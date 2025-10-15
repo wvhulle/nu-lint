@@ -1,0 +1,181 @@
+use crate::context::{Severity, Violation};
+use miette::{Diagnostic, LabeledSpan, Report, SourceCode};
+use serde::Serialize;
+use std::fmt;
+
+#[derive(Debug, Clone, Copy)]
+pub enum OutputFormat {
+    Text,
+    Json,
+    Github,
+}
+
+pub trait OutputFormatter {
+    fn format(&self, violations: &[Violation], source: &str) -> String;
+}
+
+#[derive(Debug, Default)]
+pub struct TextFormatter;
+
+impl OutputFormatter for TextFormatter {
+    fn format(&self, violations: &[Violation], _source: &str) -> String {
+        if violations.is_empty() {
+            return String::from("No violations found!");
+        }
+
+        let mut output = String::new();
+
+        for violation in violations {
+            let source_code = violation
+                .file
+                .as_ref()
+                .and_then(|path| std::fs::read_to_string(path).ok())
+                .unwrap_or_default();
+
+            let (line, column) = calculate_line_column(&source_code, violation.span.start);
+
+            if let Some(file_path) = &violation.file {
+                output.push_str(&format!(
+                    "\x1b[1m{}:{}:{}\x1b[0m\n",
+                    file_path, line, column
+                ));
+            }
+
+            let diagnostic = ViolationDiagnostic {
+                violation: violation.clone(),
+                source_code,
+            };
+
+            let report = Report::new(diagnostic);
+            output.push_str(&format!("{:?}\n", report));
+        }
+
+        let summary = Summary::from_violations(violations);
+        output.push_str(&format!(
+            "\n{} error(s), {} warning(s), {} info\n",
+            summary.errors, summary.warnings, summary.info
+        ));
+
+        output
+    }
+}
+
+/// Calculate line and column number from byte offset in source
+/// Returns (line, column) as 1-indexed values
+fn calculate_line_column(source: &str, offset: usize) -> (usize, usize) {
+    let mut line = 1;
+    let mut column = 1;
+
+    for (pos, ch) in source.char_indices() {
+        if pos >= offset {
+            break;
+        }
+        if ch == '\n' {
+            line += 1;
+            column = 1;
+        } else {
+            column += 1;
+        }
+    }
+
+    (line, column)
+}
+
+#[derive(Debug, Clone)]
+struct ViolationDiagnostic {
+    violation: Violation,
+    source_code: String,
+}
+
+impl fmt::Display for ViolationDiagnostic {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.violation.message)
+    }
+}
+
+impl std::error::Error for ViolationDiagnostic {}
+
+impl Diagnostic for ViolationDiagnostic {
+    fn code<'a>(&'a self) -> Option<Box<dyn fmt::Display + 'a>> {
+        Some(Box::new(format!(
+            "{}({})",
+            self.violation.severity, self.violation.rule_id
+        )))
+    }
+
+    fn severity(&self) -> Option<miette::Severity> {
+        Some(match self.violation.severity {
+            Severity::Error => miette::Severity::Error,
+            Severity::Warning => miette::Severity::Warning,
+            Severity::Info => miette::Severity::Advice,
+        })
+    }
+
+    fn help<'a>(&'a self) -> Option<Box<dyn fmt::Display + 'a>> {
+        self.violation
+            .suggestion
+            .as_ref()
+            .map(|s| Box::new(s.clone()) as Box<dyn fmt::Display>)
+    }
+
+    fn labels(&self) -> Option<Box<dyn Iterator<Item = LabeledSpan> + '_>> {
+        let span = self.violation.to_source_span();
+        Some(Box::new(std::iter::once(LabeledSpan::new(
+            Some(self.violation.message.clone()),
+            span.offset(),
+            span.len(),
+        ))))
+    }
+
+    fn source_code(&self) -> Option<&dyn SourceCode> {
+        Some(&self.source_code as &dyn SourceCode)
+    }
+}
+
+#[derive(Serialize)]
+pub struct JsonOutput {
+    pub violations: Vec<JsonViolation>,
+    pub summary: Summary,
+}
+
+#[derive(Serialize)]
+pub struct JsonViolation {
+    pub rule_id: String,
+    pub severity: String,
+    pub message: String,
+    pub file: Option<String>,
+    pub line: usize,
+    pub column: usize,
+    pub suggestion: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct Summary {
+    pub errors: usize,
+    pub warnings: usize,
+    pub info: usize,
+    pub files_checked: usize,
+}
+
+impl Summary {
+    pub fn from_violations(violations: &[Violation]) -> Self {
+        let mut errors = 0;
+        let mut warnings = 0;
+        let mut info = 0;
+
+        for v in violations {
+            match v.severity {
+                Severity::Error => errors += 1,
+                Severity::Warning => warnings += 1,
+                Severity::Info => info += 1,
+            }
+        }
+
+        Self {
+            errors,
+            warnings,
+            info,
+            files_checked: 1,
+        }
+    }
+}

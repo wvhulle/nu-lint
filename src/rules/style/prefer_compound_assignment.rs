@@ -8,13 +8,14 @@ use nu_protocol::ast::{Expr, Operator};
 pub struct PreferCompoundAssignment;
 
 impl PreferCompoundAssignment {
+    #[must_use]
     pub fn new() -> Self {
         Self
     }
 }
 
 impl Rule for PreferCompoundAssignment {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "S008"
     }
 
@@ -26,7 +27,7 @@ impl Rule for PreferCompoundAssignment {
         Severity::Info
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Use compound assignment operators (+=, -=, etc.) for clarity"
     }
 
@@ -52,7 +53,7 @@ impl<'a> CompoundAssignmentVisitor<'a> {
     }
 }
 
-impl<'a> AstVisitor for CompoundAssignmentVisitor<'a> {
+impl AstVisitor for CompoundAssignmentVisitor<'_> {
     fn visit_expression(&mut self, expr: &nu_protocol::ast::Expression, context: &VisitContext) {
         // Look for binary operations that are assignments
         if let Expr::BinaryOp(left, op_expr, right) = &expr.expr
@@ -68,40 +69,32 @@ impl<'a> AstVisitor for CompoundAssignmentVisitor<'a> {
                 if let Some(pipeline) = block.pipelines.first()
                     && let Some(element) = pipeline.elements.first()
                     && let Expr::BinaryOp(sub_left, sub_op_expr, _sub_right) = &element.expr.expr
+                    && let Expr::Operator(operator) = &sub_op_expr.expr
                 {
-                    if let Expr::Operator(operator) = &sub_op_expr.expr {
-                        // Check if left operand matches the variable being assigned to
-                        if self.expressions_refer_to_same_variable(left, sub_left, context) {
-                            let compound_op = self.get_compound_operator(operator);
-                            if let Some(compound_op) = compound_op {
-                                let var_text = context.get_span_contents(left.span);
-                                let op_symbol = self.get_operator_symbol(operator);
+                    // Check if left operand matches the variable being assigned to
+                    if Self::expressions_refer_to_same_variable(left, sub_left, context) {
+                        let compound_op = Self::get_compound_operator(*operator);
+                        if let Some(compound_op) = compound_op {
+                            let var_text = context.get_span_contents(left.span);
+                            let op_symbol = Self::get_operator_symbol(*operator);
 
-                                // Build fix: extract the right operand from the subexpression
-                                let fix = self.build_fix(
-                                    var_text,
-                                    compound_op,
-                                    element,
-                                    expr.span,
-                                    context,
-                                );
+                            // Build fix: extract the right operand from the subexpression
+                            let fix =
+                                Self::build_fix(var_text, compound_op, element, expr.span, context);
 
-                                self.violations.push(Violation {
+                            self.violations.push(Violation {
                                     rule_id: self.rule.id().to_string(),
                                     severity: self.rule.severity(),
                                     message: format!(
-                                        "Use compound assignment: {} {} instead of {} = {} {} ...",
-                                        var_text, compound_op, var_text, var_text, op_symbol
+                                        "Use compound assignment: {var_text} {compound_op} instead of {var_text} = {var_text} {op_symbol} ..."
                                     ),
                                     span: expr.span,
                                     suggestion: Some(format!(
-                                        "Replace with: {} {}",
-                                        var_text, compound_op
+                                        "Replace with: {var_text} {compound_op}"
                                     )),
                                     fix,
                                     file: None,
                                 });
-                            }
                         }
                     }
                 }
@@ -112,9 +105,8 @@ impl<'a> AstVisitor for CompoundAssignmentVisitor<'a> {
     }
 }
 
-impl<'a> CompoundAssignmentVisitor<'a> {
+impl CompoundAssignmentVisitor<'_> {
     fn expressions_refer_to_same_variable(
-        &self,
         expr1: &nu_protocol::ast::Expression,
         expr2: &nu_protocol::ast::Expression,
         context: &VisitContext,
@@ -126,7 +118,6 @@ impl<'a> CompoundAssignmentVisitor<'a> {
     }
 
     fn build_fix(
-        &self,
         var_text: &str,
         compound_op: &str,
         element: &nu_protocol::ast::PipelineElement,
@@ -141,7 +132,7 @@ impl<'a> CompoundAssignmentVisitor<'a> {
             let new_text = format!("{var_text} {compound_op} {right_text}");
 
             Some(Fix {
-                description: format!("Replace with compound assignment: {}", new_text),
+                description: format!("Replace with compound assignment: {new_text}"),
                 replacements: vec![Replacement {
                     span: full_span,
                     new_text,
@@ -152,7 +143,7 @@ impl<'a> CompoundAssignmentVisitor<'a> {
         }
     }
 
-    fn get_compound_operator(&self, operator: &Operator) -> Option<&'static str> {
+    fn get_compound_operator(operator: Operator) -> Option<&'static str> {
         match operator {
             Operator::Math(math_op) => match math_op {
                 nu_protocol::ast::Math::Add => Some("+="),
@@ -165,7 +156,7 @@ impl<'a> CompoundAssignmentVisitor<'a> {
         }
     }
 
-    fn get_operator_symbol(&self, operator: &Operator) -> &'static str {
+    fn get_operator_symbol(operator: Operator) -> &'static str {
         match operator {
             Operator::Math(math_op) => match math_op {
                 nu_protocol::ast::Math::Add => "+",

@@ -15,7 +15,7 @@ impl BraceSpacing {
 }
 
 impl Rule for BraceSpacing {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "S007"
     }
 
@@ -27,7 +27,7 @@ impl Rule for BraceSpacing {
         Severity::Info
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Braces should have one space after opening and before closing"
     }
 

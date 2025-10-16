@@ -19,7 +19,7 @@ impl PreferWhereOverEachIf {
 }
 
 impl Rule for PreferWhereOverEachIf {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "P001"
     }
 
@@ -31,7 +31,7 @@ impl Rule for PreferWhereOverEachIf {
         Severity::Info
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Use 'where' for filtering instead of 'each' with 'if'"
     }
 

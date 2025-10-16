@@ -19,81 +19,11 @@ pub trait AstVisitor {
     }
 
     fn visit_expression(&mut self, expr: &Expression, context: &VisitContext) {
-        match &expr.expr {
-            Expr::VarDecl(var_id) => {
-                self.visit_var_decl(*var_id, expr.span, context);
-            }
-            Expr::Var(var_id) => {
-                self.visit_var_ref(*var_id, expr.span, context);
-            }
-            Expr::Call(call) => {
-                self.visit_call(call, context);
-            }
-            Expr::BinaryOp(lhs, op, rhs) => {
-                self.visit_binary_op(lhs, op, rhs, context);
-            }
-            Expr::UnaryNot(inner) => {
-                self.visit_expression(inner, context);
-            }
-            Expr::List(items) => {
-                self.visit_list(items, context);
-            }
-            Expr::Record(items) => {
-                for item in items {
-                    match item {
-                        nu_protocol::ast::RecordItem::Pair(key, value) => {
-                            self.visit_expression(key, context);
-                            self.visit_expression(value, context);
-                        }
-                        nu_protocol::ast::RecordItem::Spread(_, expr) => {
-                            self.visit_expression(expr, context);
-                        }
-                    }
-                }
-            }
-            Expr::Block(block_id) | Expr::Closure(block_id) | Expr::Subexpression(block_id) => {
-                let block = context.get_block(*block_id);
-                self.visit_block(block, context);
-            }
-            Expr::FullCellPath(cell_path) => {
-                self.visit_expression(&cell_path.head, context);
-            }
-            Expr::String(content) | Expr::RawString(content) => {
-                self.visit_string(content, expr.span, context);
-            }
-            Expr::Int(value) => {
-                self.visit_int(*value, expr.span, context);
-            }
-            Expr::StringInterpolation(exprs) => {
-                for expr in exprs {
-                    self.visit_expression(expr, context);
-                }
-            }
-            Expr::MatchBlock(arms) => {
-                for (pattern, expr) in arms {
-                    let _ = pattern;
-                    self.visit_expression(expr, context);
-                }
-            }
-            _ => {}
-        }
+        walk_expression(self, expr, context);
     }
 
     fn visit_call(&mut self, call: &nu_protocol::ast::Call, context: &VisitContext) {
-        for expr in &call.arguments {
-            match expr {
-                nu_protocol::ast::Argument::Named(named) => {
-                    if let Some(expr) = &named.2 {
-                        self.visit_expression(expr, context);
-                    }
-                }
-                nu_protocol::ast::Argument::Positional(expr)
-                | nu_protocol::ast::Argument::Unknown(expr)
-                | nu_protocol::ast::Argument::Spread(expr) => {
-                    self.visit_expression(expr, context);
-                }
-            }
-        }
+        walk_call(self, call, context);
     }
 
     fn visit_var_decl(&mut self, _var_id: VarId, _span: Span, _context: &VisitContext) {}
@@ -212,8 +142,8 @@ pub fn walk_expression<V: AstVisitor + ?Sized>(
             visitor.visit_block(block, context);
         }
         Expr::FullCellPath(cell_path) => visitor.visit_expression(&cell_path.head, context),
-        Expr::String(content) | Expr::RawString(content) => {
-            visitor.visit_string(content, expr.span, context);
+        Expr::String(string_content) | Expr::RawString(string_content) => {
+            visitor.visit_string(string_content, expr.span, context);
         }
         Expr::Int(value) => visitor.visit_int(*value, expr.span, context),
         Expr::StringInterpolation(exprs) => {

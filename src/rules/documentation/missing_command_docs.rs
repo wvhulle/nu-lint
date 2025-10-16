@@ -6,6 +6,7 @@ use regex::Regex;
 pub struct MissingCommandDocs;
 
 impl MissingCommandDocs {
+    #[must_use]
     pub fn new() -> Self {
         Self
     }
@@ -18,7 +19,7 @@ impl Default for MissingCommandDocs {
 }
 
 impl Rule for MissingCommandDocs {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "D001"
     }
 
@@ -30,7 +31,7 @@ impl Rule for MissingCommandDocs {
         Severity::Warning
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Custom commands should have documentation comments"
     }
 
@@ -50,13 +51,13 @@ impl Rule for MissingCommandDocs {
                 false
             };
 
-            if !has_doc {
+            if has_doc {
+                None
+            } else {
                 Some((
-                    format!("Command '{}' is missing documentation comments", cmd_name),
+                    format!("Command '{cmd_name}' is missing documentation comments"),
                     Some("Add a comment starting with # above the def statement".to_string()),
                 ))
-            } else {
-                None
             }
         })
     }

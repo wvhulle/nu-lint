@@ -20,7 +20,7 @@ impl PipeSpacing {
 }
 
 impl Rule for PipeSpacing {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "S005"
     }
 
@@ -32,7 +32,7 @@ impl Rule for PipeSpacing {
         Severity::Warning
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Pipes should have exactly one space before and after"
     }
 

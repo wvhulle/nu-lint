@@ -160,6 +160,7 @@ impl LintContext<'_> {
     ///     Some("Replace with 'is-not-empty'")
     /// )
     /// ```
+    #[must_use]
     pub fn violations_from_regex(
         &self,
         pattern: &regex::Regex,

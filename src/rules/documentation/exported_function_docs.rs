@@ -5,6 +5,7 @@ use crate::rule::{Rule, RuleCategory};
 pub struct ExportedFunctionDocs;
 
 impl ExportedFunctionDocs {
+    #[must_use]
     pub fn new() -> Self {
         Self
     }
@@ -17,7 +18,7 @@ impl Default for ExportedFunctionDocs {
 }
 
 impl Rule for ExportedFunctionDocs {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "D002"
     }
 
@@ -29,7 +30,7 @@ impl Rule for ExportedFunctionDocs {
         Severity::Warning
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Exported functions should have documentation comments"
     }
 
@@ -85,14 +86,11 @@ impl Rule for ExportedFunctionDocs {
                         rule_id: self.id().to_string(),
                         severity: self.severity(),
                         message: format!(
-                            "Exported function '{}' is missing documentation",
-                            func_name
+                            "Exported function '{func_name}' is missing documentation"
                         ),
                         span: nu_protocol::Span::new(line_start, line_end),
                         suggestion: Some(format!(
-                            "Add a documentation comment above the function:\n# Description of {}\nexport def {} ...",
-                            func_name,
-                            func_name
+                            "Add a documentation comment above the function:\n# Description of {func_name}\nexport def {func_name} ..."
                         )),
                         fix: None,
                         file: None,

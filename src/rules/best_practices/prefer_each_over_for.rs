@@ -6,6 +6,7 @@ use regex::Regex;
 pub struct PreferEachOverFor;
 
 impl PreferEachOverFor {
+    #[must_use]
     pub fn new() -> Self {
         Self
     }
@@ -18,7 +19,7 @@ impl Default for PreferEachOverFor {
 }
 
 impl Rule for PreferEachOverFor {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "BP008"
     }
 
@@ -30,7 +31,7 @@ impl Rule for PreferEachOverFor {
         Severity::Warning
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Use 'each' pipeline instead of 'for' loops for functional style"
     }
 
@@ -73,19 +74,17 @@ impl Rule for PreferEachOverFor {
                 || has_system_ops
                 || has_external_tools;
 
-            if !has_side_effects {
+            if has_side_effects {
+                None
+            } else {
                 Some((
                     format!(
-                        "For loop iterating '{}' - consider using 'each' for functional style",
-                        item_var
+                        "For loop iterating '{item_var}' - consider using 'each' for functional style"
                     ),
                     Some(format!(
-                        "Use '{} | each {{ |{}| ... }}' for functional iteration",
-                        collection, item_var
+                        "Use '{collection} | each {{ |{item_var}| ... }}' for functional iteration"
                     )),
                 ))
-            } else {
-                None
             }
         })
     }

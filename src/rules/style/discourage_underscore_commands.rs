@@ -5,6 +5,7 @@ use crate::rule::{Rule, RuleCategory};
 pub struct DiscourageUnderscoreCommands;
 
 impl DiscourageUnderscoreCommands {
+    #[must_use]
     pub fn new() -> Self {
         Self
     }
@@ -17,7 +18,7 @@ impl Default for DiscourageUnderscoreCommands {
 }
 
 impl Rule for DiscourageUnderscoreCommands {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "S012"
     }
 
@@ -29,7 +30,7 @@ impl Rule for DiscourageUnderscoreCommands {
         Severity::Info
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Command names should use hyphens instead of underscores for better readability"
     }
 
@@ -48,13 +49,11 @@ impl Rule for DiscourageUnderscoreCommands {
                     rule_id: self.id().to_string(),
                     severity: self.severity(),
                     message: format!(
-                        "Command '{}' uses underscores - prefer hyphens for readability",
-                        command_name
+                        "Command '{command_name}' uses underscores - prefer hyphens for readability"
                     ),
                     span,
                     suggestion: Some(format!(
-                        "Rename to '{}' following Nushell convention",
-                        suggested_name
+                        "Rename to '{suggested_name}' following Nushell convention"
                     )),
                     fix: None,
                     file: None,

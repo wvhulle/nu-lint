@@ -12,6 +12,7 @@ pub struct RuleRegistry {
 }
 
 impl RuleRegistry {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             rules: HashMap::new(),
@@ -23,32 +24,34 @@ impl RuleRegistry {
         self.rules.insert(id, rule);
     }
 
+    #[must_use]
     pub fn get_rule(&self, id: &str) -> Option<&dyn Rule> {
-        self.rules.get(id).map(|r| r.as_ref())
+        self.rules.get(id).map(std::convert::AsRef::as_ref)
     }
 
     pub fn all_rules(&self) -> impl Iterator<Item = &dyn Rule> {
-        self.rules.values().map(|r| r.as_ref())
+        self.rules.values().map(std::convert::AsRef::as_ref)
     }
 
+    #[must_use]
     pub fn with_default_rules() -> Self {
         let mut registry = Self::new();
 
         registry.register(Box::<style::SnakeCaseVariables>::default());
         registry.register(Box::<style::KebabCaseCommands>::default());
         registry.register(Box::<style::ScreamingSnakeConstants>::default());
-        registry.register(Box::new(style::PipeSpacing::default()));
-        registry.register(Box::new(style::BraceSpacing::default()));
+        registry.register(Box::new(style::PipeSpacing));
+        registry.register(Box::new(style::BraceSpacing));
         registry.register(Box::new(style::PreferCompoundAssignment::new()));
         registry.register(Box::new(style::UnnecessaryVariableBeforeReturn::new()));
-        registry.register(Box::new(style::PreferIsNotEmpty::default()));
+        registry.register(Box::new(style::PreferIsNotEmpty));
         registry.register(Box::new(style::DiscouragedBareIgnore::new()));
         registry.register(Box::new(style::DiscourageUnderscoreCommands::new()));
         registry.register(Box::new(style::CompletionFunctionNaming::new()));
         registry.register(Box::new(style::UnnecessaryMut::new()));
 
         registry.register(Box::new(best_practices::PreferErrorMake::new()));
-        registry.register(Box::new(best_practices::AvoidMutableAccumulation::default()));
+        registry.register(Box::new(best_practices::AvoidMutableAccumulation));
         registry.register(Box::new(best_practices::PreferRangeIteration::new()));
         registry.register(Box::new(best_practices::PreferParseCommand::new()));
         registry.register(Box::new(best_practices::ConsistentErrorHandling::new()));
@@ -61,9 +64,9 @@ impl RuleRegistry {
         registry.register(Box::new(best_practices::PreferBuiltinTextTransforms::new()));
         registry.register(Box::new(best_practices::PreferBuiltinSystemCommands::new()));
 
-        registry.register(Box::new(performance::PreferWhereOverEachIf::default()));
+        registry.register(Box::new(performance::PreferWhereOverEachIf));
         registry.register(Box::new(performance::PreferLinesOverSplit::new()));
-        registry.register(Box::new(performance::PreferParseOverEachSplit::default()));
+        registry.register(Box::new(performance::PreferParseOverEachSplit));
 
         registry.register(Box::new(documentation::MissingCommandDocs::new()));
         registry.register(Box::new(documentation::ExportedFunctionDocs));

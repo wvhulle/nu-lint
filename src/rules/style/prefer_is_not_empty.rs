@@ -20,7 +20,7 @@ impl PreferIsNotEmpty {
 }
 
 impl Rule for PreferIsNotEmpty {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "S010"
     }
 
@@ -32,7 +32,7 @@ impl Rule for PreferIsNotEmpty {
         Severity::Info
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Use 'is-not-empty' instead of 'not ... is-empty' for better readability"
     }
 

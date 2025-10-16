@@ -8,6 +8,7 @@ use std::sync::OnceLock;
 pub struct PreferErrorMake;
 
 impl PreferErrorMake {
+    #[must_use]
     pub fn new() -> Self {
         Self
     }
@@ -21,7 +22,7 @@ impl PreferErrorMake {
 }
 
 impl Rule for PreferErrorMake {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "BP001"
     }
 
@@ -33,7 +34,7 @@ impl Rule for PreferErrorMake {
         Severity::Info
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Use 'error make' for custom errors instead of 'print' + 'exit'"
     }
 

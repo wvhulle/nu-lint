@@ -5,6 +5,7 @@ use crate::rule::{Rule, RuleCategory};
 pub struct CompletionFunctionNaming;
 
 impl CompletionFunctionNaming {
+    #[must_use]
     pub fn new() -> Self {
         Self
     }
@@ -17,7 +18,7 @@ impl Default for CompletionFunctionNaming {
 }
 
 impl Rule for CompletionFunctionNaming {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "S014"
     }
 
@@ -29,7 +30,7 @@ impl Rule for CompletionFunctionNaming {
         Severity::Warning
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Completion functions should use 'nu-complete' prefix for clarity"
     }
 
@@ -58,8 +59,7 @@ impl Rule for CompletionFunctionNaming {
                     rule_id: self.id().to_string(),
                     severity: self.severity(),
                     message: format!(
-                        "Completion function '{}' should use 'nu-complete' prefix",
-                        func_name
+                        "Completion function '{func_name}' should use 'nu-complete' prefix"
                     ),
                     span,
                     suggestion: Some(format!(

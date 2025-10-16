@@ -86,6 +86,11 @@ impl LintEngine {
         LintEngineBuilder::new()
     }
 
+    /// Lint a file at the given path.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be read.
     pub fn lint_file(&self, path: &Path) -> Result<Vec<Violation>, LintError> {
         let source = std::fs::read_to_string(path)?;
         Ok(self.lint_source(&source, Some(path)))

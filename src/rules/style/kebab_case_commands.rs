@@ -20,7 +20,7 @@ impl KebabCaseCommands {
 }
 
 impl Rule for KebabCaseCommands {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "S002"
     }
 
@@ -32,7 +32,7 @@ impl Rule for KebabCaseCommands {
         Severity::Warning
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Custom commands should use kebab-case naming convention"
     }
 
@@ -45,8 +45,7 @@ impl Rule for KebabCaseCommands {
                     rule_id: self.id().to_string(),
                     severity: self.severity(),
                     message: format!(
-                        "Command '{}' should use kebab-case naming convention",
-                        cmd_name
+                        "Command '{cmd_name}' should use kebab-case naming convention"
                     ),
                     span: context.find_declaration_span(cmd_name),
                     suggestion: Some(format!(

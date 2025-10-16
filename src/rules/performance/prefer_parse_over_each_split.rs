@@ -8,7 +8,7 @@ use nu_protocol::ast::{Call, Expr};
 pub struct PreferParseOverEachSplit;
 
 impl Rule for PreferParseOverEachSplit {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "P003"
     }
 
@@ -20,7 +20,7 @@ impl Rule for PreferParseOverEachSplit {
         Severity::Info
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Prefer 'parse' over 'each' with 'split row' for structured text processing"
     }
 
@@ -45,7 +45,7 @@ impl<'a> EachSplitVisitor<'a> {
         }
     }
 
-    fn is_command(&self, call: &Call, context: &VisitContext, name: &str) -> bool {
+    fn is_command(call: &Call, context: &VisitContext, name: &str) -> bool {
         context.working_set.get_decl(call.decl_id).name() == name
     }
 
@@ -93,9 +93,9 @@ impl<'a> EachSplitVisitor<'a> {
     }
 }
 
-impl<'a> AstVisitor for EachSplitVisitor<'a> {
+impl AstVisitor for EachSplitVisitor<'_> {
     fn visit_call(&mut self, call: &Call, context: &VisitContext) {
-        if self.is_command(call, context, "each") {
+        if Self::is_command(call, context, "each") {
             let has_split = call
                 .arguments
                 .iter()

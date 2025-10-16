@@ -9,6 +9,7 @@ use std::collections::HashMap;
 pub struct UnnecessaryMut;
 
 impl UnnecessaryMut {
+    #[must_use]
     pub fn new() -> Self {
         Self
     }
@@ -21,7 +22,7 @@ impl Default for UnnecessaryMut {
 }
 
 impl Rule for UnnecessaryMut {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "S015"
     }
 
@@ -33,7 +34,7 @@ impl Rule for UnnecessaryMut {
         Severity::Info
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Variables should only be marked 'mut' when they are actually reassigned"
     }
 
@@ -47,7 +48,7 @@ impl Rule for UnnecessaryMut {
 /// AST visitor that tracks mutable variable declarations and assignments
 struct MutVariableVisitor<'a> {
     rule: &'a UnnecessaryMut,
-    /// Maps variable IDs to their (name, declaration_span, mut_keyword_span, is_reassigned)
+    /// Maps variable IDs to their (name, `declaration_span`, `mut_keyword_span`, `is_reassigned`)
     mut_variables: HashMap<VarId, (String, Span, Span, bool)>,
     source: &'a str,
 }
@@ -94,7 +95,7 @@ impl<'a> MutVariableVisitor<'a> {
             if !is_reassigned {
                 // Create a fix that removes the 'mut ' keyword
                 let fix = Some(Fix {
-                    description: format!("Remove 'mut' keyword from variable '{}'", var_name),
+                    description: format!("Remove 'mut' keyword from variable '{var_name}'"),
                     replacements: vec![Replacement {
                         span: *mut_span,
                         new_text: String::new(), // Replace 'mut ' with empty string
@@ -105,11 +106,10 @@ impl<'a> MutVariableVisitor<'a> {
                     rule_id: self.rule.id().to_string(),
                     severity: self.rule.severity(),
                     message: format!(
-                        "Variable '{}' is declared as 'mut' but never reassigned",
-                        var_name
+                        "Variable '{var_name}' is declared as 'mut' but never reassigned"
                     ),
                     span: *decl_span,
-                    suggestion: Some(format!("Remove 'mut' keyword:\nlet {} = ...", var_name)),
+                    suggestion: Some(format!("Remove 'mut' keyword:\nlet {var_name} = ...")),
                     fix,
                     file: None,
                 });
@@ -120,7 +120,7 @@ impl<'a> MutVariableVisitor<'a> {
     }
 }
 
-impl<'a> AstVisitor for MutVariableVisitor<'a> {
+impl AstVisitor for MutVariableVisitor<'_> {
     fn visit_var_decl(&mut self, var_id: VarId, span: Span, context: &VisitContext) {
         let var = context.get_variable(var_id);
         if var.mutable {
@@ -160,10 +160,10 @@ impl<'a> AstVisitor for MutVariableVisitor<'a> {
                 }
                 Expr::FullCellPath(cell_path) => {
                     // Variable with optional cell path (e.g., $x or $x.field)
-                    if let Expr::Var(var_id) = &cell_path.head.expr {
-                        if let Some((_, _, _, is_reassigned)) = self.mut_variables.get_mut(var_id) {
-                            *is_reassigned = true;
-                        }
+                    if let Expr::Var(var_id) = &cell_path.head.expr
+                        && let Some((_, _, _, is_reassigned)) = self.mut_variables.get_mut(var_id)
+                    {
+                        *is_reassigned = true;
                     }
                 }
                 _ => {}

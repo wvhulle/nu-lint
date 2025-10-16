@@ -25,7 +25,7 @@ impl SnakeCaseVariables {
 }
 
 impl Rule for SnakeCaseVariables {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "S001"
     }
 
@@ -37,7 +37,7 @@ impl Rule for SnakeCaseVariables {
         Severity::Warning
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Variables should use snake_case naming convention"
     }
 

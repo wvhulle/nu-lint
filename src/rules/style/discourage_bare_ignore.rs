@@ -7,6 +7,7 @@ use std::sync::OnceLock;
 pub struct DiscouragedBareIgnore;
 
 impl DiscouragedBareIgnore {
+    #[must_use]
     pub fn new() -> Self {
         Self
     }
@@ -24,7 +25,7 @@ impl Default for DiscouragedBareIgnore {
 }
 
 impl Rule for DiscouragedBareIgnore {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "S011"
     }
 
@@ -36,7 +37,7 @@ impl Rule for DiscouragedBareIgnore {
         Severity::Info
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Using '| ignore' may hide errors - consider explicit error handling"
     }
 

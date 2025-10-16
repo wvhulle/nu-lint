@@ -6,6 +6,7 @@ use regex::Regex;
 pub struct MissingTypeAnnotation;
 
 impl MissingTypeAnnotation {
+    #[must_use]
     pub fn new() -> Self {
         Self
     }
@@ -18,7 +19,7 @@ impl Default for MissingTypeAnnotation {
 }
 
 impl Rule for MissingTypeAnnotation {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "T001"
     }
 
@@ -30,7 +31,7 @@ impl Rule for MissingTypeAnnotation {
         Severity::Info
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Parameters should have type annotations"
     }
 
@@ -50,7 +51,7 @@ impl Rule for MissingTypeAnnotation {
                 if !param.is_empty() && !param.contains(':') && !param.starts_with("--") {
                     // This is a parameter without type annotation
                     return Some((
-                        format!("Parameter '{}' is missing type annotation", param),
+                        format!("Parameter '{param}' is missing type annotation"),
                         Some(
                             "Add type annotation like 'param: string' or 'param: int'".to_string(),
                         ),

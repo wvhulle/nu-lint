@@ -6,6 +6,7 @@ use regex::Regex;
 pub struct UnnecessaryVariableBeforeReturn;
 
 impl UnnecessaryVariableBeforeReturn {
+    #[must_use]
     pub fn new() -> Self {
         Self
     }
@@ -18,7 +19,7 @@ impl Default for UnnecessaryVariableBeforeReturn {
 }
 
 impl Rule for UnnecessaryVariableBeforeReturn {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "S009"
     }
 
@@ -30,7 +31,7 @@ impl Rule for UnnecessaryVariableBeforeReturn {
         Severity::Info
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Variable assigned and immediately returned adds unnecessary verbosity"
     }
 
@@ -48,8 +49,7 @@ impl Rule for UnnecessaryVariableBeforeReturn {
             if var_name1 == var_name2 {
                 Some((
                     format!(
-                        "Variable '{}' is assigned and immediately returned - consider returning the expression directly",
-                        var_name1
+                        "Variable '{var_name1}' is assigned and immediately returned - consider returning the expression directly"
                     ),
                     Some("Return the expression directly instead of assigning to a variable first".to_string()),
                 ))

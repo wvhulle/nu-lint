@@ -48,10 +48,12 @@ impl OutputFormatter for TextFormatter {
         }
 
         let summary = Summary::from_violations(violations);
-        output.push_str(&format!(
-            "\n{} error(s), {} warning(s), {} info\n",
+        writeln!(
+            output,
+            "\n{} error(s), {} warning(s), {} info",
             summary.errors, summary.warnings, summary.info
-        ));
+        )
+        .unwrap();
 
         output
     }

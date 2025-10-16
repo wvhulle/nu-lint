@@ -6,6 +6,7 @@ use regex::Regex;
 pub struct PreferParseCommand;
 
 impl PreferParseCommand {
+    #[must_use]
     pub fn new() -> Self {
         Self
     }
@@ -18,7 +19,7 @@ impl Default for PreferParseCommand {
 }
 
 impl Rule for PreferParseCommand {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "BP004"
     }
 
@@ -30,7 +31,7 @@ impl Rule for PreferParseCommand {
         Severity::Warning
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Prefer 'parse' command over manual string splitting with indexed access"
     }
 
@@ -67,8 +68,7 @@ impl Rule for PreferParseCommand {
                             rule_id: self.id().to_string(),
                             severity: self.severity(),
                             message: format!(
-                                "Variable '{}' from split row with indexed access - consider using 'parse'",
-                                var_name
+                                "Variable '{var_name}' from split row with indexed access - consider using 'parse'"
                             ),
                             span: nu_protocol::Span::new(mat.start(), mat.end()),
                             suggestion: Some(

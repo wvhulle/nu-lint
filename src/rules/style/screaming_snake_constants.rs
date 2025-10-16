@@ -25,7 +25,7 @@ impl ScreamingSnakeConstants {
 }
 
 impl Rule for ScreamingSnakeConstants {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "S003"
     }
 
@@ -37,7 +37,7 @@ impl Rule for ScreamingSnakeConstants {
         Severity::Warning
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Constants should use SCREAMING_SNAKE_CASE naming convention"
     }
 
@@ -50,13 +50,14 @@ impl Rule for ScreamingSnakeConstants {
                 let const_match = cap.get(1)?;
                 let const_name = const_match.as_str();
 
-                if !Self::is_valid_screaming_snake(const_name) {
+                if Self::is_valid_screaming_snake(const_name) {
+                    None
+                } else {
                     Some(Violation {
                         rule_id: self.id().to_string(),
                         severity: self.severity(),
                         message: format!(
-                            "Constant '{}' should use SCREAMING_SNAKE_CASE naming convention",
-                            const_name
+                            "Constant '{const_name}' should use SCREAMING_SNAKE_CASE naming convention"
                         ),
                         span: nu_protocol::Span::new(const_match.start(), const_match.end()),
                         suggestion: Some(format!(
@@ -66,8 +67,6 @@ impl Rule for ScreamingSnakeConstants {
                         fix: None,
                         file: None,
                     })
-                } else {
-                    None
                 }
             })
             .collect()

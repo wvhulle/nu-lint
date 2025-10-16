@@ -5,6 +5,7 @@ use crate::rule::{Rule, RuleCategory};
 pub struct PreferLinesOverSplit;
 
 impl PreferLinesOverSplit {
+    #[must_use]
     pub fn new() -> Self {
         Self
     }
@@ -17,7 +18,7 @@ impl Default for PreferLinesOverSplit {
 }
 
 impl Rule for PreferLinesOverSplit {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "P002"
     }
 
@@ -29,7 +30,7 @@ impl Rule for PreferLinesOverSplit {
         Severity::Info
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Use 'lines' instead of 'split row \"\\n\"' for better performance and clarity"
     }
 

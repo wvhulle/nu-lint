@@ -3,7 +3,7 @@ use nu_protocol::Span;
 use nu_protocol::ast::Block;
 use nu_protocol::engine::{EngineState, StateWorkingSet};
 
-/// Parse Nushell source code into an AST and return both the Block and `StateWorkingSet`t`.
+/// Parse Nushell source code into an AST and return both the Block and `StateWorkingSet`.
 ///
 /// The `StateWorkingSet` contains the delta with newly defined declarations (functions, aliases, etc.)
 /// which is essential for AST-based linting rules that need to inspect function signatures,

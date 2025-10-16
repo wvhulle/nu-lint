@@ -47,7 +47,6 @@ impl Rule for PreferParseCommand {
                 "Manual string splitting with indexed access - consider using 'parse'",
                 Some(
                     "Use 'parse \"pattern {field1} {field2}\"' for structured text extraction"
-                        .to_string(),
                 ),
             ),
         );

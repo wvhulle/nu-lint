@@ -116,7 +116,7 @@ export def my-command [] {
 }
 "#;
         let engine = LintEngine::new(Config::default());
-        let violations = engine.lint_source(source, None).unwrap();
+        let violations = engine.lint_source(source, None);
 
         let rule_violations: Vec<_> = violations.iter().filter(|v| v.rule_id == "D002").collect();
 
@@ -135,7 +135,7 @@ export def my-command [] {
 }
 "#;
         let engine = LintEngine::new(Config::default());
-        let violations = engine.lint_source(source, None).unwrap();
+        let violations = engine.lint_source(source, None);
 
         let rule_violations: Vec<_> = violations.iter().filter(|v| v.rule_id == "D002").collect();
 
@@ -153,7 +153,7 @@ def my-command [] {
 }
 "#;
         let engine = LintEngine::new(Config::default());
-        let violations = engine.lint_source(source, None).unwrap();
+        let violations = engine.lint_source(source, None);
 
         let rule_violations: Vec<_> = violations.iter().filter(|v| v.rule_id == "D002").collect();
 

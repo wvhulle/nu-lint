@@ -54,7 +54,7 @@ impl Rule for PreferIsNotEmpty {
                 self.id(),
                 self.severity(),
                 msg,
-                Some(suggestion.to_string()),
+                Some(suggestion),
             )
         })
         .collect()

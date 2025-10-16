@@ -1,5 +1,5 @@
-use crate::case_conversion::to_screaming_snake;
 use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
+use heck::ToShoutySnakeCase;
 use regex::Regex;
 use std::sync::OnceLock;
 
@@ -59,7 +59,7 @@ impl Rule for ScreamingSnakeConstants {
                         span: nu_protocol::Span::new(const_match.start(), const_match.end()),
                         suggestion: Some(format!(
                             "Consider renaming to: {}",
-                            to_screaming_snake(const_name)
+                            const_name.to_shouty_snake_case()
                         )),
                         fix: None,
                         file: None,
@@ -75,13 +75,13 @@ impl Rule for ScreamingSnakeConstants {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::case_conversion::to_screaming_snake;
+    use heck::ToShoutySnakeCase;
 
     #[test]
     fn test_to_screaming_snake() {
-        assert_eq!(to_screaming_snake("maxValue"), "MAX_VALUE");
-        assert_eq!(to_screaming_snake("max_value"), "MAX_VALUE");
-        assert_eq!(to_screaming_snake("MAX_VALUE"), "MAX_VALUE");
+        assert_eq!("maxValue".to_shouty_snake_case(), "MAX_VALUE");
+        assert_eq!("max_value".to_shouty_snake_case(), "MAX_VALUE");
+        assert_eq!("MAX_VALUE".to_shouty_snake_case(), "MAX_VALUE");
     }
 
     #[test]

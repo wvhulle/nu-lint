@@ -106,7 +106,6 @@ impl<'a> AstVisitor for CompoundAssignmentVisitor<'a> {
             }
         }
 
-        // Continue walking the AST
         crate::ast_walker::walk_expression(self, expr, context);
     }
 }

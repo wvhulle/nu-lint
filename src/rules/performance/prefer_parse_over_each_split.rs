@@ -130,11 +130,7 @@ impl<'a> AstVisitor for EachSplitVisitor<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn create_engine_with_stdlib() -> nu_protocol::engine::EngineState {
-        let engine_state = nu_cmd_lang::create_default_context();
-        nu_command::add_shell_command_context(engine_state)
-    }
+    use crate::engine::LintEngineBuilder;
 
     #[test]
     fn test_each_split_row_detected() {
@@ -144,8 +140,8 @@ mod tests {
 
         // Use a simpler test case without external commands
         let bad_code = r#"["foo bar", "baz qux"] | each { |x| $x | split row " " }"#;
-        let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, bad_code.as_bytes());
+        let engine_state = LintEngineBuilder::engine_state();
+        let (block, working_set) = parse_source(engine_state, bad_code.as_bytes());
         let context = LintContext {
             source: bad_code,
             ast: &block,
@@ -169,8 +165,8 @@ mod tests {
         let rule = PreferParseOverEachSplit::default();
 
         let bad_code = r#"$lines | each { split row "," }"#;
-        let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, bad_code.as_bytes());
+        let engine_state = LintEngineBuilder::engine_state();
+        let (block, working_set) = parse_source(engine_state, bad_code.as_bytes());
         let context = LintContext {
             source: bad_code,
             ast: &block,
@@ -193,8 +189,8 @@ mod tests {
         let rule = PreferParseOverEachSplit::default();
 
         let good_code = r#"["foo bar", "baz qux"] | parse "{value} {description}""#;
-        let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, good_code.as_bytes());
+        let engine_state = LintEngineBuilder::engine_state();
+        let (block, working_set) = parse_source(engine_state, good_code.as_bytes());
         let context = LintContext {
             source: good_code,
             ast: &block,
@@ -217,8 +213,8 @@ mod tests {
         let rule = PreferParseOverEachSplit::default();
 
         let good_code = r#"let parts = $line | split row " ""#;
-        let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, good_code.as_bytes());
+        let engine_state = LintEngineBuilder::engine_state();
+        let (block, working_set) = parse_source(engine_state, good_code.as_bytes());
         let context = LintContext {
             source: good_code,
             ast: &block,
@@ -241,8 +237,8 @@ mod tests {
         let rule = PreferParseOverEachSplit::default();
 
         let good_code = r"$items | each { |item| $item.name }";
-        let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, good_code.as_bytes());
+        let engine_state = LintEngineBuilder::engine_state();
+        let (block, working_set) = parse_source(engine_state, good_code.as_bytes());
         let context = LintContext {
             source: good_code,
             ast: &block,

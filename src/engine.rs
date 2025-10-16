@@ -6,47 +6,91 @@ use nu_protocol::engine::EngineState;
 use std::path::Path;
 use std::sync::OnceLock;
 
-/// Create an engine state with standard library commands
-/// This is cached since creating it is expensive
-fn create_engine_state_with_stdlib() -> EngineState {
-    // Create engine state with core language commands and full standard library
-    // This follows the pattern used in nushell's test_bins.rs
-    let engine_state = nu_cmd_lang::create_default_context();
-    nu_command::add_shell_command_context(engine_state)
-}
-
-/// Get a cached engine state with standard library
-fn get_stdlib_engine() -> &'static EngineState {
-    static ENGINE: OnceLock<EngineState> = OnceLock::new();
-    ENGINE.get_or_init(create_engine_state_with_stdlib)
-}
-
 pub struct LintEngine {
     registry: RuleRegistry,
     config: Config,
     engine_state: &'static EngineState,
 }
 
+pub struct LintEngineBuilder {
+    registry: Option<RuleRegistry>,
+    config: Option<Config>,
+    engine_state: Option<&'static EngineState>,
+}
+
+impl Default for LintEngineBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl LintEngineBuilder {
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            registry: None,
+            config: None,
+            engine_state: None,
+        }
+    }
+
+    #[must_use]
+    pub fn with_config(mut self, config: Config) -> Self {
+        self.config = Some(config);
+        self
+    }
+
+    #[must_use]
+    pub fn with_registry(mut self, registry: RuleRegistry) -> Self {
+        self.registry = Some(registry);
+        self
+    }
+
+    #[must_use]
+    pub fn with_engine_state(mut self, engine_state: &'static EngineState) -> Self {
+        self.engine_state = Some(engine_state);
+        self
+    }
+
+    #[must_use]
+    pub fn engine_state() -> &'static EngineState {
+        static ENGINE: OnceLock<EngineState> = OnceLock::new();
+        ENGINE.get_or_init(|| {
+            let engine_state = nu_cmd_lang::create_default_context();
+            nu_command::add_shell_command_context(engine_state)
+        })
+    }
+
+    #[must_use]
+    pub fn build(self) -> LintEngine {
+        LintEngine {
+            registry: self
+                .registry
+                .unwrap_or_else(RuleRegistry::with_default_rules),
+            config: self.config.unwrap_or_default(),
+            engine_state: self.engine_state.unwrap_or_else(Self::engine_state),
+        }
+    }
+}
+
 impl LintEngine {
     #[must_use]
     pub fn new(config: Config) -> Self {
-        Self {
-            registry: RuleRegistry::with_default_rules(),
-            config,
-            engine_state: get_stdlib_engine(),
-        }
+        LintEngineBuilder::new().with_config(config).build()
+    }
+
+    #[must_use]
+    pub fn builder() -> LintEngineBuilder {
+        LintEngineBuilder::new()
     }
 
     pub fn lint_file(&self, path: &Path) -> Result<Vec<Violation>, LintError> {
         let source = std::fs::read_to_string(path)?;
-        self.lint_source(&source, Some(path))
+        Ok(self.lint_source(&source, Some(path)))
     }
 
-    pub fn lint_source(
-        &self,
-        source: &str,
-        path: Option<&Path>,
-    ) -> Result<Vec<Violation>, LintError> {
+    #[must_use]
+    pub fn lint_source(&self, source: &str, path: Option<&Path>) -> Vec<Violation> {
         let (block, working_set) = parse_source(self.engine_state, source.as_bytes());
 
         let context = LintContext {
@@ -85,7 +129,7 @@ impl LintEngine {
                 .then(a.severity.cmp(&b.severity))
         });
 
-        Ok(violations)
+        violations
     }
 
     #[must_use]
@@ -102,9 +146,7 @@ mod tests {
     fn test_lint_valid_code() {
         let engine = LintEngine::new(Config::default());
         let source = "let my_variable = 5";
-        let result = engine.lint_source(source, None);
-        assert!(result.is_ok());
-        let violations = result.unwrap();
+        let violations = engine.lint_source(source, None);
         assert_eq!(violations.len(), 0);
     }
 
@@ -112,9 +154,7 @@ mod tests {
     fn test_lint_invalid_snake_case() {
         let engine = LintEngine::new(Config::default());
         let source = "let myVariable = 5";
-        let result = engine.lint_source(source, None);
-        assert!(result.is_ok());
-        let violations = result.unwrap();
+        let violations = engine.lint_source(source, None);
         assert!(!violations.is_empty());
         assert_eq!(violations[0].rule_id, "S001");
     }

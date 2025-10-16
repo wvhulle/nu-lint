@@ -1,5 +1,5 @@
-use crate::case_conversion::to_kebab_case;
 use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
+use heck::ToKebabCase;
 use regex::Regex;
 use std::sync::OnceLock;
 
@@ -47,7 +47,7 @@ impl Rule for KebabCaseCommands {
                         cmd_name
                     ),
                     span: context.find_declaration_span(cmd_name),
-                    suggestion: Some(format!("Consider renaming to: {}", to_kebab_case(cmd_name))),
+                    suggestion: Some(format!("Consider renaming to: {}", cmd_name.to_kebab_case())),
                     fix: None,
                     file: None,
                 })
@@ -59,13 +59,13 @@ impl Rule for KebabCaseCommands {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::case_conversion::to_kebab_case;
+    use heck::ToKebabCase;
 
     #[test]
     fn test_to_kebab_case() {
-        assert_eq!(to_kebab_case("myCommand"), "my-command");
-        assert_eq!(to_kebab_case("my_command"), "my-command");
-        assert_eq!(to_kebab_case("my-command"), "my-command");
+        assert_eq!("myCommand".to_kebab_case(), "my-command");
+        assert_eq!("my_command".to_kebab_case(), "my-command");
+        assert_eq!("my-command".to_kebab_case(), "my-command");
     }
 
     #[test]

@@ -14,7 +14,7 @@ impl PreferBuiltinSystemCommands {
     }
 
     /// Map of system commands to their Nushell built-in equivalents
-    /// Based on https://www.nushell.sh/book/coming_from_bash.html#command-equivalents
+    /// Based on <https://www.nushell.sh/book/coming_from_bash.html#command-equivalents>
     fn get_builtin_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
         let mut map = HashMap::new();
 
@@ -106,7 +106,7 @@ impl Default for PreferBuiltinSystemCommands {
 }
 
 impl Rule for PreferBuiltinSystemCommands {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "BP014"
     }
 
@@ -118,7 +118,7 @@ impl Rule for PreferBuiltinSystemCommands {
         Severity::Info
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Prefer Nushell built-in commands over external tools for system operations (env, date, whoami, man, which, cd, pwd, etc.)"
     }
 
@@ -181,7 +181,7 @@ fn build_fix(
         "hostname" | "uname" => "sys host".to_string(),
         "man" => {
             if let Some(cmd) = args_text.first() {
-                format!("help {}", cmd)
+                format!("help {cmd}")
             } else {
                 "help commands".to_string()
             }
@@ -226,13 +226,13 @@ fn build_fix(
 mod tests {
     use super::*;
     use crate::parser::parse_source;
-    use crate::test_utils::create_engine_with_stdlib;
+    use crate::engine::LintEngineBuilder;
 
     #[test]
     fn test_external_env_detected() {
         let rule = PreferBuiltinSystemCommands::new();
         let source = r"^env";
-        let engine_state = create_engine_with_stdlib();
+        let engine_state = LintEngineBuilder::engine_state();
         let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
@@ -251,8 +251,8 @@ mod tests {
     fn test_external_date_detected() {
         let rule = PreferBuiltinSystemCommands::new();
         let source = r"^date";
-        let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
+        let engine_state = LintEngineBuilder::engine_state();
+        let (block, working_set) = parse_source(engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -273,8 +273,8 @@ mod tests {
     fn test_external_man_detected() {
         let rule = PreferBuiltinSystemCommands::new();
         let source = r"^man ls";
-        let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
+        let engine_state = LintEngineBuilder::engine_state();
+        let (block, working_set) = parse_source(engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -292,8 +292,8 @@ mod tests {
     fn test_external_read_detected() {
         let rule = PreferBuiltinSystemCommands::new();
         let source = r#"^read -p "Enter: ""#;
-        let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
+        let engine_state = LintEngineBuilder::engine_state();
+        let (block, working_set) = parse_source(engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -314,8 +314,8 @@ mod tests {
     fn test_builtin_date_not_flagged() {
         let rule = PreferBuiltinSystemCommands::new();
         let source = r"date now";
-        let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
+        let engine_state = LintEngineBuilder::engine_state();
+        let (block, working_set) = parse_source(engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,

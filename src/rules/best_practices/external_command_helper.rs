@@ -110,7 +110,6 @@ impl AstVisitor for ExternalCommandVisitor<'_> {
             }
         }
 
-        // Continue walking the AST
         crate::ast_walker::walk_expression(self, expr, context);
     }
 }

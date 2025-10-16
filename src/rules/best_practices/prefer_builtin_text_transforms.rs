@@ -198,14 +198,14 @@ fn build_fix(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::engine::LintEngineBuilder;
     use crate::parser::parse_source;
-    use crate::test_utils::create_engine_with_stdlib;
 
     #[test]
     fn test_external_sed_detected() {
         let rule = PreferBuiltinTextTransforms::new();
         let source = r"^sed 's/foo/bar/' file.txt";
-        let engine_state = create_engine_with_stdlib();
+        let engine_state = LintEngineBuilder::engine_state();
         let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
@@ -224,8 +224,8 @@ mod tests {
     fn test_external_awk_detected() {
         let rule = PreferBuiltinTextTransforms::new();
         let source = r"^awk '{print $1}' file.txt";
-        let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
+        let engine_state = LintEngineBuilder::engine_state();
+        let (block, working_set) = parse_source(engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -245,8 +245,8 @@ mod tests {
     fn test_external_cut_detected() {
         let rule = PreferBuiltinTextTransforms::new();
         let source = r"^cut -d ',' -f 1 file.csv";
-        let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
+        let engine_state = LintEngineBuilder::engine_state();
+        let (block, working_set) = parse_source(engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -264,8 +264,8 @@ mod tests {
     fn test_external_wc_detected() {
         let rule = PreferBuiltinTextTransforms::new();
         let source = r"^wc -l file.txt";
-        let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
+        let engine_state = LintEngineBuilder::engine_state();
+        let (block, working_set) = parse_source(engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -283,8 +283,8 @@ mod tests {
     fn test_builtin_str_replace_not_flagged() {
         let rule = PreferBuiltinTextTransforms::new();
         let source = r#""hello" | str replace "h" "H""#;
-        let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
+        let engine_state = LintEngineBuilder::engine_state();
+        let (block, working_set) = parse_source(engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -301,8 +301,8 @@ mod tests {
     fn test_sed_fix_provided() {
         let rule = PreferBuiltinTextTransforms::new();
         let source = r"^sed 's/foo/bar/' file.txt";
-        let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
+        let engine_state = LintEngineBuilder::engine_state();
+        let (block, working_set) = parse_source(engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -327,8 +327,8 @@ mod tests {
     fn test_wc_line_count_fix() {
         let rule = PreferBuiltinTextTransforms::new();
         let source = r"^wc -l file.txt";
-        let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
+        let engine_state = LintEngineBuilder::engine_state();
+        let (block, working_set) = parse_source(engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -358,8 +358,8 @@ mod tests {
     fn test_tr_upcase_fix() {
         let rule = PreferBuiltinTextTransforms::new();
         let source = r"^tr 'a-z' 'A-Z'";
-        let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
+        let engine_state = LintEngineBuilder::engine_state();
+        let (block, working_set) = parse_source(engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -383,8 +383,8 @@ mod tests {
     fn test_tr_downcase_fix() {
         let rule = PreferBuiltinTextTransforms::new();
         let source = r"^tr 'A-Z' 'a-z'";
-        let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
+        let engine_state = LintEngineBuilder::engine_state();
+        let (block, working_set) = parse_source(engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -408,8 +408,8 @@ mod tests {
     fn test_tee_fix() {
         let rule = PreferBuiltinTextTransforms::new();
         let source = r"^tee output.txt";
-        let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
+        let engine_state = LintEngineBuilder::engine_state();
+        let (block, working_set) = parse_source(engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -435,8 +435,8 @@ mod tests {
     fn test_rev_fix() {
         let rule = PreferBuiltinTextTransforms::new();
         let source = r"^rev";
-        let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
+        let engine_state = LintEngineBuilder::engine_state();
+        let (block, working_set) = parse_source(engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -459,9 +459,9 @@ mod tests {
     #[test]
     fn test_cut_fix() {
         let rule = PreferBuiltinTextTransforms::new();
-        let source = r#"^cut -d ',' -f 1 data.csv"#;
-        let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
+        let source = r"^cut -d ',' -f 1 data.csv";
+        let engine_state = LintEngineBuilder::engine_state();
+        let (block, working_set) = parse_source(engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,

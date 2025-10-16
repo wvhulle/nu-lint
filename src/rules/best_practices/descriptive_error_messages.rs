@@ -98,7 +98,7 @@ def process [] {
 }
 "#;
         let engine = LintEngine::new(Config::default());
-        let violations = engine.lint_source(source, None).unwrap();
+        let violations = engine.lint_source(source, None);
 
         let rule_violations: Vec<_> = violations.iter().filter(|v| v.rule_id == "BP011").collect();
 
@@ -118,7 +118,7 @@ def process [input: int] {
 }
 "#;
         let engine = LintEngine::new(Config::default());
-        let violations = engine.lint_source(source, None).unwrap();
+        let violations = engine.lint_source(source, None);
 
         let rule_violations: Vec<_> = violations.iter().filter(|v| v.rule_id == "BP011").collect();
 
@@ -136,7 +136,7 @@ def process [] {
 }
 "#;
         let engine = LintEngine::new(Config::default());
-        let violations = engine.lint_source(source, None).unwrap();
+        let violations = engine.lint_source(source, None);
 
         let rule_violations: Vec<_> = violations.iter().filter(|v| v.rule_id == "BP011").collect();
 

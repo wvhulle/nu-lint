@@ -1,5 +1,5 @@
-use crate::case_conversion::to_snake_case;
 use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
+use heck::ToSnakeCase;
 use regex::Regex;
 use std::sync::OnceLock;
 
@@ -53,7 +53,7 @@ impl Rule for SnakeCaseVariables {
                         "Variable '{var_name}' should use snake_case naming convention"
                     ),
                     span: nu_protocol::Span::new(var_match.start(), var_match.end()),
-                    suggestion: Some(format!("Consider renaming to: {}", to_snake_case(var_name))),
+                    suggestion: Some(format!("Consider renaming to: {}", var_name.to_snake_case())),
                     fix: None,
                     file: None,
                 })
@@ -65,14 +65,14 @@ impl Rule for SnakeCaseVariables {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::case_conversion::to_snake_case;
+    use heck::ToSnakeCase;
 
     #[test]
     fn test_to_snake_case() {
-        assert_eq!(to_snake_case("myVariable"), "my_variable");
-        assert_eq!(to_snake_case("MyVariable"), "my_variable");
-        assert_eq!(to_snake_case("my_variable"), "my_variable");
-        assert_eq!(to_snake_case("CONSTANT"), "constant");
+        assert_eq!("myVariable".to_snake_case(), "my_variable");
+        assert_eq!("MyVariable".to_snake_case(), "my_variable");
+        assert_eq!("my_variable".to_snake_case(), "my_variable");
+        assert_eq!("CONSTANT".to_snake_case(), "constant");
     }
 
     #[test]

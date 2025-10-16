@@ -145,6 +145,16 @@ fn test_bp012_prefer_builtin_commands_detected() {
     check_rule_detected("BP012");
 }
 
+#[test]
+fn test_bp013_prefer_builtin_text_transforms_detected() {
+    check_rule_detected("BP013");
+}
+
+#[test]
+fn test_bp014_prefer_builtin_system_commands_detected() {
+    check_rule_detected("BP014");
+}
+
 // Documentation tests
 #[test]
 fn test_d001_missing_command_docs_detected() {

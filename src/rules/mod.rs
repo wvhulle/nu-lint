@@ -55,7 +55,11 @@ impl RuleRegistry {
         registry.register(Box::new(best_practices::PreferMatchOverIfChain::new()));
         registry.register(Box::new(best_practices::PreferEachOverFor::new()));
         registry.register(Box::new(best_practices::DescriptiveErrorMessages::new()));
-        registry.register(Box::new(best_practices::PreferBuiltinCommands::new()));
+        registry.register(Box::new(
+            best_practices::PreferBuiltinForCommonCommands::new(),
+        ));
+        registry.register(Box::new(best_practices::PreferBuiltinTextTransforms::new()));
+        registry.register(Box::new(best_practices::PreferBuiltinSystemCommands::new()));
 
         registry.register(Box::new(performance::PreferWhereOverEachIf::new()));
         registry.register(Box::new(performance::PreferLinesOverSplit::new()));

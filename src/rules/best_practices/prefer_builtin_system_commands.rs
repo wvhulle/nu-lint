@@ -3,53 +3,94 @@ use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
 use nu_protocol::ast::Expr;
 use std::collections::HashMap;
 
-pub struct PreferBuiltinForCommonCommands;
+pub struct PreferBuiltinSystemCommands;
 
-impl PreferBuiltinForCommonCommands {
+impl PreferBuiltinSystemCommands {
     pub fn new() -> Self {
         Self
     }
 
-    /// Map of common file and text operations to their Nushell built-in equivalents
+    /// Map of system commands to their Nushell built-in equivalents
     /// Based on https://www.nushell.sh/book/coming_from_bash.html#command-equivalents
-    ///
-    /// This rule focuses on the most commonly used commands when migrating from bash.
-    /// See also: BP013 (text transformation), BP014 (system commands)
     fn get_builtin_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
         let mut map = HashMap::new();
 
-        // Common file system operations
-        map.insert("ls", BuiltinAlternative::simple("ls"));
+        // System information
         map.insert(
-            "cat",
+            "env",
             BuiltinAlternative::with_note(
-                "open --raw",
-                "Use 'open' to read files as structured data, or 'open --raw' for plain text",
+                "$env",
+                "Use '$env' to access environment variables or 'env' command to view all",
             ),
         );
         map.insert(
-            "find",
-            BuiltinAlternative::with_note("ls", "Use 'ls **/*.rs' for recursive pattern matching"),
+            "printenv",
+            BuiltinAlternative::with_note("$env", "Use '$env' to access environment variables"),
+        );
+        map.insert(
+            "date",
+            BuiltinAlternative::with_note(
+                "date now",
+                "Use 'date now' or parse dates with 'into datetime'",
+            ),
+        );
+        map.insert("whoami", BuiltinAlternative::simple("whoami"));
+        map.insert(
+            "hostname",
+            BuiltinAlternative::with_note(
+                "sys host",
+                "Use 'sys host' to get detailed host information",
+            ),
+        );
+        map.insert(
+            "uname",
+            BuiltinAlternative::with_note("sys host", "Use 'sys host' to get system information"),
+        );
+        map.insert("stat", BuiltinAlternative::simple("stat"));
+
+        // Process/system control
+        map.insert("sleep", BuiltinAlternative::simple("sleep"));
+        map.insert("kill", BuiltinAlternative::simple("kill"));
+        map.insert("clear", BuiltinAlternative::simple("clear"));
+        map.insert("exit", BuiltinAlternative::simple("exit"));
+
+        // Help and utilities
+        map.insert(
+            "man",
+            BuiltinAlternative::with_note(
+                "help",
+                "Use 'help <command>' or 'help commands' to list all commands",
+            ),
+        );
+        map.insert(
+            "which",
+            BuiltinAlternative::with_note("which", "Use 'which' to find command locations"),
+        );
+        map.insert(
+            "type",
+            BuiltinAlternative::with_note("which", "Use 'which' to find command locations"),
+        );
+        map.insert(
+            "read",
+            BuiltinAlternative::with_note(
+                "input",
+                "Use 'let var = input' or 'let secret = input -s' for password input",
+            ),
         );
 
-        // Common text processing operations
+        // Basic file system utilities (less common)
+        map.insert("pwd", BuiltinAlternative::simple("pwd"));
+        map.insert("cd", BuiltinAlternative::simple("cd"));
+        map.insert("mkdir", BuiltinAlternative::simple("mkdir"));
+        map.insert("rm", BuiltinAlternative::simple("rm"));
+        map.insert("mv", BuiltinAlternative::simple("mv"));
+        map.insert("cp", BuiltinAlternative::simple("cp"));
+        map.insert("touch", BuiltinAlternative::simple("touch"));
         map.insert(
-            "grep",
-            BuiltinAlternative::with_note(
-                "where or find",
-                "Use 'where $it =~ <pattern>' for filtering or 'find <substring>' for searching",
-            ),
+            "echo",
+            BuiltinAlternative::with_note("echo or print", "Use 'echo' or 'print' for output"),
         );
-        map.insert(
-            "head",
-            BuiltinAlternative::with_note("first", "Use 'first N' to get the first N items"),
-        );
-        map.insert(
-            "tail",
-            BuiltinAlternative::with_note("last", "Use 'last N' to get the last N items"),
-        );
-        map.insert("sort", BuiltinAlternative::simple("sort or sort-by"));
-        map.insert("uniq", BuiltinAlternative::simple("uniq or uniq-by"));
+        map.insert("printf", BuiltinAlternative::simple("print"));
 
         map
     }
@@ -76,15 +117,15 @@ impl BuiltinAlternative {
     }
 }
 
-impl Default for PreferBuiltinForCommonCommands {
+impl Default for PreferBuiltinSystemCommands {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Rule for PreferBuiltinForCommonCommands {
+impl Rule for PreferBuiltinSystemCommands {
     fn id(&self) -> &str {
-        "BP012"
+        "BP014"
     }
 
     fn category(&self) -> RuleCategory {
@@ -96,7 +137,7 @@ impl Rule for PreferBuiltinForCommonCommands {
     }
 
     fn description(&self) -> &str {
-        "Use Nushell built-ins instead of external commands for common operations like ls, cat, grep, head, tail, sort, uniq, and find"
+        "Prefer Nushell built-in commands over external tools for system operations (env, date, whoami, man, which, cd, pwd, etc.)"
     }
 
     fn check(&self, context: &LintContext) -> Vec<Violation> {
@@ -108,17 +149,17 @@ impl Rule for PreferBuiltinForCommonCommands {
 
 /// AST visitor that detects external command calls that have builtin alternatives
 struct ExternalCommandVisitor<'a> {
-    rule: &'a PreferBuiltinForCommonCommands,
+    rule: &'a PreferBuiltinSystemCommands,
     violations: Vec<Violation>,
     alternatives: HashMap<&'static str, BuiltinAlternative>,
 }
 
 impl<'a> ExternalCommandVisitor<'a> {
-    fn new(rule: &'a PreferBuiltinForCommonCommands) -> Self {
+    fn new(rule: &'a PreferBuiltinSystemCommands) -> Self {
         Self {
             rule,
             violations: Vec::new(),
-            alternatives: PreferBuiltinForCommonCommands::get_builtin_alternatives(),
+            alternatives: PreferBuiltinSystemCommands::get_builtin_alternatives(),
         }
     }
 }
@@ -176,9 +217,9 @@ mod tests {
     }
 
     #[test]
-    fn test_external_ls_detected() {
-        let rule = PreferBuiltinForCommonCommands::new();
-        let source = r#"^ls -la"#;
+    fn test_external_env_detected() {
+        let rule = PreferBuiltinSystemCommands::new();
+        let source = r#"^env"#;
         let engine_state = create_engine_with_stdlib();
         let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
         let context = LintContext {
@@ -190,56 +231,14 @@ mod tests {
         };
 
         let violations = rule.check(&context);
-        assert!(!violations.is_empty(), "Should detect external ls command");
-        assert!(violations[0].message.contains("ls"));
+        assert!(!violations.is_empty(), "Should detect external env command");
+        assert!(violations[0].message.contains("$env"));
     }
 
     #[test]
-    fn test_builtin_ls_not_flagged() {
-        let rule = PreferBuiltinForCommonCommands::new();
-        let source = r#"ls | where type == dir"#;
-        let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
-        let context = LintContext {
-            source,
-            ast: &block,
-            engine_state: &engine_state,
-            working_set: &working_set,
-            file_path: None,
-        };
-
-        let violations = rule.check(&context);
-        assert_eq!(violations.len(), 0, "Should not flag built-in ls");
-    }
-
-    #[test]
-    fn test_external_cat_detected() {
-        let rule = PreferBuiltinForCommonCommands::new();
-        // Based on Nushell docs: cat <path> -> open --raw <path>
-        let source = r#"^cat file.txt"#;
-        let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
-        let context = LintContext {
-            source,
-            ast: &block,
-            engine_state: &engine_state,
-            working_set: &working_set,
-            file_path: None,
-        };
-
-        let violations = rule.check(&context);
-        assert!(!violations.is_empty(), "Should detect external cat command");
-        assert!(
-            violations[0].message.contains("open"),
-            "Should suggest 'open' as alternative"
-        );
-    }
-
-    #[test]
-    fn test_external_grep_detected() {
-        let rule = PreferBuiltinForCommonCommands::new();
-        // Based on Nushell docs: grep <pattern> -> where $it =~ <substring> or find <substring>
-        let source = r#"^grep pattern file.txt"#;
+    fn test_external_date_detected() {
+        let rule = PreferBuiltinSystemCommands::new();
+        let source = r#"^date"#;
         let engine_state = create_engine_with_stdlib();
         let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
         let context = LintContext {
@@ -253,19 +252,34 @@ mod tests {
         let violations = rule.check(&context);
         assert!(
             !violations.is_empty(),
-            "Should detect external grep command"
+            "Should detect external date command"
         );
-        assert!(
-            violations[0].message.contains("where") || violations[0].message.contains("find"),
-            "Should suggest 'where' or 'find' as alternative"
-        );
+        assert!(violations[0].message.contains("date now"));
     }
 
     #[test]
-    fn test_external_head_detected() {
-        let rule = PreferBuiltinForCommonCommands::new();
-        // Based on Nushell docs: command | head -5 -> command | first 5
-        let source = r#"^head -5 file.txt"#;
+    fn test_external_man_detected() {
+        let rule = PreferBuiltinSystemCommands::new();
+        let source = r#"^man ls"#;
+        let engine_state = create_engine_with_stdlib();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let context = LintContext {
+            source,
+            ast: &block,
+            engine_state: &engine_state,
+            working_set: &working_set,
+            file_path: None,
+        };
+
+        let violations = rule.check(&context);
+        assert!(!violations.is_empty(), "Should detect external man command");
+        assert!(violations[0].message.contains("help"));
+    }
+
+    #[test]
+    fn test_external_read_detected() {
+        let rule = PreferBuiltinSystemCommands::new();
+        let source = r#"^read -p "Enter: ""#;
         let engine_state = create_engine_with_stdlib();
         let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
         let context = LintContext {
@@ -279,18 +293,15 @@ mod tests {
         let violations = rule.check(&context);
         assert!(
             !violations.is_empty(),
-            "Should detect external head command"
+            "Should detect external read command"
         );
-        assert!(
-            violations[0].message.contains("first"),
-            "Should suggest 'first' as alternative"
-        );
+        assert!(violations[0].message.contains("input"));
     }
 
     #[test]
-    fn test_external_command_without_builtin_not_flagged() {
-        let rule = PreferBuiltinForCommonCommands::new();
-        let source = r#"^my-custom-tool --flag"#;
+    fn test_builtin_date_not_flagged() {
+        let rule = PreferBuiltinSystemCommands::new();
+        let source = r#"date now"#;
         let engine_state = create_engine_with_stdlib();
         let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
         let context = LintContext {
@@ -302,60 +313,6 @@ mod tests {
         };
 
         let violations = rule.check(&context);
-        assert_eq!(
-            violations.len(),
-            0,
-            "Should not flag external commands without built-in alternatives"
-        );
-    }
-
-    #[test]
-    fn test_multiple_external_commands_detected() {
-        let rule = PreferBuiltinForCommonCommands::new();
-        // Pipeline with multiple external commands
-        let source = r#"^cat file.txt | ^grep pattern | ^sort"#;
-        let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
-        let context = LintContext {
-            source,
-            ast: &block,
-            engine_state: &engine_state,
-            working_set: &working_set,
-            file_path: None,
-        };
-
-        let violations = rule.check(&context);
-        // Should detect all three external commands
-        assert!(
-            violations.len() >= 3,
-            "Should detect multiple external commands, found {}",
-            violations.len()
-        );
-    }
-
-    #[test]
-    fn test_external_find_detected() {
-        let rule = PreferBuiltinForCommonCommands::new();
-        // Based on Nushell docs: find . -name *.rs -> ls **/*.rs
-        let source = r#"^find . -name "*.rs""#;
-        let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
-        let context = LintContext {
-            source,
-            ast: &block,
-            engine_state: &engine_state,
-            working_set: &working_set,
-            file_path: None,
-        };
-
-        let violations = rule.check(&context);
-        assert!(
-            !violations.is_empty(),
-            "Should detect external find command"
-        );
-        assert!(
-            violations[0].message.contains("ls"),
-            "Should suggest 'ls' as alternative"
-        );
+        assert_eq!(violations.len(), 0, "Should not flag built-in date command");
     }
 }

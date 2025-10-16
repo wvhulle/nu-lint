@@ -38,7 +38,6 @@ impl RuleRegistry {
         registry.register(Box::new(style::KebabCaseCommands::new()));
         registry.register(Box::new(style::ScreamingSnakeConstants::new()));
         registry.register(Box::new(style::PipeSpacing::new()));
-        registry.register(Box::new(style::NoListCommas::new()));
         registry.register(Box::new(style::BraceSpacing::new()));
         registry.register(Box::new(style::PreferCompoundAssignment::new()));
         registry.register(Box::new(style::UnnecessaryVariableBeforeReturn::new()));

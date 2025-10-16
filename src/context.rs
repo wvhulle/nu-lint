@@ -1,11 +1,12 @@
 use miette::{Diagnostic, SourceSpan};
 use nu_protocol::{
-    ast::Block,
+    ast::{Block, Expression},
     engine::{Command, EngineState, StateWorkingSet},
     DeclId, Span,
 };
 use std::path::Path;
 use thiserror::Error;
+use crate::ast_walker::{AstVisitor, VisitContext};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RuleCategory {
@@ -232,6 +233,73 @@ impl<'a> LintContext<'a> {
         self.violations_from_regex_if(pattern, rule_id, severity, |_| {
             Some((message.clone(), suggestion.clone()))
         })
+    }
+
+    /// Walk the AST using a visitor pattern
+    ///
+    /// This is the primary method for AST-based rules. The visitor will be called
+    /// for each relevant AST node type. This walks both the main AST block and
+    /// all blocks accessible through function declarations.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let mut visitor = MyCustomVisitor::new();
+    /// context.walk_ast(&mut visitor);
+    /// let violations = visitor.get_violations();
+    /// ```
+    pub fn walk_ast<V: AstVisitor>(&self, visitor: &mut V) {
+        let visit_context = VisitContext::new(self.working_set, self.source);
+
+        // Visit the main AST block
+        visitor.visit_block(self.ast, &visit_context);
+
+        // Visit function bodies by iterating through user-defined functions
+        for (_decl_id, decl) in self.new_user_functions() {
+            if let Some(block_id) = decl.block_id() {
+                let block = self.working_set.get_block(block_id);
+                visitor.visit_block(block, &visit_context);
+            }
+        }
+    }
+
+    /// Collect all expressions matching a predicate
+    ///
+    /// This is a convenient helper for rules that need to find specific types
+    /// of expressions in the AST.
+    ///
+    /// # Example
+    /// ```ignore
+    /// // Find all binary operations
+    /// let binary_ops = context.collect_expressions(|expr| {
+    ///     matches!(expr.expr, nu_protocol::ast::Expr::BinaryOp(_, _, _))
+    /// });
+    /// ```
+    pub fn collect_expressions<F>(&self, predicate: F) -> Vec<(Expression, Span)>
+    where
+        F: Fn(&Expression) -> bool,
+    {
+        let mut collector = crate::ast_walker::ExpressionCollector::new(predicate);
+        self.walk_ast(&mut collector);
+        collector.expressions
+    }
+
+    /// Collect all variable declarations in the AST
+    pub fn collect_var_declarations(&self) -> Vec<(nu_protocol::VarId, Span)> {
+        let mut collector = crate::ast_walker::VarDeclCollector::new();
+        self.walk_ast(&mut collector);
+        collector.var_decls
+    }
+
+    /// Collect all function calls in the AST
+    pub fn collect_function_calls(&self) -> Vec<(nu_protocol::ast::Call, Span)> {
+        let mut collector = crate::ast_walker::CallCollector::new();
+        self.walk_ast(&mut collector);
+        collector.calls
+    }
+
+    /// Get the text content of a span
+    pub fn get_span_contents(&self, span: Span) -> &str {
+        crate::parser::get_span_contents(self.source, span)
     }
 }
 

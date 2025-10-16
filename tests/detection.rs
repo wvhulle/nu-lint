@@ -55,11 +55,6 @@ fn test_s005_pipe_spacing_detected() {
 }
 
 #[test]
-fn test_s006_no_list_commas_detected() {
-    check_rule_detected("S006");
-}
-
-#[test]
 fn test_s007_brace_spacing_detected() {
     check_rule_detected("S007");
 }
@@ -129,7 +124,6 @@ fn test_bp008_prefer_each_over_for_detected() {
 fn test_bp009_max_positional_params_detected() {
     check_rule_detected("BP009");
 }
-
 
 // Documentation tests
 #[test]

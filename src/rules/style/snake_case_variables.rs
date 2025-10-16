@@ -41,8 +41,6 @@ impl Rule for SnakeCaseVariables {
     }
 
     fn check(&self, context: &LintContext) -> Vec<Violation> {
-        // Simple regex-based approach for now
-        // Look for "let variableName =" patterns in the source
         let let_pattern = Regex::new(r"\blet\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=").unwrap();
 
         let_pattern

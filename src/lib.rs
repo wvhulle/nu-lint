@@ -1,3 +1,4 @@
+pub mod ast_walker;
 pub mod config;
 pub mod context;
 pub mod engine;

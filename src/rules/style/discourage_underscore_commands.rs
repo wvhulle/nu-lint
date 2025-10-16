@@ -1,5 +1,4 @@
 use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
-use regex::Regex;
 
 pub struct DiscourageUnderscoreCommands;
 
@@ -33,33 +32,35 @@ impl Rule for DiscourageUnderscoreCommands {
     }
 
     fn check(&self, context: &LintContext) -> Vec<Violation> {
-        // Match: def command_name [...] or def "command_name" [...]
-        let pattern = Regex::new(r#"def\s+(?:")?(\w+_\w+)(?:")?\s*\["#).unwrap();
+        let mut violations = Vec::new();
 
-        pattern
-            .captures_iter(context.source)
-            .map(|caps| {
-                let command_name = &caps[1];
-                let mat = caps.get(1).unwrap();
+        for (_decl_id, decl) in context.new_user_functions() {
+            let command_name = &decl.signature().name;
+
+            // Check if command name contains underscores
+            if command_name.contains('_') {
                 let suggested_name = command_name.replace('_', "-");
+                let span = context.find_declaration_span(command_name);
 
-                Violation {
+                violations.push(Violation {
                     rule_id: self.id().to_string(),
                     severity: self.severity(),
                     message: format!(
                         "Command '{}' uses underscores - prefer hyphens for readability",
                         command_name
                     ),
-                    span: nu_protocol::Span::new(mat.start(), mat.end()),
+                    span,
                     suggestion: Some(format!(
                         "Rename to '{}' following Nushell convention",
                         suggested_name
                     )),
                     fix: None,
                     file: None,
-                }
-            })
-            .collect()
+                });
+            }
+        }
+
+        violations
     }
 }
 
@@ -69,14 +70,25 @@ mod tests {
 
     #[test]
     fn test_underscore_command_detected() {
+        use crate::parser::parse_source;
+        use nu_protocol::engine::EngineState;
+
         let rule = DiscourageUnderscoreCommands::new();
 
-        let bad_code = r#"
-def my_command [param: string] {
+        let bad_code = r#"def my_command [param: string] {
     echo $param
-}
-"#;
-        let context = LintContext::test_from_source(bad_code);
+}"#;
+
+        let engine_state = EngineState::new();
+        let (block, working_set) = parse_source(&engine_state, bad_code.as_bytes()).unwrap();
+        let context = LintContext {
+            source: bad_code,
+            ast: &block,
+            engine_state: &engine_state,
+            working_set: &working_set,
+            file_path: None,
+        };
+
         assert!(
             !rule.check(&context).is_empty(),
             "Should detect underscore in command name"
@@ -85,14 +97,25 @@ def my_command [param: string] {
 
     #[test]
     fn test_hyphenated_command_not_flagged() {
+        use crate::parser::parse_source;
+        use nu_protocol::engine::EngineState;
+
         let rule = DiscourageUnderscoreCommands::new();
 
-        let good_code = r#"
-def my-command [param: string] {
+        let good_code = r#"def my-command [param: string] {
     echo $param
-}
-"#;
-        let context = LintContext::test_from_source(good_code);
+}"#;
+
+        let engine_state = EngineState::new();
+        let (block, working_set) = parse_source(&engine_state, good_code.as_bytes()).unwrap();
+        let context = LintContext {
+            source: good_code,
+            ast: &block,
+            engine_state: &engine_state,
+            working_set: &working_set,
+            file_path: None,
+        };
+
         assert_eq!(
             rule.check(&context).len(),
             0,
@@ -102,14 +125,25 @@ def my-command [param: string] {
 
     #[test]
     fn test_single_word_command_not_flagged() {
+        use crate::parser::parse_source;
+        use nu_protocol::engine::EngineState;
+
         let rule = DiscourageUnderscoreCommands::new();
 
-        let good_code = r#"
-def command [param: string] {
+        let good_code = r#"def command [param: string] {
     echo $param
-}
-"#;
-        let context = LintContext::test_from_source(good_code);
+}"#;
+
+        let engine_state = EngineState::new();
+        let (block, working_set) = parse_source(&engine_state, good_code.as_bytes()).unwrap();
+        let context = LintContext {
+            source: good_code,
+            ast: &block,
+            engine_state: &engine_state,
+            working_set: &working_set,
+            file_path: None,
+        };
+
         assert_eq!(
             rule.check(&context).len(),
             0,

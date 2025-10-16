@@ -1,5 +1,6 @@
 use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
-use regex::Regex;
+use crate::ast_walker::{AstVisitor, VisitContext};
+use nu_protocol::ast::{Expr, Operator};
 
 pub struct PreferCompoundAssignment;
 
@@ -33,31 +34,113 @@ impl Rule for PreferCompoundAssignment {
     }
 
     fn check(&self, context: &LintContext) -> Vec<Violation> {
-        // Pattern: $var = $var op value
-        // Since regex doesn't support backreferences, we need to find all patterns and manually check
-        let pattern = Regex::new(r"\$(\w+)\s*=\s*\$(\w+)\s*([+\-*/])\s*").unwrap();
+        let mut visitor = CompoundAssignmentVisitor::new(self);
+        context.walk_ast(&mut visitor);
+        visitor.violations
+    }
+}
 
-        context.violations_from_regex_if(&pattern, self.id(), self.severity(), |mat| {
-            let caps = pattern.captures(mat.as_str())?;
-            let var_name1 = &caps[1];
-            let var_name2 = &caps[2];
+/// AST visitor that checks for compound assignment opportunities
+struct CompoundAssignmentVisitor<'a> {
+    rule: &'a PreferCompoundAssignment,
+    violations: Vec<Violation>,
+}
 
-            // Check if both variable names are the same
-            if var_name1 == var_name2 {
-                let operator = &caps[3];
-                let compound_op = format!("{}=", operator);
+impl<'a> CompoundAssignmentVisitor<'a> {
+    fn new(rule: &'a PreferCompoundAssignment) -> Self {
+        Self {
+            rule,
+            violations: Vec::new(),
+        }
+    }
+}
 
-                Some((
-                    format!(
-                        "Use compound assignment: ${} {} instead of ${} = ${} {}",
-                        var_name1, compound_op, var_name1, var_name1, operator
-                    ),
-                    Some(format!("Replace with: ${} {}", var_name1, compound_op)),
-                ))
-            } else {
-                None
+impl<'a> AstVisitor for CompoundAssignmentVisitor<'a> {
+    fn visit_expression(&mut self, expr: &nu_protocol::ast::Expression, context: &VisitContext) {
+        // Look for binary operations that are assignments
+        if let Expr::BinaryOp(left, op_expr, right) = &expr.expr {
+            if let Expr::Operator(nu_protocol::ast::Operator::Assignment(nu_protocol::ast::Assignment::Assign)) = &op_expr.expr {
+                // Found an assignment: var = value
+                // Check if the right side is a subexpression containing a binary operation
+                if let Expr::Subexpression(block_id) = &right.expr {
+                    let block = context.working_set.get_block(*block_id);
+                    // Look for a binary operation in the subexpression
+                    if let Some(pipeline) = block.pipelines.first() {
+                        if let Some(element) = pipeline.elements.first() {
+                            if let Expr::BinaryOp(sub_left, sub_op_expr, _sub_right) = &element.expr.expr {
+                                if let Expr::Operator(operator) = &sub_op_expr.expr {
+                                    // Check if left operand matches the variable being assigned to
+                                    if self.expressions_refer_to_same_variable(left, sub_left, context) {
+                                        let compound_op = self.get_compound_operator(operator);
+                                        if let Some(compound_op) = compound_op {
+                                            let var_text = context.get_span_contents(left.span);
+                                            let op_symbol = self.get_operator_symbol(operator);
+
+                                            self.violations.push(Violation {
+                                                rule_id: self.rule.id().to_string(),
+                                                severity: self.rule.severity(),
+                                                message: format!(
+                                                    "Use compound assignment: {} {} instead of {} = {} {} ...",
+                                                    var_text, compound_op, var_text, var_text, op_symbol
+                                                ),
+                                                span: expr.span,
+                                                suggestion: Some(format!("Replace with: {} {}", var_text, compound_op)),
+                                                fix: None,
+                                                file: None,
+                                            });
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
-        })
+        }
+
+        // Continue walking the AST
+        crate::ast_walker::walk_expression(self, expr, context);
+    }
+}
+
+impl<'a> CompoundAssignmentVisitor<'a> {
+
+    fn expressions_refer_to_same_variable(
+        &self,
+        expr1: &nu_protocol::ast::Expression,
+        expr2: &nu_protocol::ast::Expression,
+        context: &VisitContext,
+    ) -> bool {
+        // Simple text comparison for now - could be improved with semantic analysis
+        let text1 = context.get_span_contents(expr1.span);
+        let text2 = context.get_span_contents(expr2.span);
+        text1 == text2
+    }
+
+    fn get_compound_operator(&self, operator: &Operator) -> Option<&'static str> {
+        match operator {
+            Operator::Math(math_op) => match math_op {
+                nu_protocol::ast::Math::Add => Some("+="),
+                nu_protocol::ast::Math::Subtract => Some("-="),
+                nu_protocol::ast::Math::Multiply => Some("*="),
+                nu_protocol::ast::Math::Divide => Some("/="),
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+
+    fn get_operator_symbol(&self, operator: &Operator) -> &'static str {
+        match operator {
+            Operator::Math(math_op) => match math_op {
+                nu_protocol::ast::Math::Add => "+",
+                nu_protocol::ast::Math::Subtract => "-",
+                nu_protocol::ast::Math::Multiply => "*",
+                nu_protocol::ast::Math::Divide => "/",
+                _ => "?",
+            },
+            _ => "?",
+        }
     }
 }
 
@@ -67,10 +150,22 @@ mod tests {
 
     #[test]
     fn test_addition_assignment_detected() {
+        use crate::parser::parse_source;
+        use nu_protocol::engine::EngineState;
+
         let rule = PreferCompoundAssignment::new();
 
         let bad_code = "$count = $count + 1";
-        let context = LintContext::test_from_source(bad_code);
+        let engine_state = EngineState::new();
+        let (block, working_set) = parse_source(&engine_state, bad_code.as_bytes()).unwrap();
+        let context = LintContext {
+            source: bad_code,
+            ast: &block,
+            engine_state: &engine_state,
+            working_set: &working_set,
+            file_path: None,
+        };
+
         assert!(
             !rule.check(&context).is_empty(),
             "Should detect $x = $x + 1"
@@ -79,10 +174,22 @@ mod tests {
 
     #[test]
     fn test_subtraction_assignment_detected() {
+        use crate::parser::parse_source;
+        use nu_protocol::engine::EngineState;
+
         let rule = PreferCompoundAssignment::new();
 
         let bad_code = "$value = $value - 5";
-        let context = LintContext::test_from_source(bad_code);
+        let engine_state = EngineState::new();
+        let (block, working_set) = parse_source(&engine_state, bad_code.as_bytes()).unwrap();
+        let context = LintContext {
+            source: bad_code,
+            ast: &block,
+            engine_state: &engine_state,
+            working_set: &working_set,
+            file_path: None,
+        };
+
         assert!(
             !rule.check(&context).is_empty(),
             "Should detect $x = $x - 5"
@@ -91,10 +198,22 @@ mod tests {
 
     #[test]
     fn test_compound_assignment_not_flagged() {
+        use crate::parser::parse_source;
+        use nu_protocol::engine::EngineState;
+
         let rule = PreferCompoundAssignment::new();
 
         let good_code = "$count += 1";
-        let context = LintContext::test_from_source(good_code);
+        let engine_state = EngineState::new();
+        let (block, working_set) = parse_source(&engine_state, good_code.as_bytes()).unwrap();
+        let context = LintContext {
+            source: good_code,
+            ast: &block,
+            engine_state: &engine_state,
+            working_set: &working_set,
+            file_path: None,
+        };
+
         assert_eq!(
             rule.check(&context).len(),
             0,
@@ -104,10 +223,22 @@ mod tests {
 
     #[test]
     fn test_different_variables_not_flagged() {
+        use crate::parser::parse_source;
+        use nu_protocol::engine::EngineState;
+
         let rule = PreferCompoundAssignment::new();
 
         let good_code = "$x = $y + 1";
-        let context = LintContext::test_from_source(good_code);
+        let engine_state = EngineState::new();
+        let (block, working_set) = parse_source(&engine_state, good_code.as_bytes()).unwrap();
+        let context = LintContext {
+            source: good_code,
+            ast: &block,
+            engine_state: &engine_state,
+            working_set: &working_set,
+            file_path: None,
+        };
+
         assert_eq!(
             rule.check(&context).len(),
             0,

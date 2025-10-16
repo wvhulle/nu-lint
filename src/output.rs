@@ -2,7 +2,7 @@ use crate::context::{Severity, Violation};
 use miette::{Diagnostic, LabeledSpan, Report, SourceCode};
 use serde::Serialize;
 use std::fmt;
-
+use std::fmt::Write;
 #[derive(Debug, Clone, Copy)]
 pub enum OutputFormat {
     Text,
@@ -35,7 +35,7 @@ impl OutputFormatter for TextFormatter {
             let (line, column) = calculate_line_column(&source_code, violation.span.start);
 
             if let Some(file_path) = &violation.file {
-                output.push_str(&format!("\x1b[1m{file_path}:{line}:{column}\x1b[0m\n"));
+                writeln!(output, "\x1b[1m{file_path}:{line}:{column}\x1b[0m").unwrap();
             }
 
             let diagnostic = ViolationDiagnostic {
@@ -44,7 +44,7 @@ impl OutputFormatter for TextFormatter {
             };
 
             let report = Report::new(diagnostic);
-            output.push_str(&format!("{report:?}\n"));
+            writeln!(output, "{report:?}").unwrap();
         }
 
         let summary = Summary::from_violations(violations);

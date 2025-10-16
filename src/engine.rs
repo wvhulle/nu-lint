@@ -47,8 +47,7 @@ impl LintEngine {
         source: &str,
         path: Option<&Path>,
     ) -> Result<Vec<Violation>, LintError> {
-        let (block, working_set) =
-            parse_source(self.engine_state, source.as_bytes()).map_err(LintError::ParseError)?;
+        let (block, working_set) = parse_source(self.engine_state, source.as_bytes());
 
         let context = LintContext {
             source,

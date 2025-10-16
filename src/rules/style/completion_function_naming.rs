@@ -89,7 +89,7 @@ mod tests {
 
         let bad_code = r"def complete-branches [] { ^git branch }";
         let engine_state = EngineState::new();
-        let (block, working_set) = parse_source(&engine_state, bad_code.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, bad_code.as_bytes());
         let context = LintContext {
             source: bad_code,
             ast: &block,
@@ -111,7 +111,7 @@ mod tests {
 
         let good_code = r#"def "nu-complete git branches" [] { ^git branch }"#;
         let engine_state = EngineState::new();
-        let (block, working_set) = parse_source(&engine_state, good_code.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, good_code.as_bytes());
         let context = LintContext {
             source: good_code,
             ast: &block,
@@ -133,7 +133,7 @@ mod tests {
 
         let good_code = r#"def process-data [] { print "hello" }"#;
         let engine_state = EngineState::new();
-        let (block, working_set) = parse_source(&engine_state, good_code.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, good_code.as_bytes());
         let context = LintContext {
             source: good_code,
             ast: &block,

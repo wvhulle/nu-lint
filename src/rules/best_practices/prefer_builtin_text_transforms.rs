@@ -8,12 +8,13 @@ use std::collections::HashMap;
 pub struct PreferBuiltinTextTransforms;
 
 impl PreferBuiltinTextTransforms {
+    #[must_use]
     pub fn new() -> Self {
         Self
     }
 
     /// Map of text transformation commands to their Nushell built-in equivalents
-    /// Based on https://www.nushell.sh/book/coming_from_bash.html#command-equivalents
+    /// Based on <https://www.nushell.sh/book/coming_from_bash.html#command-equivalents>
     fn get_builtin_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
         let mut map = HashMap::new();
 
@@ -73,7 +74,7 @@ impl Default for PreferBuiltinTextTransforms {
 }
 
 impl Rule for PreferBuiltinTextTransforms {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "BP013"
     }
 
@@ -85,7 +86,7 @@ impl Rule for PreferBuiltinTextTransforms {
         Severity::Info
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Prefer Nushell built-in commands over external tools for text transformation (sed, awk, cut, wc, tr, tee)"
     }
 
@@ -122,7 +123,7 @@ fn build_fix(
                 let file = &args_text[1];
                 if pattern.starts_with("'s/") || pattern.starts_with("\"s/") {
                     // Extract pattern and replacement from sed syntax
-                    format!("open {} | str replace ...", file)
+                    format!("open {file} | str replace ...")
                 } else {
                     "str replace".to_string()
                 }
@@ -147,7 +148,7 @@ fn build_fix(
             // ^wc -l file.txt -> open file.txt | lines | length
             if args_text.contains(&"-l".to_string()) {
                 if let Some(file) = args_text.iter().find(|a| !a.starts_with('-')) {
-                    format!("open {} | lines | length", file)
+                    format!("open {file} | lines | length")
                 } else {
                     "lines | length".to_string()
                 }
@@ -203,9 +204,9 @@ mod tests {
     #[test]
     fn test_external_sed_detected() {
         let rule = PreferBuiltinTextTransforms::new();
-        let source = r#"^sed 's/foo/bar/' file.txt"#;
+        let source = r"^sed 's/foo/bar/' file.txt";
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -224,7 +225,7 @@ mod tests {
         let rule = PreferBuiltinTextTransforms::new();
         let source = r"^awk '{print $1}' file.txt";
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -243,9 +244,9 @@ mod tests {
     #[test]
     fn test_external_cut_detected() {
         let rule = PreferBuiltinTextTransforms::new();
-        let source = r#"^cut -d ',' -f 1 file.csv"#;
+        let source = r"^cut -d ',' -f 1 file.csv";
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -262,9 +263,9 @@ mod tests {
     #[test]
     fn test_external_wc_detected() {
         let rule = PreferBuiltinTextTransforms::new();
-        let source = r#"^wc -l file.txt"#;
+        let source = r"^wc -l file.txt";
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -283,7 +284,7 @@ mod tests {
         let rule = PreferBuiltinTextTransforms::new();
         let source = r#""hello" | str replace "h" "H""#;
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -301,7 +302,7 @@ mod tests {
         let rule = PreferBuiltinTextTransforms::new();
         let source = r"^sed 's/foo/bar/' file.txt";
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -325,9 +326,9 @@ mod tests {
     #[test]
     fn test_wc_line_count_fix() {
         let rule = PreferBuiltinTextTransforms::new();
-        let source = r#"^wc -l file.txt"#;
+        let source = r"^wc -l file.txt";
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -358,7 +359,7 @@ mod tests {
         let rule = PreferBuiltinTextTransforms::new();
         let source = r"^tr 'a-z' 'A-Z'";
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -381,9 +382,9 @@ mod tests {
     #[test]
     fn test_tr_downcase_fix() {
         let rule = PreferBuiltinTextTransforms::new();
-        let source = r#"^tr 'A-Z' 'a-z'"#;
+        let source = r"^tr 'A-Z' 'a-z'";
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -408,7 +409,7 @@ mod tests {
         let rule = PreferBuiltinTextTransforms::new();
         let source = r"^tee output.txt";
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -433,9 +434,9 @@ mod tests {
     #[test]
     fn test_rev_fix() {
         let rule = PreferBuiltinTextTransforms::new();
-        let source = r#"^rev"#;
+        let source = r"^rev";
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -460,7 +461,7 @@ mod tests {
         let rule = PreferBuiltinTextTransforms::new();
         let source = r#"^cut -d ',' -f 1 data.csv"#;
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,

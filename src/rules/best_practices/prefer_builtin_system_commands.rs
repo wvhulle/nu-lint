@@ -233,7 +233,7 @@ mod tests {
         let rule = PreferBuiltinSystemCommands::new();
         let source = r"^env";
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -252,7 +252,7 @@ mod tests {
         let rule = PreferBuiltinSystemCommands::new();
         let source = r"^date";
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -272,9 +272,9 @@ mod tests {
     #[test]
     fn test_external_man_detected() {
         let rule = PreferBuiltinSystemCommands::new();
-        let source = r#"^man ls"#;
+        let source = r"^man ls";
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -293,7 +293,7 @@ mod tests {
         let rule = PreferBuiltinSystemCommands::new();
         let source = r#"^read -p "Enter: ""#;
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -313,9 +313,9 @@ mod tests {
     #[test]
     fn test_builtin_date_not_flagged() {
         let rule = PreferBuiltinSystemCommands::new();
-        let source = r#"date now"#;
+        let source = r"date now";
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,

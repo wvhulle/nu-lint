@@ -88,7 +88,7 @@ def command [
 "#;
 
         let engine_state = EngineState::new();
-        let (block, working_set) = parse_source(&engine_state, code.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, code.as_bytes());
         let context = LintContext {
             source: code,
             ast: &block,
@@ -117,7 +117,7 @@ def command [
 "#;
 
         let engine_state = EngineState::new();
-        let (block, working_set) = parse_source(&engine_state, code.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, code.as_bytes());
         let context = LintContext {
             source: code,
             ast: &block,

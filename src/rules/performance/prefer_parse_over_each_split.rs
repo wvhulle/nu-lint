@@ -145,7 +145,7 @@ mod tests {
         // Use a simpler test case without external commands
         let bad_code = r#"["foo bar", "baz qux"] | each { |x| $x | split row " " }"#;
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, bad_code.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, bad_code.as_bytes());
         let context = LintContext {
             source: bad_code,
             ast: &block,
@@ -170,7 +170,7 @@ mod tests {
 
         let bad_code = r#"$lines | each { split row "," }"#;
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, bad_code.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, bad_code.as_bytes());
         let context = LintContext {
             source: bad_code,
             ast: &block,
@@ -194,7 +194,7 @@ mod tests {
 
         let good_code = r#"["foo bar", "baz qux"] | parse "{value} {description}""#;
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, good_code.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, good_code.as_bytes());
         let context = LintContext {
             source: good_code,
             ast: &block,
@@ -218,7 +218,7 @@ mod tests {
 
         let good_code = r#"let parts = $line | split row " ""#;
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, good_code.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, good_code.as_bytes());
         let context = LintContext {
             source: good_code,
             ast: &block,
@@ -240,9 +240,9 @@ mod tests {
 
         let rule = PreferParseOverEachSplit::default();
 
-        let good_code = r#"$items | each { |item| $item.name }"#;
+        let good_code = r"$items | each { |item| $item.name }";
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, good_code.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, good_code.as_bytes());
         let context = LintContext {
             source: good_code,
             ast: &block,

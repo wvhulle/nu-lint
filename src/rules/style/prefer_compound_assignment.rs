@@ -191,7 +191,7 @@ mod tests {
 
         let bad_code = "$count = $count + 1";
         let engine_state = EngineState::new();
-        let (block, working_set) = parse_source(&engine_state, bad_code.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, bad_code.as_bytes());
         let context = LintContext {
             source: bad_code,
             ast: &block,
@@ -215,7 +215,7 @@ mod tests {
 
         let bad_code = "$value = $value - 5";
         let engine_state = EngineState::new();
-        let (block, working_set) = parse_source(&engine_state, bad_code.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, bad_code.as_bytes());
         let context = LintContext {
             source: bad_code,
             ast: &block,
@@ -239,7 +239,7 @@ mod tests {
 
         let good_code = "$count += 1";
         let engine_state = EngineState::new();
-        let (block, working_set) = parse_source(&engine_state, good_code.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, good_code.as_bytes());
         let context = LintContext {
             source: good_code,
             ast: &block,
@@ -264,7 +264,7 @@ mod tests {
 
         let good_code = "$x = $y + 1";
         let engine_state = EngineState::new();
-        let (block, working_set) = parse_source(&engine_state, good_code.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, good_code.as_bytes());
         let context = LintContext {
             source: good_code,
             ast: &block,
@@ -288,7 +288,7 @@ mod tests {
         let rule = PreferCompoundAssignment::new();
         let bad_code = "$count = $count + 1";
         let engine_state = EngineState::new();
-        let (block, working_set) = parse_source(&engine_state, bad_code.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, bad_code.as_bytes());
         let context = LintContext {
             source: bad_code,
             ast: &block,
@@ -317,7 +317,7 @@ mod tests {
         let rule = PreferCompoundAssignment::new();
         let bad_code = "$value = $value - 5";
         let engine_state = EngineState::new();
-        let (block, working_set) = parse_source(&engine_state, bad_code.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, bad_code.as_bytes());
         let context = LintContext {
             source: bad_code,
             ast: &block,
@@ -345,7 +345,7 @@ mod tests {
         let rule = PreferCompoundAssignment::new();
         let bad_code = "$total = $total * 2";
         let engine_state = EngineState::new();
-        let (block, working_set) = parse_source(&engine_state, bad_code.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, bad_code.as_bytes());
         let context = LintContext {
             source: bad_code,
             ast: &block,
@@ -373,7 +373,7 @@ mod tests {
         let rule = PreferCompoundAssignment::new();
         let bad_code = "$result = $result / 3";
         let engine_state = EngineState::new();
-        let (block, working_set) = parse_source(&engine_state, bad_code.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, bad_code.as_bytes());
         let context = LintContext {
             source: bad_code,
             ast: &block,

@@ -2,6 +2,7 @@ use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
 use regex::Regex;
 use std::sync::OnceLock;
 
+#[derive(Default)]
 pub struct PreferErrorMake;
 
 impl PreferErrorMake {

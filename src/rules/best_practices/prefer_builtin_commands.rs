@@ -167,7 +167,7 @@ mod tests {
         let rule = PreferBuiltinForCommonCommands::new();
         let source = r"^ls -la";
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -186,7 +186,7 @@ mod tests {
         let rule = PreferBuiltinForCommonCommands::new();
         let source = r"ls | where type == dir";
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -205,7 +205,7 @@ mod tests {
         // Based on Nushell docs: cat <path> -> open --raw <path>
         let source = r"^cat file.txt";
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -228,7 +228,7 @@ mod tests {
         // Based on Nushell docs: grep <pattern> -> where $it =~ <substring> or find <substring>
         let source = r"^grep pattern file.txt";
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -254,7 +254,7 @@ mod tests {
         // Based on Nushell docs: command | head -5 -> command | first 5
         let source = r"^head -5 file.txt";
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -279,7 +279,7 @@ mod tests {
         let rule = PreferBuiltinForCommonCommands::new();
         let source = r"^my-custom-tool --flag";
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -302,7 +302,7 @@ mod tests {
         // Pipeline with multiple external commands
         let source = r"^cat file.txt | ^grep pattern | ^sort";
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -326,7 +326,7 @@ mod tests {
         // Based on Nushell docs: find . -name *.rs -> ls **/*.rs
         let source = r#"^find . -name "*.rs""#;
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -351,7 +351,7 @@ mod tests {
         let rule = PreferBuiltinForCommonCommands::new();
         let source = r"^ls -la";
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -377,7 +377,7 @@ mod tests {
         let rule = PreferBuiltinForCommonCommands::new();
         let source = r"^cat file.txt";
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -403,7 +403,7 @@ mod tests {
         let rule = PreferBuiltinForCommonCommands::new();
         let source = r"^grep pattern file.txt";
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -428,7 +428,7 @@ mod tests {
         let rule = PreferBuiltinForCommonCommands::new();
         let source = r"^head -5 file.txt";
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,
@@ -453,7 +453,7 @@ mod tests {
         let rule = PreferBuiltinForCommonCommands::new();
         let source = r"^tail -3 file.txt";
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
         let context = LintContext {
             source,
             ast: &block,

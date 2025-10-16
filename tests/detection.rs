@@ -84,6 +84,11 @@ fn test_s012_discourage_underscore_commands_detected() {
     check_rule_detected("S012");
 }
 
+#[test]
+fn test_s014_completion_function_naming_detected() {
+    check_rule_detected("S014");
+}
+
 // Best practices tests
 #[test]
 fn test_bp001_prefer_error_make_detected() {
@@ -125,10 +130,20 @@ fn test_bp009_max_positional_params_detected() {
     check_rule_detected("BP009");
 }
 
+#[test]
+fn test_bp011_descriptive_error_messages_detected() {
+    check_rule_detected("BP011");
+}
+
 // Documentation tests
 #[test]
 fn test_d001_missing_command_docs_detected() {
     check_rule_detected("D001");
+}
+
+#[test]
+fn test_d002_exported_function_docs_detected() {
+    check_rule_detected("D002");
 }
 
 // Type safety tests

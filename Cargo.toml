@@ -9,6 +9,8 @@ version = "0.1.0"
 
 [dependencies]
 # Nushell parser
+nu-cmd-lang = "0.108.0"
+nu-command = "0.108.0"
 nu-engine = "0.108.0"
 nu-parser = "0.108.0"
 nu-protocol = "0.108.0"

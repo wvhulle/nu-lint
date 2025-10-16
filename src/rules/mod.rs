@@ -44,6 +44,7 @@ impl RuleRegistry {
         registry.register(Box::new(style::PreferIsNotEmpty::new()));
         registry.register(Box::new(style::DiscouragedBareIgnore::new()));
         registry.register(Box::new(style::DiscourageUnderscoreCommands::new()));
+        registry.register(Box::new(style::CompletionFunctionNaming::new()));
 
         registry.register(Box::new(best_practices::PreferErrorMake::new()));
         registry.register(Box::new(best_practices::AvoidMutableAccumulation::new()));
@@ -52,10 +53,12 @@ impl RuleRegistry {
         registry.register(Box::new(best_practices::ConsistentErrorHandling::new()));
         registry.register(Box::new(best_practices::PreferMatchOverIfChain::new()));
         registry.register(Box::new(best_practices::PreferEachOverFor::new()));
+        registry.register(Box::new(best_practices::DescriptiveErrorMessages::new()));
 
         registry.register(Box::new(performance::PreferWhereOverEachIf::new()));
 
         registry.register(Box::new(documentation::MissingCommandDocs::new()));
+        registry.register(Box::new(documentation::ExportedFunctionDocs));
 
         registry.register(Box::new(type_safety::MissingTypeAnnotation::new()));
 

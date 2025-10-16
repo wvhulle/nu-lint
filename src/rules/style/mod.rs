@@ -1,4 +1,5 @@
 mod brace_spacing;
+mod completion_function_naming;
 mod discourage_bare_ignore;
 mod discourage_underscore_commands;
 mod kebab_case_commands;
@@ -10,6 +11,7 @@ mod snake_case_variables;
 mod unnecessary_variable_before_return;
 
 pub use brace_spacing::BraceSpacing;
+pub use completion_function_naming::CompletionFunctionNaming;
 pub use discourage_bare_ignore::DiscouragedBareIgnore;
 pub use discourage_underscore_commands::DiscourageUnderscoreCommands;
 pub use kebab_case_commands::KebabCaseCommands;

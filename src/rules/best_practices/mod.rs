@@ -1,5 +1,6 @@
 mod avoid_mutable_accumulation;
 mod consistent_error_handling;
+mod descriptive_error_messages;
 mod max_positional_params;
 mod prefer_each_over_for;
 mod prefer_error_make;
@@ -9,6 +10,7 @@ mod prefer_range_iteration;
 
 pub use avoid_mutable_accumulation::AvoidMutableAccumulation;
 pub use consistent_error_handling::ConsistentErrorHandling;
+pub use descriptive_error_messages::DescriptiveErrorMessages;
 pub use max_positional_params::MaxPositionalParams;
 pub use prefer_each_over_for::PreferEachOverFor;
 pub use prefer_error_make::PreferErrorMake;

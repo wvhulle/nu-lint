@@ -4,11 +4,27 @@ use crate::parser::parse_source;
 use crate::rules::RuleRegistry;
 use nu_protocol::engine::EngineState;
 use std::path::Path;
+use std::sync::OnceLock;
+
+/// Create an engine state with standard library commands
+/// This is cached since creating it is expensive
+fn create_engine_state_with_stdlib() -> EngineState {
+    // Create engine state with core language commands and full standard library
+    // This follows the pattern used in nushell's test_bins.rs
+    let engine_state = nu_cmd_lang::create_default_context();
+    nu_command::add_shell_command_context(engine_state)
+}
+
+/// Get a cached engine state with standard library
+fn get_stdlib_engine() -> &'static EngineState {
+    static ENGINE: OnceLock<EngineState> = OnceLock::new();
+    ENGINE.get_or_init(create_engine_state_with_stdlib)
+}
 
 pub struct LintEngine {
     registry: RuleRegistry,
     config: Config,
-    engine_state: EngineState,
+    engine_state: &'static EngineState,
 }
 
 impl LintEngine {
@@ -16,7 +32,7 @@ impl LintEngine {
         Self {
             registry: RuleRegistry::with_default_rules(),
             config,
-            engine_state: EngineState::new(),
+            engine_state: get_stdlib_engine(),
         }
     }
 

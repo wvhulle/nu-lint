@@ -1,9 +1,12 @@
-use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
+use crate::context::LintContext;
+use crate::lint::{Severity, Violation};
+use crate::rule::{Rule, RuleCategory};
 use regex::Regex;
 
 pub struct PreferParseCommand;
 
 impl PreferParseCommand {
+    #[must_use]
     pub fn new() -> Self {
         Self
     }
@@ -16,7 +19,7 @@ impl Default for PreferParseCommand {
 }
 
 impl Rule for PreferParseCommand {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "BP004"
     }
 
@@ -28,7 +31,7 @@ impl Rule for PreferParseCommand {
         Severity::Warning
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Prefer 'parse' command over manual string splitting with indexed access"
     }
 
@@ -39,22 +42,17 @@ impl Rule for PreferParseCommand {
         let split_get_pattern =
             Regex::new(r#"split\s+row\s+["'][^"']*["']\s*\|\s*(get\s+\d+|skip\s+\d+)"#).unwrap();
 
-        violations.extend(
-            context.violations_from_regex(
-                &split_get_pattern,
-                self.id(),
-                self.severity(),
-                "Manual string splitting with indexed access - consider using 'parse'",
-                Some(
-                    "Use 'parse \"pattern {field1} {field2}\"' for structured text extraction"
-                        .to_string(),
-                ),
-            ),
-        );
+        violations.extend(context.violations_from_regex(
+            &split_get_pattern,
+            self.id(),
+            self.severity(),
+            "Manual string splitting with indexed access - consider using 'parse'",
+            Some("Use 'parse \"pattern {field1} {field2}\"' for structured text extraction"),
+        ));
 
         // Pattern 2: let parts = ... split row, then $parts | get
         let split_to_var_pattern =
-            Regex::new(r#"let\s+(\w+)\s*=\s*\([^)]*split\s+row[^)]*\)"#).unwrap();
+            Regex::new(r"let\s+(\w+)\s*=\s*\([^)]*split\s+row[^)]*\)").unwrap();
 
         violations.extend(
             split_to_var_pattern
@@ -70,8 +68,7 @@ impl Rule for PreferParseCommand {
                             rule_id: self.id().to_string(),
                             severity: self.severity(),
                             message: format!(
-                                "Variable '{}' from split row with indexed access - consider using 'parse'",
-                                var_name
+                                "Variable '{var_name}' from split row with indexed access - consider using 'parse'"
                             ),
                             span: nu_protocol::Span::new(mat.start(), mat.end()),
                             suggestion: Some(

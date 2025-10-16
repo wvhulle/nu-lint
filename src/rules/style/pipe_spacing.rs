@@ -1,22 +1,26 @@
-use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
+use crate::context::LintContext;
+use crate::lint::{Severity, Violation};
+use crate::rule::{Rule, RuleCategory};
 use regex::Regex;
+use std::sync::OnceLock;
 
+#[derive(Default)]
 pub struct PipeSpacing;
 
 impl PipeSpacing {
-    pub fn new() -> Self {
-        Self
+    fn bad_pipe_pattern() -> &'static Regex {
+        static PATTERN: OnceLock<Regex> = OnceLock::new();
+        PATTERN.get_or_init(|| Regex::new(r"(\S\||  +\||\|  +|\|\S)").unwrap())
     }
-}
 
-impl Default for PipeSpacing {
-    fn default() -> Self {
-        Self::new()
+    fn closure_param_pattern() -> &'static Regex {
+        static PATTERN: OnceLock<Regex> = OnceLock::new();
+        PATTERN.get_or_init(|| Regex::new(r"\{\s*\|[^|]*\|").unwrap())
     }
 }
 
 impl Rule for PipeSpacing {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "S005"
     }
 
@@ -28,52 +32,49 @@ impl Rule for PipeSpacing {
         Severity::Warning
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Pipes should have exactly one space before and after"
     }
 
     fn check(&self, context: &LintContext) -> Vec<Violation> {
-        // Pattern that matches pipes with incorrect spacing
-        // Excludes pipes inside closure parameter lists by using negative lookbehind/lookahead
-        let bad_pipe_pattern = Regex::new(r"(\S\||  +\||\|  +|\|\S)").unwrap();
-
-        // Find closure parameter regions to exclude: {|...|
-        let closure_param_pattern = Regex::new(r"\{\s*\|[^|]*\|").unwrap();
-        let closure_regions: Vec<(usize, usize)> = closure_param_pattern
+        let closure_regions: Vec<_> = Self::closure_param_pattern()
             .find_iter(context.source)
             .map(|m| (m.start(), m.end()))
             .collect();
 
-        context.violations_from_regex_if(&bad_pipe_pattern, self.id(), self.severity(), |mat| {
-            // Skip if this pipe is inside a closure parameter list
-            let in_closure = closure_regions
-                .iter()
-                .any(|(c_start, c_end)| mat.start() >= *c_start && mat.end() <= *c_end);
+        context.violations_from_regex_if(
+            Self::bad_pipe_pattern(),
+            self.id(),
+            self.severity(),
+            |mat| {
+                // Skip if this pipe is inside a closure parameter list
+                if closure_regions
+                    .iter()
+                    .any(|&(start, end)| mat.start() >= start && mat.end() <= end)
+                {
+                    return None;
+                }
 
-            if in_closure {
-                return None;
-            }
+                let text = mat.as_str();
+                let message = match text.chars().next() {
+                    Some('|') if text.len() > 1 && !text.chars().nth(1)?.is_whitespace() => {
+                        "Pipe should have space after |"
+                    }
+                    _ if text.ends_with('|')
+                        && text.len() > 1
+                        && !text.chars().nth(text.len() - 2)?.is_whitespace() =>
+                    {
+                        "Pipe should have space before |"
+                    }
+                    _ => "Pipe should have exactly one space before and after",
+                };
 
-            let text = mat.as_str();
-            let message = if text.starts_with('|')
-                && text.len() > 1
-                && !text.chars().nth(1).unwrap().is_whitespace()
-            {
-                "Pipe should have space after |"
-            } else if text.ends_with('|')
-                && text.len() > 1
-                && !text.chars().nth(text.len() - 2).unwrap().is_whitespace()
-            {
-                "Pipe should have space before |"
-            } else {
-                "Pipe should have exactly one space before and after"
-            };
-
-            Some((
-                message.to_string(),
-                Some("Use ' | ' with single spaces".to_string()),
-            ))
-        })
+                Some((
+                    message.to_string(),
+                    Some("Use ' | ' with single spaces".to_string()),
+                ))
+            },
+        )
     }
 }
 
@@ -83,7 +84,7 @@ mod tests {
 
     #[test]
     fn test_pipe_spacing() {
-        let rule = PipeSpacing::new();
+        let rule = PipeSpacing::default();
 
         let good = "ls | get name | str upcase";
         let context = LintContext::test_from_source(good);
@@ -96,7 +97,7 @@ mod tests {
 
     #[test]
     fn test_closure_pipe_not_flagged() {
-        let rule = PipeSpacing::new();
+        let rule = PipeSpacing::default();
 
         // Closures with parameters should not be flagged
         let closure_code = "let completer = {|spans| echo $spans}";

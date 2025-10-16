@@ -1,11 +1,20 @@
-use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
+use crate::context::LintContext;
+use crate::lint::{Severity, Violation};
+use crate::rule::{Rule, RuleCategory};
 use regex::Regex;
+use std::sync::OnceLock;
 
 pub struct DiscouragedBareIgnore;
 
 impl DiscouragedBareIgnore {
+    #[must_use]
     pub fn new() -> Self {
         Self
+    }
+
+    fn ignore_pattern() -> &'static Regex {
+        static PATTERN: OnceLock<Regex> = OnceLock::new();
+        PATTERN.get_or_init(|| Regex::new(r"\|\s*ignore\s*(?:\n|$)").unwrap())
     }
 }
 
@@ -16,7 +25,7 @@ impl Default for DiscouragedBareIgnore {
 }
 
 impl Rule for DiscouragedBareIgnore {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "S011"
     }
 
@@ -28,13 +37,13 @@ impl Rule for DiscouragedBareIgnore {
         Severity::Info
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Using '| ignore' may hide errors - consider explicit error handling"
     }
 
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         // Pattern: | ignore (but allow external commands with ^)
-        let ignore_pattern = Regex::new(r"\|\s*ignore\s*(?:\n|$)").unwrap();
+        let ignore_pattern = Self::ignore_pattern();
 
         ignore_pattern
             .find_iter(context.source)
@@ -76,9 +85,9 @@ mod tests {
     fn test_bare_ignore_detected() {
         let rule = DiscouragedBareIgnore::new();
 
-        let bad_code = r#"
+        let bad_code = r"
 some | pipeline | each { |x| process $x } | ignore
-"#;
+";
         let context = LintContext::test_from_source(bad_code);
         assert!(
             !rule.check(&context).is_empty(),
@@ -90,9 +99,9 @@ some | pipeline | each { |x| process $x } | ignore
     fn test_external_command_ignore_acceptable() {
         let rule = DiscouragedBareIgnore::new();
 
-        let acceptable_code = r#"
+        let acceptable_code = r"
 ^bluetoothctl power on | ignore
-"#;
+";
         let context = LintContext::test_from_source(acceptable_code);
         assert_eq!(
             rule.check(&context).len(),
@@ -105,9 +114,9 @@ some | pipeline | each { |x| process $x } | ignore
     fn test_do_ignore_not_flagged() {
         let rule = DiscouragedBareIgnore::new();
 
-        let good_code = r#"
+        let good_code = r"
 do -i { some | pipeline }
-"#;
+";
         let context = LintContext::test_from_source(good_code);
         assert_eq!(rule.check(&context).len(), 0, "Should not flag do -i");
     }

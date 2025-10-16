@@ -1,9 +1,12 @@
-use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
+use crate::context::LintContext;
+use crate::lint::{Severity, Violation};
+use crate::rule::{Rule, RuleCategory};
 use regex::Regex;
 
 pub struct PreferMatchOverIfChain;
 
 impl PreferMatchOverIfChain {
+    #[must_use]
     pub fn new() -> Self {
         Self
     }
@@ -16,7 +19,7 @@ impl Default for PreferMatchOverIfChain {
 }
 
 impl Rule for PreferMatchOverIfChain {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "BP007"
     }
 
@@ -28,7 +31,7 @@ impl Rule for PreferMatchOverIfChain {
         Severity::Info
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Use 'match' for value-based branching instead of if-else-if chains"
     }
 
@@ -49,8 +52,7 @@ impl Rule for PreferMatchOverIfChain {
             if var_name1 == var_name2 {
                 Some((
                     format!(
-                        "If-else-if chain comparing '{}' to different values - consider using 'match'",
-                        var_name1
+                        "If-else-if chain comparing '{var_name1}' to different values - consider using 'match'"
                     ),
                     Some("Use 'match $var { value1 => { ... }, value2 => { ... }, _ => { ... } }' for clearer value-based branching".to_string()),
                 ))
@@ -70,13 +72,13 @@ impl Rule for PreferMatchOverIfChain {
                 .iter()
                 .any(|v| v.span.start <= mat.start() && mat.start() <= v.span.end);
 
-            if !already_reported {
+            if already_reported {
+                None
+            } else {
                 Some((
                     "Long if-else-if chain - consider using 'match' for clearer branching".to_string(),
                     Some("For multiple related conditions, 'match' provides clearer pattern matching".to_string()),
                 ))
-            } else {
-                None
             }
         }));
 

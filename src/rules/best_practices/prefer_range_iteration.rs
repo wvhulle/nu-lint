@@ -1,9 +1,12 @@
-use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
+use crate::context::LintContext;
+use crate::lint::{Severity, Violation};
+use crate::rule::{Rule, RuleCategory};
 use regex::Regex;
 
 pub struct PreferRangeIteration;
 
 impl PreferRangeIteration {
+    #[must_use]
     pub fn new() -> Self {
         Self
     }
@@ -16,7 +19,7 @@ impl Default for PreferRangeIteration {
 }
 
 impl Rule for PreferRangeIteration {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "BP003"
     }
 
@@ -28,7 +31,7 @@ impl Rule for PreferRangeIteration {
         Severity::Warning
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Prefer range iteration over while loops with counters"
     }
 
@@ -55,8 +58,7 @@ impl Rule for PreferRangeIteration {
             {
                 Some((
                     format!(
-                        "While loop with counter '{}' - consider using range iteration",
-                        counter_name
+                        "While loop with counter '{counter_name}' - consider using range iteration"
                     ),
                     Some(
                         "Use '1..$max | each { |i| ... }' instead of while loop with counter"
@@ -78,13 +80,13 @@ mod tests {
     fn test_while_counter_detected() {
         let rule = PreferRangeIteration::new();
 
-        let bad_code = r#"
+        let bad_code = r"
 mut count = 0
 while $count < 10 {
     echo $count
     $count = $count + 1
 }
-"#;
+";
         let context = LintContext::test_from_source(bad_code);
         assert!(
             !rule.check(&context).is_empty(),
@@ -96,13 +98,13 @@ while $count < 10 {
     fn test_compound_increment_detected() {
         let rule = PreferRangeIteration::new();
 
-        let bad_code = r#"
+        let bad_code = r"
 mut attempts = 0
 while $attempts < 5 {
     try_something
     $attempts += 1
 }
-"#;
+";
         let context = LintContext::test_from_source(bad_code);
         assert!(
             !rule.check(&context).is_empty(),

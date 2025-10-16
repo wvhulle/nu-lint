@@ -1,30 +1,31 @@
-use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
+use crate::context::LintContext;
+use crate::lint::{Severity, Violation};
+use crate::rule::{Rule, RuleCategory};
+use heck::ToShoutySnakeCase;
 use regex::Regex;
+use std::sync::OnceLock;
 
-pub struct ScreamingSnakeConstants {
-    pattern: Regex,
-}
+#[derive(Default)]
+pub struct ScreamingSnakeConstants;
 
 impl ScreamingSnakeConstants {
-    pub fn new() -> Self {
-        Self {
-            pattern: Regex::new(r"^[A-Z][A-Z0-9_]*$").unwrap(),
-        }
+    fn screaming_snake_pattern() -> &'static Regex {
+        static PATTERN: OnceLock<Regex> = OnceLock::new();
+        PATTERN.get_or_init(|| Regex::new(r"^[A-Z][A-Z0-9_]*$").unwrap())
     }
 
-    fn is_valid_screaming_snake(&self, name: &str) -> bool {
-        self.pattern.is_match(name)
+    fn const_pattern() -> &'static Regex {
+        static PATTERN: OnceLock<Regex> = OnceLock::new();
+        PATTERN.get_or_init(|| Regex::new(r"\bconst\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=").unwrap())
     }
-}
 
-impl Default for ScreamingSnakeConstants {
-    fn default() -> Self {
-        Self::new()
+    fn is_valid_screaming_snake(name: &str) -> bool {
+        Self::screaming_snake_pattern().is_match(name)
     }
 }
 
 impl Rule for ScreamingSnakeConstants {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "S003"
     }
 
@@ -36,12 +37,12 @@ impl Rule for ScreamingSnakeConstants {
         Severity::Warning
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Constants should use SCREAMING_SNAKE_CASE naming convention"
     }
 
     fn check(&self, context: &LintContext) -> Vec<Violation> {
-        let const_pattern = Regex::new(r"\bconst\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=").unwrap();
+        let const_pattern = Self::const_pattern();
 
         const_pattern
             .captures_iter(context.source)
@@ -49,74 +50,57 @@ impl Rule for ScreamingSnakeConstants {
                 let const_match = cap.get(1)?;
                 let const_name = const_match.as_str();
 
-                if !self.is_valid_screaming_snake(const_name) {
+                if Self::is_valid_screaming_snake(const_name) {
+                    None
+                } else {
                     Some(Violation {
                         rule_id: self.id().to_string(),
                         severity: self.severity(),
                         message: format!(
-                            "Constant '{}' should use SCREAMING_SNAKE_CASE naming convention",
-                            const_name
+                            "Constant '{const_name}' should use SCREAMING_SNAKE_CASE naming convention"
                         ),
                         span: nu_protocol::Span::new(const_match.start(), const_match.end()),
                         suggestion: Some(format!(
                             "Consider renaming to: {}",
-                            to_screaming_snake(const_name)
+                            const_name.to_shouty_snake_case()
                         )),
                         fix: None,
                         file: None,
                     })
-                } else {
-                    None
                 }
             })
             .collect()
     }
 }
 
-fn to_screaming_snake(s: &str) -> String {
-    let mut result = String::new();
-    let mut prev_is_lower = false;
-
-    for (i, c) in s.chars().enumerate() {
-        if c == '-' {
-            result.push('_');
-            prev_is_lower = false;
-        } else if c.is_uppercase() {
-            if i > 0 && prev_is_lower {
-                result.push('_');
-            }
-            result.push(c);
-            prev_is_lower = false;
-        } else if c.is_lowercase() {
-            result.push(c.to_uppercase().next().unwrap());
-            prev_is_lower = true;
-        } else {
-            result.push(c);
-            prev_is_lower = false;
-        }
-    }
-
-    result
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use heck::ToShoutySnakeCase;
 
     #[test]
     fn test_to_screaming_snake() {
-        assert_eq!(to_screaming_snake("maxValue"), "MAX_VALUE");
-        assert_eq!(to_screaming_snake("max_value"), "MAX_VALUE");
-        assert_eq!(to_screaming_snake("MAX_VALUE"), "MAX_VALUE");
+        assert_eq!("maxValue".to_shouty_snake_case(), "MAX_VALUE");
+        assert_eq!("max_value".to_shouty_snake_case(), "MAX_VALUE");
+        assert_eq!("MAX_VALUE".to_shouty_snake_case(), "MAX_VALUE");
     }
 
     #[test]
     fn test_is_valid_screaming_snake() {
-        let rule = ScreamingSnakeConstants::new();
-        assert!(rule.is_valid_screaming_snake("MAX_VALUE"));
-        assert!(rule.is_valid_screaming_snake("CONSTANT"));
-        assert!(rule.is_valid_screaming_snake("MY_CONSTANT_2"));
-        assert!(!rule.is_valid_screaming_snake("maxValue"));
-        assert!(!rule.is_valid_screaming_snake("max_value"));
+        assert!(ScreamingSnakeConstants::is_valid_screaming_snake(
+            "MAX_VALUE"
+        ));
+        assert!(ScreamingSnakeConstants::is_valid_screaming_snake(
+            "CONSTANT"
+        ));
+        assert!(ScreamingSnakeConstants::is_valid_screaming_snake(
+            "MY_CONSTANT_2"
+        ));
+        assert!(!ScreamingSnakeConstants::is_valid_screaming_snake(
+            "maxValue"
+        ));
+        assert!(!ScreamingSnakeConstants::is_valid_screaming_snake(
+            "max_value"
+        ));
     }
 }

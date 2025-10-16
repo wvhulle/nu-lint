@@ -1,72 +1,11 @@
-use miette::{Diagnostic, SourceSpan};
+use crate::lint::{Fix, Replacement, Severity, Violation};
+use crate::visitor::{AstVisitor, VisitContext};
 use nu_protocol::{
+    DeclId, Span,
     ast::Block,
     engine::{Command, EngineState, StateWorkingSet},
-    Span,
 };
 use std::path::Path;
-use thiserror::Error;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RuleCategory {
-    Style,
-    BestPractices,
-    Performance,
-    Documentation,
-    TypeSafety,
-}
-
-impl std::fmt::Display for RuleCategory {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            RuleCategory::Style => write!(f, "style"),
-            RuleCategory::BestPractices => write!(f, "best-practices"),
-            RuleCategory::Performance => write!(f, "performance"),
-            RuleCategory::Documentation => write!(f, "documentation"),
-            RuleCategory::TypeSafety => write!(f, "type-safety"),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Severity {
-    Error,
-    Warning,
-    Info,
-}
-
-impl std::fmt::Display for Severity {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Severity::Error => write!(f, "error"),
-            Severity::Warning => write!(f, "warning"),
-            Severity::Info => write!(f, "info"),
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Violation {
-    pub rule_id: String,
-    pub severity: Severity,
-    pub message: String,
-    pub span: Span,
-    pub suggestion: Option<String>,
-    pub fix: Option<Fix>,
-    pub file: Option<String>,
-}
-
-#[derive(Debug, Clone)]
-pub struct Fix {
-    pub description: String,
-    pub replacements: Vec<Replacement>,
-}
-
-#[derive(Debug, Clone)]
-pub struct Replacement {
-    pub span: Span,
-    pub new_text: String,
-}
 
 pub struct LintContext<'a> {
     pub source: &'a str,
@@ -76,9 +15,10 @@ pub struct LintContext<'a> {
     pub file_path: Option<&'a Path>,
 }
 
-impl<'a> LintContext<'a> {
+impl LintContext<'_> {
     /// Get the range of declaration IDs that were added during parsing (the delta)
-    /// Returns (base_count, total_count) for iterating: base_count..total_count
+    /// Returns (`base_count`, `total_count`) for iterating: `base_count..total_count`
+    #[must_use]
     pub fn new_decl_range(&self) -> (usize, usize) {
         let base_count = self.engine_state.num_decls();
         let total_count = self.working_set.num_decls();
@@ -90,7 +30,7 @@ impl<'a> LintContext<'a> {
     pub fn new_user_functions(&self) -> impl Iterator<Item = (usize, &dyn Command)> + '_ {
         let (base_count, total_count) = self.new_decl_range();
         (base_count..total_count)
-            .map(|decl_id| (decl_id, self.working_set.get_decl(decl_id)))
+            .map(|decl_id| (decl_id, self.working_set.get_decl(DeclId::new(decl_id))))
             .filter(|(_, decl)| {
                 let name = &decl.signature().name;
                 !name.contains(' ') && !name.starts_with('_')
@@ -112,7 +52,7 @@ impl<'a> LintContext<'a> {
     /// This is the most flexible regex helper. Use when you need to:
     /// - Filter matches conditionally (not all matches are violations)
     /// - Customize both message and suggestion per match
-    /// - Access the full regex::Match object for complex logic
+    /// - Access the full `regex::Match` object for complex logic
     ///
     /// # Arguments
     /// * `pattern` - The regex pattern to match
@@ -188,13 +128,13 @@ impl<'a> LintContext<'a> {
         rule_id: &str,
         severity: Severity,
         message_fn: F,
-        suggestion: Option<String>,
+        suggestion: Option<&str>,
     ) -> Vec<Violation>
     where
         F: Fn(&str) -> String,
     {
         self.violations_from_regex_if(pattern, rule_id, severity, |mat| {
-            Some((message_fn(mat.as_str()), suggestion.clone()))
+            Some((message_fn(mat.as_str()), suggestion.map(String::from)))
         })
     }
 
@@ -220,47 +160,68 @@ impl<'a> LintContext<'a> {
     ///     Some("Replace with 'is-not-empty'")
     /// )
     /// ```
+    #[must_use]
     pub fn violations_from_regex(
         &self,
         pattern: &regex::Regex,
         rule_id: &str,
         severity: Severity,
-        message: impl Into<String>,
-        suggestion: Option<String>,
+        message: &str,
+        suggestion: Option<&str>,
     ) -> Vec<Violation> {
-        let message = message.into();
         self.violations_from_regex_if(pattern, rule_id, severity, |_| {
-            Some((message.clone(), suggestion.clone()))
+            Some((message.to_string(), suggestion.map(String::from)))
         })
     }
-}
 
-pub trait Rule: Send + Sync {
-    fn id(&self) -> &str;
-    fn category(&self) -> RuleCategory;
-    fn severity(&self) -> Severity;
-    fn description(&self) -> &str;
+    /// Walk the AST using a visitor pattern
+    ///
+    /// This is the primary method for AST-based rules. The visitor will be called
+    /// for each relevant AST node type. This walks both the main AST block and
+    /// all blocks accessible through function declarations.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let mut visitor = MyCustomVisitor::new();
+    /// context.walk_ast(&mut visitor);
+    /// let violations = visitor.get_violations();
+    /// ```
+    pub fn walk_ast<V: AstVisitor>(&self, visitor: &mut V) {
+        let visit_context = VisitContext::new(self.working_set, self.source);
 
-    fn check(&self, context: &LintContext) -> Vec<Violation>;
-}
+        // Visit the main AST block
+        visitor.visit_block(self.ast, &visit_context);
 
-#[derive(Error, Debug, Diagnostic)]
-pub enum LintError {
-    #[error("Failed to parse file: {0}")]
-    ParseError(String),
+        // Visit function bodies by iterating through user-defined functions
+        for (_decl_id, decl) in self.new_user_functions() {
+            if let Some(block_id) = decl.block_id() {
+                let block = self.working_set.get_block(block_id);
+                visitor.visit_block(block, &visit_context);
+            }
+        }
+    }
 
-    #[error("Failed to read file: {0}")]
-    #[diagnostic(code(nu_lint::io_error))]
-    IoError(#[from] std::io::Error),
+    /// Get the text content of a span
+    #[must_use]
+    pub fn get_span_contents(&self, span: Span) -> &str {
+        crate::parser::get_span_contents(self.source, span)
+    }
 
-    #[error("Invalid configuration: {0}")]
-    #[diagnostic(code(nu_lint::config_error))]
-    ConfigError(String),
-}
-
-impl Violation {
-    pub fn to_source_span(&self) -> SourceSpan {
-        SourceSpan::from((self.span.start, self.span.end - self.span.start))
+    /// Create a simple Fix with a single replacement
+    /// This is a convenience method for creating fixes that replace one span with new text
+    pub fn create_simple_fix(
+        &self,
+        description: impl Into<String>,
+        span: Span,
+        new_text: impl Into<String>,
+    ) -> Fix {
+        Fix {
+            description: description.into(),
+            replacements: vec![Replacement {
+                span,
+                new_text: new_text.into(),
+            }],
+        }
     }
 }
 

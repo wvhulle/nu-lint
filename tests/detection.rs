@@ -3,13 +3,12 @@ use std::fs;
 
 /// Helper function to run linter on a test file and check for specific rule
 fn check_rule_detected(rule_id: &str) {
-    let test_file = format!("tests/nu/{}.nu", rule_id);
+    let test_file = format!("tests/nu/{rule_id}.nu");
 
     // Ensure test file exists
     assert!(
         fs::metadata(&test_file).is_ok(),
-        "Test file {} not found",
-        test_file
+        "Test file {test_file} not found"
     );
 
     let mut cmd = Command::cargo_bin("nu-lint").unwrap();
@@ -20,16 +19,12 @@ fn check_rule_detected(rule_id: &str) {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
-    let combined = format!("{}{}", stdout, stderr);
+    let combined = format!("{stdout}{stderr}");
 
     // Check that the specific rule ID appears in the output
     assert!(
         combined.contains(rule_id),
-        "Rule {} not detected in file {}. Stdout:\n{}\nStderr:\n{}",
-        rule_id,
-        test_file,
-        stdout,
-        stderr
+        "Rule {rule_id} not detected in file {test_file}. Stdout:\n{stdout}\nStderr:\n{stderr}"
     );
 }
 
@@ -52,11 +47,6 @@ fn test_s003_screaming_snake_constants_detected() {
 #[test]
 fn test_s005_pipe_spacing_detected() {
     check_rule_detected("S005");
-}
-
-#[test]
-fn test_s006_no_list_commas_detected() {
-    check_rule_detected("S006");
 }
 
 #[test]
@@ -87,6 +77,16 @@ fn test_s011_discourage_bare_ignore_detected() {
 #[test]
 fn test_s012_discourage_underscore_commands_detected() {
     check_rule_detected("S012");
+}
+
+#[test]
+fn test_s014_completion_function_naming_detected() {
+    check_rule_detected("S014");
+}
+
+#[test]
+fn test_s015_unnecessary_mut_detected() {
+    check_rule_detected("S015");
 }
 
 // Best practices tests
@@ -131,19 +131,34 @@ fn test_bp009_max_positional_params_detected() {
 }
 
 #[test]
-fn test_bp009_ast_max_positional_params_detected() {
-    check_rule_detected("BP009-AST");
+fn test_bp011_descriptive_error_messages_detected() {
+    check_rule_detected("BP011");
 }
 
 #[test]
-fn test_bp010_prefer_reduce_over_fold_detected() {
-    check_rule_detected("BP010");
+fn test_bp012_prefer_builtin_commands_detected() {
+    check_rule_detected("BP012");
+}
+
+#[test]
+fn test_bp013_prefer_builtin_text_transforms_detected() {
+    check_rule_detected("BP013");
+}
+
+#[test]
+fn test_bp014_prefer_builtin_system_commands_detected() {
+    check_rule_detected("BP014");
 }
 
 // Documentation tests
 #[test]
 fn test_d001_missing_command_docs_detected() {
     check_rule_detected("D001");
+}
+
+#[test]
+fn test_d002_exported_function_docs_detected() {
+    check_rule_detected("D002");
 }
 
 // Type safety tests
@@ -156,4 +171,14 @@ fn test_t001_missing_type_annotation_detected() {
 #[test]
 fn test_p001_prefer_where_over_each_if_detected() {
     check_rule_detected("P001");
+}
+
+#[test]
+fn test_p002_prefer_lines_over_split_detected() {
+    check_rule_detected("P002");
+}
+
+#[test]
+fn test_p003_prefer_parse_over_each_split_detected() {
+    check_rule_detected("P003");
 }

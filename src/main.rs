@@ -78,7 +78,7 @@ fn main() {
         match Config::load_from_file(&config_path) {
             Ok(cfg) => cfg,
             Err(e) => {
-                eprintln!("Error loading config: {}", e);
+                eprintln!("Error loading config: {e}");
                 process::exit(2);
             }
         }
@@ -128,18 +128,12 @@ fn main() {
         if path.is_file() {
             files_to_lint.push(path.clone());
         } else if path.is_dir() {
-            match collect_nu_files(path) {
-                Ok(files) => {
-                    if files.is_empty() {
-                        eprintln!("Warning: No .nu files found in {}", path.display());
-                    }
-                    files_to_lint.extend(files);
-                }
-                Err(e) => {
-                    eprintln!("Error scanning directory {}: {}", path.display(), e);
-                    has_errors = true;
-                }
+            let files = collect_nu_files(path);
+
+            if files.is_empty() {
+                eprintln!("Warning: No .nu files found in {}", path.display());
             }
+            files_to_lint.extend(files);
         }
     }
 
@@ -174,18 +168,18 @@ fn main() {
 
     let formatter = TextFormatter;
     let output = formatter.format(&all_violations, &source);
-    println!("{}", output);
+    println!("{output}");
 
-    let exit_code = if all_violations.is_empty() { 0 } else { 1 };
+    let exit_code = i32::from(!all_violations.is_empty());
 
     process::exit(exit_code);
 }
 
 /// Recursively collect all .nu files from a directory
-fn collect_nu_files(dir: &PathBuf) -> std::io::Result<Vec<PathBuf>> {
+fn collect_nu_files(dir: &PathBuf) -> std::vec::Vec<std::path::PathBuf> {
     let mut nu_files = Vec::new();
     visit_dir(dir, &mut nu_files);
-    Ok(nu_files)
+    nu_files
 }
 
 fn visit_dir(dir: &PathBuf, nu_files: &mut Vec<PathBuf>) {
@@ -244,7 +238,7 @@ fn explain_rule(config: &Config, rule_id: &str) {
         println!("Severity: {}", rule.severity());
         println!("Description: {}", rule.description());
     } else {
-        eprintln!("Error: Rule '{}' not found", rule_id);
+        eprintln!("Error: Rule '{rule_id}' not found");
         process::exit(2);
     }
 }

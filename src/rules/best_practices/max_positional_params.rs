@@ -1,10 +1,13 @@
-use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
+use crate::context::LintContext;
+use crate::lint::{Severity, Violation};
+use crate::rule::{Rule, RuleCategory};
 
 pub struct MaxPositionalParams {
     max_positional: usize,
 }
 
 impl MaxPositionalParams {
+    #[must_use]
     pub fn new() -> Self {
         Self { max_positional: 2 }
     }
@@ -17,7 +20,7 @@ impl Default for MaxPositionalParams {
 }
 
 impl Rule for MaxPositionalParams {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "BP009"
     }
 
@@ -29,7 +32,7 @@ impl Rule for MaxPositionalParams {
         Severity::Warning
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Custom commands should have ≤ 2 positional parameters"
     }
 
@@ -87,7 +90,7 @@ def command [
 "#;
 
         let engine_state = EngineState::new();
-        let (block, working_set) = parse_source(&engine_state, code.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, code.as_bytes());
         let context = LintContext {
             source: code,
             ast: &block,
@@ -116,7 +119,7 @@ def command [
 "#;
 
         let engine_state = EngineState::new();
-        let (block, working_set) = parse_source(&engine_state, code.as_bytes()).unwrap();
+        let (block, working_set) = parse_source(&engine_state, code.as_bytes());
         let context = LintContext {
             source: code,
             ast: &block,

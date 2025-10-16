@@ -1,8 +1,8 @@
-use crate::context::{Severity, Violation};
+use crate::lint::{Severity, Violation};
 use miette::{Diagnostic, LabeledSpan, Report, SourceCode};
 use serde::Serialize;
 use std::fmt;
-
+use std::fmt::Write;
 #[derive(Debug, Clone, Copy)]
 pub enum OutputFormat {
     Text,
@@ -35,10 +35,7 @@ impl OutputFormatter for TextFormatter {
             let (line, column) = calculate_line_column(&source_code, violation.span.start);
 
             if let Some(file_path) = &violation.file {
-                output.push_str(&format!(
-                    "\x1b[1m{}:{}:{}\x1b[0m\n",
-                    file_path, line, column
-                ));
+                writeln!(output, "\x1b[1m{file_path}:{line}:{column}\x1b[0m").unwrap();
             }
 
             let diagnostic = ViolationDiagnostic {
@@ -47,14 +44,16 @@ impl OutputFormatter for TextFormatter {
             };
 
             let report = Report::new(diagnostic);
-            output.push_str(&format!("{:?}\n", report));
+            writeln!(output, "{report:?}").unwrap();
         }
 
         let summary = Summary::from_violations(violations);
-        output.push_str(&format!(
-            "\n{} error(s), {} warning(s), {} info\n",
+        writeln!(
+            output,
+            "\n{} error(s), {} warning(s), {} info",
             summary.errors, summary.warnings, summary.info
-        ));
+        )
+        .unwrap();
 
         output
     }
@@ -114,8 +113,8 @@ impl Diagnostic for ViolationDiagnostic {
     fn help<'a>(&'a self) -> Option<Box<dyn fmt::Display + 'a>> {
         self.violation
             .suggestion
-            .as_ref()
-            .map(|s| Box::new(s.clone()) as Box<dyn fmt::Display>)
+            .as_deref()
+            .map(|s| Box::new(s) as Box<dyn fmt::Display>)
     }
 
     fn labels(&self) -> Option<Box<dyn Iterator<Item = LabeledSpan> + '_>> {
@@ -158,18 +157,16 @@ pub struct Summary {
 }
 
 impl Summary {
+    #[must_use]
     pub fn from_violations(violations: &[Violation]) -> Self {
-        let mut errors = 0;
-        let mut warnings = 0;
-        let mut info = 0;
-
-        for v in violations {
-            match v.severity {
-                Severity::Error => errors += 1,
-                Severity::Warning => warnings += 1,
-                Severity::Info => info += 1,
-            }
-        }
+        let (errors, warnings, info) =
+            violations
+                .iter()
+                .fold((0, 0, 0), |(e, w, i), v| match v.severity {
+                    Severity::Error => (e + 1, w, i),
+                    Severity::Warning => (e, w + 1, i),
+                    Severity::Info => (e, w, i + 1),
+                });
 
         Self {
             errors,

@@ -1,30 +1,26 @@
-use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
+use crate::context::LintContext;
+use crate::lint::{Severity, Violation};
+use crate::rule::{Rule, RuleCategory};
+use heck::ToKebabCase;
 use regex::Regex;
+use std::sync::OnceLock;
 
-pub struct KebabCaseCommands {
-    pattern: Regex,
-}
+#[derive(Default)]
+pub struct KebabCaseCommands;
 
 impl KebabCaseCommands {
-    pub fn new() -> Self {
-        Self {
-            pattern: Regex::new(r"^[a-z][a-z0-9]*(-[a-z0-9]+)*$").unwrap(),
-        }
+    fn kebab_pattern() -> &'static Regex {
+        static PATTERN: OnceLock<Regex> = OnceLock::new();
+        PATTERN.get_or_init(|| Regex::new(r"^[a-z][a-z0-9]*(-[a-z0-9]+)*$").unwrap())
     }
 
-    fn is_valid_kebab_case(&self, name: &str) -> bool {
-        self.pattern.is_match(name)
-    }
-}
-
-impl Default for KebabCaseCommands {
-    fn default() -> Self {
-        Self::new()
+    fn is_valid_kebab_case(name: &str) -> bool {
+        Self::kebab_pattern().is_match(name)
     }
 }
 
 impl Rule for KebabCaseCommands {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "S002"
     }
 
@@ -36,84 +32,52 @@ impl Rule for KebabCaseCommands {
         Severity::Warning
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Custom commands should use kebab-case naming convention"
     }
 
     fn check(&self, context: &LintContext) -> Vec<Violation> {
-        let def_pattern = Regex::new(r"\bdef\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\[").unwrap();
-
-        def_pattern
-            .captures_iter(context.source)
-            .filter_map(|cap| {
-                let cmd_match = cap.get(1)?;
-                let cmd_name = cmd_match.as_str();
-
-                if !self.is_valid_kebab_case(cmd_name) {
-                    Some(Violation {
-                        rule_id: self.id().to_string(),
-                        severity: self.severity(),
-                        message: format!(
-                            "Command '{}' should use kebab-case naming convention",
-                            cmd_name
-                        ),
-                        span: nu_protocol::Span::new(cmd_match.start(), cmd_match.end()),
-                        suggestion: Some(format!(
-                            "Consider renaming to: {}",
-                            to_kebab_case(cmd_name)
-                        )),
-                        fix: None,
-                        file: None,
-                    })
-                } else {
-                    None
-                }
+        context
+            .new_user_functions()
+            .filter_map(|(_decl_id, decl)| {
+                let cmd_name = &decl.signature().name;
+                (!Self::is_valid_kebab_case(cmd_name)).then(|| Violation {
+                    rule_id: self.id().to_string(),
+                    severity: self.severity(),
+                    message: format!(
+                        "Command '{cmd_name}' should use kebab-case naming convention"
+                    ),
+                    span: context.find_declaration_span(cmd_name),
+                    suggestion: Some(format!(
+                        "Consider renaming to: {}",
+                        cmd_name.to_kebab_case()
+                    )),
+                    fix: None,
+                    file: None,
+                })
             })
             .collect()
     }
 }
 
-fn to_kebab_case(s: &str) -> String {
-    let mut result = String::new();
-    let mut prev_is_lower = false;
-
-    for (i, c) in s.chars().enumerate() {
-        if c == '_' {
-            result.push('-');
-            prev_is_lower = false;
-        } else if c.is_uppercase() {
-            if i > 0 && prev_is_lower {
-                result.push('-');
-            }
-            result.push(c.to_lowercase().next().unwrap());
-            prev_is_lower = false;
-        } else {
-            result.push(c);
-            prev_is_lower = c.is_lowercase();
-        }
-    }
-
-    result
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use heck::ToKebabCase;
 
     #[test]
     fn test_to_kebab_case() {
-        assert_eq!(to_kebab_case("myCommand"), "my-command");
-        assert_eq!(to_kebab_case("my_command"), "my-command");
-        assert_eq!(to_kebab_case("my-command"), "my-command");
+        assert_eq!("myCommand".to_kebab_case(), "my-command");
+        assert_eq!("my_command".to_kebab_case(), "my-command");
+        assert_eq!("my-command".to_kebab_case(), "my-command");
     }
 
     #[test]
     fn test_is_valid_kebab_case() {
-        let rule = KebabCaseCommands::new();
-        assert!(rule.is_valid_kebab_case("my-command"));
-        assert!(rule.is_valid_kebab_case("command"));
-        assert!(rule.is_valid_kebab_case("my-long-command"));
-        assert!(!rule.is_valid_kebab_case("myCommand"));
-        assert!(!rule.is_valid_kebab_case("my_command"));
+        assert!(KebabCaseCommands::is_valid_kebab_case("my-command"));
+        assert!(KebabCaseCommands::is_valid_kebab_case("command"));
+        assert!(KebabCaseCommands::is_valid_kebab_case("my-long-command"));
+        assert!(!KebabCaseCommands::is_valid_kebab_case("myCommand"));
+        assert!(!KebabCaseCommands::is_valid_kebab_case("my_command"));
     }
 }

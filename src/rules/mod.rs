@@ -48,13 +48,11 @@ impl RuleRegistry {
 
         registry.register(Box::new(best_practices::PreferErrorMake::new()));
         registry.register(Box::new(best_practices::AvoidMutableAccumulation::new()));
-        registry.register(Box::new(best_practices::MaxPositionalParamsAst::new()));
         registry.register(Box::new(best_practices::PreferRangeIteration::new()));
         registry.register(Box::new(best_practices::PreferParseCommand::new()));
         registry.register(Box::new(best_practices::ConsistentErrorHandling::new()));
         registry.register(Box::new(best_practices::PreferMatchOverIfChain::new()));
         registry.register(Box::new(best_practices::PreferEachOverFor::new()));
-        registry.register(Box::new(best_practices::PreferReduceOverFold::new()));
 
         registry.register(Box::new(performance::PreferWhereOverEachIf::new()));
 

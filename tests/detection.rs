@@ -130,15 +130,6 @@ fn test_bp009_max_positional_params_detected() {
     check_rule_detected("BP009");
 }
 
-#[test]
-fn test_bp009_ast_max_positional_params_detected() {
-    check_rule_detected("BP009-AST");
-}
-
-#[test]
-fn test_bp010_prefer_reduce_over_fold_detected() {
-    check_rule_detected("BP010");
-}
 
 // Documentation tests
 #[test]

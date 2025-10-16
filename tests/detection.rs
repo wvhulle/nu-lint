@@ -89,6 +89,11 @@ fn test_s014_completion_function_naming_detected() {
     check_rule_detected("S014");
 }
 
+#[test]
+fn test_s015_unnecessary_mut_detected() {
+    check_rule_detected("S015");
+}
+
 // Best practices tests
 #[test]
 fn test_bp001_prefer_error_make_detected() {
@@ -135,6 +140,11 @@ fn test_bp011_descriptive_error_messages_detected() {
     check_rule_detected("BP011");
 }
 
+#[test]
+fn test_bp012_prefer_builtin_commands_detected() {
+    check_rule_detected("BP012");
+}
+
 // Documentation tests
 #[test]
 fn test_d001_missing_command_docs_detected() {
@@ -156,4 +166,14 @@ fn test_t001_missing_type_annotation_detected() {
 #[test]
 fn test_p001_prefer_where_over_each_if_detected() {
     check_rule_detected("P001");
+}
+
+#[test]
+fn test_p002_prefer_lines_over_split_detected() {
+    check_rule_detected("P002");
+}
+
+#[test]
+fn test_p003_prefer_parse_over_each_split_detected() {
+    check_rule_detected("P003");
 }

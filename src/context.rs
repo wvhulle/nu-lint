@@ -301,6 +301,23 @@ impl<'a> LintContext<'a> {
     pub fn get_span_contents(&self, span: Span) -> &str {
         crate::parser::get_span_contents(self.source, span)
     }
+
+    /// Create a simple Fix with a single replacement
+    /// This is a convenience method for creating fixes that replace one span with new text
+    pub fn create_simple_fix(
+        &self,
+        description: impl Into<String>,
+        span: Span,
+        new_text: impl Into<String>,
+    ) -> Fix {
+        Fix {
+            description: description.into(),
+            replacements: vec![Replacement {
+                span,
+                new_text: new_text.into(),
+            }],
+        }
+    }
 }
 
 pub trait Rule: Send + Sync {

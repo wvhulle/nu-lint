@@ -99,6 +99,24 @@ impl<'a> VisitContext<'a> {
     pub fn get_variable(&self, var_id: VarId) -> &nu_protocol::engine::Variable {
         self.working_set.get_variable(var_id)
     }
+
+    /// Extract text arguments from an external command call
+    /// Returns a Vec of argument strings extracted from the AST
+    pub fn extract_external_args(
+        &self,
+        args: &[nu_protocol::ast::ExternalArgument],
+    ) -> Vec<String> {
+        args.iter()
+            .map(|arg| match &arg {
+                nu_protocol::ast::ExternalArgument::Regular(expr) => {
+                    self.get_span_contents(expr.span).to_string()
+                }
+                nu_protocol::ast::ExternalArgument::Spread(expr) => {
+                    format!("...{}", self.get_span_contents(expr.span))
+                }
+            })
+            .collect()
+    }
 }
 
 /// Walk through a block, visiting all pipelines
@@ -109,14 +127,22 @@ pub fn walk_block<V: AstVisitor + ?Sized>(visitor: &mut V, block: &Block, contex
 }
 
 /// Walk through a pipeline, visiting all elements
-pub fn walk_pipeline<V: AstVisitor + ?Sized>(visitor: &mut V, pipeline: &Pipeline, context: &VisitContext) {
+pub fn walk_pipeline<V: AstVisitor + ?Sized>(
+    visitor: &mut V,
+    pipeline: &Pipeline,
+    context: &VisitContext,
+) {
     for element in &pipeline.elements {
         visitor.visit_expression(&element.expr, context);
     }
 }
 
 /// Walk through an expression, visiting all child nodes
-pub fn walk_expression<V: AstVisitor + ?Sized>(visitor: &mut V, expr: &Expression, context: &VisitContext) {
+pub fn walk_expression<V: AstVisitor + ?Sized>(
+    visitor: &mut V,
+    expr: &Expression,
+    context: &VisitContext,
+) {
     match &expr.expr {
         Expr::VarDecl(var_id) => {
             visitor.visit_var_decl(*var_id, expr.span, context);
@@ -181,9 +207,12 @@ pub fn walk_expression<V: AstVisitor + ?Sized>(visitor: &mut V, expr: &Expressio
     }
 }
 
-
 /// Walk through a function call, visiting arguments
-pub fn walk_call<V: AstVisitor + ?Sized>(visitor: &mut V, call: &nu_protocol::ast::Call, context: &VisitContext) {
+pub fn walk_call<V: AstVisitor + ?Sized>(
+    visitor: &mut V,
+    call: &nu_protocol::ast::Call,
+    context: &VisitContext,
+) {
     // Visit positional arguments
     for expr in &call.arguments {
         match expr {
@@ -267,9 +296,7 @@ pub struct CallCollector {
 
 impl CallCollector {
     pub fn new() -> Self {
-        Self {
-            calls: Vec::new(),
-        }
+        Self { calls: Vec::new() }
     }
 }
 

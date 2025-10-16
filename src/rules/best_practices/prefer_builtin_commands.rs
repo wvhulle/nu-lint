@@ -121,12 +121,78 @@ impl<'a> ExternalCommandVisitor<'a> {
             alternatives: PreferBuiltinForCommonCommands::get_builtin_alternatives(),
         }
     }
+
+    /// Build a simple fix for common external command replacements
+    fn build_simple_fix(
+        &self,
+        cmd_text: &str,
+        alternative: &BuiltinAlternative,
+        args: &[nu_protocol::ast::ExternalArgument],
+        expr_span: nu_protocol::Span,
+        context: &VisitContext,
+    ) -> Option<crate::context::Fix> {
+        use crate::context::{Fix, Replacement};
+
+        // Extract arguments
+        let args_text = context.extract_external_args(args);
+
+        // Build replacement based on command
+        let new_text = match cmd_text {
+            "ls" => {
+                // ^ls -la -> ls -la (remove ^)
+                if args_text.is_empty() {
+                    "ls".to_string()
+                } else {
+                    format!("ls {}", args_text.join(" "))
+                }
+            }
+            "cat" => {
+                // ^cat file.txt -> open --raw file.txt
+                if let Some(file) = args_text.iter().find(|a| !a.starts_with('-')) {
+                    format!("open --raw {}", file)
+                } else {
+                    alternative.command.to_string()
+                }
+            }
+            "grep" => {
+                // Complex - just suggest the alternative
+                alternative.command.to_string()
+            }
+            "head" | "tail" => {
+                // ^head -5 -> first 5 or ^tail -5 -> last 5
+                let builtin = if cmd_text == "head" { "first" } else { "last" };
+                if let Some(num_arg) = args_text.iter().find(|a| a.starts_with('-') && a.len() > 1) {
+                    let num = &num_arg[1..];
+                    format!("{} {}", builtin, num)
+                } else {
+                    format!("{} 10", builtin)
+                }
+            }
+            "sort" | "uniq" => {
+                // Direct replacement
+                cmd_text.to_string()
+            }
+            "find" => {
+                // ^find -> ls (simplified)
+                "ls **/*".to_string()
+            }
+            _ => alternative.command.to_string(),
+        };
+
+        Some(Fix {
+            description: format!("Replace '^{}' with '{}'", cmd_text, alternative.command),
+            replacements: vec![Replacement {
+                span: expr_span,
+                new_text,
+            }],
+        })
+    }
 }
 
 impl<'a> AstVisitor for ExternalCommandVisitor<'a> {
     fn visit_expression(&mut self, expr: &nu_protocol::ast::Expression, context: &VisitContext) {
         // Check for external calls
-        if let Expr::ExternalCall(head, _args) = &expr.expr {
+        if let Expr::ExternalCall(head, args) = &expr.expr {
             // Get the command name from the head expression
             let cmd_text = context.get_span_contents(head.span);
 
@@ -148,13 +214,16 @@ impl<'a> AstVisitor for ExternalCommandVisitor<'a> {
                     suggestion.push_str(&format!("\n\nNote: {}", note));
                 }
 
+                // Build fix
+                let fix = self.build_simple_fix(cmd_text, alternative, args, expr.span, context);
+
                 self.violations.push(Violation {
                     rule_id: self.rule.id().to_string(),
                     severity: self.rule.severity(),
                     message,
                     span: expr.span,
                     suggestion: Some(suggestion),
-                    fix: None,
+                    fix,
                     file: None,
                 });
             }
@@ -356,6 +425,130 @@ mod tests {
         assert!(
             violations[0].message.contains("ls"),
             "Should suggest 'ls' as alternative"
+        );
+    }
+
+    #[test]
+    fn test_ls_fix_provided() {
+        let rule = PreferBuiltinForCommonCommands::new();
+        let source = r#"^ls -la"#;
+        let engine_state = create_engine_with_stdlib();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let context = LintContext {
+            source,
+            ast: &block,
+            engine_state: &engine_state,
+            working_set: &working_set,
+            file_path: None,
+        };
+
+        let violations = rule.check(&context);
+        assert!(!violations.is_empty(), "Should detect external ls");
+        assert!(violations[0].fix.is_some(), "Should provide a fix");
+        
+        let fix = violations[0].fix.as_ref().unwrap();
+        // ls keeps arguments as they might be valid for built-in ls
+        assert!(fix.replacements[0].new_text.starts_with("ls"), "Should suggest 'ls'");
+    }
+
+    #[test]
+    fn test_cat_fix_provided() {
+        let rule = PreferBuiltinForCommonCommands::new();
+        let source = r#"^cat file.txt"#;
+        let engine_state = create_engine_with_stdlib();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let context = LintContext {
+            source,
+            ast: &block,
+            engine_state: &engine_state,
+            working_set: &working_set,
+            file_path: None,
+        };
+
+        let violations = rule.check(&context);
+        assert!(!violations.is_empty(), "Should detect external cat");
+        assert!(violations[0].fix.is_some(), "Should provide a fix");
+        
+        let fix = violations[0].fix.as_ref().unwrap();
+        assert!(
+            fix.replacements[0].new_text.contains("open") &&
+            fix.replacements[0].new_text.contains("file.txt"),
+            "Should suggest 'open file.txt'"
+        );
+    }
+
+    #[test]
+    fn test_grep_fix_provided() {
+        let rule = PreferBuiltinForCommonCommands::new();
+        let source = r#"^grep pattern file.txt"#;
+        let engine_state = create_engine_with_stdlib();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let context = LintContext {
+            source,
+            ast: &block,
+            engine_state: &engine_state,
+            working_set: &working_set,
+            file_path: None,
+        };
+
+        let violations = rule.check(&context);
+        assert!(!violations.is_empty(), "Should detect external grep");
+        assert!(violations[0].fix.is_some(), "Should provide a fix");
+        
+        let fix = violations[0].fix.as_ref().unwrap();
+        assert!(
+            fix.replacements[0].new_text.contains("find"),
+            "Should suggest find command"
+        );
+    }
+
+    #[test]
+    fn test_head_fix_provided() {
+        let rule = PreferBuiltinForCommonCommands::new();
+        let source = r#"^head -5 file.txt"#;
+        let engine_state = create_engine_with_stdlib();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let context = LintContext {
+            source,
+            ast: &block,
+            engine_state: &engine_state,
+            working_set: &working_set,
+            file_path: None,
+        };
+
+        let violations = rule.check(&context);
+        assert!(!violations.is_empty(), "Should detect external head");
+        assert!(violations[0].fix.is_some(), "Should provide a fix");
+        
+        let fix = violations[0].fix.as_ref().unwrap();
+        assert!(
+            fix.replacements[0].new_text.contains("first"),
+            "Should suggest 'first' command"
+        );
+    }
+
+    #[test]
+    fn test_tail_fix_provided() {
+        let rule = PreferBuiltinForCommonCommands::new();
+        let source = r#"^tail -3 file.txt"#;
+        let engine_state = create_engine_with_stdlib();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
+        let context = LintContext {
+            source,
+            ast: &block,
+            engine_state: &engine_state,
+            working_set: &working_set,
+            file_path: None,
+        };
+
+        let violations = rule.check(&context);
+        assert!(!violations.is_empty(), "Should detect external tail");
+        assert!(violations[0].fix.is_some(), "Should provide a fix");
+        
+        let fix = violations[0].fix.as_ref().unwrap();
+        assert!(
+            fix.replacements[0].new_text.contains("last"),
+            "Should suggest 'last' command"
         );
     }
 }

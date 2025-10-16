@@ -2,7 +2,7 @@ use miette::{Diagnostic, SourceSpan};
 use nu_protocol::{
     ast::Block,
     engine::{Command, EngineState, StateWorkingSet},
-    Span,
+    DeclId, Span,
 };
 use std::path::Path;
 use thiserror::Error;
@@ -90,7 +90,7 @@ impl<'a> LintContext<'a> {
     pub fn new_user_functions(&self) -> impl Iterator<Item = (usize, &dyn Command)> + '_ {
         let (base_count, total_count) = self.new_decl_range();
         (base_count..total_count)
-            .map(|decl_id| (decl_id, self.working_set.get_decl(decl_id)))
+            .map(|decl_id| (decl_id, self.working_set.get_decl(DeclId::new(decl_id))))
             .filter(|(_, decl)| {
                 let name = &decl.signature().name;
                 !name.contains(' ') && !name.starts_with('_')

@@ -4,7 +4,7 @@ pub mod performance;
 pub mod style;
 pub mod type_safety;
 
-use crate::context::Rule;
+use crate::rule::Rule;
 use std::collections::HashMap;
 
 pub struct RuleRegistry {

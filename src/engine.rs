@@ -1,5 +1,7 @@
 use crate::config::Config;
-use crate::context::{LintContext, LintError, Violation};
+use crate::context::LintContext;
+use crate::error::LintError;
+use crate::lint::Violation;
 use crate::parser::parse_source;
 use crate::rules::RuleRegistry;
 use nu_protocol::engine::EngineState;

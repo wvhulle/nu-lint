@@ -1,5 +1,7 @@
-use crate::ast_walker::{AstVisitor, VisitContext};
-use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
+use crate::context::LintContext;
+use crate::lint::{Severity, Violation};
+use crate::rule::{Rule, RuleCategory};
+use crate::visitor::{AstVisitor, VisitContext};
 use nu_protocol::ast::{Expr, Operator};
 
 #[derive(Default)]
@@ -106,7 +108,7 @@ impl<'a> AstVisitor for CompoundAssignmentVisitor<'a> {
             }
         }
 
-        crate::ast_walker::walk_expression(self, expr, context);
+        crate::visitor::walk_expression(self, expr, context);
     }
 }
 
@@ -130,8 +132,8 @@ impl<'a> CompoundAssignmentVisitor<'a> {
         element: &nu_protocol::ast::PipelineElement,
         full_span: nu_protocol::Span,
         context: &VisitContext,
-    ) -> Option<crate::context::Fix> {
-        use crate::context::{Fix, Replacement};
+    ) -> Option<crate::lint::Fix> {
+        use crate::lint::{Fix, Replacement};
 
         // Extract the right operand from the binary operation
         if let Expr::BinaryOp(_left, _op, right) = &element.expr.expr {

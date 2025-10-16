@@ -1,4 +1,6 @@
-use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
+use crate::context::LintContext;
+use crate::lint::{Severity, Violation};
+use crate::rule::{Rule, RuleCategory};
 use regex::Regex;
 
 pub struct PreferParseCommand;
@@ -39,17 +41,13 @@ impl Rule for PreferParseCommand {
         let split_get_pattern =
             Regex::new(r#"split\s+row\s+["'][^"']*["']\s*\|\s*(get\s+\d+|skip\s+\d+)"#).unwrap();
 
-        violations.extend(
-            context.violations_from_regex(
-                &split_get_pattern,
-                self.id(),
-                self.severity(),
-                "Manual string splitting with indexed access - consider using 'parse'",
-                Some(
-                    "Use 'parse \"pattern {field1} {field2}\"' for structured text extraction"
-                ),
-            ),
-        );
+        violations.extend(context.violations_from_regex(
+            &split_get_pattern,
+            self.id(),
+            self.severity(),
+            "Manual string splitting with indexed access - consider using 'parse'",
+            Some("Use 'parse \"pattern {field1} {field2}\"' for structured text extraction"),
+        ));
 
         // Pattern 2: let parts = ... split row, then $parts | get
         let split_to_var_pattern =

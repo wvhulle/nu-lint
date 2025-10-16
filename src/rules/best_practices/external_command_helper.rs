@@ -1,12 +1,12 @@
 //! Shared utilities for rules that detect external commands with builtin alternatives
 
-use crate::ast_walker::{AstVisitor, VisitContext};
-use crate::context::{Severity, Violation};
+use crate::lint::{Severity, Violation};
+use crate::visitor::{AstVisitor, VisitContext};
 use nu_protocol::ast::Expr;
 use std::collections::HashMap;
 use std::fmt::Write;
 // Re-export Fix type for use by fix builders
-pub use crate::context::Fix;
+pub use crate::lint::Fix;
 
 /// Metadata about a builtin alternative to an external command
 pub struct BuiltinAlternative {
@@ -110,6 +110,6 @@ impl AstVisitor for ExternalCommandVisitor<'_> {
             }
         }
 
-        crate::ast_walker::walk_expression(self, expr, context);
+        crate::visitor::walk_expression(self, expr, context);
     }
 }

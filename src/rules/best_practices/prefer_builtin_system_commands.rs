@@ -1,8 +1,11 @@
-use crate::ast_walker::VisitContext;
-use crate::context::{Fix, LintContext, Replacement, Rule, RuleCategory, Severity};
+use crate::context::LintContext;
+use crate::lint::Violation;
+use crate::lint::{Fix, Replacement, Severity};
+use crate::rule::{Rule, RuleCategory};
 use crate::rules::best_practices::external_command_helper::{
     BuiltinAlternative, ExternalCommandVisitor,
 };
+use crate::visitor::VisitContext;
 use std::collections::HashMap;
 
 pub struct PreferBuiltinSystemCommands;
@@ -122,7 +125,7 @@ impl Rule for PreferBuiltinSystemCommands {
         "Prefer Nushell built-in commands over external tools for system operations (env, date, whoami, man, which, cd, pwd, etc.)"
     }
 
-    fn check(&self, context: &LintContext) -> Vec<crate::context::Violation> {
+    fn check(&self, context: &LintContext) -> Vec<Violation> {
         let mut visitor = ExternalCommandVisitor::new(
             self.id(),
             self.severity(),
@@ -225,8 +228,8 @@ fn build_fix(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::parse_source;
     use crate::engine::LintEngineBuilder;
+    use crate::parser::parse_source;
 
     #[test]
     fn test_external_env_detected() {

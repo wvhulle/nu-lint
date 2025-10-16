@@ -1,4 +1,6 @@
-use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
+use crate::context::LintContext;
+use crate::lint::{Severity, Violation};
+use crate::rule::{Rule, RuleCategory};
 use heck::ToShoutySnakeCase;
 use regex::Regex;
 use std::sync::OnceLock;

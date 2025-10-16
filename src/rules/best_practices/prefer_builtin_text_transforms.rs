@@ -1,8 +1,11 @@
-use crate::ast_walker::VisitContext;
-use crate::context::{self, Fix, LintContext, Replacement, Rule, RuleCategory, Severity};
+use crate::context::LintContext;
+use crate::lint::Violation;
+use crate::lint::{Fix, Replacement, Severity};
+use crate::rule::{Rule, RuleCategory};
 use crate::rules::best_practices::external_command_helper::{
     BuiltinAlternative, ExternalCommandVisitor,
 };
+use crate::visitor::VisitContext;
 use std::collections::HashMap;
 
 pub struct PreferBuiltinTextTransforms;
@@ -90,7 +93,7 @@ impl Rule for PreferBuiltinTextTransforms {
         "Prefer Nushell built-in commands over external tools for text transformation (sed, awk, cut, wc, tr, tee)"
     }
 
-    fn check(&self, context: &LintContext) -> Vec<crate::context::Violation> {
+    fn check(&self, context: &LintContext) -> Vec<Violation> {
         let mut visitor = ExternalCommandVisitor::new(
             self.id(),
             self.severity(),
@@ -109,7 +112,7 @@ fn build_fix(
     args: &[nu_protocol::ast::ExternalArgument],
     expr_span: nu_protocol::Span,
     context: &VisitContext,
-) -> context::Fix {
+) -> Fix {
     // Extract arguments from the external call using the helper
     let args_text = context.extract_external_args(args);
 

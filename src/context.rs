@@ -1,73 +1,11 @@
-use crate::ast_walker::{AstVisitor, VisitContext};
-use miette::{Diagnostic, SourceSpan};
+use crate::lint::{Fix, Replacement, Severity, Violation};
+use crate::visitor::{AstVisitor, VisitContext};
 use nu_protocol::{
     DeclId, Span,
     ast::Block,
     engine::{Command, EngineState, StateWorkingSet},
 };
 use std::path::Path;
-use thiserror::Error;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RuleCategory {
-    Style,
-    BestPractices,
-    Performance,
-    Documentation,
-    TypeSafety,
-}
-
-impl std::fmt::Display for RuleCategory {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            RuleCategory::Style => write!(f, "style"),
-            RuleCategory::BestPractices => write!(f, "best-practices"),
-            RuleCategory::Performance => write!(f, "performance"),
-            RuleCategory::Documentation => write!(f, "documentation"),
-            RuleCategory::TypeSafety => write!(f, "type-safety"),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Severity {
-    Error,
-    Warning,
-    Info,
-}
-
-impl std::fmt::Display for Severity {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Severity::Error => write!(f, "error"),
-            Severity::Warning => write!(f, "warning"),
-            Severity::Info => write!(f, "info"),
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Violation {
-    pub rule_id: String,
-    pub severity: Severity,
-    pub message: String,
-    pub span: Span,
-    pub suggestion: Option<String>,
-    pub fix: Option<Fix>,
-    pub file: Option<String>,
-}
-
-#[derive(Debug, Clone)]
-pub struct Fix {
-    pub description: String,
-    pub replacements: Vec<Replacement>,
-}
-
-#[derive(Debug, Clone)]
-pub struct Replacement {
-    pub span: Span,
-    pub new_text: String,
-}
 
 pub struct LintContext<'a> {
     pub source: &'a str,
@@ -283,36 +221,6 @@ impl LintContext<'_> {
                 new_text: new_text.into(),
             }],
         }
-    }
-}
-
-pub trait Rule: Send + Sync {
-    fn id(&self) -> &str;
-    fn category(&self) -> RuleCategory;
-    fn severity(&self) -> Severity;
-    fn description(&self) -> &str;
-
-    fn check(&self, context: &LintContext) -> Vec<Violation>;
-}
-
-#[derive(Error, Debug, Diagnostic)]
-pub enum LintError {
-    #[error("Failed to parse file: {0}")]
-    ParseError(String),
-
-    #[error("Failed to read file: {0}")]
-    #[diagnostic(code(nu_lint::io_error))]
-    IoError(#[from] std::io::Error),
-
-    #[error("Invalid configuration: {0}")]
-    #[diagnostic(code(nu_lint::config_error))]
-    ConfigError(String),
-}
-
-impl Violation {
-    #[must_use]
-    pub fn to_source_span(&self) -> SourceSpan {
-        SourceSpan::from((self.span.start, self.span.end - self.span.start))
     }
 }
 

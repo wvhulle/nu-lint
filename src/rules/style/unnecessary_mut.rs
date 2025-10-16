@@ -1,5 +1,7 @@
-use crate::ast_walker::{AstVisitor, VisitContext};
-use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
+use crate::context::LintContext;
+use crate::lint::{Severity, Violation};
+use crate::rule::{Rule, RuleCategory};
+use crate::visitor::{AstVisitor, VisitContext};
 use nu_protocol::ast::Expr;
 use nu_protocol::{Span, VarId};
 use std::collections::HashMap;
@@ -84,7 +86,7 @@ impl<'a> MutVariableVisitor<'a> {
 
     /// Generate violations after AST traversal is complete
     fn finalize(self) -> Vec<Violation> {
-        use crate::context::{Fix, Replacement};
+        use crate::lint::{Fix, Replacement};
         let mut violations = Vec::new();
 
         // Check which mutable variables were never reassigned

@@ -1,4 +1,4 @@
-use crate::context::Severity;
+use crate::lint::Severity;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
@@ -80,11 +80,9 @@ pub struct FixConfig {
 }
 
 impl Config {
-    pub fn load_from_file(path: &Path) -> Result<Self, crate::context::LintError> {
+    pub fn load_from_file(path: &Path) -> Result<Self, crate::error::LintError> {
         let content = std::fs::read_to_string(path)?;
-        toml::from_str(&content).map_err(|e| {
-            crate::context::LintError::ConfigError(format!("Failed to parse config: {e}"))
-        })
+        Ok(toml::from_str(&content)?)
     }
 
     pub fn rule_severity(&self, rule_id: &str) -> Option<Severity> {

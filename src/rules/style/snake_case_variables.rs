@@ -1,4 +1,6 @@
-use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
+use crate::context::LintContext;
+use crate::lint::{Severity, Violation};
+use crate::rule::{Rule, RuleCategory};
 use heck::ToSnakeCase;
 use regex::Regex;
 use std::sync::OnceLock;
@@ -53,7 +55,10 @@ impl Rule for SnakeCaseVariables {
                         "Variable '{var_name}' should use snake_case naming convention"
                     ),
                     span: nu_protocol::Span::new(var_match.start(), var_match.end()),
-                    suggestion: Some(format!("Consider renaming to: {}", var_name.to_snake_case())),
+                    suggestion: Some(format!(
+                        "Consider renaming to: {}",
+                        var_name.to_snake_case()
+                    )),
                     fix: None,
                     file: None,
                 })

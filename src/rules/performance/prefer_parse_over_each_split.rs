@@ -1,5 +1,7 @@
-use crate::ast_walker::{AstVisitor, VisitContext};
-use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
+use crate::context::LintContext;
+use crate::lint::{Severity, Violation};
+use crate::rule::{Rule, RuleCategory};
+use crate::visitor::{AstVisitor, VisitContext};
 use nu_protocol::ast::{Call, Expr};
 
 #[derive(Default)]
@@ -123,7 +125,7 @@ impl<'a> AstVisitor for EachSplitVisitor<'a> {
             }
         }
 
-        crate::ast_walker::walk_call(self, call, context);
+        crate::visitor::walk_call(self, call, context);
     }
 }
 

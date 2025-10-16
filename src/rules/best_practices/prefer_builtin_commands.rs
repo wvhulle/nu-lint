@@ -1,8 +1,11 @@
-use crate::ast_walker::VisitContext;
-use crate::context::{Fix, LintContext, Replacement, Rule, RuleCategory, Severity};
+use crate::context::LintContext;
+use crate::lint::Violation;
+use crate::lint::{Fix, Replacement, Severity};
+use crate::rule::{Rule, RuleCategory};
 use crate::rules::best_practices::external_command_helper::{
     BuiltinAlternative, ExternalCommandVisitor,
 };
+use crate::visitor::VisitContext;
 use std::collections::HashMap;
 
 pub struct PreferBuiltinForCommonCommands;
@@ -81,7 +84,7 @@ impl Rule for PreferBuiltinForCommonCommands {
         "Use Nushell built-ins instead of external commands for common operations like ls, cat, grep, head, tail, sort, uniq, and find"
     }
 
-    fn check(&self, context: &LintContext) -> Vec<crate::context::Violation> {
+    fn check(&self, context: &LintContext) -> Vec<Violation> {
         let mut visitor = ExternalCommandVisitor::new(
             self.id(),
             self.severity(),
@@ -159,8 +162,8 @@ fn build_fix(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::parse_source;
     use crate::engine::LintEngineBuilder;
+    use crate::parser::parse_source;
 
     #[test]
     fn test_external_ls_detected() {

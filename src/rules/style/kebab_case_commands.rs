@@ -1,4 +1,6 @@
-use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
+use crate::context::LintContext;
+use crate::lint::{Severity, Violation};
+use crate::rule::{Rule, RuleCategory};
 use heck::ToKebabCase;
 use regex::Regex;
 use std::sync::OnceLock;
@@ -47,7 +49,10 @@ impl Rule for KebabCaseCommands {
                         cmd_name
                     ),
                     span: context.find_declaration_span(cmd_name),
-                    suggestion: Some(format!("Consider renaming to: {}", cmd_name.to_kebab_case())),
+                    suggestion: Some(format!(
+                        "Consider renaming to: {}",
+                        cmd_name.to_kebab_case()
+                    )),
                     fix: None,
                     file: None,
                 })

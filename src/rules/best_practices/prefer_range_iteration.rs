@@ -78,13 +78,13 @@ mod tests {
     fn test_while_counter_detected() {
         let rule = PreferRangeIteration::new();
 
-        let bad_code = r#"
+        let bad_code = r"
 mut count = 0
 while $count < 10 {
     echo $count
     $count = $count + 1
 }
-"#;
+";
         let context = LintContext::test_from_source(bad_code);
         assert!(
             !rule.check(&context).is_empty(),
@@ -96,13 +96,13 @@ while $count < 10 {
     fn test_compound_increment_detected() {
         let rule = PreferRangeIteration::new();
 
-        let bad_code = r#"
+        let bad_code = r"
 mut attempts = 0
 while $attempts < 5 {
     try_something
     $attempts += 1
 }
-"#;
+";
         let context = LintContext::test_from_source(bad_code);
         assert!(
             !rule.check(&context).is_empty(),

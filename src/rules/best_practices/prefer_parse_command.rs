@@ -54,7 +54,7 @@ impl Rule for PreferParseCommand {
 
         // Pattern 2: let parts = ... split row, then $parts | get
         let split_to_var_pattern =
-            Regex::new(r#"let\s+(\w+)\s*=\s*\([^)]*split\s+row[^)]*\)"#).unwrap();
+            Regex::new(r"let\s+(\w+)\s*=\s*\([^)]*split\s+row[^)]*\)").unwrap();
 
         violations.extend(
             split_to_var_pattern

@@ -1,11 +1,22 @@
 use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
 use regex::Regex;
+use std::sync::OnceLock;
 
 pub struct PipeSpacing;
 
 impl PipeSpacing {
     pub fn new() -> Self {
         Self
+    }
+
+    fn bad_pipe_pattern() -> &'static Regex {
+        static PATTERN: OnceLock<Regex> = OnceLock::new();
+        PATTERN.get_or_init(|| Regex::new(r"(\S\||  +\||\|  +|\|\S)").unwrap())
+    }
+
+    fn closure_param_pattern() -> &'static Regex {
+        static PATTERN: OnceLock<Regex> = OnceLock::new();
+        PATTERN.get_or_init(|| Regex::new(r"\{\s*\|[^|]*\|").unwrap())
     }
 }
 
@@ -33,18 +44,14 @@ impl Rule for PipeSpacing {
     }
 
     fn check(&self, context: &LintContext) -> Vec<Violation> {
-        // Pattern that matches pipes with incorrect spacing
-        // Excludes pipes inside closure parameter lists by using negative lookbehind/lookahead
-        let bad_pipe_pattern = Regex::new(r"(\S\||  +\||\|  +|\|\S)").unwrap();
-
-        // Find closure parameter regions to exclude: {|...|
-        let closure_param_pattern = Regex::new(r"\{\s*\|[^|]*\|").unwrap();
+        let bad_pipe_pattern = Self::bad_pipe_pattern();
+        let closure_param_pattern = Self::closure_param_pattern();
         let closure_regions: Vec<(usize, usize)> = closure_param_pattern
             .find_iter(context.source)
             .map(|m| (m.start(), m.end()))
             .collect();
 
-        context.violations_from_regex_if(&bad_pipe_pattern, self.id(), self.severity(), |mat| {
+        context.violations_from_regex_if(bad_pipe_pattern, self.id(), self.severity(), |mat| {
             // Skip if this pipe is inside a closure parameter list
             let in_closure = closure_regions
                 .iter()

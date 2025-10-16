@@ -182,12 +182,12 @@ mod tests {
 
     #[test]
     fn test_unnecessary_mut_detected() {
-        let source = r#"
+        let source = r"
 def process [] {
     mut x = 5
     echo $x
 }
-"#;
+";
         let engine = LintEngine::new(Config::default());
         let violations = engine.lint_source(source, None).unwrap();
 
@@ -199,7 +199,7 @@ def process [] {
 
     #[test]
     fn test_necessary_mut_not_flagged() {
-        let source = r#"
+        let source = r"
 def fibonacci [n: int] {
     mut a = 0
     mut b = 1
@@ -210,7 +210,7 @@ def fibonacci [n: int] {
     }
     $b
 }
-"#;
+";
         let engine = LintEngine::new(Config::default());
         let violations = engine.lint_source(source, None).unwrap();
 
@@ -224,12 +224,12 @@ def fibonacci [n: int] {
 
     #[test]
     fn test_immutable_variable_not_flagged() {
-        let source = r#"
+        let source = r"
 def process [] {
     let x = 5
     echo $x
 }
-"#;
+";
         let engine = LintEngine::new(Config::default());
         let violations = engine.lint_source(source, None).unwrap();
 
@@ -243,13 +243,13 @@ def process [] {
 
     #[test]
     fn test_mut_with_compound_assignment() {
-        let source = r#"
+        let source = r"
 def increment [] {
     mut counter = 0
     $counter += 1
     echo $counter
 }
-"#;
+";
         let engine = LintEngine::new(Config::default());
         let violations = engine.lint_source(source, None).unwrap();
 
@@ -282,7 +282,7 @@ def process [] {
 
     #[test]
     fn test_multiple_mut_variables() {
-        let source = r#"
+        let source = r"
 def process [] {
     mut a = 1
     mut b = 2
@@ -291,7 +291,7 @@ def process [] {
     $c = 30
     echo $a $b $c
 }
-"#;
+";
         let engine = LintEngine::new(Config::default());
         let violations = engine.lint_source(source, None).unwrap();
 
@@ -311,12 +311,12 @@ def process [] {
 
     #[test]
     fn test_unnecessary_mut_fix_provided() {
-        let source = r#"
+        let source = r"
 def process [] {
     mut x = 5
     echo $x
 }
-"#;
+";
         let engine = LintEngine::new(Config::default());
         let violations = engine.lint_source(source, None).unwrap();
 

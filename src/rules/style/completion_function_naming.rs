@@ -87,7 +87,7 @@ mod tests {
     fn test_bad_completion_naming_detected() {
         let rule = CompletionFunctionNaming::new();
 
-        let bad_code = r#"def complete-branches [] { ^git branch }"#;
+        let bad_code = r"def complete-branches [] { ^git branch }";
         let engine_state = EngineState::new();
         let (block, working_set) = parse_source(&engine_state, bad_code.as_bytes()).unwrap();
         let context = LintContext {

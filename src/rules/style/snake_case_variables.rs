@@ -1,25 +1,24 @@
+use crate::case_conversion::to_snake_case;
 use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
 use regex::Regex;
+use std::sync::OnceLock;
 
-pub struct SnakeCaseVariables {
-    pattern: Regex,
-}
+#[derive(Default)]
+pub struct SnakeCaseVariables;
 
 impl SnakeCaseVariables {
-    pub fn new() -> Self {
-        Self {
-            pattern: Regex::new(r"^[a-z][a-z0-9_]*$").unwrap(),
-        }
+    fn snake_case_pattern() -> &'static Regex {
+        static PATTERN: OnceLock<Regex> = OnceLock::new();
+        PATTERN.get_or_init(|| Regex::new(r"^[a-z][a-z0-9_]*$").unwrap())
     }
 
-    fn is_valid_snake_case(&self, name: &str) -> bool {
-        self.pattern.is_match(name)
+    fn let_pattern() -> &'static Regex {
+        static PATTERN: OnceLock<Regex> = OnceLock::new();
+        PATTERN.get_or_init(|| Regex::new(r"\blet\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=").unwrap())
     }
-}
 
-impl Default for SnakeCaseVariables {
-    fn default() -> Self {
-        Self::new()
+    fn is_valid_snake_case(name: &str) -> bool {
+        Self::snake_case_pattern().is_match(name)
     }
 }
 
@@ -41,7 +40,7 @@ impl Rule for SnakeCaseVariables {
     }
 
     fn check(&self, context: &LintContext) -> Vec<Violation> {
-        let let_pattern = Regex::new(r"\blet\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=").unwrap();
+        let let_pattern = Self::let_pattern();
 
         let_pattern
             .captures_iter(context.source)
@@ -49,13 +48,14 @@ impl Rule for SnakeCaseVariables {
                 let var_match = cap.get(1)?;
                 let var_name = var_match.as_str();
 
-                if !self.is_valid_snake_case(var_name) {
+                if Self::is_valid_snake_case(var_name) {
+                    None
+                } else {
                     Some(Violation {
                         rule_id: self.id().to_string(),
                         severity: self.severity(),
                         message: format!(
-                            "Variable '{}' should use snake_case naming convention",
-                            var_name
+                            "Variable '{var_name}' should use snake_case naming convention"
                         ),
                         span: nu_protocol::Span::new(var_match.start(), var_match.end()),
                         suggestion: Some(format!(
@@ -65,37 +65,16 @@ impl Rule for SnakeCaseVariables {
                         fix: None,
                         file: None,
                     })
-                } else {
-                    None
                 }
             })
             .collect()
     }
 }
 
-fn to_snake_case(s: &str) -> String {
-    let mut result = String::new();
-    let mut prev_is_lower = false;
-
-    for (i, c) in s.chars().enumerate() {
-        if c.is_uppercase() {
-            if i > 0 && prev_is_lower {
-                result.push('_');
-            }
-            result.push(c.to_lowercase().next().unwrap());
-            prev_is_lower = false;
-        } else {
-            result.push(c);
-            prev_is_lower = c.is_lowercase();
-        }
-    }
-
-    result
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::case_conversion::to_snake_case;
 
     #[test]
     fn test_to_snake_case() {
@@ -107,12 +86,11 @@ mod tests {
 
     #[test]
     fn test_is_valid_snake_case() {
-        let rule = SnakeCaseVariables::new();
-        assert!(rule.is_valid_snake_case("my_variable"));
-        assert!(rule.is_valid_snake_case("x"));
-        assert!(rule.is_valid_snake_case("var_2"));
-        assert!(!rule.is_valid_snake_case("myVariable"));
-        assert!(!rule.is_valid_snake_case("MyVariable"));
-        assert!(!rule.is_valid_snake_case("MY_CONSTANT"));
+        assert!(SnakeCaseVariables::is_valid_snake_case("my_variable"));
+        assert!(SnakeCaseVariables::is_valid_snake_case("x"));
+        assert!(SnakeCaseVariables::is_valid_snake_case("var_2"));
+        assert!(!SnakeCaseVariables::is_valid_snake_case("myVariable"));
+        assert!(!SnakeCaseVariables::is_valid_snake_case("MyVariable"));
+        assert!(!SnakeCaseVariables::is_valid_snake_case("MY_CONSTANT"));
     }
 }

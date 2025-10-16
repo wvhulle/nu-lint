@@ -1,11 +1,14 @@
 [package]
 authors = ["nu-lint contributors"]
 description = "A linter for Nushell scripts"
-edition = "2021"
+edition = "2024"
 license = "MIT OR Apache-2.0"
 name = "nu-lint"
 repository = "https://github.com/wvhulle/nu-lint"
 version = "0.1.0"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = 0 }
 
 [dependencies]
 # Nushell parser
@@ -27,6 +30,9 @@ thiserror = "1.0"
 
 # Regex for pattern matching
 regex = "1.10"
+
+# Case conversion utilities
+heck = "0.5"
 
 [dev-dependencies]
 assert_cmd = "2.0"

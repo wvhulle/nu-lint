@@ -66,10 +66,10 @@ mod tests {
     fn test_unnecessary_variable_detected() {
         let rule = UnnecessaryVariableBeforeReturn::new();
 
-        let bad_code = r#"def foo [] {
+        let bad_code = r"def foo [] {
   let result = (some | pipeline)
   $result
-}"#;
+}";
         let context = LintContext::test_from_source(bad_code);
         assert!(
             !rule.check(&context).is_empty(),
@@ -81,11 +81,11 @@ mod tests {
     fn test_variable_used_multiple_times_not_flagged() {
         let rule = UnnecessaryVariableBeforeReturn::new();
 
-        let good_code = r#"def foo [] {
+        let good_code = r"def foo [] {
   let result = (some | pipeline)
   print $result
   $result
-}"#;
+}";
         let context = LintContext::test_from_source(good_code);
         assert_eq!(
             rule.check(&context).len(),

@@ -140,7 +140,7 @@ fn build_fix(
     args: &[nu_protocol::ast::ExternalArgument],
     expr_span: nu_protocol::Span,
     context: &VisitContext,
-) -> Option<Fix> {
+) -> Fix {
     let args_text = context.extract_external_args(args);
 
     // Build replacement based on command
@@ -187,7 +187,7 @@ fn build_fix(
         }
         "which" | "type" => {
             if let Some(cmd) = args_text.first() {
-                format!("which {}", cmd)
+                format!("which {cmd}")
             } else {
                 "which".to_string()
             }
@@ -212,13 +212,13 @@ fn build_fix(
         _ => alternative.command.to_string(),
     };
 
-    Some(Fix {
+    Fix {
         description: format!("Replace '^{}' with '{}'", cmd_text, alternative.command),
         replacements: vec![Replacement {
             span: expr_span,
             new_text,
         }],
-    })
+    }
 }
 
 #[cfg(test)]
@@ -230,7 +230,7 @@ mod tests {
     #[test]
     fn test_external_env_detected() {
         let rule = PreferBuiltinSystemCommands::new();
-        let source = r#"^env"#;
+        let source = r"^env";
         let engine_state = create_engine_with_stdlib();
         let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
         let context = LintContext {
@@ -249,7 +249,7 @@ mod tests {
     #[test]
     fn test_external_date_detected() {
         let rule = PreferBuiltinSystemCommands::new();
-        let source = r#"^date"#;
+        let source = r"^date";
         let engine_state = create_engine_with_stdlib();
         let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
         let context = LintContext {

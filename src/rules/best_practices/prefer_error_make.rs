@@ -1,5 +1,6 @@
 use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
 use regex::Regex;
+use std::sync::OnceLock;
 
 pub struct PreferErrorMake;
 
@@ -7,11 +8,12 @@ impl PreferErrorMake {
     pub fn new() -> Self {
         Self
     }
-}
 
-impl Default for PreferErrorMake {
-    fn default() -> Self {
-        Self::new()
+    fn pattern() -> &'static Regex {
+        static PATTERN: OnceLock<Regex> = OnceLock::new();
+        PATTERN.get_or_init(|| {
+            Regex::new(r"print\s+(?:-e\s+)?([^\n]+)\s*(?:;|\n)\s*exit\s+(\d+)").unwrap()
+        })
     }
 }
 
@@ -33,10 +35,9 @@ impl Rule for PreferErrorMake {
     }
 
     fn check(&self, context: &LintContext) -> Vec<Violation> {
-        // Look for print followed by exit pattern (more flexible)
-        let pattern = Regex::new(r"print\s+(?:-e\s+)?([^\n]+)\s*(?:;|\n)\s*exit\s+(\d+)").unwrap();
+        let pattern = Self::pattern();
 
-        context.violations_from_regex_if(&pattern, self.id(), self.severity(), |mat| {
+        context.violations_from_regex_if(pattern, self.id(), self.severity(), |mat| {
             if let Some(caps) = pattern.captures(mat.as_str()) {
                 let message = &caps[1].trim_matches('"').trim_matches('\'');
                 let exit_code: i32 = caps[2].parse().unwrap_or(1);

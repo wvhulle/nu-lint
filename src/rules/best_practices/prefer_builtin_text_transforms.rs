@@ -1,5 +1,5 @@
 use crate::ast_walker::VisitContext;
-use crate::context::{Fix, LintContext, Replacement, Rule, RuleCategory, Severity};
+use crate::context::{self, Fix, LintContext, Replacement, Rule, RuleCategory, Severity};
 use crate::rules::best_practices::external_command_helper::{
     BuiltinAlternative, ExternalCommandVisitor,
 };
@@ -108,7 +108,7 @@ fn build_fix(
     args: &[nu_protocol::ast::ExternalArgument],
     expr_span: nu_protocol::Span,
     context: &VisitContext,
-) -> Option<Fix> {
+) -> context::Fix {
     // Extract arguments from the external call using the helper
     let args_text = context.extract_external_args(args);
 
@@ -138,7 +138,7 @@ fn build_fix(
             // ^cut -d ',' -f 1 file.csv -> open file.csv | select column1
             if args_text.len() >= 2 {
                 let file = args_text.last().unwrap();
-                format!("open {} | select <columns>", file)
+                format!("open {file} | select <columns>")
             } else {
                 alternative.command.to_string()
             }
@@ -172,7 +172,7 @@ fn build_fix(
         "tee" => {
             // ^tee file.txt -> tee { save file.txt }
             if let Some(file) = args_text.first() {
-                format!("tee {{ save {} }}", file)
+                format!("tee {{ save {file} }}")
             } else {
                 alternative.command.to_string()
             }
@@ -185,13 +185,13 @@ fn build_fix(
     };
 
     // Create the replacement
-    Some(Fix {
+    Fix {
         description: format!("Replace '^{}' with '{}'", cmd_text, alternative.command),
         replacements: vec![Replacement {
             span: expr_span,
             new_text,
         }],
-    })
+    }
 }
 
 #[cfg(test)]
@@ -222,7 +222,7 @@ mod tests {
     #[test]
     fn test_external_awk_detected() {
         let rule = PreferBuiltinTextTransforms::new();
-        let source = r#"^awk '{print $1}' file.txt"#;
+        let source = r"^awk '{print $1}' file.txt";
         let engine_state = create_engine_with_stdlib();
         let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
         let context = LintContext {
@@ -299,7 +299,7 @@ mod tests {
     #[test]
     fn test_sed_fix_provided() {
         let rule = PreferBuiltinTextTransforms::new();
-        let source = r#"^sed 's/foo/bar/' file.txt"#;
+        let source = r"^sed 's/foo/bar/' file.txt";
         let engine_state = create_engine_with_stdlib();
         let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
         let context = LintContext {
@@ -406,7 +406,7 @@ mod tests {
     #[test]
     fn test_tee_fix() {
         let rule = PreferBuiltinTextTransforms::new();
-        let source = r#"^tee output.txt"#;
+        let source = r"^tee output.txt";
         let engine_state = create_engine_with_stdlib();
         let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
         let context = LintContext {

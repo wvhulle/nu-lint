@@ -1,11 +1,17 @@
 use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
 use regex::Regex;
+use std::sync::OnceLock;
 
 pub struct BraceSpacing;
 
 impl BraceSpacing {
     pub fn new() -> Self {
         Self
+    }
+
+    fn bad_record_pattern() -> &'static Regex {
+        static PATTERN: OnceLock<Regex> = OnceLock::new();
+        PATTERN.get_or_init(|| Regex::new(r"\{[a-zA-Z_]").unwrap())
     }
 }
 
@@ -35,9 +41,9 @@ impl Rule for BraceSpacing {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         // Check for records without proper spacing: {key: value} vs { key: value }
         // Only check for records with colons (key: value patterns)
-        let bad_record = Regex::new(r"\{[a-zA-Z_]").unwrap();
+        let bad_record = Self::bad_record_pattern();
 
-        context.violations_from_regex_if(&bad_record, self.id(), self.severity(), |mat| {
+        context.violations_from_regex_if(bad_record, self.id(), self.severity(), |mat| {
             // Look ahead to see if this contains a colon (record pattern)
             let remaining_text = &context.source[mat.start()..];
             if let Some(close_brace_pos) = remaining_text.find('}') {

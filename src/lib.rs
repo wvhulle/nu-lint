@@ -1,4 +1,5 @@
 pub mod ast_walker;
+pub mod case_conversion;
 pub mod config;
 pub mod context;
 pub mod engine;

@@ -2,17 +2,12 @@ use crate::ast_walker::{AstVisitor, VisitContext};
 use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
 use nu_protocol::ast::{Expr, Operator};
 
+#[derive(Default)]
 pub struct PreferCompoundAssignment;
 
 impl PreferCompoundAssignment {
     pub fn new() -> Self {
         Self
-    }
-}
-
-impl Default for PreferCompoundAssignment {
-    fn default() -> Self {
-        Self::new()
     }
 }
 

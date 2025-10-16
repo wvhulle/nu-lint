@@ -34,9 +34,9 @@ impl RuleRegistry {
     pub fn with_default_rules() -> Self {
         let mut registry = Self::new();
 
-        registry.register(Box::new(style::SnakeCaseVariables::new()));
-        registry.register(Box::new(style::KebabCaseCommands::new()));
-        registry.register(Box::new(style::ScreamingSnakeConstants::new()));
+        registry.register(Box::<style::SnakeCaseVariables>::default());
+        registry.register(Box::<style::KebabCaseCommands>::default());
+        registry.register(Box::<style::ScreamingSnakeConstants>::default());
         registry.register(Box::new(style::PipeSpacing::new()));
         registry.register(Box::new(style::BraceSpacing::new()));
         registry.register(Box::new(style::PreferCompoundAssignment::new()));

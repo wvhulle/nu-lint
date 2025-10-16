@@ -1,11 +1,17 @@
 use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
 use regex::Regex;
+use std::sync::OnceLock;
 
 pub struct PreferWhereOverEachIf;
 
 impl PreferWhereOverEachIf {
     pub fn new() -> Self {
         Self
+    }
+
+    fn each_if_pattern() -> &'static Regex {
+        static PATTERN: OnceLock<Regex> = OnceLock::new();
+        PATTERN.get_or_init(|| Regex::new(r"each\s*\{\s*\|([^}|]+)\|\s*if\s+([^}]+)\}").unwrap())
     }
 }
 
@@ -34,9 +40,9 @@ impl Rule for PreferWhereOverEachIf {
 
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         // Look for "each { |item| if $item..." pattern with more detail
-        let pattern = Regex::new(r"each\s*\{\s*\|([^}|]+)\|\s*if\s+([^}]+)\}").unwrap();
+        let pattern = Self::each_if_pattern();
 
-        context.violations_from_regex_if(&pattern, self.id(), self.severity(), |mat| {
+        context.violations_from_regex_if(pattern, self.id(), self.severity(), |mat| {
             if let Some(caps) = pattern.captures(mat.as_str()) {
                 let _var = &caps[1].trim();
                 let condition_and_body = &caps[2];
@@ -130,9 +136,9 @@ mod tests {
     fn test_pure_filtering_flagged() {
         let rule = PreferWhereOverEachIf::new();
 
-        let filtering_code = r#"
+        let filtering_code = r"
 $items | each { |item| if $item.is_valid { $item } }
-"#;
+";
         let context = LintContext::test_from_source(filtering_code);
         assert!(
             !rule.check(&context).is_empty(),
@@ -144,9 +150,9 @@ $items | each { |item| if $item.is_valid { $item } }
     fn test_processing_with_side_effects_not_flagged() {
         let rule = PreferWhereOverEachIf::new();
 
-        let processing_code = r#"
+        let processing_code = r"
 $items | each { |i| if $i.marked_for_download { download $i } }
-"#;
+";
         let context = LintContext::test_from_source(processing_code);
         assert_eq!(
             rule.check(&context).len(),
@@ -174,9 +180,9 @@ $files | each { |file| if ($file | path exists) { print $"Processing ($file)" } 
     fn test_external_command_not_flagged() {
         let rule = PreferWhereOverEachIf::new();
 
-        let external_code = r#"
+        let external_code = r"
 $files | each { |file| if ($file | path exists) { ^some-tool $file } }
-"#;
+";
         let context = LintContext::test_from_source(external_code);
         assert_eq!(
             rule.check(&context).len(),
@@ -189,9 +195,9 @@ $files | each { |file| if ($file | path exists) { ^some-tool $file } }
     fn test_simple_boolean_condition_flagged() {
         let rule = PreferWhereOverEachIf::new();
 
-        let simple_filter = r#"
+        let simple_filter = r"
 $numbers | each { |n| if $n > 10 { $n } }
-"#;
+";
         let context = LintContext::test_from_source(simple_filter);
         assert!(
             !rule.check(&context).is_empty(),
@@ -203,9 +209,9 @@ $numbers | each { |n| if $n > 10 { $n } }
     fn test_assignment_not_flagged() {
         let rule = PreferWhereOverEachIf::new();
 
-        let assignment_code = r#"
+        let assignment_code = r"
 $items | each { |item| if $item.valid { $processed = process $item; $processed } }
-"#;
+";
         let context = LintContext::test_from_source(assignment_code);
         assert_eq!(
             rule.check(&context).len(),

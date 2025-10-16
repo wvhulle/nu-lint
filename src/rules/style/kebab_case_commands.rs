@@ -1,25 +1,19 @@
+use crate::case_conversion::to_kebab_case;
 use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
 use regex::Regex;
+use std::sync::OnceLock;
 
-pub struct KebabCaseCommands {
-    pattern: Regex,
-}
+#[derive(Default)]
+pub struct KebabCaseCommands;
 
 impl KebabCaseCommands {
-    pub fn new() -> Self {
-        Self {
-            pattern: Regex::new(r"^[a-z][a-z0-9]*(-[a-z0-9]+)*$").unwrap(),
-        }
+    fn kebab_pattern() -> &'static Regex {
+        static PATTERN: OnceLock<Regex> = OnceLock::new();
+        PATTERN.get_or_init(|| Regex::new(r"^[a-z][a-z0-9]*(-[a-z0-9]+)*$").unwrap())
     }
 
-    fn is_valid_kebab_case(&self, name: &str) -> bool {
-        self.pattern.is_match(name)
-    }
-}
-
-impl Default for KebabCaseCommands {
-    fn default() -> Self {
-        Self::new()
+    fn is_valid_kebab_case(name: &str) -> bool {
+        Self::kebab_pattern().is_match(name)
     }
 }
 
@@ -46,7 +40,7 @@ impl Rule for KebabCaseCommands {
         for (_decl_id, decl) in context.new_user_functions() {
             let cmd_name = &decl.signature().name;
 
-            if !self.is_valid_kebab_case(cmd_name) {
+            if !Self::is_valid_kebab_case(cmd_name) {
                 let span = context.find_declaration_span(cmd_name);
                 violations.push(Violation {
                     rule_id: self.id().to_string(),
@@ -67,32 +61,10 @@ impl Rule for KebabCaseCommands {
     }
 }
 
-fn to_kebab_case(s: &str) -> String {
-    let mut result = String::new();
-    let mut prev_is_lower = false;
-
-    for (i, c) in s.chars().enumerate() {
-        if c == '_' {
-            result.push('-');
-            prev_is_lower = false;
-        } else if c.is_uppercase() {
-            if i > 0 && prev_is_lower {
-                result.push('-');
-            }
-            result.push(c.to_lowercase().next().unwrap());
-            prev_is_lower = false;
-        } else {
-            result.push(c);
-            prev_is_lower = c.is_lowercase();
-        }
-    }
-
-    result
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::case_conversion::to_kebab_case;
 
     #[test]
     fn test_to_kebab_case() {
@@ -103,11 +75,10 @@ mod tests {
 
     #[test]
     fn test_is_valid_kebab_case() {
-        let rule = KebabCaseCommands::new();
-        assert!(rule.is_valid_kebab_case("my-command"));
-        assert!(rule.is_valid_kebab_case("command"));
-        assert!(rule.is_valid_kebab_case("my-long-command"));
-        assert!(!rule.is_valid_kebab_case("myCommand"));
-        assert!(!rule.is_valid_kebab_case("my_command"));
+        assert!(KebabCaseCommands::is_valid_kebab_case("my-command"));
+        assert!(KebabCaseCommands::is_valid_kebab_case("command"));
+        assert!(KebabCaseCommands::is_valid_kebab_case("my-long-command"));
+        assert!(!KebabCaseCommands::is_valid_kebab_case("myCommand"));
+        assert!(!KebabCaseCommands::is_valid_kebab_case("my_command"));
     }
 }

@@ -1,11 +1,17 @@
 use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
 use regex::Regex;
+use std::sync::OnceLock;
 
 pub struct AvoidMutableAccumulation;
 
 impl AvoidMutableAccumulation {
     pub fn new() -> Self {
         Self
+    }
+
+    fn mut_list_pattern() -> &'static Regex {
+        static PATTERN: OnceLock<Regex> = OnceLock::new();
+        PATTERN.get_or_init(|| Regex::new(r"mut\s+\w+\s*=\s*\[\s*\]").unwrap())
     }
 }
 
@@ -34,9 +40,9 @@ impl Rule for AvoidMutableAccumulation {
 
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         // Look for mut var = [] followed by append pattern
-        let pattern = Regex::new(r"mut\s+\w+\s*=\s*\[\s*\]").unwrap();
+        let pattern = Self::mut_list_pattern();
 
-        context.violations_from_regex_if(&pattern, self.id(), self.severity(), |mat| {
+        context.violations_from_regex_if(pattern, self.id(), self.severity(), |mat| {
             let var_text = mat.as_str();
             // Extract variable name
             let var_name = var_text.split_whitespace().nth(1)?;

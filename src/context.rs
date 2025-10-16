@@ -1,9 +1,9 @@
 use crate::ast_walker::{AstVisitor, VisitContext};
 use miette::{Diagnostic, SourceSpan};
 use nu_protocol::{
+    DeclId, Span,
     ast::{Block, Expression},
     engine::{Command, EngineState, StateWorkingSet},
-    DeclId, Span,
 };
 use std::path::Path;
 use thiserror::Error;
@@ -77,9 +77,9 @@ pub struct LintContext<'a> {
     pub file_path: Option<&'a Path>,
 }
 
-impl<'a> LintContext<'a> {
+impl LintContext<'_> {
     /// Get the range of declaration IDs that were added during parsing (the delta)
-    /// Returns (base_count, total_count) for iterating: base_count..total_count
+    /// Returns (`base_count`, `total_count`) for iterating: `base_count..total_count`
     pub fn new_decl_range(&self) -> (usize, usize) {
         let base_count = self.engine_state.num_decls();
         let total_count = self.working_set.num_decls();
@@ -113,7 +113,7 @@ impl<'a> LintContext<'a> {
     /// This is the most flexible regex helper. Use when you need to:
     /// - Filter matches conditionally (not all matches are violations)
     /// - Customize both message and suggestion per match
-    /// - Access the full regex::Match object for complex logic
+    /// - Access the full `regex::Match` object for complex logic
     ///
     /// # Arguments
     /// * `pattern` - The regex pattern to match
@@ -189,13 +189,13 @@ impl<'a> LintContext<'a> {
         rule_id: &str,
         severity: Severity,
         message_fn: F,
-        suggestion: Option<String>,
+        suggestion: Option<&String>,
     ) -> Vec<Violation>
     where
         F: Fn(&str) -> String,
     {
         self.violations_from_regex_if(pattern, rule_id, severity, |mat| {
-            Some((message_fn(mat.as_str()), suggestion.clone()))
+            Some((message_fn(mat.as_str()), suggestion.cloned()))
         })
     }
 
@@ -284,6 +284,7 @@ impl<'a> LintContext<'a> {
     }
 
     /// Collect all variable declarations in the AST
+    #[must_use]
     pub fn collect_var_declarations(&self) -> Vec<(nu_protocol::VarId, Span)> {
         let mut collector = crate::ast_walker::VarDeclCollector::new();
         self.walk_ast(&mut collector);
@@ -291,6 +292,7 @@ impl<'a> LintContext<'a> {
     }
 
     /// Collect all function calls in the AST
+    #[must_use]
     pub fn collect_function_calls(&self) -> Vec<(nu_protocol::ast::Call, Span)> {
         let mut collector = crate::ast_walker::CallCollector::new();
         self.walk_ast(&mut collector);
@@ -298,6 +300,7 @@ impl<'a> LintContext<'a> {
     }
 
     /// Get the text content of a span
+    #[must_use]
     pub fn get_span_contents(&self, span: Span) -> &str {
         crate::parser::get_span_contents(self.source, span)
     }
@@ -344,6 +347,7 @@ pub enum LintError {
 }
 
 impl Violation {
+    #[must_use]
     pub fn to_source_span(&self) -> SourceSpan {
         SourceSpan::from((self.span.start, self.span.end - self.span.start))
     }

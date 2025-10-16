@@ -97,11 +97,11 @@ mod tests {
     fn test_for_loop_detected() {
         let rule = PreferEachOverFor::new();
 
-        let bad_code = r#"
+        let bad_code = r"
 for item in $items {
     echo $item
 }
-"#;
+";
         let context = LintContext::test_from_source(bad_code);
         assert!(!rule.check(&context).is_empty(), "Should detect for loop");
     }
@@ -144,11 +144,11 @@ for item in $items {
     fn test_for_loop_with_external_tools_not_flagged() {
         let rule = PreferEachOverFor::new();
 
-        let acceptable_code = r#"
+        let acceptable_code = r"
 for item in $downloads {
     ffmpeg -i $item.url -o $item.output
 }
-"#;
+";
         let context = LintContext::test_from_source(acceptable_code);
         assert_eq!(
             rule.check(&context).len(),
@@ -161,11 +161,11 @@ for item in $downloads {
     fn test_for_loop_with_file_operations_not_flagged() {
         let rule = PreferEachOverFor::new();
 
-        let acceptable_code = r#"
+        let acceptable_code = r"
 for file in $files {
     save $file.content $file.path
 }
-"#;
+";
         let context = LintContext::test_from_source(acceptable_code);
         assert_eq!(
             rule.check(&context).len(),
@@ -196,9 +196,9 @@ for dir in $directories {
     fn test_each_not_flagged() {
         let rule = PreferEachOverFor::new();
 
-        let good_code = r#"
+        let good_code = r"
 $items | each { |item| $item * 2 }
-"#;
+";
         let context = LintContext::test_from_source(good_code);
         assert_eq!(
             rule.check(&context).len(),

@@ -1,7 +1,7 @@
 use nu_protocol::{
+    BlockId, Span, VarId,
     ast::{Block, Expr, Expression, Pipeline},
     engine::StateWorkingSet,
-    BlockId, Span, VarId,
 };
 
 /// A visitor trait for traversing Nushell AST nodes.
@@ -54,8 +54,10 @@ pub trait AstVisitor {
     fn visit_list(&mut self, items: &[nu_protocol::ast::ListItem], context: &VisitContext) {
         for item in items {
             match item {
-                nu_protocol::ast::ListItem::Item(expr) => self.visit_expression(expr, context),
-                nu_protocol::ast::ListItem::Spread(_, expr) => self.visit_expression(expr, context),
+                nu_protocol::ast::ListItem::Item(expr)
+                | nu_protocol::ast::ListItem::Spread(_, expr) => {
+                    self.visit_expression(expr, context);
+                }
             }
         }
     }
@@ -78,6 +80,7 @@ pub struct VisitContext<'a> {
 }
 
 impl<'a> VisitContext<'a> {
+    #[must_use]
     pub fn new(working_set: &'a StateWorkingSet<'a>, source: &'a str) -> Self {
         Self {
             working_set,
@@ -86,22 +89,26 @@ impl<'a> VisitContext<'a> {
     }
 
     /// Get the text content of a span
+    #[must_use]
     pub fn get_span_contents(&self, span: Span) -> &str {
         crate::parser::get_span_contents(self.source, span)
     }
 
     /// Get a block by its ID
+    #[must_use]
     pub fn get_block(&self, block_id: BlockId) -> &Block {
         self.working_set.get_block(block_id)
     }
 
     /// Get variable info by ID
+    #[must_use]
     pub fn get_variable(&self, var_id: VarId) -> &nu_protocol::engine::Variable {
         self.working_set.get_variable(var_id)
     }
 
     /// Extract text arguments from an external command call
     /// Returns a Vec of argument strings extracted from the AST
+    #[must_use]
     pub fn extract_external_args(
         &self,
         args: &[nu_protocol::ast::ExternalArgument],
@@ -182,10 +189,7 @@ pub fn walk_expression<V: AstVisitor + ?Sized>(
         Expr::FullCellPath(cell_path) => {
             visitor.visit_expression(&cell_path.head, context);
         }
-        Expr::String(content) => {
-            visitor.visit_string(content, expr.span, context);
-        }
-        Expr::RawString(content) => {
+        Expr::String(content) | Expr::RawString(content) => {
             visitor.visit_string(content, expr.span, context);
         }
         Expr::Int(value) => {
@@ -216,18 +220,14 @@ pub fn walk_call<V: AstVisitor + ?Sized>(
     // Visit positional arguments
     for expr in &call.arguments {
         match expr {
-            nu_protocol::ast::Argument::Positional(expr) => {
-                visitor.visit_expression(expr, context);
-            }
             nu_protocol::ast::Argument::Named(named) => {
                 if let Some(expr) = &named.2 {
                     visitor.visit_expression(expr, context);
                 }
             }
-            nu_protocol::ast::Argument::Unknown(expr) => {
-                visitor.visit_expression(expr, context);
-            }
-            nu_protocol::ast::Argument::Spread(expr) => {
+            nu_protocol::ast::Argument::Positional(expr)
+            | nu_protocol::ast::Argument::Unknown(expr)
+            | nu_protocol::ast::Argument::Spread(expr) => {
                 visitor.visit_expression(expr, context);
             }
         }
@@ -270,6 +270,7 @@ pub struct VarDeclCollector {
 }
 
 impl VarDeclCollector {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             var_decls: Vec::new(),
@@ -295,6 +296,7 @@ pub struct CallCollector {
 }
 
 impl CallCollector {
+    #[must_use]
     pub fn new() -> Self {
         Self { calls: Vec::new() }
     }

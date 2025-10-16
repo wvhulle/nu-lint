@@ -78,7 +78,7 @@ fn main() {
         match Config::load_from_file(&config_path) {
             Ok(cfg) => cfg,
             Err(e) => {
-                eprintln!("Error loading config: {}", e);
+                eprintln!("Error loading config: {e}");
                 process::exit(2);
             }
         }
@@ -174,9 +174,9 @@ fn main() {
 
     let formatter = TextFormatter;
     let output = formatter.format(&all_violations, &source);
-    println!("{}", output);
+    println!("{output}");
 
-    let exit_code = if all_violations.is_empty() { 0 } else { 1 };
+    let exit_code = i32::from(!all_violations.is_empty());
 
     process::exit(exit_code);
 }

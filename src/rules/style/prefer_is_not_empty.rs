@@ -1,11 +1,22 @@
 use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
 use regex::Regex;
+use std::sync::OnceLock;
 
 pub struct PreferIsNotEmpty;
 
 impl PreferIsNotEmpty {
     pub fn new() -> Self {
         Self
+    }
+
+    fn not_is_empty_pattern() -> &'static Regex {
+        static PATTERN: OnceLock<Regex> = OnceLock::new();
+        PATTERN.get_or_init(|| Regex::new(r"not\s+\([^)]*\|\s*is-empty\s*\)").unwrap())
+    }
+
+    fn if_not_is_empty_pattern() -> &'static Regex {
+        static PATTERN: OnceLock<Regex> = OnceLock::new();
+        PATTERN.get_or_init(|| Regex::new(r"if\s+not\s+\(\$[^)]*\|\s*is-empty\s*\)").unwrap())
     }
 }
 
@@ -36,9 +47,8 @@ impl Rule for PreferIsNotEmpty {
         let mut violations = Vec::new();
 
         // Pattern: not (... | is-empty)
-        let pattern = Regex::new(r"not\s+\([^)]*\|\s*is-empty\s*\)").unwrap();
         violations.extend(context.violations_from_regex(
-            &pattern,
+            Self::not_is_empty_pattern(),
             self.id(),
             self.severity(),
             "Double negative 'not ... is-empty' reduces readability",
@@ -46,9 +56,8 @@ impl Rule for PreferIsNotEmpty {
         ));
 
         // Also match: if not ($var | is-empty)
-        let if_pattern = Regex::new(r"if\s+not\s+\(\$[^)]*\|\s*is-empty\s*\)").unwrap();
         violations.extend(context.violations_from_regex(
-            &if_pattern,
+            Self::if_not_is_empty_pattern(),
             self.id(),
             self.severity(),
             "Use 'is-not-empty' instead of 'not ... is-empty'",

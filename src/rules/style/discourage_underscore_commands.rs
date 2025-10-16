@@ -75,9 +75,9 @@ mod tests {
 
         let rule = DiscourageUnderscoreCommands::new();
 
-        let bad_code = r#"def my_command [param: string] {
+        let bad_code = r"def my_command [param: string] {
     echo $param
-}"#;
+}";
 
         let engine_state = EngineState::new();
         let (block, working_set) = parse_source(&engine_state, bad_code.as_bytes()).unwrap();
@@ -102,9 +102,9 @@ mod tests {
 
         let rule = DiscourageUnderscoreCommands::new();
 
-        let good_code = r#"def my-command [param: string] {
+        let good_code = r"def my-command [param: string] {
     echo $param
-}"#;
+}";
 
         let engine_state = EngineState::new();
         let (block, working_set) = parse_source(&engine_state, good_code.as_bytes()).unwrap();
@@ -130,9 +130,9 @@ mod tests {
 
         let rule = DiscourageUnderscoreCommands::new();
 
-        let good_code = r#"def command [param: string] {
+        let good_code = r"def command [param: string] {
     echo $param
-}"#;
+}";
 
         let engine_state = EngineState::new();
         let (block, working_set) = parse_source(&engine_state, good_code.as_bytes()).unwrap();

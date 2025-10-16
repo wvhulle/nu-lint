@@ -35,10 +35,7 @@ impl OutputFormatter for TextFormatter {
             let (line, column) = calculate_line_column(&source_code, violation.span.start);
 
             if let Some(file_path) = &violation.file {
-                output.push_str(&format!(
-                    "\x1b[1m{}:{}:{}\x1b[0m\n",
-                    file_path, line, column
-                ));
+                output.push_str(&format!("\x1b[1m{file_path}:{line}:{column}\x1b[0m\n"));
             }
 
             let diagnostic = ViolationDiagnostic {
@@ -47,7 +44,7 @@ impl OutputFormatter for TextFormatter {
             };
 
             let report = Report::new(diagnostic);
-            output.push_str(&format!("{:?}\n", report));
+            output.push_str(&format!("{report:?}\n"));
         }
 
         let summary = Summary::from_violations(violations);

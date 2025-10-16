@@ -28,6 +28,7 @@ pub struct LintEngine {
 }
 
 impl LintEngine {
+    #[must_use]
     pub fn new(config: Config) -> Self {
         Self {
             registry: RuleRegistry::with_default_rules(),

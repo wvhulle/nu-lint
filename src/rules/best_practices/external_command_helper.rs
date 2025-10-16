@@ -37,7 +37,7 @@ pub type FixBuilder = fn(
     args: &[nu_protocol::ast::ExternalArgument],
     expr_span: nu_protocol::Span,
     context: &VisitContext,
-) -> Option<Fix>;
+) -> Fix;
 
 /// Generic AST visitor for detecting external commands with builtin alternatives
 pub struct ExternalCommandVisitor<'a> {
@@ -86,8 +86,7 @@ impl<'a> AstVisitor for ExternalCommandVisitor<'a> {
                 let mut suggestion = format!(
                     "Replace '^{}' with built-in command: {}\n\
                      Built-in commands are more portable, faster, and provide better error handling.",
-                    cmd_text,
-                    alternative.command
+                    cmd_text, alternative.command
                 );
 
                 if let Some(note) = alternative.note {
@@ -97,7 +96,7 @@ impl<'a> AstVisitor for ExternalCommandVisitor<'a> {
                 // Build fix if a fix builder is provided
                 let fix = self
                     .fix_builder
-                    .and_then(|builder| builder(cmd_text, alternative, args, expr.span, context));
+                    .map(|builder| builder(cmd_text, alternative, args, expr.span, context));
 
                 self.violations.push(Violation {
                     rule_id: self.rule_id.to_string(),

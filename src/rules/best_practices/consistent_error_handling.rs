@@ -1,11 +1,25 @@
 use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
 use regex::Regex;
+use std::sync::OnceLock;
 
 pub struct ConsistentErrorHandling;
 
 impl ConsistentErrorHandling {
+    #[must_use]
     pub fn new() -> Self {
         Self
+    }
+
+    fn complete_pattern() -> &'static Regex {
+        static PATTERN: OnceLock<Regex> = OnceLock::new();
+        PATTERN.get_or_init(|| {
+            Regex::new(r"let\s+(\w+)\s*=\s*\([^)]*\^[^)]*\|\s*complete\s*\)").unwrap()
+        })
+    }
+
+    fn var_pattern() -> &'static Regex {
+        static PATTERN: OnceLock<Regex> = OnceLock::new();
+        PATTERN.get_or_init(|| Regex::new(r"let\s+(\w+)").unwrap())
     }
 }
 
@@ -35,11 +49,10 @@ impl Rule for ConsistentErrorHandling {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         // Pattern: external command with complete but no exit code check
         // Matches: let result = (^command | complete) but no check for exit_code
-        let complete_pattern =
-            Regex::new(r"let\s+(\w+)\s*=\s*\([^)]*\^[^)]*\|\s*complete\s*\)").unwrap();
-        let var_pattern = Regex::new(r"let\s+(\w+)").unwrap();
+        let complete_pattern = Self::complete_pattern();
+        let var_pattern = Self::var_pattern();
 
-        context.violations_from_regex_if(&complete_pattern, self.id(), self.severity(), |mat| {
+        context.violations_from_regex_if(complete_pattern, self.id(), self.severity(), |mat| {
             let caps = var_pattern.captures(mat.as_str())?;
             let var_name = &caps[1];
 
@@ -72,10 +85,10 @@ mod tests {
     fn test_missing_exit_code_check() {
         let rule = ConsistentErrorHandling::new();
 
-        let bad_code = r#"
+        let bad_code = r"
 let result = (^bluetoothctl info $mac | complete)
 let output = $result.stdout
-"#;
+";
         let context = LintContext::test_from_source(bad_code);
         assert!(
             !rule.check(&context).is_empty(),
@@ -87,12 +100,12 @@ let output = $result.stdout
     fn test_exit_code_checked() {
         let rule = ConsistentErrorHandling::new();
 
-        let good_code = r#"
+        let good_code = r"
 let result = (^bluetoothctl info $mac | complete)
 if $result.exit_code != 0 {
     return
 }
-"#;
+";
         let context = LintContext::test_from_source(good_code);
         assert_eq!(
             rule.check(&context).len(),
@@ -105,9 +118,9 @@ if $result.exit_code != 0 {
     fn test_no_complete_not_flagged() {
         let rule = ConsistentErrorHandling::new();
 
-        let good_code = r#"
+        let good_code = r"
 let result = (some | regular | pipeline)
-"#;
+";
         let context = LintContext::test_from_source(good_code);
         assert_eq!(
             rule.check(&context).len(),

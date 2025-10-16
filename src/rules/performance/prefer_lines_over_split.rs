@@ -97,11 +97,11 @@ def process [] {
 
     #[test]
     fn test_lines_not_flagged() {
-        let source = r#"
+        let source = r"
 def process [] {
     ^git log --oneline | lines
 }
-"#;
+";
         let engine = LintEngine::new(Config::default());
         let violations = engine.lint_source(source, None).unwrap();
 
@@ -133,11 +133,11 @@ def process [] {
 
     #[test]
     fn test_single_quote_newline_detected() {
-        let source = r#"
+        let source = r"
 def process [] {
     open file.txt | split row '\n'
 }
-"#;
+";
         let engine = LintEngine::new(Config::default());
         let violations = engine.lint_source(source, None).unwrap();
 

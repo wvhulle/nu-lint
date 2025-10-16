@@ -89,6 +89,7 @@ impl LintEngine {
         Ok(violations)
     }
 
+    #[must_use]
     pub fn registry(&self) -> &RuleRegistry {
         &self.registry
     }

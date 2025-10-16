@@ -80,6 +80,7 @@ pub struct LintContext<'a> {
 impl LintContext<'_> {
     /// Get the range of declaration IDs that were added during parsing (the delta)
     /// Returns (`base_count`, `total_count`) for iterating: `base_count..total_count`
+    #[must_use]
     pub fn new_decl_range(&self) -> (usize, usize) {
         let base_count = self.engine_state.num_decls();
         let total_count = self.working_set.num_decls();

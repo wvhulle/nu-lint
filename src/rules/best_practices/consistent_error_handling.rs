@@ -30,7 +30,7 @@ impl Default for ConsistentErrorHandling {
 }
 
 impl Rule for ConsistentErrorHandling {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "BP005"
     }
 
@@ -42,7 +42,7 @@ impl Rule for ConsistentErrorHandling {
         Severity::Warning
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Check external command results consistently for better error handling"
     }
 
@@ -67,8 +67,7 @@ impl Rule for ConsistentErrorHandling {
             } else {
                 Some((
                     format!(
-                        "External command result '{}' stored but exit code not checked",
-                        var_name
+                        "External command result '{var_name}' stored but exit code not checked"
                     ),
                     Some("Check 'exit_code' field to handle command failures: if $result.exit_code != 0 { ... }".to_string()),
                 ))

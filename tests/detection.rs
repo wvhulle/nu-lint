@@ -3,13 +3,12 @@ use std::fs;
 
 /// Helper function to run linter on a test file and check for specific rule
 fn check_rule_detected(rule_id: &str) {
-    let test_file = format!("tests/nu/{}.nu", rule_id);
+    let test_file = format!("tests/nu/{rule_id}.nu");
 
     // Ensure test file exists
     assert!(
         fs::metadata(&test_file).is_ok(),
-        "Test file {} not found",
-        test_file
+        "Test file {test_file} not found"
     );
 
     let mut cmd = Command::cargo_bin("nu-lint").unwrap();
@@ -20,16 +19,12 @@ fn check_rule_detected(rule_id: &str) {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
-    let combined = format!("{}{}", stdout, stderr);
+    let combined = format!("{stdout}{stderr}");
 
     // Check that the specific rule ID appears in the output
     assert!(
         combined.contains(rule_id),
-        "Rule {} not detected in file {}. Stdout:\n{}\nStderr:\n{}",
-        rule_id,
-        test_file,
-        stdout,
-        stderr
+        "Rule {rule_id} not detected in file {test_file}. Stdout:\n{stdout}\nStderr:\n{stderr}"
     );
 }
 

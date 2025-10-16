@@ -8,12 +8,13 @@ use std::collections::HashMap;
 pub struct PreferBuiltinForCommonCommands;
 
 impl PreferBuiltinForCommonCommands {
+    #[must_use]
     pub fn new() -> Self {
         Self
     }
 
     /// Map of common file and text operations to their Nushell built-in equivalents
-    /// Based on https://www.nushell.sh/book/coming_from_bash.html#command-equivalents
+    /// Based on <https://www.nushell.sh/book/coming_from_bash.html#command-equivalents>
     ///
     /// This rule focuses on the most commonly used commands when migrating from bash.
     /// See also: BP013 (text transformation), BP014 (system commands)
@@ -64,7 +65,7 @@ impl Default for PreferBuiltinForCommonCommands {
 }
 
 impl Rule for PreferBuiltinForCommonCommands {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "BP012"
     }
 
@@ -76,7 +77,7 @@ impl Rule for PreferBuiltinForCommonCommands {
         Severity::Info
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Use Nushell built-ins instead of external commands for common operations like ls, cat, grep, head, tail, sort, uniq, and find"
     }
 
@@ -116,7 +117,7 @@ fn build_fix(
         "cat" => {
             // ^cat file.txt -> open --raw file.txt
             if let Some(file) = args_text.iter().find(|a| !a.starts_with('-')) {
-                format!("open --raw {}", file)
+                format!("open --raw {file}")
             } else {
                 alternative.command.to_string()
             }
@@ -130,9 +131,9 @@ fn build_fix(
             let builtin = if cmd_text == "head" { "first" } else { "last" };
             if let Some(num_arg) = args_text.iter().find(|a| a.starts_with('-') && a.len() > 1) {
                 let num = &num_arg[1..];
-                format!("{} {}", builtin, num)
+                format!("{builtin} {num}")
             } else {
-                format!("{} 10", builtin)
+                format!("{builtin} 10")
             }
         }
         "sort" | "uniq" => {
@@ -299,7 +300,7 @@ mod tests {
     fn test_multiple_external_commands_detected() {
         let rule = PreferBuiltinForCommonCommands::new();
         // Pipeline with multiple external commands
-        let source = r#"^cat file.txt | ^grep pattern | ^sort"#;
+        let source = r"^cat file.txt | ^grep pattern | ^sort";
         let engine_state = create_engine_with_stdlib();
         let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
         let context = LintContext {
@@ -400,7 +401,7 @@ mod tests {
     #[test]
     fn test_grep_fix_provided() {
         let rule = PreferBuiltinForCommonCommands::new();
-        let source = r#"^grep pattern file.txt"#;
+        let source = r"^grep pattern file.txt";
         let engine_state = create_engine_with_stdlib();
         let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
         let context = LintContext {
@@ -450,7 +451,7 @@ mod tests {
     #[test]
     fn test_tail_fix_provided() {
         let rule = PreferBuiltinForCommonCommands::new();
-        let source = r#"^tail -3 file.txt"#;
+        let source = r"^tail -3 file.txt";
         let engine_state = create_engine_with_stdlib();
         let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
         let context = LintContext {

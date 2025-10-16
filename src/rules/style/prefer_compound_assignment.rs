@@ -53,55 +53,52 @@ impl<'a> CompoundAssignmentVisitor<'a> {
 impl<'a> AstVisitor for CompoundAssignmentVisitor<'a> {
     fn visit_expression(&mut self, expr: &nu_protocol::ast::Expression, context: &VisitContext) {
         // Look for binary operations that are assignments
-        if let Expr::BinaryOp(left, op_expr, right) = &expr.expr {
-            if let Expr::Operator(nu_protocol::ast::Operator::Assignment(
+        if let Expr::BinaryOp(left, op_expr, right) = &expr.expr
+            && let Expr::Operator(nu_protocol::ast::Operator::Assignment(
                 nu_protocol::ast::Assignment::Assign,
             )) = &op_expr.expr
-            {
-                // Found an assignment: var = value
-                // Check if the right side is a subexpression containing a binary operation
-                if let Expr::Subexpression(block_id) = &right.expr {
-                    let block = context.working_set.get_block(*block_id);
-                    // Look for a binary operation in the subexpression
-                    if let Some(pipeline) = block.pipelines.first() {
-                        if let Some(element) = pipeline.elements.first() {
-                            if let Expr::BinaryOp(sub_left, sub_op_expr, _sub_right) =
-                                &element.expr.expr
-                            {
-                                if let Expr::Operator(operator) = &sub_op_expr.expr {
-                                    // Check if left operand matches the variable being assigned to
-                                    if self
-                                        .expressions_refer_to_same_variable(left, sub_left, context)
-                                    {
-                                        let compound_op = self.get_compound_operator(operator);
-                                        if let Some(compound_op) = compound_op {
-                                            let var_text = context.get_span_contents(left.span);
-                                            let op_symbol = self.get_operator_symbol(operator);
+        {
+            // Found an assignment: var = value
+            // Check if the right side is a subexpression containing a binary operation
+            if let Expr::Subexpression(block_id) = &right.expr {
+                let block = context.working_set.get_block(*block_id);
+                // Look for a binary operation in the subexpression
+                if let Some(pipeline) = block.pipelines.first()
+                    && let Some(element) = pipeline.elements.first()
+                    && let Expr::BinaryOp(sub_left, sub_op_expr, _sub_right) = &element.expr.expr
+                {
+                    if let Expr::Operator(operator) = &sub_op_expr.expr {
+                        // Check if left operand matches the variable being assigned to
+                        if self.expressions_refer_to_same_variable(left, sub_left, context) {
+                            let compound_op = self.get_compound_operator(operator);
+                            if let Some(compound_op) = compound_op {
+                                let var_text = context.get_span_contents(left.span);
+                                let op_symbol = self.get_operator_symbol(operator);
 
-                                            // Build fix: extract the right operand from the subexpression
-                                            let fix = self.build_fix(
-                                                var_text,
-                                                compound_op,
-                                                element,
-                                                expr.span,
-                                                context,
-                                            );
+                                // Build fix: extract the right operand from the subexpression
+                                let fix = self.build_fix(
+                                    var_text,
+                                    compound_op,
+                                    element,
+                                    expr.span,
+                                    context,
+                                );
 
-                                            self.violations.push(Violation {
-                                                rule_id: self.rule.id().to_string(),
-                                                severity: self.rule.severity(),
-                                                message: format!(
-                                                    "Use compound assignment: {} {} instead of {} = {} {} ...",
-                                                    var_text, compound_op, var_text, var_text, op_symbol
-                                                ),
-                                                span: expr.span,
-                                                suggestion: Some(format!("Replace with: {} {}", var_text, compound_op)),
-                                                fix,
-                                                file: None,
-                                            });
-                                        }
-                                    }
-                                }
+                                self.violations.push(Violation {
+                                    rule_id: self.rule.id().to_string(),
+                                    severity: self.rule.severity(),
+                                    message: format!(
+                                        "Use compound assignment: {} {} instead of {} = {} {} ...",
+                                        var_text, compound_op, var_text, var_text, op_symbol
+                                    ),
+                                    span: expr.span,
+                                    suggestion: Some(format!(
+                                        "Replace with: {} {}",
+                                        var_text, compound_op
+                                    )),
+                                    fix,
+                                    file: None,
+                                });
                             }
                         }
                     }
@@ -140,7 +137,7 @@ impl<'a> CompoundAssignmentVisitor<'a> {
         // Extract the right operand from the binary operation
         if let Expr::BinaryOp(_left, _op, right) = &element.expr.expr {
             let right_text = context.get_span_contents(right.span);
-            let new_text = format!("{} {} {}", var_text, compound_op, right_text);
+            let new_text = format!("{var_text} {compound_op} {right_text}");
 
             Some(Fix {
                 description: format!("Replace with compound assignment: {}", new_text),

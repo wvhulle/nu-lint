@@ -2,22 +2,13 @@ use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
 use regex::Regex;
 use std::sync::OnceLock;
 
+#[derive(Default)]
 pub struct BraceSpacing;
 
 impl BraceSpacing {
-    pub fn new() -> Self {
-        Self
-    }
-
     fn bad_record_pattern() -> &'static Regex {
         static PATTERN: OnceLock<Regex> = OnceLock::new();
         PATTERN.get_or_init(|| Regex::new(r"\{[a-zA-Z_]").unwrap())
-    }
-}
-
-impl Default for BraceSpacing {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -39,29 +30,27 @@ impl Rule for BraceSpacing {
     }
 
     fn check(&self, context: &LintContext) -> Vec<Violation> {
-        // Check for records without proper spacing: {key: value} vs { key: value }
-        // Only check for records with colons (key: value patterns)
-        let bad_record = Self::bad_record_pattern();
-
-        context.violations_from_regex_if(bad_record, self.id(), self.severity(), |mat| {
-            // Look ahead to see if this contains a colon (record pattern)
-            let remaining_text = &context.source[mat.start()..];
-            if let Some(close_brace_pos) = remaining_text.find('}') {
-                let record_content = &remaining_text[..close_brace_pos];
-
-                // Only flag if it contains a colon (key: value pattern)
-                if record_content.contains(':') {
-                    Some((
-                        "Record braces should have spaces: { key: value }".to_string(),
-                        Some("Add spaces: { key: value } instead of {key: value}".to_string()),
-                    ))
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
-        })
+        context.violations_from_regex_if(
+            Self::bad_record_pattern(),
+            self.id(),
+            self.severity(),
+            |mat| {
+                // Only flag if this is a record (contains ':' before closing '}')
+                context.source[mat.start()..]
+                    .find('}')
+                    .and_then(|close_pos| {
+                        context.source[mat.start()..mat.start() + close_pos]
+                            .contains(':')
+                            .then_some((
+                                "Record braces should have spaces: { key: value }".to_string(),
+                                Some(
+                                    "Add spaces: { key: value } instead of {key: value}"
+                                        .to_string(),
+                                ),
+                            ))
+                    })
+            },
+        )
     }
 }
 
@@ -71,7 +60,7 @@ mod tests {
 
     #[test]
     fn test_bad_brace_spacing() {
-        let rule = BraceSpacing::new();
+        let rule = BraceSpacing::default();
 
         let bad = "{key: value}";
         let context = LintContext::test_from_source(bad);
@@ -81,7 +70,7 @@ mod tests {
 
     #[test]
     fn test_good_brace_spacing() {
-        let rule = BraceSpacing::new();
+        let rule = BraceSpacing::default();
 
         let good = "{ key: value }";
         let context = LintContext::test_from_source(good);

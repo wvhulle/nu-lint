@@ -155,6 +155,7 @@ pub struct Summary {
 }
 
 impl Summary {
+    #[must_use]
     pub fn from_violations(violations: &[Violation]) -> Self {
         let mut errors = 0;
         let mut warnings = 0;

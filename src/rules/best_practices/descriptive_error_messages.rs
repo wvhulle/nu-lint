@@ -3,6 +3,7 @@ use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
 pub struct DescriptiveErrorMessages;
 
 impl DescriptiveErrorMessages {
+    #[must_use]
     pub fn new() -> Self {
         Self
     }
@@ -15,7 +16,7 @@ impl Default for DescriptiveErrorMessages {
 }
 
 impl Rule for DescriptiveErrorMessages {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "BP011"
     }
 
@@ -27,7 +28,7 @@ impl Rule for DescriptiveErrorMessages {
         Severity::Warning
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Error messages should be descriptive and actionable"
     }
 

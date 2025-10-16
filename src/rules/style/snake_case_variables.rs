@@ -40,32 +40,23 @@ impl Rule for SnakeCaseVariables {
     }
 
     fn check(&self, context: &LintContext) -> Vec<Violation> {
-        let let_pattern = Self::let_pattern();
-
-        let_pattern
+        Self::let_pattern()
             .captures_iter(context.source)
             .filter_map(|cap| {
                 let var_match = cap.get(1)?;
                 let var_name = var_match.as_str();
 
-                if Self::is_valid_snake_case(var_name) {
-                    None
-                } else {
-                    Some(Violation {
-                        rule_id: self.id().to_string(),
-                        severity: self.severity(),
-                        message: format!(
-                            "Variable '{var_name}' should use snake_case naming convention"
-                        ),
-                        span: nu_protocol::Span::new(var_match.start(), var_match.end()),
-                        suggestion: Some(format!(
-                            "Consider renaming to: {}",
-                            to_snake_case(var_name)
-                        )),
-                        fix: None,
-                        file: None,
-                    })
-                }
+                (!Self::is_valid_snake_case(var_name)).then(|| Violation {
+                    rule_id: self.id().to_string(),
+                    severity: self.severity(),
+                    message: format!(
+                        "Variable '{var_name}' should use snake_case naming convention"
+                    ),
+                    span: nu_protocol::Span::new(var_match.start(), var_match.end()),
+                    suggestion: Some(format!("Consider renaming to: {}", to_snake_case(var_name))),
+                    fix: None,
+                    file: None,
+                })
             })
             .collect()
     }

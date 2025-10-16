@@ -4,7 +4,7 @@ use crate::ast_walker::{AstVisitor, VisitContext};
 use crate::context::{Severity, Violation};
 use nu_protocol::ast::Expr;
 use std::collections::HashMap;
-
+use std::fmt::Write;
 // Re-export Fix type for use by fix builders
 pub use crate::context::Fix;
 
@@ -69,7 +69,7 @@ impl<'a> ExternalCommandVisitor<'a> {
     }
 }
 
-impl<'a> AstVisitor for ExternalCommandVisitor<'a> {
+impl AstVisitor for ExternalCommandVisitor<'_> {
     fn visit_expression(&mut self, expr: &nu_protocol::ast::Expression, context: &VisitContext) {
         // Check for external calls
         if let Expr::ExternalCall(head, args) = &expr.expr {
@@ -90,7 +90,7 @@ impl<'a> AstVisitor for ExternalCommandVisitor<'a> {
                 );
 
                 if let Some(note) = alternative.note {
-                    suggestion.push_str(&format!("\n\nNote: {}", note));
+                    write!(suggestion, "\n\nNote: {note}").unwrap();
                 }
 
                 // Build fix if a fix builder is provided

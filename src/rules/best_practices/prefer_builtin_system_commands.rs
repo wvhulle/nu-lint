@@ -8,6 +8,7 @@ use std::collections::HashMap;
 pub struct PreferBuiltinSystemCommands;
 
 impl PreferBuiltinSystemCommands {
+    #[must_use]
     pub fn new() -> Self {
         Self
     }

@@ -37,18 +37,18 @@ impl RuleRegistry {
         registry.register(Box::<style::SnakeCaseVariables>::default());
         registry.register(Box::<style::KebabCaseCommands>::default());
         registry.register(Box::<style::ScreamingSnakeConstants>::default());
-        registry.register(Box::new(style::PipeSpacing::new()));
-        registry.register(Box::new(style::BraceSpacing::new()));
+        registry.register(Box::new(style::PipeSpacing::default()));
+        registry.register(Box::new(style::BraceSpacing::default()));
         registry.register(Box::new(style::PreferCompoundAssignment::new()));
         registry.register(Box::new(style::UnnecessaryVariableBeforeReturn::new()));
-        registry.register(Box::new(style::PreferIsNotEmpty::new()));
+        registry.register(Box::new(style::PreferIsNotEmpty::default()));
         registry.register(Box::new(style::DiscouragedBareIgnore::new()));
         registry.register(Box::new(style::DiscourageUnderscoreCommands::new()));
         registry.register(Box::new(style::CompletionFunctionNaming::new()));
         registry.register(Box::new(style::UnnecessaryMut::new()));
 
         registry.register(Box::new(best_practices::PreferErrorMake::new()));
-        registry.register(Box::new(best_practices::AvoidMutableAccumulation::new()));
+        registry.register(Box::new(best_practices::AvoidMutableAccumulation::default()));
         registry.register(Box::new(best_practices::PreferRangeIteration::new()));
         registry.register(Box::new(best_practices::PreferParseCommand::new()));
         registry.register(Box::new(best_practices::ConsistentErrorHandling::new()));
@@ -61,9 +61,9 @@ impl RuleRegistry {
         registry.register(Box::new(best_practices::PreferBuiltinTextTransforms::new()));
         registry.register(Box::new(best_practices::PreferBuiltinSystemCommands::new()));
 
-        registry.register(Box::new(performance::PreferWhereOverEachIf::new()));
+        registry.register(Box::new(performance::PreferWhereOverEachIf::default()));
         registry.register(Box::new(performance::PreferLinesOverSplit::new()));
-        registry.register(Box::new(performance::PreferParseOverEachSplit::new()));
+        registry.register(Box::new(performance::PreferParseOverEachSplit::default()));
 
         registry.register(Box::new(documentation::MissingCommandDocs::new()));
         registry.register(Box::new(documentation::ExportedFunctionDocs));

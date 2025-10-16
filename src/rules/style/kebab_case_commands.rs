@@ -35,29 +35,24 @@ impl Rule for KebabCaseCommands {
     }
 
     fn check(&self, context: &LintContext) -> Vec<Violation> {
-        let mut violations = Vec::new();
-
-        for (_decl_id, decl) in context.new_user_functions() {
-            let cmd_name = &decl.signature().name;
-
-            if !Self::is_valid_kebab_case(cmd_name) {
-                let span = context.find_declaration_span(cmd_name);
-                violations.push(Violation {
+        context
+            .new_user_functions()
+            .filter_map(|(_decl_id, decl)| {
+                let cmd_name = &decl.signature().name;
+                (!Self::is_valid_kebab_case(cmd_name)).then(|| Violation {
                     rule_id: self.id().to_string(),
                     severity: self.severity(),
                     message: format!(
                         "Command '{}' should use kebab-case naming convention",
                         cmd_name
                     ),
-                    span,
+                    span: context.find_declaration_span(cmd_name),
                     suggestion: Some(format!("Consider renaming to: {}", to_kebab_case(cmd_name))),
                     fix: None,
                     file: None,
-                });
-            }
-        }
-
-        violations
+                })
+            })
+            .collect()
     }
 }
 

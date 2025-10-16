@@ -5,6 +5,7 @@ pub struct MaxPositionalParams {
 }
 
 impl MaxPositionalParams {
+    #[must_use]
     pub fn new() -> Self {
         Self { max_positional: 2 }
     }
@@ -17,7 +18,7 @@ impl Default for MaxPositionalParams {
 }
 
 impl Rule for MaxPositionalParams {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "BP009"
     }
 
@@ -29,7 +30,7 @@ impl Rule for MaxPositionalParams {
         Severity::Warning
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Custom commands should have ≤ 2 positional parameters"
     }
 

@@ -2,23 +2,18 @@ use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
 use regex::Regex;
 use std::sync::OnceLock;
 
+#[derive(Default)]
 pub struct PreferWhereOverEachIf;
 
 impl PreferWhereOverEachIf {
-    pub fn new() -> Self {
-        Self
-    }
-
     fn each_if_pattern() -> &'static Regex {
         static PATTERN: OnceLock<Regex> = OnceLock::new();
         PATTERN.get_or_init(|| Regex::new(r"each\s*\{\s*\|([^}|]+)\|\s*if\s+([^}]+)\}").unwrap())
     }
-}
 
-impl Default for PreferWhereOverEachIf {
-    fn default() -> Self {
-        Self::new()
-    }
+    // Side effects that indicate this is processing, not filtering
+    const SIDE_EFFECTS: &'static [&'static str] =
+        &["print", "save", "download", "^", "exit", "=", "mut "];
 }
 
 impl Rule for PreferWhereOverEachIf {
@@ -39,92 +34,37 @@ impl Rule for PreferWhereOverEachIf {
     }
 
     fn check(&self, context: &LintContext) -> Vec<Violation> {
-        // Look for "each { |item| if $item..." pattern with more detail
-        let pattern = Self::each_if_pattern();
+        context.violations_from_regex_if(
+            Self::each_if_pattern(),
+            self.id(),
+            self.severity(),
+            |mat| {
+                let caps = Self::each_if_pattern().captures(mat.as_str())?;
+                let condition_and_body = caps.get(2)?.as_str();
 
-        context.violations_from_regex_if(pattern, self.id(), self.severity(), |mat| {
-            if let Some(caps) = pattern.captures(mat.as_str()) {
-                let _var = &caps[1].trim();
-                let condition_and_body = &caps[2];
+                let body = condition_and_body
+                    .find('{')
+                    .map_or(condition_and_body, |pos| &condition_and_body[pos + 1..])
+                    .trim();
 
-                // Split on the first opening brace to separate condition from body
-                if let Some(brace_pos) = condition_and_body.find('{') {
-                    let _condition = &condition_and_body[..brace_pos].trim();
-                    let body = &condition_and_body[brace_pos + 1..].trim();
-
-                    // Only suggest 'where' if this is pure filtering
-                    if Self::is_pure_filtering(body) {
-                        Some((
-                            "Consider using 'where' for filtering instead of 'each' with 'if'"
-                                .to_string(),
-                            Some(
-                                "Use '$list | where <condition>' for better performance"
-                                    .to_string(),
-                            ),
-                        ))
-                    } else {
-                        None
-                    }
-                } else {
-                    // No body found - might be a simple condition
-                    // Could be filtering if condition returns a value directly
-                    if Self::looks_like_simple_filter(condition_and_body) {
-                        Some((
-                            "Consider using 'where' for filtering instead of 'each' with 'if'"
-                                .to_string(),
-                            Some(
-                                "Use '$list | where <condition>' for better performance"
-                                    .to_string(),
-                            ),
-                        ))
-                    } else {
-                        None
-                    }
-                }
-            } else {
-                None
-            }
-        })
+                // Check if this is pure filtering (no side effects)
+                (!Self::has_side_effects(body)).then(|| {
+                    (
+                        "Consider using 'where' for filtering instead of 'each' with 'if'"
+                            .to_string(),
+                        Some("Use '$list | where <condition>' for better performance".to_string()),
+                    )
+                })
+            },
+        )
     }
 }
 
 impl PreferWhereOverEachIf {
-    fn is_pure_filtering(body: &str) -> bool {
-        let body = body.trim();
-
-        // If body is empty or just returns the item, it's filtering
-        if body.is_empty()
-            || body == "$it"
-            || body.starts_with("$") && body.contains(".") && !body.contains("=")
-        {
-            return true;
-        }
-
-        // Check for side effects that indicate processing, not filtering
-        let has_side_effects = body.contains("print")
-            || body.contains("save")
-            || body.contains("download")
-            || body.contains("^")
-            || body.contains("exit")
-            || body.contains("=")
-            || body.contains("mut ");
-
-        !has_side_effects
-    }
-
-    fn looks_like_simple_filter(condition_and_body: &str) -> bool {
-        let text = condition_and_body.trim();
-
-        // Simple boolean conditions without side effects
-        !text.contains("print")
-            && !text.contains("save")
-            && !text.contains("download")
-            && !text.contains("^")
-            && !text.contains("=")
-            && (text.contains("==")
-                || text.contains("!=")
-                || text.contains("<")
-                || text.contains(">"))
+    fn has_side_effects(code: &str) -> bool {
+        Self::SIDE_EFFECTS
+            .iter()
+            .any(|&effect| code.contains(effect))
     }
 }
 
@@ -134,7 +74,7 @@ mod tests {
 
     #[test]
     fn test_pure_filtering_flagged() {
-        let rule = PreferWhereOverEachIf::new();
+        let rule = PreferWhereOverEachIf::default();
 
         let filtering_code = r"
 $items | each { |item| if $item.is_valid { $item } }
@@ -148,7 +88,7 @@ $items | each { |item| if $item.is_valid { $item } }
 
     #[test]
     fn test_processing_with_side_effects_not_flagged() {
-        let rule = PreferWhereOverEachIf::new();
+        let rule = PreferWhereOverEachIf::default();
 
         let processing_code = r"
 $items | each { |i| if $i.marked_for_download { download $i } }
@@ -163,7 +103,7 @@ $items | each { |i| if $i.marked_for_download { download $i } }
 
     #[test]
     fn test_print_side_effect_not_flagged() {
-        let rule = PreferWhereOverEachIf::new();
+        let rule = PreferWhereOverEachIf::default();
 
         let print_code = r#"
 $files | each { |file| if ($file | path exists) { print $"Processing ($file)" } }
@@ -178,7 +118,7 @@ $files | each { |file| if ($file | path exists) { print $"Processing ($file)" } 
 
     #[test]
     fn test_external_command_not_flagged() {
-        let rule = PreferWhereOverEachIf::new();
+        let rule = PreferWhereOverEachIf::default();
 
         let external_code = r"
 $files | each { |file| if ($file | path exists) { ^some-tool $file } }
@@ -193,7 +133,7 @@ $files | each { |file| if ($file | path exists) { ^some-tool $file } }
 
     #[test]
     fn test_simple_boolean_condition_flagged() {
-        let rule = PreferWhereOverEachIf::new();
+        let rule = PreferWhereOverEachIf::default();
 
         let simple_filter = r"
 $numbers | each { |n| if $n > 10 { $n } }
@@ -207,7 +147,7 @@ $numbers | each { |n| if $n > 10 { $n } }
 
     #[test]
     fn test_assignment_not_flagged() {
-        let rule = PreferWhereOverEachIf::new();
+        let rule = PreferWhereOverEachIf::default();
 
         let assignment_code = r"
 $items | each { |item| if $item.valid { $processed = process $item; $processed } }

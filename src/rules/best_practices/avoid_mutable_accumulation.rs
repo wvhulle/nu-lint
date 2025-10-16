@@ -2,27 +2,18 @@ use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
 use regex::Regex;
 use std::sync::OnceLock;
 
+#[derive(Default)]
 pub struct AvoidMutableAccumulation;
 
 impl AvoidMutableAccumulation {
-    pub fn new() -> Self {
-        Self
-    }
-
     fn mut_list_pattern() -> &'static Regex {
         static PATTERN: OnceLock<Regex> = OnceLock::new();
-        PATTERN.get_or_init(|| Regex::new(r"mut\s+\w+\s*=\s*\[\s*\]").unwrap())
-    }
-}
-
-impl Default for AvoidMutableAccumulation {
-    fn default() -> Self {
-        Self::new()
+        PATTERN.get_or_init(|| Regex::new(r"mut\s+(\w+)\s*=\s*\[\s*\]").unwrap())
     }
 }
 
 impl Rule for AvoidMutableAccumulation {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "BP002"
     }
 
@@ -34,35 +25,29 @@ impl Rule for AvoidMutableAccumulation {
         Severity::Warning
     }
 
-    fn description(&self) -> &str {
+    fn description(&self) -> &'static str {
         "Prefer functional pipelines over mutable list accumulation"
     }
 
     fn check(&self, context: &LintContext) -> Vec<Violation> {
-        // Look for mut var = [] followed by append pattern
-        let pattern = Self::mut_list_pattern();
-
-        context.violations_from_regex_if(pattern, self.id(), self.severity(), |mat| {
-            let var_text = mat.as_str();
-            // Extract variable name
-            let var_name = var_text.split_whitespace().nth(1)?;
-
-            // Look for append pattern with this variable
-            let append_pattern = format!(r"\${}.*\|\s*append", regex::escape(var_name));
-            if Regex::new(&append_pattern)
-                .unwrap()
-                .is_match(context.source)
-            {
-                Some((
-                    format!(
-                        "Mutable list '{}' with append - consider using functional pipeline",
-                        var_name
-                    ),
-                    Some("Use '$items | each { ... }' instead of mutable accumulation".to_string()),
-                ))
-            } else {
-                None
-            }
-        })
+        Self::mut_list_pattern()
+            .captures_iter(context.source)
+            .filter_map(|cap| {
+                let var_name = cap.get(1)?.as_str();
+                let append_pattern = format!(r"\${}.*\|\s*append", regex::escape(var_name));
+                Regex::new(&append_pattern).ok()?.is_match(context.source).then(|| {
+                    let full_match = cap.get(0)?;
+                    Some(Violation {
+                        rule_id: self.id().to_string(),
+                        severity: self.severity(),
+                        message: format!("Mutable list '{var_name}' with append - consider using functional pipeline"),
+                        span: nu_protocol::Span::new(full_match.start(), full_match.end()),
+                        suggestion: Some("Use '$items | each { ... }' instead of mutable accumulation".to_string()),
+                        fix: None,
+                        file: None,
+                    })
+                })?
+            })
+            .collect()
     }
 }

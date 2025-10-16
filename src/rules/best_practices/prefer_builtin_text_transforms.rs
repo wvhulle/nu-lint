@@ -356,7 +356,7 @@ mod tests {
     #[test]
     fn test_tr_upcase_fix() {
         let rule = PreferBuiltinTextTransforms::new();
-        let source = r#"^tr 'a-z' 'A-Z'"#;
+        let source = r"^tr 'a-z' 'A-Z'";
         let engine_state = create_engine_with_stdlib();
         let (block, working_set) = parse_source(&engine_state, source.as_bytes()).unwrap();
         let context = LintContext {

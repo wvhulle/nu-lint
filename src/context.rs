@@ -1,3 +1,4 @@
+use crate::ast_walker::{AstVisitor, VisitContext};
 use miette::{Diagnostic, SourceSpan};
 use nu_protocol::{
     ast::{Block, Expression},
@@ -6,7 +7,6 @@ use nu_protocol::{
 };
 use std::path::Path;
 use thiserror::Error;
-use crate::ast_walker::{AstVisitor, VisitContext};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RuleCategory {

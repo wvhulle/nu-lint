@@ -49,8 +49,12 @@ impl Rule for PreferWhereOverEachIf {
                     // Only suggest 'where' if this is pure filtering
                     if Self::is_pure_filtering(body) {
                         Some((
-                            "Consider using 'where' for filtering instead of 'each' with 'if'".to_string(),
-                            Some("Use '$list | where <condition>' for better performance".to_string()),
+                            "Consider using 'where' for filtering instead of 'each' with 'if'"
+                                .to_string(),
+                            Some(
+                                "Use '$list | where <condition>' for better performance"
+                                    .to_string(),
+                            ),
                         ))
                     } else {
                         None
@@ -60,8 +64,12 @@ impl Rule for PreferWhereOverEachIf {
                     // Could be filtering if condition returns a value directly
                     if Self::looks_like_simple_filter(condition_and_body) {
                         Some((
-                            "Consider using 'where' for filtering instead of 'each' with 'if'".to_string(),
-                            Some("Use '$list | where <condition>' for better performance".to_string()),
+                            "Consider using 'where' for filtering instead of 'each' with 'if'"
+                                .to_string(),
+                            Some(
+                                "Use '$list | where <condition>' for better performance"
+                                    .to_string(),
+                            ),
                         ))
                     } else {
                         None
@@ -79,7 +87,10 @@ impl PreferWhereOverEachIf {
         let body = body.trim();
 
         // If body is empty or just returns the item, it's filtering
-        if body.is_empty() || body == "$it" || body.starts_with("$") && body.contains(".") && !body.contains("=") {
+        if body.is_empty()
+            || body == "$it"
+            || body.starts_with("$") && body.contains(".") && !body.contains("=")
+        {
             return true;
         }
 
@@ -104,7 +115,10 @@ impl PreferWhereOverEachIf {
             && !text.contains("download")
             && !text.contains("^")
             && !text.contains("=")
-            && (text.contains("==") || text.contains("!=") || text.contains("<") || text.contains(">"))
+            && (text.contains("==")
+                || text.contains("!=")
+                || text.contains("<")
+                || text.contains(">"))
     }
 }
 
@@ -120,7 +134,10 @@ mod tests {
 $items | each { |item| if $item.is_valid { $item } }
 "#;
         let context = LintContext::test_from_source(filtering_code);
-        assert!(!rule.check(&context).is_empty(), "Should flag pure filtering");
+        assert!(
+            !rule.check(&context).is_empty(),
+            "Should flag pure filtering"
+        );
     }
 
     #[test]
@@ -176,7 +193,10 @@ $files | each { |file| if ($file | path exists) { ^some-tool $file } }
 $numbers | each { |n| if $n > 10 { $n } }
 "#;
         let context = LintContext::test_from_source(simple_filter);
-        assert!(!rule.check(&context).is_empty(), "Should flag simple boolean filtering");
+        assert!(
+            !rule.check(&context).is_empty(),
+            "Should flag simple boolean filtering"
+        );
     }
 
     #[test]

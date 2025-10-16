@@ -5,6 +5,8 @@ pub mod engine;
 pub mod output;
 pub mod parser;
 pub mod rules;
+#[cfg(test)]
+pub mod test_utils;
 
 pub use config::Config;
 pub use context::{LintContext, Rule, Severity, Violation};

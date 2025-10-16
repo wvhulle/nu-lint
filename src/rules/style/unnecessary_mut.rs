@@ -65,18 +65,18 @@ impl<'a> MutVariableVisitor<'a> {
         // Look backwards in the source before the variable name
         // Pattern is: "mut variable_name", so we look for "mut " before the var name
         let start = var_span.start;
-        
+
         // Search backwards for "mut " (including the space)
         // We limit the search to a reasonable distance (e.g., 20 chars back)
         let search_start = start.saturating_sub(20);
         let text_before = &self.source[search_start..start];
-        
+
         if let Some(mut_pos) = text_before.rfind("mut ") {
             let abs_mut_start = search_start + mut_pos;
             let abs_mut_end = abs_mut_start + 4; // "mut " is 4 characters
             return Span::new(abs_mut_start, abs_mut_end);
         }
-        
+
         // Fallback: if we can't find it, return a span covering the variable
         // This shouldn't happen in well-formed code
         var_span
@@ -131,7 +131,8 @@ impl<'a> AstVisitor for MutVariableVisitor<'a> {
                 // Find the 'mut' keyword before the variable name
                 // We need to look back in the source to find "mut "
                 let mut_span = self.find_mut_keyword_span(span);
-                self.mut_variables.insert(var_id, (var_name, span, mut_span, false));
+                self.mut_variables
+                    .insert(var_id, (var_name, span, mut_span, false));
             }
         }
     }
@@ -323,7 +324,7 @@ def process [] {
 
         assert!(!rule_violations.is_empty(), "Should detect unnecessary mut");
         assert!(rule_violations[0].fix.is_some(), "Should provide a fix");
-        
+
         let fix = rule_violations[0].fix.as_ref().unwrap();
         assert_eq!(fix.replacements.len(), 1, "Should have one replacement");
         // The fix should remove 'mut ' from the declaration

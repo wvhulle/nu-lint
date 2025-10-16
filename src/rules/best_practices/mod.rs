@@ -1,15 +1,16 @@
-mod avoid_mutable_accumulation;
-mod consistent_error_handling;
-mod descriptive_error_messages;
-mod max_positional_params;
-mod prefer_builtin_commands;
-mod prefer_builtin_system_commands;
-mod prefer_builtin_text_transforms;
-mod prefer_each_over_for;
-mod prefer_error_make;
-mod prefer_match_over_if_chain;
-mod prefer_parse_command;
-mod prefer_range_iteration;
+pub mod avoid_mutable_accumulation;
+pub mod consistent_error_handling;
+pub mod descriptive_error_messages;
+mod external_command_helper;
+pub mod max_positional_params;
+pub mod prefer_builtin_commands;
+pub mod prefer_builtin_system_commands;
+pub mod prefer_builtin_text_transforms;
+pub mod prefer_each_over_for;
+pub mod prefer_error_make;
+pub mod prefer_match_over_if_chain;
+pub mod prefer_parse_command;
+pub mod prefer_range_iteration;
 
 pub use avoid_mutable_accumulation::AvoidMutableAccumulation;
 pub use consistent_error_handling::ConsistentErrorHandling;

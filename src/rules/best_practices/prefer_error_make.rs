@@ -61,13 +61,27 @@ impl PreferErrorMake {
     fn looks_like_error(message: &str, exit_code: i32) -> bool {
         let message_lower = message.to_lowercase();
         let error_indicators = [
-            "error", "failed", "cannot", "unable", "invalid", "not found",
-            "missing", "denied", "forbidden", "unauthorized", "timeout",
-            "connection", "network", "unreachable"
+            "error",
+            "failed",
+            "cannot",
+            "unable",
+            "invalid",
+            "not found",
+            "missing",
+            "denied",
+            "forbidden",
+            "unauthorized",
+            "timeout",
+            "connection",
+            "network",
+            "unreachable",
         ];
 
         // Non-zero exit codes with error-like messages are likely errors
-        exit_code != 0 && error_indicators.iter().any(|indicator| message_lower.contains(indicator))
+        exit_code != 0
+            && error_indicators
+                .iter()
+                .any(|indicator| message_lower.contains(indicator))
     }
 }
 
@@ -84,7 +98,10 @@ print "Error: cannot connect to server"
 exit 1
 "#;
         let context = LintContext::test_from_source(error_code);
-        assert!(!rule.check(&context).is_empty(), "Should flag error print + exit");
+        assert!(
+            !rule.check(&context).is_empty(),
+            "Should flag error print + exit"
+        );
     }
 
     #[test]
@@ -132,7 +149,11 @@ exit 0
 
         for case in test_cases {
             let context = LintContext::test_from_source(case);
-            assert!(!rule.check(&context).is_empty(), "Should flag error case: {}", case);
+            assert!(
+                !rule.check(&context).is_empty(),
+                "Should flag error case: {}",
+                case
+            );
         }
     }
 
@@ -148,7 +169,12 @@ exit 0
 
         for case in test_cases {
             let context = LintContext::test_from_source(case);
-            assert_eq!(rule.check(&context).len(), 0, "Should not flag non-error case: {}", case);
+            assert_eq!(
+                rule.check(&context).len(),
+                0,
+                "Should not flag non-error case: {}",
+                case
+            );
         }
     }
 }

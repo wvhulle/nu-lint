@@ -50,17 +50,26 @@ impl Rule for PreferEachOverFor {
             let has_external_commands = body.contains('^');
             let has_print = body.contains("print");
             let has_mutation = body.starts_with("mut ") || body.contains(" mut ");
-            let has_file_ops = body.contains("save") || body.contains("rm ") || body.contains("mkdir")
-                || body.contains("touch") || body.contains("cp ") || body.contains("mv ");
+            let has_file_ops = body.contains("save")
+                || body.contains("rm ")
+                || body.contains("mkdir")
+                || body.contains("touch")
+                || body.contains("cp ")
+                || body.contains("mv ");
             let has_system_ops = body.contains("exit") || body.contains("cd ");
 
             // Check for external tools that might not use ^
-            let external_tool_pattern = Regex::new(r"\b(ffmpeg|curl|git|docker|ssh|wget|tar|zip|unzip|rsync)\b").unwrap();
+            let external_tool_pattern =
+                Regex::new(r"\b(ffmpeg|curl|git|docker|ssh|wget|tar|zip|unzip|rsync)\b").unwrap();
             let has_external_tools = external_tool_pattern.is_match(body);
 
             // Only suggest 'each' if there are no obvious side effects
-            let has_side_effects = has_external_commands || has_print || has_mutation
-                || has_file_ops || has_system_ops || has_external_tools;
+            let has_side_effects = has_external_commands
+                || has_print
+                || has_mutation
+                || has_file_ops
+                || has_system_ops
+                || has_external_tools;
 
             if !has_side_effects {
                 Some((

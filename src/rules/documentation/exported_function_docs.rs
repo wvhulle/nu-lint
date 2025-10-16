@@ -67,7 +67,7 @@ impl Rule for ExportedFunctionDocs {
                     let func_name = if let Some(space_idx) = after_def.find(' ') {
                         &after_def[..space_idx]
                     } else if let Some(bracket_idx) = after_def.find('[') {
-                        &after_def[..bracket_idx].trim()
+                        after_def[..bracket_idx].trim()
                     } else {
                         after_def
                     };

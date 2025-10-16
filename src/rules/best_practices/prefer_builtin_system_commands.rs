@@ -1,6 +1,8 @@
-use crate::ast_walker::{AstVisitor, VisitContext};
-use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
-use nu_protocol::ast::Expr;
+use crate::ast_walker::VisitContext;
+use crate::context::{Fix, LintContext, Replacement, Rule, RuleCategory, Severity};
+use crate::rules::best_practices::external_command_helper::{
+    BuiltinAlternative, ExternalCommandVisitor,
+};
 use std::collections::HashMap;
 
 pub struct PreferBuiltinSystemCommands;
@@ -96,27 +98,6 @@ impl PreferBuiltinSystemCommands {
     }
 }
 
-struct BuiltinAlternative {
-    command: &'static str,
-    note: Option<&'static str>,
-}
-
-impl BuiltinAlternative {
-    fn simple(command: &'static str) -> Self {
-        Self {
-            command,
-            note: None,
-        }
-    }
-
-    fn with_note(command: &'static str, note: &'static str) -> Self {
-        Self {
-            command,
-            note: Some(note),
-        }
-    }
-}
-
 impl Default for PreferBuiltinSystemCommands {
     fn default() -> Self {
         Self::new()
@@ -140,174 +121,111 @@ impl Rule for PreferBuiltinSystemCommands {
         "Prefer Nushell built-in commands over external tools for system operations (env, date, whoami, man, which, cd, pwd, etc.)"
     }
 
-    fn check(&self, context: &LintContext) -> Vec<Violation> {
-        let mut visitor = ExternalCommandVisitor::new(self);
+    fn check(&self, context: &LintContext) -> Vec<crate::context::Violation> {
+        let mut visitor = ExternalCommandVisitor::new(
+            self.id(),
+            self.severity(),
+            Self::get_builtin_alternatives(),
+            Some(build_fix),
+        );
         context.walk_ast(&mut visitor);
-        visitor.violations
+        visitor.into_violations()
     }
 }
 
-/// AST visitor that detects external command calls that have builtin alternatives
-struct ExternalCommandVisitor<'a> {
-    rule: &'a PreferBuiltinSystemCommands,
-    violations: Vec<Violation>,
-    alternatives: HashMap<&'static str, BuiltinAlternative>,
-}
+/// Build a simple fix for system command replacements
+fn build_fix(
+    cmd_text: &str,
+    alternative: &BuiltinAlternative,
+    args: &[nu_protocol::ast::ExternalArgument],
+    expr_span: nu_protocol::Span,
+    context: &VisitContext,
+) -> Option<Fix> {
+    let args_text = context.extract_external_args(args);
 
-impl<'a> ExternalCommandVisitor<'a> {
-    fn new(rule: &'a PreferBuiltinSystemCommands) -> Self {
-        Self {
-            rule,
-            violations: Vec::new(),
-            alternatives: PreferBuiltinSystemCommands::get_builtin_alternatives(),
-        }
-    }
-
-    /// Build a simple fix for system command replacements
-    fn build_simple_fix(
-        &self,
-        cmd_text: &str,
-        alternative: &BuiltinAlternative,
-        args: &[nu_protocol::ast::ExternalArgument],
-        expr_span: nu_protocol::Span,
-        context: &VisitContext,
-    ) -> Option<crate::context::Fix> {
-        use crate::context::{Fix, Replacement};
-
-        let args_text = context.extract_external_args(args);
-
-        // Build replacement based on command
-        let new_text = match cmd_text {
-            // Commands that are simple replacements
-            "whoami" | "clear" | "exit" | "stat" | "pwd" | "mkdir" | "rm" | "mv" | "cp" | "touch" => {
-                if args_text.is_empty() {
-                    cmd_text.to_string()
-                } else {
-                    format!("{} {}", cmd_text, args_text.join(" "))
-                }
-            }
-            "cd" => {
-                if args_text.is_empty() {
-                    "cd".to_string()
-                } else {
-                    format!("cd {}", args_text[0])
-                }
-            }
-            "sleep" | "kill" => {
-                // Pass through arguments
-                if args_text.is_empty() {
-                    cmd_text.to_string()
-                } else {
-                    format!("{} {}", cmd_text, args_text.join(" "))
-                }
-            }
-            "env" | "printenv" => {
-                // ^env -> $env or env
-                if args_text.is_empty() {
-                    "$env".to_string()
-                } else {
-                    format!("$env.{}", args_text.join(""))
-                }
-            }
-            "date" => "date now".to_string(),
-            "hostname" | "uname" => "sys host".to_string(),
-            "man" => {
-                if let Some(cmd) = args_text.first() {
-                    format!("help {}", cmd)
-                } else {
-                    "help commands".to_string()
-                }
-            }
-            "which" | "type" => {
-                if let Some(cmd) = args_text.first() {
-                    format!("which {}", cmd)
-                } else {
-                    "which".to_string()
-                }
-            }
-            "read" => {
-                // ^read -> input
-                if args_text.contains(&"-s".to_string()) || args_text.contains(&"--silent".to_string()) {
-                    "input -s".to_string()
-                } else {
-                    "input".to_string()
-                }
-            }
-            "echo" => {
-                if args_text.is_empty() {
-                    "print".to_string()
-                } else {
-                    format!("print {}", args_text.join(" "))
-                }
-            }
-            "printf" => "print".to_string(),
-            _ => alternative.command.to_string(),
-        };
-
-        Some(Fix {
-            description: format!("Replace '^{}' with '{}'", cmd_text, alternative.command),
-            replacements: vec![Replacement {
-                span: expr_span,
-                new_text,
-            }],
-        })
-    }
-}
-
-impl<'a> AstVisitor for ExternalCommandVisitor<'a> {
-    fn visit_expression(&mut self, expr: &nu_protocol::ast::Expression, context: &VisitContext) {
-        // Check for external calls
-        if let Expr::ExternalCall(head, args) = &expr.expr {
-            // Get the command name from the head expression
-            let cmd_text = context.get_span_contents(head.span);
-
-            // Check if this external command has a builtin alternative
-            if let Some(alternative) = self.alternatives.get(cmd_text) {
-                let message = format!(
-                    "Consider using Nushell's built-in '{}' instead of external '^{}'",
-                    alternative.command, cmd_text
-                );
-
-                let mut suggestion = format!(
-                    "Replace '^{}' with built-in command: {}\n\
-                     Built-in commands are more portable, faster, and provide better error handling.",
-                    cmd_text,
-                    alternative.command
-                );
-
-                if let Some(note) = alternative.note {
-                    suggestion.push_str(&format!("\n\nNote: {}", note));
-                }
-
-                // Build fix
-                let fix = self.build_simple_fix(cmd_text, alternative, args, expr.span, context);
-
-                self.violations.push(Violation {
-                    rule_id: self.rule.id().to_string(),
-                    severity: self.rule.severity(),
-                    message,
-                    span: expr.span,
-                    suggestion: Some(suggestion),
-                    fix,
-                    file: None,
-                });
+    // Build replacement based on command
+    let new_text = match cmd_text {
+        // Commands that are simple replacements
+        "whoami" | "clear" | "exit" | "stat" | "pwd" | "mkdir" | "rm" | "mv" | "cp" | "touch" => {
+            if args_text.is_empty() {
+                cmd_text.to_string()
+            } else {
+                format!("{} {}", cmd_text, args_text.join(" "))
             }
         }
+        "cd" => {
+            if args_text.is_empty() {
+                "cd".to_string()
+            } else {
+                format!("cd {}", args_text[0])
+            }
+        }
+        "sleep" | "kill" => {
+            // Pass through arguments
+            if args_text.is_empty() {
+                cmd_text.to_string()
+            } else {
+                format!("{} {}", cmd_text, args_text.join(" "))
+            }
+        }
+        "env" | "printenv" => {
+            // ^env -> $env or env
+            if args_text.is_empty() {
+                "$env".to_string()
+            } else {
+                format!("$env.{}", args_text.join(""))
+            }
+        }
+        "date" => "date now".to_string(),
+        "hostname" | "uname" => "sys host".to_string(),
+        "man" => {
+            if let Some(cmd) = args_text.first() {
+                format!("help {}", cmd)
+            } else {
+                "help commands".to_string()
+            }
+        }
+        "which" | "type" => {
+            if let Some(cmd) = args_text.first() {
+                format!("which {}", cmd)
+            } else {
+                "which".to_string()
+            }
+        }
+        "read" => {
+            // ^read -> input
+            if args_text.contains(&"-s".to_string()) || args_text.contains(&"--silent".to_string())
+            {
+                "input -s".to_string()
+            } else {
+                "input".to_string()
+            }
+        }
+        "echo" => {
+            if args_text.is_empty() {
+                "print".to_string()
+            } else {
+                format!("print {}", args_text.join(" "))
+            }
+        }
+        "printf" => "print".to_string(),
+        _ => alternative.command.to_string(),
+    };
 
-        // Continue walking the AST
-        crate::ast_walker::walk_expression(self, expr, context);
-    }
+    Some(Fix {
+        description: format!("Replace '^{}' with '{}'", cmd_text, alternative.command),
+        replacements: vec![Replacement {
+            span: expr_span,
+            new_text,
+        }],
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::parser::parse_source;
-
-    fn create_engine_with_stdlib() -> nu_protocol::engine::EngineState {
-        let engine_state = nu_cmd_lang::create_default_context();
-        nu_command::add_shell_command_context(engine_state)
-    }
+    use crate::test_utils::create_engine_with_stdlib;
 
     #[test]
     fn test_external_env_detected() {

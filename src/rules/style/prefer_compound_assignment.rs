@@ -1,5 +1,5 @@
-use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
 use crate::ast_walker::{AstVisitor, VisitContext};
+use crate::context::{LintContext, Rule, RuleCategory, Severity, Violation};
 use nu_protocol::ast::{Expr, Operator};
 
 pub struct PreferCompoundAssignment;
@@ -59,7 +59,10 @@ impl<'a> AstVisitor for CompoundAssignmentVisitor<'a> {
     fn visit_expression(&mut self, expr: &nu_protocol::ast::Expression, context: &VisitContext) {
         // Look for binary operations that are assignments
         if let Expr::BinaryOp(left, op_expr, right) = &expr.expr {
-            if let Expr::Operator(nu_protocol::ast::Operator::Assignment(nu_protocol::ast::Assignment::Assign)) = &op_expr.expr {
+            if let Expr::Operator(nu_protocol::ast::Operator::Assignment(
+                nu_protocol::ast::Assignment::Assign,
+            )) = &op_expr.expr
+            {
                 // Found an assignment: var = value
                 // Check if the right side is a subexpression containing a binary operation
                 if let Expr::Subexpression(block_id) = &right.expr {
@@ -67,17 +70,27 @@ impl<'a> AstVisitor for CompoundAssignmentVisitor<'a> {
                     // Look for a binary operation in the subexpression
                     if let Some(pipeline) = block.pipelines.first() {
                         if let Some(element) = pipeline.elements.first() {
-                            if let Expr::BinaryOp(sub_left, sub_op_expr, _sub_right) = &element.expr.expr {
+                            if let Expr::BinaryOp(sub_left, sub_op_expr, _sub_right) =
+                                &element.expr.expr
+                            {
                                 if let Expr::Operator(operator) = &sub_op_expr.expr {
                                     // Check if left operand matches the variable being assigned to
-                                    if self.expressions_refer_to_same_variable(left, sub_left, context) {
+                                    if self
+                                        .expressions_refer_to_same_variable(left, sub_left, context)
+                                    {
                                         let compound_op = self.get_compound_operator(operator);
                                         if let Some(compound_op) = compound_op {
                                             let var_text = context.get_span_contents(left.span);
                                             let op_symbol = self.get_operator_symbol(operator);
-                                            
+
                                             // Build fix: extract the right operand from the subexpression
-                                            let fix = self.build_fix(var_text, compound_op, element, expr.span, context);
+                                            let fix = self.build_fix(
+                                                var_text,
+                                                compound_op,
+                                                element,
+                                                expr.span,
+                                                context,
+                                            );
 
                                             self.violations.push(Violation {
                                                 rule_id: self.rule.id().to_string(),
@@ -107,7 +120,6 @@ impl<'a> AstVisitor for CompoundAssignmentVisitor<'a> {
 }
 
 impl<'a> CompoundAssignmentVisitor<'a> {
-
     fn expressions_refer_to_same_variable(
         &self,
         expr1: &nu_protocol::ast::Expression,
@@ -134,7 +146,7 @@ impl<'a> CompoundAssignmentVisitor<'a> {
         if let Expr::BinaryOp(_left, _op, right) = &element.expr.expr {
             let right_text = context.get_span_contents(right.span);
             let new_text = format!("{} {} {}", var_text, compound_op, right_text);
-            
+
             Some(Fix {
                 description: format!("Replace with compound assignment: {}", new_text),
                 replacements: vec![Replacement {
@@ -296,10 +308,13 @@ mod tests {
         let violations = rule.check(&context);
         assert!(!violations.is_empty(), "Should detect issue");
         assert!(violations[0].fix.is_some(), "Should provide a fix");
-        
+
         let fix = violations[0].fix.as_ref().unwrap();
         assert_eq!(fix.replacements.len(), 1, "Should have one replacement");
-        assert_eq!(fix.replacements[0].new_text, "$count += 1", "Should suggest compound assignment");
+        assert_eq!(
+            fix.replacements[0].new_text, "$count += 1",
+            "Should suggest compound assignment"
+        );
     }
 
     #[test]
@@ -322,9 +337,12 @@ mod tests {
         let violations = rule.check(&context);
         assert!(!violations.is_empty(), "Should detect issue");
         assert!(violations[0].fix.is_some(), "Should provide a fix");
-        
+
         let fix = violations[0].fix.as_ref().unwrap();
-        assert_eq!(fix.replacements[0].new_text, "$value -= 5", "Should suggest compound assignment");
+        assert_eq!(
+            fix.replacements[0].new_text, "$value -= 5",
+            "Should suggest compound assignment"
+        );
     }
 
     #[test]
@@ -347,9 +365,12 @@ mod tests {
         let violations = rule.check(&context);
         assert!(!violations.is_empty(), "Should detect issue");
         assert!(violations[0].fix.is_some(), "Should provide a fix");
-        
+
         let fix = violations[0].fix.as_ref().unwrap();
-        assert_eq!(fix.replacements[0].new_text, "$total *= 2", "Should suggest compound assignment");
+        assert_eq!(
+            fix.replacements[0].new_text, "$total *= 2",
+            "Should suggest compound assignment"
+        );
     }
 
     #[test]
@@ -372,8 +393,11 @@ mod tests {
         let violations = rule.check(&context);
         assert!(!violations.is_empty(), "Should detect issue");
         assert!(violations[0].fix.is_some(), "Should provide a fix");
-        
+
         let fix = violations[0].fix.as_ref().unwrap();
-        assert_eq!(fix.replacements[0].new_text, "$result /= 3", "Should suggest compound assignment");
+        assert_eq!(
+            fix.replacements[0].new_text, "$result /= 3",
+            "Should suggest compound assignment"
+        );
     }
 }

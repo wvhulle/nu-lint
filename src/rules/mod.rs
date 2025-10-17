@@ -122,13 +122,13 @@ impl RuleRegistry {
             descriptive_error_messages::DescriptiveErrorMessages::new(),
         )));
         registry.register(Rule::Regex(Box::new(
-            prefer_builtin_commands::PreferBuiltinForCommonCommands::new(),
+            prefer_builtin_commands::AvoidExternalFileTools::new(),
         )));
         registry.register(Rule::Regex(Box::new(
-            prefer_builtin_text_transforms::PreferBuiltinTextTransforms::new(),
+            prefer_builtin_text_transforms::AvoidExternalTextTools::new(),
         )));
         registry.register(Rule::Regex(Box::new(
-            prefer_builtin_system_commands::PreferBuiltinSystemCommands::new(),
+            prefer_builtin_system_commands::AvoidExternalSystemTools::new(),
         )));
 
         // Performance rules (Regex-based)

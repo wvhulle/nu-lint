@@ -8,9 +8,9 @@ use crate::{
     visitor::VisitContext,
 };
 
-pub struct PreferBuiltinTextTransforms;
+pub struct AvoidExternalTextTools;
 
-impl PreferBuiltinTextTransforms {
+impl AvoidExternalTextTools {
     #[must_use]
     pub fn new() -> Self {
         Self
@@ -74,15 +74,15 @@ impl PreferBuiltinTextTransforms {
     }
 }
 
-impl Default for PreferBuiltinTextTransforms {
+impl Default for AvoidExternalTextTools {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl RuleMetadata for PreferBuiltinTextTransforms {
+impl RuleMetadata for AvoidExternalTextTools {
     fn id(&self) -> &'static str {
-        "prefer_builtin_text_transforms"
+        "avoid_external_text_tools"
     }
 
     fn category(&self) -> RuleCategory {
@@ -94,12 +94,12 @@ impl RuleMetadata for PreferBuiltinTextTransforms {
     }
 
     fn description(&self) -> &'static str {
-        "Prefer Nushell built-in commands over external tools for text transformation (sed, awk, \
-         cut, wc, tr, tee)"
+        "Avoid external text processing tools when Nushell built-ins are available (sed, awk, cut, \
+         wc, tr, tee)"
     }
 }
 
-impl RegexRule for PreferBuiltinTextTransforms {
+impl RegexRule for AvoidExternalTextTools {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         let mut visitor = ExternalCommandVisitor::new(
             self.id(),

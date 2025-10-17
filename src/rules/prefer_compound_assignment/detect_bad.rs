@@ -8,7 +8,7 @@ mod tests {
 
     #[test]
     fn test_detect_addition_assignment() {
-        let rule = PreferCompoundAssignment::new();
+        let rule = PreferCompoundAssignment;
 
         let bad_code = r"
 mut count = 0
@@ -25,7 +25,7 @@ $count = $count + 1
 
     #[test]
     fn test_detect_subtraction_assignment() {
-        let rule = PreferCompoundAssignment::new();
+        let rule = PreferCompoundAssignment;
 
         let bad_code = r"
 mut count = 0
@@ -42,7 +42,7 @@ $count = $count - 5
 
     #[test]
     fn test_detect_multiplication_assignment() {
-        let rule = PreferCompoundAssignment::new();
+        let rule = PreferCompoundAssignment;
 
         let bad_code = r"
 mut count = 0

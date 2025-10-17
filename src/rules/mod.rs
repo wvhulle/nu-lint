@@ -90,10 +90,10 @@ impl RuleRegistry {
         )));
 
         // Style rules (AST-based)
-        registry.register(Rule::Ast(Box::new(pipe_spacing::PipeSpacing)));
-        registry.register(Rule::Ast(Box::new(
-            prefer_compound_assignment::PreferCompoundAssignment::new(),
-        )));
+        registry.register(Rule::Ast(Box::<pipe_spacing::PipeSpacing>::default()));
+        registry.register(Rule::Ast(Box::<
+            prefer_compound_assignment::PreferCompoundAssignment,
+        >::default()));
         registry.register(Rule::Ast(Box::new(unnecessary_mut::UnnecessaryMut::new())));
 
         // Best practices rules (Regex-based)

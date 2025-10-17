@@ -75,11 +75,6 @@ impl TypeAnnotationVisitor {
     pub fn into_violations(self) -> Vec<Violation> {
         self.violations
     }
-
-    #[must_use]
-    pub fn take_violations(&mut self) -> Vec<Violation> {
-        std::mem::take(&mut self.violations)
-    }
 }
 
 impl AstVisitor for TypeAnnotationVisitor {

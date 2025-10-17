@@ -73,40 +73,6 @@ impl<'a> MutVariableVisitor<'a> {
         }
     }
 
-    #[must_use]
-    pub fn take_violations(&mut self) -> Vec<Violation> {
-        use crate::lint::{Fix, Replacement};
-        let mut violations = Vec::new();
-
-        // Check which mutable variables were never reassigned
-        for (var_name, decl_span, mut_span, is_reassigned) in self.mut_variables.values() {
-            if !is_reassigned {
-                // Create a fix that removes the 'mut ' keyword
-                let fix = Some(Fix {
-                    description: format!("Remove 'mut' keyword from variable '{var_name}'"),
-                    replacements: vec![Replacement {
-                        span: *mut_span,
-                        new_text: String::new(), // Replace 'mut ' with empty string
-                    }],
-                });
-
-                violations.push(Violation {
-                    rule_id: self.rule.id().to_string(),
-                    severity: self.rule.severity(),
-                    message: format!(
-                        "Variable '{var_name}' is declared as 'mut' but never reassigned"
-                    ),
-                    span: *decl_span,
-                    suggestion: Some(format!("Remove 'mut' keyword:\nlet {var_name} = ...")),
-                    fix,
-                    file: None,
-                });
-            }
-        }
-
-        violations
-    }
-
     /// Find the span of 'mut ' keyword before the variable name
     /// Looks backwards from the variable name span to find 'mut '
     fn find_mut_keyword_span(&self, var_span: Span) -> Span {

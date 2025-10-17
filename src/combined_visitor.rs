@@ -13,7 +13,6 @@ use nu_protocol::{
 };
 
 use crate::{
-    lint::Violation,
     rules::{
         missing_type_annotation::TypeAnnotationVisitor, pipe_spacing::PipeSpacingVisitor,
         prefer_compound_assignment::CompoundAssignmentVisitor,
@@ -62,30 +61,6 @@ impl<'a> CombinedAstVisitor<'a> {
 
     pub fn set_compound_assignment(&mut self, visitor: CompoundAssignmentVisitor<'a>) {
         self.compound_assignment = Some(visitor);
-    }
-
-    /// Collect all violations from the visitors
-    #[must_use]
-    pub fn collect_violations(self) -> Vec<Violation> {
-        let mut violations = Vec::new();
-
-        if let Some(mut v) = self.pipe_spacing {
-            violations.extend(v.take_violations());
-        }
-        if let Some(v) = self.type_annotation {
-            violations.extend(v.into_violations());
-        }
-        if let Some(mut v) = self.unnecessary_mut {
-            violations.extend(v.take_violations());
-        }
-        if let Some(mut v) = self.each_split {
-            violations.extend(v.take_violations());
-        }
-        if let Some(mut v) = self.compound_assignment {
-            violations.extend(v.take_violations());
-        }
-
-        violations
     }
 }
 

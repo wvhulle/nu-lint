@@ -10,13 +10,6 @@ use crate::{
 #[derive(Default)]
 pub struct PipeSpacing;
 
-impl PipeSpacing {
-    #[must_use]
-    pub fn new() -> Self {
-        Self
-    }
-}
-
 impl RuleMetadata for PipeSpacing {
     fn id(&self) -> &'static str {
         "pipe_spacing"
@@ -62,11 +55,6 @@ impl<'a> PipeSpacingVisitor<'a> {
             source,
             violations: Vec::new(),
         }
-    }
-
-    #[must_use]
-    pub fn take_violations(&mut self) -> Vec<Violation> {
-        std::mem::take(&mut self.violations)
     }
 
     /// Check spacing around a pipe between two elements

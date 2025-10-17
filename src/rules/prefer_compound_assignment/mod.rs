@@ -10,13 +10,6 @@ use crate::{
 #[derive(Default)]
 pub struct PreferCompoundAssignment;
 
-impl PreferCompoundAssignment {
-    #[must_use]
-    pub fn new() -> Self {
-        Self
-    }
-}
-
 impl RuleMetadata for PreferCompoundAssignment {
     fn id(&self) -> &'static str {
         "prefer_compound_assignment"
@@ -60,11 +53,6 @@ impl<'a> CompoundAssignmentVisitor<'a> {
             rule,
             violations: Vec::new(),
         }
-    }
-
-    #[must_use]
-    pub fn take_violations(&mut self) -> Vec<Violation> {
-        std::mem::take(&mut self.violations)
     }
 }
 

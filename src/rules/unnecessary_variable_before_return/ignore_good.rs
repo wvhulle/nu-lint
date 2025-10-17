@@ -1,8 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::{
-        context::LintContext,
-        rule::Rule,
+        context::LintContext, rule::Rule,
         rules::unnecessary_variable_before_return::UnnecessaryVariableBeforeReturn,
     };
 
@@ -40,11 +39,7 @@ def foo [] {
 
         LintContext::test_with_parsed_source(good_code, |context| {
             let violations = rule.check(&context);
-            assert_eq!(
-                violations.len(),
-                0,
-                "Should not flag direct return"
-            );
+            assert_eq!(violations.len(), 0, "Should not flag direct return");
         });
     }
 
@@ -67,7 +62,8 @@ def process [] {
             assert_eq!(
                 violations.len(),
                 0,
-                "Should not flag variable when there's additional logic between assignment and return"
+                "Should not flag variable when there's additional logic between assignment and \
+                 return"
             );
         });
     }

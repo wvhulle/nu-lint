@@ -37,7 +37,8 @@ impl PreferBuiltinForCommonCommands {
             "find",
             BuiltinAlternative::with_note(
                 "ls or glob",
-                "Use 'ls **/*.ext' for recursive file matching, 'glob **/*.ext' for pattern matching, or 'ls' with pipes for complex filtering"
+                "Use 'ls **/*.ext' for recursive file matching, 'glob **/*.ext' for pattern \
+                 matching, or 'ls' with pipes for complex filtering",
             ),
         );
 
@@ -46,7 +47,8 @@ impl PreferBuiltinForCommonCommands {
             "grep",
             BuiltinAlternative::with_note(
                 "where or find",
-                "Use 'where $it =~ <pattern>' for regex filtering, 'find <substring>' for text search, or 'search <term>' for full-text search across structured data",
+                "Use 'where $it =~ <pattern>' for regex filtering, 'find <substring>' for text \
+                 search, or 'search <term>' for full-text search across structured data",
             ),
         );
         map.insert(

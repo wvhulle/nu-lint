@@ -95,7 +95,8 @@ impl TypeAnnotationVisitor {
                     rule_id: self.rule_id.clone(),
                     severity: self.severity,
                     message: format!("Parameter '{}' is missing type annotation", param.name),
-                    span: nu_protocol::Span::unknown(), // Signature doesn't store individual param spans
+                    span: nu_protocol::Span::unknown(), /* Signature doesn't store individual
+                                                         * param spans */
                     suggestion: Some(
                         "Add type annotation like 'param: string' or 'param: int'".to_string(),
                     ),

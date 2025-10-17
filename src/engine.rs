@@ -125,40 +125,47 @@ impl LintEngine {
             file_path: path,
         };
 
-        let mut violations = Vec::new();
-        let file_path = path.and_then(|p| p.to_str()).map(String::from);
+        let mut violations = self.collect_violations(&context);
+        Self::attach_file_path(&mut violations, path);
+        Self::sort_violations(&mut violations);
+        violations
+    }
 
-        // Partition rules by type for potential optimization
-        let (ast_rules, regex_rules): (Vec<_>, Vec<_>) = self
-            .registry
-            .all_rules()
-            .filter(|rule| {
-                if let Some(configured_severity) = self.config.rule_severity(rule.id()) {
-                    configured_severity == rule.severity()
-                } else {
-                    !self.config.rules.contains_key(rule.id())
-                }
-            })
-            .partition(|rule| rule.is_ast_rule());
+    /// Collect violations from all enabled rules
+    fn collect_violations(&self, context: &LintContext) -> Vec<Violation> {
+        let enabled_rules = self.get_enabled_rules();
 
-        // Run all rules
-        // TODO: Activate CombinedAstVisitor for single-pass AST traversal
-        for rule in ast_rules.into_iter().chain(regex_rules) {
-            let mut rule_violations = rule.check(&context);
-            for violation in &mut rule_violations {
-                violation.file.clone_from(&file_path);
+        enabled_rules.flat_map(|rule| rule.check(context)).collect()
+    }
+
+    /// Get all rules that are enabled according to the configuration
+    fn get_enabled_rules(&self) -> impl Iterator<Item = &crate::rule::Rule> {
+        self.registry.all_rules().filter(|rule| {
+            if let Some(configured_severity) = self.config.rule_severity(rule.id()) {
+                configured_severity == rule.severity()
+            } else {
+                !self.config.rules.contains_key(rule.id())
             }
-            violations.extend(rule_violations);
-        }
+        })
+    }
 
+    /// Attach file path to all violations
+    fn attach_file_path(violations: &mut [Violation], path: Option<&Path>) {
+        if let Some(file_path) = path.and_then(|p| p.to_str()).map(String::from) {
+            for violation in violations {
+                violation.file = Some(file_path.clone());
+            }
+        }
+    }
+
+    /// Sort violations by span start position, then by severity
+    fn sort_violations(violations: &mut [Violation]) {
         violations.sort_by(|a, b| {
             a.span
                 .start
                 .cmp(&b.span.start)
                 .then(a.severity.cmp(&b.severity))
         });
-
-        violations
     }
 
     #[must_use]

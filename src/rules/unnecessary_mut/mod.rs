@@ -48,10 +48,6 @@ impl AstRule for UnnecessaryMut {
         context.walk_ast(&mut visitor);
         visitor.finalize()
     }
-
-    fn create_visitor<'a>(&'a self, context: &'a LintContext<'a>) -> Box<dyn AstVisitor + 'a> {
-        Box::new(MutVariableVisitor::new(self, context.source))
-    }
 }
 
 /// AST visitor that tracks mutable variable declarations and assignments

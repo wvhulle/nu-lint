@@ -34,10 +34,6 @@ impl AstRule for PreferCompoundAssignment {
         context.walk_ast(&mut visitor);
         visitor.violations
     }
-
-    fn create_visitor<'a>(&'a self, _context: &'a LintContext<'a>) -> Box<dyn AstVisitor + 'a> {
-        Box::new(CompoundAssignmentVisitor::new(self))
-    }
 }
 
 /// AST visitor that checks for compound assignment opportunities

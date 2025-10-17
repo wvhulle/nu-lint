@@ -1,4 +1,3 @@
-pub mod combined_visitor;
 pub mod config;
 pub mod context;
 pub mod engine;
@@ -9,7 +8,6 @@ pub mod rule;
 pub mod rules;
 pub mod visitor;
 
-pub use combined_visitor::CombinedAstVisitor;
 pub use config::Config;
 pub use context::LintContext;
 pub use engine::LintEngine;

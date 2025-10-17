@@ -34,10 +34,6 @@ impl AstRule for PreferParseOverEachSplit {
         context.walk_ast(&mut visitor);
         visitor.violations
     }
-
-    fn create_visitor<'a>(&'a self, _context: &'a LintContext<'a>) -> Box<dyn AstVisitor + 'a> {
-        Box::new(EachSplitVisitor::new(self))
-    }
 }
 
 /// AST visitor that detects 'each' calls containing 'split row'
@@ -53,11 +49,6 @@ impl<'a> EachSplitVisitor<'a> {
             rule,
             violations: Vec::new(),
         }
-    }
-
-    #[must_use]
-    pub fn take_violations(&mut self) -> Vec<Violation> {
-        std::mem::take(&mut self.violations)
     }
 
     fn is_command(call: &Call, context: &VisitContext, name: &str) -> bool {

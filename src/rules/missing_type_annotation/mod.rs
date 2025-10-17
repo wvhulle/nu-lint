@@ -46,13 +46,6 @@ impl AstRule for MissingTypeAnnotation {
         context.walk_ast(&mut visitor);
         visitor.into_violations()
     }
-
-    fn create_visitor<'a>(&'a self, _context: &'a LintContext<'a>) -> Box<dyn AstVisitor + 'a> {
-        Box::new(TypeAnnotationVisitor::new(
-            self.id().to_string(),
-            self.severity(),
-        ))
-    }
 }
 
 pub struct TypeAnnotationVisitor {

@@ -1,7 +1,6 @@
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    visitor::AstVisitor,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -41,10 +40,6 @@ pub trait RegexRule: RuleMetadata {
 /// Rules that check code using AST traversal
 pub trait AstRule: RuleMetadata {
     fn check(&self, context: &LintContext) -> Vec<Violation>;
-
-    /// Create an AST visitor for this rule (for combined traversal
-    /// optimization)
-    fn create_visitor<'a>(&'a self, context: &'a LintContext<'a>) -> Box<dyn AstVisitor + 'a>;
 }
 
 /// Type-safe wrapper for different rule implementations
@@ -60,18 +55,6 @@ impl Rule {
         match self {
             Rule::Regex(rule) => rule.check(context),
             Rule::Ast(rule) => rule.check(context),
-        }
-    }
-
-    /// Create an AST visitor if this is an AST-based rule
-    #[must_use]
-    pub fn create_visitor<'a>(
-        &'a self,
-        context: &'a LintContext<'a>,
-    ) -> Option<Box<dyn AstVisitor + 'a>> {
-        match self {
-            Rule::Regex(_) => None,
-            Rule::Ast(rule) => Some(rule.create_visitor(context)),
         }
     }
 

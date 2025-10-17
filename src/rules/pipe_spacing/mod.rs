@@ -34,10 +34,6 @@ impl AstRule for PipeSpacing {
         context.walk_ast(&mut visitor);
         visitor.violations
     }
-
-    fn create_visitor<'a>(&'a self, context: &'a LintContext<'a>) -> Box<dyn AstVisitor + 'a> {
-        Box::new(PipeSpacingVisitor::new(self, context.source))
-    }
 }
 
 /// AST visitor that checks for pipe spacing issues

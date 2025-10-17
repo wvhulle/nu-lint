@@ -93,6 +93,12 @@ impl<'a> VisitContext<'a> {
         self.working_set.get_variable(var_id)
     }
 
+    /// Get a declaration by its ID
+    #[must_use]
+    pub fn get_decl(&self, decl_id: nu_protocol::DeclId) -> &dyn nu_protocol::engine::Command {
+        self.working_set.get_decl(decl_id)
+    }
+
     /// Extract text arguments from an external command call
     /// Returns a Vec of argument strings extracted from the AST
     #[must_use]

@@ -1,9 +1,10 @@
-use regex::Regex;
+use nu_protocol::ast::Expr;
 
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
     rule::{Rule, RuleCategory},
+    visitor::{AstVisitor, VisitContext},
 };
 
 pub struct MissingTypeAnnotation;
@@ -39,30 +40,104 @@ impl Rule for MissingTypeAnnotation {
     }
 
     fn check(&self, context: &LintContext) -> Vec<Violation> {
-        // Look for def with parameters without type annotations
-        // Pattern: def name [param1, param2] where param doesn't have :
-        let def_pattern = Regex::new(r"def\s+[a-zA-Z_-][a-zA-Z0-9_-]*\s*\[([^\]]+)\]").unwrap();
+        let mut visitor = TypeAnnotationVisitor::new(self.id().to_string(), self.severity());
+        context.walk_ast(&mut visitor);
+        visitor.into_violations()
+    }
+}
 
-        context.violations_from_regex_if(&def_pattern, self.id(), self.severity(), |mat| {
-            let caps = def_pattern.captures(mat.as_str())?;
-            let params_text = caps.get(1)?.as_str();
+struct TypeAnnotationVisitor {
+    rule_id: String,
+    severity: Severity,
+    violations: Vec<Violation>,
+}
 
-            // Split by comma and check each parameter
-            for param in params_text.split(',') {
-                let param = param.trim();
-                // Skip if empty or already has type annotation (contains :)
-                if !param.is_empty() && !param.contains(':') && !param.starts_with("--") {
-                    // This is a parameter without type annotation
-                    return Some((
-                        format!("Parameter '{param}' is missing type annotation"),
-                        Some(
-                            "Add type annotation like 'param: string' or 'param: int'".to_string(),
-                        ),
-                    ));
+impl TypeAnnotationVisitor {
+    fn new(rule_id: String, severity: Severity) -> Self {
+        Self {
+            rule_id,
+            severity,
+            violations: Vec::new(),
+        }
+    }
+
+    fn into_violations(self) -> Vec<Violation> {
+        self.violations
+    }
+}
+
+impl AstVisitor for TypeAnnotationVisitor {
+    fn visit_call(&mut self, call: &nu_protocol::ast::Call, context: &VisitContext) {
+        // Check if this is a def command
+        let decl = context.get_decl(call.decl_id);
+        if decl.name() == "def" {
+            // The second positional argument of 'def' is a Signature expression
+            // def name [params] { body }
+            for arg in &call.arguments {
+                if let nu_protocol::ast::Argument::Positional(arg_expr) = arg
+                    && let Expr::Signature(sig) = &arg_expr.expr
+                {
+                    self.check_signature(sig, context);
                 }
             }
-            None
-        })
+        }
+
+        crate::visitor::walk_call(self, call, context);
+    }
+}
+
+impl TypeAnnotationVisitor {
+    fn check_signature(&mut self, sig: &nu_protocol::Signature, _context: &VisitContext) {
+        // Check required positional parameters
+        for param in &sig.required_positional {
+            if param.shape == nu_protocol::SyntaxShape::Any {
+                self.violations.push(Violation {
+                    rule_id: self.rule_id.clone(),
+                    severity: self.severity,
+                    message: format!("Parameter '{}' is missing type annotation", param.name),
+                    span: nu_protocol::Span::unknown(), // Signature doesn't store individual param spans
+                    suggestion: Some(
+                        "Add type annotation like 'param: string' or 'param: int'".to_string(),
+                    ),
+                    fix: None,
+                    file: None,
+                });
+            }
+        }
+
+        // Check optional positional parameters
+        for param in &sig.optional_positional {
+            if param.shape == nu_protocol::SyntaxShape::Any {
+                self.violations.push(Violation {
+                    rule_id: self.rule_id.clone(),
+                    severity: self.severity,
+                    message: format!("Parameter '{}' is missing type annotation", param.name),
+                    span: nu_protocol::Span::unknown(),
+                    suggestion: Some(
+                        "Add type annotation like 'param: string' or 'param: int'".to_string(),
+                    ),
+                    fix: None,
+                    file: None,
+                });
+            }
+        }
+
+        // Check rest positional parameter
+        if let Some(param) = &sig.rest_positional
+            && param.shape == nu_protocol::SyntaxShape::Any
+        {
+            self.violations.push(Violation {
+                rule_id: self.rule_id.clone(),
+                severity: self.severity,
+                message: format!("Parameter '{}' is missing type annotation", param.name),
+                span: nu_protocol::Span::unknown(),
+                suggestion: Some(
+                    "Add type annotation like 'param: string' or 'param: list'".to_string(),
+                ),
+                fix: None,
+                file: None,
+            });
+        }
     }
 }
 

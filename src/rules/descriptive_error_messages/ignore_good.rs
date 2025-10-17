@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    
+
     use crate::{
         context::LintContext, rule::Rule,
         rules::descriptive_error_messages::DescriptiveErrorMessages,

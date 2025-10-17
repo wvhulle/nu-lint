@@ -76,7 +76,9 @@ impl<'a> VisitContext<'a> {
     /// Get the text content of a span
     #[must_use]
     pub fn get_span_contents(&self, span: Span) -> &str {
-        crate::parser::get_span_contents(self.source, span)
+        let start = span.start.min(self.source.len());
+        let end = span.end.min(self.source.len());
+        &self.source[start..end]
     }
 
     /// Get a block by its ID

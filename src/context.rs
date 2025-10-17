@@ -212,7 +212,9 @@ impl LintContext<'_> {
     /// Get the text content of a span
     #[must_use]
     pub fn get_span_contents(&self, span: Span) -> &str {
-        crate::parser::get_span_contents(self.source, span)
+        let start = span.start.min(self.source.len());
+        let end = span.end.min(self.source.len());
+        &self.source[start..end]
     }
 
     /// Create a simple Fix with a single replacement
@@ -241,7 +243,8 @@ impl LintContext<'_> {
     where
         F: for<'b> FnOnce(LintContext<'b>) -> R,
     {
-        use crate::parser::parse_source;
+        use nu_parser::parse;
+        use nu_protocol::engine::StateWorkingSet;
 
         fn create_engine_with_stdlib() -> nu_protocol::engine::EngineState {
             let engine_state = nu_cmd_lang::create_default_context();
@@ -249,7 +252,8 @@ impl LintContext<'_> {
         }
 
         let engine_state = create_engine_with_stdlib();
-        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
+        let mut working_set = StateWorkingSet::new(&engine_state);
+        let block = parse(&mut working_set, None, source.as_bytes(), false);
 
         let context = LintContext {
             source,

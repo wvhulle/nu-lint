@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    
+
     use crate::{
         context::LintContext, rule::Rule, rules::screaming_snake_constants::ScreamingSnakeConstants,
     };

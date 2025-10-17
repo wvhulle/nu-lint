@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    
+
     use crate::{
         context::LintContext, rule::Rule,
         rules::discourage_underscore_commands::DiscourageUnderscoreCommands,

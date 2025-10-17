@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    
+
     use crate::{
         context::LintContext, rule::Rule, rules::exported_function_docs::ExportedFunctionDocs,
     };
@@ -13,7 +13,7 @@ export def my-command [] {
 }
 "#;
         let rule = ExportedFunctionDocs::new();
-        
+
         LintContext::test_with_parsed_source(source, |context| {
             let violations = rule.check(&context);
             assert!(
@@ -32,7 +32,7 @@ export def process-data [input: string, output: string] {
 }
 ";
         let rule = ExportedFunctionDocs::new();
-        
+
         LintContext::test_with_parsed_source(source, |context| {
             let violations = rule.check(&context);
             assert!(

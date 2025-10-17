@@ -2,7 +2,7 @@
 mod tests {
 
     use crate::{
-        context::LintContext, rule::Rule,
+        context::LintContext, rule::RegexRule,
         rules::completion_function_naming::CompletionFunctionNaming,
     };
 

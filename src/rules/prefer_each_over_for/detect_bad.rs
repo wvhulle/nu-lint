@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use crate::{context::LintContext, rule::Rule, rules::prefer_each_over_for::PreferEachOverFor};
+    use crate::{
+        context::LintContext, rule::RegexRule, rules::prefer_each_over_for::PreferEachOverFor,
+    };
 
     #[test]
     fn test_detect_for_loop_with_string_processing() {

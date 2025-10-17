@@ -1,7 +1,10 @@
-use std::{path::PathBuf, process};
+use std::{path::PathBuf, process, sync::Mutex};
 
 use clap::{Parser, Subcommand};
-use nu_lint::{Config, JsonFormatter, LintEngine, OutputFormatter, TextFormatter};
+use nu_lint::{
+    Config, JsonFormatter, LintEngine, OutputFormatter, TextFormatter, rule::RuleMetadata,
+};
+use rayon::prelude::*;
 
 #[derive(Parser)]
 #[command(name = "nu-lint")]
@@ -31,6 +34,13 @@ struct Cli {
 
     #[arg(long, help = "Show what would be fixed without applying")]
     dry_run: bool,
+
+    #[arg(
+        long,
+        help = "Process files in parallel (experimental)",
+        default_value = "false"
+    )]
+    parallel: bool,
 }
 
 #[derive(Subcommand)]
@@ -73,38 +83,11 @@ fn find_config_file() -> Option<PathBuf> {
 
 fn main() {
     let cli = Cli::parse();
-
-    let config = if let Some(config_path) = cli.config {
-        match Config::load_from_file(&config_path) {
-            Ok(cfg) => cfg,
-            Err(e) => {
-                eprintln!("Error loading config: {e}");
-                process::exit(2);
-            }
-        }
-    } else if let Some(config_path) = find_config_file() {
-        match Config::load_from_file(&config_path) {
-            Ok(cfg) => cfg,
-            Err(e) => {
-                eprintln!("Error loading config from {}: {}", config_path.display(), e);
-                process::exit(2);
-            }
-        }
-    } else {
-        Config::default()
-    };
+    let config = load_config(cli.config.as_ref());
 
     if let Some(command) = cli.command {
-        match command {
-            Commands::ListRules => {
-                list_rules(&config);
-                return;
-            }
-            Commands::Explain { rule_id } => {
-                explain_rule(&config, &rule_id);
-                return;
-            }
-        }
+        handle_command(command, &config);
+        return;
     }
 
     if cli.paths.is_empty() {
@@ -113,12 +96,57 @@ fn main() {
         process::exit(2);
     }
 
+    let files_to_lint = collect_files_to_lint(&cli.paths);
     let engine = LintEngine::new(config);
-    let mut all_violations = Vec::new();
-    let mut has_errors = false;
-    let mut files_to_lint = Vec::new();
+    let (all_violations, has_errors) = lint_files(&engine, &files_to_lint, cli.parallel);
 
-    for path in &cli.paths {
+    if has_errors && all_violations.is_empty() {
+        process::exit(2);
+    }
+
+    output_results(&all_violations, &files_to_lint, cli.format);
+
+    let exit_code = i32::from(!all_violations.is_empty());
+    process::exit(exit_code);
+}
+
+/// Load configuration from file or use defaults
+fn load_config(config_path: Option<&PathBuf>) -> Config {
+    if let Some(path) = config_path {
+        match Config::load_from_file(path) {
+            Ok(cfg) => cfg,
+            Err(e) => {
+                eprintln!("Error loading config: {e}");
+                process::exit(2);
+            }
+        }
+    } else if let Some(path) = find_config_file() {
+        match Config::load_from_file(&path) {
+            Ok(cfg) => cfg,
+            Err(e) => {
+                eprintln!("Error loading config from {}: {}", path.display(), e);
+                process::exit(2);
+            }
+        }
+    } else {
+        Config::default()
+    }
+}
+
+/// Handle subcommands (list-rules, explain)
+fn handle_command(command: Commands, config: &Config) {
+    match command {
+        Commands::ListRules => list_rules(config),
+        Commands::Explain { rule_id } => explain_rule(config, &rule_id),
+    }
+}
+
+/// Collect all files to lint from the provided paths
+fn collect_files_to_lint(paths: &[PathBuf]) -> Vec<PathBuf> {
+    let mut files_to_lint = Vec::new();
+    let mut has_errors = false;
+
+    for path in paths {
         if !path.exists() {
             eprintln!("Error: Path not found: {}", path.display());
             has_errors = true;
@@ -129,7 +157,6 @@ fn main() {
             files_to_lint.push(path.clone());
         } else if path.is_dir() {
             let files = collect_nu_files(path);
-
             if files.is_empty() {
                 eprintln!("Warning: No .nu files found in {}", path.display());
             }
@@ -144,7 +171,58 @@ fn main() {
         process::exit(2);
     }
 
-    for path in &files_to_lint {
+    files_to_lint
+}
+
+/// Lint files either in parallel or sequentially
+fn lint_files(
+    engine: &LintEngine,
+    files: &[PathBuf],
+    parallel: bool,
+) -> (Vec<nu_lint::lint::Violation>, bool) {
+    if parallel && files.len() > 1 {
+        lint_files_parallel(engine, files)
+    } else {
+        lint_files_sequential(engine, files)
+    }
+}
+
+/// Lint files in parallel
+fn lint_files_parallel(
+    engine: &LintEngine,
+    files: &[PathBuf],
+) -> (Vec<nu_lint::lint::Violation>, bool) {
+    let violations_mutex = Mutex::new(Vec::new());
+    let errors_mutex = Mutex::new(false);
+
+    files
+        .par_iter()
+        .for_each(|path| match engine.lint_file(path) {
+            Ok(violations) => {
+                let mut all_viols = violations_mutex.lock().unwrap();
+                all_viols.extend(violations);
+            }
+            Err(e) => {
+                eprintln!("Error linting {}: {}", path.display(), e);
+                let mut has_errs = errors_mutex.lock().unwrap();
+                *has_errs = true;
+            }
+        });
+
+    let violations = violations_mutex.into_inner().unwrap();
+    let has_errors = errors_mutex.into_inner().unwrap();
+    (violations, has_errors)
+}
+
+/// Lint files sequentially
+fn lint_files_sequential(
+    engine: &LintEngine,
+    files: &[PathBuf],
+) -> (Vec<nu_lint::lint::Violation>, bool) {
+    let mut all_violations = Vec::new();
+    let mut has_errors = false;
+
+    for path in files {
         match engine.lint_file(path) {
             Ok(violations) => {
                 all_violations.extend(violations);
@@ -156,36 +234,37 @@ fn main() {
         }
     }
 
-    if has_errors && all_violations.is_empty() {
-        process::exit(2);
-    }
+    (all_violations, has_errors)
+}
 
-    let source = if files_to_lint.len() == 1 {
-        std::fs::read_to_string(&files_to_lint[0]).unwrap_or_default()
+/// Format and output linting results
+fn output_results(
+    violations: &[nu_lint::lint::Violation],
+    files: &[PathBuf],
+    format: Option<Format>,
+) {
+    let source = if files.len() == 1 {
+        std::fs::read_to_string(&files[0]).unwrap_or_default()
     } else {
         String::new()
     };
 
-    let output = match cli.format.unwrap_or(Format::Text) {
+    let output = match format.unwrap_or(Format::Text) {
         Format::Text => {
             let formatter = TextFormatter;
-            formatter.format(&all_violations, &source)
+            formatter.format(violations, &source)
         }
         Format::Json => {
             let formatter = JsonFormatter;
-            formatter.format(&all_violations, &source)
+            formatter.format(violations, &source)
         }
         Format::Github => {
             // TODO: Implement GitHub formatter
             let formatter = TextFormatter;
-            formatter.format(&all_violations, &source)
+            formatter.format(violations, &source)
         }
     };
     println!("{output}");
-
-    let exit_code = i32::from(!all_violations.is_empty());
-
-    process::exit(exit_code);
 }
 
 /// Recursively collect all .nu files from a directory

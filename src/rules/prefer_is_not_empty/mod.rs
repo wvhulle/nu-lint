@@ -5,7 +5,7 @@ use regex::Regex;
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{Rule, RuleCategory},
+    rule::{RegexRule, RuleCategory, RuleMetadata},
 };
 
 #[derive(Default)]
@@ -23,7 +23,7 @@ impl PreferIsNotEmpty {
     }
 }
 
-impl Rule for PreferIsNotEmpty {
+impl RuleMetadata for PreferIsNotEmpty {
     fn id(&self) -> &'static str {
         "prefer_is_not_empty"
     }
@@ -39,7 +39,9 @@ impl Rule for PreferIsNotEmpty {
     fn description(&self) -> &'static str {
         "Use 'is-not-empty' instead of 'not ... is-empty' for better readability"
     }
+}
 
+impl RegexRule for PreferIsNotEmpty {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         [
             (

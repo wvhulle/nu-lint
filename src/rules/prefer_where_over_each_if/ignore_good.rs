@@ -1,7 +1,8 @@
 #[cfg(test)]
 mod tests {
     use crate::{
-        context::LintContext, rule::Rule, rules::prefer_where_over_each_if::PreferWhereOverEachIf,
+        context::LintContext, rule::RegexRule,
+        rules::prefer_where_over_each_if::PreferWhereOverEachIf,
     };
 
     #[test]

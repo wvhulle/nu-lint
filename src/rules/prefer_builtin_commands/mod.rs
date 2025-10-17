@@ -4,7 +4,7 @@ use crate::{
     context::LintContext,
     external_command::{BuiltinAlternative, ExternalCommandVisitor},
     lint::{Fix, Replacement, Severity, Violation},
-    rule::{Rule, RuleCategory},
+    rule::{RegexRule, RuleCategory, RuleMetadata},
     visitor::VisitContext,
 };
 
@@ -72,7 +72,7 @@ impl Default for PreferBuiltinForCommonCommands {
     }
 }
 
-impl Rule for PreferBuiltinForCommonCommands {
+impl RuleMetadata for PreferBuiltinForCommonCommands {
     fn id(&self) -> &'static str {
         "prefer_builtin_commands"
     }
@@ -89,7 +89,9 @@ impl Rule for PreferBuiltinForCommonCommands {
         "Use Nushell built-ins instead of external commands for common operations like ls, cat, \
          grep, head, tail, sort, uniq, and find"
     }
+}
 
+impl RegexRule for PreferBuiltinForCommonCommands {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         let mut visitor = ExternalCommandVisitor::new(
             self.id(),

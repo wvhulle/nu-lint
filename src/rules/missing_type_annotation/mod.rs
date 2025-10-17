@@ -3,7 +3,7 @@ use nu_protocol::ast::Expr;
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{Rule, RuleCategory},
+    rule::{AstRule, RuleCategory, RuleMetadata},
     visitor::{AstVisitor, VisitContext},
 };
 
@@ -22,7 +22,7 @@ impl Default for MissingTypeAnnotation {
     }
 }
 
-impl Rule for MissingTypeAnnotation {
+impl RuleMetadata for MissingTypeAnnotation {
     fn id(&self) -> &'static str {
         "missing_type_annotation"
     }
@@ -38,22 +38,32 @@ impl Rule for MissingTypeAnnotation {
     fn description(&self) -> &'static str {
         "Parameters should have type annotations"
     }
+}
 
+impl AstRule for MissingTypeAnnotation {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         let mut visitor = TypeAnnotationVisitor::new(self.id().to_string(), self.severity());
         context.walk_ast(&mut visitor);
         visitor.into_violations()
     }
+
+    fn create_visitor<'a>(&'a self, _context: &'a LintContext<'a>) -> Box<dyn AstVisitor + 'a> {
+        Box::new(TypeAnnotationVisitor::new(
+            self.id().to_string(),
+            self.severity(),
+        ))
+    }
 }
 
-struct TypeAnnotationVisitor {
+pub struct TypeAnnotationVisitor {
     rule_id: String,
     severity: Severity,
     violations: Vec<Violation>,
 }
 
 impl TypeAnnotationVisitor {
-    fn new(rule_id: String, severity: Severity) -> Self {
+    #[must_use]
+    pub fn new(rule_id: String, severity: Severity) -> Self {
         Self {
             rule_id,
             severity,
@@ -61,8 +71,14 @@ impl TypeAnnotationVisitor {
         }
     }
 
-    fn into_violations(self) -> Vec<Violation> {
+    #[must_use]
+    pub fn into_violations(self) -> Vec<Violation> {
         self.violations
+    }
+
+    #[must_use]
+    pub fn take_violations(&mut self) -> Vec<Violation> {
+        std::mem::take(&mut self.violations)
     }
 }
 

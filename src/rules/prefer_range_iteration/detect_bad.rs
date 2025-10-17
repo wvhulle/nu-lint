@@ -2,7 +2,7 @@
 mod tests {
 
     use crate::{
-        context::LintContext, rule::Rule, rules::prefer_range_iteration::PreferRangeIteration,
+        context::LintContext, rule::RegexRule, rules::prefer_range_iteration::PreferRangeIteration,
     };
 
     #[test]

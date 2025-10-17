@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
 
-    use crate::{context::LintContext, rule::Rule, rules::pipe_spacing::PipeSpacing};
+    use crate::{context::LintContext, rule::AstRule, rules::pipe_spacing::PipeSpacing};
 
     #[test]
     fn test_pipe_spacing() {

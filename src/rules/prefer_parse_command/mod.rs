@@ -3,7 +3,7 @@ use regex::Regex;
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{Rule, RuleCategory},
+    rule::{RegexRule, RuleCategory, RuleMetadata},
 };
 
 pub struct PreferParseCommand;
@@ -21,7 +21,7 @@ impl Default for PreferParseCommand {
     }
 }
 
-impl Rule for PreferParseCommand {
+impl RuleMetadata for PreferParseCommand {
     fn id(&self) -> &'static str {
         "prefer_parse_command"
     }
@@ -37,7 +37,9 @@ impl Rule for PreferParseCommand {
     fn description(&self) -> &'static str {
         "Prefer 'parse' command over manual string splitting with indexed access"
     }
+}
 
+impl RegexRule for PreferParseCommand {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         let mut violations = Vec::new();
 

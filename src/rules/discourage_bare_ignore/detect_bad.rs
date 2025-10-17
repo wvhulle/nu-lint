@@ -2,7 +2,7 @@
 mod tests {
 
     use crate::{
-        context::LintContext, rule::Rule, rules::discourage_bare_ignore::DiscouragedBareIgnore,
+        context::LintContext, rule::RegexRule, rules::discourage_bare_ignore::DiscouragedBareIgnore,
     };
 
     #[test]

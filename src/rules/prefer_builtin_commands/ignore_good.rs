@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::{
-        context::LintContext, rule::Rule,
+        context::LintContext, rule::RegexRule,
         rules::prefer_builtin_commands::PreferBuiltinForCommonCommands,
     };
 

@@ -2,7 +2,8 @@
 mod tests {
 
     use crate::{
-        context::LintContext, rule::Rule, rules::screaming_snake_constants::ScreamingSnakeConstants,
+        context::LintContext, rule::RegexRule,
+        rules::screaming_snake_constants::ScreamingSnakeConstants,
     };
 
     #[test]

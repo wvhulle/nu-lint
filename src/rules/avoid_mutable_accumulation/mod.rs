@@ -5,7 +5,7 @@ use regex::Regex;
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{Rule, RuleCategory},
+    rule::{RegexRule, RuleCategory, RuleMetadata},
 };
 
 #[derive(Default)]
@@ -18,7 +18,7 @@ impl AvoidMutableAccumulation {
     }
 }
 
-impl Rule for AvoidMutableAccumulation {
+impl RuleMetadata for AvoidMutableAccumulation {
     fn id(&self) -> &'static str {
         "avoid_mutable_accumulation"
     }
@@ -34,7 +34,9 @@ impl Rule for AvoidMutableAccumulation {
     fn description(&self) -> &'static str {
         "Prefer functional pipelines over mutable list accumulation"
     }
+}
 
+impl RegexRule for AvoidMutableAccumulation {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         Self::mut_list_pattern()
             .captures_iter(context.source)

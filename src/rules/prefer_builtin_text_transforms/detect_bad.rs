@@ -2,7 +2,7 @@
 mod tests {
 
     use crate::{
-        context::LintContext, rule::Rule,
+        context::LintContext, rule::RegexRule,
         rules::prefer_builtin_text_transforms::PreferBuiltinTextTransforms,
     };
 

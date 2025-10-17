@@ -1,7 +1,7 @@
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{Rule, RuleCategory},
+    rule::{RegexRule, RuleCategory, RuleMetadata},
 };
 
 pub struct DiscourageUnderscoreCommands;
@@ -19,7 +19,7 @@ impl Default for DiscourageUnderscoreCommands {
     }
 }
 
-impl Rule for DiscourageUnderscoreCommands {
+impl RuleMetadata for DiscourageUnderscoreCommands {
     fn id(&self) -> &'static str {
         "discourage_underscore_commands"
     }
@@ -35,7 +35,9 @@ impl Rule for DiscourageUnderscoreCommands {
     fn description(&self) -> &'static str {
         "Command names should use hyphens instead of underscores for better readability"
     }
+}
 
+impl RegexRule for DiscourageUnderscoreCommands {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         let mut violations = Vec::new();
 

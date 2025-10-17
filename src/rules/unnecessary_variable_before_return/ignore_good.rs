@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::{
-        context::LintContext, rule::Rule,
+        context::LintContext, rule::RegexRule,
         rules::unnecessary_variable_before_return::UnnecessaryVariableBeforeReturn,
     };
 

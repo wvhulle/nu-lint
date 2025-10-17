@@ -1,7 +1,7 @@
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{Rule, RuleCategory},
+    rule::{RegexRule, RuleCategory, RuleMetadata},
 };
 
 pub struct MaxPositionalParams {
@@ -21,7 +21,7 @@ impl Default for MaxPositionalParams {
     }
 }
 
-impl Rule for MaxPositionalParams {
+impl RuleMetadata for MaxPositionalParams {
     fn id(&self) -> &'static str {
         "max_positional_params"
     }
@@ -37,7 +37,9 @@ impl Rule for MaxPositionalParams {
     fn description(&self) -> &'static str {
         "Custom commands should have ≤ 2 positional parameters"
     }
+}
 
+impl RegexRule for MaxPositionalParams {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         context
             .new_user_functions()

@@ -3,7 +3,7 @@ use regex::Regex;
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{Rule, RuleCategory},
+    rule::{RegexRule, RuleCategory, RuleMetadata},
 };
 
 pub struct PreferEachOverFor;
@@ -21,7 +21,7 @@ impl Default for PreferEachOverFor {
     }
 }
 
-impl Rule for PreferEachOverFor {
+impl RuleMetadata for PreferEachOverFor {
     fn id(&self) -> &'static str {
         "prefer_each_over_for"
     }
@@ -37,7 +37,9 @@ impl Rule for PreferEachOverFor {
     fn description(&self) -> &'static str {
         "Use 'each' pipeline instead of 'for' loops for functional style"
     }
+}
 
+impl RegexRule for PreferEachOverFor {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         // Pattern: for item in $collection { ... }
         let for_loop_pattern = Regex::new(r"for\s+(\w+)\s+in\s+(\$\w+|\([^\)]+\))\s*\{").unwrap();

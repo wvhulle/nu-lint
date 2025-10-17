@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::{context::LintContext, rule::Rule, rules::unnecessary_mut::UnnecessaryMut};
+    use crate::{context::LintContext, rule::AstRule, rules::unnecessary_mut::UnnecessaryMut};
 
     #[test]
     fn test_unnecessary_mut_detected() {

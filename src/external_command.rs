@@ -79,7 +79,6 @@ impl<'a> ExternalCommandVisitor<'a> {
 
     /// Check for special command usage patterns that need custom suggestions
     fn get_custom_suggestion(
-        &self,
         cmd_text: &str,
         args: &[nu_protocol::ast::ExternalArgument],
         context: &VisitContext,
@@ -131,7 +130,7 @@ impl AstVisitor for ExternalCommandVisitor<'_> {
 
             // Check for custom suggestions first
             if let Some((custom_message, custom_suggestion)) =
-                self.get_custom_suggestion(cmd_text, args, context)
+                Self::get_custom_suggestion(cmd_text, args, context)
             {
                 self.violations.push(Violation {
                     rule_id: self.rule_id.to_string(),

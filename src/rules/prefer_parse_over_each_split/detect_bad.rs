@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::{
-        context::LintContext, rule::Rule,
+        context::LintContext, rule::AstRule,
         rules::prefer_parse_over_each_split::PreferParseOverEachSplit,
     };
 

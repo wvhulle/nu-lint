@@ -1,7 +1,7 @@
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{Rule, RuleCategory},
+    rule::{RegexRule, RuleCategory, RuleMetadata},
 };
 
 pub struct CompletionFunctionNaming;
@@ -19,7 +19,7 @@ impl Default for CompletionFunctionNaming {
     }
 }
 
-impl Rule for CompletionFunctionNaming {
+impl RuleMetadata for CompletionFunctionNaming {
     fn id(&self) -> &'static str {
         "completion_function_naming"
     }
@@ -35,7 +35,9 @@ impl Rule for CompletionFunctionNaming {
     fn description(&self) -> &'static str {
         "Completion functions should use 'nu-complete' prefix for clarity"
     }
+}
 
+impl RegexRule for CompletionFunctionNaming {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         let mut violations = Vec::new();
 

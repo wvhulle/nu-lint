@@ -2,7 +2,7 @@
 mod tests {
 
     use crate::{
-        context::LintContext, rule::Rule,
+        context::LintContext, rule::AstRule,
         rules::prefer_compound_assignment::PreferCompoundAssignment,
     };
 

@@ -5,7 +5,7 @@ use nu_protocol::{Span, VarId, ast::Expr};
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{Rule, RuleCategory},
+    rule::{AstRule, RuleCategory, RuleMetadata},
     visitor::{AstVisitor, VisitContext},
 };
 
@@ -24,7 +24,7 @@ impl Default for UnnecessaryMut {
     }
 }
 
-impl Rule for UnnecessaryMut {
+impl RuleMetadata for UnnecessaryMut {
     fn id(&self) -> &'static str {
         "unnecessary_mut"
     }
@@ -40,16 +40,22 @@ impl Rule for UnnecessaryMut {
     fn description(&self) -> &'static str {
         "Variables should only be marked 'mut' when they are actually reassigned"
     }
+}
 
+impl AstRule for UnnecessaryMut {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         let mut visitor = MutVariableVisitor::new(self, context.source);
         context.walk_ast(&mut visitor);
         visitor.finalize()
     }
+
+    fn create_visitor<'a>(&'a self, context: &'a LintContext<'a>) -> Box<dyn AstVisitor + 'a> {
+        Box::new(MutVariableVisitor::new(self, context.source))
+    }
 }
 
 /// AST visitor that tracks mutable variable declarations and assignments
-struct MutVariableVisitor<'a> {
+pub struct MutVariableVisitor<'a> {
     rule: &'a UnnecessaryMut,
     /// Maps variable IDs to their (name, `declaration_span`,
     /// `mut_keyword_span`, `is_reassigned`)
@@ -58,7 +64,8 @@ struct MutVariableVisitor<'a> {
 }
 
 impl<'a> MutVariableVisitor<'a> {
-    fn new(rule: &'a UnnecessaryMut, source: &'a str) -> Self {
+    #[must_use]
+    pub fn new(rule: &'a UnnecessaryMut, source: &'a str) -> Self {
         Self {
             rule,
             mut_variables: HashMap::new(),
@@ -66,12 +73,46 @@ impl<'a> MutVariableVisitor<'a> {
         }
     }
 
+    #[must_use]
+    pub fn take_violations(&mut self) -> Vec<Violation> {
+        use crate::lint::{Fix, Replacement};
+        let mut violations = Vec::new();
+
+        // Check which mutable variables were never reassigned
+        for (var_name, decl_span, mut_span, is_reassigned) in self.mut_variables.values() {
+            if !is_reassigned {
+                // Create a fix that removes the 'mut ' keyword
+                let fix = Some(Fix {
+                    description: format!("Remove 'mut' keyword from variable '{var_name}'"),
+                    replacements: vec![Replacement {
+                        span: *mut_span,
+                        new_text: String::new(), // Replace 'mut ' with empty string
+                    }],
+                });
+
+                violations.push(Violation {
+                    rule_id: self.rule.id().to_string(),
+                    severity: self.rule.severity(),
+                    message: format!(
+                        "Variable '{var_name}' is declared as 'mut' but never reassigned"
+                    ),
+                    span: *decl_span,
+                    suggestion: Some(format!("Remove 'mut' keyword:\nlet {var_name} = ...")),
+                    fix,
+                    file: None,
+                });
+            }
+        }
+
+        violations
+    }
+
     /// Find the span of 'mut ' keyword before the variable name
     /// Looks backwards from the variable name span to find 'mut '
     fn find_mut_keyword_span(&self, var_span: Span) -> Span {
         // Look backwards in the source before the variable name
         // Pattern is: "mut variable_name", so we look for "mut " before the var name
-        let start = var_span.start;
+        let start = var_span.start.min(self.source.len());
 
         // Search backwards for "mut " (including the space)
         // We limit the search to a reasonable distance (e.g., 20 chars back)

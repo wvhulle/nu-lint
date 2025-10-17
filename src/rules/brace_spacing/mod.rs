@@ -5,7 +5,7 @@ use regex::Regex;
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{Rule, RuleCategory},
+    rule::{RegexRule, RuleCategory, RuleMetadata},
 };
 
 #[derive(Default)]
@@ -18,7 +18,7 @@ impl BraceSpacing {
     }
 }
 
-impl Rule for BraceSpacing {
+impl RuleMetadata for BraceSpacing {
     fn id(&self) -> &'static str {
         "brace_spacing"
     }
@@ -34,7 +34,9 @@ impl Rule for BraceSpacing {
     fn description(&self) -> &'static str {
         "Braces should have one space after opening and before closing"
     }
+}
 
+impl RegexRule for BraceSpacing {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         context.violations_from_regex_if(
             Self::bad_record_pattern(),

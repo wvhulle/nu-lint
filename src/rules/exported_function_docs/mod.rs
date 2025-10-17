@@ -1,7 +1,7 @@
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{Rule, RuleCategory},
+    rule::{RegexRule, RuleCategory, RuleMetadata},
 };
 
 pub struct ExportedFunctionDocs;
@@ -19,7 +19,7 @@ impl Default for ExportedFunctionDocs {
     }
 }
 
-impl Rule for ExportedFunctionDocs {
+impl RuleMetadata for ExportedFunctionDocs {
     fn id(&self) -> &'static str {
         "exported_function_docs"
     }
@@ -35,7 +35,9 @@ impl Rule for ExportedFunctionDocs {
     fn description(&self) -> &'static str {
         "Exported functions should have documentation comments"
     }
+}
 
+impl RegexRule for ExportedFunctionDocs {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         let mut violations = Vec::new();
 

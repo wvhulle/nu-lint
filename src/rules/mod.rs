@@ -32,10 +32,10 @@ pub mod unnecessary_variable_before_return;
 
 use std::collections::HashMap;
 
-use crate::rule::Rule;
+use crate::rule::{Rule, RuleMetadata};
 
 pub struct RuleRegistry {
-    rules: HashMap<String, Box<dyn Rule>>,
+    rules: HashMap<String, Rule>,
 }
 
 impl RuleRegistry {
@@ -46,92 +46,116 @@ impl RuleRegistry {
         }
     }
 
-    pub fn register(&mut self, rule: Box<dyn Rule>) {
+    pub fn register(&mut self, rule: Rule) {
         let id = rule.id().to_string();
         self.rules.insert(id, rule);
     }
 
     #[must_use]
-    pub fn get_rule(&self, id: &str) -> Option<&dyn Rule> {
-        self.rules.get(id).map(std::convert::AsRef::as_ref)
+    pub fn get_rule(&self, id: &str) -> Option<&Rule> {
+        self.rules.get(id)
     }
 
-    pub fn all_rules(&self) -> impl Iterator<Item = &dyn Rule> {
-        self.rules.values().map(std::convert::AsRef::as_ref)
+    pub fn all_rules(&self) -> impl Iterator<Item = &Rule> {
+        self.rules.values()
     }
 
     #[must_use]
     pub fn with_default_rules() -> Self {
         let mut registry = Self::new();
 
-        // Style rules
-        registry.register(Box::<snake_case_variables::SnakeCaseVariables>::default());
-        registry.register(Box::<kebab_case_commands::KebabCaseCommands>::default());
-        registry.register(Box::<screaming_snake_constants::ScreamingSnakeConstants>::default());
-        registry.register(Box::new(pipe_spacing::PipeSpacing));
-        registry.register(Box::new(brace_spacing::BraceSpacing));
-        registry.register(Box::new(
-            prefer_compound_assignment::PreferCompoundAssignment::new(),
+        // Style rules (Regex-based)
+        registry.register(Rule::Regex(
+            Box::<snake_case_variables::SnakeCaseVariables>::default(),
         ));
-        registry.register(Box::new(
+        registry.register(Rule::Regex(
+            Box::<kebab_case_commands::KebabCaseCommands>::default(),
+        ));
+        registry.register(Rule::Regex(Box::<
+            screaming_snake_constants::ScreamingSnakeConstants,
+        >::default()));
+        registry.register(Rule::Regex(Box::new(brace_spacing::BraceSpacing)));
+        registry.register(Rule::Regex(Box::new(
             unnecessary_variable_before_return::UnnecessaryVariableBeforeReturn::new(),
-        ));
-        registry.register(Box::new(prefer_is_not_empty::PreferIsNotEmpty));
-        registry.register(Box::new(
+        )));
+        registry.register(Rule::Regex(Box::new(prefer_is_not_empty::PreferIsNotEmpty)));
+        registry.register(Rule::Regex(Box::new(
             discourage_bare_ignore::DiscouragedBareIgnore::new(),
-        ));
-        registry.register(Box::new(
+        )));
+        registry.register(Rule::Regex(Box::new(
             discourage_underscore_commands::DiscourageUnderscoreCommands::new(),
-        ));
-        registry.register(Box::new(
+        )));
+        registry.register(Rule::Regex(Box::new(
             completion_function_naming::CompletionFunctionNaming::new(),
-        ));
-        registry.register(Box::new(unnecessary_mut::UnnecessaryMut::new()));
+        )));
 
-        // Best practices rules
-        registry.register(Box::new(prefer_error_make::PreferErrorMake::new()));
-        registry.register(Box::new(
+        // Style rules (AST-based)
+        registry.register(Rule::Ast(Box::new(pipe_spacing::PipeSpacing)));
+        registry.register(Rule::Ast(Box::new(
+            prefer_compound_assignment::PreferCompoundAssignment::new(),
+        )));
+        registry.register(Rule::Ast(Box::new(unnecessary_mut::UnnecessaryMut::new())));
+
+        // Best practices rules (Regex-based)
+        registry.register(Rule::Regex(Box::new(
+            prefer_error_make::PreferErrorMake::new(),
+        )));
+        registry.register(Rule::Regex(Box::new(
             avoid_mutable_accumulation::AvoidMutableAccumulation,
-        ));
-        registry.register(Box::new(prefer_range_iteration::PreferRangeIteration::new()));
-        registry.register(Box::new(prefer_parse_command::PreferParseCommand::new()));
-        registry.register(Box::new(
+        )));
+        registry.register(Rule::Regex(Box::new(
+            prefer_range_iteration::PreferRangeIteration::new(),
+        )));
+        registry.register(Rule::Regex(Box::new(
+            prefer_parse_command::PreferParseCommand::new(),
+        )));
+        registry.register(Rule::Regex(Box::new(
             consistent_error_handling::ConsistentErrorHandling::new(),
-        ));
-        registry.register(Box::new(
+        )));
+        registry.register(Rule::Regex(Box::new(
             prefer_match_over_if_chain::PreferMatchOverIfChain::new(),
-        ));
-        registry.register(Box::new(prefer_each_over_for::PreferEachOverFor::new()));
-        registry.register(Box::new(
+        )));
+        registry.register(Rule::Regex(Box::new(
+            prefer_each_over_for::PreferEachOverFor::new(),
+        )));
+        registry.register(Rule::Regex(Box::new(
             descriptive_error_messages::DescriptiveErrorMessages::new(),
-        ));
-        registry.register(Box::new(
+        )));
+        registry.register(Rule::Regex(Box::new(
             prefer_builtin_commands::PreferBuiltinForCommonCommands::new(),
-        ));
-        registry.register(Box::new(
+        )));
+        registry.register(Rule::Regex(Box::new(
             prefer_builtin_text_transforms::PreferBuiltinTextTransforms::new(),
-        ));
-        registry.register(Box::new(
+        )));
+        registry.register(Rule::Regex(Box::new(
             prefer_builtin_system_commands::PreferBuiltinSystemCommands::new(),
-        ));
+        )));
 
-        // Performance rules
-        registry.register(Box::new(prefer_where_over_each_if::PreferWhereOverEachIf));
-        registry.register(Box::new(
+        // Performance rules (Regex-based)
+        registry.register(Rule::Regex(Box::new(
+            prefer_where_over_each_if::PreferWhereOverEachIf,
+        )));
+        registry.register(Rule::Regex(Box::new(
             prefer_lines_over_split::PreferLinesOverSplit::new(),
-        ));
-        registry.register(Box::new(
+        )));
+
+        // Performance rules (AST-based)
+        registry.register(Rule::Ast(Box::new(
             prefer_parse_over_each_split::PreferParseOverEachSplit,
-        ));
+        )));
 
-        // Documentation rules
-        registry.register(Box::new(missing_command_docs::MissingCommandDocs::new()));
-        registry.register(Box::new(exported_function_docs::ExportedFunctionDocs));
+        // Documentation rules (Regex-based)
+        registry.register(Rule::Regex(Box::new(
+            missing_command_docs::MissingCommandDocs::new(),
+        )));
+        registry.register(Rule::Regex(Box::new(
+            exported_function_docs::ExportedFunctionDocs,
+        )));
 
-        // Type safety rules
-        registry.register(Box::new(
+        // Type safety rules (AST-based)
+        registry.register(Rule::Ast(Box::new(
             missing_type_annotation::MissingTypeAnnotation::new(),
-        ));
+        )));
 
         registry
     }

@@ -3,7 +3,7 @@ use nu_protocol::ast::{Expr, Operator};
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{Rule, RuleCategory},
+    rule::{AstRule, RuleCategory, RuleMetadata},
     visitor::{AstVisitor, VisitContext},
 };
 
@@ -17,7 +17,7 @@ impl PreferCompoundAssignment {
     }
 }
 
-impl Rule for PreferCompoundAssignment {
+impl RuleMetadata for PreferCompoundAssignment {
     fn id(&self) -> &'static str {
         "prefer_compound_assignment"
     }
@@ -33,26 +33,38 @@ impl Rule for PreferCompoundAssignment {
     fn description(&self) -> &'static str {
         "Use compound assignment operators (+=, -=, etc.) for clarity"
     }
+}
 
+impl AstRule for PreferCompoundAssignment {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         let mut visitor = CompoundAssignmentVisitor::new(self);
         context.walk_ast(&mut visitor);
         visitor.violations
     }
+
+    fn create_visitor<'a>(&'a self, _context: &'a LintContext<'a>) -> Box<dyn AstVisitor + 'a> {
+        Box::new(CompoundAssignmentVisitor::new(self))
+    }
 }
 
 /// AST visitor that checks for compound assignment opportunities
-struct CompoundAssignmentVisitor<'a> {
+pub struct CompoundAssignmentVisitor<'a> {
     rule: &'a PreferCompoundAssignment,
     violations: Vec<Violation>,
 }
 
 impl<'a> CompoundAssignmentVisitor<'a> {
-    fn new(rule: &'a PreferCompoundAssignment) -> Self {
+    #[must_use]
+    pub fn new(rule: &'a PreferCompoundAssignment) -> Self {
         Self {
             rule,
             violations: Vec::new(),
         }
+    }
+
+    #[must_use]
+    pub fn take_violations(&mut self) -> Vec<Violation> {
+        std::mem::take(&mut self.violations)
     }
 }
 

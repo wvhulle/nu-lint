@@ -5,7 +5,7 @@ use regex::Regex;
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{Rule, RuleCategory},
+    rule::{RegexRule, RuleCategory, RuleMetadata},
 };
 
 pub struct ConsistentErrorHandling;
@@ -35,7 +35,7 @@ impl Default for ConsistentErrorHandling {
     }
 }
 
-impl Rule for ConsistentErrorHandling {
+impl RuleMetadata for ConsistentErrorHandling {
     fn id(&self) -> &'static str {
         "consistent_error_handling"
     }
@@ -51,7 +51,9 @@ impl Rule for ConsistentErrorHandling {
     fn description(&self) -> &'static str {
         "Check external command results consistently for better error handling"
     }
+}
 
+impl RegexRule for ConsistentErrorHandling {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         let complete_pattern = Self::complete_pattern();
         let var_pattern = Self::var_pattern();

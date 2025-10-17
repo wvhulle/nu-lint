@@ -2,7 +2,8 @@
 mod tests {
 
     use crate::{
-        context::LintContext, rule::Rule, rules::prefer_match_over_if_chain::PreferMatchOverIfChain,
+        context::LintContext, rule::RegexRule,
+        rules::prefer_match_over_if_chain::PreferMatchOverIfChain,
     };
 
     #[test]

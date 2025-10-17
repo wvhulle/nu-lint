@@ -1,11 +1,12 @@
 [package]
-authors = ["nu-lint contributors"]
+authors = ["Willem Vanhulle <willemvanhulle@protonmail.com>"]
 description = "A linter for Nushell scripts"
 edition = "2024"
-license = "MIT OR Apache-2.0"
+keywords = ["nushell", "linter", "static-analysis", "code-quality", "shell"]
+license = "MIT"
 name = "nu-lint"
 repository = "https://github.com/wvhulle/nu-lint"
-version = "0.1.0"
+version = "0.0.1"
 
 [lints.clippy]
 pedantic = { level = "warn", priority = 0 }
@@ -14,7 +15,6 @@ pedantic = { level = "warn", priority = 0 }
 # Nushell parser
 nu-cmd-lang = "0.108.0"
 nu-command = "0.108.0"
-nu-engine = "0.108.0"
 nu-parser = "0.108.0"
 nu-protocol = "0.108.0"
 
@@ -32,12 +32,14 @@ thiserror = "1.0"
 # Regex for pattern matching
 regex = "1.10"
 
+# Parallel processing
+rayon = "1.10"
+
 # Case conversion utilities
 heck = "0.5"
 
 [dev-dependencies]
 assert_cmd = "2.0"
-insta = "1.39"
 predicates = "3.1"
 tempfile = "3.10"
 

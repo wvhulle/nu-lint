@@ -1,7 +1,7 @@
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{Rule, RuleCategory},
+    rule::{RegexRule, RuleCategory, RuleMetadata},
 };
 
 pub struct PreferLinesOverSplit;
@@ -19,7 +19,7 @@ impl Default for PreferLinesOverSplit {
     }
 }
 
-impl Rule for PreferLinesOverSplit {
+impl RuleMetadata for PreferLinesOverSplit {
     fn id(&self) -> &'static str {
         "prefer_lines_over_split"
     }
@@ -35,7 +35,9 @@ impl Rule for PreferLinesOverSplit {
     fn description(&self) -> &'static str {
         "Use 'lines' instead of 'split row \"\\n\"' for better performance and clarity"
     }
+}
 
+impl RegexRule for PreferLinesOverSplit {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         let mut violations = Vec::new();
 

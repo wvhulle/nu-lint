@@ -3,7 +3,7 @@ use regex::Regex;
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{Rule, RuleCategory},
+    rule::{RegexRule, RuleCategory, RuleMetadata},
 };
 
 pub struct MissingCommandDocs;
@@ -21,7 +21,7 @@ impl Default for MissingCommandDocs {
     }
 }
 
-impl Rule for MissingCommandDocs {
+impl RuleMetadata for MissingCommandDocs {
     fn id(&self) -> &'static str {
         "missing_command_docs"
     }
@@ -37,7 +37,9 @@ impl Rule for MissingCommandDocs {
     fn description(&self) -> &'static str {
         "Custom commands should have documentation comments"
     }
+}
 
+impl RegexRule for MissingCommandDocs {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         let def_pattern = Regex::new(r"(?m)^[ \t]*def\s+([a-zA-Z_-][a-zA-Z0-9_-]*)\s*\[").unwrap();
 

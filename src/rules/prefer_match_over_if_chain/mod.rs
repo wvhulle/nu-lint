@@ -3,7 +3,7 @@ use regex::Regex;
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{Rule, RuleCategory},
+    rule::{RegexRule, RuleCategory, RuleMetadata},
 };
 
 pub struct PreferMatchOverIfChain;
@@ -21,7 +21,7 @@ impl Default for PreferMatchOverIfChain {
     }
 }
 
-impl Rule for PreferMatchOverIfChain {
+impl RuleMetadata for PreferMatchOverIfChain {
     fn id(&self) -> &'static str {
         "prefer_match_over_if_chain"
     }
@@ -37,7 +37,9 @@ impl Rule for PreferMatchOverIfChain {
     fn description(&self) -> &'static str {
         "Use 'match' for value-based branching instead of if-else-if chains"
     }
+}
 
+impl RegexRule for PreferMatchOverIfChain {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         let mut violations = Vec::new();
 

@@ -3,14 +3,14 @@ use nu_protocol::ast::{Call, Expr};
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{Rule, RuleCategory},
+    rule::{AstRule, RuleCategory, RuleMetadata},
     visitor::{AstVisitor, VisitContext},
 };
 
 #[derive(Default)]
 pub struct PreferParseOverEachSplit;
 
-impl Rule for PreferParseOverEachSplit {
+impl RuleMetadata for PreferParseOverEachSplit {
     fn id(&self) -> &'static str {
         "prefer_parse_over_each_split"
     }
@@ -26,26 +26,38 @@ impl Rule for PreferParseOverEachSplit {
     fn description(&self) -> &'static str {
         "Prefer 'parse' over 'each' with 'split row' for structured text processing"
     }
+}
 
+impl AstRule for PreferParseOverEachSplit {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         let mut visitor = EachSplitVisitor::new(self);
         context.walk_ast(&mut visitor);
         visitor.violations
     }
+
+    fn create_visitor<'a>(&'a self, _context: &'a LintContext<'a>) -> Box<dyn AstVisitor + 'a> {
+        Box::new(EachSplitVisitor::new(self))
+    }
 }
 
 /// AST visitor that detects 'each' calls containing 'split row'
-struct EachSplitVisitor<'a> {
+pub struct EachSplitVisitor<'a> {
     rule: &'a PreferParseOverEachSplit,
     violations: Vec<Violation>,
 }
 
 impl<'a> EachSplitVisitor<'a> {
-    fn new(rule: &'a PreferParseOverEachSplit) -> Self {
+    #[must_use]
+    pub fn new(rule: &'a PreferParseOverEachSplit) -> Self {
         Self {
             rule,
             violations: Vec::new(),
         }
+    }
+
+    #[must_use]
+    pub fn take_violations(&mut self) -> Vec<Violation> {
+        std::mem::take(&mut self.violations)
     }
 
     fn is_command(call: &Call, context: &VisitContext, name: &str) -> bool {

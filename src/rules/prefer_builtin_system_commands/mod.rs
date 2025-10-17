@@ -4,7 +4,7 @@ use crate::{
     context::LintContext,
     external_command::{BuiltinAlternative, ExternalCommandVisitor},
     lint::{Fix, Replacement, Severity, Violation},
-    rule::{Rule, RuleCategory},
+    rule::{RegexRule, RuleCategory, RuleMetadata},
     visitor::VisitContext,
 };
 
@@ -109,7 +109,7 @@ impl Default for PreferBuiltinSystemCommands {
     }
 }
 
-impl Rule for PreferBuiltinSystemCommands {
+impl RuleMetadata for PreferBuiltinSystemCommands {
     fn id(&self) -> &'static str {
         "prefer_builtin_system_commands"
     }
@@ -126,7 +126,9 @@ impl Rule for PreferBuiltinSystemCommands {
         "Prefer Nushell built-in commands over external tools for system operations (env, date, \
          whoami, man, which, cd, pwd, etc.)"
     }
+}
 
+impl RegexRule for PreferBuiltinSystemCommands {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         let mut visitor = ExternalCommandVisitor::new(
             self.id(),

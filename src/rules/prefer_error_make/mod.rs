@@ -5,7 +5,7 @@ use regex::Regex;
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{Rule, RuleCategory},
+    rule::{RegexRule, RuleCategory, RuleMetadata},
 };
 
 #[derive(Default)]
@@ -25,7 +25,7 @@ impl PreferErrorMake {
     }
 }
 
-impl Rule for PreferErrorMake {
+impl RuleMetadata for PreferErrorMake {
     fn id(&self) -> &'static str {
         "prefer_error_make"
     }
@@ -41,7 +41,9 @@ impl Rule for PreferErrorMake {
     fn description(&self) -> &'static str {
         "Use 'error make' for custom errors instead of 'print' + 'exit'"
     }
+}
 
+impl RegexRule for PreferErrorMake {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         let pattern = Self::pattern();
 

@@ -1,7 +1,7 @@
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{Rule, RuleCategory},
+    rule::{RegexRule, RuleCategory, RuleMetadata},
 };
 
 pub struct DescriptiveErrorMessages;
@@ -19,7 +19,7 @@ impl Default for DescriptiveErrorMessages {
     }
 }
 
-impl Rule for DescriptiveErrorMessages {
+impl RuleMetadata for DescriptiveErrorMessages {
     fn id(&self) -> &'static str {
         "descriptive_error_messages"
     }
@@ -35,7 +35,9 @@ impl Rule for DescriptiveErrorMessages {
     fn description(&self) -> &'static str {
         "Error messages should be descriptive and actionable"
     }
+}
 
+impl RegexRule for DescriptiveErrorMessages {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         let mut violations = Vec::new();
 

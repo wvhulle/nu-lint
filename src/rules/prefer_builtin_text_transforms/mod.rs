@@ -4,7 +4,7 @@ use crate::{
     context::LintContext,
     external_command::{BuiltinAlternative, ExternalCommandVisitor},
     lint::{Fix, Replacement, Severity, Violation},
-    rule::{Rule, RuleCategory},
+    rule::{RegexRule, RuleCategory, RuleMetadata},
     visitor::VisitContext,
 };
 
@@ -80,7 +80,7 @@ impl Default for PreferBuiltinTextTransforms {
     }
 }
 
-impl Rule for PreferBuiltinTextTransforms {
+impl RuleMetadata for PreferBuiltinTextTransforms {
     fn id(&self) -> &'static str {
         "prefer_builtin_text_transforms"
     }
@@ -97,7 +97,9 @@ impl Rule for PreferBuiltinTextTransforms {
         "Prefer Nushell built-in commands over external tools for text transformation (sed, awk, \
          cut, wc, tr, tee)"
     }
+}
 
+impl RegexRule for PreferBuiltinTextTransforms {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         let mut visitor = ExternalCommandVisitor::new(
             self.id(),

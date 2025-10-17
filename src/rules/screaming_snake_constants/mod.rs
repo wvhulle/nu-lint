@@ -6,7 +6,7 @@ use regex::Regex;
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{Rule, RuleCategory},
+    rule::{RegexRule, RuleCategory, RuleMetadata},
 };
 
 #[derive(Default)]
@@ -28,7 +28,7 @@ impl ScreamingSnakeConstants {
     }
 }
 
-impl Rule for ScreamingSnakeConstants {
+impl RuleMetadata for ScreamingSnakeConstants {
     fn id(&self) -> &'static str {
         "screaming_snake_constants"
     }
@@ -44,7 +44,9 @@ impl Rule for ScreamingSnakeConstants {
     fn description(&self) -> &'static str {
         "Constants should use SCREAMING_SNAKE_CASE naming convention"
     }
+}
 
+impl RegexRule for ScreamingSnakeConstants {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         let const_pattern = Self::const_pattern();
 

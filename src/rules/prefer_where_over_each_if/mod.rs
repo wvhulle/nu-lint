@@ -5,7 +5,7 @@ use regex::Regex;
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{Rule, RuleCategory},
+    rule::{RegexRule, RuleCategory, RuleMetadata},
 };
 
 #[derive(Default)]
@@ -22,7 +22,7 @@ impl PreferWhereOverEachIf {
         &["print", "save", "download", "^", "exit", "=", "mut "];
 }
 
-impl Rule for PreferWhereOverEachIf {
+impl RuleMetadata for PreferWhereOverEachIf {
     fn id(&self) -> &'static str {
         "prefer_where_over_each_if"
     }
@@ -38,7 +38,9 @@ impl Rule for PreferWhereOverEachIf {
     fn description(&self) -> &'static str {
         "Use 'where' for filtering instead of 'each' with 'if'"
     }
+}
 
+impl RegexRule for PreferWhereOverEachIf {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         context.violations_from_regex_if(
             Self::each_if_pattern(),

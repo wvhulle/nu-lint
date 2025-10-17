@@ -1,7 +1,9 @@
 #[cfg(test)]
 mod tests {
 
-    use crate::{context::LintContext, rule::Rule, rules::kebab_case_commands::KebabCaseCommands};
+    use crate::{
+        context::LintContext, rule::RegexRule, rules::kebab_case_commands::KebabCaseCommands,
+    };
 
     #[test]
     fn test_invalid_kebab_case() {

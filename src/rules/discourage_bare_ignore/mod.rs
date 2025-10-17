@@ -5,7 +5,7 @@ use regex::Regex;
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{Rule, RuleCategory},
+    rule::{RegexRule, RuleCategory, RuleMetadata},
 };
 
 pub struct DiscouragedBareIgnore;
@@ -28,7 +28,7 @@ impl Default for DiscouragedBareIgnore {
     }
 }
 
-impl Rule for DiscouragedBareIgnore {
+impl RuleMetadata for DiscouragedBareIgnore {
     fn id(&self) -> &'static str {
         "discourage_bare_ignore"
     }
@@ -44,7 +44,9 @@ impl Rule for DiscouragedBareIgnore {
     fn description(&self) -> &'static str {
         "Using '| ignore' may hide errors - consider explicit error handling"
     }
+}
 
+impl RegexRule for DiscouragedBareIgnore {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         // Pattern: | ignore (but allow external commands with ^)
         let ignore_pattern = Self::ignore_pattern();

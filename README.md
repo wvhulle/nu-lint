@@ -1,25 +1,19 @@
 # nu-lint
 
-A linter for Nushell scripts.
-
-## Features
-
-- Fast static analysis using Nushell's AST parser
-- Helpful diagnostics powered by miette
-- Built-in rules covering style, best practices, performance, documentation, and type safety
-- Configurable via `.nu-lint.toml`
-- Extensible rule system
+A static analysis tool for Nushell scripts.
 
 ## Installation
 
+Once published to crates.io:
+
 ```bash
-cargo install --path .
+cargo install nu-lint
 ```
 
-Or run without installing:
+Or build from source:
 
 ```bash
-cargo run --release -- path/to/script.nu
+cargo install --path .
 ```
 
 ## Usage
@@ -29,7 +23,7 @@ nu-lint script.nu                          # Lint a file
 nu-lint directory/                         # Lint all .nu files in a directory
 nu-lint --config custom.toml script.nu     # Use custom config
 nu-lint list-rules                         # Show all rules
-nu-lint explain S001                       # Explain a rule
+nu-lint explain snake_case_variables       # Explain a rule
 ```
 
 ## Configuration
@@ -41,8 +35,9 @@ Create `.nu-lint.toml` in your project root (or any parent directory):
 max_severity = "warning"
 
 [rules]
-S001 = "warning"  # snake-case-variables
-BP001 = "info"    # prefer-error-make
+snake_case_variables = "warning"
+prefer_error_make = "info"
+kebab_case_commands = "warning"
 
 [style]
 line_length = 100
@@ -56,38 +51,36 @@ The linter will automatically find and use this config file when you run it.
 
 ## Rules
 
-View all available rules:
+30+ rules covering style, best practices, performance, documentation, and type safety. All rules use either Nushell's AST parser or regex patterns for analysis.
 
-```bash
-nu-lint list-rules
-```
+View all rules: `nu-lint list-rules`
 
-Get details about a specific rule:
+Get details about a rule: `nu-lint explain <RULE_ID>`
 
-```bash
-nu-lint explain <RULE_ID>
-```
-
-## Example output
+## Example Output
 
 ```text
-warning(S001)
+info[prefer_parse_over_each_split]
 
-  ⚠ Variable 'myVariable' should use snake_case naming convention
-   ╭─[3:5]
- 3 │ let myVariable = 5
-   ·     ─────┬────
-   ·          ╰── Variable 'myVariable' should use snake_case naming convention
+  ℹ Manual splitting with 'each' and 'split row' - consider using 'parse'
+   ╭─[example.nu:5:1]
+ 5 │ $data | each { |line| $line | split row " " | get 0 }
+   ·         ───────────────────┬──────────────────────────
+   ·                            ╰── AST-based detection of structured text processing pattern
    ╰────
-  help: Consider renaming to: my_variable
+  help: Use 'parse "{field1} {field2}"' for structured text extraction instead of 'each' with 'split row'
 ```
 
-## Development
+This example demonstrates AST traversal detecting command patterns that the regex-based rules cannot catch.
+
+## Contributing
+
+Contributions are welcome. Please run tests and formatting before submitting:
 
 ```bash
-cargo build --release              # Build optimized binary
-cargo test                         # Run all tests
-cargo clippy                       # Check for lint warnings
+cargo test
+cargo +nightly fmt
+cargo clippy
 ```
 
 ## License

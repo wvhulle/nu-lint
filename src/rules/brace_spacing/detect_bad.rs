@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
 
-    use crate::{context::LintContext, rule::Rule, rules::brace_spacing::BraceSpacing};
+    use crate::{context::LintContext, rule::RegexRule, rules::brace_spacing::BraceSpacing};
 
     #[test]
     fn test_bad_brace_spacing() {

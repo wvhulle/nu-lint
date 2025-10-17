@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::{
-        context::LintContext, rule::Rule, rules::missing_command_docs::MissingCommandDocs,
+        context::LintContext, rule::RegexRule, rules::missing_command_docs::MissingCommandDocs,
     };
 
     #[test]

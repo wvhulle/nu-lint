@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::{
-        context::LintContext, rule::Rule, rules::prefer_lines_over_split::PreferLinesOverSplit,
+        context::LintContext, rule::RegexRule, rules::prefer_lines_over_split::PreferLinesOverSplit,
     };
 
     #[test]

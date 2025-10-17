@@ -3,7 +3,7 @@ use regex::Regex;
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{Rule, RuleCategory},
+    rule::{RegexRule, RuleCategory, RuleMetadata},
 };
 
 pub struct PreferRangeIteration;
@@ -21,7 +21,7 @@ impl Default for PreferRangeIteration {
     }
 }
 
-impl Rule for PreferRangeIteration {
+impl RuleMetadata for PreferRangeIteration {
     fn id(&self) -> &'static str {
         "prefer_range_iteration"
     }
@@ -37,7 +37,9 @@ impl Rule for PreferRangeIteration {
     fn description(&self) -> &'static str {
         "Prefer range iteration over while loops with counters"
     }
+}
 
+impl RegexRule for PreferRangeIteration {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         // Pattern: mut counter = 0, while counter < max, counter increment
         let mut_counter_pattern = Regex::new(r"mut\s+(\w+)\s*=\s*0").unwrap();

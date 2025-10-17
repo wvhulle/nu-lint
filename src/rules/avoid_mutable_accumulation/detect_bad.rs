@@ -2,7 +2,7 @@
 mod tests {
 
     use crate::{
-        context::LintContext, rule::Rule,
+        context::LintContext, rule::RegexRule,
         rules::avoid_mutable_accumulation::AvoidMutableAccumulation,
     };
 

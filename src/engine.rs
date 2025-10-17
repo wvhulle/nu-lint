@@ -7,7 +7,8 @@ use nu_protocol::{
 };
 
 use crate::{
-    LintError, config::Config, context::LintContext, lint::Violation, rules::RuleRegistry,
+    LintError, config::Config, context::LintContext, lint::Violation, rule::RuleMetadata,
+    rules::RuleRegistry,
 };
 
 /// Parse Nushell source code into an AST and return both the Block and
@@ -127,21 +128,26 @@ impl LintEngine {
         let mut violations = Vec::new();
         let file_path = path.and_then(|p| p.to_str()).map(String::from);
 
-        for rule in self.registry.all_rules() {
-            if let Some(configured_severity) = self.config.rule_severity(rule.id()) {
-                if configured_severity != rule.severity() {
-                    continue;
+        // Partition rules by type for potential optimization
+        let (ast_rules, regex_rules): (Vec<_>, Vec<_>) = self
+            .registry
+            .all_rules()
+            .filter(|rule| {
+                if let Some(configured_severity) = self.config.rule_severity(rule.id()) {
+                    configured_severity == rule.severity()
+                } else {
+                    !self.config.rules.contains_key(rule.id())
                 }
-            } else if self.config.rules.contains_key(rule.id()) {
-                continue;
-            }
+            })
+            .partition(|rule| rule.is_ast_rule());
 
+        // Run all rules
+        // TODO: Activate CombinedAstVisitor for single-pass AST traversal
+        for rule in ast_rules.into_iter().chain(regex_rules) {
             let mut rule_violations = rule.check(&context);
-
             for violation in &mut rule_violations {
                 violation.file.clone_from(&file_path);
             }
-
             violations.extend(rule_violations);
         }
 

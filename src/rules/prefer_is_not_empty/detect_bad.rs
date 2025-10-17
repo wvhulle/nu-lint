@@ -1,7 +1,9 @@
 #[cfg(test)]
 mod tests {
 
-    use crate::{context::LintContext, rule::Rule, rules::prefer_is_not_empty::PreferIsNotEmpty};
+    use crate::{
+        context::LintContext, rule::RegexRule, rules::prefer_is_not_empty::PreferIsNotEmpty,
+    };
 
     #[test]
     fn test_not_is_empty_detected() {

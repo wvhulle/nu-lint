@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::{
-        context::LintContext, rule::Rule, rules::missing_type_annotation::MissingTypeAnnotation,
+        context::LintContext, rule::AstRule, rules::missing_type_annotation::MissingTypeAnnotation,
     };
 
     #[test]

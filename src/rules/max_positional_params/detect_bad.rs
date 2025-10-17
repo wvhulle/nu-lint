@@ -2,7 +2,7 @@
 mod tests {
 
     use crate::{
-        context::LintContext, rule::Rule, rules::max_positional_params::MaxPositionalParams,
+        context::LintContext, rule::RegexRule, rules::max_positional_params::MaxPositionalParams,
     };
 
     #[test]

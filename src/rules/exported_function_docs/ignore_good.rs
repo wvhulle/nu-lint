@@ -2,7 +2,7 @@
 mod tests {
 
     use crate::{
-        context::LintContext, rule::Rule, rules::exported_function_docs::ExportedFunctionDocs,
+        context::LintContext, rule::RegexRule, rules::exported_function_docs::ExportedFunctionDocs,
     };
 
     #[test]

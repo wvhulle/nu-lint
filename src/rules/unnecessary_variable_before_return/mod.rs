@@ -3,7 +3,7 @@ use regex::Regex;
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{Rule, RuleCategory},
+    rule::{RegexRule, RuleCategory, RuleMetadata},
 };
 
 pub struct UnnecessaryVariableBeforeReturn;
@@ -21,7 +21,7 @@ impl Default for UnnecessaryVariableBeforeReturn {
     }
 }
 
-impl Rule for UnnecessaryVariableBeforeReturn {
+impl RuleMetadata for UnnecessaryVariableBeforeReturn {
     fn id(&self) -> &'static str {
         "unnecessary_variable_before_return"
     }
@@ -37,7 +37,9 @@ impl Rule for UnnecessaryVariableBeforeReturn {
     fn description(&self) -> &'static str {
         "Variable assigned and immediately returned adds unnecessary verbosity"
     }
+}
 
+impl RegexRule for UnnecessaryVariableBeforeReturn {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         // Pattern: let var = (...)\n$var (with optional whitespace)
         // Since regex doesn't support backreferences, we match and manually verify

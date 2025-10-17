@@ -6,7 +6,7 @@ use regex::Regex;
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{Rule, RuleCategory},
+    rule::{RegexRule, RuleCategory, RuleMetadata},
 };
 
 #[derive(Default)]
@@ -33,7 +33,7 @@ impl SnakeCaseVariables {
     }
 }
 
-impl Rule for SnakeCaseVariables {
+impl RuleMetadata for SnakeCaseVariables {
     fn id(&self) -> &'static str {
         "snake_case_variables"
     }
@@ -49,7 +49,9 @@ impl Rule for SnakeCaseVariables {
     fn description(&self) -> &'static str {
         "Variables should use snake_case naming convention"
     }
+}
 
+impl RegexRule for SnakeCaseVariables {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         let mut violations = Vec::new();
 

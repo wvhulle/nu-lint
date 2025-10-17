@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::{context::LintContext, rule::Rule, rules::prefer_error_make::PreferErrorMake};
+    use crate::{context::LintContext, rule::RegexRule, rules::prefer_error_make::PreferErrorMake};
 
     #[test]
     fn test_detect_print_exit_pattern() {

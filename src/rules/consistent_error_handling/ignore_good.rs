@@ -2,7 +2,8 @@
 mod tests {
 
     use crate::{
-        context::LintContext, rule::Rule, rules::consistent_error_handling::ConsistentErrorHandling,
+        context::LintContext, rule::RegexRule,
+        rules::consistent_error_handling::ConsistentErrorHandling,
     };
 
     #[test]

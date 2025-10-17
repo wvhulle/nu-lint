@@ -3,7 +3,7 @@ use nu_protocol::Span;
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{Rule, RuleCategory},
+    rule::{AstRule, RuleCategory, RuleMetadata},
     visitor::{AstVisitor, VisitContext},
 };
 
@@ -17,7 +17,7 @@ impl PipeSpacing {
     }
 }
 
-impl Rule for PipeSpacing {
+impl RuleMetadata for PipeSpacing {
     fn id(&self) -> &'static str {
         "pipe_spacing"
     }
@@ -33,28 +33,40 @@ impl Rule for PipeSpacing {
     fn description(&self) -> &'static str {
         "Pipes should have exactly one space before and after when on the same line"
     }
+}
 
+impl AstRule for PipeSpacing {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         let mut visitor = PipeSpacingVisitor::new(self, context.source);
         context.walk_ast(&mut visitor);
         visitor.violations
     }
+
+    fn create_visitor<'a>(&'a self, context: &'a LintContext<'a>) -> Box<dyn AstVisitor + 'a> {
+        Box::new(PipeSpacingVisitor::new(self, context.source))
+    }
 }
 
 /// AST visitor that checks for pipe spacing issues
-struct PipeSpacingVisitor<'a> {
+pub struct PipeSpacingVisitor<'a> {
     rule: &'a PipeSpacing,
     source: &'a str,
     violations: Vec<Violation>,
 }
 
 impl<'a> PipeSpacingVisitor<'a> {
-    fn new(rule: &'a PipeSpacing, source: &'a str) -> Self {
+    #[must_use]
+    pub fn new(rule: &'a PipeSpacing, source: &'a str) -> Self {
         Self {
             rule,
             source,
             violations: Vec::new(),
         }
+    }
+
+    #[must_use]
+    pub fn take_violations(&mut self) -> Vec<Violation> {
+        std::mem::take(&mut self.violations)
     }
 
     /// Check spacing around a pipe between two elements
@@ -63,7 +75,7 @@ impl<'a> PipeSpacingVisitor<'a> {
         let start = prev_span.end;
         let end = curr_span.start;
 
-        if start >= end {
+        if start >= end || end > self.source.len() {
             return;
         }
 

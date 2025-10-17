@@ -6,7 +6,7 @@ use regex::Regex;
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{Rule, RuleCategory},
+    rule::{RegexRule, RuleCategory, RuleMetadata},
 };
 
 #[derive(Default)]
@@ -23,7 +23,7 @@ impl KebabCaseCommands {
     }
 }
 
-impl Rule for KebabCaseCommands {
+impl RuleMetadata for KebabCaseCommands {
     fn id(&self) -> &'static str {
         "kebab_case_commands"
     }
@@ -39,7 +39,9 @@ impl Rule for KebabCaseCommands {
     fn description(&self) -> &'static str {
         "Custom commands should use kebab-case naming convention"
     }
+}
 
+impl RegexRule for KebabCaseCommands {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         context
             .new_user_functions()

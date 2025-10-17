@@ -7,7 +7,7 @@ use nu_protocol::{
 };
 
 use crate::{
-    lint::{Severity, Violation},
+    lint::{Fix, Replacement, Severity, Violation},
     visitor::{AstVisitor, VisitContext},
 };
 
@@ -97,13 +97,6 @@ impl LintContext<'_> {
     /// This is the primary method for AST-based rules. The visitor will be
     /// called for each relevant AST node type. This walks both the main AST
     /// block and all blocks accessible through function declarations.
-    ///
-    /// # Example
-    /// ```ignore
-    /// let mut visitor = MyCustomVisitor::new();
-    /// context.walk_ast(&mut visitor);
-    /// let violations = visitor.get_violations();
-    /// ```
     pub fn walk_ast<V: AstVisitor>(&self, visitor: &mut V) {
         let visit_context = VisitContext::new(self.working_set, self.source);
 
@@ -116,6 +109,32 @@ impl LintContext<'_> {
                 let block = self.working_set.get_block(block_id);
                 visitor.visit_block(block, &visit_context);
             }
+        }
+    }
+
+    /// Get the text content of a span
+    #[must_use]
+    pub fn get_span_contents(&self, span: Span) -> &str {
+        let start = span.start.min(self.source.len());
+        let end = span.end.min(self.source.len());
+        &self.source[start..end]
+    }
+
+    /// Create a simple Fix with a single replacement
+    /// This is a convenience method for creating fixes that replace one span
+    /// with new text
+    pub fn create_simple_fix(
+        &self,
+        description: impl Into<String>,
+        span: Span,
+        new_text: impl Into<String>,
+    ) -> Fix {
+        Fix {
+            description: description.into(),
+            replacements: vec![Replacement {
+                span,
+                new_text: new_text.into(),
+            }],
         }
     }
 }

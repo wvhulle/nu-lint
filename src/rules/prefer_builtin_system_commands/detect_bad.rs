@@ -20,6 +20,32 @@ mod tests {
     }
 
     #[test]
+    fn test_detect_external_env_with_var() {
+        let rule = AvoidExternalSystemTools::new();
+        let bad_code = "^env | grep HOME";
+
+        LintContext::test_with_parsed_source(bad_code, |context| {
+            assert!(
+                !rule.check(&context).is_empty(),
+                "Should detect external env in pipeline"
+            );
+        });
+    }
+
+    #[test]
+    fn test_detect_external_printenv() {
+        let rule = AvoidExternalSystemTools::new();
+        let bad_code = "^printenv PATH";
+
+        LintContext::test_with_parsed_source(bad_code, |context| {
+            assert!(
+                !rule.check(&context).is_empty(),
+                "Should detect external printenv command"
+            );
+        });
+    }
+
+    #[test]
     fn test_detect_external_date() {
         let rule = AvoidExternalSystemTools::new();
         let bad_code = "^date";
@@ -59,6 +85,32 @@ mod tests {
     }
 
     #[test]
+    fn test_detect_external_read_silent() {
+        let rule = AvoidExternalSystemTools::new();
+        let bad_code = "^read -s -p \"Password: \"";
+
+        LintContext::test_with_parsed_source(bad_code, |context| {
+            assert!(
+                !rule.check(&context).is_empty(),
+                "Should detect external read with silent flag"
+            );
+        });
+    }
+
+    #[test]
+    fn test_detect_external_in_script() {
+        let rule = AvoidExternalSystemTools::new();
+        let bad_code = "def get-system-info [] { ^uname -a; ^hostname; ^whoami }";
+
+        LintContext::test_with_parsed_source(bad_code, |context| {
+            assert!(
+                !rule.check(&context).is_empty(),
+                "Should detect external commands in custom function"
+            );
+        });
+    }
+
+    #[test]
     fn test_detect_external_whoami() {
         let rule = AvoidExternalSystemTools::new();
         let bad_code = "^whoami";
@@ -80,6 +132,32 @@ mod tests {
             assert!(
                 !rule.check(&context).is_empty(),
                 "Should detect external hostname command"
+            );
+        });
+    }
+
+    #[test]
+    fn test_detect_external_hostname_for_ip() {
+        let rule = AvoidExternalSystemTools::new();
+        let bad_code = "^hostname -I";
+
+        LintContext::test_with_parsed_source(bad_code, |context| {
+            assert!(
+                !rule.check(&context).is_empty(),
+                "Should detect external hostname -I for IP"
+            );
+        });
+    }
+
+    #[test]
+    fn test_detect_external_uname() {
+        let rule = AvoidExternalSystemTools::new();
+        let bad_code = "^uname -a";
+
+        LintContext::test_with_parsed_source(bad_code, |context| {
+            assert!(
+                !rule.check(&context).is_empty(),
+                "Should detect external uname command"
             );
         });
     }

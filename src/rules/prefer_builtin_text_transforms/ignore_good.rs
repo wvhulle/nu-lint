@@ -12,9 +12,49 @@ fn test_good_str_replace() {
 }
 
 #[test]
+fn test_good_str_replace_regex() {
+    let rule = AvoidExternalTextTools;
+    let good = "'email@domain.com' | str replace -r '\\w+@' 'user@'";
+    LintContext::test_with_parsed_source(good, |context| {
+        let violations = rule.check(&context);
+        assert_eq!(violations.len(), 0);
+    });
+}
+
+#[test]
+fn test_good_str_replace_all() {
+    let rule = AvoidExternalTextTools;
+    let good = "'foo bar foo' | str replace -a 'foo' 'baz'";
+    LintContext::test_with_parsed_source(good, |context| {
+        let violations = rule.check(&context);
+        assert_eq!(violations.len(), 0);
+    });
+}
+
+#[test]
 fn test_good_select_columns() {
     let rule = AvoidExternalTextTools;
     let good = "ls | select name size";
+    LintContext::test_with_parsed_source(good, |context| {
+        let violations = rule.check(&context);
+        assert_eq!(violations.len(), 0);
+    });
+}
+
+#[test]
+fn test_good_select_with_range() {
+    let rule = AvoidExternalTextTools;
+    let good = "open data.csv | select 0..2";
+    LintContext::test_with_parsed_source(good, |context| {
+        let violations = rule.check(&context);
+        assert_eq!(violations.len(), 0);
+    });
+}
+
+#[test]
+fn test_good_get_nested_field() {
+    let rule = AvoidExternalTextTools;
+    let good = "sys | get cpu.0.name";
     LintContext::test_with_parsed_source(good, |context| {
         let violations = rule.check(&context);
         assert_eq!(violations.len(), 0);
@@ -55,6 +95,26 @@ fn test_good_str_length() {
 fn test_good_tee_save() {
     let rule = AvoidExternalTextTools;
     let good = "ls | tee { save list.json }";
+    LintContext::test_with_parsed_source(good, |context| {
+        let violations = rule.check(&context);
+        assert_eq!(violations.len(), 0);
+    });
+}
+
+#[test]
+fn test_good_tee_multiple_outputs() {
+    let rule = AvoidExternalTextTools;
+    let good = "ls | tee { save backup.json } { to yaml | save output.yaml }";
+    LintContext::test_with_parsed_source(good, |context| {
+        let violations = rule.check(&context);
+        assert_eq!(violations.len(), 0);
+    });
+}
+
+#[test]
+fn test_good_str_trim_and_transform() {
+    let rule = AvoidExternalTextTools;
+    let good = "'  hello  ' | str trim | str upcase";
     LintContext::test_with_parsed_source(good, |context| {
         let violations = rule.check(&context);
         assert_eq!(violations.len(), 0);

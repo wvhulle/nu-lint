@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::lint::Severity;
 
-#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq)]
 pub struct Config {
     #[serde(default)]
     pub general: GeneralConfig,
@@ -22,12 +22,12 @@ pub struct Config {
     pub fix: FixConfig,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq)]
 pub struct GeneralConfig {
     pub max_severity: RuleSeverity,
 }
 
-#[derive(Debug, Clone, Copy, Deserialize, Serialize, Default)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, Default, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum RuleSeverity {
     #[default]
@@ -48,7 +48,7 @@ impl From<RuleSeverity> for Option<Severity> {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq)]
 pub struct StyleConfig {
     #[serde(default = "StyleConfig::default_line_length")]
     pub line_length: usize,
@@ -67,13 +67,13 @@ impl StyleConfig {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq)]
 pub struct ExcludeConfig {
     #[serde(default)]
     pub patterns: Vec<String>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq)]
 pub struct FixConfig {
     pub enabled: bool,
 

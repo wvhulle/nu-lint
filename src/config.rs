@@ -87,7 +87,7 @@ impl Config {
     ///
     /// Returns an error if the file cannot be read or if the TOML content is
     /// invalid.
-    pub fn load_from_file(path: &Path) -> Result<Self, crate::error::LintError> {
+    pub fn load_from_file(path: &Path) -> Result<Self, crate::LintError> {
         let content = std::fs::read_to_string(path)?;
         Ok(toml::from_str(&content)?)
     }

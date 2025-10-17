@@ -1,10 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use nu_protocol::engine::EngineState;
-
-    
     use crate::{
-        context::LintContext, parser::parse_source, rule::Rule,
+        context::LintContext, rule::Rule,
         rules::discourage_underscore_commands::DiscourageUnderscoreCommands,
     };
 
@@ -16,21 +13,13 @@ mod tests {
     echo $param
 }";
 
-        let engine_state = EngineState::new();
-        let (block, working_set) = parse_source(&engine_state, good_code.as_bytes());
-        let context = LintContext {
-            source: good_code,
-            ast: &block,
-            engine_state: &engine_state,
-            working_set: &working_set,
-            file_path: None,
-        };
-
-        assert_eq!(
-            rule.check(&context).len(),
-            0,
-            "Should not flag hyphenated names"
-        );
+        LintContext::test_with_parsed_source(good_code, |context| {
+            assert_eq!(
+                rule.check(&context).len(),
+                0,
+                "Should not flag hyphenated names"
+            );
+        });
     }
 
     #[test]
@@ -41,20 +30,12 @@ mod tests {
     echo $param
 }";
 
-        let engine_state = EngineState::new();
-        let (block, working_set) = parse_source(&engine_state, good_code.as_bytes());
-        let context = LintContext {
-            source: good_code,
-            ast: &block,
-            engine_state: &engine_state,
-            working_set: &working_set,
-            file_path: None,
-        };
-
-        assert_eq!(
-            rule.check(&context).len(),
-            0,
-            "Should not flag single-word names"
-        );
+        LintContext::test_with_parsed_source(good_code, |context| {
+            assert_eq!(
+                rule.check(&context).len(),
+                0,
+                "Should not flag single-word names"
+            );
+        });
     }
 }

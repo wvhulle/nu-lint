@@ -1,11 +1,28 @@
 use std::{path::Path, sync::OnceLock};
 
-use nu_protocol::engine::EngineState;
+use nu_parser::parse;
+use nu_protocol::{
+    ast::Block,
+    engine::{EngineState, StateWorkingSet},
+};
 
 use crate::{
-    config::Config, context::LintContext, error::LintError, lint::Violation, parser::parse_source,
-    rules::RuleRegistry,
+    LintError, config::Config, context::LintContext, lint::Violation, rules::RuleRegistry,
 };
+
+/// Parse Nushell source code into an AST and return both the Block and
+/// `StateWorkingSet`.
+///
+/// The `StateWorkingSet` contains the delta with newly defined declarations
+/// (functions, aliases, etc.) which is essential for AST-based linting rules
+/// that need to inspect function signatures, parameter types, and other
+/// semantic information.
+fn parse_source<'a>(engine_state: &'a EngineState, source: &[u8]) -> (Block, StateWorkingSet<'a>) {
+    let mut working_set = StateWorkingSet::new(engine_state);
+    let block = parse(&mut working_set, None, source, false);
+
+    ((*block).clone(), working_set)
+}
 
 pub struct LintEngine {
     registry: RuleRegistry,

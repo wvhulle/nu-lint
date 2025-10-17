@@ -133,7 +133,8 @@ fn test_auto_discover_config_in_parent_dir() {
     // Create a .nu-lint.toml in parent directory that disables snake_case_variables
     fs::write(&config_path, "[rules]\nsnake_case_variables = \"off\"\n").unwrap();
 
-    // Create a test file in subdirectory that would normally violate snake_case_variables
+    // Create a test file in subdirectory that would normally violate
+    // snake_case_variables
     fs::write(&nu_file_path, "let myVariable = 5\n").unwrap();
 
     let mut cmd = Command::cargo_bin("nu-lint").unwrap();

@@ -1,0 +1,8 @@
+group_imports = "StdExternalCrate"
+imports_granularity = "Crate"
+format_code_in_doc_comments = true
+normalize_comments = true
+normalize_doc_attributes = true
+wrap_comments = true
+use_field_init_shorthand = true
+format_strings = true

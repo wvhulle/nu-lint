@@ -2,6 +2,7 @@ pub mod config;
 pub mod context;
 pub mod engine;
 pub mod error;
+pub mod external_command;
 pub mod lint;
 pub mod output;
 pub mod parser;

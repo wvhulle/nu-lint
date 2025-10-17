@@ -66,22 +66,6 @@ impl LintContext<'_> {
     /// * `severity` - The severity level
     /// * `predicate` - Function that returns Some((message, suggestion)) if
     ///   violation should be created
-    ///
-    /// # Example
-    /// ```ignore
-    /// context.violations_from_regex_if(
-    ///     &regex,
-    ///     "BP002",
-    ///     Severity::Warning,
-    ///     |mat| {
-    ///         if some_condition(mat.as_str()) {
-    ///             Some(("Error message".to_string(), Some("Suggestion".to_string())))
-    ///         } else {
-    ///             None
-    ///         }
-    ///     }
-    /// )
-    /// ```
     pub fn violations_from_regex_if<F>(
         &self,
         pattern: &regex::Regex,
@@ -106,80 +90,6 @@ impl LintContext<'_> {
                 })
             })
             .collect()
-    }
-
-    /// Find violations from all regex matches with dynamic messages
-    ///
-    /// Use when every match is a violation, but the message varies based on
-    /// matched text.
-    ///
-    /// # Arguments
-    /// * `pattern` - The regex pattern to match
-    /// * `rule_id` - The rule ID for violations
-    /// * `severity` - The severity level
-    /// * `message_fn` - Function to generate message from the matched text
-    /// * `suggestion` - Optional suggestion text (same for all matches)
-    ///
-    /// # Example
-    /// ```ignore
-    /// context.violations_from_regex_with_message(
-    ///     &regex,
-    ///     "S001",
-    ///     Severity::Warning,
-    ///     |text| format!("Found pattern: {}", text),
-    ///     Some("Fix suggestion")
-    /// )
-    /// ```
-    pub fn violations_from_regex_with_message<F>(
-        &self,
-        pattern: &regex::Regex,
-        rule_id: &str,
-        severity: Severity,
-        message_fn: F,
-        suggestion: Option<&str>,
-    ) -> Vec<Violation>
-    where
-        F: Fn(&str) -> String,
-    {
-        self.violations_from_regex_if(pattern, rule_id, severity, |mat| {
-            Some((message_fn(mat.as_str()), suggestion.map(String::from)))
-        })
-    }
-
-    /// Find violations from all regex matches with a fixed message
-    ///
-    /// Use when every match is a violation with the same message and
-    /// suggestion. This is the simplest regex helper.
-    ///
-    /// # Arguments
-    /// * `pattern` - The regex pattern to match
-    /// * `rule_id` - The rule ID for violations
-    /// * `severity` - The severity level
-    /// * `message` - The message for all violations
-    /// * `suggestion` - Optional suggestion text
-    ///
-    /// # Example
-    /// ```ignore
-    /// context.violations_from_regex(
-    ///     &pattern,
-    ///     "S010",
-    ///     Severity::Info,
-    ///     "Use 'is-not-empty' instead of 'not ... is-empty'",
-    ///     Some("Replace with 'is-not-empty'")
-    /// )
-    /// ```
-    #[must_use]
-    pub fn violations_from_regex(
-        &self,
-        pattern: &regex::Regex,
-        rule_id: &str,
-        severity: Severity,
-        message: &str,
-        suggestion: Option<&str>,
-    ) -> Vec<Violation> {
-        self.violations_from_regex_if(pattern, rule_id, severity, |_| {
-            Some((message.to_string(), suggestion.map(String::from)))
-        })
     }
 
     /// Walk the AST using a visitor pattern

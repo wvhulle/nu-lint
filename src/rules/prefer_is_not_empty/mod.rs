@@ -55,13 +55,9 @@ impl Rule for PreferIsNotEmpty {
         ]
         .into_iter()
         .flat_map(|(pattern, msg, suggestion)| {
-            context.violations_from_regex(
-                pattern,
-                self.id(),
-                self.severity(),
-                msg,
-                Some(suggestion),
-            )
+            context.violations_from_regex_if(pattern, self.id(), self.severity(), |_| {
+                Some((msg.to_string(), Some(suggestion.to_string())))
+            })
         })
         .collect()
     }

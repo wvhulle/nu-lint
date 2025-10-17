@@ -45,12 +45,20 @@ impl Rule for PreferParseCommand {
         let split_get_pattern =
             Regex::new(r#"split\s+row\s+["'][^"']*["']\s*\|\s*(get\s+\d+|skip\s+\d+)"#).unwrap();
 
-        violations.extend(context.violations_from_regex(
+        violations.extend(context.violations_from_regex_if(
             &split_get_pattern,
             self.id(),
             self.severity(),
-            "Manual string splitting with indexed access - consider using 'parse'",
-            Some("Use 'parse \"pattern {field1} {field2}\"' for structured text extraction"),
+            |_| {
+                Some((
+                    "Manual string splitting with indexed access - consider using 'parse'"
+                        .to_string(),
+                    Some(
+                        "Use 'parse \"pattern {field1} {field2}\"' for structured text extraction"
+                            .to_string(),
+                    ),
+                ))
+            },
         ));
 
         // Pattern 2: let parts = ... split row, then $parts | get

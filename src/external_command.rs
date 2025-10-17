@@ -94,6 +94,15 @@ impl<'a> ExternalCommandVisitor<'a> {
                     return Some((message, suggestion));
                 }
             }
+            "hostname" => {
+                let args_text = context.extract_external_args(args);
+                if args_text.iter().any(|arg| arg == "-I") {
+                    // Special case for hostname -I - this gets IP addresses, not hostname
+                    let message = "Consider using Nushell's structured approach for getting IP addresses instead of external 'hostname -I'".to_string();
+                    let suggestion = "Replace 'hostname -I' with Nushell network commands:\nsys net | get ip\n\nThis approach uses Nushell's built-in sys net command to get IP addresses in a structured format. You can filter specific interfaces or addresses as needed.".to_string();
+                    return Some((message, suggestion));
+                }
+            }
             _ => {}
         }
         None

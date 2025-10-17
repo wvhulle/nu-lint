@@ -44,8 +44,8 @@ impl PreferBuiltinSystemCommands {
         map.insert(
             "hostname",
             BuiltinAlternative::with_note(
-                "sys host",
-                "Use 'sys host' to get detailed host information",
+                "(sys host).hostname",
+                "Use '(sys host).hostname' to get hostname, or 'sys host' for detailed host information. For IP addresses, use 'sys net | get ip'",
             ),
         );
         map.insert(
@@ -182,7 +182,16 @@ fn build_fix(
             }
         }
         "date" => "date now".to_string(),
-        "hostname" | "uname" => "sys host".to_string(),
+        "hostname" => {
+            // hostname without args -> just the hostname
+            if args_text.is_empty() {
+                "(sys host).hostname".to_string()
+            } else {
+                // Let the custom suggestion handle hostname -I
+                "sys host".to_string()
+            }
+        }
+        "uname" => "sys host".to_string(),
         "man" => {
             if let Some(cmd) = args_text.first() {
                 format!("help {cmd}")

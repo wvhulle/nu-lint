@@ -1,8 +1,12 @@
-use crate::context::LintContext;
-use crate::lint::{Severity, Violation};
-use crate::rule::{Rule, RuleCategory};
-use regex::Regex;
 use std::sync::OnceLock;
+
+use regex::Regex;
+
+use crate::{
+    context::LintContext,
+    lint::{Severity, Violation},
+    rule::{Rule, RuleCategory},
+};
 
 #[derive(Default)]
 pub struct AvoidMutableAccumulation;
@@ -37,18 +41,27 @@ impl Rule for AvoidMutableAccumulation {
             .filter_map(|cap| {
                 let var_name = cap.get(1)?.as_str();
                 let append_pattern = format!(r"\${}.*\|\s*append", regex::escape(var_name));
-                Regex::new(&append_pattern).ok()?.is_match(context.source).then(|| {
-                    let full_match = cap.get(0)?;
-                    Some(Violation {
-                        rule_id: self.id().to_string(),
-                        severity: self.severity(),
-                        message: format!("Mutable list '{var_name}' with append - consider using functional pipeline"),
-                        span: nu_protocol::Span::new(full_match.start(), full_match.end()),
-                        suggestion: Some("Use '$items | each { ... }' instead of mutable accumulation".to_string()),
-                        fix: None,
-                        file: None,
-                    })
-                })?
+                Regex::new(&append_pattern)
+                    .ok()?
+                    .is_match(context.source)
+                    .then(|| {
+                        let full_match = cap.get(0)?;
+                        Some(Violation {
+                            rule_id: self.id().to_string(),
+                            severity: self.severity(),
+                            message: format!(
+                                "Mutable list '{var_name}' with append - consider using \
+                                 functional pipeline"
+                            ),
+                            span: nu_protocol::Span::new(full_match.start(), full_match.end()),
+                            suggestion: Some(
+                                "Use '$items | each { ... }' instead of mutable accumulation"
+                                    .to_string(),
+                            ),
+                            fix: None,
+                            file: None,
+                        })
+                    })?
             })
             .collect()
     }
@@ -57,6 +70,6 @@ impl Rule for AvoidMutableAccumulation {
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]
-mod ignore_good;
-#[cfg(test)]
 mod generated_fix;
+#[cfg(test)]
+mod ignore_good;

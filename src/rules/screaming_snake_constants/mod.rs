@@ -1,9 +1,13 @@
-use crate::context::LintContext;
-use crate::lint::{Severity, Violation};
-use crate::rule::{Rule, RuleCategory};
+use std::sync::OnceLock;
+
 use heck::ToShoutySnakeCase;
 use regex::Regex;
-use std::sync::OnceLock;
+
+use crate::{
+    context::LintContext,
+    lint::{Severity, Violation},
+    rule::{Rule, RuleCategory},
+};
 
 #[derive(Default)]
 pub struct ScreamingSnakeConstants;
@@ -57,7 +61,8 @@ impl Rule for ScreamingSnakeConstants {
                         rule_id: self.id().to_string(),
                         severity: self.severity(),
                         message: format!(
-                            "Constant '{const_name}' should use SCREAMING_SNAKE_CASE naming convention"
+                            "Constant '{const_name}' should use SCREAMING_SNAKE_CASE naming \
+                             convention"
                         ),
                         span: nu_protocol::Span::new(const_match.start(), const_match.end()),
                         suggestion: Some(format!(
@@ -76,6 +81,6 @@ impl Rule for ScreamingSnakeConstants {
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]
-mod ignore_good;
-#[cfg(test)]
 mod generated_fix;
+#[cfg(test)]
+mod ignore_good;

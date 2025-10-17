@@ -1,5 +1,6 @@
-use super::*;
 use heck::ToSnakeCase;
+
+use super::*;
 
 #[test]
 fn test_to_snake_case() {

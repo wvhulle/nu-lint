@@ -1,6 +1,8 @@
-use crate::context::LintContext;
-use crate::lint::{Severity, Violation};
-use crate::rule::{Rule, RuleCategory};
+use crate::{
+    context::LintContext,
+    lint::{Severity, Violation},
+    rule::{Rule, RuleCategory},
+};
 
 pub struct DiscourageUnderscoreCommands;
 
@@ -49,7 +51,8 @@ impl Rule for DiscourageUnderscoreCommands {
                     rule_id: self.id().to_string(),
                     severity: self.severity(),
                     message: format!(
-                        "Command '{command_name}' uses underscores - prefer hyphens for readability"
+                        "Command '{command_name}' uses underscores - prefer hyphens for \
+                         readability"
                     ),
                     span,
                     suggestion: Some(format!(
@@ -68,6 +71,6 @@ impl Rule for DiscourageUnderscoreCommands {
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]
-mod ignore_good;
-#[cfg(test)]
 mod generated_fix;
+#[cfg(test)]
+mod ignore_good;

@@ -1,10 +1,12 @@
-use crate::context::LintContext;
-use crate::external_command::{BuiltinAlternative, ExternalCommandVisitor};
-use crate::lint::Violation;
-use crate::lint::{Fix, Replacement, Severity};
-use crate::rule::{Rule, RuleCategory};
-use crate::visitor::VisitContext;
 use std::collections::HashMap;
+
+use crate::{
+    context::LintContext,
+    external_command::{BuiltinAlternative, ExternalCommandVisitor},
+    lint::{Fix, Replacement, Severity, Violation},
+    rule::{Rule, RuleCategory},
+    visitor::VisitContext,
+};
 
 pub struct PreferBuiltinSystemCommands;
 
@@ -120,7 +122,8 @@ impl Rule for PreferBuiltinSystemCommands {
     }
 
     fn description(&self) -> &'static str {
-        "Prefer Nushell built-in commands over external tools for system operations (env, date, whoami, man, which, cd, pwd, etc.)"
+        "Prefer Nushell built-in commands over external tools for system operations (env, date, \
+         whoami, man, which, cd, pwd, etc.)"
     }
 
     fn check(&self, context: &LintContext) -> Vec<Violation> {

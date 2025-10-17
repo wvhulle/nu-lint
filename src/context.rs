@@ -1,11 +1,15 @@
-use crate::lint::{Fix, Replacement, Severity, Violation};
-use crate::visitor::{AstVisitor, VisitContext};
+use std::path::Path;
+
 use nu_protocol::{
     DeclId, Span,
     ast::Block,
     engine::{Command, EngineState, StateWorkingSet},
 };
-use std::path::Path;
+
+use crate::{
+    lint::{Fix, Replacement, Severity, Violation},
+    visitor::{AstVisitor, VisitContext},
+};
 
 pub struct LintContext<'a> {
     pub source: &'a str,
@@ -16,8 +20,9 @@ pub struct LintContext<'a> {
 }
 
 impl LintContext<'_> {
-    /// Get the range of declaration IDs that were added during parsing (the delta)
-    /// Returns (`base_count`, `total_count`) for iterating: `base_count..total_count`
+    /// Get the range of declaration IDs that were added during parsing (the
+    /// delta) Returns (`base_count`, `total_count`) for iterating:
+    /// `base_count..total_count`
     #[must_use]
     pub fn new_decl_range(&self) -> (usize, usize) {
         let base_count = self.engine_state.num_decls();
@@ -38,7 +43,8 @@ impl LintContext<'_> {
     }
 
     /// Find the span of a function/declaration name in the source code
-    /// Returns a span pointing to the first occurrence of the name, or a fallback span
+    /// Returns a span pointing to the first occurrence of the name, or a
+    /// fallback span
     pub fn find_declaration_span(&self, name: &str) -> Span {
         if let Some(name_pos) = self.source.find(name) {
             Span::new(name_pos, name_pos + name.len())
@@ -58,7 +64,8 @@ impl LintContext<'_> {
     /// * `pattern` - The regex pattern to match
     /// * `rule_id` - The rule ID for violations
     /// * `severity` - The severity level
-    /// * `predicate` - Function that returns Some((message, suggestion)) if violation should be created
+    /// * `predicate` - Function that returns Some((message, suggestion)) if
+    ///   violation should be created
     ///
     /// # Example
     /// ```ignore
@@ -103,7 +110,8 @@ impl LintContext<'_> {
 
     /// Find violations from all regex matches with dynamic messages
     ///
-    /// Use when every match is a violation, but the message varies based on matched text.
+    /// Use when every match is a violation, but the message varies based on
+    /// matched text.
     ///
     /// # Arguments
     /// * `pattern` - The regex pattern to match
@@ -140,8 +148,8 @@ impl LintContext<'_> {
 
     /// Find violations from all regex matches with a fixed message
     ///
-    /// Use when every match is a violation with the same message and suggestion.
-    /// This is the simplest regex helper.
+    /// Use when every match is a violation with the same message and
+    /// suggestion. This is the simplest regex helper.
     ///
     /// # Arguments
     /// * `pattern` - The regex pattern to match
@@ -176,9 +184,9 @@ impl LintContext<'_> {
 
     /// Walk the AST using a visitor pattern
     ///
-    /// This is the primary method for AST-based rules. The visitor will be called
-    /// for each relevant AST node type. This walks both the main AST block and
-    /// all blocks accessible through function declarations.
+    /// This is the primary method for AST-based rules. The visitor will be
+    /// called for each relevant AST node type. This walks both the main AST
+    /// block and all blocks accessible through function declarations.
     ///
     /// # Example
     /// ```ignore
@@ -208,7 +216,8 @@ impl LintContext<'_> {
     }
 
     /// Create a simple Fix with a single replacement
-    /// This is a convenience method for creating fixes that replace one span with new text
+    /// This is a convenience method for creating fixes that replace one span
+    /// with new text
     pub fn create_simple_fix(
         &self,
         description: impl Into<String>,
@@ -226,38 +235,30 @@ impl LintContext<'_> {
 }
 
 #[cfg(test)]
-impl<'a> LintContext<'a> {
-    /// Helper to create a test context with dummy values
-    /// Only the source is used by regex-based rules
-    pub fn test_from_source(source: &'a str) -> Self {
-        use nu_protocol::engine::{EngineState, StateWorkingSet};
-        use std::sync::OnceLock;
+impl LintContext<'_> {
+    /// Helper to create a test context with stdlib commands loaded
+    pub fn test_with_parsed_source<F, R>(source: &str, f: F) -> R
+    where
+        F: for<'b> FnOnce(LintContext<'b>) -> R,
+    {
+        use crate::parser::parse_source;
 
-        // Thread-safe lazy initialization using OnceLock (no unsafe needed)
-        static DUMMY_BLOCK: OnceLock<nu_protocol::ast::Block> = OnceLock::new();
-        static DUMMY_ENGINE: OnceLock<EngineState> = OnceLock::new();
-
-        // Initialize static values on first access
-        let block = DUMMY_BLOCK.get_or_init(nu_protocol::ast::Block::default);
-        let engine_state = DUMMY_ENGINE.get_or_init(EngineState::new);
-
-        // Create a working set on the stack (can't be static due to lifetime constraints)
-        // This is safe because we're only using it for the lifetime of this test
-        let working_set = StateWorkingSet::new(engine_state);
-
-        // SAFETY: We need to extend the lifetime of working_set to 'a for the return type.
-        // This is safe in test context because:
-        // 1. The engine_state is static and lives for the entire program
-        // 2. The working_set is only used within the test and not mutated
-        // 3. Tests are single-threaded per test case
-        let working_set_ref: &'a StateWorkingSet<'a> = unsafe { std::mem::transmute(&working_set) };
-
-        Self {
-            source,
-            ast: block,
-            engine_state,
-            working_set: working_set_ref,
-            file_path: None,
+        fn create_engine_with_stdlib() -> nu_protocol::engine::EngineState {
+            let engine_state = nu_cmd_lang::create_default_context();
+            nu_command::add_shell_command_context(engine_state)
         }
+
+        let engine_state = create_engine_with_stdlib();
+        let (block, working_set) = parse_source(&engine_state, source.as_bytes());
+
+        let context = LintContext {
+            source,
+            ast: &block,
+            engine_state: &engine_state,
+            working_set: &working_set,
+            file_path: None,
+        };
+
+        f(context)
     }
 }

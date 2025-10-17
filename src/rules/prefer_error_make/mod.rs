@@ -1,8 +1,12 @@
-use crate::context::LintContext;
-use crate::lint::{Severity, Violation};
-use crate::rule::{Rule, RuleCategory};
-use regex::Regex;
 use std::sync::OnceLock;
+
+use regex::Regex;
+
+use crate::{
+    context::LintContext,
+    lint::{Severity, Violation},
+    rule::{Rule, RuleCategory},
+};
 
 #[derive(Default)]
 pub struct PreferErrorMake;
@@ -49,8 +53,13 @@ impl Rule for PreferErrorMake {
                 // Only suggest error make for actual error cases
                 if Self::looks_like_error(message, exit_code) {
                     Some((
-                        "Consider using 'error make' instead of 'print' + 'exit' for error conditions".to_string(),
-                        Some("Use 'error make { msg: \"error message\" }' for better error handling".to_string()),
+                        "Consider using 'error make' instead of 'print' + 'exit' for error \
+                         conditions"
+                            .to_string(),
+                        Some(
+                            "Use 'error make { msg: \"error message\" }' for better error handling"
+                                .to_string(),
+                        ),
                     ))
                 } else {
                     None
@@ -90,10 +99,9 @@ impl PreferErrorMake {
     }
 }
 
-
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]
-mod ignore_good;
-#[cfg(test)]
 mod generated_fix;
+#[cfg(test)]
+mod ignore_good;

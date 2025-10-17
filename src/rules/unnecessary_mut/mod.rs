@@ -1,10 +1,13 @@
-use crate::context::LintContext;
-use crate::lint::{Severity, Violation};
-use crate::rule::{Rule, RuleCategory};
-use crate::visitor::{AstVisitor, VisitContext};
-use nu_protocol::ast::Expr;
-use nu_protocol::{Span, VarId};
 use std::collections::HashMap;
+
+use nu_protocol::{Span, VarId, ast::Expr};
+
+use crate::{
+    context::LintContext,
+    lint::{Severity, Violation},
+    rule::{Rule, RuleCategory},
+    visitor::{AstVisitor, VisitContext},
+};
 
 pub struct UnnecessaryMut;
 
@@ -48,7 +51,8 @@ impl Rule for UnnecessaryMut {
 /// AST visitor that tracks mutable variable declarations and assignments
 struct MutVariableVisitor<'a> {
     rule: &'a UnnecessaryMut,
-    /// Maps variable IDs to their (name, `declaration_span`, `mut_keyword_span`, `is_reassigned`)
+    /// Maps variable IDs to their (name, `declaration_span`,
+    /// `mut_keyword_span`, `is_reassigned`)
     mut_variables: HashMap<VarId, (String, Span, Span, bool)>,
     source: &'a str,
 }
@@ -146,7 +150,8 @@ impl AstVisitor for MutVariableVisitor<'_> {
         rhs: &nu_protocol::ast::Expression,
         context: &VisitContext,
     ) {
-        // Check if this is any assignment operation (including compound assignments like +=, -=, etc.)
+        // Check if this is any assignment operation (including compound assignments
+        // like +=, -=, etc.)
         if let Expr::Operator(nu_protocol::ast::Operator::Assignment(_)) = &op.expr {
             // Mark the left-hand side variable as reassigned
             // In Nushell, variables in assignments are FullCellPath expressions,
@@ -177,10 +182,9 @@ impl AstVisitor for MutVariableVisitor<'_> {
     }
 }
 
-
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]
-mod ignore_good;
-#[cfg(test)]
 mod generated_fix;
+#[cfg(test)]
+mod ignore_good;

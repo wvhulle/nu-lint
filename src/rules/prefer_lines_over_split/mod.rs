@@ -1,6 +1,8 @@
-use crate::context::LintContext;
-use crate::lint::{Severity, Violation};
-use crate::rule::{Rule, RuleCategory};
+use crate::{
+    context::LintContext,
+    lint::{Severity, Violation},
+    rule::{Rule, RuleCategory},
+};
 
 pub struct PreferLinesOverSplit;
 
@@ -58,12 +60,13 @@ impl Rule for PreferLinesOverSplit {
                 violations.push(Violation {
                     rule_id: self.id().to_string(),
                     severity: self.severity(),
-                    message: "Use 'lines' instead of 'split row \"\\n\"' for splitting by newlines".to_string(),
+                    message: "Use 'lines' instead of 'split row \"\\n\"' for splitting by newlines"
+                        .to_string(),
                     span: nu_protocol::Span::new(line_start, line_end),
                     suggestion: Some(
-                        "Replace with: | lines\n\
-                         The 'lines' command is more efficient and clearer for splitting text by newlines."
-                            .to_string()
+                        "Replace with: | lines\nThe 'lines' command is more efficient and clearer \
+                         for splitting text by newlines."
+                            .to_string(),
                     ),
                     fix: None,
                     file: None,
@@ -75,10 +78,9 @@ impl Rule for PreferLinesOverSplit {
     }
 }
 
-
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]
-mod ignore_good;
-#[cfg(test)]
 mod generated_fix;
+#[cfg(test)]
+mod ignore_good;

@@ -30,8 +30,9 @@ pub mod snake_case_variables;
 pub mod unnecessary_mut;
 pub mod unnecessary_variable_before_return;
 
-use crate::rule::Rule;
 use std::collections::HashMap;
+
+use crate::rule::Rule;
 
 pub struct RuleRegistry {
     rules: HashMap<String, Box<dyn Rule>>,

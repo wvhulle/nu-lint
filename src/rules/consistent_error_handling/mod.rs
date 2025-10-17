@@ -1,8 +1,12 @@
-use crate::context::LintContext;
-use crate::lint::{Severity, Violation};
-use crate::rule::{Rule, RuleCategory};
-use regex::Regex;
 use std::sync::OnceLock;
+
+use regex::Regex;
+
+use crate::{
+    context::LintContext,
+    lint::{Severity, Violation},
+    rule::{Rule, RuleCategory},
+};
 
 pub struct ConsistentErrorHandling;
 
@@ -61,14 +65,21 @@ impl Rule for ConsistentErrorHandling {
 
             let exit_code_check = format!(r"\${}\s*\.\s*exit_code", regex::escape(var_name));
 
-            if Regex::new(&exit_code_check).unwrap().is_match(next_100_chars) {
+            if Regex::new(&exit_code_check)
+                .unwrap()
+                .is_match(next_100_chars)
+            {
                 None
             } else {
                 Some((
                     format!(
                         "External command result '{var_name}' stored but exit code not checked"
                     ),
-                    Some("Check 'exit_code' field to handle command failures: if $result.exit_code != 0 { ... }".to_string()),
+                    Some(
+                        "Check 'exit_code' field to handle command failures: if $result.exit_code \
+                         != 0 { ... }"
+                            .to_string(),
+                    ),
                 ))
             }
         })
@@ -77,6 +88,6 @@ impl Rule for ConsistentErrorHandling {
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]
-mod ignore_good;
-#[cfg(test)]
 mod generated_fix;
+#[cfg(test)]
+mod ignore_good;

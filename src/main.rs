@@ -1,7 +1,7 @@
+use std::{path::PathBuf, process};
+
 use clap::{Parser, Subcommand};
 use nu_lint::{Config, LintEngine, OutputFormatter, TextFormatter};
-use std::path::PathBuf;
-use std::process;
 
 #[derive(Parser)]
 #[command(name = "nu-lint")]

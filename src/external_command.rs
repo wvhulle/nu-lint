@@ -1,12 +1,16 @@
-//! Shared utilities for rules that detect external commands with builtin alternatives
+//! Shared utilities for rules that detect external commands with builtin
+//! alternatives
 
-use crate::lint::{Severity, Violation};
-use crate::visitor::{AstVisitor, VisitContext};
+use std::{collections::HashMap, fmt::Write};
+
 use nu_protocol::ast::Expr;
-use std::collections::HashMap;
-use std::fmt::Write;
+
 // Re-export Fix type for use by fix builders
 pub use crate::lint::Fix;
+use crate::{
+    lint::{Severity, Violation},
+    visitor::{AstVisitor, VisitContext},
+};
 
 /// Metadata about a builtin alternative to an external command
 pub struct BuiltinAlternative {
@@ -15,14 +19,16 @@ pub struct BuiltinAlternative {
 }
 
 impl BuiltinAlternative {
-    #[must_use] pub fn simple(command: &'static str) -> Self {
+    #[must_use]
+    pub fn simple(command: &'static str) -> Self {
         Self {
             command,
             note: None,
         }
     }
 
-    #[must_use] pub fn with_note(command: &'static str, note: &'static str) -> Self {
+    #[must_use]
+    pub fn with_note(command: &'static str, note: &'static str) -> Self {
         Self {
             command,
             note: Some(note),
@@ -39,7 +45,8 @@ pub type FixBuilder = fn(
     context: &VisitContext,
 ) -> Fix;
 
-/// Generic AST visitor for detecting external commands with builtin alternatives
+/// Generic AST visitor for detecting external commands with builtin
+/// alternatives
 pub struct ExternalCommandVisitor<'a> {
     rule_id: &'a str,
     severity: Severity,
@@ -49,7 +56,8 @@ pub struct ExternalCommandVisitor<'a> {
 }
 
 impl<'a> ExternalCommandVisitor<'a> {
-    #[must_use] pub fn new(
+    #[must_use]
+    pub fn new(
         rule_id: &'a str,
         severity: Severity,
         alternatives: HashMap<&'static str, BuiltinAlternative>,
@@ -64,7 +72,8 @@ impl<'a> ExternalCommandVisitor<'a> {
         }
     }
 
-    #[must_use] pub fn into_violations(self) -> Vec<Violation> {
+    #[must_use]
+    pub fn into_violations(self) -> Vec<Violation> {
         self.violations
     }
 }
@@ -84,8 +93,8 @@ impl AstVisitor for ExternalCommandVisitor<'_> {
                 );
 
                 let mut suggestion = format!(
-                    "Replace '^{}' with built-in command: {}\n\
-                     Built-in commands are more portable, faster, and provide better error handling.",
+                    "Replace '^{}' with built-in command: {}\nBuilt-in commands are more \
+                     portable, faster, and provide better error handling.",
                     cmd_text, alternative.command
                 );
 

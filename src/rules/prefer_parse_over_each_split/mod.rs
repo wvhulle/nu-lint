@@ -1,8 +1,11 @@
-use crate::context::LintContext;
-use crate::lint::{Severity, Violation};
-use crate::rule::{Rule, RuleCategory};
-use crate::visitor::{AstVisitor, VisitContext};
 use nu_protocol::ast::{Call, Expr};
+
+use crate::{
+    context::LintContext,
+    lint::{Severity, Violation},
+    rule::{Rule, RuleCategory},
+    visitor::{AstVisitor, VisitContext},
+};
 
 #[derive(Default)]
 pub struct PreferParseOverEachSplit;
@@ -114,10 +117,14 @@ impl AstVisitor for EachSplitVisitor<'_> {
                 self.violations.push(Violation {
                     rule_id: self.rule.id().to_string(),
                     severity: self.rule.severity(),
-                    message: "Manual splitting with 'each' and 'split row' - consider using 'parse'".to_string(),
+                    message: "Manual splitting with 'each' and 'split row' - consider using \
+                              'parse'"
+                        .to_string(),
                     span: call.span(),
                     suggestion: Some(
-                        "Use 'parse \"{field1} {field2}\"' for structured text extraction instead of 'each' with 'split row'".to_string()
+                        "Use 'parse \"{field1} {field2}\"' for structured text extraction instead \
+                         of 'each' with 'split row'"
+                            .to_string(),
                     ),
                     fix: None,
                     file: None,
@@ -129,10 +136,9 @@ impl AstVisitor for EachSplitVisitor<'_> {
     }
 }
 
-
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]
-mod ignore_good;
-#[cfg(test)]
 mod generated_fix;
+#[cfg(test)]
+mod ignore_good;

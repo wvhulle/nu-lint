@@ -1,6 +1,8 @@
-use crate::context::LintContext;
-use crate::lint::{Severity, Violation};
-use crate::rule::{Rule, RuleCategory};
+use crate::{
+    context::LintContext,
+    lint::{Severity, Violation},
+    rule::{Rule, RuleCategory},
+};
 
 pub struct DescriptiveErrorMessages;
 
@@ -70,9 +72,10 @@ impl Rule for DescriptiveErrorMessages {
                         message: "Error message is too generic and not descriptive".to_string(),
                         span: nu_protocol::Span::new(line_start, line_end),
                         suggestion: Some(
-                            "Use a descriptive error message that explains what went wrong and how to fix it.\n\
-                             Example: error make { msg: \"Failed to parse input: expected number, got string\" }"
-                                .to_string()
+                            "Use a descriptive error message that explains what went wrong and \
+                             how to fix it.\nExample: error make { msg: \"Failed to parse input: \
+                             expected number, got string\" }"
+                                .to_string(),
                         ),
                         fix: None,
                         file: None,
@@ -88,6 +91,6 @@ impl Rule for DescriptiveErrorMessages {
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]
-mod ignore_good;
-#[cfg(test)]
 mod generated_fix;
+#[cfg(test)]
+mod ignore_good;

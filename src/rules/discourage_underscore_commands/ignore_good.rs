@@ -1,11 +1,12 @@
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::rules::discourage_underscore_commands::DiscourageUnderscoreCommands;
-    use crate::parser::parse_source;
     use nu_protocol::engine::EngineState;
-    use crate::context::LintContext;
-    use crate::rule::Rule;
+
+    
+    use crate::{
+        context::LintContext, parser::parse_source, rule::Rule,
+        rules::discourage_underscore_commands::DiscourageUnderscoreCommands,
+    };
 
     #[test]
     fn test_hyphenated_command_not_flagged() {

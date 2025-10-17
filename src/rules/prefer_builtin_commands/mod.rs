@@ -1,10 +1,12 @@
-use crate::context::LintContext;
-use crate::external_command::{BuiltinAlternative, ExternalCommandVisitor};
-use crate::lint::Violation;
-use crate::lint::{Fix, Replacement, Severity};
-use crate::rule::{Rule, RuleCategory};
-use crate::visitor::VisitContext;
 use std::collections::HashMap;
+
+use crate::{
+    context::LintContext,
+    external_command::{BuiltinAlternative, ExternalCommandVisitor},
+    lint::{Fix, Replacement, Severity, Violation},
+    rule::{Rule, RuleCategory},
+    visitor::VisitContext,
+};
 
 pub struct PreferBuiltinForCommonCommands;
 
@@ -14,11 +16,11 @@ impl PreferBuiltinForCommonCommands {
         Self
     }
 
-    /// Map of common file and text operations to their Nushell built-in equivalents
-    /// Based on <https://www.nushell.sh/book/coming_from_bash.html#command-equivalents>
+    /// Map of common file and text operations to their Nushell built-in
+    /// equivalents Based on <https://www.nushell.sh/book/coming_from_bash.html#command-equivalents>
     ///
-    /// This rule focuses on the most commonly used commands when migrating from bash.
-    /// See also: BP013 (text transformation), BP014 (system commands)
+    /// This rule focuses on the most commonly used commands when migrating from
+    /// bash. See also: BP013 (text transformation), BP014 (system commands)
     fn get_builtin_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
         let mut map = HashMap::new();
 
@@ -79,7 +81,8 @@ impl Rule for PreferBuiltinForCommonCommands {
     }
 
     fn description(&self) -> &'static str {
-        "Use Nushell built-ins instead of external commands for common operations like ls, cat, grep, head, tail, sort, uniq, and find"
+        "Use Nushell built-ins instead of external commands for common operations like ls, cat, \
+         grep, head, tail, sort, uniq, and find"
     }
 
     fn check(&self, context: &LintContext) -> Vec<Violation> {

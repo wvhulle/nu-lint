@@ -1,10 +1,10 @@
 use std::{path::PathBuf, process, sync::Mutex};
 
-use clap::{Parser, Subcommand};
 use crate::{
-    Config, JsonFormatter, LintEngine, OutputFormatter, TextFormatter, rule::RuleMetadata,
-    lint::Violation
+    Config, JsonFormatter, LintEngine, OutputFormatter, TextFormatter, lint::Violation,
+    rule::RuleMetadata,
 };
+use clap::{Parser, Subcommand};
 use rayon::prelude::*;
 
 #[cfg(test)]
@@ -71,7 +71,8 @@ pub enum Format {
 }
 
 /// Search for .nu-lint.toml in current directory and parent directories
-#[must_use] pub fn find_config_file() -> Option<PathBuf> {
+#[must_use]
+pub fn find_config_file() -> Option<PathBuf> {
     let mut current_dir = std::env::current_dir().ok()?;
 
     loop {
@@ -90,7 +91,8 @@ pub enum Format {
 }
 
 /// Load configuration from file or use defaults
-#[must_use] pub fn load_config(config_path: Option<&PathBuf>) -> Config {
+#[must_use]
+pub fn load_config(config_path: Option<&PathBuf>) -> Config {
     let path = config_path.cloned().or_else(find_config_file);
 
     if let Some(path) = path {
@@ -112,7 +114,8 @@ pub fn handle_command(command: Commands, config: &Config) {
 }
 
 /// Collect all files to lint from the provided paths
-#[must_use] pub fn collect_files_to_lint(paths: &[PathBuf]) -> Vec<PathBuf> {
+#[must_use]
+pub fn collect_files_to_lint(paths: &[PathBuf]) -> Vec<PathBuf> {
     let mut files_to_lint = Vec::new();
     let mut has_errors = false;
 
@@ -145,7 +148,8 @@ pub fn handle_command(command: Commands, config: &Config) {
 }
 
 /// Lint files either in parallel or sequentially
-#[must_use] pub fn lint_files(
+#[must_use]
+pub fn lint_files(
     engine: &LintEngine,
     files: &[PathBuf],
     parallel: bool,
@@ -158,10 +162,7 @@ pub fn handle_command(command: Commands, config: &Config) {
 }
 
 /// Lint files in parallel
-fn lint_files_parallel(
-    engine: &LintEngine,
-    files: &[PathBuf],
-) -> (Vec<Violation>, bool) {
+fn lint_files_parallel(engine: &LintEngine, files: &[PathBuf]) -> (Vec<Violation>, bool) {
     let violations_mutex = Mutex::new(Vec::new());
     let errors_mutex = Mutex::new(false);
 
@@ -185,10 +186,7 @@ fn lint_files_parallel(
 }
 
 /// Lint files sequentially
-fn lint_files_sequential(
-    engine: &LintEngine,
-    files: &[PathBuf],
-) -> (Vec<Violation>, bool) {
+fn lint_files_sequential(engine: &LintEngine, files: &[PathBuf]) -> (Vec<Violation>, bool) {
     let mut all_violations = Vec::new();
     let mut has_errors = false;
 
@@ -208,11 +206,7 @@ fn lint_files_sequential(
 }
 
 /// Format and output linting results
-pub fn output_results(
-    violations: &[Violation],
-    files: &[PathBuf],
-    format: Option<Format>,
-) {
+pub fn output_results(violations: &[Violation], files: &[PathBuf], format: Option<Format>) {
     let source = if files.len() == 1 {
         std::fs::read_to_string(&files[0]).unwrap_or_default()
     } else {
@@ -341,7 +335,6 @@ mod tests {
             let _ = std::env::set_current_dir(original_dir);
         } else {
             // Skip test if we can't change directory
-            return;
         }
     }
 
@@ -359,7 +352,7 @@ mod tests {
         let file_path = temp_dir.path().join("test.nu");
         fs::write(&file_path, "let x = 5\n").unwrap();
 
-        let files = collect_files_to_lint(&[file_path.clone()]);
+        let files = collect_files_to_lint(std::slice::from_ref(&file_path));
         assert_eq!(files, vec![file_path]);
     }
 
@@ -376,11 +369,11 @@ mod tests {
         fs::write(&file2, "let y = 10\n").unwrap();
         fs::write(&file3, "let z = 15\n").unwrap();
 
-        let files = collect_files_to_lint(&[temp_dir.path().to_path_buf()]);
-        assert_eq!(files.len(), 3);
-        assert!(files.contains(&file1));
-        assert!(files.contains(&file2));
-        assert!(files.contains(&file3));
+        let collected_files = collect_files_to_lint(&[temp_dir.path().to_path_buf()]);
+        assert_eq!(collected_files.len(), 3);
+        assert!(collected_files.contains(&file1));
+        assert!(collected_files.contains(&file2));
+        assert!(collected_files.contains(&file3));
     }
 
     #[test]
@@ -410,7 +403,10 @@ mod tests {
         fs::write(&config_path, "[general]\nmax_severity = \"error\"\n").unwrap();
 
         let config = load_config(Some(&config_path));
-        assert_eq!(config.general.max_severity, crate::config::RuleSeverity::Error);
+        assert_eq!(
+            config.general.max_severity,
+            crate::config::RuleSeverity::Error
+        );
     }
 
     #[test]
@@ -420,7 +416,10 @@ mod tests {
             fs::write(&config_path, "[general]\nmax_severity = \"warning\"\n").unwrap();
 
             let config = load_config(None);
-            assert_eq!(config.general.max_severity, crate::config::RuleSeverity::Warning);
+            assert_eq!(
+                config.general.max_severity,
+                crate::config::RuleSeverity::Warning
+            );
         });
     }
 

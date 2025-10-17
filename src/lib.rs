@@ -13,7 +13,7 @@ pub use context::LintContext;
 pub use engine::LintEngine;
 pub use lint::{Fix, Replacement, Severity, Violation};
 use miette::Diagnostic;
-pub use output::{JsonOutput, OutputFormat, OutputFormatter, TextFormatter};
+pub use output::{JsonFormatter, JsonOutput, OutputFormat, OutputFormatter, TextFormatter};
 pub use rule::{Rule, RuleCategory};
 use thiserror::Error;
 

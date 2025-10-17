@@ -60,6 +60,44 @@ impl OutputFormatter for TextFormatter {
     }
 }
 
+#[derive(Debug, Default)]
+pub struct JsonFormatter;
+
+impl OutputFormatter for JsonFormatter {
+    fn format(&self, violations: &[Violation], _source: &str) -> String {
+        let json_violations: Vec<JsonViolation> = violations
+            .iter()
+            .map(|violation| {
+                let source_code = violation
+                    .file
+                    .as_ref()
+                    .and_then(|path| std::fs::read_to_string(path).ok())
+                    .unwrap_or_default();
+
+                let (line, column) = calculate_line_column(&source_code, violation.span.start);
+
+                JsonViolation {
+                    rule_id: violation.rule_id.clone(),
+                    severity: violation.severity.to_string(),
+                    message: violation.message.clone(),
+                    file: violation.file.clone(),
+                    line,
+                    column,
+                    suggestion: violation.suggestion.clone(),
+                }
+            })
+            .collect();
+
+        let summary = Summary::from_violations(violations);
+        let output = JsonOutput {
+            violations: json_violations,
+            summary,
+        };
+
+        serde_json::to_string_pretty(&output).unwrap_or_default()
+    }
+}
+
 /// Calculate line and column number from byte offset in source
 /// Returns (line, column) as 1-indexed values
 fn calculate_line_column(source: &str, offset: usize) -> (usize, usize) {

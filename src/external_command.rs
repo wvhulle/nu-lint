@@ -76,6 +76,28 @@ impl<'a> ExternalCommandVisitor<'a> {
     pub fn into_violations(self) -> Vec<Violation> {
         self.violations
     }
+
+    /// Check for special command usage patterns that need custom suggestions
+    fn get_custom_suggestion(
+        &self,
+        cmd_text: &str,
+        args: &[nu_protocol::ast::ExternalArgument],
+        context: &VisitContext,
+    ) -> Option<(String, String)> {
+        match cmd_text {
+            "tail" => {
+                let args_text = context.extract_external_args(args);
+                if args_text.iter().any(|arg| arg == "--pid") {
+                    // Special case for tail --pid - this is process monitoring
+                    let message = "Consider using Nushell's structured approach for process monitoring instead of external 'tail --pid'".to_string();
+                    let suggestion = "Replace 'tail --pid $pid -f /dev/null' with Nushell process monitoring:\nwhile (ps | where pid == $pid | length) > 0 { sleep 1s }\n\nThis approach uses Nushell's built-in ps command with structured data filtering and is more portable across platforms.".to_string();
+                    return Some((message, suggestion));
+                }
+            }
+            _ => {}
+        }
+        None
+    }
 }
 
 impl AstVisitor for ExternalCommandVisitor<'_> {
@@ -84,6 +106,20 @@ impl AstVisitor for ExternalCommandVisitor<'_> {
         if let Expr::ExternalCall(head, args) = &expr.expr {
             // Get the command name from the head expression
             let cmd_text = context.get_span_contents(head.span);
+
+            // Check for custom suggestions first
+            if let Some((custom_message, custom_suggestion)) = self.get_custom_suggestion(cmd_text, args, context) {
+                self.violations.push(Violation {
+                    rule_id: self.rule_id.to_string(),
+                    severity: self.severity,
+                    message: custom_message,
+                    span: expr.span,
+                    suggestion: Some(custom_suggestion),
+                    fix: None, // Custom suggestions don't have automatic fixes yet
+                    file: None,
+                });
+                return;
+            }
 
             // Check if this external command has a builtin alternative
             if let Some(alternative) = self.alternatives.get(cmd_text) {

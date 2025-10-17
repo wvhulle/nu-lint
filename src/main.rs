@@ -1,7 +1,7 @@
 use std::{path::PathBuf, process};
 
 use clap::{Parser, Subcommand};
-use nu_lint::{Config, LintEngine, OutputFormatter, TextFormatter};
+use nu_lint::{Config, JsonFormatter, LintEngine, OutputFormatter, TextFormatter};
 
 #[derive(Parser)]
 #[command(name = "nu-lint")]
@@ -166,8 +166,21 @@ fn main() {
         String::new()
     };
 
-    let formatter = TextFormatter;
-    let output = formatter.format(&all_violations, &source);
+    let output = match cli.format.unwrap_or(Format::Text) {
+        Format::Text => {
+            let formatter = TextFormatter;
+            formatter.format(&all_violations, &source)
+        }
+        Format::Json => {
+            let formatter = JsonFormatter;
+            formatter.format(&all_violations, &source)
+        }
+        Format::Github => {
+            // TODO: Implement GitHub formatter
+            let formatter = TextFormatter;
+            formatter.format(&all_violations, &source)
+        }
+    };
     println!("{output}");
 
     let exit_code = i32::from(!all_violations.is_empty());

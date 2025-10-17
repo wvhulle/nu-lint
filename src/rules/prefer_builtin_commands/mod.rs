@@ -35,7 +35,10 @@ impl PreferBuiltinForCommonCommands {
         );
         map.insert(
             "find",
-            BuiltinAlternative::with_note("ls", "Use 'ls **/*.rs' for recursive pattern matching"),
+            BuiltinAlternative::with_note(
+                "ls or glob",
+                "Use 'ls **/*.ext' for recursive file matching, 'glob **/*.ext' for pattern matching, or 'ls' with pipes for complex filtering"
+            ),
         );
 
         // Common text processing operations
@@ -43,7 +46,7 @@ impl PreferBuiltinForCommonCommands {
             "grep",
             BuiltinAlternative::with_note(
                 "where or find",
-                "Use 'where $it =~ <pattern>' for filtering or 'find <substring>' for searching",
+                "Use 'where $it =~ <pattern>' for regex filtering, 'find <substring>' for text search, or 'search <term>' for full-text search across structured data",
             ),
         );
         map.insert(
@@ -127,8 +130,14 @@ fn build_fix(
             }
         }
         "grep" => {
-            // Complex - just suggest the alternative
-            alternative.command.to_string()
+            // For simple cases, provide better suggestions
+            if args_text.len() == 1 && !args_text[0].starts_with('-') {
+                // Simple text search: grep "pattern" -> find "pattern"
+                format!("find \"{}\"", args_text[0])
+            } else {
+                // Complex case with flags - suggest the alternative without specific fix
+                "where $it =~ \"pattern\"".to_string()
+            }
         }
         "head" | "tail" => {
             // ^head -5 -> first 5 or ^tail -5 -> last 5
@@ -145,8 +154,21 @@ fn build_fix(
             cmd_text.to_string()
         }
         "find" => {
-            // ^find -> ls (simplified)
-            "ls **/*".to_string()
+            // Provide better find replacements based on common usage patterns
+            if args_text.iter().any(|arg| arg.contains("*.")) {
+                // find . -name "*.rs" -> ls **/*.rs
+                if let Some(pattern) = args_text.iter().find(|arg| arg.contains("*.")) {
+                    format!("ls **/{}", pattern.trim_matches('"'))
+                } else {
+                    "ls **/*".to_string()
+                }
+            } else if args_text.len() == 1 && !args_text[0].starts_with('-') {
+                // find dirname -> ls dirname/**/*
+                format!("ls {}/**/*", args_text[0])
+            } else {
+                // Default case
+                "ls **/*".to_string()
+            }
         }
         _ => alternative.command.to_string(),
     };

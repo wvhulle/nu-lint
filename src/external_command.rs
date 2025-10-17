@@ -89,8 +89,15 @@ impl<'a> ExternalCommandVisitor<'a> {
                 let args_text = context.extract_external_args(args);
                 if args_text.iter().any(|arg| arg == "--pid") {
                     // Special case for tail --pid - this is process monitoring
-                    let message = "Consider using Nushell's structured approach for process monitoring instead of external 'tail --pid'".to_string();
-                    let suggestion = "Replace 'tail --pid $pid -f /dev/null' with Nushell process monitoring:\nwhile (ps | where pid == $pid | length) > 0 { sleep 1s }\n\nThis approach uses Nushell's built-in ps command with structured data filtering and is more portable across platforms.".to_string();
+                    let message = "Consider using Nushell's structured approach for process \
+                                   monitoring instead of external 'tail --pid'"
+                        .to_string();
+                    let suggestion = "Replace 'tail --pid $pid -f /dev/null' with Nushell process \
+                                      monitoring:\nwhile (ps | where pid == $pid | length) > 0 { \
+                                      sleep 1s }\n\nThis approach uses Nushell's built-in ps \
+                                      command with structured data filtering and is more portable \
+                                      across platforms."
+                        .to_string();
                     return Some((message, suggestion));
                 }
             }
@@ -98,8 +105,14 @@ impl<'a> ExternalCommandVisitor<'a> {
                 let args_text = context.extract_external_args(args);
                 if args_text.iter().any(|arg| arg == "-I") {
                     // Special case for hostname -I - this gets IP addresses, not hostname
-                    let message = "Consider using Nushell's structured approach for getting IP addresses instead of external 'hostname -I'".to_string();
-                    let suggestion = "Replace 'hostname -I' with Nushell network commands:\nsys net | get ip\n\nThis approach uses Nushell's built-in sys net command to get IP addresses in a structured format. You can filter specific interfaces or addresses as needed.".to_string();
+                    let message = "Consider using Nushell's structured approach for getting IP \
+                                   addresses instead of external 'hostname -I'"
+                        .to_string();
+                    let suggestion = "Replace 'hostname -I' with Nushell network commands:\nsys \
+                                      net | get ip\n\nThis approach uses Nushell's built-in sys \
+                                      net command to get IP addresses in a structured format. You \
+                                      can filter specific interfaces or addresses as needed."
+                        .to_string();
                     return Some((message, suggestion));
                 }
             }
@@ -117,7 +130,9 @@ impl AstVisitor for ExternalCommandVisitor<'_> {
             let cmd_text = context.get_span_contents(head.span);
 
             // Check for custom suggestions first
-            if let Some((custom_message, custom_suggestion)) = self.get_custom_suggestion(cmd_text, args, context) {
+            if let Some((custom_message, custom_suggestion)) =
+                self.get_custom_suggestion(cmd_text, args, context)
+            {
                 self.violations.push(Violation {
                     rule_id: self.rule_id.to_string(),
                     severity: self.severity,

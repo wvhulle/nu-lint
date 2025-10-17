@@ -45,7 +45,8 @@ impl PreferBuiltinSystemCommands {
             "hostname",
             BuiltinAlternative::with_note(
                 "(sys host).hostname",
-                "Use '(sys host).hostname' to get hostname, or 'sys host' for detailed host information. For IP addresses, use 'sys net | get ip'",
+                "Use '(sys host).hostname' to get hostname, or 'sys host' for detailed host \
+                 information. For IP addresses, use 'sys net | get ip'",
             ),
         );
         map.insert(

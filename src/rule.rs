@@ -1,5 +1,7 @@
-use crate::context::LintContext;
-use crate::lint::{Severity, Violation};
+use crate::{
+    context::LintContext,
+    lint::{Severity, Violation},
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RuleCategory {

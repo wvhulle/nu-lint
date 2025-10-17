@@ -1,9 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::context::LintContext;
-    use crate::rules::kebab_case_commands::KebabCaseCommands;
-    use crate::rule::Rule;
+
+    use crate::{context::LintContext, rule::Rule, rules::kebab_case_commands::KebabCaseCommands};
 
     #[test]
     fn test_invalid_kebab_case() {
@@ -13,49 +11,55 @@ mod tests {
 
     #[test]
     fn test_detect_camel_case_command() {
-        let rule = KebabCaseCommands::default();
+        let rule = KebabCaseCommands;
 
         let bad_code = r#"
 def myCommand [] {
     print "bad naming"
 }
 "#;
-        let context = LintContext::test_from_source(bad_code);
-        assert!(
-            !rule.check(&context).is_empty(),
-            "Should detect camelCase command name"
-        );
+
+        LintContext::test_with_parsed_source(bad_code, |context| {
+            assert!(
+                !rule.check(&context).is_empty(),
+                "Should detect camelCase command name"
+            );
+        });
     }
 
     #[test]
     fn test_detect_underscore_command() {
-        let rule = KebabCaseCommands::default();
+        let rule = KebabCaseCommands;
 
         let bad_code = r#"
 def my_command [] {
     print "underscore instead of hyphen"
 }
 "#;
-        let context = LintContext::test_from_source(bad_code);
-        assert!(
-            !rule.check(&context).is_empty(),
-            "Should detect underscore in command name"
-        );
+
+        LintContext::test_with_parsed_source(bad_code, |context| {
+            assert!(
+                !rule.check(&context).is_empty(),
+                "Should detect underscore in command name"
+            );
+        });
     }
 
     #[test]
     fn test_detect_pascal_case_command() {
-        let rule = KebabCaseCommands::default();
+        let rule = KebabCaseCommands;
 
         let bad_code = r#"
 def AnotherCommand [] {
     print "CamelCase"
 }
 "#;
-        let context = LintContext::test_from_source(bad_code);
-        assert!(
-            !rule.check(&context).is_empty(),
-            "Should detect PascalCase command name"
-        );
+
+        LintContext::test_with_parsed_source(bad_code, |context| {
+            assert!(
+                !rule.check(&context).is_empty(),
+                "Should detect PascalCase command name"
+            );
+        });
     }
 }

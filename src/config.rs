@@ -1,7 +1,8 @@
-use crate::lint::Severity;
+use std::{collections::HashMap, path::Path};
+
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::path::Path;
+
+use crate::lint::Severity;
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct Config {
@@ -84,7 +85,8 @@ impl Config {
     ///
     /// # Errors
     ///
-    /// Returns an error if the file cannot be read or if the TOML content is invalid.
+    /// Returns an error if the file cannot be read or if the TOML content is
+    /// invalid.
     pub fn load_from_file(path: &Path) -> Result<Self, crate::error::LintError> {
         let content = std::fs::read_to_string(path)?;
         Ok(toml::from_str(&content)?)

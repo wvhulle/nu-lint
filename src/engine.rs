@@ -1,12 +1,11 @@
-use crate::config::Config;
-use crate::context::LintContext;
-use crate::error::LintError;
-use crate::lint::Violation;
-use crate::parser::parse_source;
-use crate::rules::RuleRegistry;
+use std::{path::Path, sync::OnceLock};
+
 use nu_protocol::engine::EngineState;
-use std::path::Path;
-use std::sync::OnceLock;
+
+use crate::{
+    config::Config, context::LintContext, error::LintError, lint::Violation, parser::parse_source,
+    rules::RuleRegistry,
+};
 
 pub struct LintEngine {
     registry: RuleRegistry,
@@ -163,6 +162,6 @@ mod tests {
         let source = "let myVariable = 5";
         let violations = engine.lint_source(source, None);
         assert!(!violations.is_empty());
-        assert_eq!(violations[0].rule_id, "S001");
+        assert_eq!(violations[0].rule_id, "snake_case_variables");
     }
 }

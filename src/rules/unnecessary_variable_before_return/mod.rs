@@ -1,7 +1,10 @@
-use crate::context::LintContext;
-use crate::lint::{Severity, Violation};
-use crate::rule::{Rule, RuleCategory};
 use regex::Regex;
+
+use crate::{
+    context::LintContext,
+    lint::{Severity, Violation},
+    rule::{Rule, RuleCategory},
+};
 
 pub struct UnnecessaryVariableBeforeReturn;
 
@@ -49,9 +52,13 @@ impl Rule for UnnecessaryVariableBeforeReturn {
             if var_name1 == var_name2 {
                 Some((
                     format!(
-                        "Variable '{var_name1}' is assigned and immediately returned - consider returning the expression directly"
+                        "Variable '{var_name1}' is assigned and immediately returned - consider \
+                         returning the expression directly"
                     ),
-                    Some("Return the expression directly instead of assigning to a variable first".to_string()),
+                    Some(
+                        "Return the expression directly instead of assigning to a variable first"
+                            .to_string(),
+                    ),
                 ))
             } else {
                 None
@@ -60,10 +67,9 @@ impl Rule for UnnecessaryVariableBeforeReturn {
     }
 }
 
-
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]
-mod ignore_good;
-#[cfg(test)]
 mod generated_fix;
+#[cfg(test)]
+mod ignore_good;

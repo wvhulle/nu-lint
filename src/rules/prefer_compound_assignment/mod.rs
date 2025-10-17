@@ -1,8 +1,11 @@
-use crate::context::LintContext;
-use crate::lint::{Severity, Violation};
-use crate::rule::{Rule, RuleCategory};
-use crate::visitor::{AstVisitor, VisitContext};
 use nu_protocol::ast::{Expr, Operator};
+
+use crate::{
+    context::LintContext,
+    lint::{Severity, Violation},
+    rule::{Rule, RuleCategory},
+    visitor::{AstVisitor, VisitContext},
+};
 
 #[derive(Default)]
 pub struct PreferCompoundAssignment;
@@ -83,18 +86,17 @@ impl AstVisitor for CompoundAssignmentVisitor<'_> {
                                 Self::build_fix(var_text, compound_op, element, expr.span, context);
 
                             self.violations.push(Violation {
-                                    rule_id: self.rule.id().to_string(),
-                                    severity: self.rule.severity(),
-                                    message: format!(
-                                        "Use compound assignment: {var_text} {compound_op} instead of {var_text} = {var_text} {op_symbol} ..."
-                                    ),
-                                    span: expr.span,
-                                    suggestion: Some(format!(
-                                        "Replace with: {var_text} {compound_op}"
-                                    )),
-                                    fix,
-                                    file: None,
-                                });
+                                rule_id: self.rule.id().to_string(),
+                                severity: self.rule.severity(),
+                                message: format!(
+                                    "Use compound assignment: {var_text} {compound_op} instead of \
+                                     {var_text} = {var_text} {op_symbol} ..."
+                                ),
+                                span: expr.span,
+                                suggestion: Some(format!("Replace with: {var_text} {compound_op}")),
+                                fix,
+                                file: None,
+                            });
                         }
                     }
                 }
@@ -170,10 +172,9 @@ impl CompoundAssignmentVisitor<'_> {
     }
 }
 
-
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]
-mod ignore_good;
-#[cfg(test)]
 mod generated_fix;
+#[cfg(test)]
+mod ignore_good;

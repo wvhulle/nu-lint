@@ -1,13 +1,17 @@
 use nu_parser::parse;
-use nu_protocol::Span;
-use nu_protocol::ast::Block;
-use nu_protocol::engine::{EngineState, StateWorkingSet};
+use nu_protocol::{
+    Span,
+    ast::Block,
+    engine::{EngineState, StateWorkingSet},
+};
 
-/// Parse Nushell source code into an AST and return both the Block and `StateWorkingSet`.
+/// Parse Nushell source code into an AST and return both the Block and
+/// `StateWorkingSet`.
 ///
-/// The `StateWorkingSet` contains the delta with newly defined declarations (functions, aliases, etc.)
-/// which is essential for AST-based linting rules that need to inspect function signatures,
-/// parameter types, and other semantic information.
+/// The `StateWorkingSet` contains the delta with newly defined declarations
+/// (functions, aliases, etc.) which is essential for AST-based linting rules
+/// that need to inspect function signatures, parameter types, and other
+/// semantic information.
 ///
 /// AST-based rules can:
 /// - Inspect function signatures for parameter ordering, types, and counts
@@ -16,8 +20,8 @@ use nu_protocol::engine::{EngineState, StateWorkingSet};
 /// - Detect semantic issues that regex cannot catch
 ///
 /// # Performance Note
-/// This function reuses the provided `EngineState` instead of creating a new one,
-/// which significantly improves performance when linting multiple files.
+/// This function reuses the provided `EngineState` instead of creating a new
+/// one, which significantly improves performance when linting multiple files.
 pub fn parse_source<'a>(
     engine_state: &'a EngineState,
     source: &[u8],

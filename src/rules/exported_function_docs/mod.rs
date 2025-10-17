@@ -1,6 +1,8 @@
-use crate::context::LintContext;
-use crate::lint::{Severity, Violation};
-use crate::rule::{Rule, RuleCategory};
+use crate::{
+    context::LintContext,
+    lint::{Severity, Violation},
+    rule::{Rule, RuleCategory},
+};
 
 pub struct ExportedFunctionDocs;
 
@@ -46,7 +48,8 @@ impl Rule for ExportedFunctionDocs {
             // Look for export def declarations
             if trimmed.starts_with("export def ") {
                 // Check if the line immediately above is a doc comment
-                // Doc comments are lines starting with # but not ##, and not test/example comments
+                // Doc comments are lines starting with # but not ##, and not test/example
+                // comments
                 let has_doc_comment = if line_idx > 0 {
                     let prev_line = source_lines[line_idx - 1].trim();
                     let is_comment = prev_line.starts_with('#') && !prev_line.starts_with("##");
@@ -90,7 +93,8 @@ impl Rule for ExportedFunctionDocs {
                         ),
                         span: nu_protocol::Span::new(line_start, line_end),
                         suggestion: Some(format!(
-                            "Add a documentation comment above the function:\n# Description of {func_name}\nexport def {func_name} ..."
+                            "Add a documentation comment above the function:\n# Description of \
+                             {func_name}\nexport def {func_name} ..."
                         )),
                         fix: None,
                         file: None,
@@ -106,6 +110,6 @@ impl Rule for ExportedFunctionDocs {
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]
-mod ignore_good;
-#[cfg(test)]
 mod generated_fix;
+#[cfg(test)]
+mod ignore_good;

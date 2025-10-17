@@ -1,8 +1,9 @@
-use crate::lint::{Severity, Violation};
+use std::{fmt, fmt::Write};
+
 use miette::{Diagnostic, LabeledSpan, Report, SourceCode};
 use serde::Serialize;
-use std::fmt;
-use std::fmt::Write;
+
+use crate::lint::{Severity, Violation};
 #[derive(Debug, Clone, Copy)]
 pub enum OutputFormat {
     Text,

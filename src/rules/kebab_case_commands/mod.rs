@@ -1,9 +1,13 @@
-use crate::context::LintContext;
-use crate::lint::{Severity, Violation};
-use crate::rule::{Rule, RuleCategory};
+use std::sync::OnceLock;
+
 use heck::ToKebabCase;
 use regex::Regex;
-use std::sync::OnceLock;
+
+use crate::{
+    context::LintContext,
+    lint::{Severity, Violation},
+    rule::{Rule, RuleCategory},
+};
 
 #[derive(Default)]
 pub struct KebabCaseCommands;
@@ -63,6 +67,6 @@ impl Rule for KebabCaseCommands {
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]
-mod ignore_good;
-#[cfg(test)]
 mod generated_fix;
+#[cfg(test)]
+mod ignore_good;

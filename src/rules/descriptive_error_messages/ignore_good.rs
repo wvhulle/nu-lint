@@ -1,9 +1,10 @@
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::rules::descriptive_error_messages::DescriptiveErrorMessages;
-    use crate::context::LintContext;
-    use crate::rule::Rule;
+    
+    use crate::{
+        context::LintContext, rule::Rule,
+        rules::descriptive_error_messages::DescriptiveErrorMessages,
+    };
 
     #[test]
     fn test_descriptive_error_message_not_flagged() {
@@ -15,13 +16,14 @@ def process [input: int] {
 }
 "#;
         let rule = DescriptiveErrorMessages::new();
-        let context = LintContext::test_from_source(source);
-        let violations = rule.check(&context);
+        LintContext::test_with_parsed_source(source, |context| {
+            let violations = rule.check(&context);
 
-        assert!(
-            violations.is_empty(),
-            "Should not flag descriptive error messages"
-        );
+            assert!(
+                violations.is_empty(),
+                "Should not flag descriptive error messages"
+            );
+        });
     }
 
     #[test]
@@ -34,12 +36,13 @@ def validate_file [path: string] {
 }
 "#;
         let rule = DescriptiveErrorMessages::new();
-        let context = LintContext::test_from_source(source);
-        let violations = rule.check(&context);
+        LintContext::test_with_parsed_source(source, |context| {
+            let violations = rule.check(&context);
 
-        assert!(
-            violations.is_empty(),
-            "Should not flag specific error messages"
-        );
+            assert!(
+                violations.is_empty(),
+                "Should not flag specific error messages"
+            );
+        });
     }
 }

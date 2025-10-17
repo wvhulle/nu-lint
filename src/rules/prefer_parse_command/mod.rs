@@ -1,7 +1,10 @@
-use crate::context::LintContext;
-use crate::lint::{Severity, Violation};
-use crate::rule::{Rule, RuleCategory};
 use regex::Regex;
+
+use crate::{
+    context::LintContext,
+    lint::{Severity, Violation},
+    rule::{Rule, RuleCategory},
+};
 
 pub struct PreferParseCommand;
 
@@ -68,12 +71,14 @@ impl Rule for PreferParseCommand {
                             rule_id: self.id().to_string(),
                             severity: self.severity(),
                             message: format!(
-                                "Variable '{var_name}' from split row with indexed access - consider using 'parse'"
+                                "Variable '{var_name}' from split row with indexed access - \
+                                 consider using 'parse'"
                             ),
                             span: nu_protocol::Span::new(mat.start(), mat.end()),
                             suggestion: Some(
-                                "Use 'parse' command to extract named fields instead of indexed access"
-                                    .to_string()
+                                "Use 'parse' command to extract named fields instead of indexed \
+                                 access"
+                                    .to_string(),
                             ),
                             fix: None,
                             file: None,
@@ -82,17 +87,16 @@ impl Rule for PreferParseCommand {
                         None
                     }
                 })
-                .collect::<Vec<_>>()
+                .collect::<Vec<_>>(),
         );
 
         violations
     }
 }
 
-
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]
-mod ignore_good;
-#[cfg(test)]
 mod generated_fix;
+#[cfg(test)]
+mod ignore_good;

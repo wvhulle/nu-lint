@@ -1,11 +1,10 @@
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::rules::discourage_underscore_commands::DiscourageUnderscoreCommands;
-    use crate::parser::parse_source;
-    use nu_protocol::engine::EngineState;
-    use crate::context::LintContext;
-    use crate::rule::Rule;
+    
+    use crate::{
+        context::LintContext, rule::Rule,
+        rules::discourage_underscore_commands::DiscourageUnderscoreCommands,
+    };
 
     #[test]
     fn test_underscore_command_detected() {
@@ -15,22 +14,14 @@ mod tests {
     echo $param
 }";
 
-        let engine_state = EngineState::new();
-        let (block, working_set) = parse_source(&engine_state, bad_code.as_bytes());
-        let context = LintContext {
-            source: bad_code,
-            ast: &block,
-            engine_state: &engine_state,
-            working_set: &working_set,
-            file_path: None,
-        };
-
-        let violations = rule.check(&context);
-        assert!(
-            !violations.is_empty(),
-            "Should detect underscore in command name"
-        );
-        assert_eq!(violations[0].rule_id, "discourage_underscore_commands");
+        LintContext::test_with_parsed_source(bad_code, |context| {
+            let violations = rule.check(&context);
+            assert!(
+                !violations.is_empty(),
+                "Should detect underscore in command name"
+            );
+            assert_eq!(violations[0].rule_id, "discourage_underscore_commands");
+        });
     }
 
     #[test]
@@ -41,21 +32,13 @@ mod tests {
     echo $param
 }";
 
-        let engine_state = EngineState::new();
-        let (block, working_set) = parse_source(&engine_state, bad_code.as_bytes());
-        let context = LintContext {
-            source: bad_code,
-            ast: &block,
-            engine_state: &engine_state,
-            working_set: &working_set,
-            file_path: None,
-        };
-
-        let violations = rule.check(&context);
-        assert!(
-            !violations.is_empty(),
-            "Should detect multiple underscores in command name"
-        );
-        assert_eq!(violations[0].rule_id, "discourage_underscore_commands");
+        LintContext::test_with_parsed_source(bad_code, |context| {
+            let violations = rule.check(&context);
+            assert!(
+                !violations.is_empty(),
+                "Should detect multiple underscores in command name"
+            );
+            assert_eq!(violations[0].rule_id, "discourage_underscore_commands");
+        });
     }
 }

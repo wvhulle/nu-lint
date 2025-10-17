@@ -1,5 +1,6 @@
-use super::*;
 use heck::ToKebabCase;
+
+use super::*;
 
 #[test]
 fn test_to_kebab_case() {

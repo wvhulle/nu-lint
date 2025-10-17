@@ -1,12 +1,12 @@
-use crate::context::LintContext;
-use crate::lint::Violation;
-use crate::lint::{Fix, Replacement, Severity};
-use crate::rule::{Rule, RuleCategory};
-use crate::external_command::{
-    BuiltinAlternative, ExternalCommandVisitor,
-};
-use crate::visitor::VisitContext;
 use std::collections::HashMap;
+
+use crate::{
+    context::LintContext,
+    external_command::{BuiltinAlternative, ExternalCommandVisitor},
+    lint::{Fix, Replacement, Severity, Violation},
+    rule::{Rule, RuleCategory},
+    visitor::VisitContext,
+};
 
 pub struct PreferBuiltinTextTransforms;
 
@@ -16,8 +16,8 @@ impl PreferBuiltinTextTransforms {
         Self
     }
 
-    /// Map of text transformation commands to their Nushell built-in equivalents
-    /// Based on <https://www.nushell.sh/book/coming_from_bash.html#command-equivalents>
+    /// Map of text transformation commands to their Nushell built-in
+    /// equivalents Based on <https://www.nushell.sh/book/coming_from_bash.html#command-equivalents>
     fn get_builtin_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
         let mut map = HashMap::new();
 
@@ -29,10 +29,14 @@ impl PreferBuiltinTextTransforms {
                 "Use 'str replace' for find and replace operations",
             ),
         );
-        map.insert("awk", BuiltinAlternative::with_note(
-            "where, select, or each",
-            "Use 'where' for filtering, 'select' for columns, or 'each' for row-by-row processing"
-        ));
+        map.insert(
+            "awk",
+            BuiltinAlternative::with_note(
+                "where, select, or each",
+                "Use 'where' for filtering, 'select' for columns, or 'each' for row-by-row \
+                 processing",
+            ),
+        );
         map.insert(
             "cut",
             BuiltinAlternative::with_note("select", "Use 'select' to choose specific columns"),
@@ -90,7 +94,8 @@ impl Rule for PreferBuiltinTextTransforms {
     }
 
     fn description(&self) -> &'static str {
-        "Prefer Nushell built-in commands over external tools for text transformation (sed, awk, cut, wc, tr, tee)"
+        "Prefer Nushell built-in commands over external tools for text transformation (sed, awk, \
+         cut, wc, tr, tee)"
     }
 
     fn check(&self, context: &LintContext) -> Vec<Violation> {
@@ -198,10 +203,9 @@ fn build_fix(
     }
 }
 
-
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]
-mod ignore_good;
-#[cfg(test)]
 mod generated_fix;
+#[cfg(test)]
+mod ignore_good;

@@ -1,8 +1,12 @@
-use crate::context::LintContext;
-use crate::lint::{Severity, Violation};
-use crate::rule::{Rule, RuleCategory};
-use regex::Regex;
 use std::sync::OnceLock;
+
+use regex::Regex;
+
+use crate::{
+    context::LintContext,
+    lint::{Severity, Violation},
+    rule::{Rule, RuleCategory},
+};
 
 pub struct DiscouragedBareIgnore;
 
@@ -65,8 +69,9 @@ impl Rule for DiscouragedBareIgnore {
                             .to_string(),
                         span: nu_protocol::Span::new(mat.start(), mat.end()),
                         suggestion: Some(
-                            "Consider: 'do -i { ... }' for error suppression or handle errors explicitly"
-                                .to_string()
+                            "Consider: 'do -i { ... }' for error suppression or handle errors \
+                             explicitly"
+                                .to_string(),
                         ),
                         fix: None,
                         file: None,
@@ -80,6 +85,6 @@ impl Rule for DiscouragedBareIgnore {
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]
-mod ignore_good;
-#[cfg(test)]
 mod generated_fix;
+#[cfg(test)]
+mod ignore_good;

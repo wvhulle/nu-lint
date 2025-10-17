@@ -1,9 +1,10 @@
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::rules::prefer_compound_assignment::PreferCompoundAssignment;
-    use crate::context::LintContext;
-    use crate::rule::Rule;
+    
+    use crate::{
+        context::LintContext, rule::Rule,
+        rules::prefer_compound_assignment::PreferCompoundAssignment,
+    };
 
     #[test]
     fn test_detect_addition_assignment() {
@@ -13,11 +14,13 @@ mod tests {
 mut count = 0
 $count = $count + 1
 ";
-        let context = LintContext::test_from_source(bad_code);
-        assert!(
-            !rule.check(&context).is_empty(),
-            "Should detect addition assignment pattern"
-        );
+
+        LintContext::test_with_parsed_source(bad_code, |context| {
+            assert!(
+                !rule.check(&context).is_empty(),
+                "Should detect addition assignment pattern"
+            );
+        });
     }
 
     #[test]
@@ -28,11 +31,13 @@ $count = $count + 1
 mut count = 0
 $count = $count - 5
 ";
-        let context = LintContext::test_from_source(bad_code);
-        assert!(
-            !rule.check(&context).is_empty(),
-            "Should detect subtraction assignment pattern"
-        );
+
+        LintContext::test_with_parsed_source(bad_code, |context| {
+            assert!(
+                !rule.check(&context).is_empty(),
+                "Should detect subtraction assignment pattern"
+            );
+        });
     }
 
     #[test]
@@ -43,10 +48,12 @@ $count = $count - 5
 mut count = 0
 $count = $count * 2
 ";
-        let context = LintContext::test_from_source(bad_code);
-        assert!(
-            !rule.check(&context).is_empty(),
-            "Should detect multiplication assignment pattern"
-        );
+
+        LintContext::test_with_parsed_source(bad_code, |context| {
+            assert!(
+                !rule.check(&context).is_empty(),
+                "Should detect multiplication assignment pattern"
+            );
+        });
     }
 }

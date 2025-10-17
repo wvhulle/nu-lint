@@ -74,7 +74,6 @@ impl RuleRegistry {
         registry.register(Rule::Regex(Box::<
             screaming_snake_constants::ScreamingSnakeConstants,
         >::default()));
-        registry.register(Rule::Regex(Box::new(brace_spacing::BraceSpacing)));
         registry.register(Rule::Regex(Box::new(
             unnecessary_variable_before_return::UnnecessaryVariableBeforeReturn::new(),
         )));
@@ -90,6 +89,7 @@ impl RuleRegistry {
         )));
 
         // Style rules (AST-based)
+        registry.register(Rule::Ast(Box::<brace_spacing::BraceSpacing>::default()));
         registry.register(Rule::Ast(Box::<pipe_spacing::PipeSpacing>::default()));
         registry.register(Rule::Ast(Box::<
             prefer_compound_assignment::PreferCompoundAssignment,

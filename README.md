@@ -1,10 +1,12 @@
 # nu-lint
 
-A static analysis tool for Nushell scripts.
+A static analysis tool for [Nushell](https://www.nushell.sh/) scripts.
+
+Can detect stylistic issues in Nushell code and suggest improvements. Complementary to the basic checks by [nu-check](https://www.nushell.sh/commands/docs/nu-check.html).
 
 ## Installation
 
-Once published to crates.io:
+From crates.io:
 
 ```bash
 cargo install nu-lint

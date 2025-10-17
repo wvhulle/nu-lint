@@ -8,9 +8,9 @@ use crate::{
     visitor::VisitContext,
 };
 
-pub struct PreferBuiltinSystemCommands;
+pub struct AvoidExternalSystemTools;
 
-impl PreferBuiltinSystemCommands {
+impl AvoidExternalSystemTools {
     #[must_use]
     pub fn new() -> Self {
         Self
@@ -103,15 +103,15 @@ impl PreferBuiltinSystemCommands {
     }
 }
 
-impl Default for PreferBuiltinSystemCommands {
+impl Default for AvoidExternalSystemTools {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl RuleMetadata for PreferBuiltinSystemCommands {
+impl RuleMetadata for AvoidExternalSystemTools {
     fn id(&self) -> &'static str {
-        "prefer_builtin_system_commands"
+        "avoid_external_system_tools"
     }
 
     fn category(&self) -> RuleCategory {
@@ -123,12 +123,12 @@ impl RuleMetadata for PreferBuiltinSystemCommands {
     }
 
     fn description(&self) -> &'static str {
-        "Prefer Nushell built-in commands over external tools for system operations (env, date, \
-         whoami, man, which, cd, pwd, etc.)"
+        "Avoid external system tools when Nushell built-ins are available (env, date, whoami, man, \
+         which, cd, pwd, etc.)"
     }
 }
 
-impl RegexRule for PreferBuiltinSystemCommands {
+impl RegexRule for AvoidExternalSystemTools {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         let mut visitor = ExternalCommandVisitor::new(
             self.id(),

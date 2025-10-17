@@ -8,9 +8,9 @@ use crate::{
     visitor::VisitContext,
 };
 
-pub struct PreferBuiltinForCommonCommands;
+pub struct AvoidExternalFileTools;
 
-impl PreferBuiltinForCommonCommands {
+impl AvoidExternalFileTools {
     #[must_use]
     pub fn new() -> Self {
         Self
@@ -66,15 +66,15 @@ impl PreferBuiltinForCommonCommands {
     }
 }
 
-impl Default for PreferBuiltinForCommonCommands {
+impl Default for AvoidExternalFileTools {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl RuleMetadata for PreferBuiltinForCommonCommands {
+impl RuleMetadata for AvoidExternalFileTools {
     fn id(&self) -> &'static str {
-        "prefer_builtin_commands"
+        "avoid_external_file_tools"
     }
 
     fn category(&self) -> RuleCategory {
@@ -86,12 +86,12 @@ impl RuleMetadata for PreferBuiltinForCommonCommands {
     }
 
     fn description(&self) -> &'static str {
-        "Use Nushell built-ins instead of external commands for common operations like ls, cat, \
-         grep, head, tail, sort, uniq, and find"
+        "Avoid external file tools when Nushell built-ins are available (ls, cat, grep, head, \
+         tail, sort, uniq, find)"
     }
 }
 
-impl RegexRule for PreferBuiltinForCommonCommands {
+impl RegexRule for AvoidExternalFileTools {
     fn check(&self, context: &LintContext) -> Vec<Violation> {
         let mut visitor = ExternalCommandVisitor::new(
             self.id(),

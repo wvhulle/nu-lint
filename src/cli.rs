@@ -292,12 +292,18 @@ fn explain_rule(config: &Config, rule_id: &str) {
 mod tests {
     use super::*;
     use std::fs;
+    use std::sync::Mutex;
     use tempfile::TempDir;
+
+    // Use a static mutex to prevent race conditions with tests that change directories
+    static CHDIR_MUTEX: Mutex<()> = Mutex::new(());
 
     fn with_temp_dir<F>(f: F)
     where
         F: FnOnce(&TempDir),
     {
+        let _guard = CHDIR_MUTEX.lock().unwrap();
+
         let temp_dir = TempDir::new().unwrap();
         let original_dir = std::env::current_dir().unwrap();
 
@@ -411,16 +417,27 @@ mod tests {
 
     #[test]
     fn test_load_config_auto_discover() {
-        with_temp_dir(|temp_dir| {
-            let config_path = temp_dir.path().join(".nu-lint.toml");
-            fs::write(&config_path, "[general]\nmax_severity = \"warning\"\n").unwrap();
+        let _guard = CHDIR_MUTEX.lock().unwrap();
 
-            let config = load_config(None);
-            assert_eq!(
-                config.general.max_severity,
-                crate::config::RuleSeverity::Warning
-            );
-        });
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join(".nu-lint.toml");
+        fs::write(&config_path, "[general]\nmax_severity = \"warning\"\n").unwrap();
+
+        // Store original directory
+        let original_dir = std::env::current_dir().unwrap();
+
+        // Change to temp directory for this test only
+        std::env::set_current_dir(temp_dir.path()).unwrap();
+
+        // Test auto-discovery
+        let config = load_config(None);
+        assert_eq!(
+            config.general.max_severity,
+            crate::config::RuleSeverity::Warning
+        );
+
+        // Restore original directory
+        std::env::set_current_dir(original_dir).unwrap();
     }
 
     #[test]

@@ -23,27 +23,15 @@ pub struct LintContext<'a> {
 
 impl LintContext<'_> {
     /// Find violations by applying a conditional predicate to regex matches
-    ///
-    /// This is a helper for regex-based rules. Use when you need to:
-    /// - Filter matches conditionally (not all matches are violations)
-    /// - Customize both message and suggestion per match
-    /// - Access the full `regex::Match` object for complex logic
-    ///
-    /// # Arguments
-    /// * `pattern` - The regex pattern to match
-    /// * `rule_id` - The rule ID for violations
-    /// * `severity` - The severity level
-    /// * `predicate` - Function that returns Some((message, suggestion)) if
-    ///   violation should be created
-    pub fn violations_from_regex_if<F>(
+    pub fn violations_from_regex<MatchPredicate>(
         &self,
         pattern: &regex::Regex,
         rule_id: &str,
         severity: Severity,
-        predicate: F,
+        predicate: MatchPredicate,
     ) -> Vec<Violation>
     where
-        F: Fn(regex::Match) -> Option<(String, Option<String>)>,
+        MatchPredicate: Fn(regex::Match) -> Option<(String, Option<String>)>,
     {
         pattern
             .find_iter(self.source)
@@ -67,7 +55,10 @@ impl LintContext<'_> {
     /// called for each relevant AST node type. This walks both the main AST
     /// block and all blocks accessible through function declarations.
     pub fn walk_ast<V: AstVisitor>(&self, visitor: &mut V) {
-        let visit_context = VisitContext::new(self.working_set, self.source);
+        let visit_context = VisitContext {
+            working_set: self.working_set,
+            source: self.source,
+        };
 
         // Visit the main AST block
         visitor.visit_block(self.ast, &visit_context);
@@ -99,10 +90,7 @@ impl LintContext<'_> {
     pub fn find_declaration_span(&self, name: &str) -> Span {
         // Use more efficient string search for function names
         // Look for function declarations starting with "def " or "export def "
-        let patterns = [
-            format!("def {name}"),
-            format!("export def {name}"),
-        ];
+        let patterns = [format!("def {name}"), format!("export def {name}")];
 
         for pattern in &patterns {
             if let Some(pos) = self.source.find(pattern) {

@@ -1,7 +1,6 @@
 use super::rule;
 use crate::LintContext;
 
-
 #[test]
 fn test_good_nu_complete_prefix() {
     let good = "def 'nu-complete git-branch' [] { git branch | lines }";

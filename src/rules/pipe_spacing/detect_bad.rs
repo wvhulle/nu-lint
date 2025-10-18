@@ -15,59 +15,33 @@ fn test_closure_pipe_not_flagged_but_operators_are() {
     // But actual pipe operators should still be flagged
     let bad_with_closure = "{|x| echo $x}|get name";
 
-    LintContext::test_with_parsed_source(bad_with_closure, |context| {
-        assert!(
-            !(rule().check)(&context).is_empty(),
-            "Pipe operators should still be flagged"
-        );
-    });
+    rule().assert_detects(bad_with_closure);
 }
 
 #[test]
 fn test_detect_double_space_before_pipe() {
     let bad_code = "ls  | get name";
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        assert!(
-            !(rule().check)(&context).is_empty(),
-            "Should detect double space before pipe"
-        );
-    });
+    rule().assert_detects(bad_code);
 }
 
 #[test]
 fn test_detect_double_space_before_pipe_no_space_after() {
     let bad_code = "ls  |get name";
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            !violations.is_empty(),
-            "Should detect double space before pipe with no space after"
-        );
-    });
+    rule().assert_detects(bad_code);
 }
 
 #[test]
 fn test_detect_missing_space_after_pipe() {
     let bad_code = "ls| get name";
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        assert!(
-            !(rule().check)(&context).is_empty(),
-            "Should detect missing space after pipe"
-        );
-    });
+    rule().assert_detects(bad_code);
 }
 
 #[test]
 fn test_detect_double_space_after_pipe() {
     let bad_code = "ls |  get name";
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        assert!(
-            !(rule().check)(&context).is_empty(),
-            "Should detect double space after pipe"
-        );
-    });
+    rule().assert_detects(bad_code);
 }

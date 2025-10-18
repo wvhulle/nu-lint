@@ -1,7 +1,6 @@
 use super::rule;
 use crate::LintContext;
 
-
 #[test]
 fn test_good_compound_add_assignment() {
     let good = "mut x = 5; $x += 3";

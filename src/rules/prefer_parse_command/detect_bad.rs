@@ -1,5 +1,4 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn test_detect_manual_string_splitting_device() {
@@ -10,12 +9,7 @@ let mac = ($parts | get 1)
 let name = ($parts | skip 2 | str join " ")
 "#;
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        assert!(
-            !(rule().check)(&context).is_empty(),
-            "Should detect manual string splitting for device info"
-        );
-    });
+    rule().assert_detects(bad_code);
 }
 
 #[test]
@@ -26,10 +20,5 @@ let fields = ($data | split row ":")
 let username = ($fields | get 0)
 "#;
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        assert!(
-            !(rule().check)(&context).is_empty(),
-            "Should detect manual string splitting for user data"
-        );
-    });
+    rule().assert_detects(bad_code);
 }

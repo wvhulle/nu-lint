@@ -69,7 +69,8 @@ impl<'a> MutVariableVisitor<'a> {
                     severity: Severity::Info,
                     message: format!(
                         "Variable '{var_name}' is declared as 'mut' but never reassigned"
-                    ).into(),
+                    )
+                    .into(),
                     span: *decl_span,
                     suggestion: Some(format!("Remove 'mut' keyword:\nlet {var_name} = ...").into()),
                     fix,

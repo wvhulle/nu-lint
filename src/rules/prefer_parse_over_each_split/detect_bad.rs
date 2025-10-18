@@ -1,5 +1,4 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn test_detect_each_with_split_row() {
@@ -7,10 +6,7 @@ fn test_detect_each_with_split_row() {
 $data | lines | each { |line| $line | split row " " }
 "#;
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(!violations.is_empty(), "Should detect each with split row");
-    });
+    rule().assert_detects(bad_code);
 }
 
 #[test]
@@ -19,10 +15,7 @@ fn test_detect_each_with_split() {
 $lines | each { |l| $l | split " " }
 "#;
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(!violations.is_empty(), "Should detect each with split");
-    });
+    rule().assert_detects(bad_code);
 }
 
 #[test]
@@ -34,8 +27,5 @@ $text | lines | each { |line|
 }
 "#;
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(!violations.is_empty(), "Should detect nested split in each");
-    });
+    rule().assert_detects(bad_code);
 }

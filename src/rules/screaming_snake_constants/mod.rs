@@ -37,14 +37,17 @@ fn check(context: &LintContext) -> Vec<Violation> {
                     rule_id: "screaming_snake_constants".into(),
                     severity: Severity::Warning,
                     message: format!(
-                        "Constant '{const_name}' should use SCREAMING_SNAKE_CASE naming \
-                         convention"
-                    ).into(),
+                        "Constant '{const_name}' should use SCREAMING_SNAKE_CASE naming convention"
+                    )
+                    .into(),
                     span: nu_protocol::Span::new(const_match.start(), const_match.end()),
-                    suggestion: Some(format!(
-                        "Consider renaming to: {}",
-                        const_name.to_shouty_snake_case()
-                    ).into()),
+                    suggestion: Some(
+                        format!(
+                            "Consider renaming to: {}",
+                            const_name.to_shouty_snake_case()
+                        )
+                        .into(),
+                    ),
                     fix: None,
                     file: None,
                 })

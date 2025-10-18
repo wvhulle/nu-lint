@@ -1,5 +1,4 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn test_descriptive_error_message_not_flagged() {
@@ -10,14 +9,7 @@ def process [input: int] {
     }
 }
 "#;
-    LintContext::test_with_parsed_source(source, |context| {
-        let violations = (rule().check)(&context);
-
-        assert!(
-            violations.is_empty(),
-            "Should not flag descriptive error messages"
-        );
-    });
+    rule().assert_ignores(source);
 }
 
 #[test]
@@ -29,12 +21,5 @@ def validate_file [path: string] {
     }
 }
 "#;
-    LintContext::test_with_parsed_source(source, |context| {
-        let violations = (rule().check)(&context);
-
-        assert!(
-            violations.is_empty(),
-            "Should not flag specific error messages"
-        );
-    });
+    rule().assert_ignores(source);
 }

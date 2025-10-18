@@ -80,10 +80,16 @@ impl OutputFormatter for JsonFormatter {
                     rule_id: violation.rule_id.to_string(),
                     severity: violation.severity.to_string(),
                     message: violation.message.to_string(),
-                    file: violation.file.as_ref().map(std::string::ToString::to_string),
+                    file: violation
+                        .file
+                        .as_ref()
+                        .map(std::string::ToString::to_string),
                     line,
                     column,
-                    suggestion: violation.suggestion.as_ref().map(std::string::ToString::to_string),
+                    suggestion: violation
+                        .suggestion
+                        .as_ref()
+                        .map(std::string::ToString::to_string),
                 }
             })
             .collect();

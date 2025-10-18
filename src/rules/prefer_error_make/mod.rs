@@ -44,7 +44,7 @@ fn looks_like_error(message: &str, exit_code: i32) -> bool {
 fn check(context: &LintContext) -> Vec<Violation> {
     let pat = pattern();
 
-    context.violations_from_regex_if(pat, "prefer_error_make", Severity::Info, |mat| {
+    context.violations_from_regex(pat, "prefer_error_make", Severity::Info, |mat| {
         if let Some(caps) = pat.captures(mat.as_str()) {
             let message = &caps[1].trim_matches('"').trim_matches('\'');
             let exit_code: i32 = caps[2].parse().unwrap_or(1);
@@ -52,8 +52,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
             // Only suggest error make for actual error cases
             if looks_like_error(message, exit_code) {
                 Some((
-                    "Consider using 'error make' instead of 'print' + 'exit' for error \
-                     conditions"
+                    "Consider using 'error make' instead of 'print' + 'exit' for error conditions"
                         .to_string(),
                     Some(
                         "Use 'error make { msg: \"error message\" }' for better error handling"

@@ -8,10 +8,7 @@ use crate::{
 };
 
 /// Check if an expression represents a "not ... is-empty" pattern
-fn is_not_is_empty_pattern(
-    expr: &nu_protocol::ast::Expression,
-    context: &VisitContext,
-) -> bool {
+fn is_not_is_empty_pattern(expr: &nu_protocol::ast::Expression, context: &VisitContext) -> bool {
     // Look for: not (expr | is-empty)
     if let Expr::UnaryNot(inner_expr) = &expr.expr {
         match &inner_expr.expr {
@@ -71,8 +68,7 @@ fn generate_fix_text(
                     if !elements_before_is_empty.is_empty() {
                         let start_span = elements_before_is_empty.first().unwrap().expr.span;
                         let end_span = elements_before_is_empty.last().unwrap().expr.span;
-                        let combined_span =
-                            nu_protocol::Span::new(start_span.start, end_span.end);
+                        let combined_span = nu_protocol::Span::new(start_span.start, end_span.end);
                         let expr_text = context.get_span_contents(combined_span);
                         return Some(format!("{} | is-not-empty", expr_text.trim()));
                     }
@@ -88,8 +84,7 @@ fn generate_fix_text(
                         let elements_before_is_empty =
                             &pipeline.elements[..pipeline.elements.len() - 1];
                         if !elements_before_is_empty.is_empty() {
-                            let start_span =
-                                elements_before_is_empty.first().unwrap().expr.span;
+                            let start_span = elements_before_is_empty.first().unwrap().expr.span;
                             let end_span = elements_before_is_empty.last().unwrap().expr.span;
                             let combined_span =
                                 nu_protocol::Span::new(start_span.start, end_span.end);
@@ -125,7 +120,9 @@ impl AstVisitor for PreferIsNotEmptyVisitor {
             && let Some(fix_text) = generate_fix_text(expr, context)
         {
             let fix = Some(Fix {
-                description: "Replace 'not ... is-empty' with 'is-not-empty'".to_string().into(),
+                description: "Replace 'not ... is-empty' with 'is-not-empty'"
+                    .to_string()
+                    .into(),
                 replacements: vec![Replacement {
                     span: expr.span,
                     new_text: fix_text.into(),
@@ -136,7 +133,8 @@ impl AstVisitor for PreferIsNotEmptyVisitor {
                 rule_id: "prefer_is_not_empty".into(),
                 severity: Severity::Info,
                 message: "Use 'is-not-empty' instead of 'not ... is-empty' for better readability"
-                    .to_string().into(),
+                    .to_string()
+                    .into(),
                 span: expr.span,
                 suggestion: Some("Replace with 'is-not-empty'".to_string().into()),
                 fix,

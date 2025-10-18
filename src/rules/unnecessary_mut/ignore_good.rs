@@ -1,5 +1,4 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn test_necessary_mut_not_flagged() {
@@ -16,13 +15,7 @@ def fibonacci [n: int] {
 }
 ";
 
-    LintContext::test_with_parsed_source(good_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            violations.is_empty(),
-            "Should not flag mut variables that are reassigned"
-        );
-    });
+    rule().assert_ignores(good_code);
 }
 
 #[test]
@@ -34,10 +27,7 @@ def process [] {
 }
 ";
 
-    LintContext::test_with_parsed_source(good_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(violations.is_empty(), "Should not flag immutable variables");
-    });
+    rule().assert_ignores(good_code);
 }
 
 #[test]
@@ -50,13 +40,7 @@ def increment [] {
 }
 ";
 
-    LintContext::test_with_parsed_source(good_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            violations.is_empty(),
-            "Should not flag mut with compound assignment"
-        );
-    });
+    rule().assert_ignores(good_code);
 }
 
 #[test]
@@ -68,13 +52,7 @@ def process [] {
 }
 "#;
 
-    LintContext::test_with_parsed_source(good_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            violations.is_empty(),
-            "Should not flag underscore-prefixed mut variables"
-        );
-    });
+    rule().assert_ignores(good_code);
 }
 
 #[test]
@@ -87,11 +65,5 @@ def increment [] {
 }
 ";
 
-    LintContext::test_with_parsed_source(good_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            violations.is_empty(),
-            "Should not flag necessary mut variables"
-        );
-    });
+    rule().assert_ignores(good_code);
 }

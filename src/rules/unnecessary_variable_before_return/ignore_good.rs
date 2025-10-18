@@ -1,5 +1,4 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn test_variable_used_multiple_times_not_flagged() {
@@ -11,14 +10,7 @@ def foo [] {
 }
 ";
 
-    LintContext::test_with_parsed_source(good_code, |context| {
-        let violations = (rule().check)(&context);
-        assert_eq!(
-            violations.len(),
-            0,
-            "Should not flag variable used multiple times"
-        );
-    });
+    rule().assert_ignores(good_code);
 }
 
 #[test]
@@ -29,10 +21,7 @@ def foo [] {
 }
 ";
 
-    LintContext::test_with_parsed_source(good_code, |context| {
-        let violations = (rule().check)(&context);
-        assert_eq!(violations.len(), 0, "Should not flag direct return");
-    });
+    rule().assert_ignores(good_code);
 }
 
 #[test]
@@ -47,15 +36,7 @@ def process [] {
 }
 ";
 
-    LintContext::test_with_parsed_source(good_code, |context| {
-        let violations = (rule().check)(&context);
-        assert_eq!(
-            violations.len(),
-            0,
-            "Should not flag variable when there's additional logic between assignment and \
-                 return"
-        );
-    });
+    rule().assert_ignores(good_code);
 }
 
 #[test]
@@ -67,12 +48,5 @@ def process [] {
 }
 ";
 
-    LintContext::test_with_parsed_source(good_code, |context| {
-        let violations = (rule().check)(&context);
-        assert_eq!(
-            violations.len(),
-            0,
-            "Should not flag when assignment is not wrapped in parentheses"
-        );
-    });
+    rule().assert_ignores(good_code);
 }

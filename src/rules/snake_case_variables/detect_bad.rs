@@ -1,5 +1,4 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn test_bad_let_variables() {
@@ -11,14 +10,7 @@ def bad-func [] {
 }
 "#;
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            violations.len() >= 3,
-            "Should detect all non-snake_case let variables, found {} violations",
-            violations.len()
-        );
-    });
+    rule().assert_violation_count(bad_code, 3);
 }
 
 #[test]
@@ -31,14 +23,7 @@ def bad-func [] {
 }
 ";
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            violations.len() >= 2,
-            "Should detect non-snake_case mut variables, found {} violations",
-            violations.len()
-        );
-    });
+    rule().assert_violation_count(bad_code, 2);
 }
 
 #[test]
@@ -53,14 +38,7 @@ def shadow-test [] {
 }
 ";
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            violations.len() >= 3,
-            "Should detect all shadowed non-snake_case variables, found {} violations",
-            violations.len()
-        );
-    });
+    rule().assert_violation_count(bad_code, 3);
 }
 
 #[test]
@@ -74,12 +52,5 @@ def test-func [] {
 }
 "#;
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            violations.len() >= 4,
-            "Should detect various non-snake_case patterns, found {} violations",
-            violations.len()
-        );
-    });
+    rule().assert_violation_count(bad_code, 4);
 }

@@ -10,12 +10,7 @@ def get-value [] {
 }
 ";
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        assert!(
-            !(rule().check)(&context).is_empty(),
-            "Should detect unnecessary variable before return with pipeline"
-        );
-    });
+    rule().assert_detects(bad_code);
 }
 
 #[test]
@@ -27,12 +22,7 @@ def calculate [] {
 }
 ";
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        assert!(
-            !(rule().check)(&context).is_empty(),
-            "Should detect unnecessary variable before return with conversion"
-        );
-    });
+    rule().assert_detects(bad_code);
 }
 
 #[test]

@@ -1,5 +1,4 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn test_detect_mutable_list_accumulation() {
@@ -10,12 +9,7 @@ for item in [1 2 3] {
 }
 ";
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        assert!(
-            !(rule().check)(&context).is_empty(),
-            "Should detect mutable list accumulation pattern"
-        );
-    });
+    rule().assert_detects(bad_code);
 }
 
 #[test]
@@ -29,10 +23,5 @@ for x in $data {
 }
 ";
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        assert!(
-            !(rule().check)(&context).is_empty(),
-            "Should detect conditional mutable accumulation pattern"
-        );
-    });
+    rule().assert_detects(bad_code);
 }

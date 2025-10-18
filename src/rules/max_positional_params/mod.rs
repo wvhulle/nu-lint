@@ -22,12 +22,15 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 rule_id: "max_positional_params".into(),
                 severity: Severity::Warning,
                 message: format!(
-                    "Command has {positional_count} positional parameters, should have ≤ {MAX_POSITIONAL}"
-                ).into(),
+                    "Command has {positional_count} positional parameters, should have ≤ \
+                     {MAX_POSITIONAL}"
+                )
+                .into(),
                 span: context.find_declaration_span(&signature.name),
                 suggestion: Some(
                     "Consider using named flags (--flag) for parameters beyond the first 2"
-                        .to_string().into(),
+                        .to_string()
+                        .into(),
                 ),
                 fix: None,
                 file: None,

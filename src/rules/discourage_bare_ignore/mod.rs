@@ -34,12 +34,14 @@ fn check(context: &LintContext) -> Vec<Violation> {
                     rule_id: "discourage_bare_ignore".into(),
                     severity: Severity::Info,
                     message: "Piping to 'ignore' suppresses output without error handling"
-                        .to_string().into(),
+                        .to_string()
+                        .into(),
                     span: nu_protocol::Span::new(mat.start(), mat.end()),
                     suggestion: Some(
                         "Consider: 'do -i { ... }' for error suppression or handle errors \
                          explicitly"
-                            .to_string().into(),
+                            .to_string()
+                            .into(),
                     ),
                     fix: None,
                     file: None,

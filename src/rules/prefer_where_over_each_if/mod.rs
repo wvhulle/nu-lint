@@ -21,23 +21,28 @@ fn has_side_effects(code: &str) -> bool {
 }
 
 fn check(context: &LintContext) -> Vec<Violation> {
-    context.violations_from_regex_if(each_if_pattern(), "prefer_where_over_each_if", Severity::Info, |mat| {
-        let caps = each_if_pattern().captures(mat.as_str())?;
-        let condition_and_body = caps.get(2)?.as_str();
+    context.violations_from_regex(
+        each_if_pattern(),
+        "prefer_where_over_each_if",
+        Severity::Info,
+        |mat| {
+            let caps = each_if_pattern().captures(mat.as_str())?;
+            let condition_and_body = caps.get(2)?.as_str();
 
-        let body = condition_and_body
-            .find('{')
-            .map_or(condition_and_body, |pos| &condition_and_body[pos + 1..])
-            .trim();
+            let body = condition_and_body
+                .find('{')
+                .map_or(condition_and_body, |pos| &condition_and_body[pos + 1..])
+                .trim();
 
-        // Check if this is pure filtering (no side effects)
-        (!has_side_effects(body)).then(|| {
-            (
-                "Consider using 'where' for filtering instead of 'each' with 'if'".to_string(),
-                Some("Use '$list | where <condition>' for better performance".to_string()),
-            )
-        })
-    })
+            // Check if this is pure filtering (no side effects)
+            (!has_side_effects(body)).then(|| {
+                (
+                    "Consider using 'where' for filtering instead of 'each' with 'if'".to_string(),
+                    Some("Use '$list | where <condition>' for better performance".to_string()),
+                )
+            })
+        },
+    )
 }
 
 pub fn rule() -> Rule {

@@ -37,13 +37,16 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 violations.push(Violation {
                     rule_id: "descriptive_error_messages".into(),
                     severity: Severity::Warning,
-                    message: "Error message is too generic and not descriptive".to_string().into(),
+                    message: "Error message is too generic and not descriptive"
+                        .to_string()
+                        .into(),
                     span: nu_protocol::Span::new(line_start, line_end),
                     suggestion: Some(
-                        "Use a descriptive error message that explains what went wrong and \
-                         how to fix it.\nExample: error make { msg: \"Failed to parse input: \
-                         expected number, got string\" }"
-                            .to_string().into(),
+                        "Use a descriptive error message that explains what went wrong and how to \
+                         fix it.\nExample: error make { msg: \"Failed to parse input: expected \
+                         number, got string\" }"
+                            .to_string()
+                            .into(),
                     ),
                     fix: None,
                     file: None,

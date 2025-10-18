@@ -29,11 +29,14 @@ impl TypeAnnotationVisitor {
                 self.violations.push(Violation {
                     rule_id: "missing_type_annotation".into(),
                     severity: Severity::Info,
-                    message: format!("Parameter '{}' is missing type annotation", param.name).into(),
+                    message: format!("Parameter '{}' is missing type annotation", param.name)
+                        .into(),
                     span: nu_protocol::Span::unknown(), /* Signature doesn't store individual
                                                          * param spans */
                     suggestion: Some(
-                        "Add type annotation like 'param: string' or 'param: int'".to_string().into(),
+                        "Add type annotation like 'param: string' or 'param: int'"
+                            .to_string()
+                            .into(),
                     ),
                     fix: None,
                     file: None,
@@ -47,10 +50,13 @@ impl TypeAnnotationVisitor {
                 self.violations.push(Violation {
                     rule_id: "missing_type_annotation".into(),
                     severity: Severity::Info,
-                    message: format!("Parameter '{}' is missing type annotation", param.name).into(),
+                    message: format!("Parameter '{}' is missing type annotation", param.name)
+                        .into(),
                     span: nu_protocol::Span::unknown(),
                     suggestion: Some(
-                        "Add type annotation like 'param: string' or 'param: int'".to_string().into(),
+                        "Add type annotation like 'param: string' or 'param: int'"
+                            .to_string()
+                            .into(),
                     ),
                     fix: None,
                     file: None,
@@ -68,7 +74,9 @@ impl TypeAnnotationVisitor {
                 message: format!("Parameter '{}' is missing type annotation", param.name).into(),
                 span: nu_protocol::Span::unknown(),
                 suggestion: Some(
-                    "Add type annotation like 'param: string' or 'param: list'".to_string().into(),
+                    "Add type annotation like 'param: string' or 'param: list'"
+                        .to_string()
+                        .into(),
                 ),
                 fix: None,
                 file: None,

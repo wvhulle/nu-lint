@@ -1,5 +1,4 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn test_missing_exit_code_check() {
@@ -8,12 +7,7 @@ let result = (^bluetoothctl info $mac | complete)
 let output = $result.stdout
 ";
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        assert!(
-            !(rule().check)(&context).is_empty(),
-            "Should detect missing exit_code check"
-        );
-    });
+    rule().assert_detects(bad_code);
 }
 
 #[test]
@@ -25,12 +19,7 @@ def risky-external [] {
 }
 "#;
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        assert!(
-            !(rule().check)(&context).is_empty(),
-            "Should detect missing exit_code check in risky-external function"
-        );
-    });
+    rule().assert_detects(bad_code);
 }
 
 #[test]
@@ -42,10 +31,5 @@ def another-risky [] {
 }
 ";
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        assert!(
-            !(rule().check)(&context).is_empty(),
-            "Should detect missing exit_code check in another-risky function"
-        );
-    });
+    rule().assert_detects(bad_code);
 }

@@ -28,12 +28,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
                         rule_id: "avoid_mutable_accumulation".into(),
                         severity: Severity::Warning,
                         message: format!(
-                            "Mutable list '{var_name}' with append - consider using \
-                             functional pipeline"
-                        ).into(),
+                            "Mutable list '{var_name}' with append - consider using functional \
+                             pipeline"
+                        )
+                        .into(),
                         span: nu_protocol::Span::new(full_match.start(), full_match.end()),
                         suggestion: Some(
-                            "Use '$items | each { ... }' instead of mutable accumulation".into()
+                            "Use '$items | each { ... }' instead of mutable accumulation".into(),
                         ),
                         fix: None,
                         file: None,

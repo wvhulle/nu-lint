@@ -1,9 +1,9 @@
-    use super::rule;
-use crate::LintContext;
 
-    #[test]
-    fn test_detect_too_many_positional_params_complex() {
-        let bad_code = r"
+use super::rule;
+
+#[test]
+fn test_detect_too_many_positional_params_complex() {
+    let bad_code = r"
 def complex-command [
     param1: string
     param2: int
@@ -14,26 +14,16 @@ def complex-command [
 }
 ";
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            assert!(
-                !(rule().check)(&context).is_empty(),
-                "Should detect function with too many positional parameters"
-            );
-        });
-    }
+    rule().assert_detects(bad_code);
+}
 
-    #[test]
-    fn test_detect_too_many_positional_params_simple() {
-        let bad_code = r"
+#[test]
+fn test_detect_too_many_positional_params_simple() {
+    let bad_code = r"
 def too-many [a: int, b: int, c: int, d: int, e: int] {
     print $a
 }
 ";
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            assert!(
-                !(rule().check)(&context).is_empty(),
-                "Should detect function with too many simple positional parameters"
-            );
-        });
-    }
+    rule().assert_detects(bad_code);
+}

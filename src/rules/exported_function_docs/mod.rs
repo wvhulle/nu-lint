@@ -56,14 +56,16 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 violations.push(Violation {
                     rule_id: "exported_function_docs".into(),
                     severity: Severity::Warning,
-                    message: format!(
-                        "Exported function '{func_name}' is missing documentation"
-                    ).into(),
+                    message: format!("Exported function '{func_name}' is missing documentation")
+                        .into(),
                     span: nu_protocol::Span::new(line_start, line_end),
-                    suggestion: Some(format!(
-                        "Add a documentation comment above the function:\n# Description of \
-                         {func_name}\nexport def {func_name} ..."
-                    ).into()),
+                    suggestion: Some(
+                        format!(
+                            "Add a documentation comment above the function:\n# Description of \
+                             {func_name}\nexport def {func_name} ..."
+                        )
+                        .into(),
+                    ),
                     fix: None,
                     file: None,
                 });

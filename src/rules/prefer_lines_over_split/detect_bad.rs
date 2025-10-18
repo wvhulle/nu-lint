@@ -1,5 +1,4 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn test_detect_split_row_with_newline_double_quotes() {
@@ -7,13 +6,7 @@ fn test_detect_split_row_with_newline_double_quotes() {
 $text | split row "\n"
 "#;
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            !violations.is_empty(),
-            "Should detect split row with \\n in double quotes"
-        );
-    });
+    rule().assert_detects(bad_code);
 }
 
 #[test]
@@ -22,13 +15,7 @@ fn test_detect_split_row_with_newline_single_quotes() {
 $text | split row '\n'
 ";
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            !violations.is_empty(),
-            "Should detect split row with \\n in single quotes"
-        );
-    });
+    rule().assert_detects(bad_code);
 }
 
 #[test]
@@ -39,11 +26,5 @@ def process-text [] {
 }
 "#;
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            !violations.is_empty(),
-            "Should detect split row with newline in function"
-        );
-    });
+    rule().assert_detects(bad_code);
 }

@@ -1,5 +1,4 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn test_ignore_lines_usage() {
@@ -7,10 +6,7 @@ fn test_ignore_lines_usage() {
 open file.txt | lines
 ";
 
-    LintContext::test_with_parsed_source(good_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(violations.is_empty(), "Should not flag proper lines usage");
-    });
+    rule().assert_ignores(good_code);
 }
 
 #[test]
@@ -19,13 +15,7 @@ fn test_ignore_split_row_with_other_delimiter() {
 "a,b,c" | split row ","
 "#;
 
-    LintContext::test_with_parsed_source(good_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            violations.is_empty(),
-            "Should not flag split row with non-newline delimiter"
-        );
-    });
+    rule().assert_ignores(good_code);
 }
 
 #[test]
@@ -34,13 +24,7 @@ fn test_ignore_split_row_with_colon() {
 "PATH=/usr/bin:/bin" | split row ":"
 "#;
 
-    LintContext::test_with_parsed_source(good_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            violations.is_empty(),
-            "Should not flag split row with colon delimiter"
-        );
-    });
+    rule().assert_ignores(good_code);
 }
 
 #[test]
@@ -49,11 +33,5 @@ fn test_ignore_split_row_with_space() {
 "one two three" | split row " "
 "#;
 
-    LintContext::test_with_parsed_source(good_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            violations.is_empty(),
-            "Should not flag split row with space delimiter"
-        );
-    });
+    rule().assert_ignores(good_code);
 }

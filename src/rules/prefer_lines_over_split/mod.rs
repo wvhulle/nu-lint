@@ -29,12 +29,14 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 rule_id: "prefer_lines_over_split".to_string().into(),
                 severity: Severity::Info,
                 message: "Use 'lines' instead of 'split row \"\\n\"' for splitting by newlines"
-                    .to_string().into(),
+                    .to_string()
+                    .into(),
                 span: nu_protocol::Span::new(line_start, line_end),
                 suggestion: Some(
-                    "Replace with: | lines\nThe 'lines' command is more efficient and clearer \
-                     for splitting text by newlines."
-                        .to_string().into(),
+                    "Replace with: | lines\nThe 'lines' command is more efficient and clearer for \
+                     splitting text by newlines."
+                        .to_string()
+                        .into(),
                 ),
                 fix: None,
                 file: None,

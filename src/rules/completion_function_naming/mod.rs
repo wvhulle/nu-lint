@@ -30,15 +30,19 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 severity: Severity::Warning,
                 message: format!(
                     "Completion function '{func_name}' should use 'nu-complete' prefix"
-                ).into(),
+                )
+                .into(),
                 span,
-                suggestion: Some(format!(
-                    "Consider renaming to: nu-complete {}",
-                    func_name
-                        .replace("complete", "")
-                        .replace("completion", "")
-                        .trim()
-                ).into()),
+                suggestion: Some(
+                    format!(
+                        "Consider renaming to: nu-complete {}",
+                        func_name
+                            .replace("complete", "")
+                            .replace("completion", "")
+                            .trim()
+                    )
+                    .into(),
+                ),
                 fix: None,
                 file: None,
             });

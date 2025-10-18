@@ -51,7 +51,8 @@ impl<'a> BraceSpacingVisitor<'a> {
                     rule_id: "brace_spacing".into(),
                     severity: Severity::Info,
                     message: "No space allowed after opening brace before closure parameters"
-                        .to_string().into(),
+                        .to_string()
+                        .into(),
                     span,
                     suggestion: Some("Use {|param| instead of { |param|".to_string().into()),
                     fix: None,
@@ -76,10 +77,13 @@ impl<'a> BraceSpacingVisitor<'a> {
                 rule_id: "brace_spacing".into(),
                 severity: Severity::Info,
                 message: "Inconsistent brace spacing: use either {x} or { x }, not { x} or {x }"
-                    .to_string().into(),
+                    .to_string()
+                    .into(),
                 span,
                 suggestion: Some(
-                    "Use consistent spacing: both spaces or no spaces inside braces".to_string().into(),
+                    "Use consistent spacing: both spaces or no spaces inside braces"
+                        .to_string()
+                        .into(),
                 ),
                 fix: None,
                 file: None,
@@ -125,7 +129,8 @@ pub fn rule() -> Rule {
         "brace_spacing",
         RuleCategory::Formatting,
         Severity::Info,
-        "Braces should have consistent spacing: either {x} or { x }, and no space before closure parameters",
+        "Braces should have consistent spacing: either {x} or { x }, and no space before closure \
+         parameters",
         check,
     )
 }

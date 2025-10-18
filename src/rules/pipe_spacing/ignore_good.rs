@@ -1,6 +1,5 @@
-use crate::LintContext;
-
 use super::rule;
+use crate::LintContext;
 
 #[test]
 fn test_pipe_spacing() {

@@ -29,8 +29,8 @@ fn get_builtin_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
         "find",
         BuiltinAlternative::with_note(
             "ls or glob",
-            "Use 'ls **/*.ext' for recursive file matching, 'glob **/*.ext' for pattern \
-             matching, or 'ls' with pipes for complex filtering",
+            "Use 'ls **/*.ext' for recursive file matching, 'glob **/*.ext' for pattern matching, \
+             or 'ls' with pipes for complex filtering",
         ),
     );
 
@@ -155,7 +155,8 @@ pub fn rule() -> Rule {
         "avoid_external_file_tools",
         RuleCategory::Idioms,
         Severity::Info,
-        "Avoid external file tools when Nushell built-ins are available (ls, cat, grep, head, tail, sort, uniq, find)",
+        "Avoid external file tools when Nushell built-ins are available (ls, cat, grep, head, \
+         tail, sort, uniq, find)",
         check,
     )
 }

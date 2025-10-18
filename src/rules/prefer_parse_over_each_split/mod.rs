@@ -73,7 +73,8 @@ impl EachSplitVisitor {
         }
     }
 
-    #[must_use] pub fn into_violations(self) -> Vec<Violation> {
+    #[must_use]
+    pub fn into_violations(self) -> Vec<Violation> {
         self.violations
     }
 }
@@ -101,12 +102,14 @@ impl AstVisitor for EachSplitVisitor {
                     severity: Severity::Info,
                     message: "Manual splitting with 'each' and 'split row' - consider using \
                               'parse'"
-                        .to_string().into(),
+                        .to_string()
+                        .into(),
                     span: call.span(),
                     suggestion: Some(
                         "Use 'parse \"{field1} {field2}\"' for structured text extraction instead \
                          of 'each' with 'split row'"
-                            .to_string().into(),
+                            .to_string()
+                            .into(),
                     ),
                     fix: None,
                     file: None,

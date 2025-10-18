@@ -1,5 +1,4 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn test_detect_addition_assignment() {
@@ -8,12 +7,7 @@ mut count = 0
 $count = $count + 1
 ";
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        assert!(
-            !(rule().check)(&context).is_empty(),
-            "Should detect addition assignment pattern"
-        );
-    });
+    rule().assert_detects(bad_code);
 }
 
 #[test]
@@ -23,12 +17,7 @@ mut count = 0
 $count = $count - 5
 ";
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        assert!(
-            !(rule().check)(&context).is_empty(),
-            "Should detect subtraction assignment pattern"
-        );
-    });
+    rule().assert_detects(bad_code);
 }
 
 #[test]
@@ -38,10 +27,5 @@ mut count = 0
 $count = $count * 2
 ";
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        assert!(
-            !(rule().check)(&context).is_empty(),
-            "Should detect multiplication assignment pattern"
-        );
-    });
+    rule().assert_detects(bad_code);
 }

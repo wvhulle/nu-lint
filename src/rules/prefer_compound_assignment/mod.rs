@@ -116,9 +116,12 @@ impl AstVisitor for CompoundAssignmentVisitor {
                                 message: format!(
                                     "Use compound assignment: {var_text} {compound_op} instead of \
                                      {var_text} = {var_text} {op_symbol} ..."
-                                ).into(),
+                                )
+                                .into(),
                                 span: expr.span,
-                                suggestion: Some(format!("Replace with: {var_text} {compound_op}").into()),
+                                suggestion: Some(
+                                    format!("Replace with: {var_text} {compound_op}").into(),
+                                ),
                                 fix,
                                 file: None,
                             });

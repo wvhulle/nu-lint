@@ -1,5 +1,4 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn test_ignore_parse_usage() {
@@ -7,10 +6,7 @@ fn test_ignore_parse_usage() {
 open data.txt | parse "{name} {value}"
 "#;
 
-    LintContext::test_with_parsed_source(good_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(violations.is_empty(), "Should not flag proper parse usage");
-    });
+    rule().assert_ignores(good_code);
 }
 
 #[test]
@@ -19,10 +15,7 @@ fn test_ignore_each_without_split() {
 seq 1 10 | each { |x| $x * 2 }
 ";
 
-    LintContext::test_with_parsed_source(good_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(violations.is_empty(), "Should not flag each without split");
-    });
+    rule().assert_ignores(good_code);
 }
 
 #[test]
@@ -31,8 +24,5 @@ fn test_ignore_split_without_each() {
 "one,two,three" | split row ","
 "#;
 
-    LintContext::test_with_parsed_source(good_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(violations.is_empty(), "Should not flag split without each");
-    });
+    rule().assert_ignores(good_code);
 }

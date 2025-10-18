@@ -19,13 +19,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 rule_id: "discourage_underscore_commands".into(),
                 severity: Severity::Info,
                 message: format!(
-                    "Command '{command_name}' uses underscores - prefer hyphens for \
-                     readability"
-                ).into(),
+                    "Command '{command_name}' uses underscores - prefer hyphens for readability"
+                )
+                .into(),
                 span,
-                suggestion: Some(format!(
-                    "Rename to '{suggested_name}' following Nushell convention"
-                ).into()),
+                suggestion: Some(
+                    format!("Rename to '{suggested_name}' following Nushell convention").into(),
+                ),
                 fix: None,
                 file: None,
             });

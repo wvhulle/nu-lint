@@ -66,11 +66,5 @@ def outer [] {
 }
 ";
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            !violations.is_empty(),
-            "Should detect missing type annotation in nested function"
-        );
-    });
+    rule().assert_detects(bad_code);
 }

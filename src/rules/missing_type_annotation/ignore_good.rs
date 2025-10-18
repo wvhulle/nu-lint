@@ -1,5 +1,4 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn test_ignore_fully_annotated_params() {
@@ -9,13 +8,7 @@ def greet [name: string] {
 }
 "#;
 
-    LintContext::test_with_parsed_source(good_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            violations.is_empty(),
-            "Should not flag parameters with type annotations"
-        );
-    });
+    rule().assert_ignores(good_code);
 }
 
 #[test]
@@ -26,13 +19,7 @@ def add [x: int, y: int] {
 }
 ";
 
-    LintContext::test_with_parsed_source(good_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            violations.is_empty(),
-            "Should not flag parameters with type annotations"
-        );
-    });
+    rule().assert_ignores(good_code);
 }
 
 #[test]
@@ -47,13 +34,7 @@ def process [
 }
 ";
 
-    LintContext::test_with_parsed_source(good_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            violations.is_empty(),
-            "Should not flag flags or annotated parameters"
-        );
-    });
+    rule().assert_ignores(good_code);
 }
 
 #[test]
@@ -64,13 +45,7 @@ def variadic [...args: list] {
 }
 ";
 
-    LintContext::test_with_parsed_source(good_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            violations.is_empty(),
-            "Should not flag spread parameters with annotations"
-        );
-    });
+    rule().assert_ignores(good_code);
 }
 
 #[test]
@@ -81,13 +56,7 @@ def hello [] {
 }
 ";
 
-    LintContext::test_with_parsed_source(good_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            violations.is_empty(),
-            "Should not flag functions with no parameters"
-        );
-    });
+    rule().assert_ignores(good_code);
 }
 
 #[test]
@@ -101,11 +70,5 @@ def process [
 }
 ";
 
-    LintContext::test_with_parsed_source(good_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            violations.is_empty(),
-            "Should not flag parameters with complex type annotations"
-        );
-    });
+    rule().assert_ignores(good_code);
 }

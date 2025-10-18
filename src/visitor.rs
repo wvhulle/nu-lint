@@ -26,6 +26,8 @@ pub trait AstVisitor {
         walk_call(self, call, context);
     }
 
+    // Optional hooks for specific node types - override in custom visitors as
+    // needed
     fn visit_var_decl(&mut self, _var_id: VarId, _span: Span, _context: &VisitContext) {}
 
     fn visit_var_ref(&mut self, _var_id: VarId, _span: Span, _context: &VisitContext) {}
@@ -44,12 +46,11 @@ pub trait AstVisitor {
 
     fn visit_list(&mut self, items: &[nu_protocol::ast::ListItem], context: &VisitContext) {
         for item in items {
-            match item {
+            let expr = match item {
                 nu_protocol::ast::ListItem::Item(expr)
-                | nu_protocol::ast::ListItem::Spread(_, expr) => {
-                    self.visit_expression(expr, context);
-                }
-            }
+                | nu_protocol::ast::ListItem::Spread(_, expr) => expr,
+            };
+            self.visit_expression(expr, context);
         }
     }
 
@@ -64,15 +65,7 @@ pub struct VisitContext<'a> {
     pub source: &'a str,
 }
 
-impl<'a> VisitContext<'a> {
-    #[must_use]
-    pub fn new(working_set: &'a StateWorkingSet<'a>, source: &'a str) -> Self {
-        Self {
-            working_set,
-            source,
-        }
-    }
-
+impl VisitContext<'_> {
     /// Get the text content of a span
     #[must_use]
     pub fn get_span_contents(&self, span: Span) -> &str {
@@ -100,14 +93,13 @@ impl<'a> VisitContext<'a> {
     }
 
     /// Extract text arguments from an external command call
-    /// Returns a Vec of argument strings extracted from the AST
     #[must_use]
     pub fn extract_external_args(
         &self,
         args: &[nu_protocol::ast::ExternalArgument],
     ) -> Vec<String> {
         args.iter()
-            .map(|arg| match &arg {
+            .map(|arg| match arg {
                 nu_protocol::ast::ExternalArgument::Regular(expr) => {
                     self.get_span_contents(expr.span).to_string()
                 }

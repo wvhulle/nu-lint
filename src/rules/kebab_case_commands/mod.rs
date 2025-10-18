@@ -80,7 +80,8 @@ impl KebabCaseCommandsVisitor {
             self.violations.push(Violation {
                 rule_id: "kebab_case_commands".into(),
                 severity: Severity::Warning,
-                message: format!("Command '{cmd_name}' should use kebab-case naming convention").into(),
+                message: format!("Command '{cmd_name}' should use kebab-case naming convention")
+                    .into(),
                 span,
                 suggestion: Some(format!("Consider renaming to: {kebab_case_name}").into()),
                 fix,

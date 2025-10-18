@@ -3,7 +3,6 @@ use crate::LintContext;
 
 #[test]
 fn test_external_command_ignore_acceptable() {
-
     let acceptable_code = r"
 ^bluetoothctl power on | ignore
 ";
@@ -18,7 +17,6 @@ fn test_external_command_ignore_acceptable() {
 
 #[test]
 fn test_do_ignore_not_flagged() {
-
     let good_code = r"
 do -i { some | pipeline }
 ";

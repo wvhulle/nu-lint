@@ -1,7 +1,6 @@
 use super::rule;
 use crate::LintContext;
 
-
 #[test]
 fn test_good_error_make() {
     let good = "error make { msg: 'Something went wrong', label: { text: 'here', span: $span } }";

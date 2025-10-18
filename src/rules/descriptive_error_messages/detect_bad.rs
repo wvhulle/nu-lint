@@ -11,12 +11,7 @@ def process-file [file: string] {
 }
 "#;
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        assert!(
-            !(rule().check)(&context).is_empty(),
-            "Should detect generic 'error' message"
-        );
-    });
+    rule().assert_detects(bad_code);
 }
 
 #[test]
@@ -67,12 +62,7 @@ def convert-data [input] {
 }
 "#;
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        assert!(
-            !(rule().check)(&context).is_empty(),
-            "Should detect vague 'failed' message"
-        );
-    });
+    rule().assert_detects(bad_code);
 }
 
 #[test]
@@ -83,10 +73,5 @@ def validate [data] {
 }
 "#;
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        assert!(
-            !(rule().check)(&context).is_empty(),
-            "Should detect 'something went wrong' message"
-        );
-    });
+    rule().assert_detects(bad_code);
 }

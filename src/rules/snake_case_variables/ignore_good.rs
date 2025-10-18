@@ -1,5 +1,4 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn test_good_let_variables() {
@@ -11,15 +10,7 @@ def good-func [] {
 }
 "#;
 
-    LintContext::test_with_parsed_source(good_code, |context| {
-        let violations = (rule().check)(&context);
-        assert_eq!(
-            violations.len(),
-            0,
-            "Should not flag valid snake_case variables, but found {} violations",
-            violations.len()
-        );
-    });
+    rule().assert_ignores(good_code);
 }
 
 #[test]
@@ -32,15 +23,7 @@ def good-func [] {
 }
 ";
 
-    LintContext::test_with_parsed_source(good_code, |context| {
-        let violations = (rule().check)(&context);
-        assert_eq!(
-            violations.len(),
-            0,
-            "Should not flag valid snake_case mut variables, but found {} violations",
-            violations.len()
-        );
-    });
+    rule().assert_ignores(good_code);
 }
 
 #[test]
@@ -54,15 +37,7 @@ def good-func [] {
 }
 ";
 
-    LintContext::test_with_parsed_source(good_code, |context| {
-        let violations = (rule().check)(&context);
-        assert_eq!(
-            violations.len(),
-            0,
-            "Should not flag single letter variables, but found {} violations",
-            violations.len()
-        );
-    });
+    rule().assert_ignores(good_code);
 }
 
 #[test]
@@ -75,13 +50,5 @@ def good-func [] {
 }
 "#;
 
-    LintContext::test_with_parsed_source(good_code, |context| {
-        let violations = (rule().check)(&context);
-        assert_eq!(
-            violations.len(),
-            0,
-            "Should not flag snake_case variables with numbers, but found {} violations",
-            violations.len()
-        );
-    });
+    rule().assert_ignores(good_code);
 }

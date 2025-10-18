@@ -42,12 +42,14 @@ fn check(context: &LintContext) -> Vec<Violation> {
             violations.push(Violation {
                 rule_id: "multiline_formatting".into(),
                 severity: Severity::Info,
-                message: "Complex constructs should use multi-line format for better \
-                          readability"
-                    .to_string().into(),
+                message: "Complex constructs should use multi-line format for better readability"
+                    .to_string()
+                    .into(),
                 span: nu_protocol::Span::new(line_start, line_start + line.len()),
                 suggestion: Some(
-                    "Consider breaking this construct across multiple lines".to_string().into(),
+                    "Consider breaking this construct across multiple lines"
+                        .to_string()
+                        .into(),
                 ),
                 fix: None,
                 file: None,
@@ -64,9 +66,10 @@ fn check(context: &LintContext) -> Vec<Violation> {
             violations.push(Violation {
                 rule_id: "multiline_formatting".into(),
                 severity: Severity::Info,
-                message: "Long lists should use multi-line format with each item on a \
-                          separate line"
-                    .to_string().into(),
+                message: "Long lists should use multi-line format with each item on a separate \
+                          line"
+                    .to_string()
+                    .into(),
                 span: nu_protocol::Span::new(line_start, line_start + line.len()),
                 suggestion: Some("Put each list item on a separate line".to_string().into()),
                 fix: None,
@@ -84,11 +87,16 @@ fn check(context: &LintContext) -> Vec<Violation> {
             violations.push(Violation {
                 rule_id: "multiline_formatting".into(),
                 severity: Severity::Info,
-                message: "Long records should use multi-line format with each field on a \
-                          separate line"
-                    .to_string().into(),
+                message: "Long records should use multi-line format with each field on a separate \
+                          line"
+                    .to_string()
+                    .into(),
                 span: nu_protocol::Span::new(line_start, line_start + line.len()),
-                suggestion: Some("Put each record field on a separate line".to_string().into()),
+                suggestion: Some(
+                    "Put each record field on a separate line"
+                        .to_string()
+                        .into(),
+                ),
                 fix: None,
                 file: None,
             });

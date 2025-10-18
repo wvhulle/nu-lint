@@ -1,5 +1,4 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn test_exported_function_with_docs() {
@@ -9,14 +8,7 @@ export def my-command [] {
     echo "hello"
 }
 "#;
-    LintContext::test_with_parsed_source(source, |context| {
-        let violations = (rule().check)(&context);
-
-        assert!(
-            violations.is_empty(),
-            "Should not flag documented exported functions"
-        );
-    });
+    rule().assert_ignores(source);
 }
 
 #[test]
@@ -26,14 +18,7 @@ def my-command [] {
     echo "hello"
 }
 "#;
-    LintContext::test_with_parsed_source(source, |context| {
-        let violations = (rule().check)(&context);
-
-        assert!(
-            violations.is_empty(),
-            "Should not flag non-exported functions"
-        );
-    });
+    rule().assert_ignores(source);
 }
 
 #[test]
@@ -45,12 +30,5 @@ export def process-data [input: string] {
     echo $input
 }
 ";
-    LintContext::test_with_parsed_source(source, |context| {
-        let violations = (rule().check)(&context);
-
-        assert!(
-            violations.is_empty(),
-            "Should not flag exported functions with documentation"
-        );
-    });
+    rule().assert_ignores(source);
 }

@@ -69,7 +69,9 @@ impl<'a> OmitListCommasVisitor<'a> {
                         message: "Omit commas between list items".to_string().into(),
                         span: comma_span,
                         suggestion: Some(
-                            "Remove the comma - Nushell lists don't need commas".to_string().into(),
+                            "Remove the comma - Nushell lists don't need commas"
+                                .to_string()
+                                .into(),
                         ),
                         fix: None,
                         file: None,

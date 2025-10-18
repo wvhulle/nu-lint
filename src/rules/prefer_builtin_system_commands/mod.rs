@@ -94,7 +94,6 @@ fn get_builtin_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
     map
 }
 
-
 /// Build a simple fix for system command replacements
 fn build_fix(
     cmd_text: &str,
@@ -208,7 +207,8 @@ pub fn rule() -> Rule {
         "avoid_external_system_tools",
         RuleCategory::Idioms,
         Severity::Info,
-        "Avoid external system tools when Nushell built-ins are available (env, date, whoami, man, which, cd, pwd, etc.)",
+        "Avoid external system tools when Nushell built-ins are available (env, date, whoami, \
+         man, which, cd, pwd, etc.)",
         check,
     )
 }

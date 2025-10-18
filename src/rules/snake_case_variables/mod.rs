@@ -88,7 +88,8 @@ impl SnakeCaseVariablesVisitor {
             self.violations.push(Violation {
                 rule_id: "snake_case_variables".into(),
                 severity: Severity::Warning,
-                message: format!("{var_type} '{var_name}' should use snake_case naming convention").into(),
+                message: format!("{var_type} '{var_name}' should use snake_case naming convention")
+                    .into(),
                 span,
                 suggestion: Some(format!("Consider renaming to: {snake_case_name}").into()),
                 fix,

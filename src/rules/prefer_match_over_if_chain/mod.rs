@@ -15,7 +15,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     let if_chain_pattern =
         Regex::new(r"if\s+\$(\w+)\s*==\s*[^\{]+\{[^\}]*\}\s*else\s+if\s+\$(\w+)\s*==").unwrap();
 
-    violations.extend(context.violations_from_regex_if(
+    violations.extend(context.violations_from_regex(
         &if_chain_pattern,
         "prefer_match_over_if_chain",
         Severity::Info,
@@ -28,12 +28,12 @@ fn check(context: &LintContext) -> Vec<Violation> {
             if var_name1 == var_name2 {
                 Some((
                     format!(
-                        "If-else-if chain comparing '{var_name1}' to different values - \
-                         consider using 'match'"
+                        "If-else-if chain comparing '{var_name1}' to different values - consider \
+                         using 'match'"
                     ),
                     Some(
-                        "Use 'match $var { value1 => { ... }, value2 => { ... }, _ => { ... } \
-                         }' for clearer value-based branching"
+                        "Use 'match $var { value1 => { ... }, value2 => { ... }, _ => { ... } }' \
+                         for clearer value-based branching"
                             .to_string(),
                     ),
                 ))
@@ -45,10 +45,9 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
     // Also detect multiple else-if chains (3+ branches) even if variable changes
     let multiple_else_if =
-        Regex::new(r"if\s+[^\{]+\{[^\}]*\}\s*else\s+if\s+[^\{]+\{[^\}]*\}\s*else\s+if")
-            .unwrap();
+        Regex::new(r"if\s+[^\{]+\{[^\}]*\}\s*else\s+if\s+[^\{]+\{[^\}]*\}\s*else\s+if").unwrap();
 
-    violations.extend(context.violations_from_regex_if(
+    violations.extend(context.violations_from_regex(
         &multiple_else_if,
         "prefer_match_over_if_chain",
         Severity::Info,

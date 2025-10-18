@@ -1,7 +1,6 @@
 use super::rule;
 use crate::LintContext;
 
-
 #[test]
 fn test_good_range_iteration() {
     let good = "0..10 | each { |i| print $i }";

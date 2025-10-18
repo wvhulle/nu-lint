@@ -1,7 +1,6 @@
 use super::rule;
 use crate::LintContext;
 
-
 #[test]
 fn test_good_str_replace() {
     let good = "'hello world' | str replace 'world' 'universe'";

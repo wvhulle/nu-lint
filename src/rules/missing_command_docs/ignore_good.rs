@@ -1,5 +1,4 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn test_command_with_docs_not_flagged() {
@@ -10,10 +9,7 @@ def my-command [] {
 }
 ";
 
-    LintContext::test_with_parsed_source(good_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(violations.is_empty(), "Should not flag documented commands");
-    });
+    rule().assert_ignores(good_code);
 }
 
 #[test]
@@ -26,13 +22,7 @@ def process-data [input: string] {
 }
 ";
 
-    LintContext::test_with_parsed_source(good_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            violations.is_empty(),
-            "Should not flag commands with multiline docs"
-        );
-    });
+    rule().assert_ignores(good_code);
 }
 
 #[test]
@@ -44,11 +34,5 @@ def greet [name: string] {
 }
 "#;
 
-    LintContext::test_with_parsed_source(good_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            violations.is_empty(),
-            "Should not flag commands with doc comments"
-        );
-    });
+    rule().assert_ignores(good_code);
 }

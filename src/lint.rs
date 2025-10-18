@@ -97,7 +97,6 @@ impl Violation {
     }
 }
 
-
 #[derive(Debug, Clone)]
 pub struct Fix {
     pub description: Cow<'static, str>,

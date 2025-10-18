@@ -1,5 +1,4 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn test_detect_while_loop_with_counter() {
@@ -11,12 +10,7 @@ while $attempts < 10 {
 }
 ";
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        assert!(
-            !(rule().check)(&context).is_empty(),
-            "Should detect while loop with counter pattern"
-        );
-    });
+    rule().assert_detects(bad_code);
 }
 
 #[test]
@@ -29,10 +23,5 @@ while $count < 5 {
 }
 ";
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        assert!(
-            !(rule().check)(&context).is_empty(),
-            "Should detect while loop with compound assignment pattern"
-        );
-    });
+    rule().assert_detects(bad_code);
 }

@@ -1,7 +1,5 @@
-
 use super::rule;
 use crate::LintContext;
-
 
 #[test]
 fn test_good_builtin_env_access() {

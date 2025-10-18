@@ -1,16 +1,10 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn test_not_is_empty_detected() {
     let bad_code = "if not ($list | is-empty) { echo 'has items' }";
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        assert!(
-            !(rule().check)(&context).is_empty(),
-            "Should detect 'not ... is-empty'"
-        );
-    });
+    rule().assert_detects(bad_code);
 }
 
 #[test]
@@ -21,22 +15,12 @@ if not ($list | is-empty) {
 }
 "#;
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        assert!(
-            !(rule().check)(&context).is_empty(),
-            "Should detect 'not is-empty' in if statement"
-        );
-    });
+    rule().assert_detects(bad_code);
 }
 
 #[test]
 fn test_detect_not_is_empty_in_assignment() {
     let bad_code = "let has_data = not ($data | is-empty)";
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        assert!(
-            !(rule().check)(&context).is_empty(),
-            "Should detect 'not is-empty' in assignment"
-        );
-    });
+    rule().assert_detects(bad_code);
 }

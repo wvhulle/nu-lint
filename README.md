@@ -4,7 +4,7 @@ A *static analysis tool for [Nushell](https://www.nushell.sh/) scripts* **based 
 
 Can *detect stylistic issues in Nushell scripts* and suggest improvements. Functions complementary to the basic checks done by [nu-check](https://www.nushell.sh/commands/docs/nu-check.html).
 
-(Inspired by Rust's Clippy linter tool.)
+(Inspired by Rust's [Clippy](https://github.com/rust-lang/rust-clippy))
 
 ## Installation
 

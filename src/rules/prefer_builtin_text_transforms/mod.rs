@@ -25,8 +25,7 @@ fn get_builtin_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
         "awk",
         BuiltinAlternative::with_note(
             "where, select, or each",
-            "Use 'where' for filtering, 'select' for columns, or 'each' for row-by-row \
-             processing",
+            "Use 'where' for filtering, 'select' for columns, or 'each' for row-by-row processing",
         ),
     );
     map.insert(
@@ -64,7 +63,6 @@ fn get_builtin_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
 
     map
 }
-
 
 /// Build a Fix with appropriate replacement based on the external command
 fn build_fix(
@@ -175,7 +173,8 @@ pub fn rule() -> Rule {
         "avoid_external_text_tools",
         RuleCategory::Idioms,
         Severity::Info,
-        "Avoid external text processing tools when Nushell built-ins are available (sed, awk, cut, wc, tr, tee)",
+        "Avoid external text processing tools when Nushell built-ins are available (sed, awk, \
+         cut, wc, tr, tee)",
         check,
     )
 }

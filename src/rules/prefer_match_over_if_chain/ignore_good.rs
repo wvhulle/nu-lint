@@ -1,7 +1,6 @@
 use super::rule;
 use crate::LintContext;
 
-
 #[test]
 fn test_good_match_statement() {
     let good = "match $status { 'ok' => 'success', 'error' => 'failed', _ => 'unknown' }";

@@ -13,14 +13,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     let split_get_pattern =
         Regex::new(r#"split\s+row\s+["'][^"']*["']\s*\|\s*(get\s+\d+|skip\s+\d+)"#).unwrap();
 
-    violations.extend(context.violations_from_regex_if(
+    violations.extend(context.violations_from_regex(
         &split_get_pattern,
         "prefer_parse_command",
         Severity::Warning,
         |_| {
             Some((
-                "Manual string splitting with indexed access - consider using 'parse'"
-                    .to_string(),
+                "Manual string splitting with indexed access - consider using 'parse'".to_string(),
                 Some(
                     "Use 'parse \"pattern {field1} {field2}\"' for structured text extraction"
                         .to_string(),
@@ -30,8 +29,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     ));
 
     // Pattern 2: let parts = ... split row, then $parts | get
-    let split_to_var_pattern =
-        Regex::new(r"let\s+(\w+)\s*=\s*\([^)]*split\s+row[^)]*\)").unwrap();
+    let split_to_var_pattern = Regex::new(r"let\s+(\w+)\s*=\s*\([^)]*split\s+row[^)]*\)").unwrap();
 
     violations.extend(
         split_to_var_pattern
@@ -47,14 +45,15 @@ fn check(context: &LintContext) -> Vec<Violation> {
                         rule_id: "prefer_parse_command".into(),
                         severity: Severity::Warning,
                         message: format!(
-                            "Variable '{var_name}' from split row with indexed access - \
-                             consider using 'parse'"
-                        ).into(),
+                            "Variable '{var_name}' from split row with indexed access - consider \
+                             using 'parse'"
+                        )
+                        .into(),
                         span: nu_protocol::Span::new(mat.start(), mat.end()),
                         suggestion: Some(
-                            "Use 'parse' command to extract named fields instead of indexed \
-                             access"
-                                .to_string().into(),
+                            "Use 'parse' command to extract named fields instead of indexed access"
+                                .to_string()
+                                .into(),
                         ),
                         fix: None,
                         file: None,

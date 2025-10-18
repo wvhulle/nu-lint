@@ -133,11 +133,5 @@ def process [] {
 }
 ";
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            violations.is_empty(),
-            "Should not flag reassigned mutable variable"
-        );
-    });
+    rule().assert_ignores(bad_code);
 }

@@ -1,5 +1,4 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn test_detect_camel_case_command() {
@@ -9,12 +8,7 @@ def myCommand [] {
 }
 "#;
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        assert!(
-            !(rule().check)(&context).is_empty(),
-            "Should detect camelCase command name"
-        );
-    });
+    rule().assert_detects(bad_code);
 }
 
 #[test]
@@ -25,12 +19,7 @@ def my_command [] {
 }
 "#;
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        assert!(
-            !(rule().check)(&context).is_empty(),
-            "Should detect underscore in command name"
-        );
-    });
+    rule().assert_detects(bad_code);
 }
 
 #[test]
@@ -41,10 +30,5 @@ def AnotherCommand [] {
 }
 "#;
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        assert!(
-            !(rule().check)(&context).is_empty(),
-            "Should detect PascalCase command name"
-        );
-    });
+    rule().assert_detects(bad_code);
 }

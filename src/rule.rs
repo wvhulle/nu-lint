@@ -26,7 +26,8 @@ pub enum RuleCategory {
 
 impl RuleCategory {
     /// Get the string representation of this category
-    #[must_use] pub const fn as_str(self) -> &'static str {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
         match self {
             RuleCategory::Naming => "naming",
             RuleCategory::Formatting => "formatting",
@@ -73,23 +74,55 @@ impl Rule {
         }
     }
 
-    /// Get the rule ID
-    #[must_use] pub const fn id(&self) -> &'static str {
-        self.id
+    /// Run the rule's check function on the given context
+    #[must_use]
+    pub fn check(&self, context: &LintContext) -> Vec<Violation> {
+        (self.check)(context)
     }
 
-    /// Get the rule category
-    #[must_use] pub const fn category(&self) -> RuleCategory {
-        self.category
+    #[cfg(test)]
+    #[allow(clippy::missing_panics_doc)]
+    /// Test helper: assert that the rule finds violations in the given code
+    pub fn assert_detects(&self, code: &str) {
+        LintContext::test_with_parsed_source(code, |context| {
+            let violations = self.check(&context);
+            assert!(
+                !violations.is_empty(),
+                "Expected rule '{}' to detect violations in code, but found none",
+                self.id
+            );
+        });
     }
 
-    /// Get the rule severity
-    #[must_use] pub const fn severity(&self) -> Severity {
-        self.severity
+    #[cfg(test)]
+    #[allow(clippy::missing_panics_doc)]
+    /// Test helper: assert that the rule finds no violations in the given code
+    pub fn assert_ignores(&self, code: &str) {
+        LintContext::test_with_parsed_source(code, |context| {
+            let violations = self.check(&context);
+            assert!(
+                violations.is_empty(),
+                "Expected rule '{}' to ignore code, but found {} violations",
+                self.id,
+                violations.len()
+            );
+        });
     }
 
-    /// Get the rule description
-    #[must_use] pub const fn description(&self) -> &'static str {
-        self.description
+    #[cfg(test)]
+    #[allow(clippy::missing_panics_doc)]
+    /// Test helper: assert that the rule finds at least the expected number of
+    /// violations
+    pub fn assert_violation_count(&self, code: &str, expected_min: usize) {
+        LintContext::test_with_parsed_source(code, |context| {
+            let violations = self.check(&context);
+            assert!(
+                violations.len() >= expected_min,
+                "Expected rule '{}' to find at least {} violations, but found {}",
+                self.id,
+                expected_min,
+                violations.len()
+            );
+        });
     }
 }

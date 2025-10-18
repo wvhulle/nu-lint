@@ -34,7 +34,7 @@ impl RuleMetadata for DiscouragedBareIgnore {
     }
 
     fn category(&self) -> RuleCategory {
-        RuleCategory::Style
+        RuleCategory::ErrorHandling
     }
 
     fn severity(&self) -> Severity {

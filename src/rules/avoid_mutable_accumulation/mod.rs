@@ -24,7 +24,7 @@ impl RuleMetadata for AvoidMutableAccumulation {
     }
 
     fn category(&self) -> RuleCategory {
-        RuleCategory::BestPractices
+        RuleCategory::CodeQuality
     }
 
     fn severity(&self) -> Severity {

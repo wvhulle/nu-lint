@@ -78,7 +78,7 @@ impl RuleMetadata for AvoidExternalFileTools {
     }
 
     fn category(&self) -> RuleCategory {
-        RuleCategory::BestPractices
+        RuleCategory::Idioms
     }
 
     fn severity(&self) -> Severity {

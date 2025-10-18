@@ -16,7 +16,7 @@ impl RuleMetadata for BraceSpacing {
     }
 
     fn category(&self) -> RuleCategory {
-        RuleCategory::Style
+        RuleCategory::Formatting
     }
 
     fn severity(&self) -> Severity {

@@ -25,7 +25,7 @@ impl RuleMetadata for CompletionFunctionNaming {
     }
 
     fn category(&self) -> RuleCategory {
-        RuleCategory::Style
+        RuleCategory::Naming
     }
 
     fn severity(&self) -> Severity {

@@ -42,7 +42,7 @@ impl RuleMetadata for MultilineFormatting {
     }
 
     fn category(&self) -> RuleCategory {
-        RuleCategory::Style
+        RuleCategory::Formatting
     }
 
     fn severity(&self) -> Severity {

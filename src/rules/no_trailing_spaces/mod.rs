@@ -24,7 +24,7 @@ impl RuleMetadata for NoTrailingSpaces {
     }
 
     fn category(&self) -> RuleCategory {
-        RuleCategory::Style
+        RuleCategory::Formatting
     }
 
     fn severity(&self) -> Severity {

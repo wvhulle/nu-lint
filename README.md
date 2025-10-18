@@ -1,8 +1,10 @@
 # nu-lint
 
-A static analysis tool for [Nushell](https://www.nushell.sh/) scripts.
+A *static analysis tool for [Nushell](https://www.nushell.sh/) scripts* **based on the official style guide**.
 
-Can detect stylistic issues in Nushell code and suggest improvements. Functions complementary to the basic checks done by [nu-check](https://www.nushell.sh/commands/docs/nu-check.html).
+Can *detect stylistic issues in Nushell scripts* and suggest improvements. Functions complementary to the basic checks done by [nu-check](https://www.nushell.sh/commands/docs/nu-check.html).
+
+(Inspired by Rust's Clippy linter tool.)
 
 ## Installation
 
@@ -53,11 +55,15 @@ The linter will automatically find and use this config file when you run it.
 
 ## Rules
 
-30+ rules covering style, best practices, performance, documentation, and type safety. All rules use either Nushell's AST parser or regex patterns for analysis.
+Categories:
 
-View all rules: `nu-lint list-rules`
-
-Get details about a rule: `nu-lint explain <RULE_ID>`
+- naming
+- formatting
+- idioms
+- error handling
+- code quality
+- documentation
+- type safety
 
 ## Example Output
 

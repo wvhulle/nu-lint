@@ -31,7 +31,7 @@ impl RuleMetadata for PreferErrorMake {
     }
 
     fn category(&self) -> RuleCategory {
-        RuleCategory::BestPractices
+        RuleCategory::ErrorHandling
     }
 
     fn severity(&self) -> Severity {

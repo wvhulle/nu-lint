@@ -16,7 +16,7 @@ impl RuleMetadata for PreferCompoundAssignment {
     }
 
     fn category(&self) -> RuleCategory {
-        RuleCategory::Style
+        RuleCategory::Idioms
     }
 
     fn severity(&self) -> Severity {

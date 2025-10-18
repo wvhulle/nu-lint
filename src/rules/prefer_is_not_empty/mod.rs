@@ -12,7 +12,10 @@ pub struct PreferIsNotEmpty;
 
 impl PreferIsNotEmpty {
     /// Check if an expression represents a "not ... is-empty" pattern
-    fn is_not_is_empty_pattern(expr: &nu_protocol::ast::Expression, context: &VisitContext) -> bool {
+    fn is_not_is_empty_pattern(
+        expr: &nu_protocol::ast::Expression,
+        context: &VisitContext,
+    ) -> bool {
         // Look for: not (expr | is-empty)
         if let Expr::UnaryNot(inner_expr) = &expr.expr {
             match &inner_expr.expr {
@@ -37,14 +40,18 @@ impl PreferIsNotEmpty {
         false
     }
 
-    fn check_pipeline_for_is_empty(pipeline: &nu_protocol::ast::Pipeline, context: &VisitContext) -> bool {
+    fn check_pipeline_for_is_empty(
+        pipeline: &nu_protocol::ast::Pipeline,
+        context: &VisitContext,
+    ) -> bool {
         if pipeline.elements.len() >= 2 {
             // Check if the last element is "is-empty"
             if let Some(last_element) = pipeline.elements.last()
-                && let Expr::Call(call) = &last_element.expr.expr {
-                    let decl = context.get_decl(call.decl_id);
-                    return decl.name() == "is-empty";
-                }
+                && let Expr::Call(call) = &last_element.expr.expr
+            {
+                let decl = context.get_decl(call.decl_id);
+                return decl.name() == "is-empty";
+            }
         }
         false
     }
@@ -56,7 +63,7 @@ impl RuleMetadata for PreferIsNotEmpty {
     }
 
     fn category(&self) -> RuleCategory {
-        RuleCategory::Style
+        RuleCategory::Idioms
     }
 
     fn severity(&self) -> Severity {
@@ -92,40 +99,50 @@ impl<'a> PreferIsNotEmptyVisitor<'a> {
     }
 
     /// Generate the fix text for "not (expr | is-empty)" -> "expr | is-not-empty"
-    fn generate_fix_text(expr: &nu_protocol::ast::Expression, context: &VisitContext) -> Option<String> {
+    fn generate_fix_text(
+        expr: &nu_protocol::ast::Expression,
+        context: &VisitContext,
+    ) -> Option<String> {
         // Extract the expression before "is-empty" from "not (expr | is-empty)"
         if let Expr::UnaryNot(inner_expr) = &expr.expr {
             match &inner_expr.expr {
                 Expr::Subexpression(block_id) => {
                     let block = context.get_block(*block_id);
                     if let Some(pipeline) = block.pipelines.first()
-                        && pipeline.elements.len() >= 2 {
-                            // Get all elements except the last one (which is "is-empty")
-                            let elements_before_is_empty = &pipeline.elements[..pipeline.elements.len() - 1];
-                            if !elements_before_is_empty.is_empty() {
-                                let start_span = elements_before_is_empty.first().unwrap().expr.span;
-                                let end_span = elements_before_is_empty.last().unwrap().expr.span;
-                                let combined_span = nu_protocol::Span::new(start_span.start, end_span.end);
-                                let expr_text = context.get_span_contents(combined_span);
-                                return Some(format!("{} | is-not-empty", expr_text.trim()));
-                            }
+                        && pipeline.elements.len() >= 2
+                    {
+                        // Get all elements except the last one (which is "is-empty")
+                        let elements_before_is_empty =
+                            &pipeline.elements[..pipeline.elements.len() - 1];
+                        if !elements_before_is_empty.is_empty() {
+                            let start_span = elements_before_is_empty.first().unwrap().expr.span;
+                            let end_span = elements_before_is_empty.last().unwrap().expr.span;
+                            let combined_span =
+                                nu_protocol::Span::new(start_span.start, end_span.end);
+                            let expr_text = context.get_span_contents(combined_span);
+                            return Some(format!("{} | is-not-empty", expr_text.trim()));
                         }
+                    }
                 }
                 Expr::FullCellPath(path) => {
                     if let Expr::Subexpression(block_id) = &path.head.expr {
                         let block = context.get_block(*block_id);
                         if let Some(pipeline) = block.pipelines.first()
-                            && pipeline.elements.len() >= 2 {
-                                // Get all elements except the last one (which is "is-empty")
-                                let elements_before_is_empty = &pipeline.elements[..pipeline.elements.len() - 1];
-                                if !elements_before_is_empty.is_empty() {
-                                    let start_span = elements_before_is_empty.first().unwrap().expr.span;
-                                    let end_span = elements_before_is_empty.last().unwrap().expr.span;
-                                    let combined_span = nu_protocol::Span::new(start_span.start, end_span.end);
-                                    let expr_text = context.get_span_contents(combined_span);
-                                    return Some(format!("{} | is-not-empty", expr_text.trim()));
-                                }
+                            && pipeline.elements.len() >= 2
+                        {
+                            // Get all elements except the last one (which is "is-empty")
+                            let elements_before_is_empty =
+                                &pipeline.elements[..pipeline.elements.len() - 1];
+                            if !elements_before_is_empty.is_empty() {
+                                let start_span =
+                                    elements_before_is_empty.first().unwrap().expr.span;
+                                let end_span = elements_before_is_empty.last().unwrap().expr.span;
+                                let combined_span =
+                                    nu_protocol::Span::new(start_span.start, end_span.end);
+                                let expr_text = context.get_span_contents(combined_span);
+                                return Some(format!("{} | is-not-empty", expr_text.trim()));
                             }
+                        }
                     }
                 }
                 _ => {}
@@ -133,34 +150,35 @@ impl<'a> PreferIsNotEmptyVisitor<'a> {
         }
         None
     }
-
 }
 
 impl AstVisitor for PreferIsNotEmptyVisitor<'_> {
     fn visit_expression(&mut self, expr: &nu_protocol::ast::Expression, context: &VisitContext) {
         // Check for "not ... is-empty" pattern
         if PreferIsNotEmpty::is_not_is_empty_pattern(expr, context)
-            && let Some(fix_text) = Self::generate_fix_text(expr, context) {
-                use crate::lint::{Fix, Replacement};
+            && let Some(fix_text) = Self::generate_fix_text(expr, context)
+        {
+            use crate::lint::{Fix, Replacement};
 
-                let fix = Some(Fix {
-                    description: "Replace 'not ... is-empty' with 'is-not-empty'".to_string(),
-                    replacements: vec![Replacement {
-                        span: expr.span,
-                        new_text: fix_text,
-                    }],
-                });
-
-                self.violations.push(Violation {
-                    rule_id: self.rule.id().to_string(),
-                    severity: self.rule.severity(),
-                    message: "Use 'is-not-empty' instead of 'not ... is-empty' for better readability".to_string(),
+            let fix = Some(Fix {
+                description: "Replace 'not ... is-empty' with 'is-not-empty'".to_string(),
+                replacements: vec![Replacement {
                     span: expr.span,
-                    suggestion: Some("Replace with 'is-not-empty'".to_string()),
-                    fix,
-                    file: None,
-                });
-            }
+                    new_text: fix_text,
+                }],
+            });
+
+            self.violations.push(Violation {
+                rule_id: self.rule.id().to_string(),
+                severity: self.rule.severity(),
+                message: "Use 'is-not-empty' instead of 'not ... is-empty' for better readability"
+                    .to_string(),
+                span: expr.span,
+                suggestion: Some("Replace with 'is-not-empty'".to_string()),
+                fix,
+                file: None,
+            });
+        }
 
         // Continue walking the tree
         crate::visitor::walk_expression(self, expr, context);

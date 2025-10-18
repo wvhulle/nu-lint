@@ -2312,7 +2312,7 @@ dependencies = [
 
 [[package]]
 name = "nu-lint"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "assert_cmd",
  "clap",

@@ -2,7 +2,7 @@
 
 A static analysis tool for [Nushell](https://www.nushell.sh/) scripts.
 
-Can detect stylistic issues in Nushell code and suggest improvements. Complementary to the basic checks by [nu-check](https://www.nushell.sh/commands/docs/nu-check.html).
+Can detect stylistic issues in Nushell code and suggest improvements. Functions complementary to the basic checks done by [nu-check](https://www.nushell.sh/commands/docs/nu-check.html).
 
 ## Installation
 

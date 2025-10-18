@@ -11,6 +11,9 @@ pub mod kebab_case_commands;
 pub mod max_positional_params;
 pub mod missing_command_docs;
 pub mod missing_type_annotation;
+pub mod multiline_formatting;
+pub mod no_trailing_spaces;
+pub mod omit_list_commas;
 pub mod pipe_spacing;
 pub mod prefer_builtin_commands;
 pub mod prefer_builtin_system_commands;
@@ -64,11 +67,11 @@ impl RuleRegistry {
     pub fn with_default_rules() -> Self {
         let mut registry = Self::new();
 
-        // Style rules (Regex-based)
-        registry.register(Rule::Regex(
+        // Style rules (AST-based - optimized)
+        registry.register(Rule::Ast(
             Box::<snake_case_variables::SnakeCaseVariables>::default(),
         ));
-        registry.register(Rule::Regex(
+        registry.register(Rule::Ast(
             Box::<kebab_case_commands::KebabCaseCommands>::default(),
         ));
         registry.register(Rule::Regex(Box::<
@@ -77,7 +80,7 @@ impl RuleRegistry {
         registry.register(Rule::Regex(Box::new(
             unnecessary_variable_before_return::UnnecessaryVariableBeforeReturn::new(),
         )));
-        registry.register(Rule::Regex(Box::new(prefer_is_not_empty::PreferIsNotEmpty)));
+        registry.register(Rule::Ast(Box::new(prefer_is_not_empty::PreferIsNotEmpty)));
         registry.register(Rule::Regex(Box::new(
             discourage_bare_ignore::DiscouragedBareIgnore::new(),
         )));
@@ -87,6 +90,12 @@ impl RuleRegistry {
         registry.register(Rule::Regex(Box::new(
             completion_function_naming::CompletionFunctionNaming::new(),
         )));
+        registry.register(Rule::Regex(Box::new(
+            multiline_formatting::MultilineFormatting,
+        )));
+        registry.register(Rule::Regex(Box::new(
+            no_trailing_spaces::NoTrailingSpaces,
+        )));
 
         // Style rules (AST-based)
         registry.register(Rule::Ast(Box::<brace_spacing::BraceSpacing>::default()));
@@ -95,6 +104,9 @@ impl RuleRegistry {
             prefer_compound_assignment::PreferCompoundAssignment,
         >::default()));
         registry.register(Rule::Ast(Box::new(unnecessary_mut::UnnecessaryMut::new())));
+        registry.register(Rule::Ast(Box::new(
+            omit_list_commas::OmitListCommas,
+        )));
 
         // Best practices rules (Regex-based)
         registry.register(Rule::Regex(Box::new(

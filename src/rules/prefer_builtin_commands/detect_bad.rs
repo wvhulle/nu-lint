@@ -1,200 +1,181 @@
-#[cfg(test)]
-mod tests {
-    use crate::{
-        context::LintContext, rule::RegexRule,
-        rules::prefer_builtin_commands::AvoidExternalFileTools,
-    };
+use super::rule;
+use crate::LintContext;
 
-    #[test]
-    fn test_detect_external_ls() {
-        let rule = AvoidExternalFileTools::new();
-        let bad_code = "^ls -la";
+#[test]
+fn test_detect_external_ls() {
+    let bad_code = "^ls -la";
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            assert!(
-                !rule.check(&context).is_empty(),
-                "Should detect external ls command"
-            );
-        });
-    }
+    LintContext::test_with_parsed_source(bad_code, |context| {
+        assert!(
+            !(rule().check)(&context).is_empty(),
+            "Should detect external ls command"
+        );
+    });
+}
 
-    #[test]
-    fn test_detect_external_cat() {
-        let rule = AvoidExternalFileTools::new();
-        let bad_code = "^cat config.toml";
+#[test]
+fn test_detect_external_cat() {
+    let bad_code = "^cat config.toml";
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            assert!(
-                !rule.check(&context).is_empty(),
-                "Should detect external cat command"
-            );
-        });
-    }
+    LintContext::test_with_parsed_source(bad_code, |context| {
+        assert!(
+            !(rule().check)(&context).is_empty(),
+            "Should detect external cat command"
+        );
+    });
+}
 
-    #[test]
-    fn test_detect_external_grep() {
-        let rule = AvoidExternalFileTools::new();
-        let bad_code = "^grep \"error\" logs.txt";
+#[test]
+fn test_detect_external_grep() {
+    let bad_code = "^grep \"error\" logs.txt";
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            assert!(
-                !rule.check(&context).is_empty(),
-                "Should detect external grep command"
-            );
-        });
-    }
+    LintContext::test_with_parsed_source(bad_code, |context| {
+        assert!(
+            !(rule().check)(&context).is_empty(),
+            "Should detect external grep command"
+        );
+    });
+}
 
-    #[test]
-    fn test_detect_external_grep_with_flags() {
-        let rule = AvoidExternalFileTools::new();
-        let bad_code = "^grep -i \"warning\" *.log";
+#[test]
+fn test_detect_external_grep_with_flags() {
+    let bad_code = "^grep -i \"warning\" *.log";
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            assert!(
-                !rule.check(&context).is_empty(),
-                "Should detect external grep with flags"
-            );
-        });
-    }
+    LintContext::test_with_parsed_source(bad_code, |context| {
+        assert!(
+            !(rule().check)(&context).is_empty(),
+            "Should detect external grep with flags"
+        );
+    });
+}
 
-    #[test]
-    fn test_detect_external_head() {
-        let rule = AvoidExternalFileTools::new();
-        let bad_code = "^head -n 5 file.txt";
+#[test]
+fn test_detect_external_head() {
+    let bad_code = "^head -n 5 file.txt";
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            assert!(
-                !rule.check(&context).is_empty(),
-                "Should detect external head command"
-            );
-        });
-    }
+    LintContext::test_with_parsed_source(bad_code, |context| {
+        assert!(
+            !(rule().check)(&context).is_empty(),
+            "Should detect external head command"
+        );
+    });
+}
 
-    #[test]
-    fn test_detect_external_tail() {
-        let rule = AvoidExternalFileTools::new();
-        let bad_code = "^tail -n 10 file.txt";
+#[test]
+fn test_detect_external_tail() {
+    let bad_code = "^tail -n 10 file.txt";
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            assert!(
-                !rule.check(&context).is_empty(),
-                "Should detect external tail command"
-            );
-        });
-    }
+    LintContext::test_with_parsed_source(bad_code, |context| {
+        assert!(
+            !(rule().check)(&context).is_empty(),
+            "Should detect external tail command"
+        );
+    });
+}
 
-    #[test]
-    fn test_detect_external_find() {
-        let rule = AvoidExternalFileTools::new();
-        let bad_code = "^find . -name \"*.rs\"";
+#[test]
+fn test_detect_external_find() {
+    let bad_code = "^find . -name \"*.rs\"";
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            assert!(
-                !rule.check(&context).is_empty(),
-                "Should detect external find command"
-            );
-        });
-    }
+    LintContext::test_with_parsed_source(bad_code, |context| {
+        assert!(
+            !(rule().check)(&context).is_empty(),
+            "Should detect external find command"
+        );
+    });
+}
 
-    #[test]
-    fn test_detect_external_commands_in_pipelines() {
-        let rule = AvoidExternalFileTools::new();
-        let bad_code = "^ls -la | ^grep config";
+#[test]
+fn test_detect_external_commands_in_pipelines() {
+    let bad_code = "^ls -la | ^grep config";
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            let violations = rule.check(&context);
-            assert!(
-                violations.len() >= 2,
-                "Should detect both ls and grep in pipeline"
-            );
-        });
-    }
+    LintContext::test_with_parsed_source(bad_code, |context| {
+        let violations = (rule().check)(&context);
+        assert!(
+            violations.len() >= 2,
+            "Should detect both ls and grep in pipeline"
+        );
+    });
+}
 
-    #[test]
-    fn test_detect_external_commands_in_function() {
-        let rule = AvoidExternalFileTools::new();
-        let bad_code = r#"
+#[test]
+fn test_detect_external_commands_in_function() {
+    let bad_code = r#"
 def git_files [] {
     ^find . -name "*.rs" | ^head -10
 }
 "#;
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            let violations = rule.check(&context);
-            assert!(
-                violations.len() >= 2,
-                "Should detect find and head in function"
-            );
-        });
-    }
+    LintContext::test_with_parsed_source(bad_code, |context| {
+        let violations = (rule().check)(&context);
+        assert!(
+            violations.len() >= 2,
+            "Should detect find and head in function"
+        );
+    });
+}
 
-    #[test]
-    fn test_detect_external_cat_with_multiple_files() {
-        let rule = AvoidExternalFileTools::new();
-        let bad_code = "^cat README.md CHANGELOG.md";
+#[test]
+fn test_detect_external_cat_with_multiple_files() {
+    let bad_code = "^cat README.md CHANGELOG.md";
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            assert!(
-                !rule.check(&context).is_empty(),
-                "Should detect external cat with multiple files"
-            );
-        });
-    }
+    LintContext::test_with_parsed_source(bad_code, |context| {
+        assert!(
+            !(rule().check)(&context).is_empty(),
+            "Should detect external cat with multiple files"
+        );
+    });
+}
 
-    #[test]
-    fn test_detect_external_sort() {
-        let rule = AvoidExternalFileTools::new();
-        let bad_code = "^sort file.txt";
+#[test]
+fn test_detect_external_sort() {
+    let bad_code = "^sort file.txt";
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            assert!(
-                !rule.check(&context).is_empty(),
-                "Should detect external sort command"
-            );
-        });
-    }
+    LintContext::test_with_parsed_source(bad_code, |context| {
+        assert!(
+            !(rule().check)(&context).is_empty(),
+            "Should detect external sort command"
+        );
+    });
+}
 
-    #[test]
-    fn test_detect_external_uniq() {
-        let rule = AvoidExternalFileTools::new();
-        let bad_code = "^uniq file.txt";
+#[test]
+fn test_detect_external_uniq() {
+    let bad_code = "^uniq file.txt";
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            assert!(
-                !rule.check(&context).is_empty(),
-                "Should detect external uniq command"
-            );
-        });
-    }
+    LintContext::test_with_parsed_source(bad_code, |context| {
+        assert!(
+            !(rule().check)(&context).is_empty(),
+            "Should detect external uniq command"
+        );
+    });
+}
 
-    #[test]
-    fn test_detect_external_commands_in_completion_function() {
-        let rule = AvoidExternalFileTools::new();
-        let bad_code = r#"
+#[test]
+fn test_detect_external_commands_in_completion_function() {
+    let bad_code = r#"
 def "nu-complete git branches" [] {
     ^cat .git/refs/heads/* | ^sort
 }
 "#;
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            let violations = rule.check(&context);
-            assert!(
-                violations.len() >= 2,
-                "Should detect cat and sort in completion function"
-            );
-        });
-    }
+    LintContext::test_with_parsed_source(bad_code, |context| {
+        let violations = (rule().check)(&context);
+        assert!(
+            violations.len() >= 2,
+            "Should detect cat and sort in completion function"
+        );
+    });
+}
 
-    #[test]
-    fn test_detect_external_head_tail_with_different_syntax() {
-        let rule = AvoidExternalFileTools::new();
-        let bad_code = "^head -5 data.csv";
+#[test]
+fn test_detect_external_head_tail_with_different_syntax() {
+    let bad_code = "^head -5 data.csv";
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            assert!(
-                !rule.check(&context).is_empty(),
-                "Should detect external head with -5 syntax"
-            );
-        });
-    }
+    LintContext::test_with_parsed_source(bad_code, |context| {
+        assert!(
+            !(rule().check)(&context).is_empty(),
+            "Should detect external head with -5 syntax"
+        );
+    });
 }

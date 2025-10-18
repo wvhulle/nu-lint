@@ -2,107 +2,87 @@ use heck::ToKebabCase;
 
 use crate::{
     context::LintContext,
-    lint::{Severity, Violation},
-    rule::{AstRule, RuleCategory, RuleMetadata},
+    lint::{Fix, Replacement, Severity, Violation},
+    rule::{Rule, RuleCategory},
     visitor::{AstVisitor, VisitContext},
 };
 
-#[derive(Default)]
-pub struct KebabCaseCommands;
+/// Check if a command name follows kebab-case convention
+fn is_valid_kebab_case(name: &str) -> bool {
+    if name.is_empty() {
+        return false;
+    }
 
-impl KebabCaseCommands {
-    /// Check if a command name follows kebab-case convention
-    fn is_valid_kebab_case(name: &str) -> bool {
-        if name.is_empty() {
-            return false;
-        }
+    // Allow single characters
+    if name.len() == 1 {
+        return name.chars().all(|c| c.is_ascii_lowercase());
+    }
 
-        // Allow single characters
-        if name.len() == 1 {
-            return name.chars().all(|c| c.is_ascii_lowercase());
-        }
-
-        // Check kebab-case pattern: lowercase letters, numbers, and hyphens
-        // Must start with lowercase letter
-        // Cannot have consecutive hyphens
-        name.chars().enumerate().all(|(i, c)| {
-            match c {
-                'a'..='z' | '0'..='9' => true,
-                '-' => {
-                    // Cannot start with hyphen
-                    if i == 0 {
-                        return false;
-                    }
-                    // Cannot have consecutive hyphens
-                    name.chars().nth(i + 1) != Some('-')
+    // Check kebab-case pattern: lowercase letters, numbers, and hyphens
+    // Must start with lowercase letter
+    // Cannot have consecutive hyphens
+    name.chars().enumerate().all(|(i, c)| {
+        match c {
+            'a'..='z' | '0'..='9' => true,
+            '-' => {
+                // Cannot start with hyphen
+                if i == 0 {
+                    return false;
                 }
-                _ => false,
+                // Cannot have consecutive hyphens
+                name.chars().nth(i + 1) != Some('-')
             }
-        }) && name.chars().next().is_some_and(|c| c.is_ascii_lowercase())
-    }
+            _ => false,
+        }
+    }) && name.chars().next().is_some_and(|c| c.is_ascii_lowercase())
 }
 
-impl RuleMetadata for KebabCaseCommands {
-    fn id(&self) -> &'static str {
-        "kebab_case_commands"
-    }
-
-    fn category(&self) -> RuleCategory {
-        RuleCategory::Naming
-    }
-
-    fn severity(&self) -> Severity {
-        Severity::Warning
-    }
-
-    fn description(&self) -> &'static str {
-        "Custom commands should use kebab-case naming convention"
-    }
+fn check(context: &LintContext) -> Vec<Violation> {
+    let mut visitor = KebabCaseCommandsVisitor::new();
+    context.walk_ast(&mut visitor);
+    visitor.violations
 }
 
-impl AstRule for KebabCaseCommands {
-    fn check(&self, context: &LintContext) -> Vec<Violation> {
-        let mut visitor = KebabCaseCommandsVisitor::new(self);
-        context.walk_ast(&mut visitor);
-        visitor.violations
-    }
+pub fn rule() -> Rule {
+    Rule::new(
+        "kebab_case_commands",
+        RuleCategory::Naming,
+        Severity::Warning,
+        "Custom commands should use kebab-case naming convention",
+        check,
+    )
 }
 
 /// AST visitor that checks command naming using AST traversal
-pub struct KebabCaseCommandsVisitor<'a> {
-    rule: &'a KebabCaseCommands,
+struct KebabCaseCommandsVisitor {
     violations: Vec<Violation>,
 }
 
-impl<'a> KebabCaseCommandsVisitor<'a> {
-    #[must_use]
-    pub fn new(rule: &'a KebabCaseCommands) -> Self {
+impl KebabCaseCommandsVisitor {
+    fn new() -> Self {
         Self {
-            rule,
             violations: Vec::new(),
         }
     }
 
     fn check_command_name(&mut self, cmd_name: &str, span: nu_protocol::Span) {
-        if !KebabCaseCommands::is_valid_kebab_case(cmd_name) {
-            use crate::lint::{Fix, Replacement};
-
+        if !is_valid_kebab_case(cmd_name) {
             let kebab_case_name = cmd_name.to_kebab_case();
 
             let fix = Some(Fix {
-                description: format!("Rename command '{cmd_name}' to '{kebab_case_name}'"),
+                description: format!("Rename command '{cmd_name}' to '{kebab_case_name}'").into(),
                 replacements: vec![Replacement {
                     span,
-                    new_text: kebab_case_name.clone(),
+                    new_text: kebab_case_name.clone().into(),
                 }],
             });
 
             self.violations.push(Violation {
-                rule_id: self.rule.id().to_string(),
-                severity: self.rule.severity(),
-                message: format!("Command '{cmd_name}' should use kebab-case naming convention"),
+                rule_id: "kebab_case_commands".into(),
+                severity: Severity::Warning,
+                message: format!("Command '{cmd_name}' should use kebab-case naming convention").into(),
                 span,
-                suggestion: Some(format!("Consider renaming to: {kebab_case_name}")),
+                suggestion: Some(format!("Consider renaming to: {kebab_case_name}").into()),
                 fix,
                 file: None,
             });
@@ -110,7 +90,7 @@ impl<'a> KebabCaseCommandsVisitor<'a> {
     }
 }
 
-impl AstVisitor for KebabCaseCommandsVisitor<'_> {
+impl AstVisitor for KebabCaseCommandsVisitor {
     fn visit_call(&mut self, call: &nu_protocol::ast::Call, context: &VisitContext) {
         // Check for def commands (function definitions)
         let decl = context.get_decl(call.decl_id);

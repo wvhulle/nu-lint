@@ -4,55 +4,13 @@ use nu_protocol::{Span, VarId, ast::Expr};
 
 use crate::{
     context::LintContext,
-    lint::{Severity, Violation},
-    rule::{AstRule, RuleCategory, RuleMetadata},
+    lint::{Fix, Replacement, Severity, Violation},
+    rule::{Rule, RuleCategory},
     visitor::{AstVisitor, VisitContext},
 };
 
-pub struct UnnecessaryMut;
-
-impl UnnecessaryMut {
-    #[must_use]
-    pub fn new() -> Self {
-        Self
-    }
-}
-
-impl Default for UnnecessaryMut {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl RuleMetadata for UnnecessaryMut {
-    fn id(&self) -> &'static str {
-        "unnecessary_mut"
-    }
-
-    fn category(&self) -> RuleCategory {
-        RuleCategory::CodeQuality
-    }
-
-    fn severity(&self) -> Severity {
-        Severity::Info
-    }
-
-    fn description(&self) -> &'static str {
-        "Variables should only be marked 'mut' when they are actually reassigned"
-    }
-}
-
-impl AstRule for UnnecessaryMut {
-    fn check(&self, context: &LintContext) -> Vec<Violation> {
-        let mut visitor = MutVariableVisitor::new(self, context.source);
-        context.walk_ast(&mut visitor);
-        visitor.finalize()
-    }
-}
-
 /// AST visitor that tracks mutable variable declarations and assignments
-pub struct MutVariableVisitor<'a> {
-    rule: &'a UnnecessaryMut,
+struct MutVariableVisitor<'a> {
     /// Maps variable IDs to their (name, `declaration_span`,
     /// `mut_keyword_span`, `is_reassigned`)
     mut_variables: HashMap<VarId, (String, Span, Span, bool)>,
@@ -60,10 +18,8 @@ pub struct MutVariableVisitor<'a> {
 }
 
 impl<'a> MutVariableVisitor<'a> {
-    #[must_use]
-    pub fn new(rule: &'a UnnecessaryMut, source: &'a str) -> Self {
+    fn new(source: &'a str) -> Self {
         Self {
-            rule,
             mut_variables: HashMap::new(),
             source,
         }
@@ -94,7 +50,6 @@ impl<'a> MutVariableVisitor<'a> {
 
     /// Generate violations after AST traversal is complete
     fn finalize(self) -> Vec<Violation> {
-        use crate::lint::{Fix, Replacement};
         let mut violations = Vec::new();
 
         // Check which mutable variables were never reassigned
@@ -102,21 +57,21 @@ impl<'a> MutVariableVisitor<'a> {
             if !is_reassigned {
                 // Create a fix that removes the 'mut ' keyword
                 let fix = Some(Fix {
-                    description: format!("Remove 'mut' keyword from variable '{var_name}'"),
+                    description: format!("Remove 'mut' keyword from variable '{var_name}'").into(),
                     replacements: vec![Replacement {
                         span: *mut_span,
-                        new_text: String::new(), // Replace 'mut ' with empty string
+                        new_text: String::new().into(), // Replace 'mut ' with empty string
                     }],
                 });
 
                 violations.push(Violation {
-                    rule_id: self.rule.id().to_string(),
-                    severity: self.rule.severity(),
+                    rule_id: "unnecessary_mut".into(),
+                    severity: Severity::Info,
                     message: format!(
                         "Variable '{var_name}' is declared as 'mut' but never reassigned"
-                    ),
+                    ).into(),
                     span: *decl_span,
-                    suggestion: Some(format!("Remove 'mut' keyword:\nlet {var_name} = ...")),
+                    suggestion: Some(format!("Remove 'mut' keyword:\nlet {var_name} = ...").into()),
                     fix,
                     file: None,
                 });
@@ -133,7 +88,7 @@ impl AstVisitor for MutVariableVisitor<'_> {
         if var.mutable {
             // The span only covers the variable name itself (e.g., just "x")
             // Get the variable name directly from the span
-            let var_name = context.get_span_contents(span).to_string();
+            let var_name: String = context.get_span_contents(span).to_string();
 
             // Skip underscore-prefixed variables (convention for intentionally unused)
             if !var_name.starts_with('_') {
@@ -183,6 +138,22 @@ impl AstVisitor for MutVariableVisitor<'_> {
         self.visit_expression(op, context);
         self.visit_expression(rhs, context);
     }
+}
+
+fn check(context: &LintContext) -> Vec<Violation> {
+    let mut visitor = MutVariableVisitor::new(context.source);
+    context.walk_ast(&mut visitor);
+    visitor.finalize()
+}
+
+pub fn rule() -> Rule {
+    Rule::new(
+        "unnecessary_mut",
+        RuleCategory::CodeQuality,
+        Severity::Info,
+        "Variables should only be marked 'mut' when they are actually reassigned",
+        check,
+    )
 }
 
 #[cfg(test)]

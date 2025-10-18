@@ -2,52 +2,20 @@ use nu_protocol::Span;
 
 use crate::{
     context::LintContext,
-    lint::{Severity, Violation},
-    rule::{AstRule, RuleCategory, RuleMetadata},
+    lint::{Fix, Replacement, Severity, Violation},
+    rule::{Rule, RuleCategory},
     visitor::{AstVisitor, VisitContext},
 };
 
-#[derive(Default)]
-pub struct PipeSpacing;
-
-impl RuleMetadata for PipeSpacing {
-    fn id(&self) -> &'static str {
-        "pipe_spacing"
-    }
-
-    fn category(&self) -> RuleCategory {
-        RuleCategory::Formatting
-    }
-
-    fn severity(&self) -> Severity {
-        Severity::Warning
-    }
-
-    fn description(&self) -> &'static str {
-        "Pipes should have exactly one space before and after when on the same line"
-    }
-}
-
-impl AstRule for PipeSpacing {
-    fn check(&self, context: &LintContext) -> Vec<Violation> {
-        let mut visitor = PipeSpacingVisitor::new(self, context.source);
-        context.walk_ast(&mut visitor);
-        visitor.violations
-    }
-}
-
 /// AST visitor that checks for pipe spacing issues
-pub struct PipeSpacingVisitor<'a> {
-    rule: &'a PipeSpacing,
+struct PipeSpacingVisitor<'a> {
     source: &'a str,
     violations: Vec<Violation>,
 }
 
 impl<'a> PipeSpacingVisitor<'a> {
-    #[must_use]
-    pub fn new(rule: &'a PipeSpacing, source: &'a str) -> Self {
+    fn new(source: &'a str) -> Self {
         Self {
-            rule,
             source,
             violations: Vec::new(),
         }
@@ -55,8 +23,6 @@ impl<'a> PipeSpacingVisitor<'a> {
 
     /// Check spacing around a pipe between two elements (optimized)
     fn check_pipe_spacing(&mut self, prev_span: Span, curr_span: Span, _context: &VisitContext) {
-        use crate::lint::{Fix, Replacement};
-
         let start = prev_span.end;
         let end = curr_span.start;
 
@@ -125,19 +91,19 @@ impl<'a> PipeSpacingVisitor<'a> {
                 let fix_span = Span::new(fix_start, fix_end);
 
                 let fix = Some(Fix {
-                    description: "Fix pipe spacing to ' | '".to_string(),
+                    description: "Fix pipe spacing to ' | '".to_string().into(),
                     replacements: vec![Replacement {
                         span: fix_span,
-                        new_text: " | ".to_string(),
+                        new_text: " | ".to_string().into(),
                     }],
                 });
 
                 self.violations.push(Violation {
-                    rule_id: self.rule.id().to_string(),
-                    severity: self.rule.severity(),
-                    message: message.to_string(),
+                    rule_id: "pipe_spacing".into(),
+                    severity: Severity::Warning,
+                    message: message.to_string().into(),
                     span: violation_span,
-                    suggestion: Some("Use ' | ' with single spaces".to_string()),
+                    suggestion: Some("Use ' | ' with single spaces".to_string().into()),
                     fix,
                     file: None,
                 });
@@ -181,6 +147,22 @@ impl AstVisitor for PipeSpacingVisitor<'_> {
             self.visit_expression(&element.expr, context);
         }
     }
+}
+
+fn check(context: &LintContext) -> Vec<Violation> {
+    let mut visitor = PipeSpacingVisitor::new(context.source);
+    context.walk_ast(&mut visitor);
+    visitor.violations
+}
+
+pub fn rule() -> Rule {
+    Rule::new(
+        "pipe_spacing",
+        RuleCategory::Formatting,
+        Severity::Warning,
+        "Pipes should have exactly one space before and after when on the same line",
+        check,
+    )
 }
 
 #[cfg(test)]

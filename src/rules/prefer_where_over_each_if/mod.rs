@@ -5,75 +5,49 @@ use regex::Regex;
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{RegexRule, RuleCategory, RuleMetadata},
+    rule::{Rule, RuleCategory},
 };
 
-#[derive(Default)]
-pub struct PreferWhereOverEachIf;
-
-impl PreferWhereOverEachIf {
-    fn each_if_pattern() -> &'static Regex {
-        static PATTERN: OnceLock<Regex> = OnceLock::new();
-        PATTERN.get_or_init(|| Regex::new(r"each\s*\{\s*\|([^}|]+)\|\s*if\s+([^}]+)\}").unwrap())
-    }
-
-    // Side effects that indicate this is processing, not filtering
-    const SIDE_EFFECTS: &'static [&'static str] =
-        &["print", "save", "download", "^", "exit", "=", "mut "];
+fn each_if_pattern() -> &'static Regex {
+    static PATTERN: OnceLock<Regex> = OnceLock::new();
+    PATTERN.get_or_init(|| Regex::new(r"each\s*\{\s*\|([^}|]+)\|\s*if\s+([^}]+)\}").unwrap())
 }
 
-impl RuleMetadata for PreferWhereOverEachIf {
-    fn id(&self) -> &'static str {
-        "prefer_where_over_each_if"
-    }
+// Side effects that indicate this is processing, not filtering
+const SIDE_EFFECTS: &[&str] = &["print", "save", "download", "^", "exit", "=", "mut "];
 
-    fn category(&self) -> RuleCategory {
-        RuleCategory::Idioms
-    }
-
-    fn severity(&self) -> Severity {
-        Severity::Info
-    }
-
-    fn description(&self) -> &'static str {
-        "Use 'where' for filtering instead of 'each' with 'if'"
-    }
+fn has_side_effects(code: &str) -> bool {
+    SIDE_EFFECTS.iter().any(|&effect| code.contains(effect))
 }
 
-impl RegexRule for PreferWhereOverEachIf {
-    fn check(&self, context: &LintContext) -> Vec<Violation> {
-        context.violations_from_regex_if(
-            Self::each_if_pattern(),
-            self.id(),
-            self.severity(),
-            |mat| {
-                let caps = Self::each_if_pattern().captures(mat.as_str())?;
-                let condition_and_body = caps.get(2)?.as_str();
+fn check(context: &LintContext) -> Vec<Violation> {
+    context.violations_from_regex_if(each_if_pattern(), "prefer_where_over_each_if", Severity::Info, |mat| {
+        let caps = each_if_pattern().captures(mat.as_str())?;
+        let condition_and_body = caps.get(2)?.as_str();
 
-                let body = condition_and_body
-                    .find('{')
-                    .map_or(condition_and_body, |pos| &condition_and_body[pos + 1..])
-                    .trim();
+        let body = condition_and_body
+            .find('{')
+            .map_or(condition_and_body, |pos| &condition_and_body[pos + 1..])
+            .trim();
 
-                // Check if this is pure filtering (no side effects)
-                (!Self::has_side_effects(body)).then(|| {
-                    (
-                        "Consider using 'where' for filtering instead of 'each' with 'if'"
-                            .to_string(),
-                        Some("Use '$list | where <condition>' for better performance".to_string()),
-                    )
-                })
-            },
-        )
-    }
+        // Check if this is pure filtering (no side effects)
+        (!has_side_effects(body)).then(|| {
+            (
+                "Consider using 'where' for filtering instead of 'each' with 'if'".to_string(),
+                Some("Use '$list | where <condition>' for better performance".to_string()),
+            )
+        })
+    })
 }
 
-impl PreferWhereOverEachIf {
-    fn has_side_effects(code: &str) -> bool {
-        Self::SIDE_EFFECTS
-            .iter()
-            .any(|&effect| code.contains(effect))
-    }
+pub fn rule() -> Rule {
+    Rule::new(
+        "prefer_where_over_each_if",
+        RuleCategory::Idioms,
+        Severity::Info,
+        "Use 'where' for filtering instead of 'each' with 'if'",
+        check,
+    )
 }
 
 #[cfg(test)]

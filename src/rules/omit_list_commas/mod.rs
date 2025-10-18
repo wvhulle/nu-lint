@@ -3,51 +3,19 @@ use nu_protocol::{Span, ast::Expr};
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{AstRule, RuleCategory, RuleMetadata},
+    rule::{Rule, RuleCategory},
     visitor::{AstVisitor, VisitContext},
 };
 
-#[derive(Default)]
-pub struct OmitListCommas;
-
-impl RuleMetadata for OmitListCommas {
-    fn id(&self) -> &'static str {
-        "omit_list_commas"
-    }
-
-    fn category(&self) -> RuleCategory {
-        RuleCategory::Formatting
-    }
-
-    fn severity(&self) -> Severity {
-        Severity::Info
-    }
-
-    fn description(&self) -> &'static str {
-        "Omit commas between list items as per Nushell style guide"
-    }
-}
-
-impl AstRule for OmitListCommas {
-    fn check(&self, context: &LintContext) -> Vec<Violation> {
-        let mut visitor = OmitListCommasVisitor::new(self, context.source);
-        context.walk_ast(&mut visitor);
-        visitor.violations
-    }
-}
-
 /// AST visitor that checks for unnecessary commas in lists
-pub struct OmitListCommasVisitor<'a> {
-    rule: &'a OmitListCommas,
+struct OmitListCommasVisitor<'a> {
     source: &'a str,
     violations: Vec<Violation>,
 }
 
 impl<'a> OmitListCommasVisitor<'a> {
-    #[must_use]
-    pub fn new(rule: &'a OmitListCommas, source: &'a str) -> Self {
+    fn new(source: &'a str) -> Self {
         Self {
-            rule,
             source,
             violations: Vec::new(),
         }
@@ -96,12 +64,12 @@ impl<'a> OmitListCommasVisitor<'a> {
                         Span::new(between_start + comma_pos, between_start + comma_pos + 1);
 
                     self.violations.push(Violation {
-                        rule_id: self.rule.id().to_string(),
-                        severity: self.rule.severity(),
-                        message: "Omit commas between list items".to_string(),
+                        rule_id: "omit_list_commas".into(),
+                        severity: Severity::Info,
+                        message: "Omit commas between list items".to_string().into(),
                         span: comma_span,
                         suggestion: Some(
-                            "Remove the comma - Nushell lists don't need commas".to_string(),
+                            "Remove the comma - Nushell lists don't need commas".to_string().into(),
                         ),
                         fix: None,
                         file: None,
@@ -121,6 +89,22 @@ impl AstVisitor for OmitListCommasVisitor<'_> {
         // Continue walking the tree
         crate::visitor::walk_expression(self, expr, context);
     }
+}
+
+fn check(context: &LintContext) -> Vec<Violation> {
+    let mut visitor = OmitListCommasVisitor::new(context.source);
+    context.walk_ast(&mut visitor);
+    visitor.violations
+}
+
+pub fn rule() -> Rule {
+    Rule::new(
+        "omit_list_commas",
+        RuleCategory::Formatting,
+        Severity::Info,
+        "Omit commas between list items as per Nushell style guide",
+        check,
+    )
 }
 
 #[cfg(test)]

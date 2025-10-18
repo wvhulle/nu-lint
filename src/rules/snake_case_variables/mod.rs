@@ -2,95 +2,74 @@ use heck::ToSnakeCase;
 
 use crate::{
     context::LintContext,
-    lint::{Severity, Violation},
-    rule::{AstRule, RuleCategory, RuleMetadata},
+    lint::{Fix, Replacement, Severity, Violation},
+    rule::{Rule, RuleCategory},
     visitor::{AstVisitor, VisitContext},
 };
 
-#[derive(Default)]
-pub struct SnakeCaseVariables;
+/// Check if a variable name follows `snake_case` convention
+fn is_valid_snake_case(name: &str) -> bool {
+    if name.is_empty() {
+        return false;
+    }
 
-impl SnakeCaseVariables {
-    /// Check if a variable name follows `snake_case` convention
-    #[must_use]
-    pub fn is_valid_snake_case(name: &str) -> bool {
-        if name.is_empty() {
-            return false;
-        }
+    // Allow single characters
+    if name.len() == 1 {
+        return name.chars().all(|c| c.is_ascii_lowercase() || c == '_');
+    }
 
-        // Allow single characters
-        if name.len() == 1 {
-            return name.chars().all(|c| c.is_ascii_lowercase() || c == '_');
-        }
-
-        // Check snake_case pattern: lowercase letters, numbers, and underscores
-        // Must start with lowercase letter or underscore
-        // Cannot have consecutive underscores
-        name.chars().enumerate().all(|(i, c)| {
-            match c {
-                'a'..='z' | '0'..='9' => true,
-                '_' => {
-                    // First character can be underscore
-                    if i == 0 {
-                        return true;
-                    }
-                    // Cannot have consecutive underscores
-                    name.chars().nth(i + 1) != Some('_')
+    // Check snake_case pattern: lowercase letters, numbers, and underscores
+    // Must start with lowercase letter or underscore
+    // Cannot have consecutive underscores
+    name.chars().enumerate().all(|(i, c)| {
+        match c {
+            'a'..='z' | '0'..='9' => true,
+            '_' => {
+                // First character can be underscore
+                if i == 0 {
+                    return true;
                 }
-                _ => false,
+                // Cannot have consecutive underscores
+                name.chars().nth(i + 1) != Some('_')
             }
-        }) && name
-            .chars()
-            .next()
-            .is_some_and(|c| c.is_ascii_lowercase() || c == '_')
-    }
+            _ => false,
+        }
+    }) && name
+        .chars()
+        .next()
+        .is_some_and(|c| c.is_ascii_lowercase() || c == '_')
 }
 
-impl RuleMetadata for SnakeCaseVariables {
-    fn id(&self) -> &'static str {
-        "snake_case_variables"
-    }
-
-    fn category(&self) -> RuleCategory {
-        RuleCategory::Naming
-    }
-
-    fn severity(&self) -> Severity {
-        Severity::Warning
-    }
-
-    fn description(&self) -> &'static str {
-        "Variables should use snake_case naming convention"
-    }
+fn check(context: &LintContext) -> Vec<Violation> {
+    let mut visitor = SnakeCaseVariablesVisitor::new();
+    context.walk_ast(&mut visitor);
+    visitor.violations
 }
 
-impl AstRule for SnakeCaseVariables {
-    fn check(&self, context: &LintContext) -> Vec<Violation> {
-        let mut visitor = SnakeCaseVariablesVisitor::new(self);
-        context.walk_ast(&mut visitor);
-        visitor.violations
-    }
+pub fn rule() -> Rule {
+    Rule::new(
+        "snake_case_variables",
+        RuleCategory::Naming,
+        Severity::Warning,
+        "Variables should use snake_case naming convention",
+        check,
+    )
 }
 
 /// AST visitor that checks variable naming using AST traversal
-pub struct SnakeCaseVariablesVisitor<'a> {
-    rule: &'a SnakeCaseVariables,
+struct SnakeCaseVariablesVisitor {
     violations: Vec<Violation>,
 }
 
-impl<'a> SnakeCaseVariablesVisitor<'a> {
-    #[must_use]
-    pub fn new(rule: &'a SnakeCaseVariables) -> Self {
+impl SnakeCaseVariablesVisitor {
+    fn new() -> Self {
         Self {
-            rule,
             violations: Vec::new(),
         }
     }
 
     fn check_variable_name(&mut self, var_name: &str, span: nu_protocol::Span, is_mutable: bool) {
-        if !SnakeCaseVariables::is_valid_snake_case(var_name) {
-            use crate::lint::{Fix, Replacement};
-
+        if !is_valid_snake_case(var_name) {
             let var_type = if is_mutable {
                 "Mutable variable"
             } else {
@@ -99,19 +78,19 @@ impl<'a> SnakeCaseVariablesVisitor<'a> {
             let snake_case_name = var_name.to_snake_case();
 
             let fix = Some(Fix {
-                description: format!("Rename variable '{var_name}' to '{snake_case_name}'"),
+                description: format!("Rename variable '{var_name}' to '{snake_case_name}'").into(),
                 replacements: vec![Replacement {
                     span,
-                    new_text: snake_case_name.clone(),
+                    new_text: snake_case_name.clone().into(),
                 }],
             });
 
             self.violations.push(Violation {
-                rule_id: self.rule.id().to_string(),
-                severity: self.rule.severity(),
-                message: format!("{var_type} '{var_name}' should use snake_case naming convention"),
+                rule_id: "snake_case_variables".into(),
+                severity: Severity::Warning,
+                message: format!("{var_type} '{var_name}' should use snake_case naming convention").into(),
                 span,
-                suggestion: Some(format!("Consider renaming to: {snake_case_name}")),
+                suggestion: Some(format!("Consider renaming to: {snake_case_name}").into()),
                 fix,
                 file: None,
             });
@@ -119,7 +98,7 @@ impl<'a> SnakeCaseVariablesVisitor<'a> {
     }
 }
 
-impl AstVisitor for SnakeCaseVariablesVisitor<'_> {
+impl AstVisitor for SnakeCaseVariablesVisitor {
     fn visit_call(&mut self, call: &nu_protocol::ast::Call, context: &VisitContext) {
         // Check for let/mut assignments in command calls
         let decl = context.get_decl(call.decl_id);

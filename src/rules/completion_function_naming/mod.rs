@@ -1,86 +1,61 @@
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{RegexRule, RuleCategory, RuleMetadata},
+    rule::{Rule, RuleCategory},
 };
 
-pub struct CompletionFunctionNaming;
+fn check(context: &LintContext) -> Vec<Violation> {
+    let mut violations = Vec::new();
 
-impl CompletionFunctionNaming {
-    #[must_use]
-    pub fn new() -> Self {
-        Self
-    }
-}
+    // Get all custom function definitions
+    let functions = context.new_user_functions();
 
-impl Default for CompletionFunctionNaming {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+    for (_decl_id, decl) in functions {
+        let func_name = &decl.signature().name;
 
-impl RuleMetadata for CompletionFunctionNaming {
-    fn id(&self) -> &'static str {
-        "completion_function_naming"
-    }
+        // Check if the function name suggests it's a completion function
+        // but doesn't follow the nu-complete pattern
+        let name_lower = func_name.to_lowercase();
 
-    fn category(&self) -> RuleCategory {
-        RuleCategory::Naming
-    }
+        // Heuristics for completion functions:
+        // - Contains "complete" or "completion"
+        // - Used in completions context (we'd need to check usage)
+        if (name_lower.contains("complete") || name_lower.contains("completion"))
+            && !func_name.starts_with("nu-complete ")
+        {
+            let span = context.find_declaration_span(func_name);
 
-    fn severity(&self) -> Severity {
-        Severity::Warning
-    }
-
-    fn description(&self) -> &'static str {
-        "Completion functions should use 'nu-complete' prefix for clarity"
-    }
-}
-
-impl RegexRule for CompletionFunctionNaming {
-    fn check(&self, context: &LintContext) -> Vec<Violation> {
-        let mut violations = Vec::new();
-
-        // Get all custom function definitions
-        let functions = context.new_user_functions();
-
-        for (_decl_id, decl) in functions {
-            let func_name = &decl.signature().name;
-
-            // Check if the function name suggests it's a completion function
-            // but doesn't follow the nu-complete pattern
-            let name_lower = func_name.to_lowercase();
-
-            // Heuristics for completion functions:
-            // - Contains "complete" or "completion"
-            // - Used in completions context (we'd need to check usage)
-            if (name_lower.contains("complete") || name_lower.contains("completion"))
-                && !func_name.starts_with("nu-complete ")
-            {
-                let span = context.find_declaration_span(func_name);
-
-                violations.push(Violation {
-                    rule_id: self.id().to_string(),
-                    severity: self.severity(),
-                    message: format!(
-                        "Completion function '{func_name}' should use 'nu-complete' prefix"
-                    ),
-                    span,
-                    suggestion: Some(format!(
-                        "Consider renaming to: nu-complete {}",
-                        func_name
-                            .replace("complete", "")
-                            .replace("completion", "")
-                            .trim()
-                    )),
-                    fix: None,
-                    file: None,
-                });
-            }
+            violations.push(Violation {
+                rule_id: "completion_function_naming".into(),
+                severity: Severity::Warning,
+                message: format!(
+                    "Completion function '{func_name}' should use 'nu-complete' prefix"
+                ).into(),
+                span,
+                suggestion: Some(format!(
+                    "Consider renaming to: nu-complete {}",
+                    func_name
+                        .replace("complete", "")
+                        .replace("completion", "")
+                        .trim()
+                ).into()),
+                fix: None,
+                file: None,
+            });
         }
-
-        violations
     }
+
+    violations
+}
+
+pub fn rule() -> Rule {
+    Rule::new(
+        "completion_function_naming",
+        RuleCategory::Naming,
+        Severity::Warning,
+        "Completion functions should use 'nu-complete' prefix for clarity",
+        check,
+    )
 }
 
 #[cfg(test)]

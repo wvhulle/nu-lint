@@ -4,113 +4,67 @@ use crate::{
     context::LintContext,
     external_command::{BuiltinAlternative, ExternalCommandVisitor},
     lint::{Fix, Replacement, Severity, Violation},
-    rule::{RegexRule, RuleCategory, RuleMetadata},
+    rule::{Rule, RuleCategory},
     visitor::VisitContext,
 };
 
-pub struct AvoidExternalTextTools;
+/// Map of text transformation commands to their Nushell built-in
+/// equivalents Based on <https://www.nushell.sh/book/coming_from_bash.html#command-equivalents>
+fn get_builtin_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
+    let mut map = HashMap::new();
 
-impl AvoidExternalTextTools {
-    #[must_use]
-    pub fn new() -> Self {
-        Self
-    }
-
-    /// Map of text transformation commands to their Nushell built-in
-    /// equivalents Based on <https://www.nushell.sh/book/coming_from_bash.html#command-equivalents>
-    fn get_builtin_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
-        let mut map = HashMap::new();
-
-        // Text transformation
-        map.insert(
-            "sed",
-            BuiltinAlternative::with_note(
-                "str replace",
-                "Use 'str replace' for find and replace operations",
-            ),
-        );
-        map.insert(
-            "awk",
-            BuiltinAlternative::with_note(
-                "where, select, or each",
-                "Use 'where' for filtering, 'select' for columns, or 'each' for row-by-row \
-                 processing",
-            ),
-        );
-        map.insert(
-            "cut",
-            BuiltinAlternative::with_note("select", "Use 'select' to choose specific columns"),
-        );
-        map.insert(
-            "wc",
-            BuiltinAlternative::with_note(
-                "length or str length",
-                "Use 'length' for item count or 'str length' for character count",
-            ),
-        );
-        map.insert(
+    // Text transformation
+    map.insert(
+        "sed",
+        BuiltinAlternative::with_note(
+            "str replace",
+            "Use 'str replace' for find and replace operations",
+        ),
+    );
+    map.insert(
+        "awk",
+        BuiltinAlternative::with_note(
+            "where, select, or each",
+            "Use 'where' for filtering, 'select' for columns, or 'each' for row-by-row \
+             processing",
+        ),
+    );
+    map.insert(
+        "cut",
+        BuiltinAlternative::with_note("select", "Use 'select' to choose specific columns"),
+    );
+    map.insert(
+        "wc",
+        BuiltinAlternative::with_note(
+            "length or str length",
+            "Use 'length' for item count or 'str length' for character count",
+        ),
+    );
+    map.insert(
+        "tee",
+        BuiltinAlternative::with_note(
             "tee",
-            BuiltinAlternative::with_note(
-                "tee",
-                "Use 'tee { save file.txt }' to save while passing through",
-            ),
-        );
-        map.insert(
-            "tr",
-            BuiltinAlternative::with_note(
-                "str replace",
-                "Use 'str replace' or 'str downcase'/'str upcase' for case conversion",
-            ),
-        );
-        map.insert(
-            "rev",
-            BuiltinAlternative::with_note(
-                "str reverse or reverse",
-                "Use 'str reverse' for string reversal or 'reverse' for list reversal",
-            ),
-        );
+            "Use 'tee { save file.txt }' to save while passing through",
+        ),
+    );
+    map.insert(
+        "tr",
+        BuiltinAlternative::with_note(
+            "str replace",
+            "Use 'str replace' or 'str downcase'/'str upcase' for case conversion",
+        ),
+    );
+    map.insert(
+        "rev",
+        BuiltinAlternative::with_note(
+            "str reverse or reverse",
+            "Use 'str reverse' for string reversal or 'reverse' for list reversal",
+        ),
+    );
 
-        map
-    }
+    map
 }
 
-impl Default for AvoidExternalTextTools {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl RuleMetadata for AvoidExternalTextTools {
-    fn id(&self) -> &'static str {
-        "avoid_external_text_tools"
-    }
-
-    fn category(&self) -> RuleCategory {
-        RuleCategory::Idioms
-    }
-
-    fn severity(&self) -> Severity {
-        Severity::Info
-    }
-
-    fn description(&self) -> &'static str {
-        "Avoid external text processing tools when Nushell built-ins are available (sed, awk, cut, \
-         wc, tr, tee)"
-    }
-}
-
-impl RegexRule for AvoidExternalTextTools {
-    fn check(&self, context: &LintContext) -> Vec<Violation> {
-        let mut visitor = ExternalCommandVisitor::new(
-            self.id(),
-            self.severity(),
-            Self::get_builtin_alternatives(),
-            Some(build_fix),
-        );
-        context.walk_ast(&mut visitor);
-        visitor.into_violations()
-    }
-}
 
 /// Build a Fix with appropriate replacement based on the external command
 fn build_fix(
@@ -197,12 +151,33 @@ fn build_fix(
 
     // Create the replacement
     Fix {
-        description: format!("Replace '^{}' with '{}'", cmd_text, alternative.command),
+        description: format!("Replace '^{}' with '{}'", cmd_text, alternative.command).into(),
         replacements: vec![Replacement {
             span: expr_span,
-            new_text,
+            new_text: new_text.into(),
         }],
     }
+}
+
+fn check(context: &LintContext) -> Vec<Violation> {
+    let mut visitor = ExternalCommandVisitor::new(
+        "avoid_external_text_tools",
+        Severity::Info,
+        get_builtin_alternatives(),
+        Some(build_fix),
+    );
+    context.walk_ast(&mut visitor);
+    visitor.into_violations()
+}
+
+pub fn rule() -> Rule {
+    Rule::new(
+        "avoid_external_text_tools",
+        RuleCategory::Idioms,
+        Severity::Info,
+        "Avoid external text processing tools when Nushell built-ins are available (sed, awk, cut, wc, tr, tee)",
+        check,
+    )
 }
 
 #[cfg(test)]

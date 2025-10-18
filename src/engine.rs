@@ -7,8 +7,7 @@ use nu_protocol::{
 };
 
 use crate::{
-    LintError, config::Config, context::LintContext, lint::Violation, rule::RuleMetadata,
-    rules::RuleRegistry,
+    LintError, config::Config, context::LintContext, lint::Violation, rules::RuleRegistry,
 };
 
 /// Parse Nushell source code into an AST and return both the Block and
@@ -119,10 +118,10 @@ impl LintEngine {
 
         let context = LintContext {
             source,
+            file_path: path,
             ast: &block,
             engine_state: self.engine_state,
             working_set: &working_set,
-            file_path: path,
         };
 
         let mut violations = self.collect_violations(&context);
@@ -135,23 +134,27 @@ impl LintEngine {
     fn collect_violations(&self, context: &LintContext) -> Vec<Violation> {
         let enabled_rules = self.get_enabled_rules();
 
-        enabled_rules.flat_map(|rule| rule.check(context)).collect()
+        enabled_rules
+            .flat_map(|rule| (rule.check)(context))
+            .collect()
     }
 
     /// Get all rules that are enabled according to the configuration
     fn get_enabled_rules(&self) -> impl Iterator<Item = &crate::rule::Rule> {
         self.registry.all_rules().filter(|rule| {
-            if let Some(configured_severity) = self.config.rule_severity(rule.id()) {
-                configured_severity == rule.severity()
+            if let Some(configured_severity) = self.config.rule_severity(rule.id) {
+                configured_severity == rule.severity
             } else {
-                !self.config.rules.contains_key(rule.id())
+                !self.config.rules.contains_key(rule.id)
             }
         })
     }
 
     /// Attach file path to all violations
     fn attach_file_path(violations: &mut [Violation], path: Option<&Path>) {
-        if let Some(file_path) = path.and_then(|p| p.to_str()).map(String::from) {
+        if let Some(file_path_str) = path.and_then(|p| p.to_str()) {
+            use std::borrow::Cow;
+            let file_path: Cow<'static, str> = file_path_str.to_owned().into();
             for violation in violations {
                 violation.file = Some(file_path.clone());
             }

@@ -5,7 +5,6 @@ use rayon::prelude::*;
 
 use crate::{
     Config, JsonFormatter, LintEngine, OutputFormatter, TextFormatter, lint::Violation,
-    rule::RuleMetadata,
 };
 
 #[derive(Parser)]

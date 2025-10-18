@@ -30,7 +30,7 @@ impl OutputFormatter for TextFormatter {
             let source_code = violation
                 .file
                 .as_ref()
-                .and_then(|path| std::fs::read_to_string(path).ok())
+                .and_then(|path| std::fs::read_to_string(path.as_ref()).ok())
                 .unwrap_or_default();
 
             let (line, column) = calculate_line_column(&source_code, violation.span.start);
@@ -71,19 +71,19 @@ impl OutputFormatter for JsonFormatter {
                 let source_code = violation
                     .file
                     .as_ref()
-                    .and_then(|path| std::fs::read_to_string(path).ok())
+                    .and_then(|path| std::fs::read_to_string(path.as_ref()).ok())
                     .unwrap_or_default();
 
                 let (line, column) = calculate_line_column(&source_code, violation.span.start);
 
                 JsonViolation {
-                    rule_id: violation.rule_id.clone(),
+                    rule_id: violation.rule_id.to_string(),
                     severity: violation.severity.to_string(),
-                    message: violation.message.clone(),
-                    file: violation.file.clone(),
+                    message: violation.message.to_string(),
+                    file: violation.file.as_ref().map(std::string::ToString::to_string),
                     line,
                     column,
-                    suggestion: violation.suggestion.clone(),
+                    suggestion: violation.suggestion.as_ref().map(std::string::ToString::to_string),
                 }
             })
             .collect();
@@ -159,7 +159,7 @@ impl Diagnostic for ViolationDiagnostic {
     fn labels(&self) -> Option<Box<dyn Iterator<Item = LabeledSpan> + '_>> {
         let span = self.violation.to_source_span();
         Some(Box::new(std::iter::once(LabeledSpan::new(
-            Some(self.violation.message.clone()),
+            Some(self.violation.message.to_string()),
             span.offset(),
             span.len(),
         ))))

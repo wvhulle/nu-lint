@@ -4,104 +4,57 @@ use crate::{
     context::LintContext,
     external_command::{BuiltinAlternative, ExternalCommandVisitor},
     lint::{Fix, Replacement, Severity, Violation},
-    rule::{RegexRule, RuleCategory, RuleMetadata},
+    rule::{Rule, RuleCategory},
     visitor::VisitContext,
 };
 
-pub struct AvoidExternalFileTools;
+/// Map of common file and text operations to their Nushell built-in
+/// equivalents Based on <https://www.nushell.sh/book/coming_from_bash.html#command-equivalents>
+///
+/// This rule focuses on the most commonly used commands when migrating from
+/// bash. See also: BP013 (text transformation), BP014 (system commands)
+fn get_builtin_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
+    let mut map = HashMap::new();
 
-impl AvoidExternalFileTools {
-    #[must_use]
-    pub fn new() -> Self {
-        Self
-    }
+    // Common file system operations
+    map.insert("ls", BuiltinAlternative::simple("ls"));
+    map.insert(
+        "cat",
+        BuiltinAlternative::with_note(
+            "open --raw",
+            "Use 'open' to read files as structured data, or 'open --raw' for plain text",
+        ),
+    );
+    map.insert(
+        "find",
+        BuiltinAlternative::with_note(
+            "ls or glob",
+            "Use 'ls **/*.ext' for recursive file matching, 'glob **/*.ext' for pattern \
+             matching, or 'ls' with pipes for complex filtering",
+        ),
+    );
 
-    /// Map of common file and text operations to their Nushell built-in
-    /// equivalents Based on <https://www.nushell.sh/book/coming_from_bash.html#command-equivalents>
-    ///
-    /// This rule focuses on the most commonly used commands when migrating from
-    /// bash. See also: BP013 (text transformation), BP014 (system commands)
-    fn get_builtin_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
-        let mut map = HashMap::new();
+    // Common text processing operations
+    map.insert(
+        "grep",
+        BuiltinAlternative::with_note(
+            "where or find",
+            "Use 'where $it =~ <pattern>' for regex filtering, 'find <substring>' for text \
+             search, or 'search <term>' for full-text search across structured data",
+        ),
+    );
+    map.insert(
+        "head",
+        BuiltinAlternative::with_note("first", "Use 'first N' to get the first N items"),
+    );
+    map.insert(
+        "tail",
+        BuiltinAlternative::with_note("last", "Use 'last N' to get the last N items"),
+    );
+    map.insert("sort", BuiltinAlternative::simple("sort or sort-by"));
+    map.insert("uniq", BuiltinAlternative::simple("uniq or uniq-by"));
 
-        // Common file system operations
-        map.insert("ls", BuiltinAlternative::simple("ls"));
-        map.insert(
-            "cat",
-            BuiltinAlternative::with_note(
-                "open --raw",
-                "Use 'open' to read files as structured data, or 'open --raw' for plain text",
-            ),
-        );
-        map.insert(
-            "find",
-            BuiltinAlternative::with_note(
-                "ls or glob",
-                "Use 'ls **/*.ext' for recursive file matching, 'glob **/*.ext' for pattern \
-                 matching, or 'ls' with pipes for complex filtering",
-            ),
-        );
-
-        // Common text processing operations
-        map.insert(
-            "grep",
-            BuiltinAlternative::with_note(
-                "where or find",
-                "Use 'where $it =~ <pattern>' for regex filtering, 'find <substring>' for text \
-                 search, or 'search <term>' for full-text search across structured data",
-            ),
-        );
-        map.insert(
-            "head",
-            BuiltinAlternative::with_note("first", "Use 'first N' to get the first N items"),
-        );
-        map.insert(
-            "tail",
-            BuiltinAlternative::with_note("last", "Use 'last N' to get the last N items"),
-        );
-        map.insert("sort", BuiltinAlternative::simple("sort or sort-by"));
-        map.insert("uniq", BuiltinAlternative::simple("uniq or uniq-by"));
-
-        map
-    }
-}
-
-impl Default for AvoidExternalFileTools {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl RuleMetadata for AvoidExternalFileTools {
-    fn id(&self) -> &'static str {
-        "avoid_external_file_tools"
-    }
-
-    fn category(&self) -> RuleCategory {
-        RuleCategory::Idioms
-    }
-
-    fn severity(&self) -> Severity {
-        Severity::Info
-    }
-
-    fn description(&self) -> &'static str {
-        "Avoid external file tools when Nushell built-ins are available (ls, cat, grep, head, \
-         tail, sort, uniq, find)"
-    }
-}
-
-impl RegexRule for AvoidExternalFileTools {
-    fn check(&self, context: &LintContext) -> Vec<Violation> {
-        let mut visitor = ExternalCommandVisitor::new(
-            self.id(),
-            self.severity(),
-            Self::get_builtin_alternatives(),
-            Some(build_fix),
-        );
-        context.walk_ast(&mut visitor);
-        visitor.into_violations()
-    }
+    map
 }
 
 /// Build a simple fix for common external command replacements
@@ -178,12 +131,33 @@ fn build_fix(
     };
 
     Fix {
-        description: format!("Replace '^{}' with '{}'", cmd_text, alternative.command),
+        description: format!("Replace '^{}' with '{}'", cmd_text, alternative.command).into(),
         replacements: vec![Replacement {
             span: expr_span,
-            new_text,
+            new_text: new_text.into(),
         }],
     }
+}
+
+fn check(context: &LintContext) -> Vec<Violation> {
+    let mut visitor = ExternalCommandVisitor::new(
+        "avoid_external_file_tools",
+        Severity::Info,
+        get_builtin_alternatives(),
+        Some(build_fix),
+    );
+    context.walk_ast(&mut visitor);
+    visitor.into_violations()
+}
+
+pub fn rule() -> Rule {
+    Rule::new(
+        "avoid_external_file_tools",
+        RuleCategory::Idioms,
+        Severity::Info,
+        "Avoid external file tools when Nushell built-ins are available (ls, cat, grep, head, tail, sort, uniq, find)",
+        check,
+    )
 }
 
 #[cfg(test)]

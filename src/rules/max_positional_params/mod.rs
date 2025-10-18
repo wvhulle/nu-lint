@@ -1,75 +1,49 @@
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{RegexRule, RuleCategory, RuleMetadata},
+    rule::{Rule, RuleCategory},
 };
 
-pub struct MaxPositionalParams {
-    max_positional: usize,
-}
+const MAX_POSITIONAL: usize = 2;
 
-impl MaxPositionalParams {
-    #[must_use]
-    pub fn new() -> Self {
-        Self { max_positional: 2 }
-    }
-}
+fn check(context: &LintContext) -> Vec<Violation> {
+    context
+        .new_user_functions()
+        .filter_map(|(_, decl)| {
+            let signature = decl.signature();
 
-impl Default for MaxPositionalParams {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+            // Count only positional parameters (not flags)
+            let positional_count = signature.required_positional.len()
+                + signature.optional_positional.len()
+                + usize::from(signature.rest_positional.is_some());
 
-impl RuleMetadata for MaxPositionalParams {
-    fn id(&self) -> &'static str {
-        "max_positional_params"
-    }
-
-    fn category(&self) -> RuleCategory {
-        RuleCategory::CodeQuality
-    }
-
-    fn severity(&self) -> Severity {
-        Severity::Warning
-    }
-
-    fn description(&self) -> &'static str {
-        "Custom commands should have ≤ 2 positional parameters"
-    }
-}
-
-impl RegexRule for MaxPositionalParams {
-    fn check(&self, context: &LintContext) -> Vec<Violation> {
-        context
-            .new_user_functions()
-            .filter_map(|(_, decl)| {
-                let signature = decl.signature();
-
-                // Count only positional parameters (not flags)
-                let positional_count = signature.required_positional.len()
-                    + signature.optional_positional.len()
-                    + usize::from(signature.rest_positional.is_some());
-
-                // Only create violation if count exceeds threshold
-                (positional_count > self.max_positional).then(|| Violation {
-                    rule_id: self.id().to_string(),
-                    severity: self.severity(),
-                    message: format!(
-                        "Command has {} positional parameters, should have ≤ {}",
-                        positional_count, self.max_positional
-                    ),
-                    span: context.find_declaration_span(&signature.name),
-                    suggestion: Some(
-                        "Consider using named flags (--flag) for parameters beyond the first 2"
-                            .to_string(),
-                    ),
-                    fix: None,
-                    file: None,
-                })
+            // Only create violation if count exceeds threshold
+            (positional_count > MAX_POSITIONAL).then(|| Violation {
+                rule_id: "max_positional_params".into(),
+                severity: Severity::Warning,
+                message: format!(
+                    "Command has {positional_count} positional parameters, should have ≤ {MAX_POSITIONAL}"
+                ).into(),
+                span: context.find_declaration_span(&signature.name),
+                suggestion: Some(
+                    "Consider using named flags (--flag) for parameters beyond the first 2"
+                        .to_string().into(),
+                ),
+                fix: None,
+                file: None,
             })
-            .collect()
-    }
+        })
+        .collect()
+}
+
+pub fn rule() -> Rule {
+    Rule::new(
+        "max_positional_params",
+        RuleCategory::CodeQuality,
+        Severity::Warning,
+        "Custom commands should have ≤ 2 positional parameters",
+        check,
+    )
 }
 
 #[cfg(test)]

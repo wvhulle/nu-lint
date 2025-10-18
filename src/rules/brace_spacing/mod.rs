@@ -3,52 +3,19 @@ use nu_protocol::{Span, ast::Expr};
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{AstRule, RuleCategory, RuleMetadata},
+    rule::{Rule, RuleCategory},
     visitor::{AstVisitor, VisitContext},
 };
 
-#[derive(Default)]
-pub struct BraceSpacing;
-
-impl RuleMetadata for BraceSpacing {
-    fn id(&self) -> &'static str {
-        "brace_spacing"
-    }
-
-    fn category(&self) -> RuleCategory {
-        RuleCategory::Formatting
-    }
-
-    fn severity(&self) -> Severity {
-        Severity::Info
-    }
-
-    fn description(&self) -> &'static str {
-        "Braces should have consistent spacing: either {x} or { x }, and no space before closure \
-         parameters"
-    }
-}
-
-impl AstRule for BraceSpacing {
-    fn check(&self, context: &LintContext) -> Vec<Violation> {
-        let mut visitor = BraceSpacingVisitor::new(self, context.source);
-        context.walk_ast(&mut visitor);
-        visitor.violations
-    }
-}
-
 /// AST visitor that checks for brace spacing issues
-pub struct BraceSpacingVisitor<'a> {
-    rule: &'a BraceSpacing,
+struct BraceSpacingVisitor<'a> {
     source: &'a str,
     violations: Vec<Violation>,
 }
 
 impl<'a> BraceSpacingVisitor<'a> {
-    #[must_use]
-    pub fn new(rule: &'a BraceSpacing, source: &'a str) -> Self {
+    fn new(source: &'a str) -> Self {
         Self {
-            rule,
             source,
             violations: Vec::new(),
         }
@@ -81,12 +48,12 @@ impl<'a> BraceSpacingVisitor<'a> {
                 && inner[..pos].trim().is_empty()
             {
                 self.violations.push(Violation {
-                    rule_id: self.rule.id().to_string(),
-                    severity: self.rule.severity(),
+                    rule_id: "brace_spacing".into(),
+                    severity: Severity::Info,
                     message: "No space allowed after opening brace before closure parameters"
-                        .to_string(),
+                        .to_string().into(),
                     span,
-                    suggestion: Some("Use {|param| instead of { |param|".to_string()),
+                    suggestion: Some("Use {|param| instead of { |param|".to_string().into()),
                     fix: None,
                     file: None,
                 });
@@ -106,13 +73,13 @@ impl<'a> BraceSpacingVisitor<'a> {
         // Inconsistent: one has space, the other doesn't
         if starts_with_space != ends_with_space {
             self.violations.push(Violation {
-                rule_id: self.rule.id().to_string(),
-                severity: self.rule.severity(),
+                rule_id: "brace_spacing".into(),
+                severity: Severity::Info,
                 message: "Inconsistent brace spacing: use either {x} or { x }, not { x} or {x }"
-                    .to_string(),
+                    .to_string().into(),
                 span,
                 suggestion: Some(
-                    "Use consistent spacing: both spaces or no spaces inside braces".to_string(),
+                    "Use consistent spacing: both spaces or no spaces inside braces".to_string().into(),
                 ),
                 fix: None,
                 file: None,
@@ -145,6 +112,22 @@ impl AstVisitor for BraceSpacingVisitor<'_> {
         // Continue walking the tree
         crate::visitor::walk_expression(self, expr, context);
     }
+}
+
+fn check(context: &LintContext) -> Vec<Violation> {
+    let mut visitor = BraceSpacingVisitor::new(context.source);
+    context.walk_ast(&mut visitor);
+    visitor.violations
+}
+
+pub fn rule() -> Rule {
+    Rule::new(
+        "brace_spacing",
+        RuleCategory::Formatting,
+        Severity::Info,
+        "Braces should have consistent spacing: either {x} or { x }, and no space before closure parameters",
+        check,
+    )
 }
 
 #[cfg(test)]

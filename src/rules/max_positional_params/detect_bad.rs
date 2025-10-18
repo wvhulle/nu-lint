@@ -1,13 +1,8 @@
-#[cfg(test)]
-mod tests {
-
-    use crate::{
-        context::LintContext, rule::RegexRule, rules::max_positional_params::MaxPositionalParams,
-    };
+    use super::rule;
+use crate::LintContext;
 
     #[test]
     fn test_detect_too_many_positional_params_complex() {
-        let rule = MaxPositionalParams::new();
         let bad_code = r"
 def complex-command [
     param1: string
@@ -21,7 +16,7 @@ def complex-command [
 
         LintContext::test_with_parsed_source(bad_code, |context| {
             assert!(
-                !rule.check(&context).is_empty(),
+                !(rule().check)(&context).is_empty(),
                 "Should detect function with too many positional parameters"
             );
         });
@@ -29,7 +24,6 @@ def complex-command [
 
     #[test]
     fn test_detect_too_many_positional_params_simple() {
-        let rule = MaxPositionalParams::new();
         let bad_code = r"
 def too-many [a: int, b: int, c: int, d: int, e: int] {
     print $a
@@ -38,9 +32,8 @@ def too-many [a: int, b: int, c: int, d: int, e: int] {
 
         LintContext::test_with_parsed_source(bad_code, |context| {
             assert!(
-                !rule.check(&context).is_empty(),
+                !(rule().check)(&context).is_empty(),
                 "Should detect function with too many simple positional parameters"
             );
         });
     }
-}

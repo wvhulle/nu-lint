@@ -1,14 +1,9 @@
-#[cfg(test)]
-mod tests {
+use super::rule;
+use crate::LintContext;
 
-    use crate::{
-        context::LintContext, rule::RegexRule, rules::prefer_range_iteration::PreferRangeIteration,
-    };
-
-    #[test]
-    fn test_detect_while_loop_with_counter() {
-        let rule = PreferRangeIteration::new();
-        let bad_code = r"
+#[test]
+fn test_detect_while_loop_with_counter() {
+    let bad_code = r"
 mut attempts = 0
 while $attempts < 10 {
     print $'Attempt ($attempts)'
@@ -16,18 +11,17 @@ while $attempts < 10 {
 }
 ";
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            assert!(
-                !rule.check(&context).is_empty(),
-                "Should detect while loop with counter pattern"
-            );
-        });
-    }
+    LintContext::test_with_parsed_source(bad_code, |context| {
+        assert!(
+            !(rule().check)(&context).is_empty(),
+            "Should detect while loop with counter pattern"
+        );
+    });
+}
 
-    #[test]
-    fn test_detect_while_loop_with_compound_assignment() {
-        let rule = PreferRangeIteration::new();
-        let bad_code = r"
+#[test]
+fn test_detect_while_loop_with_compound_assignment() {
+    let bad_code = r"
 mut count = 0
 while $count < 5 {
     do_something
@@ -35,11 +29,10 @@ while $count < 5 {
 }
 ";
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            assert!(
-                !rule.check(&context).is_empty(),
-                "Should detect while loop with compound assignment pattern"
-            );
-        });
-    }
+    LintContext::test_with_parsed_source(bad_code, |context| {
+        assert!(
+            !(rule().check)(&context).is_empty(),
+            "Should detect while loop with compound assignment pattern"
+        );
+    });
 }

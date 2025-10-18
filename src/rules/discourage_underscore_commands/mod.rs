@@ -1,73 +1,48 @@
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{RegexRule, RuleCategory, RuleMetadata},
+    rule::{Rule, RuleCategory},
 };
 
-pub struct DiscourageUnderscoreCommands;
+fn check(context: &LintContext) -> Vec<Violation> {
+    let mut violations = Vec::new();
 
-impl DiscourageUnderscoreCommands {
-    #[must_use]
-    pub fn new() -> Self {
-        Self
-    }
-}
+    for (_decl_id, decl) in context.new_user_functions() {
+        let command_name = &decl.signature().name;
 
-impl Default for DiscourageUnderscoreCommands {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+        // Check if command name contains underscores
+        if command_name.contains('_') {
+            let suggested_name = command_name.replace('_', "-");
+            let span = context.find_declaration_span(command_name);
 
-impl RuleMetadata for DiscourageUnderscoreCommands {
-    fn id(&self) -> &'static str {
-        "discourage_underscore_commands"
-    }
-
-    fn category(&self) -> RuleCategory {
-        RuleCategory::Naming
-    }
-
-    fn severity(&self) -> Severity {
-        Severity::Info
-    }
-
-    fn description(&self) -> &'static str {
-        "Command names should use hyphens instead of underscores for better readability"
-    }
-}
-
-impl RegexRule for DiscourageUnderscoreCommands {
-    fn check(&self, context: &LintContext) -> Vec<Violation> {
-        let mut violations = Vec::new();
-
-        for (_decl_id, decl) in context.new_user_functions() {
-            let command_name = &decl.signature().name;
-
-            // Check if command name contains underscores
-            if command_name.contains('_') {
-                let suggested_name = command_name.replace('_', "-");
-                let span = context.find_declaration_span(command_name);
-
-                violations.push(Violation {
-                    rule_id: self.id().to_string(),
-                    severity: self.severity(),
-                    message: format!(
-                        "Command '{command_name}' uses underscores - prefer hyphens for \
-                         readability"
-                    ),
-                    span,
-                    suggestion: Some(format!(
-                        "Rename to '{suggested_name}' following Nushell convention"
-                    )),
-                    fix: None,
-                    file: None,
-                });
-            }
+            violations.push(Violation {
+                rule_id: "discourage_underscore_commands".into(),
+                severity: Severity::Info,
+                message: format!(
+                    "Command '{command_name}' uses underscores - prefer hyphens for readability"
+                )
+                .into(),
+                span,
+                suggestion: Some(
+                    format!("Rename to '{suggested_name}' following Nushell convention").into(),
+                ),
+                fix: None,
+                file: None,
+            });
         }
-
-        violations
     }
+
+    violations
+}
+
+pub fn rule() -> Rule {
+    Rule::new(
+        "discourage_underscore_commands",
+        RuleCategory::Naming,
+        Severity::Info,
+        "Command names should use hyphens instead of underscores for better readability",
+        check,
+    )
 }
 
 #[cfg(test)]

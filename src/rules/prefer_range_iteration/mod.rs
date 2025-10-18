@@ -3,48 +3,18 @@ use regex::Regex;
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{RegexRule, RuleCategory, RuleMetadata},
+    rule::{Rule, RuleCategory},
 };
 
-pub struct PreferRangeIteration;
+fn check(context: &LintContext) -> Vec<Violation> {
+    // Pattern: mut counter = 0, while counter < max, counter increment
+    let mut_counter_pattern = Regex::new(r"mut\s+(\w+)\s*=\s*0").unwrap();
 
-impl PreferRangeIteration {
-    #[must_use]
-    pub fn new() -> Self {
-        Self
-    }
-}
-
-impl Default for PreferRangeIteration {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl RuleMetadata for PreferRangeIteration {
-    fn id(&self) -> &'static str {
-        "prefer_range_iteration"
-    }
-
-    fn category(&self) -> RuleCategory {
-        RuleCategory::Idioms
-    }
-
-    fn severity(&self) -> Severity {
-        Severity::Warning
-    }
-
-    fn description(&self) -> &'static str {
-        "Prefer range iteration over while loops with counters"
-    }
-}
-
-impl RegexRule for PreferRangeIteration {
-    fn check(&self, context: &LintContext) -> Vec<Violation> {
-        // Pattern: mut counter = 0, while counter < max, counter increment
-        let mut_counter_pattern = Regex::new(r"mut\s+(\w+)\s*=\s*0").unwrap();
-
-        context.violations_from_regex_if(&mut_counter_pattern, self.id(), self.severity(), |mat| {
+    context.violations_from_regex(
+        &mut_counter_pattern,
+        "prefer_range_iteration",
+        Severity::Warning,
+        |mat| {
             let counter_name = mat.as_str().split_whitespace().nth(1)?;
 
             // Check if there's a while loop using this counter
@@ -73,8 +43,18 @@ impl RegexRule for PreferRangeIteration {
             } else {
                 None
             }
-        })
-    }
+        },
+    )
+}
+
+pub fn rule() -> Rule {
+    Rule::new(
+        "prefer_range_iteration",
+        RuleCategory::Idioms,
+        Severity::Warning,
+        "Prefer range iteration over while loops with counters",
+        check,
+    )
 }
 
 #[cfg(test)]

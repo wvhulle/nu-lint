@@ -3,10 +3,7 @@ use std::{path::PathBuf, process, sync::Mutex};
 use clap::{Parser, Subcommand};
 use rayon::prelude::*;
 
-use crate::{
-    Config, JsonFormatter, LintEngine, OutputFormatter, TextFormatter, lint::Violation,
-    rule::RuleMetadata,
-};
+use crate::{Config, JsonFormatter, LintEngine, OutputFormatter, TextFormatter, lint::Violation};
 
 #[derive(Parser)]
 #[command(name = "nu-lint")]
@@ -225,10 +222,7 @@ fn list_rules(config: &Config) {
     for rule in engine.registry().all_rules() {
         println!(
             "{:<8} [{:<12}] {} - {}",
-            rule.id(),
-            rule.category(),
-            rule.severity(),
-            rule.description()
+            rule.id, rule.category, rule.severity, rule.description
         );
     }
 }
@@ -237,10 +231,10 @@ fn explain_rule(config: &Config, rule_id: &str) {
     let engine = LintEngine::new(config.clone());
 
     if let Some(rule) = engine.registry().get_rule(rule_id) {
-        println!("Rule: {}", rule.id());
-        println!("Category: {}", rule.category());
-        println!("Severity: {}", rule.severity());
-        println!("Description: {}", rule.description());
+        println!("Rule: {}", rule.id);
+        println!("Category: {}", rule.category);
+        println!("Severity: {}", rule.severity);
+        println!("Description: {}", rule.description);
     } else {
         eprintln!("Error: Rule '{rule_id}' not found");
         process::exit(2);
@@ -249,15 +243,12 @@ fn explain_rule(config: &Config, rule_id: &str) {
 
 #[cfg(test)]
 mod tests {
-    use std::{fs, sync::Mutex};
+    use std::fs;
 
     use tempfile::{self, TempDir};
 
     use super::*;
-
-    // Use a static mutex to prevent race conditions with tests that change
-    // directories
-    static CHDIR_MUTEX: Mutex<()> = Mutex::new(());
+    use crate::test_utils::CHDIR_MUTEX;
 
     #[test]
     fn test_collect_files_to_lint_single_file() {
@@ -353,7 +344,7 @@ mod tests {
             let rules: Vec<_> = engine.registry().all_rules().collect();
 
             assert!(!rules.is_empty());
-            assert!(rules.iter().any(|r| r.id() == "snake_case_variables"));
+            assert!(rules.iter().any(|r| r.id == "snake_case_variables"));
         }
 
         #[test]
@@ -364,8 +355,8 @@ mod tests {
 
             assert!(rule.is_some());
             let rule = rule.unwrap();
-            assert_eq!(rule.id(), "snake_case_variables");
-            assert!(!rule.description().is_empty());
+            assert_eq!(rule.id, "snake_case_variables");
+            assert!(!rule.description.is_empty());
         }
 
         #[test]
@@ -421,14 +412,23 @@ mod tests {
             fs::write(&nu_file_path, "let myVariable = 5\n").unwrap();
 
             let original_dir = std::env::current_dir().unwrap();
-            std::env::set_current_dir(temp_dir.path()).unwrap();
 
-            let config = load_config(None);
-            let engine = LintEngine::new(config);
-            let files = collect_files_to_lint(&[PathBuf::from("test.nu")]);
-            let (violations, _) = lint_files(&engine, &files, false);
+            // Use a closure with defer-like behavior to ensure directory is restored
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                std::env::set_current_dir(temp_dir.path()).unwrap();
 
+                let config = load_config(None);
+                let engine = LintEngine::new(config);
+                let files = collect_files_to_lint(&[PathBuf::from("test.nu")]);
+                let (violations, _) = lint_files(&engine, &files, false);
+
+                violations
+            }));
+
+            // Always restore directory, even if test panics
             std::env::set_current_dir(original_dir).unwrap();
+
+            let violations = result.unwrap();
 
             // Should have no violations because snake_case_variables is off
             assert!(
@@ -452,14 +452,23 @@ mod tests {
             fs::write(&nu_file_path, "let myVariable = 5\n").unwrap();
 
             let original_dir = std::env::current_dir().unwrap();
-            std::env::set_current_dir(&subdir).unwrap();
 
-            let config = load_config(None);
-            let engine = LintEngine::new(config);
-            let files = collect_files_to_lint(&[PathBuf::from("test.nu")]);
-            let (violations, _) = lint_files(&engine, &files, false);
+            // Use a closure with defer-like behavior to ensure directory is restored
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                std::env::set_current_dir(&subdir).unwrap();
 
+                let config = load_config(None);
+                let engine = LintEngine::new(config);
+                let files = collect_files_to_lint(&[PathBuf::from("test.nu")]);
+                let (violations, _) = lint_files(&engine, &files, false);
+
+                violations
+            }));
+
+            // Always restore directory, even if test panics
             std::env::set_current_dir(original_dir).unwrap();
+
+            let violations = result.unwrap();
 
             // Should have no violations because snake_case_variables is off
             assert!(
@@ -483,16 +492,25 @@ mod tests {
             fs::write(&nu_file_path, "let myVariable = 5\n").unwrap();
 
             let original_dir = std::env::current_dir().unwrap();
-            std::env::set_current_dir(temp_dir.path()).unwrap();
 
-            // Explicit config should override auto-discovery
-            let config = load_config(Some(&explicit_config));
-            let engine = LintEngine::new(config);
-            // Use relative path since we changed directory
-            let files = collect_files_to_lint(&[PathBuf::from("test.nu")]);
-            let (violations, _) = lint_files(&engine, &files, false);
+            // Use a closure with defer-like behavior to ensure directory is restored
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                std::env::set_current_dir(temp_dir.path()).unwrap();
 
+                // Explicit config should override auto-discovery
+                let config = load_config(Some(&explicit_config));
+                let engine = LintEngine::new(config);
+                // Use relative path since we changed directory
+                let files = collect_files_to_lint(&[PathBuf::from("test.nu")]);
+                let (violations, _) = lint_files(&engine, &files, false);
+
+                violations
+            }));
+
+            // Always restore directory, even if test panics
             std::env::set_current_dir(original_dir).unwrap();
+
+            let violations = result.unwrap();
 
             // Should have violations because explicit config doesn't disable the rule
             assert!(

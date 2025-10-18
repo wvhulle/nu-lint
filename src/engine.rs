@@ -7,17 +7,11 @@ use nu_protocol::{
 };
 
 use crate::{
-    LintError, config::Config, context::LintContext, lint::Violation, rule::RuleMetadata,
-    rules::RuleRegistry,
+    LintError, config::Config, context::LintContext, lint::Violation, rules::RuleRegistry,
 };
 
 /// Parse Nushell source code into an AST and return both the Block and
 /// `StateWorkingSet`.
-///
-/// The `StateWorkingSet` contains the delta with newly defined declarations
-/// (functions, aliases, etc.) which is essential for AST-based linting rules
-/// that need to inspect function signatures, parameter types, and other
-/// semantic information.
 fn parse_source<'a>(engine_state: &'a EngineState, source: &[u8]) -> (Block, StateWorkingSet<'a>) {
     let mut working_set = StateWorkingSet::new(engine_state);
     let block = parse(&mut working_set, None, source, false);
@@ -31,48 +25,9 @@ pub struct LintEngine {
     engine_state: &'static EngineState,
 }
 
-pub struct LintEngineBuilder {
-    registry: Option<RuleRegistry>,
-    config: Option<Config>,
-    engine_state: Option<&'static EngineState>,
-}
-
-impl Default for LintEngineBuilder {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl LintEngineBuilder {
-    #[must_use]
-    pub fn new() -> Self {
-        Self {
-            registry: None,
-            config: None,
-            engine_state: None,
-        }
-    }
-
-    #[must_use]
-    pub fn with_config(mut self, config: Config) -> Self {
-        self.config = Some(config);
-        self
-    }
-
-    #[must_use]
-    pub fn with_registry(mut self, registry: RuleRegistry) -> Self {
-        self.registry = Some(registry);
-        self
-    }
-
-    #[must_use]
-    pub fn with_engine_state(mut self, engine_state: &'static EngineState) -> Self {
-        self.engine_state = Some(engine_state);
-        self
-    }
-
-    #[must_use]
-    pub fn engine_state() -> &'static EngineState {
+impl LintEngine {
+    /// Get or initialize the default engine state
+    fn default_engine_state() -> &'static EngineState {
         static ENGINE: OnceLock<EngineState> = OnceLock::new();
         ENGINE.get_or_init(|| {
             let engine_state = nu_cmd_lang::create_default_context();
@@ -81,26 +36,12 @@ impl LintEngineBuilder {
     }
 
     #[must_use]
-    pub fn build(self) -> LintEngine {
-        LintEngine {
-            registry: self
-                .registry
-                .unwrap_or_else(RuleRegistry::with_default_rules),
-            config: self.config.unwrap_or_default(),
-            engine_state: self.engine_state.unwrap_or_else(Self::engine_state),
-        }
-    }
-}
-
-impl LintEngine {
-    #[must_use]
     pub fn new(config: Config) -> Self {
-        LintEngineBuilder::new().with_config(config).build()
-    }
-
-    #[must_use]
-    pub fn builder() -> LintEngineBuilder {
-        LintEngineBuilder::new()
+        Self {
+            registry: RuleRegistry::with_default_rules(),
+            config,
+            engine_state: Self::default_engine_state(),
+        }
     }
 
     /// Lint a file at the given path.
@@ -119,10 +60,10 @@ impl LintEngine {
 
         let context = LintContext {
             source,
+            file_path: path,
             ast: &block,
             engine_state: self.engine_state,
             working_set: &working_set,
-            file_path: path,
         };
 
         let mut violations = self.collect_violations(&context);
@@ -135,23 +76,28 @@ impl LintEngine {
     fn collect_violations(&self, context: &LintContext) -> Vec<Violation> {
         let enabled_rules = self.get_enabled_rules();
 
-        enabled_rules.flat_map(|rule| rule.check(context)).collect()
+        enabled_rules
+            .flat_map(|rule| (rule.check)(context))
+            .collect()
     }
 
     /// Get all rules that are enabled according to the configuration
     fn get_enabled_rules(&self) -> impl Iterator<Item = &crate::rule::Rule> {
         self.registry.all_rules().filter(|rule| {
-            if let Some(configured_severity) = self.config.rule_severity(rule.id()) {
-                configured_severity == rule.severity()
-            } else {
-                !self.config.rules.contains_key(rule.id())
-            }
+            // If not in config, use default (enabled). If in config, check if it's not
+            // turned off.
+            !matches!(
+                self.config.rules.get(rule.id),
+                Some(&crate::config::RuleSeverity::Off)
+            )
         })
     }
 
     /// Attach file path to all violations
     fn attach_file_path(violations: &mut [Violation], path: Option<&Path>) {
-        if let Some(file_path) = path.and_then(|p| p.to_str()).map(String::from) {
+        if let Some(file_path_str) = path.and_then(|p| p.to_str()) {
+            use std::borrow::Cow;
+            let file_path: Cow<'static, str> = file_path_str.to_owned().into();
             for violation in violations {
                 violation.file = Some(file_path.clone());
             }

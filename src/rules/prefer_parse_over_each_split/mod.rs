@@ -3,50 +3,25 @@ use nu_protocol::ast::{Call, Expr};
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{AstRule, RuleCategory, RuleMetadata},
+    rule::{Rule, RuleCategory},
     visitor::{AstVisitor, VisitContext},
 };
 
-#[derive(Default)]
-pub struct PreferParseOverEachSplit;
-
-impl RuleMetadata for PreferParseOverEachSplit {
-    fn id(&self) -> &'static str {
-        "prefer_parse_over_each_split"
-    }
-
-    fn category(&self) -> RuleCategory {
-        RuleCategory::Idioms
-    }
-
-    fn severity(&self) -> Severity {
-        Severity::Info
-    }
-
-    fn description(&self) -> &'static str {
-        "Prefer 'parse' over 'each' with 'split row' for structured text processing"
-    }
-}
-
-impl AstRule for PreferParseOverEachSplit {
-    fn check(&self, context: &LintContext) -> Vec<Violation> {
-        let mut visitor = EachSplitVisitor::new(self);
-        context.walk_ast(&mut visitor);
-        visitor.violations
-    }
-}
-
 /// AST visitor that detects 'each' calls containing 'split row'
-pub struct EachSplitVisitor<'a> {
-    rule: &'a PreferParseOverEachSplit,
+pub struct EachSplitVisitor {
     violations: Vec<Violation>,
 }
 
-impl<'a> EachSplitVisitor<'a> {
+impl Default for EachSplitVisitor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl EachSplitVisitor {
     #[must_use]
-    pub fn new(rule: &'a PreferParseOverEachSplit) -> Self {
+    pub fn new() -> Self {
         Self {
-            rule,
             violations: Vec::new(),
         }
     }
@@ -97,9 +72,14 @@ impl<'a> EachSplitVisitor<'a> {
             _ => false,
         }
     }
+
+    #[must_use]
+    pub fn into_violations(self) -> Vec<Violation> {
+        self.violations
+    }
 }
 
-impl AstVisitor for EachSplitVisitor<'_> {
+impl AstVisitor for EachSplitVisitor {
     fn visit_call(&mut self, call: &Call, context: &VisitContext) {
         if Self::is_command(call, context, "each") {
             let has_split = call
@@ -118,16 +98,18 @@ impl AstVisitor for EachSplitVisitor<'_> {
 
             if has_split {
                 self.violations.push(Violation {
-                    rule_id: self.rule.id().to_string(),
-                    severity: self.rule.severity(),
+                    rule_id: "prefer_parse_over_each_split".to_string().into(),
+                    severity: Severity::Info,
                     message: "Manual splitting with 'each' and 'split row' - consider using \
                               'parse'"
-                        .to_string(),
+                        .to_string()
+                        .into(),
                     span: call.span(),
                     suggestion: Some(
                         "Use 'parse \"{field1} {field2}\"' for structured text extraction instead \
                          of 'each' with 'split row'"
-                            .to_string(),
+                            .to_string()
+                            .into(),
                     ),
                     fix: None,
                     file: None,
@@ -137,6 +119,22 @@ impl AstVisitor for EachSplitVisitor<'_> {
 
         crate::visitor::walk_call(self, call, context);
     }
+}
+
+fn check(context: &LintContext) -> Vec<Violation> {
+    let mut visitor = EachSplitVisitor::new();
+    context.walk_ast(&mut visitor);
+    visitor.into_violations()
+}
+
+pub fn rule() -> Rule {
+    Rule::new(
+        "prefer_parse_over_each_split",
+        RuleCategory::Idioms,
+        Severity::Info,
+        "Prefer 'parse' over 'each' with 'split row' for structured text processing",
+        check,
+    )
 }
 
 #[cfg(test)]

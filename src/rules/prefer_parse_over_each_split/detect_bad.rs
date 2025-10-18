@@ -1,52 +1,31 @@
-#[cfg(test)]
-mod tests {
-    use crate::{
-        context::LintContext, rule::AstRule,
-        rules::prefer_parse_over_each_split::PreferParseOverEachSplit,
-    };
+use super::rule;
 
-    #[test]
-    fn test_detect_each_with_split_row() {
-        let rule = PreferParseOverEachSplit;
-
-        let bad_code = r#"
+#[test]
+fn test_detect_each_with_split_row() {
+    let bad_code = r#"
 $data | lines | each { |line| $line | split row " " }
 "#;
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            let violations = rule.check(&context);
-            assert!(!violations.is_empty(), "Should detect each with split row");
-        });
-    }
+    rule().assert_detects(bad_code);
+}
 
-    #[test]
-    fn test_detect_each_with_split() {
-        let rule = PreferParseOverEachSplit;
-
-        let bad_code = r#"
+#[test]
+fn test_detect_each_with_split() {
+    let bad_code = r#"
 $lines | each { |l| $l | split " " }
 "#;
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            let violations = rule.check(&context);
-            assert!(!violations.is_empty(), "Should detect each with split");
-        });
-    }
+    rule().assert_detects(bad_code);
+}
 
-    #[test]
-    fn test_detect_nested_split_in_each() {
-        let rule = PreferParseOverEachSplit;
-
-        let bad_code = r#"
+#[test]
+fn test_detect_nested_split_in_each() {
+    let bad_code = r#"
 $text | lines | each { |line|
     let parts = ($line | split row ":")
     $parts
 }
 "#;
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            let violations = rule.check(&context);
-            assert!(!violations.is_empty(), "Should detect nested split in each");
-        });
-    }
+    rule().assert_detects(bad_code);
 }

@@ -5,61 +5,30 @@ use regex::Regex;
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{RegexRule, RuleCategory, RuleMetadata},
+    rule::{Rule, RuleCategory},
 };
 
-pub struct ConsistentErrorHandling;
-
-impl ConsistentErrorHandling {
-    #[must_use]
-    pub fn new() -> Self {
-        Self
-    }
-
-    fn complete_pattern() -> &'static Regex {
-        static PATTERN: OnceLock<Regex> = OnceLock::new();
-        PATTERN.get_or_init(|| {
-            Regex::new(r"let\s+(\w+)\s*=\s*\([^)]*\^[^)]*\|\s*complete\s*\)").unwrap()
-        })
-    }
-
-    fn var_pattern() -> &'static Regex {
-        static PATTERN: OnceLock<Regex> = OnceLock::new();
-        PATTERN.get_or_init(|| Regex::new(r"let\s+(\w+)").unwrap())
-    }
+fn complete_pattern() -> &'static Regex {
+    static PATTERN: OnceLock<Regex> = OnceLock::new();
+    PATTERN
+        .get_or_init(|| Regex::new(r"let\s+(\w+)\s*=\s*\([^)]*\^[^)]*\|\s*complete\s*\)").unwrap())
 }
 
-impl Default for ConsistentErrorHandling {
-    fn default() -> Self {
-        Self::new()
-    }
+fn var_pattern() -> &'static Regex {
+    static PATTERN: OnceLock<Regex> = OnceLock::new();
+    PATTERN.get_or_init(|| Regex::new(r"let\s+(\w+)").unwrap())
 }
 
-impl RuleMetadata for ConsistentErrorHandling {
-    fn id(&self) -> &'static str {
-        "consistent_error_handling"
-    }
+fn check(context: &LintContext) -> Vec<Violation> {
+    let complete_pat = complete_pattern();
+    let var_pat = var_pattern();
 
-    fn category(&self) -> RuleCategory {
-        RuleCategory::ErrorHandling
-    }
-
-    fn severity(&self) -> Severity {
-        Severity::Warning
-    }
-
-    fn description(&self) -> &'static str {
-        "Check external command results consistently for better error handling"
-    }
-}
-
-impl RegexRule for ConsistentErrorHandling {
-    fn check(&self, context: &LintContext) -> Vec<Violation> {
-        let complete_pattern = Self::complete_pattern();
-        let var_pattern = Self::var_pattern();
-
-        context.violations_from_regex_if(complete_pattern, self.id(), self.severity(), |mat| {
-            let caps = var_pattern.captures(mat.as_str())?;
+    context.violations_from_regex(
+        complete_pat,
+        "consistent_error_handling",
+        Severity::Warning,
+        |mat| {
+            let caps = var_pat.captures(mat.as_str())?;
             let var_name = &caps[1];
 
             let remaining_source = &context.source[mat.end()..];
@@ -84,9 +53,20 @@ impl RegexRule for ConsistentErrorHandling {
                     ),
                 ))
             }
-        })
-    }
+        },
+    )
 }
+
+pub fn rule() -> Rule {
+    Rule::new(
+        "consistent_error_handling",
+        RuleCategory::ErrorHandling,
+        Severity::Warning,
+        "Check external command results consistently for better error handling",
+        check,
+    )
+}
+
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]

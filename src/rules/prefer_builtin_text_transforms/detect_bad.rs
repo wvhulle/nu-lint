@@ -1,151 +1,78 @@
-#[cfg(test)]
-mod tests {
+use super::rule;
 
-    use crate::{
-        context::LintContext, rule::RegexRule,
-        rules::prefer_builtin_text_transforms::AvoidExternalTextTools,
-    };
+#[test]
+fn test_detect_external_sed() {
+    let bad_code = "^sed 's/foo/bar/' file.txt";
 
-    #[test]
-    fn test_detect_external_sed() {
-        let rule = AvoidExternalTextTools::new();
-        let bad_code = "^sed 's/foo/bar/' file.txt";
+    rule().assert_detects(bad_code);
+}
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            assert!(
-                !rule.check(&context).is_empty(),
-                "Should detect external sed command"
-            );
-        });
-    }
+#[test]
+fn test_detect_external_sed_in_place() {
+    let bad_code = "^sed -i 's/old/new/g' *.txt";
 
-    #[test]
-    fn test_detect_external_sed_in_place() {
-        let rule = AvoidExternalTextTools::new();
-        let bad_code = "^sed -i 's/old/new/g' *.txt";
+    rule().assert_detects(bad_code);
+}
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            assert!(
-                !rule.check(&context).is_empty(),
-                "Should detect external sed with in-place editing"
-            );
-        });
-    }
+#[test]
+fn test_detect_external_sed_pipeline() {
+    let bad_code = "cat file.txt | ^sed 's/pattern/replacement/'";
 
-    #[test]
-    fn test_detect_external_sed_pipeline() {
-        let rule = AvoidExternalTextTools::new();
-        let bad_code = "cat file.txt | ^sed 's/pattern/replacement/'";
+    rule().assert_detects(bad_code);
+}
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            assert!(
-                !rule.check(&context).is_empty(),
-                "Should detect external sed in pipeline"
-            );
-        });
-    }
+#[test]
+fn test_detect_external_awk() {
+    let bad_code = "^awk '{print $1}' file.txt";
 
-    #[test]
-    fn test_detect_external_awk() {
-        let rule = AvoidExternalTextTools::new();
-        let bad_code = "^awk '{print $1}' file.txt";
+    rule().assert_detects(bad_code);
+}
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            assert!(
-                !rule.check(&context).is_empty(),
-                "Should detect external awk command"
-            );
-        });
-    }
+#[test]
+fn test_detect_external_awk_field_separator() {
+    let bad_code = "^awk -F',' '{print $2}' data.csv";
 
-    #[test]
-    fn test_detect_external_awk_field_separator() {
-        let rule = AvoidExternalTextTools::new();
-        let bad_code = "^awk -F',' '{print $2}' data.csv";
+    rule().assert_detects(bad_code);
+}
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            assert!(
-                !rule.check(&context).is_empty(),
-                "Should detect external awk with field separator"
-            );
-        });
-    }
+#[test]
+fn test_detect_external_awk_filtering() {
+    let bad_code = "^awk '$3 > 100 {print $0}' data.txt";
 
-    #[test]
-    fn test_detect_external_awk_filtering() {
-        let rule = AvoidExternalTextTools::new();
-        let bad_code = "^awk '$3 > 100 {print $0}' data.txt";
+    rule().assert_detects(bad_code);
+}
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            assert!(
-                !rule.check(&context).is_empty(),
-                "Should detect external awk with filtering"
-            );
-        });
-    }
+#[test]
+fn test_detect_external_cut() {
+    let bad_code = "^cut -d ',' -f 1 file.csv";
 
-    #[test]
-    fn test_detect_external_cut() {
-        let rule = AvoidExternalTextTools::new();
-        let bad_code = "^cut -d ',' -f 1 file.csv";
+    rule().assert_detects(bad_code);
+}
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            assert!(
-                !rule.check(&context).is_empty(),
-                "Should detect external cut command"
-            );
-        });
-    }
+#[test]
+fn test_detect_external_wc() {
+    let bad_code = "^wc -l file.txt";
 
-    #[test]
-    fn test_detect_external_wc() {
-        let rule = AvoidExternalTextTools::new();
-        let bad_code = "^wc -l file.txt";
+    rule().assert_detects(bad_code);
+}
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            assert!(
-                !rule.check(&context).is_empty(),
-                "Should detect external wc command"
-            );
-        });
-    }
+#[test]
+fn test_detect_external_tr() {
+    let bad_code = "^tr 'a-z' 'A-Z' file.txt";
 
-    #[test]
-    fn test_detect_external_tr() {
-        let rule = AvoidExternalTextTools::new();
-        let bad_code = "^tr 'a-z' 'A-Z' file.txt";
+    rule().assert_detects(bad_code);
+}
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            assert!(
-                !rule.check(&context).is_empty(),
-                "Should detect external tr command"
-            );
-        });
-    }
+#[test]
+fn test_detect_external_tr_delete() {
+    let bad_code = "^tr -d '\n' < file.txt";
 
-    #[test]
-    fn test_detect_external_tr_delete() {
-        let rule = AvoidExternalTextTools::new();
-        let bad_code = "^tr -d '\n' < file.txt";
+    rule().assert_detects(bad_code);
+}
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            assert!(
-                !rule.check(&context).is_empty(),
-                "Should detect external tr with delete option"
-            );
-        });
-    }
+#[test]
+fn test_detect_external_wc_lines_words() {
+    let bad_code = "^wc -lw *.txt";
 
-    #[test]
-    fn test_detect_external_wc_lines_words() {
-        let rule = AvoidExternalTextTools::new();
-        let bad_code = "^wc -lw *.txt";
-
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            assert!(
-                !rule.check(&context).is_empty(),
-                "Should detect external wc with multiple flags"
-            );
-        });
-    }
+    rule().assert_detects(bad_code);
 }

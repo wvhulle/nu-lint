@@ -3,105 +3,79 @@ use regex::Regex;
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{RegexRule, RuleCategory, RuleMetadata},
+    rule::{Rule, RuleCategory},
 };
 
-pub struct PreferParseCommand;
+fn check(context: &LintContext) -> Vec<Violation> {
+    let mut violations = Vec::new();
 
-impl PreferParseCommand {
-    #[must_use]
-    pub fn new() -> Self {
-        Self
-    }
-}
+    // Pattern 1: split row followed by get/skip with index access
+    let split_get_pattern =
+        Regex::new(r#"split\s+row\s+["'][^"']*["']\s*\|\s*(get\s+\d+|skip\s+\d+)"#).unwrap();
 
-impl Default for PreferParseCommand {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl RuleMetadata for PreferParseCommand {
-    fn id(&self) -> &'static str {
-        "prefer_parse_command"
-    }
-
-    fn category(&self) -> RuleCategory {
-        RuleCategory::Idioms
-    }
-
-    fn severity(&self) -> Severity {
-        Severity::Warning
-    }
-
-    fn description(&self) -> &'static str {
-        "Prefer 'parse' command over manual string splitting with indexed access"
-    }
-}
-
-impl RegexRule for PreferParseCommand {
-    fn check(&self, context: &LintContext) -> Vec<Violation> {
-        let mut violations = Vec::new();
-
-        // Pattern 1: split row followed by get/skip with index access
-        let split_get_pattern =
-            Regex::new(r#"split\s+row\s+["'][^"']*["']\s*\|\s*(get\s+\d+|skip\s+\d+)"#).unwrap();
-
-        violations.extend(context.violations_from_regex_if(
-            &split_get_pattern,
-            self.id(),
-            self.severity(),
-            |_| {
-                Some((
-                    "Manual string splitting with indexed access - consider using 'parse'"
+    violations.extend(context.violations_from_regex(
+        &split_get_pattern,
+        "prefer_parse_command",
+        Severity::Warning,
+        |_| {
+            Some((
+                "Manual string splitting with indexed access - consider using 'parse'".to_string(),
+                Some(
+                    "Use 'parse \"pattern {field1} {field2}\"' for structured text extraction"
                         .to_string(),
-                    Some(
-                        "Use 'parse \"pattern {field1} {field2}\"' for structured text extraction"
-                            .to_string(),
-                    ),
-                ))
-            },
-        ));
+                ),
+            ))
+        },
+    ));
 
-        // Pattern 2: let parts = ... split row, then $parts | get
-        let split_to_var_pattern =
-            Regex::new(r"let\s+(\w+)\s*=\s*\([^)]*split\s+row[^)]*\)").unwrap();
+    // Pattern 2: let parts = ... split row, then $parts | get
+    let split_to_var_pattern = Regex::new(r"let\s+(\w+)\s*=\s*\([^)]*split\s+row[^)]*\)").unwrap();
 
-        violations.extend(
-            split_to_var_pattern
-                .find_iter(context.source)
-                .filter_map(|mat| {
-                    let var_name = mat.as_str().split_whitespace().nth(1)?;
-                    // Look for subsequent indexed access
-                    let access_pattern =
-                        format!(r"\${}?\s*\|\s*(get|skip)\s+\d+", regex::escape(var_name));
+    violations.extend(
+        split_to_var_pattern
+            .find_iter(context.source)
+            .filter_map(|mat| {
+                let var_name = mat.as_str().split_whitespace().nth(1)?;
+                // Look for subsequent indexed access
+                let access_pattern =
+                    format!(r"\${}?\s*\|\s*(get|skip)\s+\d+", regex::escape(var_name));
 
-                    if Regex::new(&access_pattern).ok()?.is_match(context.source) {
-                        Some(Violation {
-                            rule_id: self.id().to_string(),
-                            severity: self.severity(),
-                            message: format!(
-                                "Variable '{var_name}' from split row with indexed access - \
-                                 consider using 'parse'"
-                            ),
-                            span: nu_protocol::Span::new(mat.start(), mat.end()),
-                            suggestion: Some(
-                                "Use 'parse' command to extract named fields instead of indexed \
-                                 access"
-                                    .to_string(),
-                            ),
-                            fix: None,
-                            file: None,
-                        })
-                    } else {
-                        None
-                    }
-                })
-                .collect::<Vec<_>>(),
-        );
+                if Regex::new(&access_pattern).ok()?.is_match(context.source) {
+                    Some(Violation {
+                        rule_id: "prefer_parse_command".into(),
+                        severity: Severity::Warning,
+                        message: format!(
+                            "Variable '{var_name}' from split row with indexed access - consider \
+                             using 'parse'"
+                        )
+                        .into(),
+                        span: nu_protocol::Span::new(mat.start(), mat.end()),
+                        suggestion: Some(
+                            "Use 'parse' command to extract named fields instead of indexed access"
+                                .to_string()
+                                .into(),
+                        ),
+                        fix: None,
+                        file: None,
+                    })
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>(),
+    );
 
-        violations
-    }
+    violations
+}
+
+pub fn rule() -> Rule {
+    Rule::new(
+        "prefer_parse_command",
+        RuleCategory::Idioms,
+        Severity::Warning,
+        "Prefer 'parse' command over manual string splitting with indexed access",
+        check,
+    )
 }
 
 #[cfg(test)]

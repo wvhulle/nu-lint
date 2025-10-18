@@ -7,27 +7,69 @@ use nu_protocol::{
 };
 
 use crate::{
-    lint::{Fix, Replacement, Severity, Violation},
+    lint::{Severity, Violation},
     visitor::{AstVisitor, VisitContext},
 };
 
+/// Context containing all lint information (source, AST, and engine state)
+/// Rules can use whatever they need from this context
 pub struct LintContext<'a> {
     pub source: &'a str,
+    pub file_path: Option<&'a Path>,
     pub ast: &'a Block,
     pub engine_state: &'a EngineState,
     pub working_set: &'a StateWorkingSet<'a>,
-    pub file_path: Option<&'a Path>,
 }
 
 impl LintContext<'_> {
-    /// Get the range of declaration IDs that were added during parsing (the
-    /// delta) Returns (`base_count`, `total_count`) for iterating:
-    /// `base_count..total_count`
-    #[must_use]
-    pub fn new_decl_range(&self) -> (usize, usize) {
-        let base_count = self.engine_state.num_decls();
-        let total_count = self.working_set.num_decls();
-        (base_count, total_count)
+    /// Find violations by applying a conditional predicate to regex matches
+    pub fn violations_from_regex<MatchPredicate>(
+        &self,
+        pattern: &regex::Regex,
+        rule_id: &str,
+        severity: Severity,
+        predicate: MatchPredicate,
+    ) -> Vec<Violation>
+    where
+        MatchPredicate: Fn(regex::Match) -> Option<(String, Option<String>)>,
+    {
+        pattern
+            .find_iter(self.source)
+            .filter_map(|mat| {
+                predicate(mat).map(|(message, suggestion)| Violation {
+                    rule_id: rule_id.to_string().into(),
+                    severity,
+                    message: message.into(),
+                    span: Span::new(mat.start(), mat.end()),
+                    suggestion: suggestion.map(Into::into),
+                    fix: None,
+                    file: None,
+                })
+            })
+            .collect()
+    }
+
+    /// Walk the AST using a visitor pattern
+    ///
+    /// This is the primary method for AST-based rules. The visitor will be
+    /// called for each relevant AST node type. This walks both the main AST
+    /// block and all blocks accessible through function declarations.
+    pub fn walk_ast<V: AstVisitor>(&self, visitor: &mut V) {
+        let visit_context = VisitContext {
+            working_set: self.working_set,
+            source: self.source,
+        };
+
+        // Visit the main AST block
+        visitor.visit_block(self.ast, &visit_context);
+
+        // Visit function bodies by iterating through user-defined functions
+        for (_decl_id, decl) in self.new_user_functions() {
+            if let Some(block_id) = decl.block_id() {
+                let block = self.working_set.get_block(block_id);
+                visitor.visit_block(block, &visit_context);
+            }
+        }
     }
 
     /// Iterator over newly added user-defined function declarations
@@ -46,6 +88,19 @@ impl LintContext<'_> {
     /// Returns a span pointing to the first occurrence of the name, or a
     /// fallback span
     pub fn find_declaration_span(&self, name: &str) -> Span {
+        // Use more efficient string search for function names
+        // Look for function declarations starting with "def " or "export def "
+        let patterns = [format!("def {name}"), format!("export def {name}")];
+
+        for pattern in &patterns {
+            if let Some(pos) = self.source.find(pattern) {
+                // Find the start of the function name within the pattern
+                let name_start = pos + pattern.len() - name.len();
+                return Span::new(name_start, name_start + name.len());
+            }
+        }
+
+        // Fallback to simple name search
         if let Some(name_pos) = self.source.find(name) {
             Span::new(name_pos, name_pos + name.len())
         } else {
@@ -53,89 +108,14 @@ impl LintContext<'_> {
         }
     }
 
-    /// Find violations by applying a conditional predicate to regex matches
-    ///
-    /// This is the most flexible regex helper. Use when you need to:
-    /// - Filter matches conditionally (not all matches are violations)
-    /// - Customize both message and suggestion per match
-    /// - Access the full `regex::Match` object for complex logic
-    ///
-    /// # Arguments
-    /// * `pattern` - The regex pattern to match
-    /// * `rule_id` - The rule ID for violations
-    /// * `severity` - The severity level
-    /// * `predicate` - Function that returns Some((message, suggestion)) if
-    ///   violation should be created
-    pub fn violations_from_regex_if<F>(
-        &self,
-        pattern: &regex::Regex,
-        rule_id: &str,
-        severity: Severity,
-        predicate: F,
-    ) -> Vec<Violation>
-    where
-        F: Fn(regex::Match) -> Option<(String, Option<String>)>,
-    {
-        pattern
-            .find_iter(self.source)
-            .filter_map(|mat| {
-                predicate(mat).map(|(message, suggestion)| Violation {
-                    rule_id: rule_id.to_string(),
-                    severity,
-                    message,
-                    span: Span::new(mat.start(), mat.end()),
-                    suggestion,
-                    fix: None,
-                    file: None,
-                })
-            })
-            .collect()
-    }
-
-    /// Walk the AST using a visitor pattern
-    ///
-    /// This is the primary method for AST-based rules. The visitor will be
-    /// called for each relevant AST node type. This walks both the main AST
-    /// block and all blocks accessible through function declarations.
-    pub fn walk_ast<V: AstVisitor>(&self, visitor: &mut V) {
-        let visit_context = VisitContext::new(self.working_set, self.source);
-
-        // Visit the main AST block
-        visitor.visit_block(self.ast, &visit_context);
-
-        // Visit function bodies by iterating through user-defined functions
-        for (_decl_id, decl) in self.new_user_functions() {
-            if let Some(block_id) = decl.block_id() {
-                let block = self.working_set.get_block(block_id);
-                visitor.visit_block(block, &visit_context);
-            }
-        }
-    }
-
-    /// Get the text content of a span
+    /// Get the range of declaration IDs that were added during parsing (the
+    /// delta) Returns (`base_count`, `total_count`) for iterating:
+    /// `base_count..total_count`
     #[must_use]
-    pub fn get_span_contents(&self, span: Span) -> &str {
-        let start = span.start.min(self.source.len());
-        let end = span.end.min(self.source.len());
-        &self.source[start..end]
-    }
-
-    /// Create a simple Fix with a single replacement
-    /// This is a convenience method for creating fixes that replace one span
-    /// with new text
-    pub fn create_simple_fix(
-        &self,
-        description: impl Into<String>,
-        span: Span,
-        new_text: impl Into<String>,
-    ) -> Fix {
-        Fix {
-            description: description.into(),
-            replacements: vec![Replacement {
-                span,
-                new_text: new_text.into(),
-            }],
-        }
+    pub fn new_decl_range(&self) -> (usize, usize) {
+        let base_count = self.engine_state.num_decls();
+        let total_count = self.working_set.num_decls();
+        (base_count, total_count)
     }
 }
 
@@ -160,10 +140,10 @@ impl LintContext<'_> {
 
         let context = LintContext {
             source,
+            file_path: None,
             ast: &block,
             engine_state: &engine_state,
             working_set: &working_set,
-            file_path: None,
         };
 
         f(context)

@@ -3,47 +3,17 @@ use regex::Regex;
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{RegexRule, RuleCategory, RuleMetadata},
+    rule::{Rule, RuleCategory},
 };
 
-pub struct MissingCommandDocs;
+fn check(context: &LintContext) -> Vec<Violation> {
+    let def_pattern = Regex::new(r"(?m)^[ \t]*def\s+([a-zA-Z_-][a-zA-Z0-9_-]*)\s*\[").unwrap();
 
-impl MissingCommandDocs {
-    #[must_use]
-    pub fn new() -> Self {
-        Self
-    }
-}
-
-impl Default for MissingCommandDocs {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl RuleMetadata for MissingCommandDocs {
-    fn id(&self) -> &'static str {
-        "missing_command_docs"
-    }
-
-    fn category(&self) -> RuleCategory {
-        RuleCategory::Documentation
-    }
-
-    fn severity(&self) -> Severity {
-        Severity::Warning
-    }
-
-    fn description(&self) -> &'static str {
-        "Custom commands should have documentation comments"
-    }
-}
-
-impl RegexRule for MissingCommandDocs {
-    fn check(&self, context: &LintContext) -> Vec<Violation> {
-        let def_pattern = Regex::new(r"(?m)^[ \t]*def\s+([a-zA-Z_-][a-zA-Z0-9_-]*)\s*\[").unwrap();
-
-        context.violations_from_regex_if(&def_pattern, self.id(), self.severity(), |mat| {
+    context.violations_from_regex(
+        &def_pattern,
+        "missing_command_docs",
+        Severity::Warning,
+        |mat| {
             let caps = def_pattern.captures(mat.as_str())?;
             let cmd_name = caps.get(1)?.as_str();
             let def_start = mat.start();
@@ -64,8 +34,18 @@ impl RegexRule for MissingCommandDocs {
                     Some("Add a comment starting with # above the def statement".to_string()),
                 ))
             }
-        })
-    }
+        },
+    )
+}
+
+pub fn rule() -> Rule {
+    Rule::new(
+        "missing_command_docs",
+        RuleCategory::Documentation,
+        Severity::Warning,
+        "Custom commands should have documentation comments",
+        check,
+    )
 }
 
 #[cfg(test)]

@@ -138,15 +138,12 @@ pub fn load_config(config_path: Option<&PathBuf>) -> Config {
 
 #[cfg(test)]
 mod tests {
-    use std::{fs, sync::Mutex};
+    use std::fs;
 
     use tempfile::TempDir;
 
     use super::*;
-
-    // Use a static mutex to prevent race conditions with tests that change
-    // directories
-    static CHDIR_MUTEX: Mutex<()> = Mutex::new(());
+    use crate::test_utils::CHDIR_MUTEX;
 
     fn with_temp_dir<F>(f: F)
     where
@@ -157,9 +154,18 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let original_dir = std::env::current_dir().unwrap();
 
-        if std::env::set_current_dir(temp_dir.path()).is_ok() {
+        // Use catch_unwind to ensure directory is restored even if the test panics
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            std::env::set_current_dir(temp_dir.path()).unwrap();
             f(&temp_dir);
-            let _ = std::env::set_current_dir(original_dir);
+        }));
+
+        // Always restore directory, even if test panics
+        std::env::set_current_dir(original_dir).unwrap();
+
+        // Re-panic if the test failed
+        if let Err(e) = result {
+            std::panic::resume_unwind(e);
         }
     }
 
@@ -186,14 +192,19 @@ mod tests {
         fs::write(&config_path, "[rules]\n").unwrap();
 
         let original_dir = std::env::current_dir().unwrap();
-        if std::env::set_current_dir(&subdir).is_ok() {
-            let found = find_config_file();
-            assert!(found.is_some());
-            assert_eq!(found.unwrap(), config_path);
-            let _ = std::env::set_current_dir(original_dir);
-        } else {
-            // Skip test if we can't change directory
-        }
+
+        // Use a closure with defer-like behavior to ensure directory is restored
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            std::env::set_current_dir(&subdir).unwrap();
+            find_config_file()
+        }));
+
+        // Always restore directory, even if test panics
+        std::env::set_current_dir(original_dir).unwrap();
+
+        let found = result.unwrap();
+        assert!(found.is_some());
+        assert_eq!(found.unwrap(), config_path);
     }
 
     #[test]
@@ -222,18 +233,19 @@ mod tests {
         let config_path = temp_dir.path().join(".nu-lint.toml");
         fs::write(&config_path, "[general]\nmax_severity = \"warning\"\n").unwrap();
 
-        // Store original directory
         let original_dir = std::env::current_dir().unwrap();
 
-        // Change to temp directory for this test only
-        std::env::set_current_dir(temp_dir.path()).unwrap();
+        // Use a closure with defer-like behavior to ensure directory is restored
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            std::env::set_current_dir(temp_dir.path()).unwrap();
+            load_config(None)
+        }));
 
-        // Test auto-discovery
-        let config = load_config(None);
-        assert_eq!(config.general.max_severity, RuleSeverity::Warning);
-
-        // Restore original directory
+        // Always restore directory, even if test panics
         std::env::set_current_dir(original_dir).unwrap();
+
+        let config = result.unwrap();
+        assert_eq!(config.general.max_severity, RuleSeverity::Warning);
     }
 
     #[test]

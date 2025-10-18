@@ -1,6 +1,3 @@
-//! Shared utilities for rules that detect external commands with builtin
-//! alternatives
-
 use std::{collections::HashMap, fmt::Write};
 
 use nu_protocol::ast::Expr;
@@ -47,24 +44,24 @@ pub type FixBuilder = fn(
 
 /// Generic AST visitor for detecting external commands with builtin
 /// alternatives
-pub struct ExternalCommandVisitor<'a> {
-    rule_id: &'a str,
+pub struct ExternalCommandVisitor {
+    rule_id: String,
     severity: Severity,
     violations: Vec<Violation>,
     alternatives: HashMap<&'static str, BuiltinAlternative>,
     fix_builder: Option<FixBuilder>,
 }
 
-impl<'a> ExternalCommandVisitor<'a> {
+impl ExternalCommandVisitor {
     #[must_use]
     pub fn new(
-        rule_id: &'a str,
+        rule_id: &str,
         severity: Severity,
         alternatives: HashMap<&'static str, BuiltinAlternative>,
         fix_builder: Option<FixBuilder>,
     ) -> Self {
         Self {
-            rule_id,
+            rule_id: rule_id.to_string(),
             severity,
             violations: Vec::new(),
             alternatives,
@@ -121,7 +118,7 @@ impl<'a> ExternalCommandVisitor<'a> {
     }
 }
 
-impl AstVisitor for ExternalCommandVisitor<'_> {
+impl AstVisitor for ExternalCommandVisitor {
     fn visit_expression(&mut self, expr: &nu_protocol::ast::Expression, context: &VisitContext) {
         // Check for external calls
         if let Expr::ExternalCall(head, args) = &expr.expr {
@@ -133,11 +130,11 @@ impl AstVisitor for ExternalCommandVisitor<'_> {
                 Self::get_custom_suggestion(cmd_text, args, context)
             {
                 self.violations.push(Violation {
-                    rule_id: self.rule_id.to_string(),
+                    rule_id: self.rule_id.clone().into(),
                     severity: self.severity,
-                    message: custom_message,
+                    message: custom_message.into(),
                     span: expr.span,
-                    suggestion: Some(custom_suggestion),
+                    suggestion: Some(custom_suggestion.into()),
                     fix: None, // Custom suggestions don't have automatic fixes yet
                     file: None,
                 });
@@ -167,11 +164,11 @@ impl AstVisitor for ExternalCommandVisitor<'_> {
                     .map(|builder| builder(cmd_text, alternative, args, expr.span, context));
 
                 self.violations.push(Violation {
-                    rule_id: self.rule_id.to_string(),
+                    rule_id: self.rule_id.clone().into(),
                     severity: self.severity,
-                    message,
+                    message: message.into(),
                     span: expr.span,
-                    suggestion: Some(suggestion),
+                    suggestion: Some(suggestion.into()),
                     fix,
                     file: None,
                 });

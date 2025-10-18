@@ -3,48 +3,18 @@ use regex::Regex;
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
-    rule::{RegexRule, RuleCategory, RuleMetadata},
+    rule::{Rule, RuleCategory},
 };
 
-pub struct PreferEachOverFor;
+fn check(context: &LintContext) -> Vec<Violation> {
+    // Pattern: for item in $collection { ... }
+    let for_loop_pattern = Regex::new(r"for\s+(\w+)\s+in\s+(\$\w+|\([^\)]+\))\s*\{").unwrap();
 
-impl PreferEachOverFor {
-    #[must_use]
-    pub fn new() -> Self {
-        Self
-    }
-}
-
-impl Default for PreferEachOverFor {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl RuleMetadata for PreferEachOverFor {
-    fn id(&self) -> &'static str {
-        "prefer_each_over_for"
-    }
-
-    fn category(&self) -> RuleCategory {
-        RuleCategory::Idioms
-    }
-
-    fn severity(&self) -> Severity {
-        Severity::Warning
-    }
-
-    fn description(&self) -> &'static str {
-        "Use 'each' pipeline instead of 'for' loops for functional style"
-    }
-}
-
-impl RegexRule for PreferEachOverFor {
-    fn check(&self, context: &LintContext) -> Vec<Violation> {
-        // Pattern: for item in $collection { ... }
-        let for_loop_pattern = Regex::new(r"for\s+(\w+)\s+in\s+(\$\w+|\([^\)]+\))\s*\{").unwrap();
-
-        context.violations_from_regex_if(&for_loop_pattern, self.id(), self.severity(), |mat| {
+    context.violations_from_regex(
+        &for_loop_pattern,
+        "prefer_each_over_for",
+        Severity::Warning,
+        |mat| {
             let caps = for_loop_pattern.captures(mat.as_str())?;
             let item_var = &caps[1];
             let collection = &caps[2];
@@ -92,8 +62,18 @@ impl RegexRule for PreferEachOverFor {
                     )),
                 ))
             }
-        })
-    }
+        },
+    )
+}
+
+pub fn rule() -> Rule {
+    Rule::new(
+        "prefer_each_over_for",
+        RuleCategory::Idioms,
+        Severity::Warning,
+        "Use 'each' pipeline instead of 'for' loops for functional style",
+        check,
+    )
 }
 
 #[cfg(test)]

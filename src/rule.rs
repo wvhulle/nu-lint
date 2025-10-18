@@ -24,88 +24,105 @@ pub enum RuleCategory {
     Performance,
 }
 
-impl std::fmt::Display for RuleCategory {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl RuleCategory {
+    /// Get the string representation of this category
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
         match self {
-            RuleCategory::Naming => write!(f, "naming"),
-            RuleCategory::Formatting => write!(f, "formatting"),
-            RuleCategory::Idioms => write!(f, "idioms"),
-            RuleCategory::ErrorHandling => write!(f, "error-handling"),
-            RuleCategory::CodeQuality => write!(f, "code-quality"),
-            RuleCategory::Documentation => write!(f, "documentation"),
-            RuleCategory::TypeSafety => write!(f, "type-safety"),
-            RuleCategory::Performance => write!(f, "performance"),
+            RuleCategory::Naming => "naming",
+            RuleCategory::Formatting => "formatting",
+            RuleCategory::Idioms => "idioms",
+            RuleCategory::ErrorHandling => "error-handling",
+            RuleCategory::CodeQuality => "code-quality",
+            RuleCategory::Documentation => "documentation",
+            RuleCategory::TypeSafety => "type-safety",
+            RuleCategory::Performance => "performance",
         }
     }
 }
 
-/// Common metadata for all rules
-pub trait RuleMetadata: Send + Sync {
-    fn id(&self) -> &str;
-    fn category(&self) -> RuleCategory;
-    fn severity(&self) -> Severity;
-    fn description(&self) -> &str;
+impl std::fmt::Display for RuleCategory {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
 }
 
-/// Rules that check code using regex patterns on source text
-pub trait RegexRule: RuleMetadata {
-    fn check(&self, context: &LintContext) -> Vec<Violation>;
-}
-
-/// Rules that check code using AST traversal
-pub trait AstRule: RuleMetadata {
-    fn check(&self, context: &LintContext) -> Vec<Violation>;
-}
-
-/// Type-safe wrapper for different rule implementations
-pub enum Rule {
-    Regex(Box<dyn RegexRule>),
-    Ast(Box<dyn AstRule>),
+/// A concrete rule struct that wraps the check function
+pub struct Rule {
+    pub id: &'static str,
+    pub category: RuleCategory,
+    pub severity: Severity,
+    pub description: &'static str,
+    pub check: fn(&LintContext) -> Vec<Violation>,
 }
 
 impl Rule {
-    /// Check this rule against the given context
+    /// Create a new rule
+    pub const fn new(
+        id: &'static str,
+        category: RuleCategory,
+        severity: Severity,
+        description: &'static str,
+        check: fn(&LintContext) -> Vec<Violation>,
+    ) -> Self {
+        Self {
+            id,
+            category,
+            severity,
+            description,
+            check,
+        }
+    }
+
+    /// Run the rule's check function on the given context
     #[must_use]
     pub fn check(&self, context: &LintContext) -> Vec<Violation> {
-        match self {
-            Rule::Regex(rule) => rule.check(context),
-            Rule::Ast(rule) => rule.check(context),
-        }
+        (self.check)(context)
     }
 
-    /// Check if this is an AST-based rule
-    #[must_use]
-    pub fn is_ast_rule(&self) -> bool {
-        matches!(self, Rule::Ast(_))
-    }
-}
-
-impl RuleMetadata for Rule {
-    fn id(&self) -> &str {
-        match self {
-            Rule::Regex(rule) => rule.id(),
-            Rule::Ast(rule) => rule.id(),
-        }
-    }
-
-    fn category(&self) -> RuleCategory {
-        match self {
-            Rule::Regex(rule) => rule.category(),
-            Rule::Ast(rule) => rule.category(),
-        }
+    #[cfg(test)]
+    #[allow(clippy::missing_panics_doc)]
+    /// Test helper: assert that the rule finds violations in the given code
+    pub fn assert_detects(&self, code: &str) {
+        LintContext::test_with_parsed_source(code, |context| {
+            let violations = self.check(&context);
+            assert!(
+                !violations.is_empty(),
+                "Expected rule '{}' to detect violations in code, but found none",
+                self.id
+            );
+        });
     }
 
-    fn severity(&self) -> Severity {
-        match self {
-            Rule::Regex(rule) => rule.severity(),
-            Rule::Ast(rule) => rule.severity(),
-        }
+    #[cfg(test)]
+    #[allow(clippy::missing_panics_doc)]
+    /// Test helper: assert that the rule finds no violations in the given code
+    pub fn assert_ignores(&self, code: &str) {
+        LintContext::test_with_parsed_source(code, |context| {
+            let violations = self.check(&context);
+            assert!(
+                violations.is_empty(),
+                "Expected rule '{}' to ignore code, but found {} violations",
+                self.id,
+                violations.len()
+            );
+        });
     }
 
-    fn description(&self) -> &str {
-        match self {
-            Rule::Regex(rule) => rule.description(),
-            Rule::Ast(rule) => rule.description(),
-        }
+    #[cfg(test)]
+    #[allow(clippy::missing_panics_doc)]
+    /// Test helper: assert that the rule finds at least the expected number of
+    /// violations
+    pub fn assert_violation_count(&self, code: &str, expected_min: usize) {
+        LintContext::test_with_parsed_source(code, |context| {
+            let violations = self.check(&context);
+            assert!(
+                violations.len() >= expected_min,
+                "Expected rule '{}' to find at least {} violations, but found {}",
+                self.id,
+                expected_min,
+                violations.len()
+            );
+        });
     }
 }

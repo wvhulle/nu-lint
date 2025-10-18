@@ -1,48 +1,25 @@
-#[cfg(test)]
-mod tests {
 
-    use crate::{
-        context::LintContext, rule::RegexRule, rules::discourage_bare_ignore::DiscouragedBareIgnore,
-    };
+use super::rule;
 
-    #[test]
-    fn test_bare_ignore_detected() {
-        let rule = DiscouragedBareIgnore::new();
-        let bad_code = r"
+#[test]
+fn test_bare_ignore_detected() {
+    let bad_code = r"
 some | pipeline | each { |x| process $x } | ignore
 ";
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            assert!(
-                !rule.check(&context).is_empty(),
-                "Should detect bare ignore"
-            );
-        });
-    }
+    rule().assert_detects(bad_code);
+}
 
-    #[test]
-    fn test_detect_bare_ignore_complex_pipeline() {
-        let rule = DiscouragedBareIgnore::new();
-        let bad_code = "some | pipeline | each { |x| process $x } | ignore";
+#[test]
+fn test_detect_bare_ignore_complex_pipeline() {
+    let bad_code = "some | pipeline | each { |x| process $x } | ignore";
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            assert!(
-                !rule.check(&context).is_empty(),
-                "Should detect bare ignore in complex pipeline"
-            );
-        });
-    }
+    rule().assert_detects(bad_code);
+}
 
-    #[test]
-    fn test_detect_bare_ignore_simple() {
-        let rule = DiscouragedBareIgnore::new();
-        let bad_code = "another | operation | ignore";
+#[test]
+fn test_detect_bare_ignore_simple() {
+    let bad_code = "another | operation | ignore";
 
-        LintContext::test_with_parsed_source(bad_code, |context| {
-            assert!(
-                !rule.check(&context).is_empty(),
-                "Should detect bare ignore in simple operation"
-            );
-        });
-    }
+    rule().assert_detects(bad_code);
 }

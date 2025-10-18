@@ -1,4 +1,8 @@
-use std::{collections::HashMap, path::Path};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+    process,
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -94,5 +98,149 @@ impl Config {
 
     pub fn rule_severity(&self, rule_id: &str) -> Option<Severity> {
         self.rules.get(rule_id).copied().and_then(Into::into)
+    }
+}
+
+/// Search for .nu-lint.toml in current directory and parent directories
+#[must_use]
+pub fn find_config_file() -> Option<PathBuf> {
+    let mut current_dir = std::env::current_dir().ok()?;
+
+    loop {
+        let config_path = current_dir.join(".nu-lint.toml");
+        if config_path.exists() && config_path.is_file() {
+            return Some(config_path);
+        }
+
+        // Try to go to parent directory
+        if !current_dir.pop() {
+            break;
+        }
+    }
+
+    None
+}
+
+/// Load configuration from file or use defaults
+#[must_use]
+pub fn load_config(config_path: Option<&PathBuf>) -> Config {
+    let path = config_path.cloned().or_else(find_config_file);
+
+    if let Some(path) = path {
+        Config::load_from_file(&path).unwrap_or_else(|e| {
+            eprintln!("Error loading config from {}: {e}", path.display());
+            process::exit(2);
+        })
+    } else {
+        Config::default()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{fs, sync::Mutex};
+
+    use tempfile::TempDir;
+
+    use super::*;
+
+    // Use a static mutex to prevent race conditions with tests that change
+    // directories
+    static CHDIR_MUTEX: Mutex<()> = Mutex::new(());
+
+    fn with_temp_dir<F>(f: F)
+    where
+        F: FnOnce(&TempDir),
+    {
+        let _guard = CHDIR_MUTEX.lock().unwrap();
+
+        let temp_dir = TempDir::new().unwrap();
+        let original_dir = std::env::current_dir().unwrap();
+
+        if std::env::set_current_dir(temp_dir.path()).is_ok() {
+            f(&temp_dir);
+            let _ = std::env::set_current_dir(original_dir);
+        }
+    }
+
+    #[test]
+    fn test_find_config_file_in_current_dir() {
+        with_temp_dir(|temp_dir| {
+            let config_path = temp_dir.path().join(".nu-lint.toml");
+            fs::write(&config_path, "[rules]\n").unwrap();
+
+            let found = find_config_file();
+            assert!(found.is_some());
+            assert_eq!(found.unwrap(), config_path);
+        });
+    }
+
+    #[test]
+    fn test_find_config_file_in_parent_dir() {
+        let _guard = CHDIR_MUTEX.lock().unwrap();
+
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join(".nu-lint.toml");
+        let subdir = temp_dir.path().join("subdir");
+        fs::create_dir(&subdir).unwrap();
+        fs::write(&config_path, "[rules]\n").unwrap();
+
+        let original_dir = std::env::current_dir().unwrap();
+        if std::env::set_current_dir(&subdir).is_ok() {
+            let found = find_config_file();
+            assert!(found.is_some());
+            assert_eq!(found.unwrap(), config_path);
+            let _ = std::env::set_current_dir(original_dir);
+        } else {
+            // Skip test if we can't change directory
+        }
+    }
+
+    #[test]
+    fn test_find_config_file_not_found() {
+        with_temp_dir(|_temp_dir| {
+            let found = find_config_file();
+            assert!(found.is_none());
+        });
+    }
+
+    #[test]
+    fn test_load_config_with_explicit_path() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("config.toml");
+        fs::write(&config_path, "[general]\nmax_severity = \"error\"\n").unwrap();
+
+        let config = load_config(Some(&config_path));
+        assert_eq!(config.general.max_severity, RuleSeverity::Error);
+    }
+
+    #[test]
+    fn test_load_config_auto_discover() {
+        let _guard = CHDIR_MUTEX.lock().unwrap();
+
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join(".nu-lint.toml");
+        fs::write(&config_path, "[general]\nmax_severity = \"warning\"\n").unwrap();
+
+        // Store original directory
+        let original_dir = std::env::current_dir().unwrap();
+
+        // Change to temp directory for this test only
+        std::env::set_current_dir(temp_dir.path()).unwrap();
+
+        // Test auto-discovery
+        let config = load_config(None);
+        assert_eq!(config.general.max_severity, RuleSeverity::Warning);
+
+        // Restore original directory
+        std::env::set_current_dir(original_dir).unwrap();
+    }
+
+    #[test]
+    fn test_load_config_default() {
+        with_temp_dir(|_temp_dir| {
+            let config = load_config(None);
+            assert_eq!(config, Config::default());
+        });
     }
 }

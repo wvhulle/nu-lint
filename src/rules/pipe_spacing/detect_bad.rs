@@ -30,12 +30,26 @@ mod tests {
     #[test]
     fn test_detect_double_space_before_pipe() {
         let rule = PipeSpacing;
-        let bad_code = "ls  |get name";
+        let bad_code = "ls  | get name";
 
         LintContext::test_with_parsed_source(bad_code, |context| {
             assert!(
                 !rule.check(&context).is_empty(),
                 "Should detect double space before pipe"
+            );
+        });
+    }
+
+    #[test]
+    fn test_detect_double_space_before_pipe_no_space_after() {
+        let rule = PipeSpacing;
+        let bad_code = "ls  |get name";
+
+        LintContext::test_with_parsed_source(bad_code, |context| {
+            let violations = rule.check(&context);
+            assert!(
+                !violations.is_empty(),
+                "Should detect double space before pipe with no space after"
             );
         });
     }

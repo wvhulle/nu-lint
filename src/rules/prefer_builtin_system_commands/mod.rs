@@ -115,7 +115,7 @@ impl RuleMetadata for AvoidExternalSystemTools {
     }
 
     fn category(&self) -> RuleCategory {
-        RuleCategory::BestPractices
+        RuleCategory::Idioms
     }
 
     fn severity(&self) -> Severity {

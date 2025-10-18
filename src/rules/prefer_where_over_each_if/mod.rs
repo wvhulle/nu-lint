@@ -28,7 +28,7 @@ impl RuleMetadata for PreferWhereOverEachIf {
     }
 
     fn category(&self) -> RuleCategory {
-        RuleCategory::Performance
+        RuleCategory::Idioms
     }
 
     fn severity(&self) -> Severity {

@@ -1,4 +1,3 @@
-// Individual rule modules
 pub mod avoid_mutable_accumulation;
 pub mod brace_spacing;
 pub mod completion_function_naming;
@@ -11,6 +10,9 @@ pub mod kebab_case_commands;
 pub mod max_positional_params;
 pub mod missing_command_docs;
 pub mod missing_type_annotation;
+pub mod multiline_formatting;
+pub mod no_trailing_spaces;
+pub mod omit_list_commas;
 pub mod pipe_spacing;
 pub mod prefer_builtin_commands;
 pub mod prefer_builtin_system_commands;
@@ -64,11 +66,10 @@ impl RuleRegistry {
     pub fn with_default_rules() -> Self {
         let mut registry = Self::new();
 
-        // Style rules (Regex-based)
-        registry.register(Rule::Regex(
+        registry.register(Rule::Ast(
             Box::<snake_case_variables::SnakeCaseVariables>::default(),
         ));
-        registry.register(Rule::Regex(
+        registry.register(Rule::Ast(
             Box::<kebab_case_commands::KebabCaseCommands>::default(),
         ));
         registry.register(Rule::Regex(Box::<
@@ -77,7 +78,7 @@ impl RuleRegistry {
         registry.register(Rule::Regex(Box::new(
             unnecessary_variable_before_return::UnnecessaryVariableBeforeReturn::new(),
         )));
-        registry.register(Rule::Regex(Box::new(prefer_is_not_empty::PreferIsNotEmpty)));
+        registry.register(Rule::Ast(Box::new(prefer_is_not_empty::PreferIsNotEmpty)));
         registry.register(Rule::Regex(Box::new(
             discourage_bare_ignore::DiscouragedBareIgnore::new(),
         )));
@@ -87,16 +88,17 @@ impl RuleRegistry {
         registry.register(Rule::Regex(Box::new(
             completion_function_naming::CompletionFunctionNaming::new(),
         )));
-
-        // Style rules (AST-based)
+        registry.register(Rule::Regex(Box::new(
+            multiline_formatting::MultilineFormatting,
+        )));
+        registry.register(Rule::Regex(Box::new(no_trailing_spaces::NoTrailingSpaces)));
         registry.register(Rule::Ast(Box::<brace_spacing::BraceSpacing>::default()));
         registry.register(Rule::Ast(Box::<pipe_spacing::PipeSpacing>::default()));
         registry.register(Rule::Ast(Box::<
             prefer_compound_assignment::PreferCompoundAssignment,
         >::default()));
         registry.register(Rule::Ast(Box::new(unnecessary_mut::UnnecessaryMut::new())));
-
-        // Best practices rules (Regex-based)
+        registry.register(Rule::Ast(Box::new(omit_list_commas::OmitListCommas)));
         registry.register(Rule::Regex(Box::new(
             prefer_error_make::PreferErrorMake::new(),
         )));
@@ -130,29 +132,21 @@ impl RuleRegistry {
         registry.register(Rule::Regex(Box::new(
             prefer_builtin_system_commands::AvoidExternalSystemTools::new(),
         )));
-
-        // Performance rules (Regex-based)
         registry.register(Rule::Regex(Box::new(
             prefer_where_over_each_if::PreferWhereOverEachIf,
         )));
         registry.register(Rule::Regex(Box::new(
             prefer_lines_over_split::PreferLinesOverSplit::new(),
         )));
-
-        // Performance rules (AST-based)
         registry.register(Rule::Ast(Box::new(
             prefer_parse_over_each_split::PreferParseOverEachSplit,
         )));
-
-        // Documentation rules (Regex-based)
         registry.register(Rule::Regex(Box::new(
             missing_command_docs::MissingCommandDocs::new(),
         )));
         registry.register(Rule::Regex(Box::new(
             exported_function_docs::ExportedFunctionDocs,
         )));
-
-        // Type safety rules (AST-based)
         registry.register(Rule::Ast(Box::new(
             missing_type_annotation::MissingTypeAnnotation::new(),
         )));

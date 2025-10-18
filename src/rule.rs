@@ -5,21 +5,36 @@ use crate::{
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RuleCategory {
-    Style,
-    BestPractices,
-    Performance,
+    /// Rules about identifier naming conventions (`snake_case`, kebab-case,
+    /// etc.)
+    Naming,
+    /// Code layout and whitespace formatting rules
+    Formatting,
+    /// Nushell-specific best practices and preferred patterns
+    Idioms,
+    /// Error management and safety patterns
+    ErrorHandling,
+    /// General code cleanliness and maintainability
+    CodeQuality,
+    /// Documentation requirements and standards
     Documentation,
+    /// Type annotations and type safety
     TypeSafety,
+    /// Performance optimizations and efficient patterns
+    Performance,
 }
 
 impl std::fmt::Display for RuleCategory {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            RuleCategory::Style => write!(f, "style"),
-            RuleCategory::BestPractices => write!(f, "best-practices"),
-            RuleCategory::Performance => write!(f, "performance"),
+            RuleCategory::Naming => write!(f, "naming"),
+            RuleCategory::Formatting => write!(f, "formatting"),
+            RuleCategory::Idioms => write!(f, "idioms"),
+            RuleCategory::ErrorHandling => write!(f, "error-handling"),
+            RuleCategory::CodeQuality => write!(f, "code-quality"),
             RuleCategory::Documentation => write!(f, "documentation"),
             RuleCategory::TypeSafety => write!(f, "type-safety"),
+            RuleCategory::Performance => write!(f, "performance"),
         }
     }
 }

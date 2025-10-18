@@ -2,7 +2,7 @@
 mod tests {
 
     use crate::{
-        context::LintContext, rule::RegexRule, rules::kebab_case_commands::KebabCaseCommands,
+        context::LintContext, rule::AstRule, rules::kebab_case_commands::KebabCaseCommands,
     };
 
     #[test]

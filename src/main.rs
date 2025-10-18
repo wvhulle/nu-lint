@@ -2,10 +2,10 @@ use std::process;
 
 use clap::Parser;
 use nu_lint::{
-    cli::{Cli, collect_files_to_lint, handle_command, lint_files, load_config, output_results},
     LintEngine,
+    cli::{Cli, collect_files_to_lint, handle_command, lint_files, output_results},
+    config::load_config,
 };
-
 
 fn main() {
     let cli = Cli::parse();

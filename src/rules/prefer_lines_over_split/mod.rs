@@ -25,7 +25,7 @@ impl RuleMetadata for PreferLinesOverSplit {
     }
 
     fn category(&self) -> RuleCategory {
-        RuleCategory::Performance
+        RuleCategory::Idioms
     }
 
     fn severity(&self) -> Severity {

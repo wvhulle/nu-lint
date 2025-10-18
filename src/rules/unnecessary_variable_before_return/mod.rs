@@ -27,7 +27,7 @@ impl RuleMetadata for UnnecessaryVariableBeforeReturn {
     }
 
     fn category(&self) -> RuleCategory {
-        RuleCategory::Style
+        RuleCategory::CodeQuality
     }
 
     fn severity(&self) -> Severity {

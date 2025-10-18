@@ -30,7 +30,7 @@ impl RuleMetadata for UnnecessaryMut {
     }
 
     fn category(&self) -> RuleCategory {
-        RuleCategory::Style
+        RuleCategory::CodeQuality
     }
 
     fn severity(&self) -> Severity {

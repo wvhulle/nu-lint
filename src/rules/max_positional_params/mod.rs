@@ -27,7 +27,7 @@ impl RuleMetadata for MaxPositionalParams {
     }
 
     fn category(&self) -> RuleCategory {
-        RuleCategory::BestPractices
+        RuleCategory::CodeQuality
     }
 
     fn severity(&self) -> Severity {

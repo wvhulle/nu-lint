@@ -9,6 +9,7 @@ def myCommand [] {
 "#;
 
     rule().assert_detects(bad_code);
+    rule().assert_violation_count_exact(bad_code, 1);
 }
 
 #[test]
@@ -20,6 +21,7 @@ def my_command [] {
 "#;
 
     rule().assert_detects(bad_code);
+    rule().assert_violation_count_exact(bad_code, 1);
 }
 
 #[test]
@@ -31,4 +33,5 @@ def AnotherCommand [] {
 "#;
 
     rule().assert_detects(bad_code);
+    rule().assert_violation_count_exact(bad_code, 1);
 }

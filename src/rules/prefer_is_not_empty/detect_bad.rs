@@ -4,7 +4,7 @@ use super::rule;
 fn test_not_is_empty_detected() {
     let bad_code = "if not ($list | is-empty) { echo 'has items' }";
 
-    rule().assert_detects(bad_code);
+    rule().assert_violation_count_exact(bad_code, 1);
 }
 
 #[test]

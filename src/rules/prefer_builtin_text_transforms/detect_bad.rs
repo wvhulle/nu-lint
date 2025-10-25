@@ -60,7 +60,7 @@ fn test_detect_external_wc() {
 fn test_detect_external_tr() {
     let bad_code = "^tr 'a-z' 'A-Z' file.txt";
 
-    rule().assert_detects(bad_code);
+    rule().assert_violation_count_exact(bad_code, 1);
 }
 
 #[test]
@@ -74,5 +74,5 @@ fn test_detect_external_tr_delete() {
 fn test_detect_external_wc_lines_words() {
     let bad_code = "^wc -lw *.txt";
 
-    rule().assert_detects(bad_code);
+    rule().assert_violation_count_exact(bad_code, 1);
 }

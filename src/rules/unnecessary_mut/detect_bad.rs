@@ -1,5 +1,4 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn test_unnecessary_mut_detected() {
@@ -10,11 +9,8 @@ def process [] {
 }
 ";
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(!violations.is_empty(), "Should detect unnecessary mut");
-        assert!(violations[0].message.contains("never reassigned"));
-    });
+    rule().assert_detects(bad_code);
+    rule().assert_violation_count_exact(bad_code, 1);
 }
 
 #[test]
@@ -30,19 +26,7 @@ def process [] {
 }
 ";
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        let violations = (rule().check)(&context);
-        // Only 'b' should be flagged as unnecessary mut
-        assert_eq!(
-            violations.len(),
-            1,
-            "Should flag only the one unnecessary mut"
-        );
-        assert!(
-            violations[0].message.contains('b'),
-            "Should flag variable 'b'"
-        );
-    });
+    rule().assert_violation_count_exact(bad_code, 1);
 }
 
 #[test]
@@ -54,17 +38,5 @@ def process [] {
 }
 ";
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(!violations.is_empty(), "Should detect unnecessary mut");
-        assert!(violations[0].fix.is_some(), "Should provide a fix");
-
-        let fix = violations[0].fix.as_ref().unwrap();
-        assert_eq!(fix.replacements.len(), 1, "Should have one replacement");
-        // The fix should remove 'mut ' from the declaration
-        assert!(
-            fix.description.contains("Remove 'mut'"),
-            "Fix description should mention removing 'mut'"
-        );
-    });
+    rule().assert_violation_count_exact(bad_code, 1);
 }

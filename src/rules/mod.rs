@@ -5,6 +5,7 @@ pub mod consistent_error_handling;
 pub mod descriptive_error_messages;
 pub mod discourage_bare_ignore;
 pub mod discourage_underscore_commands;
+pub mod escape_string_interpolation_operators;
 pub mod exported_function_docs;
 pub mod kebab_case_commands;
 pub mod max_positional_params;
@@ -73,6 +74,7 @@ impl RuleRegistry {
         registry.register(discourage_bare_ignore::rule());
         registry.register(discourage_underscore_commands::rule());
         registry.register(completion_function_naming::rule());
+        registry.register(escape_string_interpolation_operators::rule());
         registry.register(multiline_formatting::rule());
         registry.register(no_trailing_spaces::rule());
         registry.register(brace_spacing::rule());

@@ -12,7 +12,7 @@ fn test_inconsistent_spacing_space_after_only() {
     // { x} is inconsistent - space after but not before
     let bad_code = r#"let record = { name: "test"}"#;
 
-    rule().assert_detects(bad_code);
+    rule().assert_violation_count(bad_code, 1);
 }
 
 #[test]

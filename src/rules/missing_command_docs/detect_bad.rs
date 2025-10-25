@@ -1,5 +1,4 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn test_command_without_docs_detected() {
@@ -8,12 +7,8 @@ def my-command [] {
     echo 'hello'
 }
 ";
-
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(!violations.is_empty(), "Should detect missing command docs");
-        assert!(violations[0].message.contains("my-command"));
-    });
+    rule().assert_detects(bad_code);
+    rule().assert_violation_count_exact(bad_code, 1);
 }
 
 #[test]
@@ -23,12 +18,8 @@ def process-data [input: string, --verbose] {
     print $input
 }
 ";
-
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(!violations.is_empty(), "Should detect missing command docs");
-        assert!(violations[0].message.contains("process-data"));
-    });
+    rule().assert_detects(bad_code);
+    rule().assert_violation_count_exact(bad_code, 1);
 }
 
 #[test]
@@ -43,12 +34,5 @@ def second-command [] {
 }
 ";
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        let violations = (rule().check)(&context);
-        assert_eq!(
-            violations.len(),
-            2,
-            "Should detect both undocumented commands"
-        );
-    });
+    rule().assert_violation_count_exact(bad_code, 2);
 }

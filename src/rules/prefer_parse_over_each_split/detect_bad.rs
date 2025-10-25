@@ -6,7 +6,7 @@ fn test_detect_each_with_split_row() {
 $data | lines | each { |line| $line | split row " " }
 "#;
 
-    rule().assert_detects(bad_code);
+    rule().assert_violation_count_exact(bad_code, 1);
 }
 
 #[test]

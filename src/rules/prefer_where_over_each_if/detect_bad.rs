@@ -15,7 +15,7 @@ fn test_detect_each_if_complex_condition() {
 open data.json | get items | each { |item| if ($item.status == 'active' and $item.count > 0) { $item } }
 ";
 
-    rule().assert_detects(bad_code);
+    rule().assert_violation_count_exact(bad_code, 1);
 }
 
 #[test]

@@ -1,63 +1,63 @@
 #[test]
 fn detects_not_keyword() {
     let rule = super::rule();
-    
+
     let code = r#"
 def bad_example [] {
     let path = "/some/path"
     print $"File ($path) (not found)"
 }
 "#;
-    
+
     rule.assert_detects(code);
 }
 
 #[test]
 fn detects_and_keyword() {
     let rule = super::rule();
-    
+
     let code = r#"
 def test [] {
     let var = "x"
     print $"($var) (and y)"
 }
 "#;
-    
+
     rule.assert_detects(code);
 }
 
 #[test]
 fn detects_or_keyword() {
     let rule = super::rule();
-    
+
     let code = r#"
 def test [] {
     let var = "x"
     print $"($var) (or z)"
 }
 "#;
-    
+
     rule.assert_detects(code);
 }
 
 #[test]
 fn detects_multiple_violations() {
     let rule = super::rule();
-    
+
     let code = r#"
 def test [] {
     let name = "test"
     print $"Item ($name) (or maybe not) (and another)"
 }
 "#;
-    
+
     rule.assert_detects(code);
 }
 
 #[test]
 fn detects_in_error_messages() {
     let rule = super::rule();
-    
+
     let code = r#"
 def bad_error_msg [path: string] {
     error make {
@@ -65,7 +65,7 @@ def bad_error_msg [path: string] {
     }
 }
 "#;
-    
+
     rule.assert_detects(code);
 }
 

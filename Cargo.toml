@@ -1,8 +1,7 @@
 [package]
 authors = ["Willem Vanhulle <willemvanhulle@protonmail.com>"]
 description = "A linter for Nushell scripts"
-edition = "2021"
-rust-version = "1.70.0"
+edition = "2024"
 keywords = ["nushell", "linter", "static-analysis", "code-quality", "shell"]
 license = "MIT"
 name = "nu-lint"
@@ -13,31 +12,19 @@ version = "0.0.7"
 pedantic = { level = "warn", priority = 0 }
 
 [dependencies]
-# Nushell parser
+clap = { version = "4.5", features = ["derive"] }
+heck = "0.5"
+miette = { version = "7.0", features = ["fancy"] }
 nu-cmd-lang = "0.108.0"
 nu-command = "0.108.0"
 nu-parser = "0.108.0"
 nu-protocol = "0.108.0"
-
-# CLI and config
-clap = { version = "4.5", features = ["derive"] }
+rayon = "1.10"
+regex = "1.10"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-toml = "0.8"
-
-# Error handling and diagnostics
-miette = { version = "7.0", features = ["fancy"] }
 thiserror = "1.0"
-
-
-# Regex for pattern matching
-regex = "1.10"
-
-# Parallel processing
-rayon = "1.10"
-
-# Case conversion utilities
-heck = "0.5"
+toml = "0.8"
 
 [dev-dependencies]
 tempfile = "3.10"

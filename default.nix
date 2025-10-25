@@ -1,33 +1,46 @@
 {
-  lib,
-  rustPlatform,
-  fetchFromGitHub,
+  pkgs ? import <nixpkgs> { },
+  fetchFromGitHub ? pkgs.fetchFromGitHub,
 }:
+let
+  meta = builtins.fromTOML (pkgs.lib.readFile ./Cargo.toml);
 
+  fenix = pkgs.callPackage (fetchFromGitHub {
+    owner = "nix-community";
+    repo = "fenix";
+    rev = "b0fa429fc946e6e716dff3bfb97ce6383eae9359";
+    hash = "sha256-YmnUYXjacFHa8fWCo8gBAHpqlcG8+P5+5YYFhy6hOkg=";
+  }) { };
+
+  toolchain = fenix.fromToolchainFile {
+    file = ./rust-toolchain.toml;
+  };
+
+  rustPlatform = pkgs.makeRustPlatform {
+    cargo = toolchain;
+    rustc = toolchain;
+  };
+in
 rustPlatform.buildRustPackage {
-  pname = "nu-lint";
-  version = "0.0.7";
+  pname = meta.package.name;
+  version = meta.package.version;
 
-  src = lib.cleanSource ./.;
+  src = pkgs.lib.cleanSource ./.;
 
-  cargoHash = "sha256-DiExIO0NG2GqvvXGpHsoNGBt8BTBn533SKC+mkXo2F4=";
+  cargoLock = {
+    lockFile = ./Cargo.lock;
+  };
 
   nativeBuildInputs = [ ];
 
   buildInputs = [ ];
 
-  # Build configuration
-  doCheck = false; # Skip tests during build
-
-  # Enable unstable features for nu-glob compatibility
-  RUSTC_BOOTSTRAP = "1";
-
-  meta = with lib; {
-    description = "A linter for Nushell scripts";
-    homepage = "https://github.com/wvhulle/nu-lint";
+  meta = with pkgs.lib; {
+    description = meta.package.description;
+    homepage = meta.package.repository;
     license = licenses.mit;
-    maintainers = [ ];
-    mainProgram = "nu-lint";
+    maintainers = meta.package.authors;
+    mainProgram = meta.package.name;
     platforms = platforms.all;
   };
 }

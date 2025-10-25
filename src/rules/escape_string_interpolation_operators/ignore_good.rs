@@ -1,48 +1,48 @@
 #[test]
 fn ignores_escaped_parentheses() {
     let rule = super::rule();
-    
+
     let code = r#"
 def good_example [] {
     let path = "/some/path"
     print $"File ($path) \(not found\)"
 }
 "#;
-    
+
     rule.assert_ignores(code);
 }
 
 #[test]
 fn ignores_plain_strings() {
     let rule = super::rule();
-    
+
     let code = r#"
 def ok_example [] {
     print "(not a problem)"
 }
 "#;
-    
+
     rule.assert_ignores(code);
 }
 
 #[test]
 fn ignores_non_operator_keywords() {
     let rule = super::rule();
-    
+
     let code = r#"
 def ok_example [] {
     let x = "value"
     print $"Result ($x) (some text here)"
 }
 "#;
-    
+
     rule.assert_ignores(code);
 }
 
 #[test]
 fn ignores_escaped_all_keywords() {
     let rule = super::rule();
-    
+
     let code = r#"
 def good_operators [] {
     let var = "x"
@@ -51,21 +51,21 @@ def good_operators [] {
     print $"($var) \(or z\)"
 }
 "#;
-    
+
     rule.assert_ignores(code);
 }
 
 #[test]
 fn ignores_simple_interpolation() {
     let rule = super::rule();
-    
+
     let code = r#"
 def test [] {
     let name = "Alice"
     print $"Hello ($name)"
 }
 "#;
-    
+
     rule.assert_ignores(code);
 }
 

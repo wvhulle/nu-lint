@@ -310,7 +310,8 @@ fn is_incomplete_binary_op(
     right: &nu_protocol::ast::Expression,
     _context: &VisitContext,
 ) -> bool {
-    // Very basic check - in a real implementation you might want more sophisticated logic
+    // Very basic check - in a real implementation you might want more sophisticated
+    // logic
     matches!(left.expr, Expr::Nothing) || matches!(right.expr, Expr::Nothing)
 }
 
@@ -324,7 +325,8 @@ fn analyze_function_call(
 
     // Check for boolean operator function calls that might be meant as literal text
     if matches!(decl_name, "and" | "or" | "not") {
-        // If it's a boolean operator used as a function call, it's likely intended as literal text
+        // If it's a boolean operator used as a function call, it's likely intended as
+        // literal text
         Some(DangerousInterpolationPattern::BooleanOperator(
             decl_name.to_string(),
         ))
@@ -365,7 +367,8 @@ fn analyze_external_call(
             ));
         }
 
-        // Check for incomplete operator expressions (operators with no or few arguments)
+        // Check for incomplete operator expressions (operators with no or few
+        // arguments)
         if matches!(sensitivity, DetectionSensitivity::Aggressive)
             && matches!(
                 pattern.as_str(),
@@ -428,13 +431,15 @@ fn create_violation(span: nu_protocol::Span, pattern: DangerousInterpolationPatt
     let (message, suggestion) = match pattern {
         DangerousInterpolationPattern::BooleanOperator(op) => (
             format!(
-                "Unescaped parentheses with boolean operator '{op}' in string interpolation will cause runtime error"
+                "Unescaped parentheses with boolean operator '{op}' in string interpolation will \
+                 cause runtime error"
             ),
             "Escape literal parentheses with backslashes: \\(...\\)".to_string(),
         ),
         DangerousInterpolationPattern::ErrorMessage(pattern) => (
             format!(
-                "Error message pattern '{pattern}' in unescaped parentheses will cause runtime error"
+                "Error message pattern '{pattern}' in unescaped parentheses will cause runtime \
+                 error"
             ),
             "Escape literal parentheses with backslashes: \\(...\\)".to_string(),
         ),
@@ -514,14 +519,17 @@ pub fn rule() -> Rule {
         "escape_string_interpolation_operators",
         RuleCategory::ErrorHandling,
         Severity::Warning,
-        "Detect unescaped parentheses with operator keywords in string interpolations that cause runtime errors",
+        "Detect unescaped parentheses with operator keywords in string interpolations that cause \
+         runtime errors",
         check,
     )
 }
 
-// NOTE: Future enhancement - the DetectionSensitivity enum is ready for integration
-// with the configuration system when per-rule configuration is implemented.
-// Users will be able to configure: { "escape_string_interpolation_operators": { "sensitivity": "conservative" | "balanced" | "aggressive" } }
+// NOTE: Future enhancement - the DetectionSensitivity enum is ready for
+// integration with the configuration system when per-rule configuration is
+// implemented. Users will be able to configure: {
+// "escape_string_interpolation_operators": { "sensitivity": "conservative" |
+// "balanced" | "aggressive" } }
 
 #[cfg(test)]
 mod detect_bad;

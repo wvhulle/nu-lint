@@ -1,4 +1,3 @@
-
 use super::rule;
 
 #[test]

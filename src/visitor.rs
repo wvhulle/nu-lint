@@ -156,6 +156,17 @@ pub fn walk_expression<V: AstVisitor + ?Sized>(
                 visitor.visit_expression(expr, context);
             }
         }
+        Expr::ExternalCall(head, args) => {
+            visitor.visit_expression(head, context);
+            for arg in args {
+                match arg {
+                    nu_protocol::ast::ExternalArgument::Regular(expr)
+                    | nu_protocol::ast::ExternalArgument::Spread(expr) => {
+                        visitor.visit_expression(expr, context);
+                    }
+                }
+            }
+        }
         _ => {}
     }
 }

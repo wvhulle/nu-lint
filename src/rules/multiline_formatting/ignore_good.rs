@@ -1,14 +1,9 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn ignores_short_single_line_list() {
     let code = "let items = [1 2 3]";
-
-    LintContext::test_with_parsed_source(code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(violations.is_empty());
-    });
+    rule().assert_ignores(code);
 }
 
 #[test]
@@ -18,11 +13,7 @@ fn ignores_multiline_list() {
     "second"
     "third"
 ]"#;
-
-    LintContext::test_with_parsed_source(code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(violations.is_empty());
-    });
+    rule().assert_ignores(code);
 }
 
 #[test]
@@ -33,9 +24,5 @@ fn ignores_multiline_function() {
 ] {
     echo "processing"
 }"#;
-
-    LintContext::test_with_parsed_source(code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(violations.is_empty());
-    });
+    rule().assert_ignores(code);
 }

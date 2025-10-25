@@ -1,28 +1,13 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn test_is_not_empty_not_flagged() {
     let good_code = "if ($list | is-not-empty) { echo 'has items' }";
-
-    LintContext::test_with_parsed_source(good_code, |context| {
-        assert_eq!(
-            (rule().check)(&context).len(),
-            0,
-            "Should not flag 'is-not-empty'"
-        );
-    });
+    rule().assert_ignores(good_code);
 }
 
 #[test]
 fn test_plain_is_empty_not_flagged() {
     let good_code = "if ($list | is-empty) { echo 'no items' }";
-
-    LintContext::test_with_parsed_source(good_code, |context| {
-        assert_eq!(
-            (rule().check)(&context).len(),
-            0,
-            "Should not flag plain 'is-empty'"
-        );
-    });
+    rule().assert_ignores(good_code);
 }

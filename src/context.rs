@@ -52,8 +52,7 @@ impl LintContext<'_> {
     /// Walk the AST using a visitor pattern
     ///
     /// This is the primary method for AST-based rules. The visitor will be
-    /// called for each relevant AST node type. This walks both the main AST
-    /// block and all blocks accessible through function declarations.
+    /// called for each relevant AST node type.
     pub fn walk_ast<V: AstVisitor>(&self, visitor: &mut V) {
         let visit_context = VisitContext {
             working_set: self.working_set,
@@ -61,15 +60,10 @@ impl LintContext<'_> {
         };
 
         // Visit the main AST block
+        // Note: Function bodies are visited automatically when the visitor
+        // descends into Block/Closure expressions, so we don't need to
+        // explicitly visit them again to avoid duplicate violations.
         visitor.visit_block(self.ast, &visit_context);
-
-        // Visit function bodies by iterating through user-defined functions
-        for (_decl_id, decl) in self.new_user_functions() {
-            if let Some(block_id) = decl.block_id() {
-                let block = self.working_set.get_block(block_id);
-                visitor.visit_block(block, &visit_context);
-            }
-        }
     }
 
     /// Iterator over newly added user-defined function declarations

@@ -7,7 +7,7 @@ mut count = 0
 $count = $count + 1
 ";
 
-    rule().assert_detects(bad_code);
+    rule().assert_violation_count_exact(bad_code, 1);
 }
 
 #[test]
@@ -27,5 +27,5 @@ mut count = 0
 $count = $count * 2
 ";
 
-    rule().assert_detects(bad_code);
+    rule().assert_violation_count_exact(bad_code, 1);
 }

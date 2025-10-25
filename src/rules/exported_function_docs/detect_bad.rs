@@ -1,5 +1,4 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn test_exported_function_without_docs() {
@@ -8,15 +7,7 @@ export def my-command [] {
     echo "hello"
 }
 "#;
-
-    LintContext::test_with_parsed_source(source, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            !violations.is_empty(),
-            "Should detect exported function without docs"
-        );
-        assert_eq!(violations[0].rule_id, "exported_function_docs");
-    });
+    rule().assert_violation_count_exact(source, 1);
 }
 
 #[test]
@@ -26,13 +17,5 @@ export def process-data [input: string, output: string] {
     echo $input | save $output
 }
 ";
-
-    LintContext::test_with_parsed_source(source, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            !violations.is_empty(),
-            "Should detect exported function with params without docs"
-        );
-        assert_eq!(violations[0].rule_id, "exported_function_docs");
-    });
+    rule().assert_violation_count_exact(source, 1);
 }

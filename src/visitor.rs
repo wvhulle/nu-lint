@@ -137,10 +137,14 @@ pub fn walk_expression<V: AstVisitor + ?Sized>(
                 }
             }
         }
-        Expr::Block(block_id) | Expr::Closure(block_id) | Expr::Subexpression(block_id) => {
+        Expr::Block(block_id)
+        | Expr::Closure(block_id)
+        | Expr::Subexpression(block_id)
+        | Expr::RowCondition(block_id) => {
             let block = context.get_block(*block_id);
             visitor.visit_block(block, context);
         }
+        Expr::Keyword(keyword) => visitor.visit_expression(&keyword.expr, context),
         Expr::FullCellPath(cell_path) => visitor.visit_expression(&cell_path.head, context),
         Expr::String(string_content) | Expr::RawString(string_content) => {
             visitor.visit_string(string_content, expr.span, context);

@@ -1,26 +1,15 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn test_ignore_builtin_ls() {
     let good_code = "ls -la";
-    LintContext::test_with_parsed_source(good_code, |context| {
-        assert!(
-            (rule().check)(&context).is_empty(),
-            "Should ignore builtin ls command"
-        );
-    });
+    rule().assert_ignores(good_code);
 }
 
 #[test]
 fn test_ignore_open_command() {
     let good_code = "open --raw config.toml";
-    LintContext::test_with_parsed_source(good_code, |context| {
-        assert!(
-            (rule().check)(&context).is_empty(),
-            "Should ignore proper open command usage"
-        );
-    });
+    rule().assert_ignores(good_code);
 }
 
 #[test]
@@ -28,12 +17,7 @@ fn test_ignore_where_filter() {
     let good_code = r#"
 $data | where name =~ "error"
 "#;
-    LintContext::test_with_parsed_source(good_code, |context| {
-        assert!(
-            (rule().check)(&context).is_empty(),
-            "Should ignore where filter instead of grep"
-        );
-    });
+    rule().assert_ignores(good_code);
 }
 
 #[test]
@@ -42,12 +26,7 @@ fn test_ignore_first_last_commands() {
 $lines | first 5
 $lines | last 10
 ";
-    LintContext::test_with_parsed_source(good_code, |context| {
-        assert!(
-            (rule().check)(&context).is_empty(),
-            "Should ignore proper first/last usage"
-        );
-    });
+    rule().assert_ignores(good_code);
 }
 
 #[test]
@@ -55,23 +34,13 @@ fn test_ignore_builtin_sort_uniq() {
     let good_code = r"
 $data | sort-by name | uniq-by id
 ";
-    LintContext::test_with_parsed_source(good_code, |context| {
-        assert!(
-            (rule().check)(&context).is_empty(),
-            "Should ignore builtin sort and uniq commands"
-        );
-    });
+    rule().assert_ignores(good_code);
 }
 
 #[test]
 fn test_ignore_external_commands_not_in_list() {
     let good_code = "^git status";
-    LintContext::test_with_parsed_source(good_code, |context| {
-        assert!(
-            (rule().check)(&context).is_empty(),
-            "Should ignore external commands not in replacement list"
-        );
-    });
+    rule().assert_ignores(good_code);
 }
 
 #[test]
@@ -81,12 +50,7 @@ fn test_ignore_specialized_external_tools() {
 ^ffmpeg -i input.mp4 output.avi
 ^curl -X POST https://api.example.com/data
 ";
-    LintContext::test_with_parsed_source(good_code, |context| {
-        assert!(
-            (rule().check)(&context).is_empty(),
-            "Should ignore specialized external tools"
-        );
-    });
+    rule().assert_ignores(good_code);
 }
 
 #[test]
@@ -94,10 +58,5 @@ fn test_ignore_proper_pipeline_usage() {
     let good_code = r"
 ls *.nu | where size > 1KB | sort-by modified | first 10
 ";
-    LintContext::test_with_parsed_source(good_code, |context| {
-        assert!(
-            (rule().check)(&context).is_empty(),
-            "Should ignore proper nu pipeline usage"
-        );
-    });
+    rule().assert_ignores(good_code);
 }

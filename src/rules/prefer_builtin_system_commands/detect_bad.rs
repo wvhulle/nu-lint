@@ -102,5 +102,5 @@ fn test_detect_external_pwd() {
 fn test_detect_external_cd() {
     let bad_code = "^cd /tmp";
 
-    rule().assert_detects(bad_code);
+    rule().assert_violation_count_exact(bad_code, 1);
 }

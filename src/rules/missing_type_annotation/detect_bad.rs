@@ -1,5 +1,4 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn test_detect_missing_type_annotation_single_param() {
@@ -8,15 +7,8 @@ def greet [name] {
     print $"Hello ($name)"
 }
 "#;
-
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            !violations.is_empty(),
-            "Should detect missing type annotation on 'name' parameter"
-        );
-        assert!(violations[0].message.contains("name"));
-    });
+    rule().assert_detects(bad_code);
+    rule().assert_violation_count_exact(bad_code, 1);
 }
 
 #[test]
@@ -26,15 +18,8 @@ def add [x, y] {
     $x + $y
 }
 ";
-
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        let violations = (rule().check)(&context);
-        assert_eq!(
-            violations.len(),
-            2,
-            "Should detect missing type annotations on both 'x' and 'y' parameters"
-        );
-    });
+    rule().assert_detects(bad_code);
+    rule().assert_violation_count_exact(bad_code, 2);
 }
 
 #[test]
@@ -44,16 +29,8 @@ def process [data, format: string] {
     print $data
 }
 ";
-
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        let violations = (rule().check)(&context);
-        assert_eq!(
-            violations.len(),
-            1,
-            "Should detect missing type annotation only on 'data' parameter"
-        );
-        assert!(violations[0].message.contains("data"));
-    });
+    rule().assert_detects(bad_code);
+    rule().assert_violation_count_exact(bad_code, 1);
 }
 
 #[test]
@@ -67,4 +44,5 @@ def outer [] {
 ";
 
     rule().assert_detects(bad_code);
+    rule().assert_violation_count_exact(bad_code, 1);
 }

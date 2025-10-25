@@ -1,14 +1,10 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn test_good_brace_spacing_with_spaces() {
     // According to style guide: { x: 1, y: 2 } is correct (consistent spaces)
     let good = "{ key: value }";
-    LintContext::test_with_parsed_source(good, |context| {
-        let violations = (rule().check)(&context);
-        assert_eq!(violations.len(), 0);
-    });
+    rule().assert_ignores(good);
 }
 
 #[test]

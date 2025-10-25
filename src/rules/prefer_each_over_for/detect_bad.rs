@@ -1,5 +1,4 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn test_detect_for_loop_with_string_processing() {
@@ -8,10 +7,7 @@ for name in $names {
     $name | str capitalize
 }
 ";
-
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        assert!(!(rule().check)(&context).is_empty());
-    });
+    rule().assert_violation_count_exact(bad_code, 1);
 }
 
 #[test]
@@ -21,10 +17,7 @@ for item in $users {
     $item.name
 }
 ";
-
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        assert!(!(rule().check)(&context).is_empty());
-    });
+    rule().assert_violation_count_exact(bad_code, 1);
 }
 
 #[test]
@@ -34,10 +27,7 @@ for x in $numbers {
     ($x | math sqrt) + 1
 }
 ";
-
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        assert!(!(rule().check)(&context).is_empty());
-    });
+    rule().assert_violation_count_exact(bad_code, 1);
 }
 
 #[test]
@@ -48,7 +38,5 @@ for file in (ls | get name) {
 }
 ";
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        assert!(!(rule().check)(&context).is_empty());
-    });
+    rule().assert_violation_count_exact(bad_code, 1);
 }

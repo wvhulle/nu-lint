@@ -1,5 +1,4 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn test_exit_code_checked() {
@@ -9,13 +8,8 @@ if $result.exit_code != 0 {
     return
 }
 ";
-    LintContext::test_with_parsed_source(good_code, |context| {
-        assert_eq!(
-            (rule().check)(&context).len(),
-            0,
-            "Should not flag when exit_code is checked"
-        );
-    });
+
+    rule().assert_ignores(good_code);
 }
 
 #[test]
@@ -23,11 +17,5 @@ fn test_no_complete_not_flagged() {
     let good_code = r"
 let result = (some | regular | pipeline)
 ";
-    LintContext::test_with_parsed_source(good_code, |context| {
-        assert_eq!(
-            (rule().check)(&context).len(),
-            0,
-            "Should not flag non-external commands"
-        );
-    });
+    rule().assert_ignores(good_code);
 }

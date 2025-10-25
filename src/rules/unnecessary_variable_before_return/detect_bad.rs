@@ -1,5 +1,4 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn test_detect_unnecessary_variable_with_pipeline() {
@@ -11,6 +10,7 @@ def get-value [] {
 ";
 
     rule().assert_detects(bad_code);
+    rule().assert_violation_count_exact(bad_code, 1);
 }
 
 #[test]
@@ -23,23 +23,5 @@ def calculate [] {
 ";
 
     rule().assert_detects(bad_code);
-}
-
-#[test]
-fn test_detect_unnecessary_variable_simple() {
-    let bad_code = r"
-def foo [] {
-  let result = (some | pipeline)
-  $result
-}
-";
-
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(!violations.is_empty(), "Should detect unnecessary variable");
-        assert!(
-            violations[0].message.contains("result"),
-            "Message should mention the variable name"
-        );
-    });
+    rule().assert_violation_count_exact(bad_code, 1);
 }

@@ -13,6 +13,25 @@ def bad_example [] {
 }
 
 #[test]
+fn detects_not_found_in_write_sysfs() {
+    let rule = super::rule();
+
+    let code = r#"
+def write_sysfs [path: string, value: string] {
+    if ($path | path exists) {
+        do -i { $value | save -f $path }
+        print -e $"<7>Set ($path) = ($value)"
+    } else {
+        print -e $"<7>Skipped ($path) (not found)"
+    }
+}
+"#;
+
+    rule.assert_detects(code);
+    rule.assert_violation_count_exact(code, 1);
+}
+
+#[test]
 fn detects_and_keyword() {
     let rule = super::rule();
 
@@ -52,6 +71,7 @@ def test [] {
 "#;
 
     rule.assert_detects(code);
+    rule.assert_violation_count_exact(code, 1); // One string with multiple violations is still one violation
 }
 
 #[test]
@@ -98,6 +118,7 @@ def test_errors [] {
 "#;
 
     rule.assert_detects(code);
+    rule.assert_violation_count_exact(code, 3);
 }
 
 #[test]

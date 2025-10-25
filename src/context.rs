@@ -2,14 +2,11 @@ use std::path::Path;
 
 use nu_protocol::{
     DeclId, Span,
-    ast::Block,
+    ast::{Block, Expression, FindMapResult, Traverse},
     engine::{Command, EngineState, StateWorkingSet},
 };
 
-use crate::{
-    lint::{Severity, Violation},
-    visitor::{AstVisitor, VisitContext},
-};
+use crate::lint::{Severity, Violation};
 
 /// Context containing all lint information (source, AST, and engine state)
 /// Rules can use whatever they need from this context
@@ -49,21 +46,36 @@ impl LintContext<'_> {
             .collect()
     }
 
-    /// Walk the AST using a visitor pattern
+    /// Collect all violations using a closure over expressions (Traverse-based)
     ///
-    /// This is the primary method for AST-based rules. The visitor will be
-    /// called for each relevant AST node type.
-    pub fn walk_ast<V: AstVisitor>(&self, visitor: &mut V) {
-        let visit_context = VisitContext {
-            working_set: self.working_set,
-            source: self.source,
-        };
+    /// This method uses Nushell's upstream `Traverse` trait to walk the AST
+    /// and collect violations. The collector function is called for each
+    /// expression in the AST and should return a vector of violations.
+    pub fn collect_violations<F>(&self, collector: F) -> Vec<Violation>
+    where
+        F: Fn(&Expression, &Self) -> Vec<Violation>,
+    {
+        let mut violations = Vec::new();
 
-        // Visit the main AST block
-        // Note: Function bodies are visited automatically when the visitor
-        // descends into Block/Closure expressions, so we don't need to
-        // explicitly visit them again to avoid duplicate violations.
-        visitor.visit_block(self.ast, &visit_context);
+        let f = |expr: &Expression| collector(expr, self);
+
+        // Visit main AST
+        self.ast.flat_map(self.working_set, &f, &mut violations);
+
+        violations
+    }
+
+    /// Find first match using `find_map` (Traverse-based)
+    ///
+    /// This method uses Nushell's upstream `Traverse` trait to search the AST
+    /// for the first matching expression. The finder function should return
+    /// `FindMapResult::Found(value)` to return a value, `FindMapResult::Stop`
+    /// to stop searching, or `FindMapResult::Continue` to continue searching.
+    pub fn find_match<T, F>(&self, finder: F) -> Option<T>
+    where
+        F: Fn(&Expression) -> FindMapResult<T>,
+    {
+        self.ast.find_map(self.working_set, &finder)
     }
 
     /// Iterator over newly added user-defined function declarations

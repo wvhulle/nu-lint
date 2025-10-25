@@ -1,87 +1,43 @@
-use nu_protocol::ast::{Call, Expr};
+use nu_protocol::ast::Expr;
 
 use crate::{
     context::LintContext,
     lint::{Severity, Violation},
     rule::{Rule, RuleCategory},
-    visitor::{AstVisitor, VisitContext},
 };
 
-/// AST visitor that detects 'each' calls containing 'split row'
-pub struct EachSplitVisitor {
-    violations: Vec<Violation>,
-}
-
-impl Default for EachSplitVisitor {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl EachSplitVisitor {
-    #[must_use]
-    pub fn new() -> Self {
-        Self {
-            violations: Vec::new(),
+fn contains_split_row(expr: &nu_protocol::ast::Expression, ctx: &LintContext) -> bool {
+    match &expr.expr {
+        Expr::Call(call) => {
+            let name = ctx.working_set.get_decl(call.decl_id).name();
+            (name == "split row" || name == "split")
+                || call.arguments.iter().any(|arg| match arg {
+                    nu_protocol::ast::Argument::Positional(e)
+                    | nu_protocol::ast::Argument::Named((_, _, Some(e))) => {
+                        contains_split_row(e, ctx)
+                    }
+                    _ => false,
+                })
         }
-    }
-
-    fn is_command(call: &Call, context: &VisitContext, name: &str) -> bool {
-        context.working_set.get_decl(call.decl_id).name() == name
-    }
-
-    fn block_contains_split_row(
-        &self,
-        block_id: nu_protocol::BlockId,
-        context: &VisitContext,
-    ) -> bool {
-        context
-            .get_block(block_id)
+        Expr::Block(id) | Expr::Closure(id) | Expr::Subexpression(id) => ctx
+            .working_set
+            .get_block(*id)
             .pipelines
             .iter()
             .flat_map(|pipeline| &pipeline.elements)
-            .any(|element| self.expr_contains_split_row(&element.expr, context))
-    }
-
-    fn expr_contains_split_row(
-        &self,
-        expr: &nu_protocol::ast::Expression,
-        context: &VisitContext,
-    ) -> bool {
-        match &expr.expr {
-            Expr::Call(call) => {
-                let name = context.working_set.get_decl(call.decl_id).name();
-                (name == "split row" || name == "split")
-                    || call.arguments.iter().any(|arg| match arg {
-                        nu_protocol::ast::Argument::Positional(e)
-                        | nu_protocol::ast::Argument::Named((_, _, Some(e))) => {
-                            self.expr_contains_split_row(e, context)
-                        }
-                        _ => false,
-                    })
-            }
-            Expr::Block(id) | Expr::Closure(id) | Expr::Subexpression(id) => {
-                self.block_contains_split_row(*id, context)
-            }
-            Expr::FullCellPath(cell_path) => self.expr_contains_split_row(&cell_path.head, context),
-            Expr::BinaryOp(left, _, right) => {
-                self.expr_contains_split_row(left, context)
-                    || self.expr_contains_split_row(right, context)
-            }
-            Expr::UnaryNot(inner) => self.expr_contains_split_row(inner, context),
-            _ => false,
+            .any(|element| contains_split_row(&element.expr, ctx)),
+        Expr::FullCellPath(cell_path) => contains_split_row(&cell_path.head, ctx),
+        Expr::BinaryOp(left, _, right) => {
+            contains_split_row(left, ctx) || contains_split_row(right, ctx)
         }
-    }
-
-    #[must_use]
-    pub fn into_violations(self) -> Vec<Violation> {
-        self.violations
+        Expr::UnaryNot(inner) => contains_split_row(inner, ctx),
+        _ => false,
     }
 }
 
-impl AstVisitor for EachSplitVisitor {
-    fn visit_call(&mut self, call: &Call, context: &VisitContext) {
-        if Self::is_command(call, context, "each") {
+fn check(context: &LintContext) -> Vec<Violation> {
+    context.collect_violations(|expr, ctx| match &expr.expr {
+        Expr::Call(call) if ctx.working_set.get_decl(call.decl_id).name() == "each" => {
             let has_split = call
                 .arguments
                 .iter()
@@ -89,42 +45,30 @@ impl AstVisitor for EachSplitVisitor {
                     nu_protocol::ast::Argument::Positional(expr) => Some(expr),
                     _ => None,
                 })
-                .any(|expr| match &expr.expr {
-                    Expr::Closure(id) | Expr::Block(id) => {
-                        self.block_contains_split_row(*id, context)
-                    }
-                    _ => false,
-                });
+                .any(|expr| contains_split_row(expr, ctx));
 
             if has_split {
-                self.violations.push(Violation {
-                    rule_id: "prefer_parse_over_each_split".to_string().into(),
+                vec![Violation {
+                    rule_id: "prefer_parse_over_each_split".into(),
                     severity: Severity::Info,
                     message: "Manual splitting with 'each' and 'split row' - consider using \
                               'parse'"
-                        .to_string()
                         .into(),
                     span: call.span(),
                     suggestion: Some(
                         "Use 'parse \"{field1} {field2}\"' for structured text extraction instead \
                          of 'each' with 'split row'"
-                            .to_string()
                             .into(),
                     ),
                     fix: None,
                     file: None,
-                });
+                }]
+            } else {
+                vec![]
             }
         }
-
-        crate::visitor::walk_call(self, call, context);
-    }
-}
-
-fn check(context: &LintContext) -> Vec<Violation> {
-    let mut visitor = EachSplitVisitor::new();
-    context.walk_ast(&mut visitor);
-    visitor.into_violations()
+        _ => vec![],
+    })
 }
 
 pub fn rule() -> Rule {

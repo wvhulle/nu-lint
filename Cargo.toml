@@ -1,7 +1,8 @@
 [package]
 authors = ["Willem Vanhulle <willemvanhulle@protonmail.com>"]
 description = "A linter for Nushell scripts"
-edition = "2024"
+edition = "2021"
+rust-version = "1.70.0"
 keywords = ["nushell", "linter", "static-analysis", "code-quality", "shell"]
 license = "MIT"
 name = "nu-lint"

@@ -20,6 +20,46 @@ Or build from source:
 cargo install --path .
 ```
 
+### Nix
+
+Add to your `configuration.nix`:
+
+```nix
+let
+  nu-lint = pkgs.callPackage (pkgs.fetchFromGitHub {
+    owner = "wvhulle";
+    repo = "nu-lint";
+    rev = "main"; # or specific commit hash
+    sha256 = ""; # nix will tell you the correct hash
+  }) {};
+in
+{
+  environment.systemPackages = [
+    nu-lint
+  ];
+}
+```
+
+Or in a `shell.nix`:
+
+```nix
+{ pkgs ? import <nixpkgs> {} }:
+
+let
+  nu-lint = pkgs.callPackage (pkgs.fetchFromGitHub {
+    owner = "wvhulle";
+    repo = "nu-lint";
+    rev = "main";
+    sha256 = ""; # nix will tell you the correct hash
+  }) {};
+in
+pkgs.mkShell {
+  buildInputs = [
+    nu-lint
+  ];
+}
+```
+
 ## Usage
 
 ```bash

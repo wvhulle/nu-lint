@@ -1,10 +1,10 @@
 use heck::ToKebabCase;
+use nu_protocol::ast::{Argument, Expr};
 
 use crate::{
     context::LintContext,
     lint::{Fix, Replacement, Severity, Violation},
     rule::{Rule, RuleCategory},
-    visitor::{AstVisitor, VisitContext},
 };
 
 /// Check if a command name follows kebab-case convention
@@ -38,9 +38,54 @@ fn is_valid_kebab_case(name: &str) -> bool {
 }
 
 fn check(context: &LintContext) -> Vec<Violation> {
-    let mut visitor = KebabCaseCommandsVisitor::new();
-    context.walk_ast(&mut visitor);
-    visitor.violations
+    context.collect_violations(|expr, ctx| {
+        match &expr.expr {
+            Expr::Call(call) => {
+                // Check for def commands (function definitions)
+                let decl = ctx.working_set.get_decl(call.decl_id);
+                if decl.name() == "def" || decl.name() == "export def" {
+                    // The first argument to def should be the command name
+                    if let Some(Argument::Positional(name_expr)) = call.arguments.first() {
+                        let cmd_name = ctx
+                            .source
+                            .get(name_expr.span.start..name_expr.span.end)
+                            .unwrap_or("");
+
+                        if !is_valid_kebab_case(cmd_name) {
+                            let kebab_case_name = cmd_name.to_kebab_case();
+                            let fix = Some(Fix {
+                                description: format!(
+                                    "Rename command '{cmd_name}' to '{kebab_case_name}'"
+                                )
+                                .into(),
+                                replacements: vec![Replacement {
+                                    span: name_expr.span,
+                                    new_text: kebab_case_name.clone().into(),
+                                }],
+                            });
+
+                            return vec![Violation {
+                                rule_id: "kebab_case_commands".into(),
+                                severity: Severity::Warning,
+                                message: format!(
+                                    "Command '{cmd_name}' should use kebab-case naming convention"
+                                )
+                                .into(),
+                                span: name_expr.span,
+                                suggestion: Some(
+                                    format!("Consider renaming to: {kebab_case_name}").into(),
+                                ),
+                                fix,
+                                file: None,
+                            }];
+                        }
+                    }
+                }
+                vec![]
+            }
+            _ => vec![],
+        }
+    })
 }
 
 pub fn rule() -> Rule {
@@ -51,64 +96,6 @@ pub fn rule() -> Rule {
         "Custom commands should use kebab-case naming convention",
         check,
     )
-}
-
-/// AST visitor that checks command naming using AST traversal
-struct KebabCaseCommandsVisitor {
-    violations: Vec<Violation>,
-}
-
-impl KebabCaseCommandsVisitor {
-    fn new() -> Self {
-        Self {
-            violations: Vec::new(),
-        }
-    }
-
-    fn check_command_name(&mut self, cmd_name: &str, span: nu_protocol::Span) {
-        if !is_valid_kebab_case(cmd_name) {
-            let kebab_case_name = cmd_name.to_kebab_case();
-
-            let fix = Some(Fix {
-                description: format!("Rename command '{cmd_name}' to '{kebab_case_name}'").into(),
-                replacements: vec![Replacement {
-                    span,
-                    new_text: kebab_case_name.clone().into(),
-                }],
-            });
-
-            self.violations.push(Violation {
-                rule_id: "kebab_case_commands".into(),
-                severity: Severity::Warning,
-                message: format!("Command '{cmd_name}' should use kebab-case naming convention")
-                    .into(),
-                span,
-                suggestion: Some(format!("Consider renaming to: {kebab_case_name}").into()),
-                fix,
-                file: None,
-            });
-        }
-    }
-}
-
-impl AstVisitor for KebabCaseCommandsVisitor {
-    fn visit_call(&mut self, call: &nu_protocol::ast::Call, context: &VisitContext) {
-        // Check for def commands (function definitions)
-        let decl = context.get_decl(call.decl_id);
-        if decl.name() == "def" || decl.name() == "export def" {
-            // The first argument to def should be the command name
-            if let Some(first_arg) = call.arguments.first()
-                && let nu_protocol::ast::Argument::Positional(expr) = first_arg
-            {
-                // Extract command name from the span
-                let cmd_name = context.get_span_contents(expr.span);
-                self.check_command_name(cmd_name, expr.span);
-            }
-        }
-
-        // Continue walking
-        crate::visitor::walk_call(self, call, context);
-    }
 }
 
 #[cfg(test)]

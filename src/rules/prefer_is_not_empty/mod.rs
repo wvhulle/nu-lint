@@ -4,16 +4,15 @@ use crate::{
     context::LintContext,
     lint::{Fix, Replacement, Severity, Violation},
     rule::{Rule, RuleCategory},
-    visitor::{AstVisitor, VisitContext},
 };
 
 /// Check if an expression represents a "not ... is-empty" pattern
-fn is_not_is_empty_pattern(expr: &nu_protocol::ast::Expression, context: &VisitContext) -> bool {
+fn is_not_is_empty_pattern(expr: &nu_protocol::ast::Expression, context: &LintContext) -> bool {
     // Look for: not (expr | is-empty)
     if let Expr::UnaryNot(inner_expr) = &expr.expr {
         match &inner_expr.expr {
             Expr::Subexpression(block_id) => {
-                let block = context.get_block(*block_id);
+                let block = context.working_set.get_block(*block_id);
                 if let Some(pipeline) = block.pipelines.first() {
                     return check_pipeline_for_is_empty(pipeline, context);
                 }
@@ -21,7 +20,7 @@ fn is_not_is_empty_pattern(expr: &nu_protocol::ast::Expression, context: &VisitC
             Expr::FullCellPath(path) => {
                 // Check if the head is a subexpression
                 if let Expr::Subexpression(block_id) = &path.head.expr {
-                    let block = context.get_block(*block_id);
+                    let block = context.working_set.get_block(*block_id);
                     if let Some(pipeline) = block.pipelines.first() {
                         return check_pipeline_for_is_empty(pipeline, context);
                     }
@@ -35,14 +34,14 @@ fn is_not_is_empty_pattern(expr: &nu_protocol::ast::Expression, context: &VisitC
 
 fn check_pipeline_for_is_empty(
     pipeline: &nu_protocol::ast::Pipeline,
-    context: &VisitContext,
+    context: &LintContext,
 ) -> bool {
     if pipeline.elements.len() >= 2 {
         // Check if the last element is "is-empty"
         if let Some(last_element) = pipeline.elements.last()
             && let Expr::Call(call) = &last_element.expr.expr
         {
-            let decl = context.get_decl(call.decl_id);
+            let decl = context.working_set.get_decl(call.decl_id);
             return decl.name() == "is-empty";
         }
     }
@@ -50,15 +49,12 @@ fn check_pipeline_for_is_empty(
 }
 
 /// Generate the fix text for "not (expr | is-empty)" -> "expr | is-not-empty"
-fn generate_fix_text(
-    expr: &nu_protocol::ast::Expression,
-    context: &VisitContext,
-) -> Option<String> {
+fn generate_fix_text(expr: &nu_protocol::ast::Expression, context: &LintContext) -> Option<String> {
     // Extract the expression before "is-empty" from "not (expr | is-empty)"
     if let Expr::UnaryNot(inner_expr) = &expr.expr {
         match &inner_expr.expr {
             Expr::Subexpression(block_id) => {
-                let block = context.get_block(*block_id);
+                let block = context.working_set.get_block(*block_id);
                 if let Some(pipeline) = block.pipelines.first()
                     && pipeline.elements.len() >= 2
                 {
@@ -69,14 +65,14 @@ fn generate_fix_text(
                         let start_span = elements_before_is_empty.first().unwrap().expr.span;
                         let end_span = elements_before_is_empty.last().unwrap().expr.span;
                         let combined_span = nu_protocol::Span::new(start_span.start, end_span.end);
-                        let expr_text = context.get_span_contents(combined_span);
+                        let expr_text = &context.source[combined_span.start..combined_span.end];
                         return Some(format!("{} | is-not-empty", expr_text.trim()));
                     }
                 }
             }
             Expr::FullCellPath(path) => {
                 if let Expr::Subexpression(block_id) = &path.head.expr {
-                    let block = context.get_block(*block_id);
+                    let block = context.working_set.get_block(*block_id);
                     if let Some(pipeline) = block.pipelines.first()
                         && pipeline.elements.len() >= 2
                     {
@@ -88,7 +84,7 @@ fn generate_fix_text(
                             let end_span = elements_before_is_empty.last().unwrap().expr.span;
                             let combined_span =
                                 nu_protocol::Span::new(start_span.start, end_span.end);
-                            let expr_text = context.get_span_contents(combined_span);
+                            let expr_text = &context.source[combined_span.start..combined_span.end];
                             return Some(format!("{} | is-not-empty", expr_text.trim()));
                         }
                     }
@@ -100,24 +96,11 @@ fn generate_fix_text(
     None
 }
 
-/// AST visitor that checks for "not ... is-empty" patterns
-struct PreferIsNotEmptyVisitor {
-    violations: Vec<Violation>,
-}
-
-impl PreferIsNotEmptyVisitor {
-    fn new() -> Self {
-        Self {
-            violations: Vec::new(),
-        }
-    }
-}
-
-impl AstVisitor for PreferIsNotEmptyVisitor {
-    fn visit_expression(&mut self, expr: &nu_protocol::ast::Expression, context: &VisitContext) {
+fn check(context: &LintContext) -> Vec<Violation> {
+    context.collect_violations(|expr, ctx| {
         // Check for "not ... is-empty" pattern
-        if is_not_is_empty_pattern(expr, context)
-            && let Some(fix_text) = generate_fix_text(expr, context)
+        if is_not_is_empty_pattern(expr, ctx)
+            && let Some(fix_text) = generate_fix_text(expr, ctx)
         {
             let fix = Some(Fix {
                 description: "Replace 'not ... is-empty' with 'is-not-empty'"
@@ -129,7 +112,7 @@ impl AstVisitor for PreferIsNotEmptyVisitor {
                 }],
             });
 
-            self.violations.push(Violation {
+            vec![Violation {
                 rule_id: "prefer_is_not_empty".into(),
                 severity: Severity::Info,
                 message: "Use 'is-not-empty' instead of 'not ... is-empty' for better readability"
@@ -139,18 +122,11 @@ impl AstVisitor for PreferIsNotEmptyVisitor {
                 suggestion: Some("Replace with 'is-not-empty'".to_string().into()),
                 fix,
                 file: None,
-            });
+            }]
+        } else {
+            vec![]
         }
-
-        // Continue walking the tree
-        crate::visitor::walk_expression(self, expr, context);
-    }
-}
-
-fn check(context: &LintContext) -> Vec<Violation> {
-    let mut visitor = PreferIsNotEmptyVisitor::new();
-    context.walk_ast(&mut visitor);
-    visitor.violations
+    })
 }
 
 pub fn rule() -> Rule {

@@ -2,10 +2,9 @@ use std::collections::HashMap;
 
 use crate::{
     context::LintContext,
-    external_command::{BuiltinAlternative, ExternalCommandVisitor},
+    external_command::BuiltinAlternative,
     lint::{Fix, Replacement, Severity, Violation},
     rule::{Rule, RuleCategory},
-    visitor::VisitContext,
 };
 
 /// Map of system commands to their Nushell built-in equivalents
@@ -100,9 +99,9 @@ fn build_fix(
     alternative: &BuiltinAlternative,
     args: &[nu_protocol::ast::ExternalArgument],
     expr_span: nu_protocol::Span,
-    context: &VisitContext,
+    context: &LintContext,
 ) -> Fix {
-    let args_text = context.extract_external_args(args);
+    let args_text = extract_external_args(args, context);
 
     // Build replacement based on command
     let new_text = match cmd_text {
@@ -191,15 +190,31 @@ fn build_fix(
     }
 }
 
+/// Helper function to extract external command arguments as strings
+fn extract_external_args(
+    args: &[nu_protocol::ast::ExternalArgument],
+    context: &LintContext,
+) -> Vec<String> {
+    args.iter()
+        .map(|arg| match arg {
+            nu_protocol::ast::ExternalArgument::Regular(expr) => {
+                context.source[expr.span.start..expr.span.end].to_string()
+            }
+            nu_protocol::ast::ExternalArgument::Spread(expr) => {
+                format!("...{}", &context.source[expr.span.start..expr.span.end])
+            }
+        })
+        .collect()
+}
+
 fn check(context: &LintContext) -> Vec<Violation> {
-    let mut visitor = ExternalCommandVisitor::new(
+    crate::external_command::detect_external_commands(
+        context,
         "avoid_external_system_tools",
         Severity::Info,
-        get_builtin_alternatives(),
+        &get_builtin_alternatives(),
         Some(build_fix),
-    );
-    context.walk_ast(&mut visitor);
-    visitor.into_violations()
+    )
 }
 
 pub fn rule() -> Rule {

@@ -5,7 +5,6 @@ use crate::{
     context::LintContext,
     lint::{Severity, Violation},
     rule::{Rule, RuleCategory},
-    visitor::{AstVisitor, VisitContext},
 };
 
 const PROBLEMATIC_BOOLEAN_OPERATORS: &[&str] = &["not", "and", "or", "in"];
@@ -151,12 +150,12 @@ fn detect_complex_boolean_logic(content: &str) -> Option<String> {
         None
     }
 }
-fn contains_variables(expr: &nu_protocol::ast::Expression, context: &VisitContext) -> bool {
+fn contains_variables(expr: &nu_protocol::ast::Expression, context: &LintContext) -> bool {
     match &expr.expr {
         Expr::Var(_) => true,
         Expr::FullCellPath(path) => contains_variables(&path.head, context),
         Expr::Subexpression(block_id) => {
-            let block = context.get_block(*block_id);
+            let block = context.working_set.get_block(*block_id);
             block_contains_variables(block, context)
         }
         Expr::BinaryOp(left, _, right) => {
@@ -168,7 +167,7 @@ fn contains_variables(expr: &nu_protocol::ast::Expression, context: &VisitContex
 }
 
 /// Check if a block contains variable references
-fn block_contains_variables(block: &Block, context: &VisitContext) -> bool {
+fn block_contains_variables(block: &Block, context: &LintContext) -> bool {
     block.pipelines.iter().any(|pipeline| {
         pipeline
             .elements
@@ -180,14 +179,14 @@ fn block_contains_variables(block: &Block, context: &VisitContext) -> bool {
 /// Analyze an AST expression to detect problematic patterns
 fn analyze_ast_expression(
     expr: &nu_protocol::ast::Expression,
-    context: &VisitContext,
+    context: &LintContext,
     sensitivity: DetectionSensitivity,
 ) -> Option<DangerousInterpolationPattern> {
     match &expr.expr {
         // VALID: Variable references and safe expressions
         // ANALYZE: Subexpressions - check their contents
         Expr::Subexpression(block_id) => {
-            let block = context.get_block(*block_id);
+            let block = context.working_set.get_block(*block_id);
             analyze_subexpression_block(block, context, sensitivity)
         }
 
@@ -221,7 +220,7 @@ fn analyze_ast_expression(
 /// Analyze a subexpression block for problematic patterns
 fn analyze_subexpression_block(
     block: &Block,
-    context: &VisitContext,
+    context: &LintContext,
     sensitivity: DetectionSensitivity,
 ) -> Option<DangerousInterpolationPattern> {
     // Check each pipeline in the block
@@ -250,7 +249,7 @@ fn analyze_standalone_operator(op: Operator) -> DangerousInterpolationPattern {
 /// Analyze unary not expressions
 fn analyze_unary_not(
     _inner: &nu_protocol::ast::Expression,
-    _context: &VisitContext,
+    _context: &LintContext,
     sensitivity: DetectionSensitivity,
 ) -> Option<DangerousInterpolationPattern> {
     // Unary not at the start of an interpolation is likely meant as literal text
@@ -271,7 +270,7 @@ fn analyze_binary_operation(
     left: &nu_protocol::ast::Expression,
     op: &nu_protocol::ast::Expression,
     right: &nu_protocol::ast::Expression,
-    context: &VisitContext,
+    context: &LintContext,
     sensitivity: DetectionSensitivity,
 ) -> Option<DangerousInterpolationPattern> {
     if let Expr::Operator(operator) = &op.expr {
@@ -308,7 +307,7 @@ fn analyze_binary_operation(
 fn is_incomplete_binary_op(
     left: &nu_protocol::ast::Expression,
     right: &nu_protocol::ast::Expression,
-    _context: &VisitContext,
+    _context: &LintContext,
 ) -> bool {
     // Very basic check - in a real implementation you might want more sophisticated
     // logic
@@ -318,7 +317,7 @@ fn is_incomplete_binary_op(
 /// Analyze function calls for problematic patterns
 fn analyze_function_call(
     call: &Call,
-    context: &VisitContext,
+    context: &LintContext,
     sensitivity: DetectionSensitivity,
 ) -> Option<DangerousInterpolationPattern> {
     let decl_name = context.working_set.get_decl(call.decl_id).name();
@@ -355,7 +354,7 @@ fn analyze_function_call(
 fn analyze_external_call(
     head: &nu_protocol::ast::Expression,
     args: &[nu_protocol::ast::ExternalArgument],
-    _context: &VisitContext,
+    _context: &LintContext,
     sensitivity: DetectionSensitivity,
 ) -> Option<DangerousInterpolationPattern> {
     // Check if the head expression is a problematic command name
@@ -398,7 +397,7 @@ fn analyze_external_call(
 fn is_valid_interpolation(
     expr: &nu_protocol::ast::Expression,
     _source: &str,
-    context: &VisitContext,
+    context: &LintContext,
 ) -> bool {
     match &expr.expr {
         Expr::Var(_) => true,
@@ -469,12 +468,12 @@ fn create_violation(span: nu_protocol::Span, pattern: DangerousInterpolationPatt
 fn check_string_interpolation(
     exprs: &[nu_protocol::ast::Expression],
     span: nu_protocol::Span,
-    context: &VisitContext,
+    context: &LintContext,
 ) -> Option<Violation> {
     exprs
         .iter()
         .filter(|expr| !matches!(expr.expr, Expr::String(_)))
-        .map(|expr| (expr, context.get_span_contents(expr.span)))
+        .map(|expr| (expr, &context.source[expr.span.start..expr.span.end]))
         .filter(|(_, source)| source.starts_with('('))
         .find_map(|(expr, source)| {
             if is_valid_interpolation(expr, source, context) {
@@ -491,27 +490,16 @@ fn check_string_interpolation(
         })
 }
 
-struct EscapeStringInterpolationVisitor {
-    violations: Vec<Violation>,
-}
-
-impl AstVisitor for EscapeStringInterpolationVisitor {
-    fn visit_expression(&mut self, expr: &nu_protocol::ast::Expression, context: &VisitContext) {
-        if let Expr::StringInterpolation(exprs) = &expr.expr
-            && let Some(violation) = check_string_interpolation(exprs, expr.span, context)
-        {
-            self.violations.push(violation);
-        }
-        crate::visitor::walk_expression(self, expr, context);
-    }
-}
-
 fn check(context: &LintContext) -> Vec<Violation> {
-    let mut visitor = EscapeStringInterpolationVisitor {
-        violations: Vec::new(),
-    };
-    context.walk_ast(&mut visitor);
-    visitor.violations
+    context.collect_violations(|expr, ctx| {
+        if let Expr::StringInterpolation(exprs) = &expr.expr
+            && let Some(violation) = check_string_interpolation(exprs, expr.span, ctx)
+        {
+            vec![violation]
+        } else {
+            vec![]
+        }
+    })
 }
 
 pub fn rule() -> Rule {

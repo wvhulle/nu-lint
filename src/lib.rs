@@ -9,7 +9,6 @@ pub mod rule;
 pub mod rules;
 #[cfg(test)]
 mod test_utils;
-pub mod visitor;
 
 pub use config::Config;
 pub use context::LintContext;

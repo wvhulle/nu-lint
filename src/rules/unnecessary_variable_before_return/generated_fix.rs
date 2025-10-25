@@ -1,6 +1,5 @@
-use crate::LintContext;
-
 use super::rule;
+use crate::LintContext;
 
 #[test]
 fn test_detect_unnecessary_variable_simple() {

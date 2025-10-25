@@ -4,7 +4,6 @@ use crate::{
     context::LintContext,
     lint::{Fix, Replacement, Severity, Violation},
     rule::{Rule, RuleCategory},
-    visitor::{AstVisitor, VisitContext},
 };
 
 /// AST visitor that checks for pipe spacing issues
@@ -22,7 +21,7 @@ impl<'a> PipeSpacingVisitor<'a> {
     }
 
     /// Check spacing around a pipe between two elements (optimized)
-    fn check_pipe_spacing(&mut self, prev_span: Span, curr_span: Span, _context: &VisitContext) {
+    fn check_pipe_spacing(&mut self, prev_span: Span, curr_span: Span) {
         let start = prev_span.end;
         let end = curr_span.start;
 
@@ -132,27 +131,71 @@ impl<'a> PipeSpacingVisitor<'a> {
     }
 }
 
-impl AstVisitor for PipeSpacingVisitor<'_> {
-    fn visit_pipeline(&mut self, pipeline: &nu_protocol::ast::Pipeline, context: &VisitContext) {
-        // Check spacing between consecutive pipeline elements
-        for i in 1..pipeline.elements.len() {
-            let prev = &pipeline.elements[i - 1];
-            let curr = &pipeline.elements[i];
+fn check_pipeline_spacing(pipeline: &nu_protocol::ast::Pipeline, source: &str) -> Vec<Violation> {
+    let mut violations = Vec::new();
+    let mut visitor = PipeSpacingVisitor::new(source);
 
-            self.check_pipe_spacing(prev.expr.span, curr.expr.span, context);
-        }
+    // Check spacing between consecutive pipeline elements
+    for i in 1..pipeline.elements.len() {
+        let prev = &pipeline.elements[i - 1];
+        let curr = &pipeline.elements[i];
+        visitor.check_pipe_spacing(prev.expr.span, curr.expr.span);
+    }
 
-        // Continue walking the tree
+    violations.extend(visitor.violations);
+    violations
+}
+
+fn walk_block_for_pipelines(
+    block: &nu_protocol::ast::Block,
+    working_set: &nu_protocol::engine::StateWorkingSet,
+    source: &str,
+    violations: &mut Vec<Violation>,
+) {
+    for pipeline in &block.pipelines {
+        violations.extend(check_pipeline_spacing(pipeline, source));
+
+        // Also check nested blocks
         for element in &pipeline.elements {
-            self.visit_expression(&element.expr, context);
+            walk_expr_for_pipelines(&element.expr, working_set, source, violations);
         }
     }
 }
 
+fn walk_expr_for_pipelines(
+    expr: &nu_protocol::ast::Expression,
+    working_set: &nu_protocol::engine::StateWorkingSet,
+    source: &str,
+    violations: &mut Vec<Violation>,
+) {
+    match &expr.expr {
+        nu_protocol::ast::Expr::Block(block_id)
+        | nu_protocol::ast::Expr::Closure(block_id)
+        | nu_protocol::ast::Expr::Subexpression(block_id)
+        | nu_protocol::ast::Expr::RowCondition(block_id) => {
+            let block = working_set.get_block(*block_id);
+            walk_block_for_pipelines(block, working_set, source, violations);
+        }
+        nu_protocol::ast::Expr::Call(call) => {
+            for arg in &call.arguments {
+                if let Some(expr) = arg.expr() {
+                    walk_expr_for_pipelines(expr, working_set, source, violations);
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
 fn check(context: &LintContext) -> Vec<Violation> {
-    let mut visitor = PipeSpacingVisitor::new(context.source);
-    context.walk_ast(&mut visitor);
-    visitor.violations
+    let mut violations = Vec::new();
+    walk_block_for_pipelines(
+        context.ast,
+        context.working_set,
+        context.source,
+        &mut violations,
+    );
+    violations
 }
 
 pub fn rule() -> Rule {

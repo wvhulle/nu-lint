@@ -27,7 +27,6 @@ def write_sysfs [path: string, value: string] {
 }
 "#;
 
-    rule.assert_detects(code);
     rule.assert_violation_count_exact(code, 1);
 }
 

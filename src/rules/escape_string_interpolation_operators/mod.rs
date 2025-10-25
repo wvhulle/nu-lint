@@ -78,7 +78,7 @@ fn detect_string_based_problems_with_sensitivity(
         ));
     }
 
-    if sensitivity_allows_error_pattern_detection(sensitivity) {
+    if allows_error_patterns(sensitivity) {
         for pattern in LITERAL_ERROR_MESSAGE_PATTERNS {
             if trimmed.starts_with(pattern) {
                 return Some(DangerousInterpolationPattern::ErrorMessage(
@@ -88,7 +88,7 @@ fn detect_string_based_problems_with_sensitivity(
         }
     }
 
-    if sensitivity_allows_incomplete_expression_detection(sensitivity) {
+    if allows_incomplete_expressions(sensitivity) {
         if let Some(incomplete_pattern) = detect_incomplete_expression(trimmed) {
             return Some(DangerousInterpolationPattern::IncompleteExpression(
                 incomplete_pattern,
@@ -109,14 +109,11 @@ fn contains_variable_reference(content: &str) -> bool {
     content.contains('$')
 }
 
-fn sensitivity_allows_error_pattern_detection(sensitivity: DetectionSensitivity) -> bool {
-    matches!(
-        sensitivity,
-        DetectionSensitivity::Balanced | DetectionSensitivity::Aggressive
-    )
+fn allows_error_patterns(sensitivity: DetectionSensitivity) -> bool {
+    !matches!(sensitivity, DetectionSensitivity::Conservative)
 }
 
-fn sensitivity_allows_incomplete_expression_detection(sensitivity: DetectionSensitivity) -> bool {
+fn allows_incomplete_expressions(sensitivity: DetectionSensitivity) -> bool {
     matches!(sensitivity, DetectionSensitivity::Aggressive)
 }
 
@@ -132,23 +129,19 @@ fn detect_incomplete_expression(content: &str) -> Option<String> {
 }
 
 fn detect_complex_boolean_logic(content: &str) -> Option<String> {
-    let operator_count = PROBLEMATIC_BOOLEAN_OPERATORS
+    let operator_count: usize = PROBLEMATIC_BOOLEAN_OPERATORS
         .iter()
         .map(|op| content.matches(op).count())
-        .sum::<usize>();
+        .sum();
 
-    let is_complex =
-        operator_count > 1 || (operator_count == 1 && content.split_whitespace().count() > 3);
-    let lacks_expression_indicators = !content.contains('(')
-        && !content.contains('>')
-        && !content.contains('<')
-        && !content.contains('=');
+    let word_count = content.split_whitespace().count();
+    let is_complex = operator_count > 1 || (operator_count == 1 && word_count > 3);
+    let has_expression_indicators = content.contains('(')
+        || content.contains('>')
+        || content.contains('<')
+        || content.contains('=');
 
-    if is_complex && lacks_expression_indicators {
-        Some(content.to_string())
-    } else {
-        None
-    }
+    (is_complex && !has_expression_indicators).then(|| content.to_string())
 }
 fn contains_variables(expr: &nu_protocol::ast::Expression, context: &LintContext) -> bool {
     match &expr.expr {
@@ -252,17 +245,8 @@ fn analyze_unary_not(
     _context: &LintContext,
     sensitivity: DetectionSensitivity,
 ) -> Option<DangerousInterpolationPattern> {
-    // Unary not at the start of an interpolation is likely meant as literal text
-    if matches!(
-        sensitivity,
-        DetectionSensitivity::Balanced | DetectionSensitivity::Aggressive
-    ) {
-        Some(DangerousInterpolationPattern::BooleanOperator(
-            "not".to_string(),
-        ))
-    } else {
-        None
-    }
+    allows_error_patterns(sensitivity)
+        .then(|| DangerousInterpolationPattern::BooleanOperator("not".to_string()))
 }
 
 /// Analyze binary operations for problematic patterns
@@ -322,29 +306,17 @@ fn analyze_function_call(
 ) -> Option<DangerousInterpolationPattern> {
     let decl_name = context.working_set.get_decl(call.decl_id).name();
 
-    // Check for boolean operator function calls that might be meant as literal text
     if matches!(decl_name, "and" | "or" | "not") {
-        // If it's a boolean operator used as a function call, it's likely intended as
-        // literal text
         Some(DangerousInterpolationPattern::BooleanOperator(
             decl_name.to_string(),
         ))
-    }
-    // Check for common error-related function names that might be meant as literal text
-    else if matches!(
-        sensitivity,
-        DetectionSensitivity::Balanced | DetectionSensitivity::Aggressive
-    ) {
-        // Check if this looks like an error message pattern
-        if matches!(decl_name, "failed" | "denied" | "error" | "missing")
-            && call.arguments.is_empty()
-        {
-            Some(DangerousInterpolationPattern::ErrorMessage(
-                decl_name.to_string(),
-            ))
-        } else {
-            None
-        }
+    } else if allows_error_patterns(sensitivity)
+        && matches!(decl_name, "failed" | "denied" | "error" | "missing")
+        && call.arguments.is_empty()
+    {
+        Some(DangerousInterpolationPattern::ErrorMessage(
+            decl_name.to_string(),
+        ))
     } else {
         None
     }

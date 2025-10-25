@@ -6,68 +6,26 @@ use crate::{
     rule::{Rule, RuleCategory},
 };
 
+fn create_violation(param_name: &str) -> Violation {
+    Violation {
+        rule_id: "missing_type_annotation".into(),
+        severity: Severity::Info,
+        message: format!("Parameter '{param_name}' is missing type annotation").into(),
+        span: nu_protocol::Span::unknown(),
+        suggestion: Some("Add type annotation like 'param: string' or 'param: int'".into()),
+        fix: None,
+        file: None,
+    }
+}
+
 fn check_signature(sig: &nu_protocol::Signature) -> Vec<Violation> {
-    let mut violations = Vec::new();
-
-    // Check required positional parameters
-    for param in &sig.required_positional {
-        if param.shape == nu_protocol::SyntaxShape::Any {
-            violations.push(Violation {
-                rule_id: "missing_type_annotation".into(),
-                severity: Severity::Info,
-                message: format!("Parameter '{}' is missing type annotation", param.name).into(),
-                span: nu_protocol::Span::unknown(), /* Signature doesn't store individual
-                                                     * param spans */
-                suggestion: Some(
-                    "Add type annotation like 'param: string' or 'param: int'"
-                        .to_string()
-                        .into(),
-                ),
-                fix: None,
-                file: None,
-            });
-        }
-    }
-
-    // Check optional positional parameters
-    for param in &sig.optional_positional {
-        if param.shape == nu_protocol::SyntaxShape::Any {
-            violations.push(Violation {
-                rule_id: "missing_type_annotation".into(),
-                severity: Severity::Info,
-                message: format!("Parameter '{}' is missing type annotation", param.name).into(),
-                span: nu_protocol::Span::unknown(),
-                suggestion: Some(
-                    "Add type annotation like 'param: string' or 'param: int'"
-                        .to_string()
-                        .into(),
-                ),
-                fix: None,
-                file: None,
-            });
-        }
-    }
-
-    // Check rest positional parameter
-    if let Some(param) = &sig.rest_positional
-        && param.shape == nu_protocol::SyntaxShape::Any
-    {
-        violations.push(Violation {
-            rule_id: "missing_type_annotation".into(),
-            severity: Severity::Info,
-            message: format!("Parameter '{}' is missing type annotation", param.name).into(),
-            span: nu_protocol::Span::unknown(),
-            suggestion: Some(
-                "Add type annotation like 'param: string' or 'param: list'"
-                    .to_string()
-                    .into(),
-            ),
-            fix: None,
-            file: None,
-        });
-    }
-
-    violations
+    sig.required_positional
+        .iter()
+        .chain(&sig.optional_positional)
+        .chain(sig.rest_positional.iter())
+        .filter(|param| param.shape == nu_protocol::SyntaxShape::Any)
+        .map(|param| create_violation(&param.name))
+        .collect()
 }
 
 fn check(context: &LintContext) -> Vec<Violation> {

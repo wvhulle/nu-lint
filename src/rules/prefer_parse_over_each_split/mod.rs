@@ -6,16 +6,7 @@ use crate::{
     rule::{Rule, RuleCategory},
 };
 
-fn block_contains_split_row(block_id: nu_protocol::BlockId, ctx: &LintContext) -> bool {
-    ctx.working_set
-        .get_block(block_id)
-        .pipelines
-        .iter()
-        .flat_map(|pipeline| &pipeline.elements)
-        .any(|element| expr_contains_split_row(&element.expr, ctx))
-}
-
-fn expr_contains_split_row(expr: &nu_protocol::ast::Expression, ctx: &LintContext) -> bool {
+fn contains_split_row(expr: &nu_protocol::ast::Expression, ctx: &LintContext) -> bool {
     match &expr.expr {
         Expr::Call(call) => {
             let name = ctx.working_set.get_decl(call.decl_id).name();
@@ -23,61 +14,58 @@ fn expr_contains_split_row(expr: &nu_protocol::ast::Expression, ctx: &LintContex
                 || call.arguments.iter().any(|arg| match arg {
                     nu_protocol::ast::Argument::Positional(e)
                     | nu_protocol::ast::Argument::Named((_, _, Some(e))) => {
-                        expr_contains_split_row(e, ctx)
+                        contains_split_row(e, ctx)
                     }
                     _ => false,
                 })
         }
-        Expr::Block(id) | Expr::Closure(id) | Expr::Subexpression(id) => {
-            block_contains_split_row(*id, ctx)
-        }
-        Expr::FullCellPath(cell_path) => expr_contains_split_row(&cell_path.head, ctx),
+        Expr::Block(id) | Expr::Closure(id) | Expr::Subexpression(id) => ctx
+            .working_set
+            .get_block(*id)
+            .pipelines
+            .iter()
+            .flat_map(|pipeline| &pipeline.elements)
+            .any(|element| contains_split_row(&element.expr, ctx)),
+        Expr::FullCellPath(cell_path) => contains_split_row(&cell_path.head, ctx),
         Expr::BinaryOp(left, _, right) => {
-            expr_contains_split_row(left, ctx) || expr_contains_split_row(right, ctx)
+            contains_split_row(left, ctx) || contains_split_row(right, ctx)
         }
-        Expr::UnaryNot(inner) => expr_contains_split_row(inner, ctx),
+        Expr::UnaryNot(inner) => contains_split_row(inner, ctx),
         _ => false,
     }
 }
 
 fn check(context: &LintContext) -> Vec<Violation> {
     context.collect_violations(|expr, ctx| match &expr.expr {
-        Expr::Call(call) => {
-            let decl = ctx.working_set.get_decl(call.decl_id);
-            if decl.name() == "each" {
-                let has_split = call
-                    .arguments
-                    .iter()
-                    .filter_map(|arg| match arg {
-                        nu_protocol::ast::Argument::Positional(expr) => Some(expr),
-                        _ => None,
-                    })
-                    .any(|expr| match &expr.expr {
-                        Expr::Closure(id) | Expr::Block(id) => block_contains_split_row(*id, ctx),
-                        _ => false,
-                    });
+        Expr::Call(call) if ctx.working_set.get_decl(call.decl_id).name() == "each" => {
+            let has_split = call
+                .arguments
+                .iter()
+                .filter_map(|arg| match arg {
+                    nu_protocol::ast::Argument::Positional(expr) => Some(expr),
+                    _ => None,
+                })
+                .any(|expr| contains_split_row(expr, ctx));
 
-                if has_split {
-                    return vec![Violation {
-                        rule_id: "prefer_parse_over_each_split".to_string().into(),
-                        severity: Severity::Info,
-                        message: "Manual splitting with 'each' and 'split row' - consider using \
-                                  'parse'"
-                            .to_string()
+            if has_split {
+                vec![Violation {
+                    rule_id: "prefer_parse_over_each_split".into(),
+                    severity: Severity::Info,
+                    message: "Manual splitting with 'each' and 'split row' - consider using \
+                              'parse'"
+                        .into(),
+                    span: call.span(),
+                    suggestion: Some(
+                        "Use 'parse \"{field1} {field2}\"' for structured text extraction instead \
+                         of 'each' with 'split row'"
                             .into(),
-                        span: call.span(),
-                        suggestion: Some(
-                            "Use 'parse \"{field1} {field2}\"' for structured text extraction \
-                             instead of 'each' with 'split row'"
-                                .to_string()
-                                .into(),
-                        ),
-                        fix: None,
-                        file: None,
-                    }];
-                }
+                    ),
+                    fix: None,
+                    file: None,
+                }]
+            } else {
+                vec![]
             }
-            vec![]
         }
         _ => vec![],
     })

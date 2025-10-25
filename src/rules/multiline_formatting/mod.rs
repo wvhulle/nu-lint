@@ -26,84 +26,64 @@ fn multiline_record_pattern() -> &'static Regex {
     PATTERN.get_or_init(|| Regex::new(r"\{[^{}]*:[^{}]*[,\s][^{}]*\}").unwrap())
 }
 
+struct LineCheck {
+    pattern: fn() -> &'static Regex,
+    max_length: usize,
+    message: &'static str,
+    suggestion: &'static str,
+}
+
+const LINE_CHECKS: &[LineCheck] = &[
+    LineCheck {
+        pattern: complex_construct_pattern,
+        max_length: 80,
+        message: "Complex constructs should use multi-line format for better readability",
+        suggestion: "Consider breaking this construct across multiple lines",
+    },
+    LineCheck {
+        pattern: multiline_list_pattern,
+        max_length: 60,
+        message: "Long lists should use multi-line format with each item on a separate line",
+        suggestion: "Put each list item on a separate line",
+    },
+    LineCheck {
+        pattern: multiline_record_pattern,
+        max_length: 60,
+        message: "Long records should use multi-line format with each field on a separate line",
+        suggestion: "Put each record field on a separate line",
+    },
+];
+
 fn check(context: &LintContext) -> Vec<Violation> {
-    let mut violations = Vec::new();
     let source = context.source;
     let lines: Vec<&str> = source.lines().collect();
 
-    for (line_num, line) in lines.iter().enumerate() {
-        // Check for complex constructs that should be multi-line
-        if complex_construct_pattern().is_match(line) && line.len() > 80 {
-            let line_start = source[..]
-                .lines()
-                .take(line_num)
-                .map(|l| l.len() + 1)
-                .sum::<usize>();
-            violations.push(Violation {
-                rule_id: "multiline_formatting".into(),
-                severity: Severity::Info,
-                message: "Complex constructs should use multi-line format for better readability"
-                    .to_string()
-                    .into(),
-                span: nu_protocol::Span::new(line_start, line_start + line.len()),
-                suggestion: Some(
-                    "Consider breaking this construct across multiple lines"
-                        .to_string()
-                        .into(),
-                ),
-                fix: None,
-                file: None,
-            });
-        }
-
-        // Check for lists that should be multi-line
-        if multiline_list_pattern().is_match(line) && line.len() > 60 {
-            let line_start = source[..]
-                .lines()
-                .take(line_num)
-                .map(|l| l.len() + 1)
-                .sum::<usize>();
-            violations.push(Violation {
-                rule_id: "multiline_formatting".into(),
-                severity: Severity::Info,
-                message: "Long lists should use multi-line format with each item on a separate \
-                          line"
-                    .to_string()
-                    .into(),
-                span: nu_protocol::Span::new(line_start, line_start + line.len()),
-                suggestion: Some("Put each list item on a separate line".to_string().into()),
-                fix: None,
-                file: None,
-            });
-        }
-
-        // Check for records that should be multi-line
-        if multiline_record_pattern().is_match(line) && line.len() > 60 {
-            let line_start = source[..]
-                .lines()
-                .take(line_num)
-                .map(|l| l.len() + 1)
-                .sum::<usize>();
-            violations.push(Violation {
-                rule_id: "multiline_formatting".into(),
-                severity: Severity::Info,
-                message: "Long records should use multi-line format with each field on a separate \
-                          line"
-                    .to_string()
-                    .into(),
-                span: nu_protocol::Span::new(line_start, line_start + line.len()),
-                suggestion: Some(
-                    "Put each record field on a separate line"
-                        .to_string()
-                        .into(),
-                ),
-                fix: None,
-                file: None,
-            });
-        }
-    }
-
-    violations
+    lines
+        .iter()
+        .enumerate()
+        .flat_map(|(line_num, line)| {
+            LINE_CHECKS.iter().filter_map(move |check| {
+                if (check.pattern)().is_match(line) && line.len() > check.max_length {
+                    let line_start = source[..]
+                        .lines()
+                        .take(line_num)
+                        .map(|l| l.len() + 1)
+                        .sum::<usize>();
+                    Some(Violation {
+                        rule_id: "multiline_formatting".into(),
+                        severity: Severity::Info,
+                        message: check.message.into(),
+                        span: nu_protocol::Span::new(line_start, line_start + line.len()),
+                        suggestion: Some(check.suggestion.into()),
+                        fix: None,
+                        file: None,
+                    })
+                } else {
+                    None
+                }
+            })
+        })
+        .collect()
 }
 
 pub fn rule() -> Rule {

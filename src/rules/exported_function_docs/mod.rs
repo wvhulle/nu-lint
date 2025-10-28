@@ -1,10 +1,10 @@
 use crate::{
     context::LintContext,
-    lint::{Severity, Violation},
+    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
-fn check(context: &LintContext) -> Vec<Violation> {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
     let mut violations = Vec::new();
 
     // Search for "export def" patterns in the source code
@@ -53,22 +53,17 @@ fn check(context: &LintContext) -> Vec<Violation> {
                     .sum();
                 let line_end = line_start + line.len();
 
-                violations.push(Violation {
-                    rule_id: "exported_function_docs".into(),
-                    severity: Severity::Warning,
-                    message: format!("Exported function '{func_name}' is missing documentation")
-                        .into(),
-                    span: nu_protocol::Span::new(line_start, line_end),
-                    suggestion: Some(
-                        format!(
-                            "Add a documentation comment above the function:\n# Description of \
-                             {func_name}\nexport def {func_name} ..."
-                        )
-                        .into(),
-                    ),
-                    fix: None,
-                    file: None,
-                });
+                violations.push(
+                    RuleViolation::new_dynamic(
+                        "exported_function_docs",
+                        format!("Exported function '{func_name}' is missing documentation"),
+                        nu_protocol::Span::new(line_start, line_end),
+                    )
+                    .with_suggestion_dynamic(format!(
+                        "Add a documentation comment above the function:\n# Description of \
+                         {func_name}\nexport def {func_name} ..."
+                    )),
+                );
             }
         }
     }
@@ -80,7 +75,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "exported_function_docs",
         RuleCategory::Documentation,
-        Severity::Warning,
+        Severity::Info,
         "Exported functions should have documentation comments",
         check,
     )

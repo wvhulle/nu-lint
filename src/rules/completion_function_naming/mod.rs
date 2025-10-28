@@ -1,10 +1,10 @@
 use crate::{
     context::LintContext,
-    lint::{Severity, Violation},
+    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
-fn check(context: &LintContext) -> Vec<Violation> {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
     let mut violations = Vec::new();
 
     // Get all custom function definitions
@@ -25,27 +25,20 @@ fn check(context: &LintContext) -> Vec<Violation> {
         {
             let span = context.find_declaration_span(func_name);
 
-            violations.push(Violation {
-                rule_id: "completion_function_naming".into(),
-                severity: Severity::Warning,
-                message: format!(
-                    "Completion function '{func_name}' should use 'nu-complete' prefix"
+            violations.push(
+                RuleViolation::new_dynamic(
+                    "completion_function_naming",
+                    format!("Completion function '{func_name}' should use 'nu-complete' prefix"),
+                    span,
                 )
-                .into(),
-                span,
-                suggestion: Some(
-                    format!(
-                        "Consider renaming to: nu-complete {}",
-                        func_name
-                            .replace("complete", "")
-                            .replace("completion", "")
-                            .trim()
-                    )
-                    .into(),
-                ),
-                fix: None,
-                file: None,
-            });
+                .with_suggestion_dynamic(format!(
+                    "Consider renaming to: nu-complete {}",
+                    func_name
+                        .replace("complete", "")
+                        .replace("completion", "")
+                        .trim()
+                )),
+            );
         }
     }
 
@@ -56,7 +49,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "completion_function_naming",
         RuleCategory::Naming,
-        Severity::Warning,
+        Severity::Info,
         "Completion functions should use 'nu-complete' prefix for clarity",
         check,
     )

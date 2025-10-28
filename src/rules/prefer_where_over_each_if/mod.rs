@@ -4,7 +4,7 @@ use regex::Regex;
 
 use crate::{
     context::LintContext,
-    lint::{Severity, Violation},
+    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
@@ -20,7 +20,7 @@ fn has_side_effects(code: &str) -> bool {
     SIDE_EFFECTS.iter().any(|&effect| code.contains(effect))
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
     context.violations_from_regex(
         each_if_pattern(),
         "prefer_where_over_each_if",

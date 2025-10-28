@@ -5,7 +5,7 @@ use regex::Regex;
 
 use crate::{
     context::LintContext,
-    lint::{Severity, Violation},
+    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
@@ -23,7 +23,7 @@ fn is_valid_screaming_snake(name: &str) -> bool {
     screaming_snake_pattern().is_match(name)
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
     const_pattern()
         .captures_iter(context.source)
         .filter_map(|cap| {
@@ -33,24 +33,20 @@ fn check(context: &LintContext) -> Vec<Violation> {
             if is_valid_screaming_snake(const_name) {
                 None
             } else {
-                Some(Violation {
-                    rule_id: "screaming_snake_constants".into(),
-                    severity: Severity::Warning,
-                    message: format!(
-                        "Constant '{const_name}' should use SCREAMING_SNAKE_CASE naming convention"
-                    )
-                    .into(),
-                    span: nu_protocol::Span::new(const_match.start(), const_match.end()),
-                    suggestion: Some(
+                Some(
+                    RuleViolation::new_dynamic(
+                        "screaming_snake_constants",
                         format!(
-                            "Consider renaming to: {}",
-                            const_name.to_shouty_snake_case()
-                        )
-                        .into(),
-                    ),
-                    fix: None,
-                    file: None,
-                })
+                            "Constant '{const_name}' should use SCREAMING_SNAKE_CASE naming \
+                             convention"
+                        ),
+                        nu_protocol::Span::new(const_match.start(), const_match.end()),
+                    )
+                    .with_suggestion_dynamic(format!(
+                        "Consider renaming to: {}",
+                        const_name.to_shouty_snake_case()
+                    )),
+                )
             }
         })
         .collect()

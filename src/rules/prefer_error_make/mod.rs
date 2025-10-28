@@ -4,7 +4,7 @@ use regex::Regex;
 
 use crate::{
     context::LintContext,
-    lint::{Severity, Violation},
+    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
@@ -39,7 +39,7 @@ fn looks_like_error(message: &str, exit_code: i32) -> bool {
             .any(|indicator| message.to_lowercase().contains(indicator))
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
     let pat = pattern();
 
     context.violations_from_regex(pat, "prefer_error_make", Severity::Info, |mat| {

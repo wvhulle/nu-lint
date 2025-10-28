@@ -4,7 +4,7 @@ use regex::Regex;
 
 use crate::{
     context::LintContext,
-    lint::{Severity, Violation},
+    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
@@ -13,7 +13,7 @@ fn trailing_space_pattern() -> &'static Regex {
     PATTERN.get_or_init(|| Regex::new(r"[ \t]+$").unwrap())
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
     let mut violations = Vec::new();
     let source = context.source;
     let lines: Vec<&str> = source.lines().collect();
@@ -24,15 +24,14 @@ fn check(context: &LintContext) -> Vec<Violation> {
             let violation_start = byte_offset + m.start();
             let violation_end = byte_offset + m.end();
 
-            violations.push(Violation {
-                rule_id: "no_trailing_spaces".into(),
-                severity: Severity::Warning,
-                message: format!("Line {} has trailing whitespace", line_num + 1).into(),
-                span: nu_protocol::Span::new(violation_start, violation_end),
-                suggestion: Some("Remove trailing spaces".into()),
-                fix: None,
-                file: None,
-            });
+            violations.push(
+                RuleViolation::new_dynamic(
+                    "no_trailing_spaces",
+                    format!("Line {} has trailing whitespace", line_num + 1),
+                    nu_protocol::Span::new(violation_start, violation_end),
+                )
+                .with_suggestion_static("Remove trailing spaces"),
+            );
         }
 
         // Update byte offset for next line (including newline character)

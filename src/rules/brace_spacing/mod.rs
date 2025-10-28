@@ -2,11 +2,11 @@ use nu_protocol::{Span, ast::Expr};
 
 use crate::{
     context::LintContext,
-    lint::{Severity, Violation},
+    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
-fn check_brace_spacing(source: &str, span: Span, has_params: bool) -> Vec<Violation> {
+fn check_brace_spacing(source: &str, span: Span, has_params: bool) -> Vec<RuleViolation> {
     let mut violations = Vec::new();
 
     if span.start >= span.end || span.end > source.len() {
@@ -34,17 +34,14 @@ fn check_brace_spacing(source: &str, span: Span, has_params: bool) -> Vec<Violat
             && pos > 0
             && inner[..pos].trim().is_empty()
         {
-            violations.push(Violation {
-                rule_id: "brace_spacing".into(),
-                severity: Severity::Info,
-                message: "No space allowed after opening brace before closure parameters"
-                    .to_string()
-                    .into(),
-                span,
-                suggestion: Some("Use {|param| instead of { |param|".to_string().into()),
-                fix: None,
-                file: None,
-            });
+            violations.push(
+                RuleViolation::new_dynamic(
+                    "brace_spacing",
+                    "No space allowed after opening brace before closure parameters".to_string(),
+                    span,
+                )
+                .with_suggestion_static("Use {|param| instead of { |param|"),
+            );
             return violations;
         }
     }
@@ -60,28 +57,23 @@ fn check_brace_spacing(source: &str, span: Span, has_params: bool) -> Vec<Violat
 
     // Inconsistent: one has space, the other doesn't
     if starts_with_space != ends_with_space {
-        violations.push(Violation {
-            rule_id: "brace_spacing".into(),
-            severity: Severity::Info,
-            message: "Inconsistent brace spacing: use either {x} or { x }, not { x} or {x }"
-                .to_string()
-                .into(),
-            span,
-            suggestion: Some(
-                "Use consistent spacing: both spaces or no spaces inside braces"
-                    .to_string()
-                    .into(),
+        violations.push(
+            RuleViolation::new_dynamic(
+                "brace_spacing",
+                "Inconsistent brace spacing: use either {x} or { x }, not { x} or {x }".to_string(),
+                span,
+            )
+            .with_suggestion_static(
+                "Use consistent spacing: both spaces or no spaces inside braces",
             ),
-            fix: None,
-            file: None,
-        });
+        );
     }
 
     violations
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    context.collect_violations(|expr, ctx| {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
+    context.collect_rule_violations(|expr, ctx| {
         match &expr.expr {
             // Closures and blocks with parameters
             Expr::Closure(block_id) | Expr::Block(block_id) => {

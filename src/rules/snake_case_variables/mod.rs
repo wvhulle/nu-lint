@@ -3,7 +3,7 @@ use nu_protocol::ast::{Argument, Expr};
 
 use crate::{
     context::LintContext,
-    lint::{Fix, Replacement, Severity, Violation},
+    lint::{Fix, Replacement, RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
@@ -40,8 +40,8 @@ fn is_valid_snake_case(name: &str) -> bool {
         .is_some_and(|c| c.is_ascii_lowercase() || c == '_')
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    context.collect_violations(|expr, ctx| {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
+    context.collect_rule_violations(|expr, ctx| {
         match &expr.expr {
             Expr::Call(call) => {
                 // Check for let/mut assignments in command calls
@@ -78,21 +78,23 @@ fn check(context: &LintContext) -> Vec<Violation> {
                                 }],
                             });
 
-                            return vec![Violation {
-                                rule_id: "snake_case_variables".into(),
-                                severity: Severity::Warning,
-                                message: format!(
+                            let mut violation = RuleViolation::new_dynamic(
+                                "snake_case_variables",
+                                format!(
                                     "{var_type} '{var_name}' should use snake_case naming \
                                      convention"
-                                )
-                                .into(),
-                                span: name_expr.span,
-                                suggestion: Some(
-                                    format!("Consider renaming to: {snake_case_name}").into(),
                                 ),
-                                fix,
-                                file: None,
-                            }];
+                                name_expr.span,
+                            )
+                            .with_suggestion_dynamic(format!(
+                                "Consider renaming to: {snake_case_name}"
+                            ));
+
+                            if let Some(f) = fix {
+                                violation = violation.with_fix(f);
+                            }
+
+                            return vec![violation];
                         }
                     }
                 }
@@ -107,7 +109,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "snake_case_variables",
         RuleCategory::Naming,
-        Severity::Warning,
+        Severity::Info,
         "Variables should use snake_case naming convention",
         check,
     )

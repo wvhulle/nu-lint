@@ -3,7 +3,7 @@ use nu_protocol::ast::{Argument, Expr};
 
 use crate::{
     context::LintContext,
-    lint::{Fix, Replacement, Severity, Violation},
+    lint::{Fix, Replacement, RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
@@ -37,8 +37,8 @@ fn is_valid_kebab_case(name: &str) -> bool {
     }) && name.chars().next().is_some_and(|c| c.is_ascii_lowercase())
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    context.collect_violations(|expr, ctx| {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
+    context.collect_rule_violations(|expr, ctx| {
         match &expr.expr {
             Expr::Call(call) => {
                 // Check for def commands (function definitions)
@@ -64,20 +64,22 @@ fn check(context: &LintContext) -> Vec<Violation> {
                                 }],
                             });
 
-                            return vec![Violation {
-                                rule_id: "kebab_case_commands".into(),
-                                severity: Severity::Warning,
-                                message: format!(
+                            let mut violation = RuleViolation::new_dynamic(
+                                "kebab_case_commands",
+                                format!(
                                     "Command '{cmd_name}' should use kebab-case naming convention"
-                                )
-                                .into(),
-                                span: name_expr.span,
-                                suggestion: Some(
-                                    format!("Consider renaming to: {kebab_case_name}").into(),
                                 ),
-                                fix,
-                                file: None,
-                            }];
+                                name_expr.span,
+                            )
+                            .with_suggestion_dynamic(format!(
+                                "Consider renaming to: {kebab_case_name}"
+                            ));
+
+                            if let Some(f) = fix {
+                                violation = violation.with_fix(f);
+                            }
+
+                            return vec![violation];
                         }
                     }
                 }
@@ -92,7 +94,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "kebab_case_commands",
         RuleCategory::Naming,
-        Severity::Warning,
+        Severity::Info,
         "Custom commands should use kebab-case naming convention",
         check,
     )

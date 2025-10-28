@@ -2,11 +2,11 @@ use regex::Regex;
 
 use crate::{
     context::LintContext,
-    lint::{Severity, Violation},
+    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
-fn check(context: &LintContext) -> Vec<Violation> {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
     // Pattern: let var = (...)\n$var (with optional whitespace)
     // Since regex doesn't support backreferences, we match and manually verify
     let pattern = Regex::new(r"let\s+(\w+)\s*=\s*\([^)]+\)\s*\n\s*\$(\w+)\s*(?:\n|$)").unwrap();

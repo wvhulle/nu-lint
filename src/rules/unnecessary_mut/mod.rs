@@ -4,7 +4,7 @@ use nu_protocol::{Span, VarId, ast::Expr};
 
 use crate::{
     context::LintContext,
-    lint::{Fix, Replacement, Severity, Violation},
+    lint::{Fix, Replacement, RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
@@ -23,7 +23,7 @@ fn find_mut_keyword_span(source: &str, var_span: Span) -> Span {
     var_span
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
     use nu_protocol::ast::Traverse;
 
     // First pass: collect all mutable variable declarations using flat_map
@@ -108,24 +108,20 @@ fn check(context: &LintContext) -> Vec<Violation> {
     let mut violations = Vec::new();
     for (var_id, (var_name, decl_span, mut_span)) in mut_variables {
         if !reassigned_vars.contains(&var_id) {
-            let fix = Some(Fix {
-                description: format!("Remove 'mut' keyword from variable '{var_name}'").into(),
-                replacements: vec![Replacement {
-                    span: mut_span,
-                    new_text: String::new().into(),
-                }],
-            });
+            let fix = Fix::new_dynamic(
+                format!("Remove 'mut' keyword from variable '{var_name}'"),
+                vec![Replacement::new_static(mut_span, "")],
+            );
 
-            violations.push(Violation {
-                rule_id: "unnecessary_mut".into(),
-                severity: Severity::Info,
-                message: format!("Variable '{var_name}' is declared as 'mut' but never reassigned")
-                    .into(),
-                span: decl_span,
-                suggestion: Some(format!("Remove 'mut' keyword:\nlet {var_name} = ...").into()),
-                fix,
-                file: None,
-            });
+            violations.push(
+                RuleViolation::new_dynamic(
+                    "unnecessary_mut",
+                    format!("Variable '{var_name}' is declared as 'mut' but never reassigned"),
+                    decl_span,
+                )
+                .with_suggestion_dynamic(format!("Remove 'mut' keyword:\nlet {var_name} = ..."))
+                .with_fix(fix),
+            );
         }
     }
 

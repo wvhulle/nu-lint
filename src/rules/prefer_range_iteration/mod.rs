@@ -2,11 +2,11 @@ use regex::Regex;
 
 use crate::{
     context::LintContext,
-    lint::{Severity, Violation},
+    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
-fn check(context: &LintContext) -> Vec<Violation> {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
     // Pattern: mut counter = 0, while counter < max, counter increment
     let mut_counter_pattern = Regex::new(r"mut\s+(\w+)\s*=\s*0").unwrap();
 

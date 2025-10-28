@@ -5,9 +5,9 @@ use nu_protocol::Span;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Severity {
-    Error,
-    Warning,
     Info,
+    Warning,
+    Error,
 }
 
 impl std::fmt::Display for Severity {
@@ -20,6 +20,78 @@ impl std::fmt::Display for Severity {
     }
 }
 
+/// A rule violation without severity (created by rules)
+#[derive(Debug, Clone)]
+pub struct RuleViolation {
+    pub rule_id: Cow<'static, str>,
+    pub message: Cow<'static, str>,
+    pub span: Span,
+    pub suggestion: Option<Cow<'static, str>>,
+    pub fix: Option<Fix>,
+}
+
+impl RuleViolation {
+    /// Create a new rule violation with static strings
+    #[must_use]
+    pub const fn new_static(rule_id: &'static str, message: &'static str, span: Span) -> Self {
+        Self {
+            rule_id: Cow::Borrowed(rule_id),
+            message: Cow::Borrowed(message),
+            span,
+            suggestion: None,
+            fix: None,
+        }
+    }
+
+    /// Create a new rule violation with a dynamic message
+    #[must_use]
+    pub fn new_dynamic(rule_id: &'static str, message: String, span: Span) -> Self {
+        Self {
+            rule_id: Cow::Borrowed(rule_id),
+            message: Cow::Owned(message),
+            span,
+            suggestion: None,
+            fix: None,
+        }
+    }
+
+    /// Add a static suggestion to this violation
+    #[must_use]
+    pub fn with_suggestion_static(mut self, suggestion: &'static str) -> Self {
+        self.suggestion = Some(Cow::Borrowed(suggestion));
+        self
+    }
+
+    /// Add a dynamic suggestion to this violation
+    #[must_use]
+    pub fn with_suggestion_dynamic(mut self, suggestion: String) -> Self {
+        self.suggestion = Some(Cow::Owned(suggestion));
+        self
+    }
+
+    /// Add a fix to this violation
+    #[must_use]
+    pub fn with_fix(mut self, fix: Fix) -> Self {
+        self.fix = Some(fix);
+        self
+    }
+
+    /// Convert to a full Violation with severity
+    #[must_use]
+    pub fn into_violation(self, severity: Severity) -> Violation {
+        Violation {
+            rule_id: self.rule_id,
+            severity,
+            message: self.message,
+            span: self.span,
+            suggestion: self.suggestion,
+            fix: self.fix,
+            file: None,
+        }
+    }
+}
+
+/// A complete violation with severity (created by the engine)
 #[derive(Debug, Clone)]
 pub struct Violation {
     pub rule_id: Cow<'static, str>,

@@ -2,7 +2,7 @@ use nu_protocol::ast::Expr;
 
 use crate::{
     context::LintContext,
-    lint::{Severity, Violation},
+    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
@@ -35,8 +35,8 @@ fn contains_split_row(expr: &nu_protocol::ast::Expression, ctx: &LintContext) ->
     }
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    context.collect_violations(|expr, ctx| match &expr.expr {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
+    context.collect_rule_violations(|expr, ctx| match &expr.expr {
         Expr::Call(call) if ctx.working_set.get_decl(call.decl_id).name() == "each" => {
             let has_split = call
                 .arguments
@@ -48,21 +48,17 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 .any(|expr| contains_split_row(expr, ctx));
 
             if has_split {
-                vec![Violation {
-                    rule_id: "prefer_parse_over_each_split".into(),
-                    severity: Severity::Info,
-                    message: "Manual splitting with 'each' and 'split row' - consider using \
-                              'parse'"
-                        .into(),
-                    span: call.span(),
-                    suggestion: Some(
+                vec![
+                    RuleViolation::new_static(
+                        "prefer_parse_over_each_split",
+                        "Manual splitting with 'each' and 'split row' - consider using 'parse'",
+                        call.span(),
+                    )
+                    .with_suggestion_static(
                         "Use 'parse \"{field1} {field2}\"' for structured text extraction instead \
-                         of 'each' with 'split row'"
-                            .into(),
+                         of 'each' with 'split row'",
                     ),
-                    fix: None,
-                    file: None,
-                }]
+                ]
             } else {
                 vec![]
             }

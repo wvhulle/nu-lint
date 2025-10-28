@@ -2,11 +2,11 @@ use regex::Regex;
 
 use crate::{
     context::LintContext,
-    lint::{Severity, Violation},
+    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
-fn check(context: &LintContext) -> Vec<Violation> {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
     let mut violations = Vec::new();
 
     // Pattern 1: split row followed by get/skip with index access
@@ -41,23 +41,19 @@ fn check(context: &LintContext) -> Vec<Violation> {
                     format!(r"\${}?\s*\|\s*(get|skip)\s+\d+", regex::escape(var_name));
 
                 if Regex::new(&access_pattern).ok()?.is_match(context.source) {
-                    Some(Violation {
-                        rule_id: "prefer_parse_command".into(),
-                        severity: Severity::Warning,
-                        message: format!(
-                            "Variable '{var_name}' from split row with indexed access - consider \
-                             using 'parse'"
+                    Some(
+                        RuleViolation::new_dynamic(
+                            "prefer_parse_command",
+                            format!(
+                                "Variable '{var_name}' from split row with indexed access - \
+                                 consider using 'parse'"
+                            ),
+                            nu_protocol::Span::new(mat.start(), mat.end()),
                         )
-                        .into(),
-                        span: nu_protocol::Span::new(mat.start(), mat.end()),
-                        suggestion: Some(
-                            "Use 'parse' command to extract named fields instead of indexed access"
-                                .to_string()
-                                .into(),
+                        .with_suggestion_static(
+                            "Use 'parse' command to extract named fields instead of indexed access",
                         ),
-                        fix: None,
-                        file: None,
-                    })
+                    )
                 } else {
                     None
                 }

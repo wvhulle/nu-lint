@@ -26,19 +26,34 @@ pub struct Config {
     pub fix: FixConfig,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct GeneralConfig {
-    pub max_severity: RuleSeverity,
+    #[serde(default = "GeneralConfig::default_min_severity")]
+    pub min_severity: RuleSeverity,
 }
 
-#[derive(Debug, Clone, Copy, Deserialize, Serialize, Default, PartialEq)]
+impl Default for GeneralConfig {
+    fn default() -> Self {
+        Self {
+            min_severity: Self::default_min_severity(),
+        }
+    }
+}
+
+impl GeneralConfig {
+    fn default_min_severity() -> RuleSeverity {
+        RuleSeverity::Info // Show all violations by default
+    }
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, Default, PartialEq, PartialOrd, Ord, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum RuleSeverity {
+    Off,
+    Info,
+    Warning,
     #[default]
     Error,
-    Warning,
-    Info,
-    Off,
 }
 
 impl From<RuleSeverity> for Option<Severity> {
@@ -48,6 +63,16 @@ impl From<RuleSeverity> for Option<Severity> {
             RuleSeverity::Warning => Some(Severity::Warning),
             RuleSeverity::Info => Some(Severity::Info),
             RuleSeverity::Off => None,
+        }
+    }
+}
+
+impl From<Severity> for RuleSeverity {
+    fn from(severity: Severity) -> Self {
+        match severity {
+            Severity::Error => RuleSeverity::Error,
+            Severity::Warning => RuleSeverity::Warning,
+            Severity::Info => RuleSeverity::Info,
         }
     }
 }
@@ -219,10 +244,10 @@ mod tests {
     fn test_load_config_with_explicit_path() {
         let temp_dir = TempDir::new().unwrap();
         let config_path = temp_dir.path().join("config.toml");
-        fs::write(&config_path, "[general]\nmax_severity = \"error\"\n").unwrap();
+        fs::write(&config_path, "[general]\nmin_severity = \"error\"\n").unwrap();
 
         let config = load_config(Some(&config_path));
-        assert_eq!(config.general.max_severity, RuleSeverity::Error);
+        assert_eq!(config.general.min_severity, RuleSeverity::Error);
     }
 
     #[test]
@@ -231,7 +256,7 @@ mod tests {
 
         let temp_dir = TempDir::new().unwrap();
         let config_path = temp_dir.path().join(".nu-lint.toml");
-        fs::write(&config_path, "[general]\nmax_severity = \"warning\"\n").unwrap();
+        fs::write(&config_path, "[general]\nmin_severity = \"warning\"\n").unwrap();
 
         let original_dir = std::env::current_dir().unwrap();
 
@@ -245,7 +270,7 @@ mod tests {
         std::env::set_current_dir(original_dir).unwrap();
 
         let config = result.unwrap();
-        assert_eq!(config.general.max_severity, RuleSeverity::Warning);
+        assert_eq!(config.general.min_severity, RuleSeverity::Warning);
     }
 
     #[test]

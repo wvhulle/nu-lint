@@ -1,8 +1,9 @@
 use nu_protocol::ast::Expr;
 
 use crate::{
+    Fix, Replacement,
     context::LintContext,
-    lint::{Fix, Replacement, Severity, Violation},
+    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
@@ -96,33 +97,26 @@ fn generate_fix_text(expr: &nu_protocol::ast::Expression, context: &LintContext)
     None
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    context.collect_violations(|expr, ctx| {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
+    context.collect_rule_violations(|expr, ctx| {
         // Check for "not ... is-empty" pattern
         if is_not_is_empty_pattern(expr, ctx)
             && let Some(fix_text) = generate_fix_text(expr, ctx)
         {
-            let fix = Some(Fix {
-                description: "Replace 'not ... is-empty' with 'is-not-empty'"
-                    .to_string()
-                    .into(),
-                replacements: vec![Replacement {
-                    span: expr.span,
-                    new_text: fix_text.into(),
-                }],
-            });
+            let fix = Fix::new_static(
+                "Replace 'not ... is-empty' with 'is-not-empty'",
+                vec![Replacement::new_dynamic(expr.span, fix_text)],
+            );
 
-            vec![Violation {
-                rule_id: "prefer_is_not_empty".into(),
-                severity: Severity::Info,
-                message: "Use 'is-not-empty' instead of 'not ... is-empty' for better readability"
-                    .to_string()
-                    .into(),
-                span: expr.span,
-                suggestion: Some("Replace with 'is-not-empty'".to_string().into()),
-                fix,
-                file: None,
-            }]
+            vec![
+                RuleViolation::new_static(
+                    "prefer_is_not_empty",
+                    "Use 'is-not-empty' instead of 'not ... is-empty' for better readability",
+                    expr.span,
+                )
+                .with_suggestion_static("Replace with 'is-not-empty'")
+                .with_fix(fix),
+            ]
         } else {
             vec![]
         }

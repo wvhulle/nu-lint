@@ -4,7 +4,7 @@ use regex::Regex;
 
 use crate::{
     context::LintContext,
-    lint::{Severity, Violation},
+    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
@@ -13,7 +13,7 @@ fn ignore_pattern() -> &'static Regex {
     PATTERN.get_or_init(|| Regex::new(r"\|\s*ignore\s*(?:\n|$)").unwrap())
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
     // Pattern: | ignore (but allow external commands with ^)
     let pattern = ignore_pattern();
 
@@ -30,22 +30,17 @@ fn check(context: &LintContext) -> Vec<Violation> {
             if is_external {
                 None
             } else {
-                Some(Violation {
-                    rule_id: "discourage_bare_ignore".into(),
-                    severity: Severity::Info,
-                    message: "Piping to 'ignore' suppresses output without error handling"
-                        .to_string()
-                        .into(),
-                    span: nu_protocol::Span::new(mat.start(), mat.end()),
-                    suggestion: Some(
+                Some(
+                    RuleViolation::new_dynamic(
+                        "discourage_bare_ignore",
+                        "Piping to 'ignore' suppresses output without error handling".to_string(),
+                        nu_protocol::Span::new(mat.start(), mat.end()),
+                    )
+                    .with_suggestion_static(
                         "Consider: 'do -i { ... }' for error suppression or handle errors \
-                         explicitly"
-                            .to_string()
-                            .into(),
+                         explicitly",
                     ),
-                    fix: None,
-                    file: None,
-                })
+                )
             }
         })
         .collect()

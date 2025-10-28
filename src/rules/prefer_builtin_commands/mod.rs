@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     context::LintContext,
     external_command::{BuiltinAlternative, Fix},
-    lint::{Replacement, Severity, Violation},
+    lint::{Replacement, RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
@@ -155,7 +155,7 @@ fn extract_external_args(
         .collect()
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
     crate::external_command::detect_external_commands(
         context,
         "avoid_external_file_tools",

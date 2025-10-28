@@ -26,7 +26,7 @@ pub struct Config {
     pub fix: FixConfig,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 pub struct GeneralConfig {
     #[serde(default = "GeneralConfig::default_min_severity")]
     pub min_severity: RuleSeverity,
@@ -41,7 +41,7 @@ impl Default for GeneralConfig {
 }
 
 impl GeneralConfig {
-    fn default_min_severity() -> RuleSeverity {
+    const fn default_min_severity() -> RuleSeverity {
         RuleSeverity::Info // Show all violations by default
     }
 }
@@ -70,14 +70,14 @@ impl From<RuleSeverity> for Option<Severity> {
 impl From<Severity> for RuleSeverity {
     fn from(severity: Severity) -> Self {
         match severity {
-            Severity::Error => RuleSeverity::Error,
-            Severity::Warning => RuleSeverity::Warning,
-            Severity::Info => RuleSeverity::Info,
+            Severity::Error => Self::Error,
+            Severity::Warning => Self::Warning,
+            Severity::Info => Self::Info,
         }
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
 pub struct StyleConfig {
     #[serde(default = "StyleConfig::default_line_length")]
     pub line_length: usize,
@@ -96,13 +96,13 @@ impl StyleConfig {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
 pub struct ExcludeConfig {
     #[serde(default)]
     pub patterns: Vec<String>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
 pub struct FixConfig {
     pub enabled: bool,
 
@@ -149,16 +149,15 @@ pub fn find_config_file() -> Option<PathBuf> {
 /// Load configuration from file or use defaults
 #[must_use]
 pub fn load_config(config_path: Option<&PathBuf>) -> Config {
-    let path = config_path.cloned().or_else(find_config_file);
-
-    if let Some(path) = path {
-        Config::load_from_file(&path).unwrap_or_else(|e| {
-            eprintln!("Error loading config from {}: {e}", path.display());
-            process::exit(2);
+    config_path
+        .cloned()
+        .or_else(find_config_file)
+        .map_or_else(Config::default, |path| {
+            Config::load_from_file(&path).unwrap_or_else(|e| {
+                eprintln!("Error loading config from {}: {e}", path.display());
+                process::exit(2);
+            })
         })
-    } else {
-        Config::default()
-    }
 }
 
 #[cfg(test)]

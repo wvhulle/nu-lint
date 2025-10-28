@@ -36,7 +36,7 @@ impl OutputFormatter for TextFormatter {
             let (line, column) = calculate_line_column(&source_code, violation.span.start);
 
             if let Some(file_path) = &violation.file {
-                writeln!(output, "\x1b[1m{file_path}:{line}:{column}\x1b[0m").unwrap();
+                let _ = writeln!(output, "\x1b[1m{file_path}:{line}:{column}\x1b[0m");
             }
 
             let diagnostic = ViolationDiagnostic {
@@ -45,16 +45,15 @@ impl OutputFormatter for TextFormatter {
             };
 
             let report = Report::new(diagnostic);
-            writeln!(output, "{report:?}").unwrap();
+            let _ = writeln!(output, "{report:?}");
         }
 
         let summary = Summary::from_violations(violations);
-        writeln!(
+        let _ = writeln!(
             output,
             "\n{} error(s), {} warning(s), {} info",
             summary.errors, summary.warnings, summary.info
-        )
-        .unwrap();
+        );
 
         output
     }
@@ -204,14 +203,17 @@ pub struct Summary {
 impl Summary {
     #[must_use]
     pub fn from_violations(violations: &[Violation]) -> Self {
-        let (errors, warnings, info) =
-            violations
-                .iter()
-                .fold((0, 0, 0), |(e, w, i), v| match v.severity {
-                    Severity::Error => (e + 1, w, i),
-                    Severity::Warning => (e, w + 1, i),
-                    Severity::Info => (e, w, i + 1),
-                });
+        let mut errors = 0;
+        let mut warnings = 0;
+        let mut info = 0;
+
+        for violation in violations {
+            match violation.severity {
+                Severity::Error => errors += 1,
+                Severity::Warning => warnings += 1,
+                Severity::Info => info += 1,
+            }
+        }
 
         Self {
             errors,

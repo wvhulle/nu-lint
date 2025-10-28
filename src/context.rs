@@ -115,25 +115,28 @@ impl LintContext<'_> {
     /// Find the span of a function/declaration name in the source code
     /// Returns a span pointing to the first occurrence of the name, or a
     /// fallback span
+    #[must_use]
     pub fn find_declaration_span(&self, name: &str) -> Span {
-        // Use more efficient string search for function names
+        // Use more efficient string search for function declarations
         // Look for function declarations starting with "def " or "export def "
-        let patterns = [format!("def {name}"), format!("export def {name}")];
 
-        for pattern in &patterns {
-            if let Some(pos) = self.source.find(pattern) {
-                // Find the start of the function name within the pattern
-                let name_start = pos + pattern.len() - name.len();
-                return Span::new(name_start, name_start + name.len());
-            }
+        // Try "def <name>" first (most common case)
+        if let Some(pos) = self.source.find(&format!("def {name}")) {
+            let name_start = pos + 4; // "def ".len() == 4
+            return Span::new(name_start, name_start + name.len());
+        }
+
+        // Try "export def <name>"
+        if let Some(pos) = self.source.find(&format!("export def {name}")) {
+            let name_start = pos + 11; // "export def ".len() == 11
+            return Span::new(name_start, name_start + name.len());
         }
 
         // Fallback to simple name search
-        if let Some(name_pos) = self.source.find(name) {
-            Span::new(name_pos, name_pos + name.len())
-        } else {
-            self.ast.span.unwrap_or_else(Span::unknown)
-        }
+        self.source.find(name).map_or_else(
+            || self.ast.span.unwrap_or_else(Span::unknown),
+            |name_pos| Span::new(name_pos, name_pos + name.len()),
+        )
     }
 
     /// Get the range of declaration IDs that were added during parsing (the

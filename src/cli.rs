@@ -384,13 +384,13 @@ mod tests {
             let config_path = temp_dir.path().join("custom.toml");
             let nu_file_path = temp_dir.path().join("test.nu");
 
-            fs::write(&config_path, "[general]\nmin_severity = \"error\"\n").unwrap();
+            fs::write(&config_path, "[general]\nmin_severity = \"info\"\n").unwrap();
             fs::write(&nu_file_path, "let myVariable = 5\n").unwrap();
 
             let config = load_config(Some(&config_path));
             assert_eq!(
                 config.general.min_severity,
-                crate::config::RuleSeverity::Error
+                crate::config::RuleSeverity::Info
             );
 
             let engine = LintEngine::new(config);

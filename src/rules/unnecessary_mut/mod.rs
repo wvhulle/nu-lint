@@ -40,11 +40,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
                     // For "mut" declarations, the first argument contains the variable declaration
                     if let Some(var_arg) = call.arguments.first() {
                         // Match against Argument enum variants
-                        let var_expr = match var_arg {
-                            nu_protocol::ast::Argument::Positional(e)
-                            | nu_protocol::ast::Argument::Unknown(e) => e,
-                            _ => return vec![],
-                        };
+                        let (nu_protocol::ast::Argument::Positional(var_expr) | nu_protocol::ast::Argument::Unknown(var_expr)) = var_arg else { return vec![] };
 
                         // Look for VarDecl pattern which contains the variable ID
                         if let Expr::VarDecl(var_id) = &var_expr.expr {

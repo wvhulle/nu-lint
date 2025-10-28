@@ -102,11 +102,11 @@ fn extract_external_args(
 
 /// Detect external commands with builtin alternatives
 #[must_use]
-pub fn detect_external_commands(
+pub fn detect_external_commands<S: ::std::hash::BuildHasher>(
     context: &LintContext,
     rule_id: &'static str,
     _severity: Severity,
-    alternatives: &HashMap<&'static str, BuiltinAlternative>,
+    alternatives: &HashMap<&'static str, BuiltinAlternative, S>,
     fix_builder: Option<FixBuilder>,
 ) -> Vec<RuleViolation> {
     context.collect_rule_violations(|expr, ctx| {

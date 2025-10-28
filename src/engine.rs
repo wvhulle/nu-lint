@@ -149,8 +149,7 @@ impl LintEngine {
             RuleSeverity::Error => Some(crate::lint::Severity::Error), // Show only errors
             RuleSeverity::Warning => Some(crate::lint::Severity::Warning), /* Show warnings and
                                                                              * above */
-            RuleSeverity::Info => None, // Show all (no filtering)
-            RuleSeverity::Off => None,  // Special case handled separately - show nothing
+            RuleSeverity::Info | RuleSeverity::Off => None, // Show all (no filtering)
         }
     }
 

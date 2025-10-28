@@ -1,3 +1,4 @@
+pub mod avoid_jq_for_simple_ops;
 pub mod avoid_mutable_accumulation;
 pub mod brace_spacing;
 pub mod completion_function_naming;
@@ -21,12 +22,15 @@ pub mod prefer_builtin_text_transforms;
 pub mod prefer_compound_assignment;
 pub mod prefer_each_over_for;
 pub mod prefer_error_make;
+pub mod prefer_from_json;
 pub mod prefer_is_not_empty;
 pub mod prefer_lines_over_split;
 pub mod prefer_match_over_if_chain;
+pub mod prefer_nushell_data_ops;
 pub mod prefer_parse_command;
 pub mod prefer_parse_over_each_split;
 pub mod prefer_range_iteration;
+pub mod prefer_structured_data_flow;
 pub mod prefer_where_over_each_if;
 pub mod screaming_snake_constants;
 pub mod snake_case_variables;
@@ -100,6 +104,10 @@ impl RuleRegistry {
         registry.register(exported_function_docs::rule());
         registry.register(missing_type_annotation::rule());
         registry.register(max_positional_params::rule());
+        registry.register(prefer_from_json::rule());
+        registry.register(prefer_nushell_data_ops::rule());
+        registry.register(avoid_jq_for_simple_ops::rule());
+        registry.register(prefer_structured_data_flow::rule());
 
         registry
     }

@@ -9,6 +9,24 @@ use crate::{
     lint::{RuleViolation, Severity},
 };
 
+/// Extract external command arguments as strings
+#[must_use]
+pub fn extract_external_args(
+    args: &[nu_protocol::ast::ExternalArgument],
+    context: &LintContext,
+) -> Vec<String> {
+    args.iter()
+        .map(|arg| match arg {
+            nu_protocol::ast::ExternalArgument::Regular(expr) => {
+                context.source[expr.span.start..expr.span.end].to_string()
+            }
+            nu_protocol::ast::ExternalArgument::Spread(expr) => {
+                format!("...{}", &context.source[expr.span.start..expr.span.end])
+            }
+        })
+        .collect()
+}
+
 /// Metadata about a builtin alternative to an external command
 pub struct BuiltinAlternative {
     pub command: &'static str,
@@ -81,23 +99,6 @@ fn get_custom_suggestion(
         _ => {}
     }
     None
-}
-
-/// Helper function to extract external command arguments as strings
-fn extract_external_args(
-    args: &[nu_protocol::ast::ExternalArgument],
-    context: &LintContext,
-) -> Vec<String> {
-    args.iter()
-        .map(|arg| match arg {
-            nu_protocol::ast::ExternalArgument::Regular(expr) => {
-                context.source[expr.span.start..expr.span.end].to_string()
-            }
-            nu_protocol::ast::ExternalArgument::Spread(expr) => {
-                format!("...{}", &context.source[expr.span.start..expr.span.end])
-            }
-        })
-        .collect()
 }
 
 /// Detect external commands with builtin alternatives

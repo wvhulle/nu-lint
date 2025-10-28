@@ -147,8 +147,8 @@ impl LintEngine {
         use crate::config::RuleSeverity;
         match self.config.general.min_severity {
             RuleSeverity::Error => Some(crate::lint::Severity::Error), // Show only errors
-            RuleSeverity::Warning => Some(crate::lint::Severity::Warning), /* Show warnings and
-                                                                             * above */
+            RuleSeverity::Warning => Some(crate::lint::Severity::Warning), // Show warnings and
+            // above
             RuleSeverity::Info | RuleSeverity::Off => None, // Show all (no filtering)
         }
     }

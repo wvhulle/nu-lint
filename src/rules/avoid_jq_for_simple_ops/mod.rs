@@ -2,10 +2,23 @@ use std::collections::HashMap;
 
 use crate::{
     context::LintContext,
-    external_command::BuiltinAlternative,
+    external_command::{BuiltinAlternative, extract_external_args},
     lint::{Fix, Replacement, RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
+
+/// Simple jq operations that have direct Nushell equivalents
+const SIMPLE_JQ_OPS: &[&str] = &[
+    "'length'",
+    "'keys'",
+    "'type'",
+    "'empty'",
+    "'not'",
+    "'flatten'",
+    "'add'",
+    "'min'",
+    "'max'",
+];
 
 fn get_simple_jq_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
     let mut map = HashMap::new();
@@ -108,20 +121,10 @@ fn build_fix(
     )
 }
 
-fn extract_external_args(
-    args: &[nu_protocol::ast::ExternalArgument],
-    context: &LintContext,
-) -> Vec<String> {
-    args.iter()
-        .map(|arg| match arg {
-            nu_protocol::ast::ExternalArgument::Regular(expr) => {
-                context.source[expr.span.start..expr.span.end].to_string()
-            }
-            nu_protocol::ast::ExternalArgument::Spread(expr) => {
-                format!("...{}", &context.source[expr.span.start..expr.span.end])
-            }
-        })
-        .collect()
+/// Check if a jq command contains simple operations
+fn contains_simple_jq_op(source_text: &str) -> bool {
+    SIMPLE_JQ_OPS.iter().any(|op| source_text.contains(op))
+        || (source_text.contains("'.[") && source_text.contains("]'"))
 }
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {
@@ -140,17 +143,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
         .into_iter()
         .filter(|violation| {
             let source_text = &context.source[violation.span.start..violation.span.end];
-            // Simple operations that have direct equivalents
-            source_text.contains("'length'")
-                || source_text.contains("'keys'")
-                || source_text.contains("'type'")
-                || source_text.contains("'empty'")
-                || source_text.contains("'not'")
-                || source_text.contains("'flatten'")
-                || source_text.contains("'add'")
-                || source_text.contains("'min'")
-                || source_text.contains("'max'")
-                || (source_text.contains("'.[") && source_text.contains("]'"))
+            contains_simple_jq_op(source_text)
         })
         .collect()
 }

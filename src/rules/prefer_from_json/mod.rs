@@ -2,10 +2,33 @@ use std::collections::HashMap;
 
 use crate::{
     context::LintContext,
-    external_command::BuiltinAlternative,
+    external_command::{BuiltinAlternative, extract_external_args},
     lint::{Fix, Replacement, RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
+
+#[derive(Debug, PartialEq)]
+enum JqFilter<'a> {
+    Identity,
+    FieldAccess(&'a str),
+    Complex,
+}
+
+/// Parse a jq filter to determine its type and extract field names
+fn parse_jq_filter(filter: &str) -> JqFilter<'_> {
+    if filter == "'.'" {
+        JqFilter::Identity
+    } else if filter.starts_with("'.") && filter.ends_with('\'') && filter.len() > 3 {
+        let field = &filter[2..filter.len() - 1]; // Remove '. at start and ' at end
+        if field.chars().all(|c| c.is_alphanumeric() || c == '_') {
+            JqFilter::FieldAccess(field)
+        } else {
+            JqFilter::Complex
+        }
+    } else {
+        JqFilter::Complex
+    }
+}
 
 fn get_jq_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
     let mut map = HashMap::new();
@@ -38,24 +61,27 @@ fn build_fix(
             } else {
                 let filter = &args_text[0];
 
-                if filter == "'.'" {
-                    // jq '.' file.json -> open file.json | from json
-                    if args_text.len() >= 2 {
-                        format!("open {} | from json", args_text[1])
-                    } else {
+                match parse_jq_filter(filter) {
+                    JqFilter::Identity => {
+                        // jq '.' file.json -> open file.json | from json
+                        if args_text.len() >= 2 {
+                            format!("open {} | from json", args_text[1])
+                        } else {
+                            "from json".to_string()
+                        }
+                    }
+                    JqFilter::FieldAccess(field) => {
+                        // jq '.field' file.json -> open file.json | from json | get field
+                        if args_text.len() >= 2 {
+                            format!("open {} | from json | get {field}", args_text[1])
+                        } else {
+                            format!("from json | get {field}")
+                        }
+                    }
+                    JqFilter::Complex => {
+                        // Complex case - suggest general approach
                         "from json".to_string()
                     }
-                } else if filter.starts_with("'.") && filter.len() > 3 {
-                    // jq '.field' file.json -> open file.json | from json | get field
-                    let field = &filter[2..filter.len() - 1]; // Remove '. at start and ' at end
-                    if args_text.len() >= 2 {
-                        format!("open {} | from json | get {}", args_text[1], field)
-                    } else {
-                        format!("from json | get {field}")
-                    }
-                } else {
-                    // Complex case - suggest general approach
-                    "from json".to_string()
                 }
             }
         }
@@ -66,22 +92,6 @@ fn build_fix(
         description: format!("Replace '^{cmd_text}' with structured data processing").into(),
         replacements: vec![Replacement::new_dynamic(expr_span, new_text)],
     }
-}
-
-fn extract_external_args(
-    args: &[nu_protocol::ast::ExternalArgument],
-    context: &LintContext,
-) -> Vec<String> {
-    args.iter()
-        .map(|arg| match arg {
-            nu_protocol::ast::ExternalArgument::Regular(expr) => {
-                context.source[expr.span.start..expr.span.end].to_string()
-            }
-            nu_protocol::ast::ExternalArgument::Spread(expr) => {
-                format!("...{}", &context.source[expr.span.start..expr.span.end])
-            }
-        })
-        .collect()
 }
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {

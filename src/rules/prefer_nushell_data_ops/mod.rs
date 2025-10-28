@@ -2,10 +2,21 @@ use std::collections::HashMap;
 
 use crate::{
     context::LintContext,
-    external_command::BuiltinAlternative,
+    external_command::{BuiltinAlternative, extract_external_args},
     lint::{Fix, Replacement, RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
+
+/// Complex jq operations that can be replaced with Nushell data operations
+const COMPLEX_JQ_PATTERNS: &[&str] = &[
+    "map(",
+    "select(",
+    "group_by(",
+    "sort_by(",
+    "unique",
+    "reverse",
+    ".[]",
+];
 
 fn get_jq_data_ops() -> HashMap<&'static str, BuiltinAlternative> {
     let mut map = HashMap::new();
@@ -75,20 +86,11 @@ fn build_fix(
     )
 }
 
-fn extract_external_args(
-    args: &[nu_protocol::ast::ExternalArgument],
-    context: &LintContext,
-) -> Vec<String> {
-    args.iter()
-        .map(|arg| match arg {
-            nu_protocol::ast::ExternalArgument::Regular(expr) => {
-                context.source[expr.span.start..expr.span.end].to_string()
-            }
-            nu_protocol::ast::ExternalArgument::Spread(expr) => {
-                format!("...{}", &context.source[expr.span.start..expr.span.end])
-            }
-        })
-        .collect()
+/// Check if a jq command contains complex data operations
+fn contains_complex_jq_op(source_text: &str) -> bool {
+    COMPLEX_JQ_PATTERNS
+        .iter()
+        .any(|pattern| source_text.contains(pattern))
 }
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {
@@ -105,15 +107,8 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     violations
         .into_iter()
         .filter(|violation| {
-            // Check if the command contains jq data operation patterns
             let source_text = &context.source[violation.span.start..violation.span.end];
-            source_text.contains("map(")
-                || source_text.contains("select(")
-                || source_text.contains("group_by(")
-                || source_text.contains("sort_by(")
-                || source_text.contains("unique")
-                || source_text.contains("reverse")
-                || source_text.contains(".[]")
+            contains_complex_jq_op(source_text)
         })
         .collect()
 }

@@ -1,0 +1,3 @@
+[submodule "benches/fixtures/nu_scripts"]
+	path = benches/fixtures/nu_scripts
+	url = https://github.com/nushell/nu_scripts.git

@@ -1,8 +1,10 @@
 pub mod avoid_jq_for_simple_ops;
 pub mod avoid_mutable_accumulation;
 pub mod brace_spacing;
+pub mod closure_variable_capture;
 pub mod completion_function_naming;
 pub mod consistent_error_handling;
+pub mod dangerous_file_operations;
 pub mod descriptive_error_messages;
 pub mod discourage_bare_ignore;
 pub mod discourage_underscore_commands;
@@ -16,6 +18,7 @@ pub mod multiline_formatting;
 pub mod no_trailing_spaces;
 pub mod omit_list_commas;
 pub mod pipe_spacing;
+pub mod pipeline_error_propagation;
 pub mod prefer_builtin_commands;
 pub mod prefer_builtin_system_commands;
 pub mod prefer_builtin_text_transforms;
@@ -32,8 +35,10 @@ pub mod prefer_parse_over_each_split;
 pub mod prefer_range_iteration;
 pub mod prefer_structured_data_flow;
 pub mod prefer_where_over_each_if;
+pub mod resource_cleanup;
 pub mod screaming_snake_constants;
 pub mod snake_case_variables;
+pub mod systemd_journal_prefix;
 pub mod unnecessary_mut;
 pub mod unnecessary_variable_before_return;
 
@@ -73,6 +78,8 @@ impl RuleRegistry {
         registry.register(snake_case_variables::rule());
         registry.register(kebab_case_commands::rule());
         registry.register(screaming_snake_constants::rule());
+        registry.register(dangerous_file_operations::rule());
+        registry.register(closure_variable_capture::rule());
         registry.register(unnecessary_variable_before_return::rule());
         registry.register(prefer_is_not_empty::rule());
         registry.register(discourage_bare_ignore::rule());
@@ -108,6 +115,9 @@ impl RuleRegistry {
         registry.register(prefer_nushell_data_ops::rule());
         registry.register(avoid_jq_for_simple_ops::rule());
         registry.register(prefer_structured_data_flow::rule());
+        registry.register(pipeline_error_propagation::rule());
+        registry.register(resource_cleanup::rule());
+        registry.register(systemd_journal_prefix::rule());
 
         registry
     }

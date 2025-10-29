@@ -1,0 +1,1 @@
+// No auto-fixes for resource cleanup - requires manual review of resource management strategy

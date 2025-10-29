@@ -2,11 +2,12 @@
 authors = ["Willem Vanhulle <willemvanhulle@protonmail.com>"]
 description = "Linter for Nu shell scripts that helpfully suggests improvements"
 edition = "2024"
+exclude = ["benches/fixtures/"]
 keywords = ["nushell", "linter", "static-analysis", "code-quality", "shell"]
 license = "MIT"
 name = "nu-lint"
 repository = "https://github.com/wvhulle/nu-lint"
-version = "0.0.12"
+version = "0.0.13"
 
 
 [lints.clippy]
@@ -31,4 +32,9 @@ thiserror = "1.0"
 toml = "0.8"
 
 [dev-dependencies]
+criterion = { version = "0.7", features = ["html_reports", "csv_output"] }
 tempfile = "3.10"
+
+[[bench]]
+harness = false
+name = "prefer_builtin_rules"

@@ -96,12 +96,11 @@ Create `.nu-lint.toml` in your project root (or any parent directory):
 
 ```toml
 [general]
-min_severity = "warning"
+min_severity = "info"
 
 [rules]
 snake_case_variables = "warning"
 prefer_error_make = "info"
-kebab_case_commands = "warning"
 ```
 
 The linter will automatically find and use this config file when you run it.
@@ -151,6 +150,16 @@ cargo +nightly fmt
 cargo clippy --all-targets
 cargo clippy --fix --allow-dirty --all-targets
 ```
+
+### Running Benchmarks
+
+Quick benchmark for performance testing:
+
+```bash
+cargo bench --bench prefer_builtin_rules prefer_builtin_small
+```
+
+This runs in ~5-10 seconds and measures AST traversal overhead for the prefer_builtin_* rules.
 
 ## License
 

@@ -68,70 +68,108 @@ fn build_fix(
     // Extract arguments
     let args_text = extract_external_args(args, context);
 
-    // Build replacement based on command
-    let new_text = match cmd_text {
+    // Build replacement and description based on command
+    let (new_text, description) = match cmd_text {
         "ls" => {
             // ^ls -la -> ls -la (remove ^)
-            if args_text.is_empty() {
+            let replacement = if args_text.is_empty() {
                 "ls".to_string()
             } else {
                 format!("ls {}", args_text.join(" "))
-            }
+            };
+            let desc = "Use Nu's built-in 'ls' which returns structured table data with name, type, size, and modified columns".to_string();
+            (replacement, desc)
         }
         "cat" => {
             // ^cat file.txt -> open --raw file.txt
-            if let Some(file) = args_text.iter().find(|a| !a.starts_with('-')) {
+            let replacement = if let Some(file) = args_text.iter().find(|a| !a.starts_with('-')) {
                 format!("open --raw {file}")
             } else {
                 alternative.command.to_string()
-            }
+            };
+            let desc = "Use 'open --raw' for plain text, or just 'open' to auto-parse structured files (JSON, TOML, CSV, etc.)".to_string();
+            (replacement, desc)
         }
         "grep" => {
             // For simple cases, provide better suggestions
             if args_text.len() == 1 && !args_text[0].starts_with('-') {
                 // Simple text search: grep "pattern" -> find "pattern"
-                format!("find \"{}\"", args_text[0])
+                let replacement = format!("find \"{}\"", args_text[0]);
+                let desc =
+                    "Use 'find' which is case-insensitive by default and works on structured data"
+                        .to_string();
+                (replacement, desc)
+            } else if args_text.contains(&"-i".to_string()) {
+                // grep -i -> find (case-insensitive is default in Nu)
+                let replacement = "where $it =~ \"pattern\"".to_string();
+                let desc = "Use 'find' (case-insensitive by default) or 'where $it =~ pattern' for regex filtering. The -i flag is redundant in Nu".to_string();
+                (replacement, desc)
             } else {
                 // Complex case with flags - suggest the alternative without specific fix
-                "where $it =~ \"pattern\"".to_string()
+                let replacement = "where $it =~ \"pattern\"".to_string();
+                let desc = "Use 'where $it =~ pattern' for regex filtering or 'find' for simple text search".to_string();
+                (replacement, desc)
             }
         }
         "head" | "tail" => {
             // ^head -5 -> first 5 or ^tail -5 -> last 5
             let builtin = if cmd_text == "head" { "first" } else { "last" };
-            if let Some(num_arg) = args_text.iter().find(|a| a.starts_with('-') && a.len() > 1) {
+            let replacement = if let Some(num_arg) =
+                args_text.iter().find(|a| a.starts_with('-') && a.len() > 1)
+            {
                 let num = &num_arg[1..];
                 format!("{builtin} {num}")
             } else {
                 format!("{builtin} 10")
-            }
+            };
+            let desc = format!(
+                "Use '{builtin}' with cleaner syntax: '{builtin} N' instead of '{cmd_text} -N'"
+            );
+            (replacement, desc)
         }
-        "sort" | "uniq" => {
+        "sort" => {
             // Direct replacement
-            cmd_text.to_string()
+            let desc = "Use Nu's built-in 'sort' which works on any data type and supports natural sorting with -n flag".to_string();
+            (cmd_text.to_string(), desc)
+        }
+        "uniq" => {
+            let desc = "Use Nu's built-in 'uniq' which works on structured data and supports 'uniq-by' for specific columns".to_string();
+            (cmd_text.to_string(), desc)
         }
         "find" => {
             // Provide better find replacements based on common usage patterns
-            if args_text.iter().any(|arg| arg.contains("*.")) {
+            let (replacement, desc) = if args_text.iter().any(|arg| arg.contains("*.")) {
                 // find . -name "*.rs" -> ls **/*.rs
-                if let Some(pattern) = args_text.iter().find(|arg| arg.contains("*.")) {
+                let repl = if let Some(pattern) = args_text.iter().find(|arg| arg.contains("*.")) {
                     format!("ls **/{}", pattern.trim_matches('"'))
                 } else {
                     "ls **/*".to_string()
-                }
+                };
+                (
+                    repl,
+                    "Use 'ls' with glob patterns (**/*.ext) for recursive file searches"
+                        .to_string(),
+                )
             } else if args_text.len() == 1 && !args_text[0].starts_with('-') {
                 // find dirname -> ls dirname/**/*
-                format!("ls {}/**/*", args_text[0])
+                (
+                    format!("ls {}/**/*", args_text[0]),
+                    "Use 'ls' with glob patterns for directory traversal".to_string(),
+                )
             } else {
                 // Default case
-                "ls **/*".to_string()
-            }
+                ("ls **/*".to_string(), "Use 'ls' with glob patterns for file finding, or 'glob' for more complex patterns".to_string())
+            };
+            (replacement, desc)
         }
-        _ => alternative.command.to_string(),
+        _ => (
+            alternative.command.to_string(),
+            format!("Use Nu's built-in '{}'", alternative.command),
+        ),
     };
 
     Fix {
-        description: format!("Replace '^{}' with '{}'", cmd_text, alternative.command).into(),
+        description: description.into(),
         replacements: vec![Replacement {
             span: expr_span,
             new_text: new_text.into(),

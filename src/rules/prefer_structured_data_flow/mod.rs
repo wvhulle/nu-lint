@@ -6,9 +6,9 @@ use crate::{
     rule::{Rule, RuleCategory},
 };
 
-fn check_for_inefficient_json_flow(
-    context: &LintContext,
+fn check_pipeline_for_violations(
     pipeline: &nu_protocol::ast::Pipeline,
+    context: &LintContext,
 ) -> Option<RuleViolation> {
     // Look for patterns like: data | to json | ^jq 'filter' using sliding window
     pipeline.elements.windows(2).find_map(|window| {
@@ -48,28 +48,43 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 
     // Check the main AST block directly
     for pipeline in &context.ast.pipelines {
-        if let Some(violation) = check_for_inefficient_json_flow(context, pipeline) {
+        if let Some(violation) = check_pipeline_for_violations(pipeline, context) {
             violations.push(violation);
         }
     }
 
-    // Also traverse the AST to check pipelines in nested blocks
-    violations.extend(
-        context.collect_rule_violations(|expr, ctx| match &expr.expr {
+    // Collect violations from all nested blocks (including function bodies)
+    violations.extend(context.collect_rule_violations(|expr, ctx| {
+        match &expr.expr {
             Expr::Block(block_id) => {
                 let block = ctx.working_set.get_block(*block_id);
                 let mut nested_violations = Vec::new();
 
+                // Check all pipelines in this block
                 for pipeline in &block.pipelines {
-                    if let Some(violation) = check_for_inefficient_json_flow(ctx, pipeline) {
+                    if let Some(violation) = check_pipeline_for_violations(pipeline, ctx) {
                         nested_violations.push(violation);
                     }
                 }
                 nested_violations
             }
-            _ => vec![],
-        }),
-    );
+            Expr::Closure(block_id) => {
+                let block = ctx.working_set.get_block(*block_id);
+                let mut nested_violations = Vec::new();
+
+                // Check all pipelines in this closure block (function body)
+                for pipeline in &block.pipelines {
+                    if let Some(violation) = check_pipeline_for_violations(pipeline, ctx) {
+                        nested_violations.push(violation);
+                    }
+                }
+                nested_violations
+            }
+            _ => {
+                vec![]
+            }
+        }
+    }));
 
     violations
 }

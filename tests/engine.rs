@@ -2,8 +2,7 @@ mod common;
 
 use std::path::PathBuf;
 
-use nu_lint::config::Config;
-use nu_lint::engine::LintEngine;
+use nu_lint::{config::Config, engine::LintEngine};
 
 #[test]
 fn test_list_rules_returns_all_rules() {

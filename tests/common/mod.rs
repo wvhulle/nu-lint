@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 use std::sync::Mutex;
+
 use tempfile::TempDir;
 
 /// Global mutex to prevent concurrent directory changes across all tests.

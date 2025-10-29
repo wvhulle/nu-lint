@@ -1,14 +1,14 @@
 mod common;
 
-use std::fs;
-use std::path::PathBuf;
-
-use nu_lint::cli::{collect_files_to_lint, lint_files};
-use nu_lint::config::{RuleSeverity, load_config};
-use nu_lint::engine::LintEngine;
-use tempfile::TempDir;
+use std::{fs, path::PathBuf};
 
 use common::CHDIR_MUTEX;
+use nu_lint::{
+    cli::{collect_files_to_lint, lint_files},
+    config::{RuleSeverity, load_config},
+    engine::LintEngine,
+};
+use tempfile::TempDir;
 
 #[test]
 fn test_custom_config_file() {

@@ -2,10 +2,9 @@ mod common;
 
 use std::fs;
 
+use common::{CHDIR_MUTEX, with_temp_dir};
 use nu_lint::config::{Config, RuleSeverity, find_config_file, load_config};
 use tempfile::TempDir;
-
-use common::{CHDIR_MUTEX, with_temp_dir};
 
 #[test]
 fn test_find_config_file_in_current_dir() {

@@ -88,9 +88,14 @@ fn build_fix(
 
 /// Check if a jq command contains complex data operations
 fn contains_complex_jq_op(source_text: &str) -> bool {
-    COMPLEX_JQ_PATTERNS
-        .iter()
-        .any(|pattern| source_text.contains(pattern))
+    COMPLEX_JQ_PATTERNS.iter().any(|pattern| {
+        if pattern == &".[]" {
+            // Match any array iteration pattern like .[], .users[], .items[], etc.
+            source_text.contains("[]")
+        } else {
+            source_text.contains(pattern)
+        }
+    })
 }
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {

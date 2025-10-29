@@ -21,7 +21,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
             Some((
                 format!(
                     "Variable '{var_name1}' is assigned and immediately returned - consider \
-                         returning the expression directly"
+                     returning the expression directly"
                 ),
                 Some(
                     "Return the expression directly instead of assigning to a variable first"

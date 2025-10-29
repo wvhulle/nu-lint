@@ -50,8 +50,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
         } else {
             Some((
                 format!(
-                    "For loop iterating '{item_var}' - consider using 'each' for functional \
-                         style"
+                    "For loop iterating '{item_var}' - consider using 'each' for functional style"
                 ),
                 Some(format!(
                     "Use '{collection} | each {{ |{item_var}| ... }}' for functional iteration"

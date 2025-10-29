@@ -6,6 +6,33 @@ use crate::{
     rule::{Rule, RuleCategory},
 };
 
+fn check_expr_for_error_handling(
+    expr: &nu_protocol::ast::Expression,
+    context: &LintContext,
+) -> Option<bool> {
+    let Expr::Call(call) = &expr.expr else {
+        return None;
+    };
+
+    let decl_name = context.working_set.get_decl(call.decl_id).name();
+    if decl_name == "try" || decl_name == "complete" {
+        return Some(true);
+    }
+
+    if decl_name != "do" {
+        return None;
+    }
+
+    for arg in &call.arguments {
+        if let nu_protocol::ast::Argument::Named(named) = arg
+            && named.0.item == "ignore"
+        {
+            return Some(true);
+        }
+    }
+    None
+}
+
 fn has_error_handling_in_pipeline(
     pipeline: &nu_protocol::ast::Pipeline,
     context: &LintContext,
@@ -14,27 +41,13 @@ fn has_error_handling_in_pipeline(
 
     let mut found_handling = Vec::new();
 
-    // Check each element in the pipeline for error handling constructs
     for element in &pipeline.elements {
         element.expr.flat_map(
             context.working_set,
             &|expr| {
-                if let Expr::Call(call) = &expr.expr {
-                    let decl_name = context.working_set.get_decl(call.decl_id).name();
-                    if decl_name == "try" || decl_name == "complete" {
-                        return vec![true];
-                    } else if decl_name == "do" {
-                        // Check for -i flag in do command
-                        for arg in &call.arguments {
-                            if let nu_protocol::ast::Argument::Named(named) = arg
-                                && named.0.item == "ignore"
-                            {
-                                return vec![true];
-                            }
-                        }
-                    }
-                }
-                vec![]
+                check_expr_for_error_handling(expr, context)
+                    .into_iter()
+                    .collect()
             },
             &mut found_handling,
         );

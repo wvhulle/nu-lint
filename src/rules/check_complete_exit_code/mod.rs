@@ -8,6 +8,48 @@ use crate::{
     rule::{Rule, RuleCategory},
 };
 
+fn extract_complete_assignment(
+    expr: &nu_protocol::ast::Expression,
+    context: &LintContext,
+) -> Option<(VarId, String, Span)> {
+    let Expr::Call(call) = &expr.expr else {
+        return None;
+    };
+
+    let decl_name = context.working_set.get_decl(call.decl_id).name();
+    if decl_name != "let" && decl_name != "mut" {
+        return None;
+    }
+
+    let var_arg = call.arguments.first()?;
+
+    let (nu_protocol::ast::Argument::Positional(var_expr)
+    | nu_protocol::ast::Argument::Unknown(var_expr)) = var_arg
+    else {
+        return None;
+    };
+
+    let Expr::VarDecl(var_id) = &var_expr.expr else {
+        return None;
+    };
+
+    let var_name = &context.source[var_expr.span.start..var_expr.span.end];
+
+    let value_arg = call.arguments.get(1)?;
+
+    let (nu_protocol::ast::Argument::Positional(value_expr)
+    | nu_protocol::ast::Argument::Unknown(value_expr)) = value_arg
+    else {
+        return None;
+    };
+
+    if !assignment_has_complete(value_expr, context) {
+        return None;
+    }
+
+    Some((*var_id, var_name.to_string(), expr.span))
+}
+
 /// Find variable assignments that store complete results
 fn find_complete_assignments(context: &LintContext) -> HashMap<VarId, (String, Span)> {
     use nu_protocol::ast::Traverse;
@@ -16,26 +58,9 @@ fn find_complete_assignments(context: &LintContext) -> HashMap<VarId, (String, S
     context.ast.flat_map(
         context.working_set,
         &|expr| {
-            if let Expr::Call(call) = &expr.expr {
-                let decl_name = context.working_set.get_decl(call.decl_id).name();
-                if (decl_name == "let" || decl_name == "mut")
-                    && let Some(var_arg) = call.arguments.first()
-                    && let nu_protocol::ast::Argument::Positional(var_expr)
-                    | nu_protocol::ast::Argument::Unknown(var_expr) = var_arg
-                    && let Expr::VarDecl(var_id) = &var_expr.expr
-                {
-                    let var_name = &context.source[var_expr.span.start..var_expr.span.end];
-
-                    if let Some(value_arg) = call.arguments.get(1)
-                        && let nu_protocol::ast::Argument::Positional(value_expr)
-                        | nu_protocol::ast::Argument::Unknown(value_expr) = value_arg
-                        && assignment_has_complete(value_expr, context)
-                    {
-                        return vec![(*var_id, var_name.to_string(), expr.span)];
-                    }
-                }
-            }
-            vec![]
+            extract_complete_assignment(expr, context)
+                .into_iter()
+                .collect()
         },
         &mut complete_assignments,
     );

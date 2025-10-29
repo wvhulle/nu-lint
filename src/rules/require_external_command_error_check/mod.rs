@@ -6,6 +6,40 @@ use crate::{
     rule::{Rule, RuleCategory},
 };
 
+fn check_expr_for_error_handling(
+    expr: &nu_protocol::ast::Expression,
+    context: &LintContext,
+) -> Option<bool> {
+    let Expr::Call(call) = &expr.expr else {
+        return None;
+    };
+
+    let decl_name = context.working_set.get_decl(call.decl_id).name();
+    if decl_name == "try" || decl_name == "complete" {
+        return Some(true);
+    }
+
+    if decl_name != "do" {
+        return None;
+    }
+
+    for arg in &call.arguments {
+        if let nu_protocol::ast::Argument::Named(named) = arg
+            && named.0.item == "ignore"
+        {
+            return Some(true);
+        }
+    }
+    None
+}
+
+fn check_expr_for_external_call(expr: &nu_protocol::ast::Expression) -> Option<Span> {
+    if let Expr::ExternalCall(_head, _args) = &expr.expr {
+        return Some(expr.span);
+    }
+    None
+}
+
 fn has_error_handling_in_pipeline(
     pipeline: &nu_protocol::ast::Pipeline,
     context: &LintContext,
@@ -18,21 +52,9 @@ fn has_error_handling_in_pipeline(
         element.expr.flat_map(
             context.working_set,
             &|expr| {
-                if let Expr::Call(call) = &expr.expr {
-                    let decl_name = context.working_set.get_decl(call.decl_id).name();
-                    if decl_name == "try" || decl_name == "complete" {
-                        return vec![true];
-                    } else if decl_name == "do" {
-                        for arg in &call.arguments {
-                            if let nu_protocol::ast::Argument::Named(named) = arg
-                                && named.0.item == "ignore"
-                            {
-                                return vec![true];
-                            }
-                        }
-                    }
-                }
-                vec![]
+                check_expr_for_error_handling(expr, context)
+                    .into_iter()
+                    .collect()
             },
             &mut found_handling,
         );
@@ -52,12 +74,7 @@ fn has_external_command_in_pipeline(
 
         element.expr.flat_map(
             context.working_set,
-            &|expr| {
-                if let Expr::ExternalCall(_head, _args) = &expr.expr {
-                    return vec![expr.span];
-                }
-                vec![]
-            },
+            &|expr| check_expr_for_external_call(expr).into_iter().collect(),
             &mut found_external,
         );
 

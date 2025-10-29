@@ -44,13 +44,17 @@ fn find_closures(context: &LintContext) -> Vec<ClosureInfo> {
     context.ast.flat_map(
         context.working_set,
         &|expr| {
-            let Expr::Closure(block_id) = &expr.expr else {
-                return vec![];
-            };
+            (|| {
+                let Expr::Closure(block_id) = &expr.expr else {
+                    return None;
+                };
 
-            let block = context.working_set.get_block(*block_id);
-            let closure_params = extract_closure_params(block);
-            vec![(expr.span, *block_id, closure_params)]
+                let block = context.working_set.get_block(*block_id);
+                let closure_params = extract_closure_params(block);
+                Some((expr.span, *block_id, closure_params))
+            })()
+            .into_iter()
+            .collect()
         },
         &mut closure_info,
     );
@@ -94,12 +98,9 @@ fn collect_local_variables(
             element.expr.flat_map(
                 context.working_set,
                 &|inner_expr| {
-                    let Expr::Call(call) = &inner_expr.expr else {
-                        return vec![];
-                    };
-
-                    extract_var_decl_from_call(call, context)
-                        .map_or_else(Vec::new, |var_id| vec![var_id])
+                    extract_call_var_decl(inner_expr, context)
+                        .into_iter()
+                        .collect()
                 },
                 &mut closure_local_vars_vec,
             );
@@ -107,6 +108,29 @@ fn collect_local_variables(
     }
 
     closure_local_vars_vec.into_iter().collect()
+}
+
+fn extract_call_var_decl(
+    expr: &nu_protocol::ast::Expression,
+    context: &LintContext,
+) -> Option<nu_protocol::VarId> {
+    let Expr::Call(call) = &expr.expr else {
+        return None;
+    };
+
+    extract_var_decl_from_call(call, context)
+}
+
+fn extract_var_usage(
+    expr: &nu_protocol::ast::Expression,
+    context: &LintContext,
+) -> Option<VarUsage> {
+    let Expr::Var(var_id) = &expr.expr else {
+        return None;
+    };
+
+    let var_name = &context.source[expr.span.start..expr.span.end];
+    Some((*var_id, expr.span, var_name.to_string()))
 }
 
 /// Find all variable references in a block
@@ -122,14 +146,7 @@ fn collect_variable_usages(
         for element in &pipeline.elements {
             element.expr.flat_map(
                 context.working_set,
-                &|inner_expr| {
-                    let Expr::Var(var_id) = &inner_expr.expr else {
-                        return vec![];
-                    };
-
-                    let var_name = &context.source[inner_expr.span.start..inner_expr.span.end];
-                    vec![(*var_id, inner_expr.span, var_name.to_string())]
-                },
+                &|inner_expr| extract_var_usage(inner_expr, context).into_iter().collect(),
                 &mut used_vars,
             );
         }

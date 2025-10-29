@@ -1,4 +1,7 @@
-use nu_protocol::ast::{Expr, ExternalArgument};
+use nu_protocol::{
+    Span,
+    ast::{Expr, ExternalArgument},
+};
 
 use crate::{
     context::LintContext,
@@ -7,7 +10,6 @@ use crate::{
 };
 
 fn is_dangerous_path(path_str: &str) -> bool {
-    // Check for dangerous patterns in file paths
     path_str == "/"
         || path_str == "../"
         || path_str == ".."
@@ -23,23 +25,19 @@ fn is_dangerous_path(path_str: &str) -> bool {
 }
 
 fn has_recursive_flag(args: &[ExternalArgument], context: &LintContext) -> bool {
-    for arg in args {
+    args.iter().any(|arg| {
         let arg_text = match arg {
             ExternalArgument::Regular(expr) | ExternalArgument::Spread(expr) => {
                 &context.source[expr.span.start..expr.span.end]
             }
         };
 
-        if arg_text.contains("-r")
+        arg_text.contains("-r")
             || arg_text.contains("--recursive")
             || arg_text.contains("-rf")
             || arg_text.contains("-fr")
             || arg_text.contains("--force")
-        {
-            return true;
-        }
-    }
-    false
+    })
 }
 
 fn extract_path_from_arg(arg: &ExternalArgument, context: &LintContext) -> String {
@@ -50,7 +48,24 @@ fn extract_path_from_arg(arg: &ExternalArgument, context: &LintContext) -> Strin
     }
 }
 
-fn is_inside_if_block(context: &LintContext, command_span: nu_protocol::Span) -> bool {
+fn check_expr_for_if_block(
+    expr: &nu_protocol::ast::Expression,
+    command_span: Span,
+    context: &LintContext,
+) -> bool {
+    let Expr::Call(call) = &expr.expr else {
+        return false;
+    };
+
+    let decl_name = context.working_set.get_decl(call.decl_id).name();
+    if decl_name != "if" {
+        return false;
+    }
+
+    expr.span.start <= command_span.start && expr.span.end >= command_span.end
+}
+
+fn is_inside_if_block(context: &LintContext, command_span: Span) -> bool {
     use nu_protocol::ast::Traverse;
 
     let mut found_in_if = Vec::new();
@@ -58,16 +73,11 @@ fn is_inside_if_block(context: &LintContext, command_span: nu_protocol::Span) ->
     context.ast.flat_map(
         context.working_set,
         &|expr| {
-            if let Expr::Call(call) = &expr.expr {
-                let decl_name = context.working_set.get_decl(call.decl_id).name();
-                if decl_name == "if" {
-                    // Check if the command span is within this if expression
-                    if expr.span.start <= command_span.start && expr.span.end >= command_span.end {
-                        return vec![true];
-                    }
-                }
+            if check_expr_for_if_block(expr, command_span, context) {
+                vec![true]
+            } else {
+                vec![]
             }
-            vec![]
         },
         &mut found_in_if,
     );
@@ -75,95 +85,118 @@ fn is_inside_if_block(context: &LintContext, command_span: nu_protocol::Span) ->
     !found_in_if.is_empty()
 }
 
+fn extract_dangerous_command(
+    expr: &nu_protocol::ast::Expression,
+    context: &LintContext,
+) -> Option<(Span, String, Vec<ExternalArgument>)> {
+    match &expr.expr {
+        Expr::ExternalCall(head, args) => {
+            let cmd_name = &context.source[head.span.start..head.span.end];
+            if cmd_name == "rm" || cmd_name == "mv" || cmd_name == "cp" {
+                Some((expr.span, cmd_name.to_string(), args.to_vec()))
+            } else {
+                None
+            }
+        }
+        Expr::Call(call) => {
+            let decl_name = context.working_set.get_decl(call.decl_id).name();
+            if decl_name != "rm" && decl_name != "mv" && decl_name != "cp" {
+                return None;
+            }
+
+            let external_args: Vec<ExternalArgument> = call
+                .arguments
+                .iter()
+                .filter_map(|arg| match arg {
+                    nu_protocol::ast::Argument::Positional(expr) => {
+                        Some(ExternalArgument::Regular(expr.clone()))
+                    }
+                    _ => None,
+                })
+                .collect();
+            Some((expr.span, decl_name.to_string(), external_args))
+        }
+        _ => None,
+    }
+}
+
+fn create_dangerous_path_violation(
+    cmd_name: &str,
+    path_str: &str,
+    command_span: Span,
+    is_recursive: bool,
+) -> RuleViolation {
+    let severity = if is_recursive { "CRITICAL" } else { "WARNING" };
+    RuleViolation::new_dynamic(
+        "dangerous_file_operations",
+        format!(
+            "{severity}: Dangerous file operation '{cmd_name} {path_str}' - could \
+             cause data loss"
+        ),
+        command_span,
+    )
+    .with_suggestion_static(
+        "Avoid operations on system paths. Use specific file paths and consider \
+         backup first",
+    )
+}
+
+fn create_variable_validation_violation(
+    cmd_name: &str,
+    path_str: &str,
+    command_span: Span,
+) -> RuleViolation {
+    RuleViolation::new_dynamic(
+        "dangerous_file_operations",
+        format!(
+            "Variable '{path_str}' used in '{cmd_name}' command without visible \
+             validation"
+        ),
+        command_span,
+    )
+    .with_suggestion_dynamic(format!(
+        "Validate variable before use: if ({path_str} | path exists) {{ \
+         {cmd_name} {path_str} }}"
+    ))
+}
+
 fn check(context: &LintContext) -> Vec<RuleViolation> {
     use nu_protocol::ast::Traverse;
 
     let mut violations = Vec::new();
 
-    // Find dangerous file operations
     let mut dangerous_commands = Vec::new();
     context.ast.flat_map(
         context.working_set,
         &|expr| {
-            match &expr.expr {
-                Expr::ExternalCall(head, args) => {
-                    let cmd_name = &context.source[head.span.start..head.span.end];
-
-                    // Check for dangerous file operations
-                    if cmd_name == "rm" || cmd_name == "mv" || cmd_name == "cp" {
-                        return vec![(expr.span, cmd_name.to_string(), args.clone())];
-                    }
-                }
-                Expr::Call(call) => {
-                    let decl_name = context.working_set.get_decl(call.decl_id).name();
-
-                    // Check for built-in file operations
-                    if decl_name == "rm" || decl_name == "mv" || decl_name == "cp" {
-                        // Extract arguments for built-in commands
-                        let mut external_args = Vec::new();
-                        for arg in &call.arguments {
-                            if let nu_protocol::ast::Argument::Positional(expr) = arg {
-                                external_args.push(ExternalArgument::Regular(expr.clone()));
-                            }
-                        }
-                        return vec![(
-                            expr.span,
-                            decl_name.to_string(),
-                            external_args.into_boxed_slice(),
-                        )];
-                    }
-                }
-                _ => {}
-            }
-            vec![]
+            extract_dangerous_command(expr, context)
+                .into_iter()
+                .collect()
         },
         &mut dangerous_commands,
     );
 
-    // Analyze each dangerous command
     for (command_span, cmd_name, args) in dangerous_commands {
-        // Check for recursive flags on rm commands
         let is_recursive = cmd_name == "rm" && has_recursive_flag(&args, context);
 
         for arg in &args {
             let path_str = extract_path_from_arg(arg, context);
 
-            // Check for dangerous paths
             if is_dangerous_path(&path_str) {
-                let severity = if is_recursive { "CRITICAL" } else { "WARNING" };
-                violations.push(
-                    RuleViolation::new_dynamic(
-                        "dangerous_file_operations",
-                        format!(
-                            "{severity}: Dangerous file operation '{cmd_name} {path_str}' - could \
-                             cause data loss"
-                        ),
-                        command_span,
-                    )
-                    .with_suggestion_static(
-                        "Avoid operations on system paths. Use specific file paths and consider \
-                         backup first",
-                    ),
-                );
+                violations.push(create_dangerous_path_violation(
+                    &cmd_name,
+                    &path_str,
+                    command_span,
+                    is_recursive,
+                ));
             }
 
-            // Check for variables used without validation
             if path_str.starts_with('$') && !is_inside_if_block(context, command_span) {
-                // Flag variable usage in dangerous commands as potentially risky
-                violations.push(
-                    RuleViolation::new_dynamic(
-                        "dangerous_file_operations",
-                        format!(
-                            "Variable '{path_str}' used in '{cmd_name}' command without visible \
-                             validation"
-                        ),
-                        command_span,
-                    )
-                    .with_suggestion_dynamic(format!(
-                        "Validate variable before use: if ({path_str} | path exists) {{ \
-                         {cmd_name} {path_str} }}"
-                    )),
-                );
+                violations.push(create_variable_validation_violation(
+                    &cmd_name,
+                    &path_str,
+                    command_span,
+                ));
             }
         }
     }

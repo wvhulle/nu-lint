@@ -25,25 +25,30 @@ fn check_signature(sig: &nu_protocol::Signature) -> Vec<RuleViolation> {
         .collect()
 }
 
+fn check_def_call(call: &nu_protocol::ast::Call, ctx: &LintContext) -> Vec<RuleViolation> {
+    let decl = ctx.working_set.get_decl(call.decl_id);
+    if decl.name() != "def" {
+        return vec![];
+    }
+
+    call.arguments
+        .iter()
+        .filter_map(|arg| {
+            if let nu_protocol::ast::Argument::Positional(arg_expr) = arg
+                && let Expr::Signature(sig) = &arg_expr.expr
+            {
+                return Some(check_signature(sig));
+            }
+            None
+        })
+        .flatten()
+        .collect()
+}
+
 fn check(context: &LintContext) -> Vec<RuleViolation> {
     context.collect_rule_violations(|expr, ctx| {
         match &expr.expr {
-            Expr::Call(call) => {
-                // Check if this is a def command
-                let decl = ctx.working_set.get_decl(call.decl_id);
-                if decl.name() == "def" {
-                    // The second positional argument of 'def' is a Signature expression
-                    // def name [params] { body }
-                    for arg in &call.arguments {
-                        if let nu_protocol::ast::Argument::Positional(arg_expr) = arg
-                            && let Expr::Signature(sig) = &arg_expr.expr
-                        {
-                            return check_signature(sig);
-                        }
-                    }
-                }
-                vec![]
-            }
+            Expr::Call(call) => check_def_call(call, ctx),
             _ => vec![],
         }
     })

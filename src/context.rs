@@ -33,15 +33,15 @@ impl LintContext<'_> {
             .find_iter(self.source)
             .filter_map(|mat| {
                 predicate(mat).map(|(message, suggestion)| {
-                    let mut violation = RuleViolation::new_dynamic(
+                    let violation = RuleViolation::new_dynamic(
                         rule_id,
                         message,
                         Span::new(mat.start(), mat.end()),
                     );
-                    if let Some(suggestion) = suggestion {
-                        violation = violation.with_suggestion_dynamic(suggestion);
+                    match suggestion {
+                        Some(sug) => violation.with_suggestion_dynamic(sug),
+                        None => violation,
                     }
-                    violation
                 })
             })
             .collect()

@@ -64,57 +64,72 @@ fn get_operator_symbol(operator: Operator) -> &'static str {
     }
 }
 
+fn check_for_compound_assignment(
+    expr: &nu_protocol::ast::Expression,
+    ctx: &LintContext,
+) -> Option<RuleViolation> {
+    let Expr::BinaryOp(left, op_expr, right) = &expr.expr else {
+        return None;
+    };
+
+    let Expr::Operator(nu_protocol::ast::Operator::Assignment(
+        nu_protocol::ast::Assignment::Assign,
+    )) = &op_expr.expr
+    else {
+        return None;
+    };
+
+    let Expr::Subexpression(block_id) = &right.expr else {
+        return None;
+    };
+
+    let block = ctx.working_set.get_block(*block_id);
+
+    let pipeline = block.pipelines.first()?;
+    let element = pipeline.elements.first()?;
+
+    let Expr::BinaryOp(sub_left, sub_op_expr, _sub_right) = &element.expr.expr else {
+        return None;
+    };
+
+    let Expr::Operator(operator) = &sub_op_expr.expr else {
+        return None;
+    };
+
+    if !expressions_refer_to_same_variable(left, sub_left, ctx) {
+        return None;
+    }
+
+    let compound_op = get_compound_operator(*operator)?;
+
+    let var_text = &ctx.source[left.span.start..left.span.end];
+    let op_symbol = get_operator_symbol(*operator);
+
+    let fix = build_fix(var_text, compound_op, element, expr.span, ctx);
+
+    let violation = RuleViolation::new_dynamic(
+        "prefer_compound_assignment",
+        format!(
+            "Use compound assignment: {var_text} {compound_op} instead of \
+             {var_text} = {var_text} {op_symbol} ..."
+        ),
+        expr.span,
+    )
+    .with_suggestion_dynamic(format!("Replace with: {var_text} {compound_op}"));
+
+    let violation = match fix {
+        Some(f) => violation.with_fix(f),
+        None => violation,
+    };
+
+    Some(violation)
+}
+
 fn check(context: &LintContext) -> Vec<RuleViolation> {
     context.collect_rule_violations(|expr, ctx| {
-        // Look for binary operations that are assignments
-        if let Expr::BinaryOp(left, op_expr, right) = &expr.expr
-            && let Expr::Operator(nu_protocol::ast::Operator::Assignment(
-                nu_protocol::ast::Assignment::Assign,
-            )) = &op_expr.expr
-        {
-            // Found an assignment: var = value
-            // Check if the right side is a subexpression containing a binary operation
-            if let Expr::Subexpression(block_id) = &right.expr {
-                let block = ctx.working_set.get_block(*block_id);
-                // Look for a binary operation in the subexpression
-                if let Some(pipeline) = block.pipelines.first()
-                    && let Some(element) = pipeline.elements.first()
-                    && let Expr::BinaryOp(sub_left, sub_op_expr, _sub_right) = &element.expr.expr
-                    && let Expr::Operator(operator) = &sub_op_expr.expr
-                {
-                    // Check if left operand matches the variable being assigned to
-                    if expressions_refer_to_same_variable(left, sub_left, ctx) {
-                        let compound_op = get_compound_operator(*operator);
-                        if let Some(compound_op) = compound_op {
-                            let var_text = &ctx.source[left.span.start..left.span.end];
-                            let op_symbol = get_operator_symbol(*operator);
-
-                            // Build fix: extract the right operand from the subexpression
-                            let fix = build_fix(var_text, compound_op, element, expr.span, ctx);
-
-                            let mut violation = RuleViolation::new_dynamic(
-                                "prefer_compound_assignment",
-                                format!(
-                                    "Use compound assignment: {var_text} {compound_op} instead of \
-                                     {var_text} = {var_text} {op_symbol} ..."
-                                ),
-                                expr.span,
-                            )
-                            .with_suggestion_dynamic(format!(
-                                "Replace with: {var_text} {compound_op}"
-                            ));
-
-                            if let Some(fix) = fix {
-                                violation = violation.with_fix(fix);
-                            }
-
-                            return vec![violation];
-                        }
-                    }
-                }
-            }
-        }
-        vec![]
+        check_for_compound_assignment(expr, ctx)
+            .into_iter()
+            .collect()
     })
 }
 

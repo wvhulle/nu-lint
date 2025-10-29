@@ -2,6 +2,33 @@
 mod tests {
     use crate::{context::LintContext, rules::prefer_nushell_data_ops::rule};
 
+    fn assert_fix_text_equals(
+        violations: &[crate::lint::RuleViolation],
+        expected: &str,
+        source: &str,
+    ) {
+        let Some(fix) = &violations[0].fix else {
+            return;
+        };
+        assert_eq!(
+            fix.replacements[0].new_text, expected,
+            "Failed for: {source}"
+        );
+    }
+
+    fn assert_fix_contains_alternative(violations: &[crate::lint::RuleViolation]) {
+        let Some(fix) = &violations[0].fix else {
+            return;
+        };
+        assert!(
+            fix.replacements[0]
+                .new_text
+                .contains("structured data operations")
+                || fix.replacements[0].new_text.contains("each { get field }")
+                || fix.replacements[0].new_text.contains("where condition")
+        );
+    }
+
     #[test]
     fn fix_jq_map_operation() {
         let source = "^jq 'map(.name)' users.json";
@@ -77,13 +104,7 @@ mod tests {
             LintContext::test_with_parsed_source(source, |context| {
                 let violations = rule.check(&context);
                 assert!(!violations.is_empty(), "Expected violation for: {source}");
-
-                if let Some(fix) = &violations[0].fix {
-                    assert_eq!(
-                        fix.replacements[0].new_text, expected,
-                        "Failed for: {source}"
-                    );
-                }
+                assert_fix_text_equals(&violations, expected, source);
             });
         }
     }
@@ -105,17 +126,7 @@ mod tests {
                     !violations.is_empty(),
                     "Should detect complex pattern: {source}"
                 );
-
-                if let Some(fix) = &violations[0].fix {
-                    // Complex patterns should get a general suggestion or specific known patterns
-                    assert!(
-                        fix.replacements[0]
-                            .new_text
-                            .contains("structured data operations")
-                            || fix.replacements[0].new_text.contains("each { get field }")
-                            || fix.replacements[0].new_text.contains("where condition")
-                    );
-                }
+                assert_fix_contains_alternative(&violations);
             });
         }
     }
@@ -184,14 +195,7 @@ mod tests {
             LintContext::test_with_parsed_source(source, |context| {
                 let violations = rule.check(&context);
                 assert!(!violations.is_empty());
-
-                if let Some(fix) = &violations[0].fix {
-                    assert_eq!(
-                        fix.replacements[0].new_text, expected_text,
-                        "Failed for: {}. Got: {}",
-                        source, fix.replacements[0].new_text
-                    );
-                }
+                assert_fix_text_equals(&violations, expected_text, source);
             });
         }
     }

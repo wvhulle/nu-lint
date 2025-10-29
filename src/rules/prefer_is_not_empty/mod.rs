@@ -7,30 +7,32 @@ use crate::{
     rule::{Rule, RuleCategory},
 };
 
+fn check_subexpression_for_is_empty(block_id: nu_protocol::BlockId, context: &LintContext) -> bool {
+    let block = context.working_set.get_block(block_id);
+    let Some(pipeline) = block.pipelines.first() else {
+        return false;
+    };
+    check_pipeline_for_is_empty(pipeline, context)
+}
+
 /// Check if an expression represents a "not ... is-empty" pattern
 fn is_not_is_empty_pattern(expr: &nu_protocol::ast::Expression, context: &LintContext) -> bool {
     // Look for: not (expr | is-empty)
-    if let Expr::UnaryNot(inner_expr) = &expr.expr {
-        match &inner_expr.expr {
-            Expr::Subexpression(block_id) => {
-                let block = context.working_set.get_block(*block_id);
-                if let Some(pipeline) = block.pipelines.first() {
-                    return check_pipeline_for_is_empty(pipeline, context);
-                }
+    let Expr::UnaryNot(inner_expr) = &expr.expr else {
+        return false;
+    };
+
+    match &inner_expr.expr {
+        Expr::Subexpression(block_id) => check_subexpression_for_is_empty(*block_id, context),
+        Expr::FullCellPath(path) => {
+            if let Expr::Subexpression(block_id) = &path.head.expr {
+                check_subexpression_for_is_empty(*block_id, context)
+            } else {
+                false
             }
-            Expr::FullCellPath(path) => {
-                // Check if the head is a subexpression
-                if let Expr::Subexpression(block_id) = &path.head.expr {
-                    let block = context.working_set.get_block(*block_id);
-                    if let Some(pipeline) = block.pipelines.first() {
-                        return check_pipeline_for_is_empty(pipeline, context);
-                    }
-                }
-            }
-            _ => {}
         }
+        _ => false,
     }
-    false
 }
 
 fn check_pipeline_for_is_empty(
@@ -49,52 +51,52 @@ fn check_pipeline_for_is_empty(
     false
 }
 
+fn extract_pipeline_text(
+    pipeline: &nu_protocol::ast::Pipeline,
+    context: &LintContext,
+) -> Option<String> {
+    if pipeline.elements.len() < 2 {
+        return None;
+    }
+
+    let elements_before_is_empty = &pipeline.elements[..pipeline.elements.len() - 1];
+    if elements_before_is_empty.is_empty() {
+        return None;
+    }
+
+    let start_span = elements_before_is_empty.first().unwrap().expr.span;
+    let end_span = elements_before_is_empty.last().unwrap().expr.span;
+    let combined_span = nu_protocol::Span::new(start_span.start, end_span.end);
+    let expr_text = &context.source[combined_span.start..combined_span.end];
+    Some(format!("{} | is-not-empty", expr_text.trim()))
+}
+
+fn generate_fix_from_subexpression(
+    block_id: nu_protocol::BlockId,
+    context: &LintContext,
+) -> Option<String> {
+    let block = context.working_set.get_block(block_id);
+    let pipeline = block.pipelines.first()?;
+    extract_pipeline_text(pipeline, context)
+}
+
 /// Generate the fix text for "not (expr | is-empty)" -> "expr | is-not-empty"
 fn generate_fix_text(expr: &nu_protocol::ast::Expression, context: &LintContext) -> Option<String> {
-    // Extract the expression before "is-empty" from "not (expr | is-empty)"
-    if let Expr::UnaryNot(inner_expr) = &expr.expr {
-        match &inner_expr.expr {
-            Expr::Subexpression(block_id) => {
-                let block = context.working_set.get_block(*block_id);
-                if let Some(pipeline) = block.pipelines.first()
-                    && pipeline.elements.len() >= 2
-                {
-                    // Get all elements except the last one (which is "is-empty")
-                    let elements_before_is_empty =
-                        &pipeline.elements[..pipeline.elements.len() - 1];
-                    if !elements_before_is_empty.is_empty() {
-                        let start_span = elements_before_is_empty.first().unwrap().expr.span;
-                        let end_span = elements_before_is_empty.last().unwrap().expr.span;
-                        let combined_span = nu_protocol::Span::new(start_span.start, end_span.end);
-                        let expr_text = &context.source[combined_span.start..combined_span.end];
-                        return Some(format!("{} | is-not-empty", expr_text.trim()));
-                    }
-                }
+    let Expr::UnaryNot(inner_expr) = &expr.expr else {
+        return None;
+    };
+
+    match &inner_expr.expr {
+        Expr::Subexpression(block_id) => generate_fix_from_subexpression(*block_id, context),
+        Expr::FullCellPath(path) => {
+            if let Expr::Subexpression(block_id) = &path.head.expr {
+                generate_fix_from_subexpression(*block_id, context)
+            } else {
+                None
             }
-            Expr::FullCellPath(path) => {
-                if let Expr::Subexpression(block_id) = &path.head.expr {
-                    let block = context.working_set.get_block(*block_id);
-                    if let Some(pipeline) = block.pipelines.first()
-                        && pipeline.elements.len() >= 2
-                    {
-                        // Get all elements except the last one (which is "is-empty")
-                        let elements_before_is_empty =
-                            &pipeline.elements[..pipeline.elements.len() - 1];
-                        if !elements_before_is_empty.is_empty() {
-                            let start_span = elements_before_is_empty.first().unwrap().expr.span;
-                            let end_span = elements_before_is_empty.last().unwrap().expr.span;
-                            let combined_span =
-                                nu_protocol::Span::new(start_span.start, end_span.end);
-                            let expr_text = &context.source[combined_span.start..combined_span.end];
-                            return Some(format!("{} | is-not-empty", expr_text.trim()));
-                        }
-                    }
-                }
-            }
-            _ => {}
         }
+        _ => None,
     }
-    None
 }
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {

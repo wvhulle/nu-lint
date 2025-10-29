@@ -25,7 +25,8 @@ fn echo_pattern() -> &'static Regex {
 fn has_journal_prefix(text: &str) -> bool {
     static PREFIX_PATTERN: OnceLock<Regex> = OnceLock::new();
     let pattern = PREFIX_PATTERN.get_or_init(|| {
-        // Match either numeric prefix <0-7> or keyword prefix (emerg, alert, crit, err, warning, notice, info, debug)
+        // Match either numeric prefix <0-7> or keyword prefix (emerg, alert, crit, err,
+        // warning, notice, info, debug)
         Regex::new(r"^<(?:[0-7]|emerg|alert|crit|err|warning|notice|info|debug)>").unwrap()
     });
     pattern.is_match(text)
@@ -50,11 +51,14 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
                 violations.push(
                     RuleViolation::new_static(
                         "systemd_journal_prefix",
-                        "Output without systemd journal log level prefix - consider adding prefix for proper logging",
+                        "Output without systemd journal log level prefix - consider adding prefix \
+                         for proper logging",
                         nu_protocol::Span::new(mat.start(), mat.end()),
                     )
                     .with_suggestion_static(
-                        "Add systemd journal prefix using numbers <0-7> or keywords: <emerg>, <alert>, <crit>, <err>, <warning>, <notice>, <info>, <debug>. Example: print \"<info>Starting process\"",
+                        "Add systemd journal prefix using numbers <0-7> or keywords: <emerg>, \
+                         <alert>, <crit>, <err>, <warning>, <notice>, <info>, <debug>. Example: \
+                         print \"<info>Starting process\"",
                     ),
                 );
             }
@@ -75,11 +79,14 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
                 violations.push(
                     RuleViolation::new_static(
                         "systemd_journal_prefix",
-                        "Output without systemd journal log level prefix - consider adding prefix for proper logging",
+                        "Output without systemd journal log level prefix - consider adding prefix \
+                         for proper logging",
                         nu_protocol::Span::new(mat.start(), mat.end()),
                     )
                     .with_suggestion_static(
-                        "Add systemd journal prefix using numbers <0-7> or keywords: <emerg>, <alert>, <crit>, <err>, <warning>, <notice>, <info>, <debug>. Example: echo \"<info>Starting process\"",
+                        "Add systemd journal prefix using numbers <0-7> or keywords: <emerg>, \
+                         <alert>, <crit>, <err>, <warning>, <notice>, <info>, <debug>. Example: \
+                         echo \"<info>Starting process\"",
                     ),
                 );
             }

@@ -156,7 +156,7 @@ Contributions are welcome. Please run tests and formatting before submitting:
 cargo test
 cargo +nightly fmt
 cargo clippy --all
-cargo clippy --fix --allow-dirty --all
+cargo clippy --fix --allow-dirty --all-targets
 ```
 
 ## License

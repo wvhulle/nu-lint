@@ -85,14 +85,12 @@ impl Rule {
     #[track_caller]
     /// Test helper: assert that the rule finds violations in the given code
     pub fn assert_detects(&self, code: &str) {
-        LintContext::test_with_parsed_source(code, |context| {
-            let violations = self.check(&context);
-            assert!(
-                !violations.is_empty(),
-                "Expected rule '{}' to detect violations in code, but found none",
-                self.id
-            );
-        });
+        let violations = LintContext::test_with_parsed_source(code, |context| self.check(&context));
+        assert!(
+            !violations.is_empty(),
+            "Expected rule '{}' to detect violations in code, but found none",
+            self.id
+        );
     }
 
     #[cfg(test)]
@@ -100,15 +98,13 @@ impl Rule {
     #[track_caller]
     /// Test helper: assert that the rule finds no violations in the given code
     pub fn assert_ignores(&self, code: &str) {
-        LintContext::test_with_parsed_source(code, |context| {
-            let violations = self.check(&context);
-            assert!(
-                violations.is_empty(),
-                "Expected rule '{}' to ignore code, but found {} violations",
-                self.id,
-                violations.len()
-            );
-        });
+        let violations = LintContext::test_with_parsed_source(code, |context| self.check(&context));
+        assert!(
+            violations.is_empty(),
+            "Expected rule '{}' to ignore code, but found {} violations",
+            self.id,
+            violations.len()
+        );
     }
 
     #[cfg(test)]
@@ -117,16 +113,14 @@ impl Rule {
     /// Test helper: assert that the rule finds at least the expected number of
     /// violations
     pub fn assert_violation_count(&self, code: &str, expected_min: usize) {
-        LintContext::test_with_parsed_source(code, |context| {
-            let violations = self.check(&context);
-            assert!(
-                violations.len() >= expected_min,
-                "Expected rule '{}' to find at least {} violations, but found {}",
-                self.id,
-                expected_min,
-                violations.len()
-            );
-        });
+        let violations = LintContext::test_with_parsed_source(code, |context| self.check(&context));
+        assert!(
+            violations.len() >= expected_min,
+            "Expected rule '{}' to find at least {} violations, but found {}",
+            self.id,
+            expected_min,
+            violations.len()
+        );
     }
 
     #[cfg(test)]
@@ -135,16 +129,14 @@ impl Rule {
     /// Test helper: assert that the rule finds exactly the expected number of
     /// violations
     pub fn assert_violation_count_exact(&self, code: &str, expected: usize) {
-        LintContext::test_with_parsed_source(code, |context| {
-            let violations = self.check(&context);
-            assert_eq!(
-                violations.len(),
-                expected,
-                "Expected rule '{}' to find exactly {} violation(s), but found {}",
-                self.id,
-                expected,
-                violations.len()
-            );
-        });
+        let violations = LintContext::test_with_parsed_source(code, |context| self.check(&context));
+        assert_eq!(
+            violations.len(),
+            expected,
+            "Expected rule '{}' to find exactly {} violation(s), but found {}",
+            self.id,
+            expected,
+            violations.len()
+        );
     }
 }

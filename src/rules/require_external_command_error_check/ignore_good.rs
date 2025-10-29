@@ -1,30 +1,33 @@
 use super::rule;
 
 #[test]
-fn ignore_proper_in_usage() {
+fn test_ignore_with_complete() {
     let good_code = r"
-let items = [1, 2, 3]
-$items | each { $in * 10 }";
+^git status | complete | if $in.exit_code != 0 { return }
+";
     rule().assert_ignores(good_code);
 }
 
 #[test]
-fn ignore_builtin_variables() {
+fn test_ignore_with_try() {
     let good_code = r"
-$env.PATH | each { $in | path exists }";
+try { ^command | process }
+";
     rule().assert_ignores(good_code);
 }
 
 #[test]
-fn ignore_proper_where_usage() {
+fn test_ignore_single_external() {
     let good_code = r"
-$data | where { $in.value > 5 }";
+^git status
+";
     rule().assert_ignores(good_code);
 }
 
 #[test]
-fn ignore_it_variable() {
+fn test_ignore_no_external() {
     let good_code = r"
-$items | each { $it.name }";
+ls | where size > 1kb
+";
     rule().assert_ignores(good_code);
 }

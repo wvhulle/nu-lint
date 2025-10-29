@@ -152,6 +152,7 @@ impl LintContext<'_> {
 #[cfg(test)]
 impl LintContext<'_> {
     /// Helper to create a test context with stdlib commands loaded
+    #[track_caller]
     pub fn test_with_parsed_source<F, R>(source: &str, f: F) -> R
     where
         F: for<'b> FnOnce(LintContext<'b>) -> R,

@@ -9,6 +9,8 @@ use crate::{
 fn is_dangerous_path(path_str: &str) -> bool {
     // Check for dangerous patterns in file paths
     path_str == "/"
+        || path_str == "../"
+        || path_str == ".."
         || path_str.starts_with("/..")
         || path_str.contains("/*")
         || path_str == "~"
@@ -46,6 +48,31 @@ fn extract_path_from_arg(arg: &ExternalArgument, context: &LintContext) -> Strin
             context.source[expr.span.start..expr.span.end].to_string()
         }
     }
+}
+
+fn is_inside_if_block(context: &LintContext, command_span: nu_protocol::Span) -> bool {
+    use nu_protocol::ast::Traverse;
+
+    let mut found_in_if = Vec::new();
+
+    context.ast.flat_map(
+        context.working_set,
+        &|expr| {
+            if let Expr::Call(call) = &expr.expr {
+                let decl_name = context.working_set.get_decl(call.decl_id).name();
+                if decl_name == "if" {
+                    // Check if the command span is within this if expression
+                    if expr.span.start <= command_span.start && expr.span.end >= command_span.end {
+                        return vec![true];
+                    }
+                }
+            }
+            vec![]
+        },
+        &mut found_in_if,
+    );
+
+    !found_in_if.is_empty()
 }
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {
@@ -107,27 +134,35 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
                 violations.push(
                     RuleViolation::new_dynamic(
                         "dangerous_file_operations",
-                        format!("{severity}: Dangerous file operation '{cmd_name} {path_str}' - could cause data loss"),
+                        format!(
+                            "{severity}: Dangerous file operation '{cmd_name} {path_str}' - could \
+                             cause data loss"
+                        ),
                         command_span,
                     )
                     .with_suggestion_static(
-                        "Avoid operations on system paths. Use specific file paths and consider backup first",
+                        "Avoid operations on system paths. Use specific file paths and consider \
+                         backup first",
                     ),
                 );
             }
 
             // Check for variables used without validation
-            if path_str.starts_with('$') {
+            if path_str.starts_with('$') && !is_inside_if_block(context, command_span) {
                 // Flag variable usage in dangerous commands as potentially risky
                 violations.push(
                     RuleViolation::new_dynamic(
                         "dangerous_file_operations",
-                        format!("Variable '{path_str}' used in '{cmd_name}' command without visible validation"),
+                        format!(
+                            "Variable '{path_str}' used in '{cmd_name}' command without visible \
+                             validation"
+                        ),
                         command_span,
                     )
-                    .with_suggestion_dynamic(
-                        format!("Validate variable before use: if ({path_str} | path exists) {{ {cmd_name} {path_str} }}"),
-                    ),
+                    .with_suggestion_dynamic(format!(
+                        "Validate variable before use: if ({path_str} | path exists) {{ \
+                         {cmd_name} {path_str} }}"
+                    )),
                 );
             }
         }

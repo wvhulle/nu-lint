@@ -1,4 +1,4 @@
-use std::{path::Path, sync::OnceLock};
+use std::{collections::HashSet, path::Path, sync::OnceLock};
 
 use nu_parser::parse;
 use nu_protocol::{
@@ -67,6 +67,10 @@ impl LintEngine {
         };
 
         let mut violations = self.collect_violations(&context);
+
+        // Extract parse errors from the working set and convert to violations
+        violations.extend(self.convert_parse_errors_to_violations(&working_set));
+
         Self::attach_file_path(&mut violations, path);
         Self::sort_violations(&mut violations);
         violations
@@ -86,6 +90,55 @@ impl LintEngine {
                     .into_iter()
                     .map(|rule_violation| rule_violation.into_violation(rule_severity))
                     .collect::<Vec<_>>()
+            })
+            .collect()
+    }
+
+    /// Convert parse errors from the `StateWorkingSet` into violations
+    fn convert_parse_errors_to_violations(&self, working_set: &StateWorkingSet) -> Vec<Violation> {
+        // Get the nu_parse_error rule to use its metadata
+        let parse_error_rule = self.registry.get_rule("nu_parse_error");
+
+        if parse_error_rule.is_none() {
+            return vec![];
+        }
+
+        let rule = parse_error_rule.unwrap();
+        let rule_severity = self.get_effective_rule_severity(rule);
+
+        // Check if this rule meets the minimum severity threshold
+        if let Some(min_threshold) = self.get_minimum_severity_threshold()
+            && rule_severity < min_threshold
+        {
+            return vec![];
+        }
+
+        let mut seen = HashSet::new();
+
+        // Convert each parse error to a violation, deduplicating by span and message
+        working_set
+            .parse_errors
+            .iter()
+            .filter_map(|parse_error| {
+                let key = (
+                    parse_error.span().start,
+                    parse_error.span().end,
+                    parse_error.to_string(),
+                );
+                if seen.insert(key.clone()) {
+                    use crate::lint::RuleViolation;
+
+                    Some(
+                        RuleViolation::new_dynamic(
+                            "nu_parse_error",
+                            parse_error.to_string(),
+                            parse_error.span(),
+                        )
+                        .into_violation(rule_severity),
+                    )
+                } else {
+                    None
+                }
             })
             .collect()
     }

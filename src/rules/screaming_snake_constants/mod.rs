@@ -56,7 +56,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "screaming_snake_constants",
         RuleCategory::Naming,
-        Severity::Warning,
+        Severity::Info,
         "Constants should use SCREAMING_SNAKE_CASE naming convention",
         check,
     )

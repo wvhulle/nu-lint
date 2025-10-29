@@ -42,7 +42,7 @@ fn looks_like_error(message: &str, exit_code: i32) -> bool {
 fn check(context: &LintContext) -> Vec<RuleViolation> {
     let pat = pattern();
 
-    context.violations_from_regex(pat, "prefer_error_make", Severity::Info, |mat| {
+    context.violations_from_regex(pat, "prefer_error_make", |mat| {
         pat.captures(mat.as_str()).and_then(|caps| {
             let message = caps[1].trim_matches('"').trim_matches('\'');
             let exit_code: i32 = caps[2].parse().unwrap_or(1);
@@ -65,7 +65,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "prefer_error_make",
         RuleCategory::ErrorHandling,
-        Severity::Info,
+        Severity::Warning,
         "Use 'error make' for custom errors instead of 'print' + 'exit'",
         check,
     )

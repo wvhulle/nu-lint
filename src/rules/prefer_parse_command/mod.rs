@@ -16,7 +16,6 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     violations.extend(context.violations_from_regex(
         &split_get_pattern,
         "prefer_parse_command",
-        Severity::Warning,
         |_| {
             Some((
                 "Manual string splitting with indexed access - consider using 'parse'".to_string(),

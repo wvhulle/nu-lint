@@ -45,7 +45,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "no_trailing_spaces",
         RuleCategory::Formatting,
-        Severity::Warning,
+        Severity::Info,
         "Eliminate trailing spaces at the end of lines",
         check,
     )

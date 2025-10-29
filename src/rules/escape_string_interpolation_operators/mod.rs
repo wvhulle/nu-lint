@@ -474,7 +474,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "escape_string_interpolation_operators",
         RuleCategory::ErrorHandling,
-        Severity::Warning,
+        Severity::Error,
         "Detect unescaped parentheses with operator keywords in string interpolations that cause \
          runtime errors",
         check,

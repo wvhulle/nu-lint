@@ -6,7 +6,7 @@ use nu_protocol::{
     engine::{Command, EngineState, StateWorkingSet},
 };
 
-use crate::lint::{RuleViolation, Severity, Violation};
+use crate::lint::{RuleViolation, Violation};
 
 /// Context containing all lint information (source, AST, and engine state)
 /// Rules can use whatever they need from this context
@@ -24,7 +24,6 @@ impl LintContext<'_> {
         &self,
         pattern: &regex::Regex,
         rule_id: &'static str,
-        _severity: Severity,
         predicate: MatchPredicate,
     ) -> Vec<RuleViolation>
     where

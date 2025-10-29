@@ -152,7 +152,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "avoid_jq_for_simple_ops",
         RuleCategory::Performance,
-        Severity::Warning,
+        Severity::Info,
         "Avoid jq for simple operations that have direct Nushell built-in equivalents",
         check,
     )

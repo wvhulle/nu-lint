@@ -63,7 +63,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "consistent_error_handling",
         RuleCategory::ErrorHandling,
-        Severity::Warning,
+        Severity::Error,
         "Check external command results consistently for better error handling",
         check,
     )

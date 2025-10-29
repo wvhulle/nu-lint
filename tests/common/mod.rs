@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use std::sync::Mutex;
 use tempfile::TempDir;
 

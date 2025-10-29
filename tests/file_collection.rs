@@ -1,3 +1,5 @@
+mod common;
+
 use std::fs;
 
 use nu_lint::cli::{collect_files_to_lint, collect_nu_files};
@@ -51,4 +53,14 @@ fn test_collect_nu_files() {
     assert!(files.contains(&nu_file));
     assert!(files.contains(&nu_file_in_subdir));
     assert!(!files.contains(&other_file));
+}
+
+#[test]
+fn test_lint_empty_directory() {
+    let temp_dir = TempDir::new().unwrap();
+
+    // Verify the directory exists but has no .nu files
+    assert!(temp_dir.path().exists());
+    let nu_files = collect_nu_files(&temp_dir.path().to_path_buf());
+    assert!(nu_files.is_empty());
 }

@@ -240,7 +240,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "prefer_builtin_grep",
         RuleCategory::Idioms,
-        Severity::Info,
+        Severity::Warning,
         "Use Nu's 'find' or 'where' instead of 'grep' for better data handling",
         check,
     )

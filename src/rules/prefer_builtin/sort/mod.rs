@@ -191,7 +191,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "prefer_builtin_sort",
         RuleCategory::Idioms,
-        Severity::Info,
+        Severity::Warning,
         "Use Nu's 'sort' command for better data type support",
         check,
     )

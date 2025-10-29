@@ -220,7 +220,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "prefer_builtin_cat",
         RuleCategory::Idioms,
-        Severity::Info,
+        Severity::Warning,
         "Use Nu's 'open' command instead of 'cat' for better file handling",
         check,
     )

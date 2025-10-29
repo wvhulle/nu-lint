@@ -216,7 +216,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "prefer_builtin_ls",
         RuleCategory::Idioms,
-        Severity::Info,
+        Severity::Warning,
         "Use Nu's built-in 'ls' instead of external ls command for structured data",
         check,
     )

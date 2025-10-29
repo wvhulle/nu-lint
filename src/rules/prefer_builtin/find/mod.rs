@@ -250,7 +250,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "prefer_builtin_find",
         RuleCategory::Idioms,
-        Severity::Info,
+        Severity::Warning,
         "Use Nu's 'ls' with glob patterns instead of 'find' command",
         check,
     )

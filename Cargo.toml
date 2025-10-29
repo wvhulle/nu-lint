@@ -2,6 +2,7 @@
 authors = ["Willem Vanhulle <willemvanhulle@protonmail.com>"]
 description = "Linter for Nu shell scripts that helpfully suggests improvements"
 edition = "2024"
+exclude = ["benches/fixtures/"]
 keywords = ["nushell", "linter", "static-analysis", "code-quality", "shell"]
 license = "MIT"
 name = "nu-lint"

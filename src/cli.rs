@@ -21,8 +21,10 @@ pub struct Cli {
     pub config: Option<PathBuf>,
 
     #[arg(
-        short,
-        long,
+        short = 'f',
+        long = "format",
+        alias = "output",
+        short_alias = 'o',
         help = "Output format",
         value_enum,
         default_value = "text"

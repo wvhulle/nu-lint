@@ -87,7 +87,7 @@ nu-lint explain snake_case_variables       # Explain a rule
 For LSP / editor plugins:
 
 ```bash
-nu-lint --output json                      # Lint and output JSON
+nu-lint --format json                      # Lint and output JSON
 ```
 
 ## Configuration

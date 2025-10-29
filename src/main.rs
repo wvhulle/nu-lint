@@ -8,7 +8,29 @@ use nu_lint::{
 };
 
 fn main() {
-    let cli = Cli::parse();
+    let cli = match Cli::try_parse() {
+        Ok(cli) => cli,
+        Err(err) => {
+            // Custom error handling to provide better error messages
+            match err.kind() {
+                clap::error::ErrorKind::UnknownArgument => {
+                    eprintln!("Error: Unknown argument or option");
+                    eprintln!();
+                    eprintln!(
+                        "Usage: {} [OPTIONS] [PATHS]... [COMMAND]",
+                        env!("CARGO_PKG_NAME")
+                    );
+                    eprintln!();
+                    eprintln!("For more information, try '--help'");
+                    process::exit(2);
+                }
+                _ => {
+                    // For other error types, use the default clap formatting
+                    err.exit();
+                }
+            }
+        }
+    };
     let config = load_config(cli.config.as_ref());
 
     if let Some(command) = cli.command {

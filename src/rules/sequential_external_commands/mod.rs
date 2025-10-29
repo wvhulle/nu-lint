@@ -52,7 +52,8 @@ fn create_violation_if_needed(
             combined_span,
         )
         .with_suggestion_static(
-            "Check exit codes between commands or use '&&' for conditional execution",
+            "Check exit codes using 'try', 'complete', or check $env.LAST_EXIT_CODE between \
+             commands",
         ),
     )
 }

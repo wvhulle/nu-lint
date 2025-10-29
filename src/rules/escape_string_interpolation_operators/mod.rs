@@ -40,6 +40,23 @@ const INCOMPLETE_EXPRESSION_PATTERNS: &[&str] = &[
     r"^\s*(if|while|for)\s+\w+\s*$",
 ];
 
+/// Common words that appear in natural language but unlikely to be commands
+const COMMON_NATURAL_LANGUAGE_WORDS: &[&str] = &[
+    "some",
+    "text",
+    "here",
+    "manual",
+    "review",
+    "needed",
+    "this",
+    "that",
+    "with",
+    "note",
+    "message",
+    "description",
+    "example",
+];
+
 fn extract_content_from_parentheses(source: &str) -> &str {
     source.trim_start_matches('(').trim_end_matches(')')
 }
@@ -326,7 +343,7 @@ fn analyze_function_call(
 fn analyze_external_call(
     head: &nu_protocol::ast::Expression,
     args: &[nu_protocol::ast::ExternalArgument],
-    _context: &LintContext,
+    context: &LintContext,
     sensitivity: DetectionSensitivity,
 ) -> Option<DangerousInterpolationPattern> {
     // Check if the head expression is a problematic command name
@@ -358,9 +375,59 @@ fn analyze_external_call(
                 return Some(DangerousInterpolationPattern::ErrorMessage(pattern.clone()));
             }
         }
+
+        // Check if this looks like plain text rather than a command
+        // Use working_set to check if the command actually exists
+        if !args.is_empty() && looks_like_plain_text(pattern.as_str(), args, context) {
+            return Some(DangerousInterpolationPattern::ComplexBooleanLogic(format!(
+                "plain text: {pattern}"
+            )));
+        }
     }
 
     None
+}
+
+/// Check if an external call looks like plain text rather than a command
+fn looks_like_plain_text(
+    head: &str,
+    args: &[nu_protocol::ast::ExternalArgument],
+    context: &LintContext,
+) -> bool {
+    // Need at least 2 arguments to consider it plain text
+    if args.len() < 2 {
+        return false;
+    }
+
+    // Check if this is a known Nushell command
+    if context.working_set.find_decl(head.as_bytes()).is_some() {
+        return false; // It's a known command, not plain text
+    }
+
+    // If the head is a common natural language word, it's likely plain text
+    if COMMON_NATURAL_LANGUAGE_WORDS.contains(&head) {
+        return true;
+    }
+
+    // Check if any arguments look like flags or special syntax (command-like)
+    let has_command_syntax = args.iter().any(|arg| {
+        let nu_protocol::ast::ExternalArgument::Regular(expr) = arg else {
+            return false;
+        };
+        let Expr::String(s) = &expr.expr else {
+            return false;
+        };
+        s.starts_with('-') || s.starts_with('$') || s.starts_with('/')
+    });
+
+    // If has command-like syntax, it's probably a command
+    if has_command_syntax {
+        return false;
+    }
+
+    // Multiple words without command syntax and not a known command = likely plain
+    // text
+    true
 }
 
 // Note: is_dangerous_subexpression has been replaced by analyze_ast_expression

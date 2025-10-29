@@ -9,7 +9,7 @@ fn replaces_simple_grep_with_find() {
 
         assert_eq!(violations.len(), 1);
         let fix = violations[0].fix.as_ref().expect("Fix should be generated");
-        assert_eq!(fix.replacements[0].new_text.as_ref(), r#"find ""pattern"""#);
+        assert_eq!(fix.replacements[0].new_text.as_ref(), r#"find "pattern""#);
         assert!(
             fix.description.contains("case-insensitive") && fix.description.contains("default"),
             "Fix should explicitly mention case-insensitive is default in Nu: {}",
@@ -26,6 +26,11 @@ fn mentions_redundant_i_flag() {
         let violations = rule().check(&context);
 
         let fix = violations[0].fix.as_ref().unwrap();
+        // With a file argument, it converts to open | lines | where
+        assert_eq!(
+            fix.replacements[0].new_text.as_ref(),
+            r#"open logs.txt | lines | where $it =~ "warning""#
+        );
         assert!(
             fix.description.contains("redundant") && fix.description.contains("-i"),
             "Fix must explicitly state that -i flag is redundant in Nu: {}",
@@ -42,9 +47,10 @@ fn suggests_where_for_complex_grep() {
         let violations = rule().check(&context);
 
         let fix = violations[0].fix.as_ref().unwrap();
+        // -r flag triggers complex mode with where
         assert_eq!(
             fix.replacements[0].new_text.as_ref(),
-            r#"where $it =~ "pattern""#
+            r#"open . | lines | where $it =~ "TODO""#
         );
         assert!(
             fix.description.contains("regex") || fix.description.contains("where"),
@@ -62,6 +68,7 @@ fn mentions_structured_data_advantage() {
         let violations = rule().check(&context);
 
         let fix = violations[0].fix.as_ref().unwrap();
+        assert_eq!(fix.replacements[0].new_text.as_ref(), r#"find "error""#);
         assert!(
             fix.description.contains("structured") || fix.description.contains("data"),
             "Fix should mention that find works on structured data: {}",

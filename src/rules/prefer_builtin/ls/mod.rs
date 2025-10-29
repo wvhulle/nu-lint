@@ -159,9 +159,8 @@ impl LsOptions {
 
         if self.long || self.human_readable {
             parts.push(
-                "Note: -l and -h flags are not needed in Nu. The ls command always shows \
-                 detailed information in a structured table, and sizes are automatically \
-                 human-readable."
+                "Note: -l and -h flags are not needed in Nu. The ls command always shows detailed \
+                 information in a structured table, and sizes are automatically human-readable."
                     .to_string(),
             );
         }

@@ -113,5 +113,8 @@ fn test_multiple_parse_errors() {
         .filter(|v| v.rule_id.as_ref() == "nu_parse_error")
         .collect();
 
-    assert!(!parse_errors.is_empty(), "Expected at least one parse error");
+    assert!(
+        !parse_errors.is_empty(),
+        "Expected at least one parse error"
+    );
 }

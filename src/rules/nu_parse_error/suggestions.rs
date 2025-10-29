@@ -120,10 +120,7 @@ fn test_unexpected_token_message_propagation() {
     for error in &parse_errors {
         let msg = error.message.to_string();
         assert!(!msg.is_empty(), "Error message should not be empty");
-        assert!(
-            msg.len() > 5,
-            "Error message should be descriptive: {msg}"
-        );
+        assert!(msg.len() > 5, "Error message should be descriptive: {msg}");
     }
 }
 

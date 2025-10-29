@@ -46,11 +46,9 @@ fn check_def_call(call: &nu_protocol::ast::Call, ctx: &LintContext) -> Vec<RuleV
 }
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {
-    context.collect_rule_violations(|expr, ctx| {
-        match &expr.expr {
-            Expr::Call(call) => check_def_call(call, ctx),
-            _ => vec![],
-        }
+    context.collect_rule_violations(|expr, ctx| match &expr.expr {
+        Expr::Call(call) => check_def_call(call, ctx),
+        _ => vec![],
     })
 }
 

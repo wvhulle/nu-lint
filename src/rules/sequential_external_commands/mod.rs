@@ -47,13 +47,12 @@ fn create_violation_if_needed(
     Some(
         RuleViolation::new_static(
             "sequential_external_commands",
-            "Sequential external commands without error checking - failures in \
-             first command ignored",
+            "Sequential external commands without error checking - failures in first command \
+             ignored",
             combined_span,
         )
         .with_suggestion_static(
-            "Check exit codes between commands or use '&&' for conditional \
-             execution",
+            "Check exit codes between commands or use '&&' for conditional execution",
         ),
     )
 }

@@ -42,7 +42,7 @@ fn format_jq_replacement(filter: &str, file_arg: Option<&str>) -> String {
             |file| format!("open {file} | from json | {cmd}"),
         )
     };
-    
+
     match filter {
         "'length'" => with_file("length"),
         "'keys'" => with_file("columns"),

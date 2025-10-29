@@ -63,18 +63,14 @@ fn build_fix(
                 let file_arg = args_text.get(1);
 
                 match parse_jq_filter(filter) {
-                    JqFilter::Identity => {
-                        file_arg.map_or_else(
-                            || "from json".to_string(),
-                            |file| format!("open {file} | from json"),
-                        )
-                    }
-                    JqFilter::FieldAccess(field) => {
-                        file_arg.map_or_else(
-                            || format!("from json | get {field}"),
-                            |file| format!("open {file} | from json | get {field}"),
-                        )
-                    }
+                    JqFilter::Identity => file_arg.map_or_else(
+                        || "from json".to_string(),
+                        |file| format!("open {file} | from json"),
+                    ),
+                    JqFilter::FieldAccess(field) => file_arg.map_or_else(
+                        || format!("from json | get {field}"),
+                        |file| format!("open {file} | from json | get {field}"),
+                    ),
                     JqFilter::Complex => "from json".to_string(),
                 }
             }

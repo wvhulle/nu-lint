@@ -69,7 +69,11 @@ impl<'a> PipeSpacingVisitor<'a> {
                 return;
             }
 
-            let message = Self::get_pipe_spacing_message(has_proper_space_before, has_proper_space_after, before_pipe);
+            let message = Self::get_pipe_spacing_message(
+                has_proper_space_before,
+                has_proper_space_after,
+                before_pipe,
+            );
 
             let violation_start = start + pipe_pos.saturating_sub(1);
             let violation_end = (start + pipe_pos + 2).min(end);
@@ -92,7 +96,11 @@ impl<'a> PipeSpacingVisitor<'a> {
         }
     }
 
-    fn get_pipe_spacing_message(has_proper_space_before: bool, has_proper_space_after: bool, before_pipe: &str) -> &'static str {
+    fn get_pipe_spacing_message(
+        has_proper_space_before: bool,
+        has_proper_space_after: bool,
+        before_pipe: &str,
+    ) -> &'static str {
         if !has_proper_space_before && !has_proper_space_after {
             "Pipe should have exactly one space before and after"
         } else if !has_proper_space_before {

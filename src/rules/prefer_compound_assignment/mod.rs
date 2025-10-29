@@ -110,8 +110,8 @@ fn check_for_compound_assignment(
     let violation = RuleViolation::new_dynamic(
         "prefer_compound_assignment",
         format!(
-            "Use compound assignment: {var_text} {compound_op} instead of \
-             {var_text} = {var_text} {op_symbol} ..."
+            "Use compound assignment: {var_text} {compound_op} instead of {var_text} = {var_text} \
+             {op_symbol} ..."
         ),
         expr.span,
     )

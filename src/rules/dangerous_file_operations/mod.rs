@@ -130,14 +130,12 @@ fn create_dangerous_path_violation(
     RuleViolation::new_dynamic(
         "dangerous_file_operations",
         format!(
-            "{severity}: Dangerous file operation '{cmd_name} {path_str}' - could \
-             cause data loss"
+            "{severity}: Dangerous file operation '{cmd_name} {path_str}' - could cause data loss"
         ),
         command_span,
     )
     .with_suggestion_static(
-        "Avoid operations on system paths. Use specific file paths and consider \
-         backup first",
+        "Avoid operations on system paths. Use specific file paths and consider backup first",
     )
 }
 
@@ -148,15 +146,11 @@ fn create_variable_validation_violation(
 ) -> RuleViolation {
     RuleViolation::new_dynamic(
         "dangerous_file_operations",
-        format!(
-            "Variable '{path_str}' used in '{cmd_name}' command without visible \
-             validation"
-        ),
+        format!("Variable '{path_str}' used in '{cmd_name}' command without visible validation"),
         command_span,
     )
     .with_suggestion_dynamic(format!(
-        "Validate variable before use: if ({path_str} | path exists) {{ \
-         {cmd_name} {path_str} }}"
+        "Validate variable before use: if ({path_str} | path exists) {{ {cmd_name} {path_str} }}"
     ))
 }
 

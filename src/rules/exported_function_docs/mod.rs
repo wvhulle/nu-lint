@@ -23,10 +23,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
             let after_def = trimmed.strip_prefix("export def ").unwrap();
             let func_name = extract_function_name(after_def);
 
-            let line_start: usize = source_lines[..line_idx]
-                .iter()
-                .map(|l| l.len() + 1)
-                .sum();
+            let line_start: usize = source_lines[..line_idx].iter().map(|l| l.len() + 1).sum();
             let line_end = line_start + line.len();
 
             violations.push(

@@ -76,7 +76,7 @@ Create `.nu-lint.toml` in your project root (or any parent directory):
 
 ```toml
 [general]
-max_severity = "warning"
+min_severity = "warning"
 
 [rules]
 snake_case_variables = "warning"

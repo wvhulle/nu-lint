@@ -6,7 +6,8 @@ use crate::{
     rule::{Rule, RuleCategory},
 };
 
-/// Find all external command calls in the AST along with their parent expression spans
+/// Find all external command calls in the AST along with their parent
+/// expression spans
 fn find_external_commands(context: &LintContext) -> Vec<(Span, Span)> {
     use nu_protocol::ast::Traverse;
 
@@ -32,21 +33,21 @@ fn is_wrapped_in_error_handling(span: Span, context: &LintContext) -> bool {
     // Get a safe substring by only looking at full source sections
     let source_before = &context.source[..span.start];
     let source_after = &context.source[span.end..];
-    
+
     // Look at the last 100 chars before (safe because we're taking from the start)
     let prefix_text = if source_before.len() > 100 {
         &source_before[source_before.len() - 100..]
     } else {
         source_before
     };
-    
+
     // Look at the first 100 chars after (safe because we're taking from the end)
     let suffix_text = if source_after.len() > 100 {
         &source_after[..100]
     } else {
         source_after
     };
-    
+
     // Check for various error handling patterns
     (prefix_text.contains("try {") || prefix_text.contains("try{"))
         || suffix_text.trim_start().starts_with("| complete")

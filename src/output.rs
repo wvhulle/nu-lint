@@ -78,8 +78,10 @@ impl OutputFormatter for JsonFormatter {
                     .and_then(|path| std::fs::read_to_string(path.as_ref()).ok())
                     .unwrap_or_default();
 
-                let (line_start, column_start) = calculate_line_column(&source_code, violation.span.start);
-                let (line_end, column_end) = calculate_line_column(&source_code, violation.span.end);
+                let (line_start, column_start) =
+                    calculate_line_column(&source_code, violation.span.start);
+                let (line_end, column_end) =
+                    calculate_line_column(&source_code, violation.span.end);
 
                 JsonViolation {
                     rule_id: violation.rule_id.to_string(),

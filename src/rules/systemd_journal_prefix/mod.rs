@@ -100,7 +100,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "systemd_journal_prefix",
         RuleCategory::Idioms,
-        Severity::Warning,
+        Severity::Info,
         "Detect output without systemd journal log level prefix when using SyslogLevelPrefix",
         check,
     )

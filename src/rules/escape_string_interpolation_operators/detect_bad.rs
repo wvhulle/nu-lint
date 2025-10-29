@@ -167,3 +167,21 @@ def test_common [] {
 
     rule.assert_detects(code);
 }
+
+#[test]
+fn detects_manual_review_needed_pattern() {
+    let rule = super::rule();
+
+    let code = r#"
+def fix_file [file: string] {
+    if $has_errors {
+        print $"(ansi yellow)⚠️  Could not apply some fixes to ($file) (manual review needed)(ansi reset)"
+    } else {
+        print $"(ansi green)✅ No issues in ($file)(ansi reset)"
+    }
+}
+"#;
+
+    rule.assert_detects(code);
+    rule.assert_violation_count_exact(code, 1);
+}

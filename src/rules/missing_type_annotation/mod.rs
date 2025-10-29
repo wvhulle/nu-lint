@@ -56,7 +56,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "missing_type_annotation",
         RuleCategory::TypeSafety,
-        Severity::Info,
+        Severity::Warning,
         "Parameters should have type annotations",
         check,
     )

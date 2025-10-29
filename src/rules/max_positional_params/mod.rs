@@ -39,7 +39,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "max_positional_params",
         RuleCategory::CodeQuality,
-        Severity::Info,
+        Severity::Warning,
         "Custom commands should have ≤ 2 positional parameters",
         check,
     )

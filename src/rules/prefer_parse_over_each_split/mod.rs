@@ -71,7 +71,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "prefer_parse_over_each_split",
         RuleCategory::Idioms,
-        Severity::Info,
+        Severity::Warning,
         "Prefer 'parse' over 'each' with 'split row' for structured text processing",
         check,
     )

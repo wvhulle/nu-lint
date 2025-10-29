@@ -46,7 +46,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "prefer_lines_over_split",
         RuleCategory::Idioms,
-        Severity::Info,
+        Severity::Warning,
         "Use 'lines' instead of 'split row \"\\n\"' for better performance and clarity",
         check,
     )

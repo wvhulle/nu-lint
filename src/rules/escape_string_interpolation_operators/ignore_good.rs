@@ -32,7 +32,7 @@ fn ignores_non_operator_keywords() {
     let code = r#"
 def ok_example [] {
     let x = "value"
-    print $"Result ($x) (some text here)"
+    print $"Result ($x) \(some text here\)"
 }
 "#;
 

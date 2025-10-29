@@ -134,7 +134,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "unnecessary_mut",
         RuleCategory::CodeQuality,
-        Severity::Info,
+        Severity::Warning,
         "Variables should only be marked 'mut' when they are actually reassigned",
         check,
     )

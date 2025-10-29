@@ -4,10 +4,7 @@ use nu_protocol::ast::Expr;
 
 // Re-export Fix type for use by fix builders
 pub use crate::lint::Fix;
-use crate::{
-    context::LintContext,
-    lint::{RuleViolation, Severity},
-};
+use crate::{context::LintContext, lint::RuleViolation};
 
 /// Extract external command arguments as strings
 #[must_use]
@@ -106,7 +103,6 @@ fn get_custom_suggestion(
 pub fn detect_external_commands<S: ::std::hash::BuildHasher>(
     context: &LintContext,
     rule_id: &'static str,
-    _severity: Severity,
     alternatives: &HashMap<&'static str, BuiltinAlternative, S>,
     fix_builder: Option<FixBuilder>,
 ) -> Vec<RuleViolation> {

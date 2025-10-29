@@ -208,7 +208,6 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     crate::external_command::detect_external_commands(
         context,
         "avoid_external_system_tools",
-        Severity::Info,
         &get_builtin_alternatives(),
         Some(build_fix),
     )

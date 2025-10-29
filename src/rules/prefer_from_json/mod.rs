@@ -88,7 +88,6 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     crate::external_command::detect_external_commands(
         context,
         "prefer_from_json",
-        Severity::Info,
         &get_jq_alternatives(),
         Some(build_fix),
     )
@@ -98,7 +97,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "prefer_from_json",
         RuleCategory::Idioms,
-        Severity::Info,
+        Severity::Warning,
         "Prefer 'from json' and structured data operations over external jq commands",
         check,
     )

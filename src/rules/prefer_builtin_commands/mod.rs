@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
 use crate::{
+    RuleViolation,
     context::LintContext,
     external_command::{BuiltinAlternative, Fix, extract_external_args},
-    lint::{Replacement, RuleViolation, Severity},
+    lint::{Replacement, Severity},
     rule::{Rule, RuleCategory},
 };
 
@@ -142,7 +143,6 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     crate::external_command::detect_external_commands(
         context,
         "avoid_external_file_tools",
-        Severity::Info,
         &get_builtin_alternatives(),
         Some(build_fix),
     )

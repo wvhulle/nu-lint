@@ -52,7 +52,8 @@ fn create_violation_if_needed(
             combined_span,
         )
         .with_suggestion_static(
-            "Check exit codes between commands or use '&&' for conditional execution",
+            "Check exit codes using 'try', 'complete', or check $env.LAST_EXIT_CODE between \
+             commands",
         ),
     )
 }
@@ -70,7 +71,10 @@ fn process_external_command_pair(
         let second_span = sequential_externals[j];
         let pair_key = (first_span.start, second_span.start);
 
-        if seen_pairs.contains(&pair_key) || second_span.start - first_span.end >= MAX_DISTANCE {
+        if seen_pairs.contains(&pair_key)
+            || second_span.start <= first_span.end
+            || second_span.start - first_span.end >= MAX_DISTANCE
+        {
             continue;
         }
 

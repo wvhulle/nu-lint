@@ -7,6 +7,7 @@ fn detects_external_ls() {
     LintContext::test_with_parsed_source(source, |context| {
         let violations = rule().check(&context);
         assert_eq!(violations.len(), 1);
+        assert_eq!(violations[0].rule_id, "prefer_builtin_ls");
     });
 }
 
@@ -46,20 +47,14 @@ fn preserves_directory_argument() {
 }
 
 #[test]
-fn preserves_flags() {
-    let source = "^ls -la";
+fn preserves_multiple_paths() {
+    let source = "^ls src tests";
 
     LintContext::test_with_parsed_source(source, |context| {
         let violations = rule().check(&context);
 
         let fix = violations[0].fix.as_ref().unwrap();
-        // -la gets converted: -a becomes --all, -l is noted as unnecessary
-        assert_eq!(fix.replacements[0].new_text.as_ref(), "ls --all");
-        assert!(
-            fix.description.contains("-l") && fix.description.contains("not needed"),
-            "Fix should mention that -l flag is not needed: {}",
-            fix.description
-        );
+        assert_eq!(fix.replacements[0].new_text.as_ref(), "ls src tests");
     });
 }
 
@@ -81,8 +76,49 @@ fn preserves_glob_pattern() {
 }
 
 #[test]
+fn detects_exa_command() {
+    let source = "^exa";
+
+    LintContext::test_with_parsed_source(source, |context| {
+        let violations = rule().check(&context);
+
+        assert_eq!(violations.len(), 1);
+        let fix = violations[0].fix.as_ref().unwrap();
+        assert_eq!(fix.replacements[0].new_text.as_ref(), "ls");
+        assert!(
+            fix.description.contains("exa") || fix.description.contains("structured"),
+            "Fix should mention exa and structured data: {}",
+            fix.description
+        );
+    });
+}
+
+#[test]
+fn detects_eza_command() {
+    let source = "^eza -la";
+
+    LintContext::test_with_parsed_source(source, |context| {
+        let violations = rule().check(&context);
+
+        assert_eq!(violations.len(), 1);
+        let fix = violations[0].fix.as_ref().unwrap();
+        assert_eq!(fix.replacements[0].new_text.as_ref(), "ls --all");
+    });
+}
+
+#[test]
 fn ignores_builtin_ls() {
     let source = "ls";
+
+    LintContext::test_with_parsed_source(source, |context| {
+        let violations = rule().check(&context);
+        assert_eq!(violations.len(), 0);
+    });
+}
+
+#[test]
+fn ignores_builtin_ls_with_args() {
+    let source = "ls --all *.rs";
 
     LintContext::test_with_parsed_source(source, |context| {
         let violations = rule().check(&context);

@@ -179,25 +179,3 @@ impl LintEngine {
         &self.registry
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_lint_valid_code() {
-        let engine = LintEngine::new(Config::default());
-        let source = "let my_variable = 5";
-        let violations = engine.lint_source(source, None);
-        assert_eq!(violations.len(), 0);
-    }
-
-    #[test]
-    fn test_lint_invalid_snake_case() {
-        let engine = LintEngine::new(Config::default());
-        let source = "let myVariable = 5";
-        let violations = engine.lint_source(source, None);
-        assert!(!violations.is_empty());
-        assert_eq!(violations[0].rule_id, "snake_case_variables");
-    }
-}

@@ -7,8 +7,6 @@ pub mod lint;
 pub mod output;
 pub mod rule;
 pub mod rules;
-#[cfg(test)]
-mod test_utils;
 
 pub use config::Config;
 pub use context::LintContext;

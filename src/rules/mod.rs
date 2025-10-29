@@ -8,6 +8,7 @@ pub mod descriptive_error_messages;
 pub mod discourage_bare_ignore;
 pub mod discourage_underscore_commands;
 pub mod escape_string_interpolation_operators;
+pub mod exit_only_in_main;
 pub mod exported_function_docs;
 pub mod kebab_case_commands;
 pub mod max_positional_params;
@@ -84,6 +85,7 @@ impl RuleRegistry {
         registry.register(discourage_bare_ignore::rule());
         registry.register(discourage_underscore_commands::rule());
         registry.register(escape_string_interpolation_operators::rule());
+        registry.register(exit_only_in_main::rule());
         registry.register(exported_function_docs::rule());
         registry.register(kebab_case_commands::rule());
         registry.register(max_positional_params::rule());

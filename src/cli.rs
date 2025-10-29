@@ -1,6 +1,7 @@
 use std::{path::PathBuf, process, sync::Mutex};
 
 use clap::{Parser, Subcommand};
+use ignore::WalkBuilder;
 use rayon::prelude::*;
 
 use crate::{Config, JsonFormatter, LintEngine, OutputFormatter, TextFormatter, lint::Violation};
@@ -69,7 +70,8 @@ pub fn handle_command(command: Commands, config: &Config) {
     }
 }
 
-/// Collect all files to lint from the provided paths
+/// Collect all files to lint from the provided paths, respecting .gitignore
+/// files
 #[must_use]
 pub fn collect_files_to_lint(paths: &[PathBuf]) -> Vec<PathBuf> {
     let mut files_to_lint = Vec::new();
@@ -83,9 +85,13 @@ pub fn collect_files_to_lint(paths: &[PathBuf]) -> Vec<PathBuf> {
         }
 
         if path.is_file() {
-            files_to_lint.push(path.clone());
+            // For individual files, add them directly (don't check gitignore for explicitly
+            // specified files)
+            if path.extension().and_then(|s| s.to_str()) == Some("nu") {
+                files_to_lint.push(path.clone());
+            }
         } else if path.is_dir() {
-            let files = collect_nu_files(path);
+            let files = collect_nu_files_with_gitignore(path);
             if files.is_empty() {
                 eprintln!("Warning: No .nu files found in {}", path.display());
             }
@@ -101,6 +107,32 @@ pub fn collect_files_to_lint(paths: &[PathBuf]) -> Vec<PathBuf> {
     }
 
     files_to_lint
+}
+
+/// Collect .nu files from a directory, respecting .gitignore files
+#[must_use]
+pub fn collect_nu_files_with_gitignore(dir: &PathBuf) -> Vec<PathBuf> {
+    let mut nu_files = Vec::new();
+
+    let walker = WalkBuilder::new(dir)
+        .standard_filters(true) // Enable standard filters including .gitignore
+        .build();
+
+    for result in walker {
+        match result {
+            Ok(entry) => {
+                let path = entry.path();
+                if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("nu") {
+                    nu_files.push(path.to_path_buf());
+                }
+            }
+            Err(err) => {
+                eprintln!("Warning: Error walking directory: {err}");
+            }
+        }
+    }
+
+    nu_files
 }
 
 /// Lint files either in parallel or sequentially
@@ -174,46 +206,6 @@ pub fn output_results(violations: &[Violation], files: &[PathBuf], format: Optio
         Format::Json => JsonFormatter.format(violations, &source),
     };
     println!("{output}");
-}
-
-/// Recursively collect all .nu files from a directory
-#[must_use]
-pub fn collect_nu_files(dir: &PathBuf) -> Vec<PathBuf> {
-    let mut nu_files = Vec::new();
-    visit_dir(dir, &mut nu_files);
-    nu_files
-}
-
-fn visit_dir(dir: &PathBuf, nu_files: &mut Vec<PathBuf>) {
-    if !dir.is_dir() {
-        return;
-    }
-
-    let entries = match std::fs::read_dir(dir) {
-        Ok(entries) => entries,
-        Err(e) => {
-            eprintln!("Warning: Cannot read directory {}: {}", dir.display(), e);
-            return;
-        }
-    };
-
-    for entry in entries {
-        let entry = match entry {
-            Ok(entry) => entry,
-            Err(e) => {
-                eprintln!("Warning: Cannot read entry in {}: {}", dir.display(), e);
-                continue;
-            }
-        };
-
-        let path = entry.path();
-
-        if path.is_dir() {
-            visit_dir(&path, nu_files);
-        } else if path.extension().and_then(|s| s.to_str()) == Some("nu") {
-            nu_files.push(path);
-        }
-    }
 }
 
 fn list_rules(config: &Config) {

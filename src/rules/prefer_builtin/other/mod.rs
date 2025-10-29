@@ -253,12 +253,6 @@ fn build_fix(
         ),
 
         // Text transformation commands
-        "sed" => {
-            let desc = "Use 'str replace' for find and replace: 'str replace <pattern> \
-                        <replacement>' works on structured data"
-                .to_string();
-            ("str replace".to_string(), desc)
-        }
         "awk" => {
             let desc = "Use Nu's data pipeline: 'where' for filtering, 'select' for columns, or \
                         'each' for row processing"

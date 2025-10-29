@@ -135,23 +135,6 @@ fn replaces_wc_lines() {
 }
 
 #[test]
-fn replaces_sed_with_str_replace() {
-    let source = "^sed";
-
-    LintContext::test_with_parsed_source(source, |context| {
-        let violations = rule().check(&context);
-
-        let fix = violations[0].fix.as_ref().unwrap();
-        assert_eq!(fix.replacements[0].new_text.as_ref(), "str replace");
-        assert!(
-            fix.description.contains("structured"),
-            "Fix should mention structured data: {}",
-            fix.description
-        );
-    });
-}
-
-#[test]
 fn replaces_awk_with_pipeline() {
     let source = "^awk";
 

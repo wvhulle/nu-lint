@@ -103,6 +103,7 @@ impl RuleRegistry {
         registry.register(prefer_builtin::prefer_builtin_tail());
         registry.register(prefer_builtin::prefer_builtin_sort());
         registry.register(prefer_builtin::prefer_builtin_uniq());
+        registry.register(prefer_builtin::prefer_builtin_sed());
         registry.register(prefer_builtin::prefer_builtin_other());
         registry.register(prefer_compound_assignment::rule());
         registry.register(prefer_each_over_for::rule());

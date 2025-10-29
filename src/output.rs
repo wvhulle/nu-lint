@@ -78,7 +78,10 @@ impl OutputFormatter for JsonFormatter {
                     .and_then(|path| std::fs::read_to_string(path.as_ref()).ok())
                     .unwrap_or_default();
 
-                let (line, column) = calculate_line_column(&source_code, violation.span.start);
+                let (line_start, column_start) =
+                    calculate_line_column(&source_code, violation.span.start);
+                let (line_end, column_end) =
+                    calculate_line_column(&source_code, violation.span.end);
 
                 JsonViolation {
                     rule_id: violation.rule_id.to_string(),
@@ -88,8 +91,12 @@ impl OutputFormatter for JsonFormatter {
                         .file
                         .as_ref()
                         .map(std::string::ToString::to_string),
-                    line,
-                    column,
+                    line_start,
+                    line_end,
+                    column_start,
+                    column_end,
+                    offset_start: violation.span.start,
+                    offset_end: violation.span.end,
                     suggestion: violation
                         .suggestion
                         .as_ref()
@@ -205,8 +212,12 @@ pub struct JsonViolation {
     pub severity: String,
     pub message: String,
     pub file: Option<String>,
-    pub line: usize,
-    pub column: usize,
+    pub line_start: usize,
+    pub line_end: usize,
+    pub column_start: usize,
+    pub column_end: usize,
+    pub offset_start: usize,
+    pub offset_end: usize,
     pub suggestion: Option<String>,
 }
 

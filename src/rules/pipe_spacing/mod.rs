@@ -61,59 +61,65 @@ impl<'a> PipeSpacingVisitor<'a> {
             let before_pipe = &between[..pipe_pos];
             let after_pipe = &between[pipe_pos + 1..];
 
-            // Fixed logic: Check for exactly one space before and after
             let has_proper_space_before = before_pipe == " ";
             let has_proper_space_after =
                 after_pipe.starts_with(' ') && !after_pipe.starts_with("  ");
 
-            if !has_proper_space_before || !has_proper_space_after {
-                let message = if !has_proper_space_before && !has_proper_space_after {
-                    "Pipe should have exactly one space before and after"
-                } else if !has_proper_space_before {
-                    if before_pipe.is_empty() {
-                        "Pipe should have space before |"
-                    } else {
-                        "Pipe should have exactly one space before |"
-                    }
-                } else {
-                    "Pipe should have space after |"
-                };
-
-                // Calculate the span for the violation (around the pipe)
-                let violation_start = start + pipe_pos.saturating_sub(1);
-                let violation_end = (start + pipe_pos + 2).min(end);
-                let violation_span = Span::new(violation_start, violation_end);
-
-                // Replace the entire pipe region with proper spacing
-                let fix_start = start;
-                let fix_end = end;
-                let fix_span = Span::new(fix_start, fix_end);
-
-                let fix = Fix::new_static(
-                    "Fix pipe spacing to ' | '",
-                    vec![Replacement::new_static(fix_span, " | ")],
-                );
-
-                self.violations.push(
-                    RuleViolation::new_dynamic("pipe_spacing", message.to_string(), violation_span)
-                        .with_suggestion_static("Use ' | ' with single spaces")
-                        .with_fix(fix),
-                );
+            if has_proper_space_before && has_proper_space_after {
+                return;
             }
+
+            let message = Self::get_pipe_spacing_message(
+                has_proper_space_before,
+                has_proper_space_after,
+                before_pipe,
+            );
+
+            let violation_start = start + pipe_pos.saturating_sub(1);
+            let violation_end = (start + pipe_pos + 2).min(end);
+            let violation_span = Span::new(violation_start, violation_end);
+
+            let fix_start = start;
+            let fix_end = end;
+            let fix_span = Span::new(fix_start, fix_end);
+
+            let fix = Fix::new_static(
+                "Fix pipe spacing to ' | '",
+                vec![Replacement::new_static(fix_span, " | ")],
+            );
+
+            self.violations.push(
+                RuleViolation::new_dynamic("pipe_spacing", message.to_string(), violation_span)
+                    .with_suggestion_static("Use ' | ' with single spaces")
+                    .with_fix(fix),
+            );
         }
     }
 
-    /// Check if a pipe at the given position is part of closure parameters
+    fn get_pipe_spacing_message(
+        has_proper_space_before: bool,
+        has_proper_space_after: bool,
+        before_pipe: &str,
+    ) -> &'static str {
+        if !has_proper_space_before && !has_proper_space_after {
+            "Pipe should have exactly one space before and after"
+        } else if !has_proper_space_before {
+            if before_pipe.is_empty() {
+                "Pipe should have space before |"
+            } else {
+                "Pipe should have exactly one space before |"
+            }
+        } else {
+            "Pipe should have space after |"
+        }
+    }
+
     fn is_closure_parameter(text: &str, pipe_pos: usize) -> bool {
-        // Look for pattern like {|...|
         let before = &text[..pipe_pos];
         let after = &text[pipe_pos + 1..];
-
-        // Check if we're between { and another |
         before.contains('{') && after.contains('|')
     }
 
-    /// Get line number for a byte offset (optimized for performance)
     fn get_line_number_optimized(&self, offset: usize) -> usize {
         // Only count newlines up to the offset, not the entire source
         let safe_offset = offset.min(self.source.len());

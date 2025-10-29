@@ -102,13 +102,6 @@ min_severity = "warning"
 snake_case_variables = "warning"
 prefer_error_make = "info"
 kebab_case_commands = "warning"
-
-[style]
-line_length = 100
-indent_spaces = 4
-
-[exclude]
-patterns = ["*.test.nu", "vendor/**"]
 ```
 
 The linter will automatically find and use this config file when you run it.
@@ -155,8 +148,8 @@ Contributions are welcome. Please run tests and formatting before submitting:
 ```bash
 cargo test
 cargo +nightly fmt
-cargo clippy --all
-cargo clippy --fix --allow-dirty --all
+cargo clippy --all-targets
+cargo clippy --fix --allow-dirty --all-targets
 ```
 
 ## License

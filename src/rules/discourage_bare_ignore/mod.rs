@@ -50,7 +50,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "discourage_bare_ignore",
         RuleCategory::ErrorHandling,
-        Severity::Info,
+        Severity::Warning,
         "Using '| ignore' may hide errors - consider explicit error handling",
         check,
     )

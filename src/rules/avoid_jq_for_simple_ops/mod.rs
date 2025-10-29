@@ -35,6 +35,32 @@ fn get_simple_jq_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
     map
 }
 
+fn format_jq_replacement(filter: &str, file_arg: Option<&str>) -> String {
+    let with_file = |cmd: &str| {
+        file_arg.map_or_else(
+            || cmd.to_string(),
+            |file| format!("open {file} | from json | {cmd}"),
+        )
+    };
+
+    match filter {
+        "'length'" => with_file("length"),
+        "'keys'" => with_file("columns"),
+        "'type'" => with_file("describe"),
+        "'empty'" => "null".to_string(),
+        "'not'" => "not".to_string(),
+        "'flatten'" => "flatten".to_string(),
+        "'add'" => "math sum".to_string(),
+        "'min'" => "math min".to_string(),
+        "'max'" => "math max".to_string(),
+        _ if filter.starts_with("'.[") && filter.ends_with("]'") => {
+            let index = &filter[3..filter.len() - 2];
+            format!("get {index}")
+        }
+        _ => "# Use structured data operations".to_string(),
+    }
+}
+
 fn build_fix(
     cmd_text: &str,
     alternative: &BuiltinAlternative,
@@ -50,66 +76,8 @@ fn build_fix(
                 alternative.command.to_string()
             } else {
                 let filter = &args_text[0];
-
-                match filter.as_str() {
-                    "'length'" => {
-                        // jq 'length' -> length
-                        if args_text.len() >= 2 {
-                            format!("open {} | from json | length", args_text[1])
-                        } else {
-                            "length".to_string()
-                        }
-                    }
-                    "'keys'" => {
-                        // jq 'keys' -> columns
-                        if args_text.len() >= 2 {
-                            format!("open {} | from json | columns", args_text[1])
-                        } else {
-                            "columns".to_string()
-                        }
-                    }
-                    "'type'" => {
-                        // jq 'type' -> describe
-                        if args_text.len() >= 2 {
-                            format!("open {} | from json | describe", args_text[1])
-                        } else {
-                            "describe".to_string()
-                        }
-                    }
-                    "'empty'" => {
-                        // jq 'empty' -> null or empty
-                        "null".to_string()
-                    }
-                    "'not'" => {
-                        // jq 'not' -> not
-                        "not".to_string()
-                    }
-                    "'flatten'" => {
-                        // jq 'flatten' -> flatten
-                        "flatten".to_string()
-                    }
-                    "'add'" => {
-                        // jq 'add' -> math sum (for arrays)
-                        "math sum".to_string()
-                    }
-                    "'min'" => {
-                        // jq 'min' -> math min
-                        "math min".to_string()
-                    }
-                    "'max'" => {
-                        // jq 'max' -> math max
-                        "math max".to_string()
-                    }
-                    _ => {
-                        // Check for simple array indexing
-                        if filter.starts_with("'.[") && filter.ends_with("]'") {
-                            let index = &filter[3..filter.len() - 2];
-                            format!("get {index}")
-                        } else {
-                            "# Use structured data operations".to_string()
-                        }
-                    }
-                }
+                let file_arg = args_text.get(1).map(String::as_str);
+                format_jq_replacement(filter, file_arg)
             }
         }
         _ => alternative.command.to_string(),

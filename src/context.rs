@@ -33,15 +33,15 @@ impl LintContext<'_> {
             .find_iter(self.source)
             .filter_map(|mat| {
                 predicate(mat).map(|(message, suggestion)| {
-                    let mut violation = RuleViolation::new_dynamic(
+                    let violation = RuleViolation::new_dynamic(
                         rule_id,
                         message,
                         Span::new(mat.start(), mat.end()),
                     );
-                    if let Some(suggestion) = suggestion {
-                        violation = violation.with_suggestion_dynamic(suggestion);
+                    match suggestion {
+                        Some(sug) => violation.with_suggestion_dynamic(sug),
+                        None => violation,
                     }
-                    violation
                 })
             })
             .collect()
@@ -152,6 +152,7 @@ impl LintContext<'_> {
 #[cfg(test)]
 impl LintContext<'_> {
     /// Helper to create a test context with stdlib commands loaded
+    #[track_caller]
     pub fn test_with_parsed_source<F, R>(source: &str, f: F) -> R
     where
         F: for<'b> FnOnce(LintContext<'b>) -> R,

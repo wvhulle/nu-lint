@@ -60,28 +60,18 @@ fn build_fix(
                 alternative.command.to_string()
             } else {
                 let filter = &args_text[0];
+                let file_arg = args_text.get(1);
 
                 match parse_jq_filter(filter) {
-                    JqFilter::Identity => {
-                        // jq '.' file.json -> open file.json | from json
-                        if args_text.len() >= 2 {
-                            format!("open {} | from json", args_text[1])
-                        } else {
-                            "from json".to_string()
-                        }
-                    }
-                    JqFilter::FieldAccess(field) => {
-                        // jq '.field' file.json -> open file.json | from json | get field
-                        if args_text.len() >= 2 {
-                            format!("open {} | from json | get {field}", args_text[1])
-                        } else {
-                            format!("from json | get {field}")
-                        }
-                    }
-                    JqFilter::Complex => {
-                        // Complex case - suggest general approach
-                        "from json".to_string()
-                    }
+                    JqFilter::Identity => file_arg.map_or_else(
+                        || "from json".to_string(),
+                        |file| format!("open {file} | from json"),
+                    ),
+                    JqFilter::FieldAccess(field) => file_arg.map_or_else(
+                        || format!("from json | get {field}"),
+                        |file| format!("open {file} | from json | get {field}"),
+                    ),
+                    JqFilter::Complex => "from json".to_string(),
                 }
             }
         }

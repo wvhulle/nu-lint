@@ -37,55 +37,53 @@ fn is_valid_kebab_case(name: &str) -> bool {
     }) && name.chars().next().is_some_and(|c| c.is_ascii_lowercase())
 }
 
+/// Check if this is a def or export def command
+fn is_def_command(decl_name: &str) -> bool {
+    matches!(decl_name, "def" | "export def")
+}
+
+/// Create a violation for invalid command name
+fn create_kebab_case_violation(cmd_name: &str, name_span: nu_protocol::Span) -> RuleViolation {
+    let kebab_case_name = cmd_name.to_kebab_case();
+
+    let fix = Fix {
+        description: format!("Rename command '{cmd_name}' to '{kebab_case_name}'").into(),
+        replacements: vec![Replacement {
+            span: name_span,
+            new_text: kebab_case_name.clone().into(),
+        }],
+    };
+
+    RuleViolation::new_dynamic(
+        "kebab_case_commands",
+        format!("Command '{cmd_name}' should use kebab-case naming convention"),
+        name_span,
+    )
+    .with_suggestion_dynamic(format!("Consider renaming to: {kebab_case_name}"))
+    .with_fix(fix)
+}
+
+/// Check a single call expression for command naming violations
+fn check_call(call: &nu_protocol::ast::Call, ctx: &LintContext) -> Option<RuleViolation> {
+    let decl = ctx.working_set.get_decl(call.decl_id);
+
+    is_def_command(decl.name()).then_some(())?;
+
+    let Argument::Positional(name_expr) = call.arguments.first()? else {
+        return None;
+    };
+
+    let cmd_name = ctx.source.get(name_expr.span.start..name_expr.span.end)?;
+
+    (!is_valid_kebab_case(cmd_name)).then(|| create_kebab_case_violation(cmd_name, name_expr.span))
+}
+
 fn check(context: &LintContext) -> Vec<RuleViolation> {
     context.collect_rule_violations(|expr, ctx| {
-        match &expr.expr {
-            Expr::Call(call) => {
-                // Check for def commands (function definitions)
-                let decl = ctx.working_set.get_decl(call.decl_id);
-                if decl.name() == "def" || decl.name() == "export def" {
-                    // The first argument to def should be the command name
-                    if let Some(Argument::Positional(name_expr)) = call.arguments.first() {
-                        let cmd_name = ctx
-                            .source
-                            .get(name_expr.span.start..name_expr.span.end)
-                            .unwrap_or("");
-
-                        if !is_valid_kebab_case(cmd_name) {
-                            let kebab_case_name = cmd_name.to_kebab_case();
-                            let fix = Some(Fix {
-                                description: format!(
-                                    "Rename command '{cmd_name}' to '{kebab_case_name}'"
-                                )
-                                .into(),
-                                replacements: vec![Replacement {
-                                    span: name_expr.span,
-                                    new_text: kebab_case_name.clone().into(),
-                                }],
-                            });
-
-                            let mut violation = RuleViolation::new_dynamic(
-                                "kebab_case_commands",
-                                format!(
-                                    "Command '{cmd_name}' should use kebab-case naming convention"
-                                ),
-                                name_expr.span,
-                            )
-                            .with_suggestion_dynamic(format!(
-                                "Consider renaming to: {kebab_case_name}"
-                            ));
-
-                            if let Some(f) = fix {
-                                violation = violation.with_fix(f);
-                            }
-
-                            return vec![violation];
-                        }
-                    }
-                }
-                vec![]
-            }
-            _ => vec![],
+        if let Expr::Call(call) = &expr.expr {
+            check_call(call, ctx).into_iter().collect()
+        } else {
+            vec![]
         }
     })
 }

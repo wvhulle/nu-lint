@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Write};
+use std::collections::HashMap;
 
 use nu_protocol::ast::Expr;
 
@@ -131,25 +131,29 @@ pub fn detect_external_commands<S: ::std::hash::BuildHasher>(
                     alternative.command, cmd_text
                 );
 
-                let mut suggestion = format!(
-                    "Replace '^{}' with built-in command: {}\nBuilt-in commands are more \
-                     portable, faster, and provide better error handling.",
-                    cmd_text, alternative.command
-                );
-
-                if let Some(note) = alternative.note {
-                    write!(suggestion, "\n\nNote: {note}").unwrap();
-                }
+                let suggestion = match alternative.note {
+                    Some(note) => format!(
+                        "Replace '^{}' with built-in command: {}\nBuilt-in commands are more \
+                         portable, faster, and provide better error handling.\n\nNote: {note}",
+                        cmd_text, alternative.command
+                    ),
+                    None => format!(
+                        "Replace '^{}' with built-in command: {}\nBuilt-in commands are more \
+                         portable, faster, and provide better error handling.",
+                        cmd_text, alternative.command
+                    ),
+                };
 
                 let fix =
                     fix_builder.map(|builder| builder(cmd_text, alternative, args, expr.span, ctx));
 
-                let mut violation = RuleViolation::new_dynamic(rule_id, message, expr.span)
+                let violation = RuleViolation::new_dynamic(rule_id, message, expr.span)
                     .with_suggestion_dynamic(suggestion);
 
-                if let Some(f) = fix {
-                    violation = violation.with_fix(f);
-                }
+                let violation = match fix {
+                    Some(f) => violation.with_fix(f),
+                    None => violation,
+                };
 
                 return vec![violation];
             }

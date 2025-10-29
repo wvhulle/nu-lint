@@ -54,37 +54,21 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     }
 
     // Collect violations from all nested blocks (including function bodies)
-    violations.extend(context.collect_rule_violations(|expr, ctx| {
-        match &expr.expr {
-            Expr::Block(block_id) => {
+    violations.extend(
+        context.collect_rule_violations(|expr, ctx| match &expr.expr {
+            Expr::Block(block_id) | Expr::Closure(block_id) => {
                 let block = ctx.working_set.get_block(*block_id);
-                let mut nested_violations = Vec::new();
-
-                // Check all pipelines in this block
-                for pipeline in &block.pipelines {
-                    if let Some(violation) = check_pipeline_for_violations(pipeline, ctx) {
-                        nested_violations.push(violation);
-                    }
-                }
-                nested_violations
-            }
-            Expr::Closure(block_id) => {
-                let block = ctx.working_set.get_block(*block_id);
-                let mut nested_violations = Vec::new();
-
-                // Check all pipelines in this closure block (function body)
-                for pipeline in &block.pipelines {
-                    if let Some(violation) = check_pipeline_for_violations(pipeline, ctx) {
-                        nested_violations.push(violation);
-                    }
-                }
-                nested_violations
+                block
+                    .pipelines
+                    .iter()
+                    .filter_map(|pipeline| check_pipeline_for_violations(pipeline, ctx))
+                    .collect()
             }
             _ => {
                 vec![]
             }
-        }
-    }));
+        }),
+    );
 
     violations
 }

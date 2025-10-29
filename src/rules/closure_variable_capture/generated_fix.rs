@@ -1,0 +1,1 @@
+// No auto-fixes for closure captures - requires manual review of variable scope

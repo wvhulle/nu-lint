@@ -16,89 +16,91 @@ fn find_mut_keyword_span(source: &str, var_span: Span) -> Span {
 
     if let Some(mut_pos) = text_before.rfind("mut ") {
         let abs_mut_start = search_start + mut_pos;
-        let abs_mut_end = abs_mut_start + 4; // "mut " is 4 characters
+        let abs_mut_end = abs_mut_start + 4;
         return Span::new(abs_mut_start, abs_mut_end);
     }
 
     var_span
 }
 
+fn extract_mut_declaration(
+    expr: &nu_protocol::ast::Expression,
+    context: &LintContext,
+) -> Option<(VarId, String, Span, Span)> {
+    let Expr::Call(call) = &expr.expr else {
+        return None;
+    };
+
+    let decl_name = context.working_set.get_decl(call.decl_id).name();
+    if decl_name != "mut" {
+        return None;
+    }
+
+    let var_arg = call.arguments.first()?;
+
+    let (nu_protocol::ast::Argument::Positional(var_expr)
+    | nu_protocol::ast::Argument::Unknown(var_expr)) = var_arg
+    else {
+        return None;
+    };
+
+    let Expr::VarDecl(var_id) = &var_expr.expr else {
+        return None;
+    };
+
+    let var_name = &context.source[var_expr.span.start..var_expr.span.end];
+
+    if var_name.starts_with('_') {
+        return None;
+    }
+
+    let mut_span = find_mut_keyword_span(context.source, var_expr.span);
+    Some((*var_id, var_name.to_string(), var_expr.span, mut_span))
+}
+
+fn extract_reassigned_var(expr: &nu_protocol::ast::Expression) -> Option<VarId> {
+    let Expr::BinaryOp(lhs, op, _rhs) = &expr.expr else {
+        return None;
+    };
+
+    let Expr::Operator(nu_protocol::ast::Operator::Assignment(_)) = &op.expr else {
+        return None;
+    };
+
+    match &lhs.expr {
+        Expr::Var(var_id) => Some(*var_id),
+        Expr::FullCellPath(cell_path) => {
+            if let Expr::Var(var_id) = &cell_path.head.expr {
+                Some(*var_id)
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
+}
+
 fn check(context: &LintContext) -> Vec<RuleViolation> {
     use nu_protocol::ast::Traverse;
 
-    // First pass: collect all mutable variable declarations using flat_map
     let mut mut_declarations: Vec<(VarId, String, Span, Span)> = Vec::new();
 
     context.ast.flat_map(
         context.working_set,
-        &|expr| {
-            if let Expr::Call(call) = &expr.expr {
-                let decl_name = context.working_set.get_decl(call.decl_id).name();
-
-                // Check if this is a "mut" declaration
-                if decl_name == "mut" {
-                    // For "mut" declarations, the first argument contains the variable declaration
-                    if let Some(var_arg) = call.arguments.first() {
-                        // Match against Argument enum variants
-                        let (nu_protocol::ast::Argument::Positional(var_expr)
-                        | nu_protocol::ast::Argument::Unknown(var_expr)) = var_arg
-                        else {
-                            return vec![];
-                        };
-
-                        // Look for VarDecl pattern which contains the variable ID
-                        if let Expr::VarDecl(var_id) = &var_expr.expr {
-                            let var_name = &context.source[var_expr.span.start..var_expr.span.end];
-
-                            // Skip underscore-prefixed variables
-                            if !var_name.starts_with('_') {
-                                let mut_span = find_mut_keyword_span(context.source, var_expr.span);
-                                return vec![(
-                                    *var_id,
-                                    var_name.to_string(),
-                                    var_expr.span,
-                                    mut_span,
-                                )];
-                            }
-                        }
-                    }
-                }
-            }
-            vec![]
-        },
+        &|expr| extract_mut_declaration(expr, context).into_iter().collect(),
         &mut mut_declarations,
     );
 
-    // Convert to HashMap for quick lookup
     let mut_variables: HashMap<VarId, (String, Span, Span)> = mut_declarations
         .into_iter()
         .map(|(id, name, decl_span, mut_span)| (id, (name, decl_span, mut_span)))
         .collect();
 
-    // Second pass: find all reassignments using flat_map
     let mut reassigned: Vec<VarId> = Vec::new();
 
     context.ast.flat_map(
         context.working_set,
-        &|expr| {
-            if let Expr::BinaryOp(lhs, op, _rhs) = &expr.expr
-                && let Expr::Operator(nu_protocol::ast::Operator::Assignment(_)) = &op.expr
-            {
-                // Collect reassigned variable IDs
-                return match &lhs.expr {
-                    Expr::Var(var_id) => vec![*var_id],
-                    Expr::FullCellPath(cell_path) => {
-                        if let Expr::Var(var_id) = &cell_path.head.expr {
-                            vec![*var_id]
-                        } else {
-                            vec![]
-                        }
-                    }
-                    _ => vec![],
-                };
-            }
-            vec![]
-        },
+        &|expr| extract_reassigned_var(expr).into_iter().collect(),
         &mut reassigned,
     );
 

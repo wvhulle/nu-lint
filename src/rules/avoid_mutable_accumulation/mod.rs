@@ -4,7 +4,7 @@ use regex::Regex;
 
 use crate::{
     context::LintContext,
-    lint::{Severity, Violation},
+    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
@@ -13,7 +13,7 @@ fn mut_list_pattern() -> &'static Regex {
     PATTERN.get_or_init(|| Regex::new(r"mut\s+(\w+)\s*=\s*\[\s*\]").unwrap())
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
     mut_list_pattern()
         .captures_iter(context.source)
         .filter_map(|cap| {
@@ -24,21 +24,19 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 .is_match(context.source)
                 .then(|| {
                     let full_match = cap.get(0)?;
-                    Some(Violation {
-                        rule_id: "avoid_mutable_accumulation".into(),
-                        severity: Severity::Warning,
-                        message: format!(
-                            "Mutable list '{var_name}' with append - consider using functional \
-                             pipeline"
+                    Some(
+                        RuleViolation::new_dynamic(
+                            "avoid_mutable_accumulation",
+                            format!(
+                                "Mutable list '{var_name}' with append - consider using \
+                                 functional pipeline"
+                            ),
+                            nu_protocol::Span::new(full_match.start(), full_match.end()),
                         )
-                        .into(),
-                        span: nu_protocol::Span::new(full_match.start(), full_match.end()),
-                        suggestion: Some(
-                            "Use '$items | each { ... }' instead of mutable accumulation".into(),
+                        .with_suggestion_static(
+                            "Use '$items | each { ... }' instead of mutable accumulation",
                         ),
-                        fix: None,
-                        file: None,
-                    })
+                    )
                 })?
         })
         .collect()

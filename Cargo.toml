@@ -6,7 +6,7 @@ keywords = ["nushell", "linter", "static-analysis", "code-quality", "shell"]
 license = "MIT"
 name = "nu-lint"
 repository = "https://github.com/wvhulle/nu-lint"
-version = "0.0.8"
+version = "0.0.9"
 
 [lints.clippy]
 pedantic = { level = "warn", priority = 0 }
@@ -14,6 +14,7 @@ pedantic = { level = "warn", priority = 0 }
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
 heck = "0.5"
+ignore = "0.4"
 miette = { version = "7.0", features = ["fancy"] }
 nu-cmd-lang = "0.108.0"
 nu-command = "0.108.0"

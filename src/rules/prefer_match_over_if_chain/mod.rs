@@ -2,11 +2,11 @@ use regex::Regex;
 
 use crate::{
     context::LintContext,
-    lint::{Severity, Violation},
+    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
-fn check(context: &LintContext) -> Vec<Violation> {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
     let mut violations = Vec::new();
 
     // Pattern: if $var == value { } else if $var == value { } else { }
@@ -18,7 +18,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
     violations.extend(context.violations_from_regex(
         &if_chain_pattern,
         "prefer_match_over_if_chain",
-        Severity::Info,
         |mat| {
             let caps = if_chain_pattern.captures(mat.as_str())?;
             let var_name1 = &caps[1];
@@ -50,7 +49,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
     violations.extend(context.violations_from_regex(
         &multiple_else_if,
         "prefer_match_over_if_chain",
-        Severity::Info,
         |mat| {
             // Check if we already reported this location
             let already_reported = violations
@@ -80,7 +78,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "prefer_match_over_if_chain",
         RuleCategory::Idioms,
-        Severity::Info,
+        Severity::Warning,
         "Use 'match' for value-based branching instead of if-else-if chains",
         check,
     )

@@ -4,7 +4,7 @@ use regex::Regex;
 
 use crate::{
     context::LintContext,
-    lint::{Severity, Violation},
+    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
@@ -54,7 +54,7 @@ const LINE_CHECKS: &[LineCheck] = &[
     },
 ];
 
-fn check(context: &LintContext) -> Vec<Violation> {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
     let source = context.source;
     let lines: Vec<&str> = source.lines().collect();
 
@@ -69,15 +69,14 @@ fn check(context: &LintContext) -> Vec<Violation> {
                         .take(line_num)
                         .map(|l| l.len() + 1)
                         .sum::<usize>();
-                    Some(Violation {
-                        rule_id: "multiline_formatting".into(),
-                        severity: Severity::Info,
-                        message: check.message.into(),
-                        span: nu_protocol::Span::new(line_start, line_start + line.len()),
-                        suggestion: Some(check.suggestion.into()),
-                        fix: None,
-                        file: None,
-                    })
+                    Some(
+                        RuleViolation::new_static(
+                            "multiline_formatting",
+                            check.message,
+                            nu_protocol::Span::new(line_start, line_start + line.len()),
+                        )
+                        .with_suggestion_static(check.suggestion),
+                    )
                 } else {
                     None
                 }

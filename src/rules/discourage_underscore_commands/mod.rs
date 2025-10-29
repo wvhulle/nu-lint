@@ -1,10 +1,10 @@
 use crate::{
     context::LintContext,
-    lint::{Severity, Violation},
+    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
-fn check(context: &LintContext) -> Vec<Violation> {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
     let mut violations = Vec::new();
 
     for (_decl_id, decl) in context.new_user_functions() {
@@ -15,20 +15,19 @@ fn check(context: &LintContext) -> Vec<Violation> {
             let suggested_name = command_name.replace('_', "-");
             let span = context.find_declaration_span(command_name);
 
-            violations.push(Violation {
-                rule_id: "discourage_underscore_commands".into(),
-                severity: Severity::Info,
-                message: format!(
-                    "Command '{command_name}' uses underscores - prefer hyphens for readability"
+            violations.push(
+                RuleViolation::new_dynamic(
+                    "discourage_underscore_commands",
+                    format!(
+                        "Command '{command_name}' uses underscores - prefer hyphens for \
+                         readability"
+                    ),
+                    span,
                 )
-                .into(),
-                span,
-                suggestion: Some(
-                    format!("Rename to '{suggested_name}' following Nushell convention").into(),
-                ),
-                fix: None,
-                file: None,
-            });
+                .with_suggestion_dynamic(format!(
+                    "Rename to '{suggested_name}' following Nushell convention"
+                )),
+            );
         }
     }
 

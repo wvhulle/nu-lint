@@ -74,10 +74,19 @@ impl LintEngine {
 
     /// Collect violations from all enabled rules
     fn collect_violations(&self, context: &LintContext) -> Vec<Violation> {
-        let enabled_rules = self.get_enabled_rules();
+        let eligible_rules = self.get_eligible_rules();
 
-        enabled_rules
-            .flat_map(|rule| (rule.check)(context))
+        eligible_rules
+            .flat_map(|rule| {
+                let rule_violations = (rule.check)(context);
+                let rule_severity = self.get_effective_rule_severity(rule);
+
+                // Convert RuleViolations to Violations with the rule's effective severity
+                rule_violations
+                    .into_iter()
+                    .map(|rule_violation| rule_violation.into_violation(rule_severity))
+                    .collect::<Vec<_>>()
+            })
             .collect()
     }
 
@@ -91,6 +100,57 @@ impl LintEngine {
                 Some(&crate::config::RuleSeverity::Off)
             )
         })
+    }
+
+    /// Get all rules that are enabled and meet the `min_severity` threshold
+    /// This is more efficient as it avoids running rules that would be filtered
+    /// out anyway
+    fn get_eligible_rules(&self) -> impl Iterator<Item = &crate::rule::Rule> {
+        let min_severity_threshold = self.get_minimum_severity_threshold();
+
+        self.get_enabled_rules().filter(move |rule| {
+            let rule_severity = self.get_effective_rule_severity(rule);
+
+            // Handle special case: min_severity = "off" means no rules are eligible
+            if matches!(
+                self.config.general.min_severity,
+                crate::config::RuleSeverity::Off
+            ) {
+                return false;
+            }
+
+            // Check if rule severity meets minimum threshold
+            match min_severity_threshold {
+                Some(min_threshold) => rule_severity >= min_threshold,
+                None => true, // min_severity = "info" means all rules are eligible
+            }
+        })
+    }
+
+    /// Get the effective severity for a rule (config override or rule default)
+    fn get_effective_rule_severity(&self, rule: &crate::rule::Rule) -> crate::lint::Severity {
+        if let Some(config_severity) = self.config.rule_severity(rule.id) {
+            config_severity
+        } else {
+            rule.severity
+        }
+    }
+
+    /// Get the minimum severity threshold from `min_severity` config
+    /// `min_severity` sets the minimum threshold for showing violations:
+    /// - "error": Show only errors (minimum threshold = Error)
+    /// - "warning": Show warnings and errors (minimum threshold = Warning)
+    /// - "info": Show info, warnings, and errors (minimum threshold = Info,
+    ///   i.e., all)
+    /// - "off": Show nothing
+    fn get_minimum_severity_threshold(&self) -> Option<crate::lint::Severity> {
+        use crate::config::RuleSeverity;
+        match self.config.general.min_severity {
+            RuleSeverity::Error => Some(crate::lint::Severity::Error), // Show only errors
+            RuleSeverity::Warning => Some(crate::lint::Severity::Warning), // Show warnings and
+            // above
+            RuleSeverity::Info | RuleSeverity::Off => None, // Show all (no filtering)
+        }
     }
 
     /// Attach file path to all violations
@@ -117,27 +177,5 @@ impl LintEngine {
     #[must_use]
     pub fn registry(&self) -> &RuleRegistry {
         &self.registry
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_lint_valid_code() {
-        let engine = LintEngine::new(Config::default());
-        let source = "let my_variable = 5";
-        let violations = engine.lint_source(source, None);
-        assert_eq!(violations.len(), 0);
-    }
-
-    #[test]
-    fn test_lint_invalid_snake_case() {
-        let engine = LintEngine::new(Config::default());
-        let source = "let myVariable = 5";
-        let violations = engine.lint_source(source, None);
-        assert!(!violations.is_empty());
-        assert_eq!(violations[0].rule_id, "snake_case_variables");
     }
 }

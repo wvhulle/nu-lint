@@ -2,7 +2,7 @@ use nu_protocol::ast::{Expr, Operator};
 
 use crate::{
     context::LintContext,
-    lint::{Fix, Replacement, Severity, Violation},
+    lint::{Fix, Replacement, RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
@@ -29,13 +29,10 @@ fn build_fix(
         let right_text = &context.source[right.span.start..right.span.end];
         let new_text = format!("{var_text} {compound_op} {right_text}");
 
-        Some(Fix {
-            description: format!("Replace with compound assignment: {new_text}").into(),
-            replacements: vec![Replacement {
-                span: full_span,
-                new_text: new_text.into(),
-            }],
-        })
+        Some(Fix::new_dynamic(
+            format!("Replace with compound assignment: {new_text}"),
+            vec![Replacement::new_dynamic(full_span, new_text)],
+        ))
     } else {
         None
     }
@@ -67,8 +64,8 @@ fn get_operator_symbol(operator: Operator) -> &'static str {
     }
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    context.collect_violations(|expr, ctx| {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
+    context.collect_rule_violations(|expr, ctx| {
         // Look for binary operations that are assignments
         if let Expr::BinaryOp(left, op_expr, right) = &expr.expr
             && let Expr::Operator(nu_protocol::ast::Operator::Assignment(
@@ -95,21 +92,23 @@ fn check(context: &LintContext) -> Vec<Violation> {
                             // Build fix: extract the right operand from the subexpression
                             let fix = build_fix(var_text, compound_op, element, expr.span, ctx);
 
-                            return vec![Violation {
-                                rule_id: "prefer_compound_assignment".into(),
-                                severity: Severity::Info,
-                                message: format!(
+                            let mut violation = RuleViolation::new_dynamic(
+                                "prefer_compound_assignment",
+                                format!(
                                     "Use compound assignment: {var_text} {compound_op} instead of \
                                      {var_text} = {var_text} {op_symbol} ..."
-                                )
-                                .into(),
-                                span: expr.span,
-                                suggestion: Some(
-                                    format!("Replace with: {var_text} {compound_op}").into(),
                                 ),
-                                fix,
-                                file: None,
-                            }];
+                                expr.span,
+                            )
+                            .with_suggestion_dynamic(format!(
+                                "Replace with: {var_text} {compound_op}"
+                            ));
+
+                            if let Some(fix) = fix {
+                                violation = violation.with_fix(fix);
+                            }
+
+                            return vec![violation];
                         }
                     }
                 }

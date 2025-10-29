@@ -3,7 +3,7 @@ use regex::Regex;
 
 use crate::{
     context::LintContext,
-    lint::{Severity, Violation},
+    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
@@ -398,7 +398,10 @@ fn is_valid_interpolation(
     }
 }
 
-fn create_violation(span: nu_protocol::Span, pattern: DangerousInterpolationPattern) -> Violation {
+fn create_violation(
+    span: nu_protocol::Span,
+    pattern: DangerousInterpolationPattern,
+) -> RuleViolation {
     let (message, suggestion) = match pattern {
         DangerousInterpolationPattern::BooleanOperator(op) => (
             format!(
@@ -426,22 +429,15 @@ fn create_violation(span: nu_protocol::Span, pattern: DangerousInterpolationPatt
         ),
     };
 
-    Violation {
-        rule_id: "escape_string_interpolation_operators".into(),
-        severity: Severity::Warning,
-        message: message.into(),
-        span,
-        suggestion: Some(suggestion.into()),
-        fix: None,
-        file: None,
-    }
+    RuleViolation::new_dynamic("escape_string_interpolation_operators", message, span)
+        .with_suggestion_dynamic(suggestion)
 }
 
 fn check_string_interpolation(
     exprs: &[nu_protocol::ast::Expression],
     span: nu_protocol::Span,
     context: &LintContext,
-) -> Option<Violation> {
+) -> Option<RuleViolation> {
     exprs
         .iter()
         .filter(|expr| !matches!(expr.expr, Expr::String(_)))
@@ -462,8 +458,8 @@ fn check_string_interpolation(
         })
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    context.collect_violations(|expr, ctx| {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
+    context.collect_rule_violations(|expr, ctx| {
         if let Expr::StringInterpolation(exprs) = &expr.expr
             && let Some(violation) = check_string_interpolation(exprs, expr.span, ctx)
         {
@@ -478,7 +474,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "escape_string_interpolation_operators",
         RuleCategory::ErrorHandling,
-        Severity::Warning,
+        Severity::Error,
         "Detect unescaped parentheses with operator keywords in string interpolations that cause \
          runtime errors",
         check,

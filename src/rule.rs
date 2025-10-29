@@ -1,6 +1,6 @@
 use crate::{
     context::LintContext,
-    lint::{Severity, Violation},
+    lint::{RuleViolation, Severity},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -53,7 +53,7 @@ pub struct Rule {
     pub category: RuleCategory,
     pub severity: Severity,
     pub description: &'static str,
-    pub check: fn(&LintContext) -> Vec<Violation>,
+    pub check: fn(&LintContext) -> Vec<RuleViolation>,
 }
 
 impl Rule {
@@ -63,7 +63,7 @@ impl Rule {
         category: RuleCategory,
         severity: Severity,
         description: &'static str,
-        check: fn(&LintContext) -> Vec<Violation>,
+        check: fn(&LintContext) -> Vec<RuleViolation>,
     ) -> Self {
         Self {
             id,
@@ -76,7 +76,7 @@ impl Rule {
 
     /// Run the rule's check function on the given context
     #[must_use]
-    pub fn check(&self, context: &LintContext) -> Vec<Violation> {
+    pub fn check(&self, context: &LintContext) -> Vec<RuleViolation> {
         (self.check)(context)
     }
 

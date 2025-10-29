@@ -2,18 +2,16 @@ use regex::Regex;
 
 use crate::{
     context::LintContext,
-    lint::{Severity, Violation},
+    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
-fn check(context: &LintContext) -> Vec<Violation> {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
     let def_pattern = Regex::new(r"(?m)^[ \t]*def\s+([a-zA-Z_-][a-zA-Z0-9_-]*)\s*\[").unwrap();
 
-    context.violations_from_regex(
-        &def_pattern,
-        "missing_command_docs",
-        Severity::Warning,
-        |mat| {
+    def_pattern
+        .find_iter(context.source)
+        .filter_map(|mat| {
             let caps = def_pattern.captures(mat.as_str())?;
             let cmd_name = caps.get(1)?.as_str();
             let def_start = mat.start();
@@ -29,20 +27,26 @@ fn check(context: &LintContext) -> Vec<Violation> {
             if has_doc {
                 None
             } else {
-                Some((
-                    format!("Command '{cmd_name}' is missing documentation comments"),
-                    Some("Add a comment starting with # above the def statement".to_string()),
-                ))
+                Some(
+                    RuleViolation::new_dynamic(
+                        "missing_command_docs",
+                        format!("Command '{cmd_name}' is missing documentation comments"),
+                        nu_protocol::Span::new(mat.start(), mat.end()),
+                    )
+                    .with_suggestion_static(
+                        "Add a comment starting with # above the def statement",
+                    ),
+                )
             }
-        },
-    )
+        })
+        .collect()
 }
 
 pub fn rule() -> Rule {
     Rule::new(
         "missing_command_docs",
         RuleCategory::Documentation,
-        Severity::Warning,
+        Severity::Info,
         "Custom commands should have documentation comments",
         check,
     )

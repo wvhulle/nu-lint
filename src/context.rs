@@ -6,7 +6,7 @@ use nu_protocol::{
     engine::{Command, EngineState, StateWorkingSet},
 };
 
-use crate::lint::{Severity, Violation};
+use crate::lint::{RuleViolation, Violation};
 
 /// Context containing all lint information (source, AST, and engine state)
 /// Rules can use whatever they need from this context
@@ -23,24 +23,25 @@ impl LintContext<'_> {
     pub fn violations_from_regex<MatchPredicate>(
         &self,
         pattern: &regex::Regex,
-        rule_id: &str,
-        severity: Severity,
+        rule_id: &'static str,
         predicate: MatchPredicate,
-    ) -> Vec<Violation>
+    ) -> Vec<RuleViolation>
     where
         MatchPredicate: Fn(regex::Match) -> Option<(String, Option<String>)>,
     {
         pattern
             .find_iter(self.source)
             .filter_map(|mat| {
-                predicate(mat).map(|(message, suggestion)| Violation {
-                    rule_id: rule_id.to_string().into(),
-                    severity,
-                    message: message.into(),
-                    span: Span::new(mat.start(), mat.end()),
-                    suggestion: suggestion.map(Into::into),
-                    fix: None,
-                    file: None,
+                predicate(mat).map(|(message, suggestion)| {
+                    let mut violation = RuleViolation::new_dynamic(
+                        rule_id,
+                        message,
+                        Span::new(mat.start(), mat.end()),
+                    );
+                    if let Some(suggestion) = suggestion {
+                        violation = violation.with_suggestion_dynamic(suggestion);
+                    }
+                    violation
                 })
             })
             .collect()
@@ -54,6 +55,26 @@ impl LintContext<'_> {
     pub fn collect_violations<F>(&self, collector: F) -> Vec<Violation>
     where
         F: Fn(&Expression, &Self) -> Vec<Violation>,
+    {
+        let mut violations = Vec::new();
+
+        let f = |expr: &Expression| collector(expr, self);
+
+        // Visit main AST
+        self.ast.flat_map(self.working_set, &f, &mut violations);
+
+        violations
+    }
+
+    /// Collect all rule violations using a closure over expressions
+    /// (Traverse-based)
+    ///
+    /// This method uses Nushell's upstream `Traverse` trait to walk the AST
+    /// and collect rule violations. The collector function is called for each
+    /// expression in the AST and should return a vector of rule violations.
+    pub fn collect_rule_violations<F>(&self, collector: F) -> Vec<RuleViolation>
+    where
+        F: Fn(&Expression, &Self) -> Vec<RuleViolation>,
     {
         let mut violations = Vec::new();
 
@@ -93,25 +114,28 @@ impl LintContext<'_> {
     /// Find the span of a function/declaration name in the source code
     /// Returns a span pointing to the first occurrence of the name, or a
     /// fallback span
+    #[must_use]
     pub fn find_declaration_span(&self, name: &str) -> Span {
-        // Use more efficient string search for function names
+        // Use more efficient string search for function declarations
         // Look for function declarations starting with "def " or "export def "
-        let patterns = [format!("def {name}"), format!("export def {name}")];
 
-        for pattern in &patterns {
-            if let Some(pos) = self.source.find(pattern) {
-                // Find the start of the function name within the pattern
-                let name_start = pos + pattern.len() - name.len();
-                return Span::new(name_start, name_start + name.len());
-            }
+        // Try "def <name>" first (most common case)
+        if let Some(pos) = self.source.find(&format!("def {name}")) {
+            let name_start = pos + 4; // "def ".len() == 4
+            return Span::new(name_start, name_start + name.len());
+        }
+
+        // Try "export def <name>"
+        if let Some(pos) = self.source.find(&format!("export def {name}")) {
+            let name_start = pos + 11; // "export def ".len() == 11
+            return Span::new(name_start, name_start + name.len());
         }
 
         // Fallback to simple name search
-        if let Some(name_pos) = self.source.find(name) {
-            Span::new(name_pos, name_pos + name.len())
-        } else {
-            self.ast.span.unwrap_or_else(Span::unknown)
-        }
+        self.source.find(name).map_or_else(
+            || self.ast.span.unwrap_or_else(Span::unknown),
+            |name_pos| Span::new(name_pos, name_pos + name.len()),
+        )
     }
 
     /// Get the range of declaration IDs that were added during parsing (the

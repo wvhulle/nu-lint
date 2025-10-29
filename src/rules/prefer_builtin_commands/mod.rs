@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use crate::{
     context::LintContext,
-    external_command::{BuiltinAlternative, Fix},
-    lint::{Replacement, Severity, Violation},
+    external_command::{BuiltinAlternative, Fix, extract_external_args},
+    lint::{Replacement, RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
@@ -138,24 +138,7 @@ fn build_fix(
     }
 }
 
-/// Helper function to extract external command arguments as strings
-fn extract_external_args(
-    args: &[nu_protocol::ast::ExternalArgument],
-    context: &LintContext,
-) -> Vec<String> {
-    args.iter()
-        .map(|arg| match arg {
-            nu_protocol::ast::ExternalArgument::Regular(expr) => {
-                context.source[expr.span.start..expr.span.end].to_string()
-            }
-            nu_protocol::ast::ExternalArgument::Spread(expr) => {
-                format!("...{}", &context.source[expr.span.start..expr.span.end])
-            }
-        })
-        .collect()
-}
-
-fn check(context: &LintContext) -> Vec<Violation> {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
     crate::external_command::detect_external_commands(
         context,
         "avoid_external_file_tools",

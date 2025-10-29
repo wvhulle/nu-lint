@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     context::LintContext,
     external_command::BuiltinAlternative,
-    lint::{Fix, Replacement, Severity, Violation},
+    lint::{Fix, Replacement, RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
@@ -147,13 +147,10 @@ fn build_fix(
     };
 
     // Create the replacement
-    Fix {
-        description: format!("Replace '^{}' with '{}'", cmd_text, alternative.command).into(),
-        replacements: vec![Replacement {
-            span: expr_span,
-            new_text: new_text.into(),
-        }],
-    }
+    Fix::new_dynamic(
+        format!("Replace '^{}' with '{}'", cmd_text, alternative.command),
+        vec![Replacement::new_dynamic(expr_span, new_text)],
+    )
 }
 
 /// Helper function to extract external command arguments as strings
@@ -173,7 +170,7 @@ fn extract_external_args(
         .collect()
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
     crate::external_command::detect_external_commands(
         context,
         "avoid_external_text_tools",

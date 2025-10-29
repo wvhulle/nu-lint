@@ -7,13 +7,11 @@ pub mod lint;
 pub mod output;
 pub mod rule;
 pub mod rules;
-#[cfg(test)]
-mod test_utils;
 
 pub use config::Config;
 pub use context::LintContext;
 pub use engine::LintEngine;
-pub use lint::{Fix, Replacement, Severity, Violation};
+pub use lint::{Fix, Replacement, RuleViolation, Severity, Violation};
 use miette::Diagnostic;
 pub use output::{JsonFormatter, JsonOutput, OutputFormat, OutputFormatter, TextFormatter};
 pub use rule::{Rule, RuleCategory};

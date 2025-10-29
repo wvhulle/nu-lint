@@ -16,13 +16,16 @@ fn main() {
         return;
     }
 
-    if cli.paths.is_empty() {
-        eprintln!("Error: No files specified");
-        eprintln!("Usage: nu-lint [FILES...]");
-        process::exit(2);
-    }
+    let paths_to_lint = if cli.paths.is_empty() {
+        vec![std::env::current_dir().unwrap_or_else(|_| {
+            eprintln!("Error: Unable to determine current directory");
+            process::exit(2);
+        })]
+    } else {
+        cli.paths
+    };
 
-    let files_to_lint = collect_files_to_lint(&cli.paths);
+    let files_to_lint = collect_files_to_lint(&paths_to_lint);
     let engine = LintEngine::new(config);
     let (all_violations, has_errors) = lint_files(&engine, &files_to_lint, cli.parallel);
 

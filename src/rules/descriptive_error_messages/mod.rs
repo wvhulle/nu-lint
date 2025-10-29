@@ -1,10 +1,10 @@
 use crate::{
     context::LintContext,
-    lint::{Severity, Violation},
+    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
-fn check(context: &LintContext) -> Vec<Violation> {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
     let mut violations = Vec::new();
 
     // Search for "error make" patterns in the source code
@@ -34,23 +34,18 @@ fn check(context: &LintContext) -> Vec<Violation> {
                     .sum();
                 let line_end = line_start + line.len();
 
-                violations.push(Violation {
-                    rule_id: "descriptive_error_messages".into(),
-                    severity: Severity::Warning,
-                    message: "Error message is too generic and not descriptive"
-                        .to_string()
-                        .into(),
-                    span: nu_protocol::Span::new(line_start, line_end),
-                    suggestion: Some(
+                violations.push(
+                    RuleViolation::new_static(
+                        "descriptive_error_messages",
+                        "Error message is too generic and not descriptive",
+                        nu_protocol::Span::new(line_start, line_end),
+                    )
+                    .with_suggestion_static(
                         "Use a descriptive error message that explains what went wrong and how to \
                          fix it.\nExample: error make { msg: \"Failed to parse input: expected \
-                         number, got string\" }"
-                            .to_string()
-                            .into(),
+                         number, got string\" }",
                     ),
-                    fix: None,
-                    file: None,
-                });
+                );
             }
         }
     }

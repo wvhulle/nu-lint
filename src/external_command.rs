@@ -6,8 +6,26 @@ use nu_protocol::ast::Expr;
 pub use crate::lint::Fix;
 use crate::{
     context::LintContext,
-    lint::{Severity, Violation},
+    lint::{RuleViolation, Severity},
 };
+
+/// Extract external command arguments as strings
+#[must_use]
+pub fn extract_external_args(
+    args: &[nu_protocol::ast::ExternalArgument],
+    context: &LintContext,
+) -> Vec<String> {
+    args.iter()
+        .map(|arg| match arg {
+            nu_protocol::ast::ExternalArgument::Regular(expr) => {
+                context.source[expr.span.start..expr.span.end].to_string()
+            }
+            nu_protocol::ast::ExternalArgument::Spread(expr) => {
+                format!("...{}", &context.source[expr.span.start..expr.span.end])
+            }
+        })
+        .collect()
+}
 
 /// Metadata about a builtin alternative to an external command
 pub struct BuiltinAlternative {
@@ -83,32 +101,16 @@ fn get_custom_suggestion(
     None
 }
 
-/// Helper function to extract external command arguments as strings
-fn extract_external_args(
-    args: &[nu_protocol::ast::ExternalArgument],
-    context: &LintContext,
-) -> Vec<String> {
-    args.iter()
-        .map(|arg| match arg {
-            nu_protocol::ast::ExternalArgument::Regular(expr) => {
-                context.source[expr.span.start..expr.span.end].to_string()
-            }
-            nu_protocol::ast::ExternalArgument::Spread(expr) => {
-                format!("...{}", &context.source[expr.span.start..expr.span.end])
-            }
-        })
-        .collect()
-}
-
 /// Detect external commands with builtin alternatives
-pub fn detect_external_commands(
+#[must_use]
+pub fn detect_external_commands<S: ::std::hash::BuildHasher>(
     context: &LintContext,
-    rule_id: &str,
-    severity: Severity,
-    alternatives: &HashMap<&'static str, BuiltinAlternative>,
+    rule_id: &'static str,
+    _severity: Severity,
+    alternatives: &HashMap<&'static str, BuiltinAlternative, S>,
     fix_builder: Option<FixBuilder>,
-) -> Vec<Violation> {
-    context.collect_violations(|expr, ctx| {
+) -> Vec<RuleViolation> {
+    context.collect_rule_violations(|expr, ctx| {
         if let Expr::ExternalCall(head, args) = &expr.expr {
             let cmd_text = &ctx.source[head.span.start..head.span.end];
 
@@ -116,15 +118,10 @@ pub fn detect_external_commands(
             if let Some((custom_message, custom_suggestion)) =
                 get_custom_suggestion(cmd_text, args, ctx)
             {
-                return vec![Violation {
-                    rule_id: rule_id.to_string().into(),
-                    severity,
-                    message: custom_message.into(),
-                    span: expr.span,
-                    suggestion: Some(custom_suggestion.into()),
-                    fix: None,
-                    file: None,
-                }];
+                return vec![
+                    RuleViolation::new_dynamic(rule_id, custom_message, expr.span)
+                        .with_suggestion_dynamic(custom_suggestion),
+                ];
             }
 
             // Check if this external command has a builtin alternative
@@ -147,15 +144,14 @@ pub fn detect_external_commands(
                 let fix =
                     fix_builder.map(|builder| builder(cmd_text, alternative, args, expr.span, ctx));
 
-                return vec![Violation {
-                    rule_id: rule_id.to_string().into(),
-                    severity,
-                    message: message.into(),
-                    span: expr.span,
-                    suggestion: Some(suggestion.into()),
-                    fix,
-                    file: None,
-                }];
+                let mut violation = RuleViolation::new_dynamic(rule_id, message, expr.span)
+                    .with_suggestion_dynamic(suggestion);
+
+                if let Some(f) = fix {
+                    violation = violation.with_fix(f);
+                }
+
+                return vec![violation];
             }
         }
         vec![]

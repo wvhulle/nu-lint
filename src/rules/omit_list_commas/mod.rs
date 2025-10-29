@@ -2,7 +2,7 @@ use nu_protocol::{Span, ast::Expr};
 
 use crate::{
     context::LintContext,
-    lint::{Severity, Violation},
+    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
@@ -10,7 +10,7 @@ fn check_list_commas(
     source: &str,
     span: Span,
     items: &[nu_protocol::ast::ListItem],
-) -> Vec<Violation> {
+) -> Vec<RuleViolation> {
     let mut violations = Vec::new();
 
     if items.len() < 2 || span.end > source.len() {
@@ -54,19 +54,14 @@ fn check_list_commas(
                 let comma_span =
                     Span::new(between_start + comma_pos, between_start + comma_pos + 1);
 
-                violations.push(Violation {
-                    rule_id: "omit_list_commas".into(),
-                    severity: Severity::Info,
-                    message: "Omit commas between list items".to_string().into(),
-                    span: comma_span,
-                    suggestion: Some(
-                        "Remove the comma - Nushell lists don't need commas"
-                            .to_string()
-                            .into(),
-                    ),
-                    fix: None,
-                    file: None,
-                });
+                violations.push(
+                    RuleViolation::new_static(
+                        "omit_list_commas",
+                        "Omit commas between list items",
+                        comma_span,
+                    )
+                    .with_suggestion_static("Remove the comma - Nushell lists don't need commas"),
+                );
             }
         }
     }
@@ -74,8 +69,8 @@ fn check_list_commas(
     violations
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    context.collect_violations(|expr, ctx| match &expr.expr {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
+    context.collect_rule_violations(|expr, ctx| match &expr.expr {
         Expr::List(items) => check_list_commas(ctx.source, expr.span, items),
         _ => vec![],
     })

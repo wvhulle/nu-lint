@@ -2,23 +2,20 @@ use nu_protocol::ast::Expr;
 
 use crate::{
     context::LintContext,
-    lint::{Severity, Violation},
+    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
-fn create_violation(param_name: &str) -> Violation {
-    Violation {
-        rule_id: "missing_type_annotation".into(),
-        severity: Severity::Info,
-        message: format!("Parameter '{param_name}' is missing type annotation").into(),
-        span: nu_protocol::Span::unknown(),
-        suggestion: Some("Add type annotation like 'param: string' or 'param: int'".into()),
-        fix: None,
-        file: None,
-    }
+fn create_violation(param_name: &str) -> RuleViolation {
+    RuleViolation::new_dynamic(
+        "missing_type_annotation",
+        format!("Parameter '{param_name}' is missing type annotation"),
+        nu_protocol::Span::unknown(),
+    )
+    .with_suggestion_static("Add type annotation like 'param: string' or 'param: int'")
 }
 
-fn check_signature(sig: &nu_protocol::Signature) -> Vec<Violation> {
+fn check_signature(sig: &nu_protocol::Signature) -> Vec<RuleViolation> {
     sig.required_positional
         .iter()
         .chain(&sig.optional_positional)
@@ -28,8 +25,8 @@ fn check_signature(sig: &nu_protocol::Signature) -> Vec<Violation> {
         .collect()
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    context.collect_violations(|expr, ctx| {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
+    context.collect_rule_violations(|expr, ctx| {
         match &expr.expr {
             Expr::Call(call) => {
                 // Check if this is a def command

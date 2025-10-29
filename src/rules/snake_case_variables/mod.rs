@@ -3,7 +3,7 @@ use nu_protocol::ast::{Argument, Expr};
 
 use crate::{
     context::LintContext,
-    lint::{Fix, Replacement, Severity, Violation},
+    lint::{Fix, Replacement, RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
@@ -18,30 +18,27 @@ fn is_valid_snake_case(name: &str) -> bool {
         return name.chars().all(|c| c.is_ascii_lowercase() || c == '_');
     }
 
-    // Check snake_case pattern: lowercase letters, numbers, and underscores
     // Must start with lowercase letter or underscore
+    let first_char = name.chars().next().unwrap();
+    if !first_char.is_ascii_lowercase() && first_char != '_' {
+        return false;
+    }
+
+    // Check snake_case pattern: lowercase letters, numbers, and underscores
     // Cannot have consecutive underscores
-    name.chars().enumerate().all(|(i, c)| {
-        match c {
-            'a'..='z' | '0'..='9' => true,
-            '_' => {
-                // First character can be underscore
-                if i == 0 {
-                    return true;
-                }
-                // Cannot have consecutive underscores
-                name.chars().nth(i + 1) != Some('_')
-            }
-            _ => false,
-        }
-    }) && name
-        .chars()
-        .next()
-        .is_some_and(|c| c.is_ascii_lowercase() || c == '_')
+    let chars: Vec<char> = name.chars().collect();
+    chars.windows(2).all(|w| {
+        let (current, next) = (w[0], w[1]);
+        // All characters must be valid
+        let valid_char = matches!(current, 'a'..='z' | '0'..='9' | '_');
+        // No consecutive underscores
+        let no_double_underscore = !(current == '_' && next == '_');
+        valid_char && no_double_underscore
+    }) && matches!(chars.last(), Some('a'..='z' | '0'..='9' | '_'))
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    context.collect_violations(|expr, ctx| {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
+    context.collect_rule_violations(|expr, ctx| {
         match &expr.expr {
             Expr::Call(call) => {
                 // Check for let/mut assignments in command calls
@@ -78,21 +75,23 @@ fn check(context: &LintContext) -> Vec<Violation> {
                                 }],
                             });
 
-                            return vec![Violation {
-                                rule_id: "snake_case_variables".into(),
-                                severity: Severity::Warning,
-                                message: format!(
+                            let mut violation = RuleViolation::new_dynamic(
+                                "snake_case_variables",
+                                format!(
                                     "{var_type} '{var_name}' should use snake_case naming \
                                      convention"
-                                )
-                                .into(),
-                                span: name_expr.span,
-                                suggestion: Some(
-                                    format!("Consider renaming to: {snake_case_name}").into(),
                                 ),
-                                fix,
-                                file: None,
-                            }];
+                                name_expr.span,
+                            )
+                            .with_suggestion_dynamic(format!(
+                                "Consider renaming to: {snake_case_name}"
+                            ));
+
+                            if let Some(f) = fix {
+                                violation = violation.with_fix(f);
+                            }
+
+                            return vec![violation];
                         }
                     }
                 }
@@ -107,7 +106,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "snake_case_variables",
         RuleCategory::Naming,
-        Severity::Warning,
+        Severity::Info,
         "Variables should use snake_case naming convention",
         check,
     )

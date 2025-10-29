@@ -1,10 +1,10 @@
 use crate::{
     context::LintContext,
-    lint::{Severity, Violation},
+    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
-fn check(context: &LintContext) -> Vec<Violation> {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
     let mut violations = Vec::new();
 
     // Search for "split row" patterns with newline in the source code
@@ -25,22 +25,17 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 .sum();
             let line_end = line_start + line.len();
 
-            violations.push(Violation {
-                rule_id: "prefer_lines_over_split".to_string().into(),
-                severity: Severity::Info,
-                message: "Use 'lines' instead of 'split row \"\\n\"' for splitting by newlines"
-                    .to_string()
-                    .into(),
-                span: nu_protocol::Span::new(line_start, line_end),
-                suggestion: Some(
+            violations.push(
+                RuleViolation::new_static(
+                    "prefer_lines_over_split",
+                    "Use 'lines' instead of 'split row \"\\n\"' for splitting by newlines",
+                    nu_protocol::Span::new(line_start, line_end),
+                )
+                .with_suggestion_static(
                     "Replace with: | lines\nThe 'lines' command is more efficient and clearer for \
-                     splitting text by newlines."
-                        .to_string()
-                        .into(),
+                     splitting text by newlines.",
                 ),
-                fix: None,
-                file: None,
-            });
+            );
         }
     }
 

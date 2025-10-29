@@ -2,14 +2,14 @@ use nu_protocol::Span;
 
 use crate::{
     context::LintContext,
-    lint::{Fix, Replacement, Severity, Violation},
+    lint::{Fix, Replacement, RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
 /// AST visitor that checks for pipe spacing issues
 struct PipeSpacingVisitor<'a> {
     source: &'a str,
-    violations: Vec<Violation>,
+    violations: Vec<RuleViolation>,
 }
 
 impl<'a> PipeSpacingVisitor<'a> {
@@ -89,23 +89,16 @@ impl<'a> PipeSpacingVisitor<'a> {
                 let fix_end = end;
                 let fix_span = Span::new(fix_start, fix_end);
 
-                let fix = Some(Fix {
-                    description: "Fix pipe spacing to ' | '".to_string().into(),
-                    replacements: vec![Replacement {
-                        span: fix_span,
-                        new_text: " | ".to_string().into(),
-                    }],
-                });
+                let fix = Fix::new_static(
+                    "Fix pipe spacing to ' | '",
+                    vec![Replacement::new_static(fix_span, " | ")],
+                );
 
-                self.violations.push(Violation {
-                    rule_id: "pipe_spacing".into(),
-                    severity: Severity::Warning,
-                    message: message.to_string().into(),
-                    span: violation_span,
-                    suggestion: Some("Use ' | ' with single spaces".to_string().into()),
-                    fix,
-                    file: None,
-                });
+                self.violations.push(
+                    RuleViolation::new_dynamic("pipe_spacing", message.to_string(), violation_span)
+                        .with_suggestion_static("Use ' | ' with single spaces")
+                        .with_fix(fix),
+                );
             }
         }
     }
@@ -131,7 +124,10 @@ impl<'a> PipeSpacingVisitor<'a> {
     }
 }
 
-fn check_pipeline_spacing(pipeline: &nu_protocol::ast::Pipeline, source: &str) -> Vec<Violation> {
+fn check_pipeline_spacing(
+    pipeline: &nu_protocol::ast::Pipeline,
+    source: &str,
+) -> Vec<RuleViolation> {
     let mut violations = Vec::new();
     let mut visitor = PipeSpacingVisitor::new(source);
 
@@ -150,7 +146,7 @@ fn walk_block_for_pipelines(
     block: &nu_protocol::ast::Block,
     working_set: &nu_protocol::engine::StateWorkingSet,
     source: &str,
-    violations: &mut Vec<Violation>,
+    violations: &mut Vec<RuleViolation>,
 ) {
     for pipeline in &block.pipelines {
         violations.extend(check_pipeline_spacing(pipeline, source));
@@ -166,7 +162,7 @@ fn walk_expr_for_pipelines(
     expr: &nu_protocol::ast::Expression,
     working_set: &nu_protocol::engine::StateWorkingSet,
     source: &str,
-    violations: &mut Vec<Violation>,
+    violations: &mut Vec<RuleViolation>,
 ) {
     match &expr.expr {
         nu_protocol::ast::Expr::Block(block_id)
@@ -187,7 +183,7 @@ fn walk_expr_for_pipelines(
     }
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
+fn check(context: &LintContext) -> Vec<RuleViolation> {
     let mut violations = Vec::new();
     walk_block_for_pipelines(
         context.ast,

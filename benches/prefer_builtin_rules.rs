@@ -31,17 +31,18 @@ fn create_lint_context<'a>(
     }
 }
 
-// Quick benchmark - runs in ~5-10 seconds
-fn bench_quick(c: &mut Criterion) {
+// Quick benchmark using small file (9KB) - runs in ~5-10 seconds
+// Tests prefer_builtin_* rules to measure AST traversal overhead
+fn bench_prefer_builtin_small(c: &mut Criterion) {
     let source =
         fs::read_to_string("benches/fixtures/small_file.nu").expect("Failed to read small_file.nu");
     let engine_state = add_shell_command_context(create_default_context());
 
-    let mut group = c.benchmark_group("quick");
+    let mut group = c.benchmark_group("prefer_builtin_small");
     group.sample_size(10); // Smaller sample for speed
 
     // Benchmark just parsing (baseline cost)
-    group.bench_function("parse_only", |b| {
+    group.bench_function("baseline_parse", |b| {
         b.iter(|| {
             let mut working_set = StateWorkingSet::new(&engine_state);
             let block = parse(&mut working_set, None, black_box(&source).as_bytes(), false);
@@ -55,7 +56,7 @@ fn bench_quick(c: &mut Criterion) {
     });
 
     // Benchmark a single rule
-    group.bench_function("single_rule", |b| {
+    group.bench_function("ls_rule_only", |b| {
         b.iter(|| {
             let mut working_set = StateWorkingSet::new(&engine_state);
             let block = parse(&mut working_set, None, black_box(&source).as_bytes(), false);
@@ -65,8 +66,8 @@ fn bench_quick(c: &mut Criterion) {
         });
     });
 
-    // Benchmark all 9 rules to show overhead
-    group.bench_function("all_9_rules", |b| {
+    // Benchmark all 9 rules to measure traversal overhead
+    group.bench_function("common_builtin_rules_sequential", |b| {
         b.iter(|| {
             let mut working_set = StateWorkingSet::new(&engine_state);
             let block = parse(&mut working_set, None, black_box(&source).as_bytes(), false);
@@ -86,16 +87,16 @@ fn bench_quick(c: &mut Criterion) {
     group.finish();
 }
 
-// Medium file benchmark for comparison
-fn bench_medium(c: &mut Criterion) {
+// Medium file benchmark (17KB) for comparison
+fn bench_prefer_builtin_medium(c: &mut Criterion) {
     let source = fs::read_to_string("benches/fixtures/medium_file.nu")
         .expect("Failed to read medium_file.nu");
     let engine_state = add_shell_command_context(create_default_context());
 
-    let mut group = c.benchmark_group("medium");
+    let mut group = c.benchmark_group("prefer_builtin_medium");
     group.sample_size(10);
 
-    group.bench_function("single_rule", |b| {
+    group.bench_function("ls_rule_only", |b| {
         b.iter(|| {
             let mut working_set = StateWorkingSet::new(&engine_state);
             let block = parse(&mut working_set, None, black_box(&source).as_bytes(), false);
@@ -104,7 +105,7 @@ fn bench_medium(c: &mut Criterion) {
         });
     });
 
-    group.bench_function("all_9_rules", |b| {
+    group.bench_function("common_builtin_rules_sequential", |b| {
         b.iter(|| {
             let mut working_set = StateWorkingSet::new(&engine_state);
             let block = parse(&mut working_set, None, black_box(&source).as_bytes(), false);
@@ -124,16 +125,16 @@ fn bench_medium(c: &mut Criterion) {
     group.finish();
 }
 
-// Violations-heavy file to test actual work
-fn bench_with_violations(c: &mut Criterion) {
+// Small file with dense violations to test actual rule matching work
+fn bench_prefer_builtin_violations(c: &mut Criterion) {
     let source = fs::read_to_string("benches/fixtures/with_violations.nu")
         .expect("Failed to read with_violations.nu");
     let engine_state = add_shell_command_context(create_default_context());
 
-    let mut group = c.benchmark_group("violations");
+    let mut group = c.benchmark_group("prefer_builtin_violations");
     group.sample_size(10);
 
-    group.bench_function("single_rule", |b| {
+    group.bench_function("ls_rule_only", |b| {
         b.iter(|| {
             let mut working_set = StateWorkingSet::new(&engine_state);
             let block = parse(&mut working_set, None, black_box(&source).as_bytes(), false);
@@ -142,7 +143,7 @@ fn bench_with_violations(c: &mut Criterion) {
         });
     });
 
-    group.bench_function("all_9_rules", |b| {
+    group.bench_function("common_builtin_rules_sequential", |b| {
         b.iter(|| {
             let mut working_set = StateWorkingSet::new(&engine_state);
             let block = parse(&mut working_set, None, black_box(&source).as_bytes(), false);
@@ -162,5 +163,10 @@ fn bench_with_violations(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, bench_quick, bench_medium, bench_with_violations);
+criterion_group!(
+    benches,
+    bench_prefer_builtin_small,
+    bench_prefer_builtin_medium,
+    bench_prefer_builtin_violations
+);
 criterion_main!(benches);

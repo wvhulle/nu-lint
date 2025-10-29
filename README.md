@@ -152,6 +152,16 @@ cargo clippy --all-targets
 cargo clippy --fix --allow-dirty --all-targets
 ```
 
+### Running Benchmarks
+
+Quick benchmark for performance testing:
+
+```bash
+cargo bench --bench prefer_builtin_rules prefer_builtin_small
+```
+
+This runs in ~5-10 seconds and measures AST traversal overhead for the prefer_builtin_* rules.
+
 ## License
 
 MIT

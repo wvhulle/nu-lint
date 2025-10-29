@@ -26,6 +26,10 @@ impl OutputFormatter for TextFormatter {
 
         let mut output = String::new();
 
+        // Show summary at the beginning
+        let summary = Summary::from_violations(violations);
+        let _ = writeln!(output, "Found {}\n", summary.format_compact());
+
         for violation in violations {
             let source_code = violation
                 .file
@@ -34,6 +38,7 @@ impl OutputFormatter for TextFormatter {
                 .unwrap_or_default();
 
             let (line, column) = calculate_line_column(&source_code, violation.span.start);
+            let (end_line, end_column) = calculate_line_column(&source_code, violation.span.end);
 
             if let Some(file_path) = &violation.file {
                 let _ = writeln!(output, "\x1b[1m{file_path}:{line}:{column}\x1b[0m");
@@ -42,6 +47,10 @@ impl OutputFormatter for TextFormatter {
             let diagnostic = ViolationDiagnostic {
                 violation: violation.clone(),
                 source_code,
+                line,
+                column,
+                end_line,
+                end_column,
             };
 
             let report = Report::new(diagnostic);
@@ -49,11 +58,7 @@ impl OutputFormatter for TextFormatter {
         }
 
         let summary = Summary::from_violations(violations);
-        let _ = writeln!(
-            output,
-            "\n{} error(s), {} warning(s), {} info",
-            summary.errors, summary.warnings, summary.info
-        );
+        let _ = writeln!(output, "\n{}", summary.format_compact());
 
         output
     }
@@ -128,6 +133,10 @@ fn calculate_line_column(source: &str, offset: usize) -> (usize, usize) {
 struct ViolationDiagnostic {
     violation: Violation,
     source_code: String,
+    line: usize,
+    column: usize,
+    end_line: usize,
+    end_column: usize,
 }
 
 impl fmt::Display for ViolationDiagnostic {
@@ -163,8 +172,17 @@ impl Diagnostic for ViolationDiagnostic {
 
     fn labels(&self) -> Option<Box<dyn Iterator<Item = LabeledSpan> + '_>> {
         let span = self.violation.to_source_span();
+        let label_text = if self.line == self.end_line {
+            format!("{} [{}:{}]", self.violation.message, self.line, self.column)
+        } else {
+            format!(
+                "{} [{}:{} - {}:{}]",
+                self.violation.message, self.line, self.column, self.end_line, self.end_column
+            )
+        };
+
         Some(Box::new(std::iter::once(LabeledSpan::new(
-            Some(self.violation.message.to_string()),
+            Some(label_text),
             span.offset(),
             span.len(),
         ))))
@@ -220,6 +238,28 @@ impl Summary {
             warnings,
             info,
             files_checked: 1,
+        }
+    }
+
+    /// Format summary showing only non-zero severity counts
+    #[must_use]
+    pub fn format_compact(&self) -> String {
+        let mut parts = Vec::new();
+
+        if self.errors > 0 {
+            parts.push(format!("{} error(s)", self.errors));
+        }
+        if self.warnings > 0 {
+            parts.push(format!("{} warning(s)", self.warnings));
+        }
+        if self.info > 0 {
+            parts.push(format!("{} info", self.info));
+        }
+
+        if parts.is_empty() {
+            String::from("0 violations")
+        } else {
+            parts.join(", ")
         }
     }
 }

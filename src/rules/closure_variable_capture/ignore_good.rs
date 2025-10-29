@@ -28,3 +28,18 @@ fn ignore_it_variable() {
 $items | each { $it.name }";
     rule().assert_ignores(good_code);
 }
+
+#[test]
+fn ignore_do_block_with_local_variable() {
+    let good_code = r#"
+def run_validation [temp_config: string, is_nixos: bool] {
+  let cmd = if $is_nixos {
+    ["nixos-rebuild" "dry-build" "-I" $"nixos-config=($temp_config)"]
+  } else {
+    ["nix-instantiate" "--eval" "--strict" $temp_config]
+  }
+
+  do { ^$cmd.0 ...($cmd | skip 1) } | complete
+}"#;
+    rule().assert_ignores(good_code);
+}

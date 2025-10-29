@@ -2,7 +2,6 @@ pub mod avoid_jq_for_simple_ops;
 pub mod avoid_mutable_accumulation;
 pub mod brace_spacing;
 pub mod check_complete_exit_code;
-pub mod closure_variable_capture;
 pub mod completion_function_naming;
 pub mod dangerous_file_operations;
 pub mod descriptive_error_messages;
@@ -81,7 +80,6 @@ impl RuleRegistry {
         registry.register(avoid_mutable_accumulation::rule());
         registry.register(brace_spacing::rule());
         registry.register(check_complete_exit_code::rule());
-        registry.register(closure_variable_capture::rule());
         registry.register(completion_function_naming::rule());
         registry.register(dangerous_file_operations::rule());
         registry.register(descriptive_error_messages::rule());

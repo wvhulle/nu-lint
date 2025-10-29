@@ -103,7 +103,6 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     let violations = crate::external_command::detect_external_commands(
         context,
         "prefer_nushell_data_ops",
-        Severity::Info,
         &get_jq_data_ops(),
         Some(build_fix),
     );
@@ -122,7 +121,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "prefer_nushell_data_ops",
         RuleCategory::Idioms,
-        Severity::Info,
+        Severity::Warning,
         "Prefer Nushell's structured data operations (where, each, group-by) over jq filters",
         check,
     )

@@ -77,7 +77,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "prefer_structured_data_flow",
         RuleCategory::Idioms,
-        Severity::Info,
+        Severity::Warning,
         "Prefer keeping data in structured format throughout the pipeline instead of converting \
          to JSON strings for jq processing",
         check,

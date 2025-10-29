@@ -101,7 +101,6 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     let violations = crate::external_command::detect_external_commands(
         context,
         "avoid_jq_for_simple_ops",
-        Severity::Warning,
         &get_simple_jq_alternatives(),
         Some(build_fix),
     );
@@ -120,7 +119,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "avoid_jq_for_simple_ops",
         RuleCategory::Performance,
-        Severity::Info,
+        Severity::Warning,
         "Avoid jq for simple operations that have direct Nushell built-in equivalents",
         check,
     )

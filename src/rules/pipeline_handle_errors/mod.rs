@@ -16,7 +16,6 @@ fn is_alias_or_export_definition(pipeline: &Pipeline, context: &LintContext) -> 
         .and_then(|element| {
             if let Expr::Call(call) = &element.expr.expr {
                 let decl_name = context.working_set.get_decl(call.decl_id).name();
-                log::debug!("Pipeline first element is a Call to: {decl_name}");
                 Some(matches!(
                     decl_name,
                     "alias"
@@ -30,56 +29,12 @@ fn is_alias_or_export_definition(pipeline: &Pipeline, context: &LintContext) -> 
                         | "const"
                 ))
             } else {
-                log::debug!("Pipeline first element is NOT a Call");
                 None
             }
         })
         .unwrap_or(false)
 }
 
-/// Check if a pipeline contains external commands that are not in error-handling wrappers
-/// Returns a violation if found
-fn check_pipeline_for_external_commands(
-    pipeline: &Pipeline,
-    context: &LintContext,
-) -> Option<RuleViolation> {
-    log::debug!("Checking pipeline with {} elements", pipeline.elements.len());
-    
-    // Single element pipelines don't have the issue - the exit code is checked
-    if pipeline.elements.len() <= 1 {
-        log::debug!("Pipeline has only 1 element, skipping");
-        return None;
-    }
-
-    // Check if wrapped in try or complete or do -i
-    if is_pipeline_wrapped_in_error_handling(pipeline, context) {
-        log::debug!("Pipeline is wrapped in error handling");
-        return None;
-    }
-
-    // Look for external commands that are NOT in the last position
-    // Check the TOP LEVEL expression of each pipeline element
-    let last_idx = pipeline.elements.len() - 1;
-    
-    for (idx, element) in pipeline.elements.iter().enumerate() {
-        if idx >= last_idx {
-            // Last element is OK - its exit code is checked
-            continue;
-        }
-        
-        log::debug!("Checking pipeline element {idx} (top-level): {:?}", element.expr.expr);
-        
-        // Check if THIS element (or anything it contains) is an external call
-        if contains_external_call(&element.expr, context) {
-            log::debug!("Element {idx} contains external call - creating violation");
-            return Some(create_violation(element.expr.span, pipeline, context));
-        }
-    }
-
-    None
-}
-
-/// Check if an expression or any of its sub-expressions contains an external call
 fn contains_external_call(expr: &nu_protocol::ast::Expression, context: &LintContext) -> bool {
     use nu_protocol::ast::Traverse;
     
@@ -87,14 +42,7 @@ fn contains_external_call(expr: &nu_protocol::ast::Expression, context: &LintCon
     expr.flat_map(
         context.working_set,
         &|e| {
-            if let Expr::ExternalCall(head, _args) = &e.expr {
-                let head_text = &context.source[head.span.start..head.span.end];
-                log::debug!("    Found ExternalCall in traversal: {head_text:?}");
-                
-                // If it's an ExternalCall, the user explicitly used ^ prefix
-                // This means they want to run the external version, regardless of
-                // whether a builtin exists with the same name
-                log::debug!("    Confirmed as external command (via ^ prefix): {head_text:?}");
+            if matches!(&e.expr, Expr::ExternalCall(_, _)) {
                 vec![true]
             } else {
                 vec![]
@@ -103,30 +51,47 @@ fn contains_external_call(expr: &nu_protocol::ast::Expression, context: &LintCon
         &mut results,
     );
     
-    let has_external = !results.is_empty();
-    log::debug!("    Contains external: {has_external}");
-    has_external
+    !results.is_empty()
+}
+
+fn check_pipeline_for_external_commands(
+    pipeline: &Pipeline,
+    context: &LintContext,
+) -> Option<RuleViolation> {
+    // Single element pipelines don't have the issue - the exit code is checked
+    if pipeline.elements.len() <= 1 {
+        return None;
+    }
+
+    // Check if wrapped in error handling (try, complete, or do -i)
+    if is_pipeline_wrapped_in_error_handling(pipeline, context) {
+        return None;
+    }
+
+    // Look for external commands that are NOT in the last position
+    // Only the last command's exit code is checked by Nushell
+    let last_idx = pipeline.elements.len() - 1;
+    
+    pipeline.elements
+        .iter()
+        .enumerate()
+        .take(last_idx) // Skip last element
+        .find(|(_, element)| contains_external_call(&element.expr, context))
+        .map(|(_, element)| create_violation(element.expr.span, pipeline, context))
 }
 
 fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<RuleViolation>) {
-    log::debug!("Checking block with {} pipelines", block.pipelines.len());
-
-    // Check each pipeline for external commands that aren't in the last position
-    block.pipelines.iter().for_each(|pipeline| {
-        // Skip checking the pipeline itself if it's a definition, but still check nested blocks
-        if is_alias_or_export_definition(pipeline, context) {
-            log::debug!("Skipping - pipeline is an alias/export definition (but will check nested blocks)");
-        } else if let Some(violation) = check_pipeline_for_external_commands(pipeline, context) {
-            log::debug!("Creating violation for external command in pipeline");
-            violations.push(violation);
+    for pipeline in &block.pipelines {
+        // Check the pipeline itself unless it's a definition
+        if !is_alias_or_export_definition(pipeline, context) {
+            violations.extend(check_pipeline_for_external_commands(pipeline, context));
         }
 
         // Always check for nested blocks (functions, closures, etc.)
         check_pipeline_for_nested_blocks(pipeline, context, violations);
-    });
+    }
 }
 
-/// Check a pipeline for nested blocks and recursively check them
 fn check_pipeline_for_nested_blocks(
     pipeline: &Pipeline,
     context: &LintContext,
@@ -134,7 +99,7 @@ fn check_pipeline_for_nested_blocks(
 ) {
     use nu_protocol::ast::Traverse;
 
-    pipeline.elements.iter().for_each(|element| {
+    for element in &pipeline.elements {
         let mut blocks = Vec::new();
         element.expr.flat_map(
             context.working_set,
@@ -151,7 +116,7 @@ fn check_pipeline_for_nested_blocks(
             let block = context.working_set.get_block(block_id);
             check_block(block, context, violations);
         }
-    });
+    }
 }
 
 fn is_in_try_block(expr_span: Span, context: &LintContext) -> bool {
@@ -184,75 +149,47 @@ fn pipeline_has_complete(pipeline: &Pipeline, context: &LintContext) -> bool {
 
 fn pipeline_has_do_ignore(pipeline: &Pipeline, context: &LintContext) -> bool {
     use nu_protocol::ast::Traverse;
-
-    let mut has_do_ignore = false;
     
-    for element in &pipeline.elements {
+    pipeline.elements.iter().any(|element| {
         let mut found = Vec::new();
         element.expr.flat_map(
             context.working_set,
-            &|expr| check_expr_for_do_ignore(expr, context),
+            &|expr| {
+                if is_do_with_ignore_flag(expr, context) {
+                    vec![()]
+                } else {
+                    vec![]
+                }
+            },
             &mut found,
         );
-        if !found.is_empty() {
-            has_do_ignore = true;
-            break;
-        }
-    }
-
-    has_do_ignore
+        !found.is_empty()
+    })
 }
 
-fn check_expr_for_do_ignore(
-    expr: &nu_protocol::ast::Expression,
-    context: &LintContext,
-) -> Vec<bool> {
-    if let Expr::Call(call) = &expr.expr {
-        let decl_name = context.working_set.get_decl(call.decl_id).name();
-        if decl_name != "do" {
-            return vec![];
-        }
-        
-        // Check if the call has the ignore_errors flag set
-        // The `do` command has an `ignore_errors` named parameter
-        let has_ignore_flag = call.arguments.iter().any(|arg| {
-            // Check if this is a named argument with ignore_errors
-            matches!(arg, nu_protocol::ast::Argument::Named(named) 
-                if named.0.item == "ignore_errors" || named.0.item == "i")
-        });
-        
-        if has_ignore_flag {
-            vec![true]
-        } else {
-            vec![]
-        }
-    } else {
-        vec![]
-    }
+fn is_do_with_ignore_flag(expr: &nu_protocol::ast::Expression, context: &LintContext) -> bool {
+    let Expr::Call(call) = &expr.expr else {
+        return false;
+    };
+    
+    let decl_name = context.working_set.get_decl(call.decl_id).name();
+    decl_name == "do" && has_ignore_errors_flag(call)
+}
+
+fn has_ignore_errors_flag(call: &nu_protocol::ast::Call) -> bool {
+    call.arguments.iter().any(|arg| {
+        matches!(arg, nu_protocol::ast::Argument::Named(named) 
+            if named.0.item == "ignore_errors" || named.0.item == "i")
+    })
 }
 
 fn is_pipeline_wrapped_in_error_handling(pipeline: &Pipeline, context: &LintContext) -> bool {
     // Check if any element is in a try block
-    for element in &pipeline.elements {
-        if is_in_try_block(element.expr.span, context) {
-            log::debug!("Pipeline element is in try block");
-            return true;
-        }
-    }
-
-    // Check if pipeline uses complete
-    if pipeline_has_complete(pipeline, context) {
-        log::debug!("Pipeline contains complete");
-        return true;
-    }
-
-    // Check if pipeline uses do -i
-    if pipeline_has_do_ignore(pipeline, context) {
-        log::debug!("Pipeline uses do -i");
-        return true;
-    }
-
-    false
+    pipeline.elements.iter().any(|element| is_in_try_block(element.expr.span, context))
+        // Check if pipeline uses complete
+        || pipeline_has_complete(pipeline, context)
+        // Check if pipeline uses do -i
+        || pipeline_has_do_ignore(pipeline, context)
 }
 
 fn create_violation(span: Span, _pipeline: &Pipeline, _context: &LintContext) -> RuleViolation {

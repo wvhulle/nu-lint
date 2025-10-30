@@ -3,6 +3,8 @@ use crate::LintContext;
 
 #[test]
 fn test_detect_unnecessary_variable_simple() {
+    let _ = env_logger::builder().is_test(true).try_init();
+    
     let bad_code = r"
 def foo [] {
   let result = (some | pipeline)

@@ -130,13 +130,17 @@ Ideas for future improvements:
 Contributions are welcome. Please run tests and formatting before submitting:
 
 ```bash
-cargo test
 cargo +nightly fmt
 cargo clippy --all-targets
 cargo clippy --fix --allow-dirty --all-targets
 ```
 
-### Running Benchmarks
+Debugging
+
+```bash
+cargo test
+RUST_LOG=debug cargo test --lib test_detect_unnecessary_variable_simple -- --nocapture
+```
 
 Quick benchmark for performance testing:
 

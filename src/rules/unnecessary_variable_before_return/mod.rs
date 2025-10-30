@@ -38,16 +38,11 @@ fn extract_let_declaration(
 fn extract_var_reference(expr: &nu_protocol::ast::Expression) -> Option<VarId> {
     match &expr.expr {
         Expr::Var(var_id) | Expr::VarDecl(var_id) => Some(*var_id),
-        Expr::FullCellPath(cell_path) => {
-            // Check if it's a simple variable without path members (e.g., $var, not $var.field)
-            if cell_path.tail.is_empty() {
-                if let Expr::Var(var_id) = &cell_path.head.expr {
-                    Some(*var_id)
-                } else {
-                    None
-                }
-            } else {
-                None
+        Expr::FullCellPath(cell_path) if cell_path.tail.is_empty() => {
+            // Simple variable without path members (e.g., $var, not $var.field)
+            match &cell_path.head.expr {
+                Expr::Var(var_id) => Some(*var_id),
+                _ => None,
             }
         }
         _ => None,
@@ -55,10 +50,7 @@ fn extract_var_reference(expr: &nu_protocol::ast::Expression) -> Option<VarId> {
 }
 
 /// Check if a pipeline contains only a single variable reference
-fn is_simple_var_reference(
-    pipeline: &nu_protocol::ast::Pipeline,
-    var_id: VarId,
-) -> Option<Span> {
+fn is_simple_var_reference(pipeline: &nu_protocol::ast::Pipeline, var_id: VarId) -> Option<Span> {
     if pipeline.elements.len() != 1 {
         return None;
     }
@@ -93,8 +85,7 @@ fn check_block(
         let element = &current_pipeline.elements[0];
 
         // Try to extract a let declaration
-        let Some((var_id, var_name, decl_span)) =
-            extract_let_declaration(&element.expr, context)
+        let Some((var_id, var_name, decl_span)) = extract_let_declaration(&element.expr, context)
         else {
             continue;
         };
@@ -130,21 +121,17 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     check_block(context.ast, context, &mut violations);
 
     // Recursively check all nested blocks (closures, functions, etc.)
-    context.collect_rule_violations(|expr, ctx| {
-        let mut nested_violations = Vec::new();
-
+    violations.extend(context.collect_rule_violations(|expr, ctx| {
         match &expr.expr {
             Expr::Closure(block_id) | Expr::Block(block_id) => {
+                let mut nested_violations = Vec::new();
                 let block = ctx.working_set.get_block(*block_id);
                 check_block(block, ctx, &mut nested_violations);
+                nested_violations
             }
-            _ => {}
+            _ => vec![],
         }
-
-        nested_violations
-    })
-    .into_iter()
-    .for_each(|v| violations.push(v));
+    }));
 
     violations
 }

@@ -1,6 +1,5 @@
 mod common;
 
-use std::path::PathBuf;
 
 use nu_lint::{config::Config, engine::LintEngine};
 

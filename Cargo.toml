@@ -21,6 +21,7 @@ heck = "0.5"
 ignore = "0.4"
 log = "0.4"
 miette = { version = "7.0", features = ["fancy"] }
+nu-cli = "0.108.0"
 nu-cmd-lang = "0.108.0"
 nu-command = "0.108.0"
 nu-parser = "0.108.0"

@@ -77,3 +77,31 @@ def build [] {
 ";
     rule().assert_ignores(good_code);
 }
+
+#[test]
+fn test_ignore_builtin_print_commands() {
+    init_logger();
+    let good_code = r#"
+def test_func [] {
+    "test output"
+}
+
+def main [] {
+    print -n (test_func)
+    print "after"
+}
+"#;
+    rule().assert_ignores(good_code);
+}
+
+#[test]
+fn test_ignore_builtin_commands_with_help() {
+    init_logger();
+    let good_code = r#"
+export def main [] {
+    print -n (help bm)
+    print (["info"] | str join "\n")
+}
+"#;
+    rule().assert_ignores(good_code);
+}

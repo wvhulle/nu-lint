@@ -1768,6 +1768,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1fe266d2e243c931d8190177f20bf7f24eed45e96f39e87dc49a27b32d12d407"
 
 [[package]]
+name = "is_executable"
+version = "1.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "baabb8b4867b26294d818bf3f651a454b6901431711abb96e296245888d6e8c4"
+dependencies = [
+ "windows-sys 0.60.2",
+]
+
+[[package]]
 name = "is_terminal_polyfill"
 version = "1.70.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2224,6 +2233,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "nu-cli"
+version = "0.108.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f0ab6fd643bb3235d3a785449a25e04dd13e99b6ca8abb46b270bba34cd39c8f"
+dependencies = [
+ "chrono",
+ "crossterm",
+ "fancy-regex",
+ "is_executable",
+ "log",
+ "lscolors",
+ "miette",
+ "nu-ansi-term",
+ "nu-cmd-base",
+ "nu-color-config",
+ "nu-engine",
+ "nu-experimental",
+ "nu-glob",
+ "nu-parser",
+ "nu-path",
+ "nu-protocol",
+ "nu-utils",
+ "nucleo-matcher",
+ "percent-encoding",
+ "reedline",
+ "strum",
+ "sysinfo",
+ "unicode-segmentation",
+ "uuid",
+ "which",
+]
+
+[[package]]
 name = "nu-cmd-base"
 version = "0.108.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2444,6 +2486,7 @@ dependencies = [
  "ignore",
  "log",
  "miette",
+ "nu-cli",
  "nu-cmd-lang",
  "nu-command",
  "nu-parser",
@@ -2599,6 +2642,16 @@ dependencies = [
  "strip-ansi-escapes",
  "sys-locale",
  "unicase",
+]
+
+[[package]]
+name = "nucleo-matcher"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf33f538733d1a5a3494b836ba913207f14d9d4a1d3cd67030c5061bdd2cac85"
+dependencies = [
+ "memchr",
+ "unicode-segmentation",
 ]
 
 [[package]]

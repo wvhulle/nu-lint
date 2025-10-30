@@ -45,14 +45,39 @@ fn pipeline_contains_external(pipeline: &Pipeline, context: &LintContext) -> Opt
         element.expr.flat_map(
             context.working_set,
             &|expr| {
-                matches!(&expr.expr, Expr::ExternalCall(..))
-                    .then_some(expr.span)
-                    .into_iter()
-                    .collect()
+                if let Expr::ExternalCall(head, _args) = &expr.expr {
+                    let head_text = &context.source[head.span.start..head.span.end];
+                    log::debug!("Found ExternalCall: head={:?}, head.expr={:?} at span {:?}",
+                               head_text, head.expr, expr.span);
+
+                    // Check if this is a known built-in command by checking all decls in engine_state
+                    // get_decls_sorted returns all declarations including built-ins
+                    let is_known_command = context.engine_state
+                        .get_decls_sorted(false)
+                        .iter()
+                        .any(|(name, _id)| name == head_text.as_bytes());
+
+                    log::debug!("Command {:?} is known built-in/user-defined: {}", head_text, is_known_command);
+
+                    if is_known_command {
+                        log::debug!("Skipping - command {:?} is a known built-in or user-defined command", head_text);
+                        vec![]
+                    } else {
+                        log::debug!("Confirmed as truly external command");
+                        vec![expr.span]
+                    }
+                } else {
+                    vec![]
+                }
             },
             &mut found,
         );
-        found.first().copied()
+        if let Some(span) = found.first().copied() {
+            log::debug!("Pipeline contains external command at span {:?}", span);
+            Some(span)
+        } else {
+            None
+        }
     })
 }
 

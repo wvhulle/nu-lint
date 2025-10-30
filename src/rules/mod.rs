@@ -1,4 +1,3 @@
-pub mod avoid_jq_for_simple_ops;
 pub mod avoid_mutable_accumulation;
 pub mod brace_spacing;
 pub mod check_complete_exit_code;
@@ -75,7 +74,6 @@ impl RuleRegistry {
     pub fn with_default_rules() -> Self {
         let mut registry = Self::new();
 
-        registry.register(avoid_jq_for_simple_ops::rule());
         registry.register(avoid_mutable_accumulation::rule());
         registry.register(brace_spacing::rule());
         registry.register(check_complete_exit_code::rule());
@@ -107,6 +105,7 @@ impl RuleRegistry {
         registry.register(prefer_builtin::prefer_builtin_uniq());
         registry.register(prefer_builtin::prefer_builtin_sed());
         registry.register(prefer_builtin::prefer_builtin_other());
+        registry.register(prefer_builtin::prefer_builtin_jq());
         registry.register(prefer_compound_assignment::rule());
         registry.register(prefer_each_over_for::rule());
         registry.register(prefer_error_make::rule());

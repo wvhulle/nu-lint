@@ -30,7 +30,7 @@ impl OutputFormatter for TextFormatter {
         let summary = Summary::from_violations(violations);
         let _ = writeln!(output, "Found {}\n", summary.format_compact());
 
-        for violation in violations {
+        for (idx, violation) in violations.iter().enumerate() {
             let source_code = violation
                 .file
                 .as_ref()
@@ -40,8 +40,9 @@ impl OutputFormatter for TextFormatter {
             let (line, column) = calculate_line_column(&source_code, violation.span.start);
             let (end_line, end_column) = calculate_line_column(&source_code, violation.span.end);
 
+            // Print a clear header with file path and rule name
             if let Some(file_path) = &violation.file {
-                let _ = writeln!(output, "\x1b[1m{file_path}:{line}:{column}\x1b[0m");
+                let _ = writeln!(output, "\n\x1b[1;4m{file_path}:{line}:{column}\x1b[0m");
             }
 
             let diagnostic = ViolationDiagnostic {
@@ -55,6 +56,11 @@ impl OutputFormatter for TextFormatter {
 
             let report = Report::new(diagnostic);
             let _ = writeln!(output, "{report:?}");
+
+            // Add a horizontal ruler between errors (but not after the last one)
+            if idx < violations.len() - 1 {
+                let _ = writeln!(output, "\n{}", "─".repeat(80));
+            }
         }
 
         let summary = Summary::from_violations(violations);

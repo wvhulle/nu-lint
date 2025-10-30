@@ -175,7 +175,7 @@ impl LintContext<'_> {
             };
 
             if let Err(err) = engine_state.merge_delta(delta) {
-                eprintln!("Error adding Print command: {:?}", err);
+                eprintln!("Error adding Print command: {err:?}");
             }
 
             engine_state

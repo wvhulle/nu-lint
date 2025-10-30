@@ -12,7 +12,7 @@ enum BraceType {
     Record,
 }
 
-fn check_brace_spacing(source: &str, span: Span, brace_type: BraceType) -> Vec<RuleViolation> {
+fn check_brace_spacing(source: &str, span: Span, brace_type: &BraceType) -> Vec<RuleViolation> {
     if span.start >= span.end || span.end > source.len() {
         return vec![];
     }
@@ -101,10 +101,10 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
             } else {
                 BraceType::BlockWithoutParams
             };
-            check_brace_spacing(ctx.source, expr.span, brace_type)
+            check_brace_spacing(ctx.source, expr.span, &brace_type)
         }
         Expr::Record(items) if !items.is_empty() => {
-            check_brace_spacing(ctx.source, expr.span, BraceType::Record)
+            check_brace_spacing(ctx.source, expr.span, &BraceType::Record)
         }
         _ => vec![],
     })

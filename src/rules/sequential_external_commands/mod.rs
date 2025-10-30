@@ -28,27 +28,42 @@ fn find_external_commands(context: &LintContext) -> Vec<(Span, Span)> {
     sequential_externals
 }
 
+/// Get a substring from the end, ensuring we don't split multi-byte characters
+fn safe_suffix(text: &str, max_bytes: usize) -> &str {
+    if text.len() <= max_bytes {
+        text
+    } else {
+        let start_idx = text.len().saturating_sub(max_bytes);
+        let boundary_idx = (start_idx..text.len())
+            .find(|&i| text.is_char_boundary(i))
+            .unwrap_or(text.len());
+        &text[boundary_idx..]
+    }
+}
+
+/// Get a substring from the start, ensuring we don't split multi-byte characters
+fn safe_prefix(text: &str, max_bytes: usize) -> &str {
+    if text.len() <= max_bytes {
+        text
+    } else {
+        let end_idx = (0..=max_bytes)
+            .rev()
+            .find(|&i| text.is_char_boundary(i))
+            .unwrap_or(0);
+        &text[..end_idx]
+    }
+}
+
 /// Check if an external command is wrapped in error handling
 fn is_wrapped_in_error_handling(span: Span, context: &LintContext) -> bool {
-    // Get a safe substring by only looking at full source sections
+    const CONTEXT_SIZE: usize = 100;
+    
     let source_before = &context.source[..span.start];
     let source_after = &context.source[span.end..];
 
-    // Look at the last 100 chars before (safe because we're taking from the start)
-    let prefix_text = if source_before.len() > 100 {
-        &source_before[source_before.len() - 100..]
-    } else {
-        source_before
-    };
+    let prefix_text = safe_suffix(source_before, CONTEXT_SIZE);
+    let suffix_text = safe_prefix(source_after, CONTEXT_SIZE);
 
-    // Look at the first 100 chars after (safe because we're taking from the end)
-    let suffix_text = if source_after.len() > 100 {
-        &source_after[..100]
-    } else {
-        source_after
-    };
-
-    // Check for various error handling patterns
     (prefix_text.contains("try {") || prefix_text.contains("try{"))
         || suffix_text.trim_start().starts_with("| complete")
         || suffix_text.contains("| complete)")

@@ -1,4 +1,4 @@
-use regex::Regex;
+use nu_protocol::{Span, VarId, ast::Expr};
 
 use crate::{
     context::LintContext,
@@ -6,32 +6,134 @@ use crate::{
     rule::{Rule, RuleCategory},
 };
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
-    // Pattern: let var = (...)\n$var (with optional whitespace)
-    // Since regex doesn't support backreferences, we match and manually verify
-    let pattern = Regex::new(r"let\s+(\w+)\s*=\s*\([^)]+\)\s*\n\s*\$(\w+)\s*(?:\n|$)").unwrap();
+/// Extract variable declaration from a `let` statement
+fn extract_let_declaration(
+    expr: &nu_protocol::ast::Expression,
+    context: &LintContext,
+) -> Option<(VarId, String, Span)> {
+    let Expr::Call(call) = &expr.expr else {
+        return None;
+    };
 
-    context.violations_from_regex(&pattern, "unnecessary_variable_before_return", |mat| {
-        let caps = pattern.captures(mat.as_str())?;
-        let var_name1 = &caps[1];
-        let var_name2 = &caps[2];
+    let decl_name = context.working_set.get_decl(call.decl_id).name();
+    if decl_name != "let" {
+        return None;
+    }
 
-        // Check if the variable name matches
-        if var_name1 == var_name2 {
-            Some((
-                format!(
-                    "Variable '{var_name1}' is assigned and immediately returned - consider \
-                     returning the expression directly"
-                ),
-                Some(
-                    "Return the expression directly instead of assigning to a variable first"
-                        .to_string(),
-                ),
-            ))
-        } else {
-            None
+    let var_arg = call.arguments.first()?;
+    let nu_protocol::ast::Argument::Positional(var_expr) = var_arg else {
+        return None;
+    };
+
+    let Expr::VarDecl(var_id) = &var_expr.expr else {
+        return None;
+    };
+
+    let var_name = &context.source[var_expr.span.start..var_expr.span.end];
+
+    Some((*var_id, var_name.to_string(), expr.span))
+}
+
+/// Check if an expression is just a variable reference
+fn extract_var_reference(expr: &nu_protocol::ast::Expression) -> Option<VarId> {
+    match &expr.expr {
+        Expr::Var(var_id) | Expr::VarDecl(var_id) => Some(*var_id),
+        Expr::FullCellPath(cell_path) if cell_path.tail.is_empty() => {
+            // Simple variable without path members (e.g., $var, not $var.field)
+            match &cell_path.head.expr {
+                Expr::Var(var_id) => Some(*var_id),
+                _ => None,
+            }
         }
-    })
+        _ => None,
+    }
+}
+
+/// Check if a pipeline contains only a single variable reference
+fn is_simple_var_reference(pipeline: &nu_protocol::ast::Pipeline, var_id: VarId) -> Option<Span> {
+    if pipeline.elements.len() != 1 {
+        return None;
+    }
+
+    let element = pipeline.elements.first()?;
+    let referenced_var_id = extract_var_reference(&element.expr)?;
+
+    if referenced_var_id == var_id {
+        Some(element.expr.span)
+    } else {
+        None
+    }
+}
+
+/// Check a block for the unnecessary variable pattern
+fn check_block(
+    block: &nu_protocol::ast::Block,
+    context: &LintContext,
+    violations: &mut Vec<RuleViolation>,
+) {
+    let pipelines = &block.pipelines;
+
+    for i in 0..pipelines.len().saturating_sub(1) {
+        let current_pipeline = &pipelines[i];
+        let next_pipeline = &pipelines[i + 1];
+
+        // Check if current pipeline has a single element
+        if current_pipeline.elements.len() != 1 {
+            continue;
+        }
+
+        let element = &current_pipeline.elements[0];
+
+        // Try to extract a let declaration
+        let Some((var_id, var_name, decl_span)) = extract_let_declaration(&element.expr, context)
+        else {
+            continue;
+        };
+
+        // Check if the next pipeline is just a reference to the same variable
+        if let Some(ref_span) = is_simple_var_reference(next_pipeline, var_id) {
+            log::debug!(
+                "Found unnecessary variable pattern: let {var_name} = ... followed by ${var_name}"
+            );
+            let combined_span = Span::new(decl_span.start, ref_span.end);
+
+            violations.push(
+                RuleViolation::new_dynamic(
+                    "unnecessary_variable_before_return",
+                    format!(
+                        "Variable '{var_name}' is assigned and immediately returned - consider \
+                         returning the expression directly"
+                    ),
+                    combined_span,
+                )
+                .with_suggestion_static(
+                    "Return the expression directly instead of assigning to a variable first",
+                ),
+            );
+        }
+    }
+}
+
+fn check(context: &LintContext) -> Vec<RuleViolation> {
+    let mut violations = Vec::new();
+
+    // Check the main block
+    check_block(context.ast, context, &mut violations);
+
+    // Recursively check all nested blocks (closures, functions, etc.)
+    violations.extend(context.collect_rule_violations(|expr, ctx| {
+        match &expr.expr {
+            Expr::Closure(block_id) | Expr::Block(block_id) => {
+                let mut nested_violations = Vec::new();
+                let block = ctx.working_set.get_block(*block_id);
+                check_block(block, ctx, &mut nested_violations);
+                nested_violations
+            }
+            _ => vec![],
+        }
+    }));
+
+    violations
 }
 
 pub fn rule() -> Rule {

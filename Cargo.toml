@@ -7,7 +7,7 @@ keywords = ["nushell", "linter", "static-analysis", "code-quality", "shell"]
 license = "MIT"
 name = "nu-lint"
 repository = "https://github.com/wvhulle/nu-lint"
-version = "0.0.14"
+version = "0.0.15"
 
 
 [lints.clippy]
@@ -19,7 +19,9 @@ style = { level = "deny", priority = -1 }
 clap = { version = "4.5", features = ["derive"] }
 heck = "0.5"
 ignore = "0.4"
+log = "0.4"
 miette = { version = "7.0", features = ["fancy"] }
+nu-cli = "0.108.0"
 nu-cmd-lang = "0.108.0"
 nu-command = "0.108.0"
 nu-parser = "0.108.0"
@@ -33,6 +35,7 @@ toml = "0.8"
 
 [dev-dependencies]
 criterion = { version = "0.7", features = ["html_reports", "csv_output"] }
+env_logger = "0.11"
 tempfile = "3.10"
 
 [[bench]]

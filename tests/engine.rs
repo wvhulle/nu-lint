@@ -1,6 +1,5 @@
 mod common;
 
-use std::path::PathBuf;
 
 use nu_lint::{config::Config, engine::LintEngine};
 
@@ -33,14 +32,4 @@ fn test_explain_nonexistent_rule() {
     let rule = engine.registry().get_rule("NONEXISTENT");
 
     assert!(rule.is_none());
-}
-
-#[test]
-fn test_lint_nonexistent_file() {
-    let nonexistent = PathBuf::from("nonexistent.nu");
-
-    // collect_files_to_lint will call process::exit for nonexistent files
-    // We can't test this directly without spawning a process, but we can
-    // verify the file doesn't exist as a precondition
-    assert!(!nonexistent.exists());
 }

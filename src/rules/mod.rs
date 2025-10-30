@@ -1,4 +1,3 @@
-pub mod avoid_jq_for_simple_ops;
 pub mod avoid_mutable_accumulation;
 pub mod brace_spacing;
 pub mod check_complete_exit_code;
@@ -15,10 +14,12 @@ pub mod max_positional_params;
 pub mod missing_command_docs;
 pub mod missing_type_annotation;
 pub mod multiline_formatting;
+pub mod never_use_echo;
 pub mod no_trailing_spaces;
 pub mod nu_parse_error;
 pub mod omit_list_commas;
 pub mod pipe_spacing;
+pub mod pipeline_handle_errors;
 pub mod prefer_builtin;
 pub mod prefer_compound_assignment;
 pub mod prefer_each_over_for;
@@ -33,10 +34,7 @@ pub mod prefer_parse_over_each_split;
 pub mod prefer_range_iteration;
 pub mod prefer_structured_data_flow;
 pub mod prefer_where_over_each_if;
-pub mod require_external_command_error_check;
-pub mod require_long_pipeline_error_handling;
 pub mod screaming_snake_constants;
-pub mod sequential_external_commands;
 pub mod snake_case_variables;
 pub mod systemd_journal_prefix;
 pub mod unnecessary_mut;
@@ -75,7 +73,6 @@ impl RuleRegistry {
     pub fn with_default_rules() -> Self {
         let mut registry = Self::new();
 
-        registry.register(avoid_jq_for_simple_ops::rule());
         registry.register(avoid_mutable_accumulation::rule());
         registry.register(brace_spacing::rule());
         registry.register(check_complete_exit_code::rule());
@@ -107,6 +104,8 @@ impl RuleRegistry {
         registry.register(prefer_builtin::prefer_builtin_uniq());
         registry.register(prefer_builtin::prefer_builtin_sed());
         registry.register(prefer_builtin::prefer_builtin_other());
+        registry.register(prefer_builtin::prefer_builtin_jq());
+        registry.register(never_use_echo::rule());
         registry.register(prefer_compound_assignment::rule());
         registry.register(prefer_each_over_for::rule());
         registry.register(prefer_error_make::rule());
@@ -120,10 +119,8 @@ impl RuleRegistry {
         registry.register(prefer_range_iteration::rule());
         registry.register(prefer_structured_data_flow::rule());
         registry.register(prefer_where_over_each_if::rule());
-        registry.register(require_external_command_error_check::rule());
-        registry.register(require_long_pipeline_error_handling::rule());
         registry.register(screaming_snake_constants::rule());
-        registry.register(sequential_external_commands::rule());
+        registry.register(pipeline_handle_errors::rule());
         registry.register(snake_case_variables::rule());
         registry.register(systemd_journal_prefix::rule());
         registry.register(unnecessary_mut::rule());

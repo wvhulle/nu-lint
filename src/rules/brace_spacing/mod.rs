@@ -6,94 +6,107 @@ use crate::{
     rule::{Rule, RuleCategory},
 };
 
-fn check_brace_spacing(source: &str, span: Span, has_params: bool) -> Vec<RuleViolation> {
-    let mut violations = Vec::new();
+enum BraceType {
+    ClosureWithParams,
+    BlockWithoutParams,
+    Record,
+}
 
+fn check_brace_spacing(source: &str, span: Span, brace_type: &BraceType) -> Vec<RuleViolation> {
     if span.start >= span.end || span.end > source.len() {
-        return violations;
+        return vec![];
     }
 
     let text = &source[span.start..span.end];
 
-    // Find opening and closing braces
     if !text.starts_with('{') || !text.ends_with('}') {
-        return violations;
+        return vec![];
     }
 
     let inner = &text[1..text.len() - 1];
 
-    // Empty braces are fine
     if inner.trim().is_empty() {
-        return violations;
+        return vec![];
     }
 
-    // Check for space after opening brace before closure parameters
-    if has_params && inner.starts_with(|c: char| c.is_whitespace()) {
-        let pipe_pos = inner.find('|');
-        if let Some(pos) = pipe_pos
-            && pos > 0
-            && inner[..pos].trim().is_empty()
-        {
-            violations.push(
-                RuleViolation::new_dynamic(
-                    "brace_spacing",
-                    "No space allowed after opening brace before closure parameters".to_string(),
-                    span,
-                )
-                .with_suggestion_static("Use {|param| instead of { |param|"),
-            );
-            return violations;
+    match brace_type {
+        BraceType::ClosureWithParams => {
+            if let Some(pipe_pos) = inner.find('|')
+                && pipe_pos > 0
+                && inner[..pipe_pos].chars().all(char::is_whitespace)
+            {
+                vec![
+                    RuleViolation::new_dynamic(
+                        "brace_spacing",
+                        "No space allowed after opening brace before closure parameters"
+                            .to_string(),
+                        span,
+                    )
+                    .with_suggestion_static("Use {|param| instead of { |param|"),
+                ]
+            } else {
+                vec![]
+            }
+        }
+        BraceType::BlockWithoutParams => {
+            let starts_with_space = inner.starts_with(char::is_whitespace);
+            let ends_with_space = inner.ends_with(char::is_whitespace);
+
+            if !starts_with_space || !ends_with_space {
+                vec![
+                    RuleViolation::new_dynamic(
+                        "brace_spacing",
+                        "Blocks and closures without parameters should have spaces inside braces"
+                            .to_string(),
+                        span,
+                    )
+                    .with_suggestion_static("Use { body } for blocks without parameters"),
+                ]
+            } else {
+                vec![]
+            }
+        }
+        BraceType::Record => {
+            let starts_with_space = inner.starts_with(char::is_whitespace);
+            let ends_with_space = inner.ends_with(char::is_whitespace);
+
+            if starts_with_space || ends_with_space {
+                vec![
+                    RuleViolation::new_dynamic(
+                        "brace_spacing",
+                        "Records should not have spaces inside braces".to_string(),
+                        span,
+                    )
+                    .with_suggestion_static("Use {key: value} for records"),
+                ]
+            } else {
+                vec![]
+            }
         }
     }
+}
 
-    // Skip closure parameter checking for other cases
-    if has_params {
-        return violations;
-    }
-
-    // Check for inconsistent spacing in records/blocks
-    let starts_with_space = inner.starts_with(|c: char| c.is_whitespace());
-    let ends_with_space = inner.ends_with(|c: char| c.is_whitespace());
-
-    // Inconsistent: one has space, the other doesn't
-    if starts_with_space != ends_with_space {
-        violations.push(
-            RuleViolation::new_dynamic(
-                "brace_spacing",
-                "Inconsistent brace spacing: use either {x} or { x }, not { x} or {x }".to_string(),
-                span,
-            )
-            .with_suggestion_static(
-                "Use consistent spacing: both spaces or no spaces inside braces",
-            ),
-        );
-    }
-
-    violations
+fn has_block_params(context: &LintContext, block_id: nu_protocol::BlockId) -> bool {
+    let block = context.working_set.get_block(block_id);
+    !block.signature.required_positional.is_empty()
+        || !block.signature.optional_positional.is_empty()
+        || block.signature.rest_positional.is_some()
 }
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {
-    context.collect_rule_violations(|expr, ctx| {
-        match &expr.expr {
-            // Closures and blocks with parameters
-            Expr::Closure(block_id) | Expr::Block(block_id) => {
-                let block = ctx.working_set.get_block(*block_id);
-                let has_params = !block.signature.required_positional.is_empty()
-                    || !block.signature.optional_positional.is_empty()
-                    || block.signature.rest_positional.is_some();
-
-                check_brace_spacing(ctx.source, expr.span, has_params)
-            }
-            // Records
-            Expr::Record(items) => {
-                if items.is_empty() {
-                    vec![]
-                } else {
-                    check_brace_spacing(ctx.source, expr.span, false)
-                }
-            }
-            _ => vec![],
+    context.collect_rule_violations(|expr, ctx| match &expr.expr {
+        Expr::Closure(block_id) | Expr::Block(block_id) => {
+            let brace_type = if has_block_params(ctx, *block_id) {
+                BraceType::ClosureWithParams
+            } else {
+                BraceType::BlockWithoutParams
+            };
+            check_brace_spacing(ctx.source, expr.span, &brace_type)
         }
+        Expr::Record(items) if !items.is_empty() => {
+            check_brace_spacing(ctx.source, expr.span, &BraceType::Record)
+        }
+        _ => vec![],
     })
 }
 
@@ -102,8 +115,8 @@ pub fn rule() -> Rule {
         "brace_spacing",
         RuleCategory::Formatting,
         Severity::Info,
-        "Braces should have consistent spacing: either {x} or { x }, and no space before closure \
-         parameters",
+        "Enforces Nushell style guide: records use {key: value}, blocks/closures without params \
+         use { body }, and closures with params use {|x| body}",
         check,
     )
 }

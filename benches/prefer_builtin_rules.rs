@@ -31,15 +31,14 @@ fn create_lint_context<'a>(
     }
 }
 
-// Quick benchmark using small file (9KB) - runs in ~5-10 seconds
-// Tests prefer_builtin_* rules to measure AST traversal overhead
+// Quick benchmark using small file
 fn bench_prefer_builtin_small(c: &mut Criterion) {
     let source =
         fs::read_to_string("benches/fixtures/small_file.nu").expect("Failed to read small_file.nu");
     let engine_state = add_shell_command_context(create_default_context());
 
     let mut group = c.benchmark_group("prefer_builtin_small");
-    group.sample_size(10); // Smaller sample for speed
+    group.sample_size(20);
 
     // Benchmark just parsing (baseline cost)
     group.bench_function("baseline_parse", |b| {
@@ -55,7 +54,6 @@ fn bench_prefer_builtin_small(c: &mut Criterion) {
         });
     });
 
-    // Benchmark a single rule
     group.bench_function("ls_rule_only", |b| {
         b.iter(|| {
             let mut working_set = StateWorkingSet::new(&engine_state);
@@ -66,7 +64,6 @@ fn bench_prefer_builtin_small(c: &mut Criterion) {
         });
     });
 
-    // Benchmark all 9 rules to measure traversal overhead
     group.bench_function("common_builtin_rules_sequential", |b| {
         b.iter(|| {
             let mut working_set = StateWorkingSet::new(&engine_state);
@@ -87,7 +84,7 @@ fn bench_prefer_builtin_small(c: &mut Criterion) {
     group.finish();
 }
 
-// Medium file benchmark (17KB) for comparison
+// Medium file benchmark
 fn bench_prefer_builtin_medium(c: &mut Criterion) {
     let source = fs::read_to_string("benches/fixtures/medium_file.nu")
         .expect("Failed to read medium_file.nu");

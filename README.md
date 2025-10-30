@@ -84,7 +84,7 @@ nu-lint list-rules                         # Show all rules
 nu-lint explain snake_case_variables       # Explain a rule
 ```
 
-For LSP / editor plugins:
+For editor plugins (for LLMs / creators):
 
 ```bash
 nu-lint --format json                      # Lint and output JSON
@@ -117,49 +117,36 @@ Categories:
 - documentation
 - type safety
 
-## Example Output
-
-```text
-info[prefer_parse_over_each_split]
-
-  ℹ Manual splitting with 'each' and 'split row' - consider using 'parse'
-   ╭─[example.nu:5:1]
- 5 │ $data | each { |line| $line | split row " " | get 0 }
-   ·         ───────────────────┬──────────────────────────
-   ·                            ╰── AST-based detection of structured text processing pattern
-   ╰────
-  help: Use 'parse "{field1} {field2}"' for structured text extraction instead of 'each' with 'split row'
-```
-
-This example demonstrates AST traversal detecting command patterns that the regex-based rules cannot catch.
-
 ## Planned features
 
 Ideas for future improvements:
 
-- Editor plugins
-- Use external `jq` parser
+- Editor plugins such a VS Code extension
+- Use external parsers for DSLs such as `jq`
+- A lint plugin for Nu shell command line itself
 
 ## Contributing
 
 Contributions are welcome. Please run tests and formatting before submitting:
 
 ```bash
-cargo test
 cargo +nightly fmt
 cargo clippy --all-targets
 cargo clippy --fix --allow-dirty --all-targets
 ```
 
-### Running Benchmarks
+Debugging
+
+```bash
+cargo test
+RUST_LOG=debug cargo test --lib test_detect_unnecessary_variable_simple -- --nocapture
+```
 
 Quick benchmark for performance testing:
 
 ```bash
 cargo bench --bench prefer_builtin_rules prefer_builtin_small
 ```
-
-This runs in ~5-10 seconds and measures AST traversal overhead for the prefer_builtin_* rules.
 
 ## License
 

@@ -1,11 +1,11 @@
 #[test]
-fn detects_not_keyword() {
+fn detects_not_as_external_call() {
     let rule = super::rule();
 
     let code = r#"
 def bad_example [] {
     let path = "/some/path"
-    print $"File ($path) (not found)"
+    print $"File ($path) (not x)"
 }
 "#;
 
@@ -13,7 +13,7 @@ def bad_example [] {
 }
 
 #[test]
-fn detects_not_found_in_write_sysfs() {
+fn detects_standalone_operator_in_conditional_branch() {
     let rule = super::rule();
 
     let code = r#"
@@ -22,7 +22,7 @@ def write_sysfs [path: string, value: string] {
         do -i { $value | save -f $path }
         print -e $"<7>Set ($path) = ($value)"
     } else {
-        print -e $"<7>Skipped ($path) (not found)"
+        print -e $"<7>Skipped ($path) (or)"
     }
 }
 "#;
@@ -89,14 +89,14 @@ def bad_error_msg [path: string] {
 }
 
 #[test]
-fn detects_nested_expressions() {
+fn detects_standalone_operator_after_valid_text() {
     let rule = super::rule();
 
     let code = r#"
 def bad_nested [] {
     let a = "x"
     let b = "y"
-    print $"Values ($a) and ($b) (not equal)"
+    print $"Values ($a) and ($b) (and)"
 }
 "#;
 
@@ -104,15 +104,15 @@ def bad_nested [] {
 }
 
 #[test]
-fn detects_error_message_patterns() {
+fn detects_multiple_standalone_operators() {
     let rule = super::rule();
 
     let code = r#"
 def test_errors [] {
     let file = "config.txt"
-    print $"File ($file) (not found)"
-    print $"Access ($file) (access denied)"
-    print $"Service (failed to connect)"
+    print $"File ($file) (not x)"
+    print $"Access ($file) (and y)"
+    print $"Service ($file) (or z)"
 }
 "#;
 
@@ -169,13 +169,13 @@ def test_common [] {
 }
 
 #[test]
-fn detects_manual_review_needed_pattern() {
+fn detects_operator_in_ansi_formatted_string() {
     let rule = super::rule();
 
     let code = r#"
 def fix_file [file: string] {
     if $has_errors {
-        print $"(ansi yellow)⚠️  Could not apply some fixes to ($file) (manual review needed)(ansi reset)"
+        print $"(ansi yellow)⚠️  Could not apply some fixes to ($file) (or)(ansi reset)"
     } else {
         print $"(ansi green)✅ No issues in ($file)(ansi reset)"
     }

@@ -43,70 +43,69 @@ fn check_pipeline_for_external_commands(
     pipeline: &Pipeline,
     context: &LintContext,
 ) -> Option<RuleViolation> {
-    use nu_protocol::ast::Traverse;
-
-    // If the pipeline has only one element, no risk of silent failure
+    log::debug!("Checking pipeline with {} elements", pipeline.elements.len());
+    
+    // Single element pipelines don't have the issue - the exit code is checked
     if pipeline.elements.len() <= 1 {
+        log::debug!("Pipeline has only 1 element, skipping");
         return None;
     }
 
-    // Check if wrapped in try or complete
+    // Check if wrapped in try or complete or do -i
     if is_pipeline_wrapped_in_error_handling(pipeline, context) {
         log::debug!("Pipeline is wrapped in error handling");
         return None;
     }
 
     // Look for external commands that are NOT in the last position
-    let mut external_spans = Vec::new();
+    // Check the TOP LEVEL expression of each pipeline element
+    let last_idx = pipeline.elements.len() - 1;
     
     for (idx, element) in pipeline.elements.iter().enumerate() {
-        let is_last = idx == pipeline.elements.len() - 1;
+        if idx >= last_idx {
+            // Last element is OK - its exit code is checked
+            continue;
+        }
         
-        let mut found = Vec::new();
-        element.expr.flat_map(
-            context.working_set,
-            &|expr| {
-                check_expr_for_external(expr, idx, is_last, context)
-            },
-            &mut found,
-        );
-        external_spans.extend(found);
+        log::debug!("Checking pipeline element {idx} (top-level): {:?}", element.expr.expr);
+        
+        // Check if THIS element (or anything it contains) is an external call
+        if contains_external_call(&element.expr, context) {
+            log::debug!("Element {idx} contains external call - creating violation");
+            return Some(create_violation(element.expr.span, pipeline, context));
+        }
     }
 
-    // Find the first external command not in last position
-    external_spans
-        .into_iter()
-        .find(|(idx, _)| *idx < pipeline.elements.len() - 1)
-        .map(|(_idx, span)| {
-            log::debug!("Creating violation for external command in non-last position");
-            create_violation(span, pipeline, context)
-        })
+    None
 }
 
-fn check_expr_for_external(
-    expr: &nu_protocol::ast::Expression,
-    idx: usize,
-    _is_last: bool,
-    context: &LintContext,
-) -> Vec<(usize, Span)> {
-    if let Expr::ExternalCall(head, _args) = &expr.expr {
-        let head_text = &context.source[head.span.start..head.span.end];
-        
-        let is_known_command = context
-            .engine_state
-            .get_decls_sorted(false)
-            .iter()
-            .any(|(name, _id)| name == head_text.as_bytes());
-
-        if is_known_command {
-            vec![]
-        } else {
-            log::debug!("Found external command {head_text:?} at position {idx}");
-            vec![(idx, expr.span)]
-        }
-    } else {
-        vec![]
-    }
+/// Check if an expression or any of its sub-expressions contains an external call
+fn contains_external_call(expr: &nu_protocol::ast::Expression, context: &LintContext) -> bool {
+    use nu_protocol::ast::Traverse;
+    
+    let mut results = Vec::new();
+    expr.flat_map(
+        context.working_set,
+        &|e| {
+            if let Expr::ExternalCall(head, _args) = &e.expr {
+                let head_text = &context.source[head.span.start..head.span.end];
+                log::debug!("    Found ExternalCall in traversal: {head_text:?}");
+                
+                // If it's an ExternalCall, the user explicitly used ^ prefix
+                // This means they want to run the external version, regardless of
+                // whether a builtin exists with the same name
+                log::debug!("    Confirmed as external command (via ^ prefix): {head_text:?}");
+                vec![true]
+            } else {
+                vec![]
+            }
+        },
+        &mut results,
+    );
+    
+    let has_external = !results.is_empty();
+    log::debug!("    Contains external: {has_external}");
+    has_external
 }
 
 fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<RuleViolation>) {
@@ -114,16 +113,15 @@ fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<RuleVi
 
     // Check each pipeline for external commands that aren't in the last position
     block.pipelines.iter().for_each(|pipeline| {
+        // Skip checking the pipeline itself if it's a definition, but still check nested blocks
         if is_alias_or_export_definition(pipeline, context) {
-            log::debug!("Skipping - pipeline is an alias/export definition");
-            return;
-        }
-
-        if let Some(violation) = check_pipeline_for_external_commands(pipeline, context) {
+            log::debug!("Skipping - pipeline is an alias/export definition (but will check nested blocks)");
+        } else if let Some(violation) = check_pipeline_for_external_commands(pipeline, context) {
             log::debug!("Creating violation for external command in pipeline");
             violations.push(violation);
         }
 
+        // Always check for nested blocks (functions, closures, etc.)
         check_pipeline_for_nested_blocks(pipeline, context, violations);
     });
 }

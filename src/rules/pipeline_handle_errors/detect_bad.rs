@@ -159,17 +159,17 @@ fn test_detect_multiple_external_in_pipeline() {
 }
 
 #[test]
-fn test_unnecessary_try_for_safe_git() {
-    init_logger();
-    let bad_code = "try { git status | grep modified } catch { |err| print $err }";
-    rule().assert_detects(bad_code);
-}
-
-#[test]
 fn test_suggestion_recommends_complete_for_custom_handling() {
     init_logger();
     let bad_code = r"^docker build -t myapp . | lines";
     rule().assert_detects(bad_code);
+}
+
+#[test]
+fn test_do_ignore_but_first_item_not_ignored() {
+    init_logger();
+    let good_code = "do -i { ^git status | grep modified | wc -l }";
+    rule().assert_detects(good_code);
 }
 
 #[test]

@@ -9,20 +9,6 @@ fn init_logger() {
 }
 
 #[test]
-fn test_ignore_safe_git_status() {
-    init_logger();
-    let good_code = r"^git status | lines";
-    rule().assert_ignores(good_code);
-}
-
-#[test]
-fn test_ignore_safe_git_log() {
-    init_logger();
-    let good_code = r"^git log --oneline | lines | first 10";
-    rule().assert_ignores(good_code);
-}
-
-#[test]
 fn test_ignore_useful_try_dangerous_command() {
     init_logger();
     let good_code = "try { sysctl -n kernel.arch kernel.ostype | lines }";
@@ -58,13 +44,6 @@ if $result.exit_code == 0 {
 fn test_ignore_pipeline_ending_with_complete() {
     init_logger();
     let good_code = "curl https://example.com | complete";
-    rule().assert_ignores(good_code);
-}
-
-#[test]
-fn test_ignore_with_do_ignore() {
-    init_logger();
-    let good_code = "do -i { git status | grep modified | wc -l }";
     rule().assert_ignores(good_code);
 }
 

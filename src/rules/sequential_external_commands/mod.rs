@@ -1,4 +1,7 @@
-use nu_protocol::{Span, ast::Expr};
+use nu_protocol::{
+    Span,
+    ast::{Block, Expr, Pipeline},
+};
 
 use crate::{
     context::LintContext,
@@ -6,26 +9,132 @@ use crate::{
     rule::{Rule, RuleCategory},
 };
 
-/// Find all external command calls in the AST along with their parent
-/// expression spans
-fn find_external_commands(context: &LintContext) -> Vec<(Span, Span)> {
+/// Check if a pipeline is an alias or export definition
+fn is_alias_or_export_definition(pipeline: &Pipeline, context: &LintContext) -> bool {
+    // Check if the pipeline starts with 'alias' or 'export' command
+    if let Some(first_element) = pipeline.elements.first()
+        && let Expr::Call(call) = &first_element.expr.expr
+    {
+        let decl_name = context.working_set.get_decl(call.decl_id).name();
+        log::debug!("Pipeline first element is a Call to: {}", decl_name);
+        let is_alias_or_export = decl_name == "alias"
+            || decl_name == "export"
+            || decl_name == "export alias"
+            || decl_name == "export def"
+            || decl_name == "export const"
+            || decl_name == "export use"
+            || decl_name == "export extern"
+            || decl_name == "def"
+            || decl_name == "const";
+        log::debug!("Is alias or export? {is_alias_or_export}");
+        return is_alias_or_export;
+    }
+
+    log::debug!("Pipeline first element is NOT a Call");
+    false
+}
+
+/// Check if a pipeline contains an external command
+fn pipeline_contains_external(pipeline: &Pipeline, context: &LintContext) -> Option<Span> {
     use nu_protocol::ast::Traverse;
 
-    let mut sequential_externals = Vec::new();
-    context.ast.flat_map(
-        context.working_set,
-        &|expr| {
-            if let Expr::ExternalCall(_head, _args) = &expr.expr {
-                // Return both the external call span and the parent expression span
-                // This helps us check if it's wrapped in complete/try
-                return vec![(expr.span, expr.span)];
-            }
-            vec![]
-        },
-        &mut sequential_externals,
-    );
+    let mut external_span = None;
+    pipeline.elements.iter().for_each(|element| {
+        if external_span.is_some() {
+            return;
+        }
 
-    sequential_externals
+        let mut found = Vec::new();
+        element.expr.flat_map(
+            context.working_set,
+            &|expr| {
+                if let Expr::ExternalCall(_head, _args) = &expr.expr {
+                    vec![expr.span]
+                } else {
+                    vec![]
+                }
+            },
+            &mut found,
+        );
+
+        if let Some(&span) = found.first() {
+            external_span = Some(span);
+        }
+    });
+
+    external_span
+}
+
+/// Check a block for sequential external commands
+fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<RuleViolation>) {
+    let pipelines: Vec<&Pipeline> = block.pipelines.iter().collect();
+    log::debug!("Checking block with {} pipelines", pipelines.len());
+
+    for window in pipelines.windows(2) {
+        let [first_pipeline, second_pipeline] = window else {
+            continue;
+        };
+
+        log::debug!("Checking pair of pipelines");
+
+        // Skip if either pipeline is an alias or export definition
+        if is_alias_or_export_definition(first_pipeline, context)
+            || is_alias_or_export_definition(second_pipeline, context)
+        {
+            log::debug!("Skipping - one or both pipelines are alias/export definitions");
+            continue;
+        }
+
+        let (Some(first_span), Some(second_span)) = (
+            pipeline_contains_external(first_pipeline, context),
+            pipeline_contains_external(second_pipeline, context),
+        ) else {
+            log::debug!("Skipping - one or both pipelines don't contain external commands");
+            continue;
+        };
+
+        log::debug!(
+            "Found sequential external commands at spans: {first_span:?} and {second_span:?}"
+        );
+
+        if let Some(violation) = create_violation_if_needed(first_span, second_span, context) {
+            log::debug!("Creating violation");
+            violations.push(violation);
+        }
+    }
+
+    // Recursively check nested blocks
+    for pipeline in &block.pipelines {
+        check_pipeline_for_nested_blocks(pipeline, context, violations);
+    }
+}
+
+/// Check a pipeline for nested blocks and recursively check them
+fn check_pipeline_for_nested_blocks(
+    pipeline: &Pipeline,
+    context: &LintContext,
+    violations: &mut Vec<RuleViolation>,
+) {
+    use nu_protocol::ast::Traverse;
+
+    for element in &pipeline.elements {
+        let mut blocks = Vec::new();
+        element.expr.flat_map(
+            context.working_set,
+            &|expr| match &expr.expr {
+                Expr::Block(block_id) | Expr::Closure(block_id) | Expr::Subexpression(block_id) => {
+                    vec![*block_id]
+                }
+                _ => vec![],
+            },
+            &mut blocks,
+        );
+
+        for block_id in blocks {
+            let block = context.working_set.get_block(block_id);
+            check_block(block, context, violations);
+        }
+    }
 }
 
 /// Get a substring from the end, ensuring we don't split multi-byte characters
@@ -57,7 +166,7 @@ fn safe_prefix(text: &str, max_bytes: usize) -> &str {
 /// Check if an external command is wrapped in error handling
 fn is_wrapped_in_error_handling(span: Span, context: &LintContext) -> bool {
     const CONTEXT_SIZE: usize = 100;
-    
+
     let source_before = &context.source[..span.start];
     let source_after = &context.source[span.end..];
 
@@ -111,47 +220,10 @@ fn create_violation_if_needed(
     )
 }
 
-fn process_external_command_pair(
-    i: usize,
-    sequential_externals: &[(Span, Span)],
-    seen_pairs: &mut std::collections::HashSet<(usize, usize)>,
-    context: &LintContext,
-) -> Option<RuleViolation> {
-    const MAX_DISTANCE: usize = 200;
-
-    // Only check the immediate next external command to avoid duplicate violations
-    if i + 1 >= sequential_externals.len() {
-        return None;
-    }
-
-    let (first_span, _) = sequential_externals[i];
-    let (second_span, _) = sequential_externals[i + 1];
-    let pair_key = (first_span.start, second_span.start);
-
-    if seen_pairs.contains(&pair_key)
-        || second_span.start <= first_span.end
-        || second_span.start - first_span.end >= MAX_DISTANCE
-    {
-        return None;
-    }
-
-    if let Some(violation) = create_violation_if_needed(first_span, second_span, context) {
-        seen_pairs.insert(pair_key);
-        return Some(violation);
-    }
-
-    None
-}
-
 fn check(context: &LintContext) -> Vec<RuleViolation> {
-    let sequential_externals = find_external_commands(context);
-    let mut seen_pairs = std::collections::HashSet::new();
-
-    (0..sequential_externals.len())
-        .filter_map(|i| {
-            process_external_command_pair(i, &sequential_externals, &mut seen_pairs, context)
-        })
-        .collect()
+    let mut violations = Vec::new();
+    check_block(context.ast, context, &mut violations);
+    violations
 }
 
 pub fn rule() -> Rule {

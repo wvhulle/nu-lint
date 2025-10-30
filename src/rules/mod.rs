@@ -34,8 +34,6 @@ pub mod prefer_parse_over_each_split;
 pub mod prefer_range_iteration;
 pub mod prefer_structured_data_flow;
 pub mod prefer_where_over_each_if;
-pub mod require_external_command_error_check;
-pub mod require_long_pipeline_error_handling;
 pub mod screaming_snake_constants;
 pub mod snake_case_variables;
 pub mod systemd_journal_prefix;
@@ -121,8 +119,6 @@ impl RuleRegistry {
         registry.register(prefer_range_iteration::rule());
         registry.register(prefer_structured_data_flow::rule());
         registry.register(prefer_where_over_each_if::rule());
-        registry.register(require_external_command_error_check::rule());
-        registry.register(require_long_pipeline_error_handling::rule());
         registry.register(screaming_snake_constants::rule());
         registry.register(pipeline_handle_errors::rule());
         registry.register(snake_case_variables::rule());

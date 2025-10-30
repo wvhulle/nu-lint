@@ -54,7 +54,13 @@ fn test_ignore_error_redirection_with_complete() {
     rule().assert_ignores(good_code);
 }
 
-// Pattern 5: sequential statements (not pipelines)
+#[test]
+fn test_ignore_safe_git_command() {
+    init_logger();
+    let good_code = r#"git branch --merged | lines | where ($it != "* master" and $it != "* main") | each {|br| git branch -D ($br | str trim) } | str trim"#;
+    rule().assert_ignores(good_code);
+}
+
 #[test]
 fn test_ignore_sequential_statements_semicolon() {
     init_logger();

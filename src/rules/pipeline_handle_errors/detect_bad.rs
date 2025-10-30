@@ -19,13 +19,6 @@ fn test_detect_curl_piped_to_from_json() {
 }
 
 #[test]
-fn test_detect_git_log_piped_processing() {
-    init_logger();
-    let bad_code = r"^git log --oneline | lines | each { |line| $line | split row ' ' }";
-    rule().assert_detects(bad_code);
-}
-
-#[test]
 fn test_detect_wget_piped_to_tar() {
     init_logger();
     let bad_code = r"^wget -O - https://example.com/file.tar.gz | ^tar xz";
@@ -74,21 +67,6 @@ fn test_detect_docker_ps_piped() {
 fn test_detect_docker_logs_piped() {
     init_logger();
     let bad_code = r"^docker logs mycontainer | ^grep ERROR";
-    rule().assert_detects(bad_code);
-}
-
-// Test git commands in pipelines
-#[test]
-fn test_detect_git_diff_piped() {
-    init_logger();
-    let bad_code = r"^git diff --name-only | lines | each { |f| print $f }";
-    rule().assert_detects(bad_code);
-}
-
-#[test]
-fn test_detect_git_status_piped() {
-    init_logger();
-    let bad_code = r"^git status --short | lines | where ($it | str starts-with 'M ')";
     rule().assert_detects(bad_code);
 }
 

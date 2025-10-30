@@ -9,6 +9,27 @@ use crate::{
     rule::{Rule, RuleCategory},
 };
 
+/// Whitelist of external commands that are generally safe and unlikely to fail
+/// These commands typically only fail if the system is severely broken
+const SAFE_EXTERNAL_COMMANDS: &[&str] = &[
+    // Basic shell utilities that rarely fail
+    "echo", "printf", "true", "false", "yes", "seq", "git",
+    // Date/time commands
+    "date", "uptime", "cal",
+    // Information display commands (read-only, safe)
+    "whoami", "id", "hostname", "uname", "arch",
+    // Path commands
+    "pwd", "basename", "dirname", "realpath", "readlink",
+    // Environment
+    "env", "printenv",
+    // Simple text processing (no file I/O)
+    "tr", "cut", "paste", "column", "fmt", "fold", "expand", "unexpand",
+    // Math
+    "bc", "dc", "expr",
+    // Safe directory operations
+    "mktemp",
+];
+
 fn is_alias_or_export_definition(pipeline: &Pipeline, context: &LintContext) -> bool {
     pipeline
         .elements
@@ -35,23 +56,36 @@ fn is_alias_or_export_definition(pipeline: &Pipeline, context: &LintContext) -> 
         .unwrap_or(false)
 }
 
-fn contains_external_call(expr: &nu_protocol::ast::Expression, context: &LintContext) -> bool {
+/// Check if an external command is dangerous (likely to fail)
+/// Returns the command name if it's dangerous, None otherwise
+fn get_dangerous_external_command(expr: &nu_protocol::ast::Expression, context: &LintContext) -> Option<String> {
     use nu_protocol::ast::Traverse;
     
-    let mut results = Vec::new();
+    let mut commands = Vec::new();
     expr.flat_map(
         context.working_set,
         &|e| {
-            if matches!(&e.expr, Expr::ExternalCall(_, _)) {
-                vec![true]
+            if let Expr::ExternalCall(head, _args) = &e.expr {
+                let head_text = context.source[head.span.start..head.span.end].to_string();
+                if is_safe_command(&head_text) {
+                    vec![]
+                } else {
+                    vec![head_text]
+                }
             } else {
                 vec![]
             }
         },
-        &mut results,
+        &mut commands,
     );
     
-    !results.is_empty()
+    commands.into_iter().next()
+}
+
+/// Whitelist of commands that are generally safe and unlikely to fail
+/// These commands typically only fail if the system is severely broken
+fn is_safe_command(cmd: &str) -> bool {
+    SAFE_EXTERNAL_COMMANDS.contains(&cmd)
 }
 
 fn check_pipeline_for_external_commands(
@@ -68,7 +102,7 @@ fn check_pipeline_for_external_commands(
         return None;
     }
 
-    // Look for external commands that are NOT in the last position
+    // Look for dangerous external commands that are NOT in the last position
     // Only the last command's exit code is checked by Nushell
     let last_idx = pipeline.elements.len() - 1;
     
@@ -76,8 +110,10 @@ fn check_pipeline_for_external_commands(
         .iter()
         .enumerate()
         .take(last_idx) // Skip last element
-        .find(|(_, element)| contains_external_call(&element.expr, context))
-        .map(|(_, element)| create_violation(element.expr.span, pipeline, context))
+        .find_map(|(_, element)| {
+            get_dangerous_external_command(&element.expr, context)
+                .map(|_cmd| create_violation(element.expr.span, pipeline, context))
+        })
 }
 
 fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<RuleViolation>) {

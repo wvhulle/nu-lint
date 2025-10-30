@@ -13,21 +13,14 @@ use crate::{
 /// These commands typically only fail if the system is severely broken
 const SAFE_EXTERNAL_COMMANDS: &[&str] = &[
     // Basic shell utilities that rarely fail
-    "echo", "printf", "true", "false", "yes", "seq", "git",
-    // Date/time commands
-    "date", "uptime", "cal",
-    // Information display commands (read-only, safe)
-    "whoami", "id", "hostname", "uname", "arch",
-    // Path commands
-    "pwd", "basename", "dirname", "realpath", "readlink",
-    // Environment
-    "env", "printenv",
-    // Simple text processing (no file I/O)
-    "tr", "cut", "paste", "column", "fmt", "fold", "expand", "unexpand",
-    // Math
-    "bc", "dc", "expr",
-    // Safe directory operations
-    "mktemp",
+    "echo", "printf", "true", "false", "yes", "seq", "ls", // Date/time commands
+    "date", "uptime", "cal", // Information display commands (read-only, safe)
+    "whoami", "id", "hostname", "uname", "arch", // Path commands
+    "pwd", "basename", "dirname", "realpath", "readlink", // Environment
+    "env", "printenv", // Simple text processing (no file I/O)
+    "tr", "cut", "paste", "column", "fmt", "fold", "expand", "unexpand", // Math
+    "bc", "dc", "expr", // Safe directory operations
+    "mktemp", "git",
 ];
 
 fn is_alias_or_export_definition(pipeline: &Pipeline, context: &LintContext) -> bool {
@@ -58,9 +51,12 @@ fn is_alias_or_export_definition(pipeline: &Pipeline, context: &LintContext) -> 
 
 /// Check if an external command is dangerous (likely to fail)
 /// Returns the command name if it's dangerous, None otherwise
-fn get_dangerous_external_command(expr: &nu_protocol::ast::Expression, context: &LintContext) -> Option<String> {
+fn get_dangerous_external_command(
+    expr: &nu_protocol::ast::Expression,
+    context: &LintContext,
+) -> Option<String> {
     use nu_protocol::ast::Traverse;
-    
+
     let mut commands = Vec::new();
     expr.flat_map(
         context.working_set,
@@ -78,7 +74,7 @@ fn get_dangerous_external_command(expr: &nu_protocol::ast::Expression, context: 
         },
         &mut commands,
     );
-    
+
     commands.into_iter().next()
 }
 
@@ -105,8 +101,9 @@ fn check_pipeline_for_external_commands(
     // Look for dangerous external commands that are NOT in the last position
     // Only the last command's exit code is checked by Nushell
     let last_idx = pipeline.elements.len() - 1;
-    
-    pipeline.elements
+
+    pipeline
+        .elements
         .iter()
         .enumerate()
         .take(last_idx) // Skip last element
@@ -185,7 +182,7 @@ fn pipeline_has_complete(pipeline: &Pipeline, context: &LintContext) -> bool {
 
 fn pipeline_has_do_ignore(pipeline: &Pipeline, context: &LintContext) -> bool {
     use nu_protocol::ast::Traverse;
-    
+
     pipeline.elements.iter().any(|element| {
         let mut found = Vec::new();
         element.expr.flat_map(
@@ -207,14 +204,14 @@ fn is_do_with_ignore_flag(expr: &nu_protocol::ast::Expression, context: &LintCon
     let Expr::Call(call) = &expr.expr else {
         return false;
     };
-    
+
     let decl_name = context.working_set.get_decl(call.decl_id).name();
     decl_name == "do" && has_ignore_errors_flag(call)
 }
 
 fn has_ignore_errors_flag(call: &nu_protocol::ast::Call) -> bool {
     call.arguments.iter().any(|arg| {
-        matches!(arg, nu_protocol::ast::Argument::Named(named) 
+        matches!(arg, nu_protocol::ast::Argument::Named(named)
             if named.0.item == "ignore_errors" || named.0.item == "i")
     })
 }
@@ -229,9 +226,9 @@ fn is_pipeline_wrapped_in_error_handling(pipeline: &Pipeline, context: &LintCont
 }
 
 fn create_violation(span: Span, _pipeline: &Pipeline, _context: &LintContext) -> RuleViolation {
-    let message = "External command in pipeline without error handling: \
-        Nushell only checks the last command's exit code. \
-        If this command fails, the error will be silently ignored.";
+    let message = "External command in pipeline without error handling: Nushell only checks the \
+                   last command's exit code. If this command fails, the error will be silently \
+                   ignored.";
 
     let suggestion = "Handle errors from pipeline commands:\n\n\
         1. Use 'try' block (recommended for simple cases):\n\
@@ -263,7 +260,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "pipeline_handle_errors",
         RuleCategory::ErrorHandling,
-        Severity::Warning,
+        Severity::Error,
         "Ensure external commands in pipelines have proper error handling",
         check,
     )

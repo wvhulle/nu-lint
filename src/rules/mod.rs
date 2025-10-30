@@ -14,6 +14,7 @@ pub mod max_positional_params;
 pub mod missing_command_docs;
 pub mod missing_type_annotation;
 pub mod multiline_formatting;
+pub mod never_use_echo;
 pub mod no_trailing_spaces;
 pub mod nu_parse_error;
 pub mod omit_list_commas;
@@ -106,6 +107,7 @@ impl RuleRegistry {
         registry.register(prefer_builtin::prefer_builtin_sed());
         registry.register(prefer_builtin::prefer_builtin_other());
         registry.register(prefer_builtin::prefer_builtin_jq());
+        registry.register(never_use_echo::rule());
         registry.register(prefer_compound_assignment::rule());
         registry.register(prefer_each_over_for::rule());
         registry.register(prefer_error_make::rule());

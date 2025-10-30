@@ -56,7 +56,6 @@ fn test_suggestion_for_pipeline() {
     assert!(!violations.is_empty(), "Should detect echo in pipeline");
     let suggestion = violations[0].suggestion.as_ref().unwrap();
 
-    // Should show removing echo from the pipeline
     assert!(
         suggestion.contains("$var | str upcase"),
         "Should show pipeline without echo: {suggestion}"
@@ -76,12 +75,10 @@ fn test_suggestion_for_external_echo() {
     assert!(!violations.is_empty(), "Should detect external echo");
     let suggestion = violations[0].suggestion.as_ref().unwrap();
 
-    // Should mention it's external echo
     assert!(
         suggestion.contains("^echo"),
         "Should mention external echo: {suggestion}"
     );
-    // Should suggest alternatives
     assert!(
         suggestion.contains("print") || suggestion.contains(r#""test""#),
         "Should suggest alternatives: {suggestion}"
@@ -154,7 +151,6 @@ echo $var
 
     assert_eq!(violations.len(), 3, "Should detect all three echo uses");
 
-    // Each violation should have a suggestion
     for violation in &violations {
         assert!(
             violation.suggestion.is_some(),
@@ -167,19 +163,16 @@ echo $var
     let suggestion2 = violations[1].suggestion.as_ref().unwrap();
     let suggestion3 = violations[2].suggestion.as_ref().unwrap();
 
-    // First one has string literal
     assert!(
         suggestion1.contains(r#""first""#),
         "First suggestion should mention the string: {suggestion1}"
     );
 
-    // Second one has variable
     assert!(
         suggestion2.contains("$var"),
         "Second suggestion should mention the variable: {suggestion2}"
     );
 
-    // Third one has external echo
     assert!(
         suggestion3.contains("^echo") || suggestion3.contains("third"),
         "Third suggestion should mention external or the string: {suggestion3}"
@@ -195,13 +188,11 @@ fn test_suggestion_format_consistency() {
     assert!(!violations.is_empty(), "Should detect echo usage");
     let suggestion = violations[0].suggestion.as_ref().unwrap();
 
-    // Should have clear structure
     assert!(
         suggestion.contains("Bad:") && suggestion.contains("Good:"),
         "Should have Bad/Good format: {suggestion}"
     );
 
-    // Should have newlines for readability
     assert!(
         suggestion.contains('\n'),
         "Should have newlines for readability: {suggestion}"
@@ -220,13 +211,11 @@ fn test_suggestion_for_multiple_arguments() {
     );
     let suggestion = violations[0].suggestion.as_ref().unwrap();
 
-    // Should show the actual command
     assert!(
         suggestion.contains("echo"),
         "Should show echo command: {suggestion}"
     );
 
-    // Should suggest alternatives
     assert!(
         suggestion.contains("print") || suggestion.contains("directly"),
         "Should suggest alternatives: {suggestion}"

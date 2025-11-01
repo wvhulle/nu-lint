@@ -20,7 +20,6 @@ pub mod pipeline_handle_errors;
 pub mod prefer_compound_assignment;
 pub mod prefer_each_over_for;
 pub mod prefer_error_make;
-pub mod prefer_from_json;
 pub mod prefer_is_not_empty;
 pub mod prefer_lines_over_split;
 pub mod prefer_match_over_if_chain;
@@ -28,7 +27,6 @@ pub mod prefer_nushell_data_ops;
 pub mod prefer_parse_command;
 pub mod prefer_parse_over_each_split;
 pub mod prefer_range_iteration;
-pub mod prefer_structured_data_flow;
 pub mod prefer_where_over_each_if;
 
 pub mod prefer_builtin;
@@ -111,7 +109,6 @@ impl RuleRegistry {
         registry.register(prefer_compound_assignment::rule());
         registry.register(prefer_each_over_for::rule());
         registry.register(prefer_error_make::rule());
-        registry.register(prefer_from_json::rule());
         registry.register(prefer_is_not_empty::rule());
         registry.register(prefer_lines_over_split::rule());
         registry.register(prefer_match_over_if_chain::rule());
@@ -119,7 +116,6 @@ impl RuleRegistry {
         registry.register(prefer_parse_command::rule());
         registry.register(prefer_parse_over_each_split::rule());
         registry.register(prefer_range_iteration::rule());
-        registry.register(prefer_structured_data_flow::rule());
         registry.register(prefer_where_over_each_if::rule());
         registry.register(screaming_snake_constants::rule());
         registry.register(sed::rule());

@@ -18,6 +18,8 @@ const SIMPLE_JQ_OPS: &[&str] = &[
     "'add'",
     "'min'",
     "'max'",
+    "'sort'",
+    "'unique'",
 ];
 
 fn get_simple_jq_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
@@ -53,6 +55,8 @@ fn format_jq_replacement(filter: &str, file_arg: Option<&str>) -> String {
         "'add'" => "math sum".to_string(),
         "'min'" => "math min".to_string(),
         "'max'" => "math max".to_string(),
+        "'sort'" => "sort".to_string(),
+        "'unique'" => "uniq".to_string(),
         _ if filter.starts_with("'.[") && filter.ends_with("]'") => {
             let index = &filter[3..filter.len() - 2];
             format!("get {index}")

@@ -94,17 +94,21 @@ fn likely_uses_parameter_for_data_operations(param_var_id: VarId, context: &Lint
 }
 
 /// Extract the function body from its declaration span for generating specific suggestions
-fn extract_function_body(decl_name: &str, _param_name: &str, context: &LintContext) -> Option<String> {
+fn extract_function_body(
+    decl_name: &str,
+    _param_name: &str,
+    context: &LintContext,
+) -> Option<String> {
     // Find the declaration span and extract the body
     let decl_span = context.find_declaration_span(decl_name);
     let contents = String::from_utf8_lossy(context.working_set.get_span_contents(decl_span));
 
     // Look for the function body between braces
-    if let Some(start) = contents.find('{') {
-        if let Some(end) = contents.rfind('}') {
-            let body = &contents[start+1..end].trim();
-            return Some(body.to_string());
-        }
+    if let Some(start) = contents.find('{')
+        && let Some(end) = contents.rfind('}')
+    {
+        let body = &contents[start + 1..end].trim();
+        return Some((*body).to_string());
     }
 
     None
@@ -159,7 +163,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
                 let suggested_body = if function_body.trim_start().starts_with(&param_var)
                     && function_body.contains(" | ") {
                     // Parameter is at start of pipeline - can omit $in
-                    function_body.replacen(&format!("{} | ", param_var), "", 1)
+                    function_body.replacen(&format!("{param_var} | "), "", 1)
                 } else {
                     // Parameter is used elsewhere - need explicit $in
                     function_body.replace(&param_var, "$in")

@@ -1,5 +1,3 @@
-#![allow(clippy::excessive_nesting)]
-
 use std::{fs, hint::black_box};
 
 use criterion::{Criterion, criterion_group, criterion_main};

@@ -70,12 +70,11 @@ fn extract_function_body(decl_name: &str, context: &LintContext) -> Option<Strin
     let contents = String::from_utf8_lossy(context.working_set.get_span_contents(decl_span));
 
     // Look for the function body between braces
-    if let Some(start) = contents.find('{') {
-        if let Some(end) = contents.rfind('}') {
+    if let Some(start) = contents.find('{')
+        && let Some(end) = contents.rfind('}') {
             let body = &contents[start+1..end].trim();
             return Some((*body).to_string());
         }
-    }
 
     None
 }

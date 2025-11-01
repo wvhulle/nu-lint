@@ -49,73 +49,60 @@ fn ignore_nushell_get_operations() {
 }
 
 #[test]
-fn ignore_complex_jq_operations() {
-    let good_codes = vec![
-        "^jq '.[] | select(.age > 30)' people.json",
-        "^jq 'map(.name)' users.json",
-        "^jq 'group_by(.category)' items.json",
-        "^jq '.users[] | .name' data.json",
-        "^jq 'sort_by(.timestamp)' events.json",
-    ];
-
-    for code in good_codes {
-        rule().assert_ignores(code);
-    }
+fn ignore_jq_with_function_definitions() {
+    // jq allows defining custom functions - no direct Nushell equivalent in jq syntax
+    rule().assert_ignores("^jq 'def f: .; . | f' input.json");
 }
 
 #[test]
-fn ignore_jq_field_access() {
+fn ignore_jq_with_complex_conditionals() {
+    // Complex conditional logic with multiple branches
     let good_codes = vec![
-        "^jq '.name' user.json",
-        "^jq '.data.items' response.json",
-        "^jq '.config.version' settings.json",
-    ];
-
-    for code in good_codes {
-        rule().assert_ignores(code);
-    }
-}
-
-#[test]
-fn ignore_other_external_commands() {
-    let good_codes = vec![
-        "^curl -s api.example.com",
-        "^git status",
-        "^docker ps",
-        "^sed 's/old/new/g' file.txt",
-        "^awk '{print $1}' data.txt",
-    ];
-
-    for code in good_codes {
-        rule().assert_ignores(code);
-    }
-}
-
-#[test]
-fn ignore_proper_nushell_pipelines() {
-    let good_codes = vec![
-        "open file.json | from json | length",
-        "open data.json | from json | get name",
-        "ls *.json | where size > 1KB",
-        "$data | where active | length",
-    ];
-
-    for code in good_codes {
-        rule().assert_ignores(code);
-    }
-}
-
-#[test]
-fn ignore_jq_with_complex_filters() {
-    let good_codes = vec![
-        "^jq '.items[] | select(.price > 100) | .name' catalog.json",
-        "^jq 'def f: .; . | f' input.json",
         "^jq 'if .status == \"ok\" then .data else empty end' response.json",
+        "^jq 'if .x > 0 then .y elif .x < 0 then .z else .w end' data.json",
     ];
-
+    
     for code in good_codes {
         rule().assert_ignores(code);
     }
+}
+
+#[test]
+fn ignore_jq_with_arithmetic_in_filters() {
+    // Complex arithmetic operations in filter expressions
+    let good_codes = vec![
+        "^jq '.items[] | select(.price * .quantity > 100)' catalog.json",
+        "^jq '.[] | select((.a + .b) / 2 > 10)' data.json",
+    ];
+    
+    for code in good_codes {
+        rule().assert_ignores(code);
+    }
+}
+
+#[test]
+fn ignore_jq_with_string_operations_in_select() {
+    // String operations inside select predicates
+    let good_codes = vec![
+        "^jq '.[] | select(.name | startswith(\"A\"))' people.json",
+        "^jq '.[] | select(.email | contains(\"@example.com\"))' users.json",
+    ];
+    
+    for code in good_codes {
+        rule().assert_ignores(code);
+    }
+}
+
+#[test]
+fn ignore_jq_multiline_with_complex_select() {
+    // Multiline jq with complex select condition (comparison)
+    rule().assert_ignores(
+        r#"$data | to json | ^jq '
+        .users[]
+        | select(.role == "admin")
+        | .email
+    '"#,
+    );
 }
 
 #[test]

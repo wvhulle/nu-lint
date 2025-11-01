@@ -26,8 +26,10 @@ pub mod prefer_match_over_if_chain;
 pub mod prefer_nushell_data_ops;
 pub mod prefer_parse_command;
 pub mod prefer_parse_over_each_split;
+pub mod prefer_pipeline_input;
 pub mod prefer_range_iteration;
 pub mod prefer_where_over_each_if;
+pub mod remove_redundant_in;
 
 pub mod prefer_builtin;
 pub mod spacing;
@@ -115,8 +117,10 @@ impl RuleRegistry {
         registry.register(prefer_nushell_data_ops::rule());
         registry.register(prefer_parse_command::rule());
         registry.register(prefer_parse_over_each_split::rule());
+        registry.register(prefer_pipeline_input::rule());
         registry.register(prefer_range_iteration::rule());
         registry.register(prefer_where_over_each_if::rule());
+        registry.register(remove_redundant_in::rule());
         registry.register(screaming_snake_constants::rule());
         registry.register(sed::rule());
         registry.register(snake_case_variables::rule());

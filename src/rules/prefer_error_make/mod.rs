@@ -33,25 +33,20 @@ fn looks_like_error(message: &str, exit_code: i64) -> bool {
 
 /// Extract the message from a print command call
 fn extract_print_message(call: &nu_protocol::ast::Call, context: &LintContext) -> Option<String> {
-    // Get the first positional argument (the message)
-    let message_expr = call.get_first_positional_arg()?;
-
-    // Extract string content
-    match &message_expr.expr {
-        Expr::String(s) => Some(s.clone()),
-        _ => Some(message_expr.span_text(context).to_string()),
-    }
+    call.get_first_positional_arg()
+        .map(|message_expr| match &message_expr.expr {
+            Expr::String(s) => s.clone(),
+            _ => message_expr.span_text(context).to_string(),
+        })
 }
 
 /// Extract the exit code from an exit command call
 fn extract_exit_code(call: &nu_protocol::ast::Call) -> Option<i64> {
-    // Get the first positional argument (the exit code)
-    let code_expr = call.get_first_positional_arg()?;
-
-    match &code_expr.expr {
-        Expr::Int(code) => Some(*code),
-        _ => None,
-    }
+    call.get_first_positional_arg()
+        .and_then(|code_expr| match &code_expr.expr {
+            Expr::Int(code) => Some(*code),
+            _ => None,
+        })
 }
 
 /// Check if two pipeline elements are sequential print and exit calls
@@ -60,87 +55,65 @@ fn check_sequential_print_exit(
     second: &PipelineElement,
     context: &LintContext,
 ) -> Option<RuleViolation> {
-    // Check if first element is a print call
-    let Expr::Call(print_call) = &first.expr.expr else {
-        return None;
+    let print_call = match &first.expr.expr {
+        Expr::Call(call) if call.is_call_to_command("print", context) => call,
+        _ => return None,
     };
 
-    if !print_call.is_call_to_command("print", context) {
-        return None;
-    }
-
-    // Check if second element is an exit call
-    let Expr::Call(exit_call) = &second.expr.expr else {
-        return None;
+    let exit_call = match &second.expr.expr {
+        Expr::Call(call) if call.is_call_to_command("exit", context) => call,
+        _ => return None,
     };
 
-    if !exit_call.is_call_to_command("exit", context) {
-        return None;
-    }
-
-    // Extract message and exit code
-    let message = extract_print_message(print_call, context)?;
-    let exit_code = extract_exit_code(exit_call)?;
-
-    // Check if it looks like an error
-    looks_like_error(&message, exit_code).then(|| {
-        RuleViolation::new_static(
-            "prefer_error_make",
-            "Consider using 'error make' instead of 'print' + 'exit' for error conditions",
-            print_call.span().merge(exit_call.span()),
-        )
-        .with_suggestion_static(
-            "Use 'error make { msg: \"error message\" }' for better error handling",
-        )
-    })
+    extract_print_message(print_call, context)
+        .zip(extract_exit_code(exit_call))
+        .filter(|(message, exit_code)| looks_like_error(message, *exit_code))
+        .map(|_| {
+            RuleViolation::new_static(
+                "prefer_error_make",
+                "Consider using 'error make' instead of 'print' + 'exit' for error conditions",
+                print_call.span().merge(exit_call.span()),
+            )
+            .with_suggestion_static(
+                "Use 'error make { msg: \"error message\" }' for better error handling",
+            )
+        })
 }
 
 /// Check consecutive pipelines in a block for print + exit pattern
-fn check_block_pipelines(
-    block: &nu_protocol::ast::Block,
-    context: &LintContext,
-    violations: &mut Vec<RuleViolation>,
-) {
-    for pipelines in block.pipelines.windows(2) {
-        if let [first_pipeline, second_pipeline] = pipelines {
-            // Each pipeline should have exactly one element for this pattern
-            if first_pipeline.elements.len() != 1 || second_pipeline.elements.len() != 1 {
-                continue;
-            }
+fn check_block_pipelines<'a>(
+    block: &'a nu_protocol::ast::Block,
+    context: &'a LintContext<'a>,
+) -> impl Iterator<Item = RuleViolation> + 'a {
+    block.pipelines.windows(2).filter_map(move |pipelines| {
+        let [first_pipeline, second_pipeline] = pipelines else {
+            return None;
+        };
 
-            if let Some(violation) = check_sequential_print_exit(
-                &first_pipeline.elements[0],
-                &second_pipeline.elements[0],
-                context,
-            ) {
-                violations.push(violation);
-            }
-        }
-    }
+        // Each pipeline should have exactly one element for this pattern
+        let [first_elem] = &first_pipeline.elements[..] else {
+            return None;
+        };
+        let [second_elem] = &second_pipeline.elements[..] else {
+            return None;
+        };
+
+        check_sequential_print_exit(first_elem, second_elem, context)
+    })
 }
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {
-    let mut violations = Vec::new();
+    let main_violations = check_block_pipelines(context.ast, context);
 
-    // Check the main block
-    check_block_pipelines(context.ast, context, &mut violations);
+    let nested_violations = context.collect_rule_violations(|expr, ctx| match &expr.expr {
+        Expr::Closure(block_id) | Expr::Block(block_id) => {
+            let block = ctx.working_set.get_block(*block_id);
+            check_block_pipelines(block, ctx).collect()
+        }
+        _ => vec![],
+    });
 
-    // Recursively check all nested blocks (closures, functions, etc.)
-    // Note: We only check Block/Closure expressions here because if/while/for
-    // command blocks are already traversed by collect_rule_violations
-    violations.extend(
-        context.collect_rule_violations(|expr, ctx| match &expr.expr {
-            Expr::Closure(block_id) | Expr::Block(block_id) => {
-                let mut nested_violations = Vec::new();
-                let block = ctx.working_set.get_block(*block_id);
-                check_block_pipelines(block, ctx, &mut nested_violations);
-                nested_violations
-            }
-            _ => vec![],
-        }),
-    );
-
-    violations
+    main_violations.chain(nested_violations).collect()
 }
 
 pub fn rule() -> Rule {

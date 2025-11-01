@@ -8,9 +8,11 @@ use nu_command::add_shell_command_context;
 use nu_lint::{
     context::LintContext,
     rules::prefer_builtin::{
-        prefer_builtin_cat, prefer_builtin_find, prefer_builtin_grep, prefer_builtin_head,
-        prefer_builtin_ls, prefer_builtin_other, prefer_builtin_sort, prefer_builtin_tail,
-        prefer_builtin_uniq,
+        cat::rule as prefer_builtin_cat, find::rule as prefer_builtin_find,
+        grep::rule as prefer_builtin_grep, head::rule as prefer_builtin_head,
+        ls::rule as prefer_builtin_ls, other::rule as prefer_builtin_other,
+        sort::rule as prefer_builtin_sort, tail::rule as prefer_builtin_tail,
+        uniq::rule as prefer_builtin_uniq,
     },
 };
 use nu_parser::parse;

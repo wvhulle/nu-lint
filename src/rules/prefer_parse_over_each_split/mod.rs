@@ -38,7 +38,7 @@ fn contains_split_row(expr: &nu_protocol::ast::Expression, ctx: &LintContext) ->
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {
     use crate::ast::CallExt;
-    
+
     context.collect_rule_violations(|expr, ctx| match &expr.expr {
         Expr::Call(call) if call.is_call_to_command("each", ctx) => {
             let has_split = call

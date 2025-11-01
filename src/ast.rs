@@ -49,7 +49,8 @@ pub trait ExpressionExt {
     /// Extract external command name if this is an external call
     fn extract_external_command_name(&self, context: &LintContext) -> Option<String>;
 
-    /// Check if this expression contains a call to a specific command (recursive)
+    /// Check if this expression contains a call to a specific command
+    /// (recursive)
     fn contains_call_to(&self, command_name: &str, context: &LintContext) -> bool;
 
     /// Check if this expression contains any variable references (recursive)
@@ -254,9 +255,7 @@ impl ExpressionExt for Expression {
             // Lists and records might contain variables
             Expr::List(items) => items.iter().any(|item| match item {
                 nu_protocol::ast::ListItem::Item(expr)
-                | nu_protocol::ast::ListItem::Spread(_, expr) => {
-                    expr.contains_variables(context)
-                }
+                | nu_protocol::ast::ListItem::Spread(_, expr) => expr.contains_variables(context),
             }),
 
             Expr::Record(fields) => fields.iter().any(|field| match field {
@@ -471,11 +470,7 @@ impl BlockExt for BlockId {
 
     fn all_elements<'a>(&self, context: &'a LintContext) -> Vec<&'a PipelineElement> {
         let block = context.working_set.get_block(*self);
-        block
-            .pipelines
-            .iter()
-            .flat_map(|p| &p.elements)
-            .collect()
+        block.pipelines.iter().flat_map(|p| &p.elements).collect()
     }
 
     fn contains_call_to(&self, command_name: &str, context: &LintContext) -> bool {

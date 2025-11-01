@@ -51,6 +51,9 @@ pub trait ExpressionExt {
 
     /// Check if this expression contains a call to a specific command (recursive)
     fn contains_call_to(&self, command_name: &str, context: &LintContext) -> bool;
+
+    /// Check if this expression contains any variable references (recursive)
+    fn contains_variables(&self, context: &LintContext) -> bool;
 }
 
 impl ExpressionExt for Expression {
@@ -226,6 +229,57 @@ impl ExpressionExt for Expression {
         );
         !results.is_empty()
     }
+
+    fn contains_variables(&self, context: &LintContext) -> bool {
+        match &self.expr {
+            // Direct variable reference
+            Expr::Var(_) | Expr::VarDecl(_) => true,
+
+            // Cell paths (like $x.field)
+            Expr::FullCellPath(path) => path.head.contains_variables(context),
+
+            // Subexpressions, blocks, closures
+            Expr::Subexpression(block_id) | Expr::Block(block_id) | Expr::Closure(block_id) => {
+                block_id.contains_variables(context)
+            }
+
+            // Binary operators
+            Expr::BinaryOp(left, _, right) => {
+                left.contains_variables(context) || right.contains_variables(context)
+            }
+
+            // Unary operators
+            Expr::UnaryNot(inner) => inner.contains_variables(context),
+
+            // Lists and records might contain variables
+            Expr::List(items) => items.iter().any(|item| match item {
+                nu_protocol::ast::ListItem::Item(expr)
+                | nu_protocol::ast::ListItem::Spread(_, expr) => {
+                    expr.contains_variables(context)
+                }
+            }),
+
+            Expr::Record(fields) => fields.iter().any(|field| match field {
+                nu_protocol::ast::RecordItem::Pair(key, val) => {
+                    key.contains_variables(context) || val.contains_variables(context)
+                }
+                nu_protocol::ast::RecordItem::Spread(_, expr) => expr.contains_variables(context),
+            }),
+
+            // Calls might have variables in arguments
+            Expr::Call(call) => call.arguments.iter().any(|arg| match arg {
+                nu_protocol::ast::Argument::Positional(expr)
+                | nu_protocol::ast::Argument::Unknown(expr)
+                | nu_protocol::ast::Argument::Named((_, _, Some(expr))) => {
+                    expr.contains_variables(context)
+                }
+                _ => false,
+            }),
+
+            // Everything else (literals, nothing, etc.) doesn't contain variables
+            _ => false,
+        }
+    }
 }
 
 /// Trait to extend Call with utility methods
@@ -381,6 +435,9 @@ pub trait BlockExt {
     fn any_element<F>(&self, context: &LintContext, predicate: F) -> bool
     where
         F: Fn(&PipelineElement) -> bool;
+
+    /// Check if this block contains any variable references
+    fn contains_variables(&self, context: &LintContext) -> bool;
 }
 
 impl BlockExt for BlockId {
@@ -432,6 +489,15 @@ impl BlockExt for BlockId {
         F: Fn(&PipelineElement) -> bool,
     {
         self.all_elements(context).iter().any(|e| predicate(e))
+    }
+
+    fn contains_variables(&self, context: &LintContext) -> bool {
+        let block = context.working_set.get_block(*self);
+        block
+            .pipelines
+            .iter()
+            .flat_map(|p| &p.elements)
+            .any(|elem| elem.expr.contains_variables(context))
     }
 }
 

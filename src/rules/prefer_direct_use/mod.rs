@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet};
 use nu_protocol::ast::Expr;
 
 use crate::{
+    ast_utils::{AstUtils, LoopVariableExtractor},
     context::LintContext,
     lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
@@ -92,21 +93,6 @@ fn has_transformation_in_append(
     false
 }
 
-fn get_loop_var_name(call: &nu_protocol::ast::Call, context: &LintContext) -> Option<String> {
-    let var_arg = call.arguments.first()?;
-    let (nu_protocol::ast::Argument::Positional(var_expr)
-    | nu_protocol::ast::Argument::Unknown(var_expr)) = var_arg
-    else {
-        return None;
-    };
-
-    if let Expr::Var(_var_id) | Expr::VarDecl(_var_id) = &var_expr.expr {
-        let var_name = &context.source[var_expr.span.start..var_expr.span.end];
-        Some(var_name.to_string())
-    } else {
-        None
-    }
-}
 
 fn is_literal_list(expr: &nu_protocol::ast::Expression) -> bool {
     match &expr.expr {
@@ -117,29 +103,6 @@ fn is_literal_list(expr: &nu_protocol::ast::Expression) -> bool {
     }
 }
 
-fn is_empty_list_in_block(block_id: nu_protocol::BlockId, context: &LintContext) -> bool {
-    log::debug!("Found Block, checking if empty list");
-    let block = context.working_set.get_block(block_id);
-    log::debug!("Block has {} pipelines", block.pipelines.len());
-
-    let Some(pipeline) = block.pipelines.first() else {
-        return false;
-    };
-    log::debug!("First pipeline has {} elements", pipeline.elements.len());
-
-    let Some(elem) = pipeline.elements.first() else {
-        return false;
-    };
-    log::debug!("First element expr: {:?}", elem.expr.expr);
-
-    match &elem.expr.expr {
-        Expr::List(items) => items.is_empty(),
-        Expr::FullCellPath(cell_path) => {
-            matches!(&cell_path.head.expr, Expr::List(items) if items.is_empty())
-        }
-        _ => false,
-    }
-}
 
 /// Extract variable IDs that are assigned to within a block (for append
 /// detection)
@@ -248,7 +211,7 @@ fn extract_empty_list_vars(
             log::debug!("Found List with {} items", items.len());
             items.is_empty()
         }
-        Expr::Block(block_id) => is_empty_list_in_block(*block_id, context),
+        Expr::Block(block_id) => AstUtils::is_empty_list_block(*block_id, context),
         _ => {
             log::debug!("Init expr is neither List nor Block: {:?}", init_expr.expr);
             false
@@ -279,7 +242,7 @@ fn extract_direct_copy_patterns(
         return vec![];
     }
 
-    let Some(loop_var_name) = get_loop_var_name(call, context) else {
+    let Some(loop_var_name) = LoopVariableExtractor::from_for_call(call, context) else {
         log::debug!("Could not get loop var name");
         return vec![];
     };

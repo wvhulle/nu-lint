@@ -1,9 +1,10 @@
 use heck::ToKebabCase;
-use nu_protocol::ast::{Argument, Expr};
+use nu_protocol::ast::Expr;
 
 use crate::{
+    ast_utils::{AstUtils, DeclarationUtils, NamingUtils},
     context::LintContext,
-    lint::{Fix, Replacement, RuleViolation, Severity},
+    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
@@ -37,45 +38,28 @@ fn is_valid_kebab_case(name: &str) -> bool {
     }) && name.chars().next().is_some_and(|c| c.is_ascii_lowercase())
 }
 
-/// Check if this is a def or export def command
-fn is_def_command(decl_name: &str) -> bool {
-    matches!(decl_name, "def" | "export def")
-}
-
-/// Create a violation for invalid command name
-fn create_kebab_case_violation(cmd_name: &str, name_span: nu_protocol::Span) -> RuleViolation {
-    let kebab_case_name = cmd_name.to_kebab_case();
-
-    let fix = Fix {
-        description: format!("Rename command '{cmd_name}' to '{kebab_case_name}'").into(),
-        replacements: vec![Replacement {
-            span: name_span,
-            new_text: kebab_case_name.clone().into(),
-        }],
-    };
-
-    RuleViolation::new_dynamic(
-        "kebab_case_commands",
-        format!("Command '{cmd_name}' should use kebab-case naming convention"),
-        name_span,
-    )
-    .with_suggestion_dynamic(format!("Consider renaming to: {kebab_case_name}"))
-    .with_fix(fix)
-}
-
 /// Check a single call expression for command naming violations
 fn check_call(call: &nu_protocol::ast::Call, ctx: &LintContext) -> Option<RuleViolation> {
-    let decl = ctx.working_set.get_decl(call.decl_id);
+    let decl_name = AstUtils::get_call_name(call, ctx);
 
-    is_def_command(decl.name()).then_some(())?;
-
-    let Argument::Positional(name_expr) = call.arguments.first()? else {
+    if !DeclarationUtils::is_def_command(&decl_name) {
         return None;
-    };
+    }
 
-    let cmd_name = ctx.source.get(name_expr.span.start..name_expr.span.end)?;
+    let (cmd_name, name_span) = DeclarationUtils::extract_declaration_name(call, ctx)?;
 
-    (!is_valid_kebab_case(cmd_name)).then(|| create_kebab_case_violation(cmd_name, name_expr.span))
+    if !is_valid_kebab_case(&cmd_name) {
+        let kebab_case_name = cmd_name.to_kebab_case();
+        return Some(NamingUtils::create_naming_violation(
+            "kebab_case_commands",
+            "Command",
+            &cmd_name,
+            kebab_case_name,
+            name_span,
+        ));
+    }
+
+    None
 }
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {

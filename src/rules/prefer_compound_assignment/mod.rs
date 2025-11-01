@@ -1,21 +1,12 @@
 use nu_protocol::ast::{Expr, Operator};
 
 use crate::{
+    ast_utils::AstUtils,
     context::LintContext,
     lint::{Fix, Replacement, RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
 
-fn expressions_refer_to_same_variable(
-    expr1: &nu_protocol::ast::Expression,
-    expr2: &nu_protocol::ast::Expression,
-    context: &LintContext,
-) -> bool {
-    // Simple text comparison for now - could be improved with semantic analysis
-    let text1 = &context.source[expr1.span.start..expr1.span.end];
-    let text2 = &context.source[expr2.span.start..expr2.span.end];
-    text1 == text2
-}
 
 fn build_fix(
     var_text: &str,
@@ -26,7 +17,7 @@ fn build_fix(
 ) -> Option<Fix> {
     // Extract the right operand from the binary operation
     if let Expr::BinaryOp(_left, _op, right) = &element.expr.expr {
-        let right_text = &context.source[right.span.start..right.span.end];
+        let right_text = AstUtils::span_text(right.span, context);
         let new_text = format!("{var_text} {compound_op} {right_text}");
 
         Some(Fix::new_dynamic(
@@ -96,13 +87,13 @@ fn check_for_compound_assignment(
         return None;
     };
 
-    if !expressions_refer_to_same_variable(left, sub_left, ctx) {
+    if !AstUtils::expressions_refer_to_same_variable(left, sub_left, ctx) {
         return None;
     }
 
     let compound_op = get_compound_operator(*operator)?;
 
-    let var_text = &ctx.source[left.span.start..left.span.end];
+    let var_text = AstUtils::span_text(left.span, ctx);
     let op_symbol = get_operator_symbol(*operator);
 
     let fix = build_fix(var_text, compound_op, element, expr.span, ctx);

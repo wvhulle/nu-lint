@@ -7,7 +7,6 @@ pub mod exit_only_in_main;
 pub mod exported_function_docs;
 
 pub mod max_positional_params;
-pub mod missing_command_docs;
 pub mod missing_type_annotation;
 pub mod naming;
 pub mod never_use_echo;
@@ -96,7 +95,6 @@ impl RuleRegistry {
         registry.register(kebab_case_commands::rule());
         registry.register(ls::rule());
         registry.register(max_positional_params::rule());
-        registry.register(missing_command_docs::rule());
         registry.register(missing_type_annotation::rule());
         registry.register(multiline_formatting::rule());
         registry.register(never_use_echo::rule());

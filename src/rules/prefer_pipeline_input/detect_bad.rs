@@ -168,4 +168,3 @@ fn detect_string_parameter_used_for_data_processing() {
         rule().assert_detects(code);
     }
 }
-

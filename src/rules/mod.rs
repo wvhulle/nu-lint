@@ -42,11 +42,10 @@ use naming::{
     completion_function_naming, discourage_underscore_commands, kebab_case_commands,
     screaming_snake_constants, snake_case_variables,
 };
+use prefer_builtin::{cat, find, grep, head, jq, ls, other, sed, sort, tail, uniq};
 use spacing::{
     brace_spacing, multiline_formatting, no_trailing_spaces, omit_list_commas, pipe_spacing,
 };
-
-use prefer_builtin::{cat, find, grep, head, jq, ls, other, sed, sort, tail, uniq};
 
 use crate::rule::Rule;
 

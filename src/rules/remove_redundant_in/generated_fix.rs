@@ -11,7 +11,10 @@ fn fix_get_field_operation() {
         assert!(!violations.is_empty());
 
         if let Some(fix) = &violations[0].fix {
-            assert!(fix.description.contains("Change to: def get-field [field] { get $field }"));
+            assert!(
+                fix.description
+                    .contains("Change to: def get-field [field] { get $field }")
+            );
             assert!(fix.description.contains("Remove redundant $in"));
         }
     });
@@ -27,7 +30,10 @@ fn fix_select_operation() {
         assert!(!violations.is_empty());
 
         if let Some(fix) = &violations[0].fix {
-            assert!(fix.description.contains("Change to: def select-column [column] { select $column }"));
+            assert!(
+                fix.description
+                    .contains("Change to: def select-column [column] { select $column }")
+            );
             assert!(fix.description.contains("Remove redundant $in"));
         }
     });
@@ -43,7 +49,10 @@ fn fix_each_operation() {
         assert!(!violations.is_empty());
 
         if let Some(fix) = &violations[0].fix {
-            assert!(fix.description.contains("Change to: def multiply [factor] { each { |x| $x * $factor } }"));
+            assert!(
+                fix.description
+                    .contains("Change to: def multiply [factor] { each { |x| $x * $factor } }")
+            );
             assert!(fix.description.contains("Remove redundant $in"));
         }
     });
@@ -59,7 +68,10 @@ fn fix_no_parameters() {
         assert!(!violations.is_empty());
 
         if let Some(fix) = &violations[0].fix {
-            assert!(fix.description.contains("Change to: def process [] { where active }"));
+            assert!(
+                fix.description
+                    .contains("Change to: def process [] { where active }")
+            );
             assert!(fix.description.contains("Remove redundant $in"));
         }
     });
@@ -75,7 +87,9 @@ fn fix_complex_pipeline() {
         assert!(!violations.is_empty());
 
         if let Some(fix) = &violations[0].fix {
-            assert!(fix.description.contains("Change to: def process [] { where active | select name | sort-by name }"));
+            assert!(fix.description.contains(
+                "Change to: def process [] { where active | select name | sort-by name }"
+            ));
             assert!(fix.description.contains("Remove redundant $in"));
         }
     });
@@ -91,7 +105,10 @@ fn fix_no_space_after_in() {
         assert!(!violations.is_empty());
 
         if let Some(fix) = &violations[0].fix {
-            assert!(fix.description.contains("Change to: def filter [] { where $it > 0 }"));
+            assert!(
+                fix.description
+                    .contains("Change to: def filter [] { where $it > 0 }")
+            );
             assert!(fix.description.contains("Remove redundant $in"));
         }
     });
@@ -107,7 +124,10 @@ fn fix_sort_by_operation() {
         assert!(!violations.is_empty());
 
         if let Some(fix) = &violations[0].fix {
-            assert!(fix.description.contains("Change to: def sort-by-field [field] { sort-by $field }"));
+            assert!(
+                fix.description
+                    .contains("Change to: def sort-by-field [field] { sort-by $field }")
+            );
             assert!(fix.description.contains("Remove redundant $in"));
         }
     });
@@ -123,7 +143,10 @@ fn fix_first_operation() {
         assert!(!violations.is_empty());
 
         if let Some(fix) = &violations[0].fix {
-            assert!(fix.description.contains("Change to: def take-first [n] { first $n }"));
+            assert!(
+                fix.description
+                    .contains("Change to: def take-first [n] { first $n }")
+            );
             assert!(fix.description.contains("Remove redundant $in"));
         }
     });

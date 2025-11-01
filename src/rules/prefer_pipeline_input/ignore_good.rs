@@ -34,7 +34,8 @@ fn ignore_optional_parameters() {
     let good_codes = vec![
         // Commands with optional parameters should not be converted
         "def greet [name?] { $\"Hello, ($name | default 'World')!\" }",
-        "def process [data, multiplier?: int] { $data | each { |x| $x * ($multiplier | default 1) } }",
+        "def process [data, multiplier?: int] { $data | each { |x| $x * ($multiplier | default 1) \
+         } }",
     ];
 
     for code in good_codes {

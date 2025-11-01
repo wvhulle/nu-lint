@@ -230,7 +230,7 @@ fn detect_jq_simple_field_access() {
         "^jq '.email' contact.json",
         "^jq '.id' record.json",
     ];
-    
+
     for code in bad_codes {
         rule().assert_detects(code);
     }
@@ -244,7 +244,7 @@ fn detect_jq_nested_field_access() {
         "^jq '.config.version' settings.json",
         "^jq '.user.profile.name' data.json",
     ];
-    
+
     for code in bad_codes {
         rule().assert_detects(code);
     }
@@ -253,11 +253,8 @@ fn detect_jq_nested_field_access() {
 #[test]
 fn detect_jq_array_iteration_all() {
     // .[] -> each (when used with open)
-    let bad_codes = vec![
-        "^jq '.[]' array.json",
-        "$data | to json | ^jq '.[]'",
-    ];
-    
+    let bad_codes = vec!["^jq '.[]' array.json", "$data | to json | ^jq '.[]'"];
+
     for code in bad_codes {
         rule().assert_detects(code);
     }
@@ -271,7 +268,7 @@ fn detect_jq_field_array_iteration() {
         "^jq '.items[]' catalog.json",
         "$data | to json | ^jq '.products[]'",
     ];
-    
+
     for code in bad_codes {
         rule().assert_detects(code);
     }
@@ -285,7 +282,7 @@ fn detect_jq_map_simple() {
         "^jq 'map(.id)' items.json",
         "$data | to json | ^jq 'map(.email)'",
     ];
-    
+
     for code in bad_codes {
         rule().assert_detects(code);
     }
@@ -299,7 +296,7 @@ fn detect_jq_group_by_simple() {
         "^jq 'group_by(.status)' tasks.json",
         "$events | to json | ^jq 'group_by(.type)'",
     ];
-    
+
     for code in bad_codes {
         rule().assert_detects(code);
     }
@@ -314,7 +311,7 @@ fn detect_jq_sort_by_simple() {
         "^jq 'sort_by(.priority)' tasks.json",
         "$items | to json | ^jq 'sort_by(.price)'",
     ];
-    
+
     for code in bad_codes {
         rule().assert_detects(code);
     }
@@ -328,7 +325,7 @@ fn detect_jq_select_simple_field() {
         "^jq 'select(.enabled)' features.json",
         "$data | to json | ^jq 'select(.published)'",
     ];
-    
+
     for code in bad_codes {
         rule().assert_detects(code);
     }
@@ -343,7 +340,7 @@ fn detect_jq_with_file_operations() {
         "^jq 'length' items.json",
         "^jq 'keys' object.json",
     ];
-    
+
     for code in bad_codes {
         rule().assert_detects(code);
     }
@@ -356,7 +353,7 @@ fn detect_jq_chained_simple_operations() {
         "$data | to json | ^jq '.users[] | .name'",
         "$data | to json | ^jq '.items[] | .id'",
     ];
-    
+
     for code in bad_codes {
         rule().assert_detects(code);
     }
@@ -364,13 +361,14 @@ fn detect_jq_chained_simple_operations() {
 
 #[test]
 fn detect_jq_with_flags() {
-    // jq with flags like -r, -c, -M should still be detected if the filter is simple
+    // jq with flags like -r, -c, -M should still be detected if the filter is
+    // simple
     let bad_codes = vec![
         "$config | to json | ^jq -r '.database.host'",
         "$data | to json | ^jq -c '.users'",
         "$items | to json | ^jq -M '.products'",
     ];
-    
+
     for code in bad_codes {
         rule().assert_detects(code);
     }

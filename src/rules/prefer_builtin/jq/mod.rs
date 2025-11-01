@@ -1,18 +1,19 @@
 use std::collections::HashMap;
 
+use jaq_core::{
+    load::{
+        lex::{Lexer, StrPart},
+        parse::{Parser, Term},
+    },
+    path::{Opt, Part},
+};
+
 use crate::{
     context::LintContext,
     external_command::{BuiltinAlternative, extract_external_args},
     lint::{Fix, Replacement, RuleViolation, Severity},
     rule::{Rule, RuleCategory},
 };
-
-use jaq_core::load::{
-    lex::Lexer,
-    lex::StrPart,
-    parse::{Parser, Term},
-};
-use jaq_core::path::Part;
 
 /// Extract field name from a path like .field
 fn extract_field_from_path<'a>(term: &'a Term<&str>) -> Option<&'a str> {
@@ -24,6 +25,18 @@ fn extract_field_from_path<'a>(term: &'a Term<&str>) -> Option<&'a str> {
         && let StrPart::Str(field) = &parts[0]
     {
         Some(field)
+    } else {
+        None
+    }
+}
+
+/// Extract field name from a Part if it's a simple string index
+fn extract_field_from_part<'a>(part: &(Part<Term<&'a str>>, Opt)) -> Option<&'a str> {
+    if let Part::Index(Term::Str(_, parts)) = &part.0
+        && parts.len() == 1
+        && let jaq_core::load::lex::StrPart::Str(field) = &parts[0]
+    {
+        Some(*field)
     } else {
         None
     }
@@ -64,119 +77,17 @@ fn jq_term_to_nushell(term: &Term<&str>, has_file: bool) -> Option<String> {
 
     match term {
         // Simple function calls like length, keys, add, etc.
-        Term::Call(name, args) if args.is_empty() => match *name {
-            "length" => Some(wrap_with_open("length")),
-            "keys" => Some(wrap_with_open("columns")),
-            "type" => Some(wrap_with_open("describe")),
-            "empty" => Some("null".to_string()),
-            "not" => Some(wrap_with_open("not $in")),
-            "flatten" => Some(wrap_with_open("flatten")),
-            "add" => Some(wrap_with_open("math sum")),
-            "min" => Some(wrap_with_open("math min")),
-            "max" => Some(wrap_with_open("math max")),
-            "sort" => Some(wrap_with_open("sort")),
-            "unique" => Some(wrap_with_open("uniq")),
-            "reverse" => Some(wrap_with_open("reverse")),
-            _ => None,
-        },
+        Term::Call(name, args) if args.is_empty() => convert_simple_call(name, &wrap_with_open),
 
-        // Functions with arguments: map(.field), select(.active), group_by(.category), sort_by(.field)
+        // Functions with arguments: map(.field), select(.active), group_by(.category),
+        // sort_by(.field)
         Term::Call(name, args) if args.len() == 1 => {
-            match *name {
-                "map" => {
-                    // map(.field) -> get field
-                    extract_field_from_path(&args[0])
-                        .map(|field| wrap_with_open(&format!("get {field}")))
-                }
-                "select" => {
-                    // select(.field) -> where field
-                    // Only handle simple field access, not complex conditions
-                    extract_field_from_path(&args[0])
-                        .map(|field| wrap_with_open(&format!("where {field}")))
-                }
-                "group_by" => {
-                    // group_by(.field) -> group-by field
-                    extract_field_from_path(&args[0])
-                        .map(|field| wrap_with_open(&format!("group-by {field}")))
-                }
-                "sort_by" => {
-                    // sort_by(.field) -> sort-by field
-                    extract_field_from_path(&args[0])
-                        .map(|field| wrap_with_open(&format!("sort-by {field}")))
-                }
-                _ => None,
-            }
+            convert_call_with_arg(name, &args[0], &wrap_with_open)
         }
 
         // Path expressions: .[0], .[-1], .[], .field, .users[], .database.host
         Term::Path(inner, path_parts) if matches!(**inner, Term::Id) => {
-            match path_parts.0.len() {
-                1 => match &path_parts.0[0].0 {
-                    // Positive numeric index: .[0], .[1], etc.
-                    Part::Index(Term::Num(n)) => Some(wrap_with_open(&format!("get {n}"))),
-                    // Negative numeric index: .[-1] is parsed as Neg(Num("1"))
-                    Part::Index(Term::Neg(inner_term)) => match &**inner_term {
-                        Term::Num(n) if n == &"1" => Some(wrap_with_open("last")),
-                        Term::Num(n) => Some(wrap_with_open(&format!("get -{n}"))),
-                        _ => None,
-                    },
-                    // Array iteration: .[]
-                    Part::Range(None, None) => Some(wrap_with_open("each")),
-                    // Field access: .field is Index(Str(...))
-                    Part::Index(Term::Str(_, parts)) if parts.len() == 1 => {
-                        if let jaq_core::load::lex::StrPart::Str(field) = &parts[0] {
-                            Some(wrap_with_open(&format!("get {field}")))
-                        } else {
-                            None
-                        }
-                    }
-                    _ => None,
-                },
-                2 => {
-                    // .users[] pattern: field access followed by array iteration
-                    if let Part::Index(Term::Str(_, parts)) = &path_parts.0[0].0
-                        && parts.len() == 1
-                        && let jaq_core::load::lex::StrPart::Str(field) = &parts[0]
-                        && matches!(path_parts.0[1].0, Part::Range(None, None))
-                    {
-                        Some(wrap_with_open(&format!("get {field} | each")))
-                    // .database.host pattern: multiple field accesses
-                    } else if let Part::Index(Term::Str(_, parts1)) = &path_parts.0[0].0
-                        && let Part::Index(Term::Str(_, parts2)) = &path_parts.0[1].0
-                        && parts1.len() == 1
-                        && parts2.len() == 1
-                        && let jaq_core::load::lex::StrPart::Str(field1) = &parts1[0]
-                        && let jaq_core::load::lex::StrPart::Str(field2) = &parts2[0]
-                    {
-                        Some(wrap_with_open(&format!("get {field1}.{field2}")))
-                    } else {
-                        None
-                    }
-                }
-                _ => {
-                    // Try to extract all field names for longer paths like .a.b.c
-                    let fields: Vec<_> = path_parts
-                        .0
-                        .iter()
-                        .filter_map(|part| {
-                            if let Part::Index(Term::Str(_, parts)) = &part.0
-                                && parts.len() == 1
-                                && let jaq_core::load::lex::StrPart::Str(field) = &parts[0]
-                            {
-                                Some(*field)
-                            } else {
-                                None
-                            }
-                        })
-                        .collect();
-
-                    if fields.len() == path_parts.0.len() && !fields.is_empty() {
-                        Some(wrap_with_open(&format!("get {}", fields.join("."))))
-                    } else {
-                        None
-                    }
-                }
-            }
+            convert_path_expression(path_parts, &wrap_with_open)
         }
 
         // Pipe expressions: .users[] | .name
@@ -187,6 +98,152 @@ fn jq_term_to_nushell(term: &Term<&str>, has_file: bool) -> Option<String> {
         }
 
         _ => None,
+    }
+}
+
+/// Convert simple jq function calls (no arguments)
+fn convert_simple_call<F>(name: &str, wrap_with_open: &F) -> Option<String>
+where
+    F: Fn(&str) -> String,
+{
+    match name {
+        "length" => Some(wrap_with_open("length")),
+        "keys" => Some(wrap_with_open("columns")),
+        "type" => Some(wrap_with_open("describe")),
+        "empty" => Some("null".to_string()),
+        "not" => Some(wrap_with_open("not $in")),
+        "flatten" => Some(wrap_with_open("flatten")),
+        "add" => Some(wrap_with_open("math sum")),
+        "min" => Some(wrap_with_open("math min")),
+        "max" => Some(wrap_with_open("math max")),
+        "sort" => Some(wrap_with_open("sort")),
+        "unique" => Some(wrap_with_open("uniq")),
+        "reverse" => Some(wrap_with_open("reverse")),
+        _ => None,
+    }
+}
+
+/// Convert jq function calls with one argument
+fn convert_call_with_arg<F>(name: &str, arg: &Term<&str>, wrap_with_open: &F) -> Option<String>
+where
+    F: Fn(&str) -> String,
+{
+    match name {
+        "map" => {
+            // map(.field) -> get field
+            extract_field_from_path(arg).map(|field| wrap_with_open(&format!("get {field}")))
+        }
+        "select" => {
+            // select(.field) -> where field
+            // Only handle simple field access, not complex conditions
+            extract_field_from_path(arg).map(|field| wrap_with_open(&format!("where {field}")))
+        }
+        "group_by" => {
+            // group_by(.field) -> group-by field
+            extract_field_from_path(arg).map(|field| wrap_with_open(&format!("group-by {field}")))
+        }
+        "sort_by" => {
+            // sort_by(.field) -> sort-by field
+            extract_field_from_path(arg).map(|field| wrap_with_open(&format!("sort-by {field}")))
+        }
+        _ => None,
+    }
+}
+
+/// Convert jq path expressions to Nushell
+fn convert_path_expression<F>(
+    path_parts: &jaq_core::path::Path<Term<&str>>,
+    wrap_with_open: &F,
+) -> Option<String>
+where
+    F: Fn(&str) -> String,
+{
+    match path_parts.0.len() {
+        1 => convert_single_part_path(&path_parts.0[0].0, wrap_with_open),
+        2 => convert_two_part_path(&path_parts.0[0].0, &path_parts.0[1].0, wrap_with_open),
+        _ => convert_multi_part_path(path_parts, wrap_with_open),
+    }
+}
+
+/// Convert single-part path expressions
+fn convert_single_part_path<F>(part: &Part<Term<&str>>, wrap_with_open: &F) -> Option<String>
+where
+    F: Fn(&str) -> String,
+{
+    match part {
+        // Positive numeric index: .[0], .[1], etc.
+        Part::Index(Term::Num(n)) => Some(wrap_with_open(&format!("get {n}"))),
+        // Negative numeric index: .[-1] is parsed as Neg(Num("1"))
+        Part::Index(Term::Neg(inner_term)) => match &**inner_term {
+            Term::Num(n) if n == &"1" => Some(wrap_with_open("last")),
+            Term::Num(n) => Some(wrap_with_open(&format!("get -{n}"))),
+            _ => None,
+        },
+        // Array iteration: .[]
+        Part::Range(None, None) => Some(wrap_with_open("each")),
+        // Field access: .field is Index(Str(...))
+        Part::Index(Term::Str(_, parts)) if parts.len() == 1 => {
+            if let jaq_core::load::lex::StrPart::Str(field) = &parts[0] {
+                Some(wrap_with_open(&format!("get {field}")))
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
+}
+
+/// Convert two-part path expressions
+fn convert_two_part_path<F>(
+    part1: &Part<Term<&str>>,
+    part2: &Part<Term<&str>>,
+    wrap_with_open: &F,
+) -> Option<String>
+where
+    F: Fn(&str) -> String,
+{
+    // .users[] pattern: field access followed by array iteration
+    if let Part::Index(Term::Str(_, parts)) = part1
+        && parts.len() == 1
+        && let jaq_core::load::lex::StrPart::Str(field) = &parts[0]
+        && matches!(part2, Part::Range(None, None))
+    {
+        return Some(wrap_with_open(&format!("get {field} | each")));
+    }
+
+    // .database.host pattern: multiple field accesses
+    if let Part::Index(Term::Str(_, parts1)) = part1
+        && let Part::Index(Term::Str(_, parts2)) = part2
+        && parts1.len() == 1
+        && parts2.len() == 1
+        && let jaq_core::load::lex::StrPart::Str(field1) = &parts1[0]
+        && let jaq_core::load::lex::StrPart::Str(field2) = &parts2[0]
+    {
+        return Some(wrap_with_open(&format!("get {field1}.{field2}")));
+    }
+
+    None
+}
+
+/// Convert multi-part path expressions (3+ parts)
+fn convert_multi_part_path<F>(
+    path_parts: &jaq_core::path::Path<Term<&str>>,
+    wrap_with_open: &F,
+) -> Option<String>
+where
+    F: Fn(&str) -> String,
+{
+    // Try to extract all field names for longer paths like .a.b.c
+    let fields: Vec<_> = path_parts
+        .0
+        .iter()
+        .filter_map(extract_field_from_part)
+        .collect();
+
+    if fields.len() == path_parts.0.len() && !fields.is_empty() {
+        Some(wrap_with_open(&format!("get {}", fields.join("."))))
+    } else {
+        None
     }
 }
 
@@ -288,7 +345,8 @@ fn build_fix(
 fn contains_simple_jq_op(source_text: &str) -> bool {
     // Extract the filter argument from the jq command
     // Handle both single-line and multi-line jq filters
-    // Skip "jq" or "^jq", skip flags (starting with -), then extract the quoted filter
+    // Skip "jq" or "^jq", skip flags (starting with -), then extract the quoted
+    // filter
 
     // Find the start of the filter (first quote after jq and any flags)
     let quote_start = source_text.find(['\'', '"']);

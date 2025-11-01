@@ -10,11 +10,20 @@ use crate::{
 
 /// Map of less common system and text processing commands to their Nushell
 /// built-in equivalents
-#[allow(clippy::too_many_lines)]
 fn get_builtin_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
     let mut map = HashMap::new();
+    add_system_info_alternatives(&mut map);
+    add_process_control_alternatives(&mut map);
+    add_file_operations_alternatives(&mut map);
+    add_text_processing_alternatives(&mut map);
+    add_network_alternatives(&mut map);
+    add_archive_alternatives(&mut map);
+    add_misc_alternatives(&mut map);
+    map
+}
 
-    // System information commands
+/// Add system information command alternatives
+fn add_system_info_alternatives(map: &mut HashMap<&'static str, BuiltinAlternative>) {
     map.insert(
         "env",
         BuiltinAlternative::with_note(
@@ -47,14 +56,14 @@ fn get_builtin_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
         BuiltinAlternative::with_note("sys host", "Use 'sys host' to get system information"),
     );
     map.insert("stat", BuiltinAlternative::simple("stat"));
+}
 
-    // Process/system control
+/// Add process/system control command alternatives
+fn add_process_control_alternatives(map: &mut HashMap<&'static str, BuiltinAlternative>) {
     map.insert("sleep", BuiltinAlternative::simple("sleep"));
     map.insert("kill", BuiltinAlternative::simple("kill"));
     map.insert("clear", BuiltinAlternative::simple("clear"));
     map.insert("exit", BuiltinAlternative::simple("exit"));
-
-    // Help and utilities
     map.insert(
         "man",
         BuiltinAlternative::with_note(
@@ -77,8 +86,10 @@ fn get_builtin_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
             "Use 'let var = input' or 'let secret = input -s' for password input",
         ),
     );
+}
 
-    // Basic file system utilities
+/// Add file operation command alternatives
+fn add_file_operations_alternatives(map: &mut HashMap<&'static str, BuiltinAlternative>) {
     map.insert("pwd", BuiltinAlternative::simple("pwd"));
     map.insert("cd", BuiltinAlternative::simple("cd"));
     map.insert("mkdir", BuiltinAlternative::simple("mkdir"));
@@ -91,8 +102,10 @@ fn get_builtin_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
         BuiltinAlternative::with_note("print", "Use 'print' for output"),
     );
     map.insert("printf", BuiltinAlternative::simple("print"));
+}
 
-    // Text transformation commands
+/// Add text processing command alternatives
+fn add_text_processing_alternatives(map: &mut HashMap<&'static str, BuiltinAlternative>) {
     map.insert(
         "sed",
         BuiltinAlternative::with_note(
@@ -139,10 +152,23 @@ fn get_builtin_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
             "Use 'str reverse' for string reversal or 'reverse' for list reversal",
         ),
     );
-
-    map
 }
-#[allow(clippy::too_many_lines)]
+
+/// Add network command alternatives (placeholder)
+fn add_network_alternatives(_map: &mut HashMap<&'static str, BuiltinAlternative>) {
+    // Currently no network commands in this rule
+}
+
+/// Add archive command alternatives (placeholder)
+fn add_archive_alternatives(_map: &mut HashMap<&'static str, BuiltinAlternative>) {
+    // Currently no archive commands in this rule
+}
+
+/// Add miscellaneous command alternatives (placeholder)
+fn add_misc_alternatives(_map: &mut HashMap<&'static str, BuiltinAlternative>) {
+    // Currently no misc commands in this rule
+}
+
 fn build_fix(
     cmd_text: &str,
     alternative: &BuiltinAlternative,
@@ -156,148 +182,23 @@ fn build_fix(
     let (new_text, description) = match cmd_text {
         // Simple replacements
         "whoami" | "clear" | "exit" | "stat" | "pwd" | "mkdir" | "rm" | "mv" | "cp" | "touch"
-        | "sleep" | "kill" => {
-            let repl = if args_text.is_empty() {
-                cmd_text.to_string()
-            } else {
-                format!("{} {}", cmd_text, args_text.join(" "))
-            };
-            (repl, format!("Use Nu's built-in '{}'", alternative.command))
-        }
-        "cd" => {
-            let repl = if args_text.is_empty() {
-                "cd".to_string()
-            } else {
-                format!("cd {}", args_text[0])
-            };
-            (repl, "Use Nu's built-in 'cd'".to_string())
-        }
-        "env" | "printenv" => {
-            let (repl, desc) = if args_text.is_empty() {
-                (
-                    "$env".to_string(),
-                    "Use '$env' to access all environment variables as a record".to_string(),
-                )
-            } else {
-                (
-                    format!("$env.{}", args_text[0]),
-                    format!(
-                        "Use '$env.{}' to access environment variable directly",
-                        args_text[0]
-                    ),
-                )
-            };
-            (repl, desc)
-        }
-        "date" => (
-            "date now".to_string(),
-            "Use 'date now' which returns a datetime object with timezone support".to_string(),
-        ),
-        "hostname" => (
-            "(sys host).hostname".to_string(),
-            "Use '(sys host).hostname' for hostname, or 'sys net | get ip' for IP addresses"
-                .to_string(),
-        ),
-        "uname" => (
-            "sys host".to_string(),
-            "Use 'sys host' which returns structured system information (name, kernel_version, \
-             os_version, etc.)"
-                .to_string(),
-        ),
-        "man" => {
-            let repl = if let Some(cmd) = args_text.first() {
-                format!("help {cmd}")
-            } else {
-                "help commands".to_string()
-            };
-            (
-                repl,
-                "Use 'help <command>' for command help, or 'help commands' to list all commands"
-                    .to_string(),
-            )
-        }
-        "which" | "type" => {
-            let repl = if let Some(cmd) = args_text.first() {
-                format!("which {cmd}")
-            } else {
-                "which".to_string()
-            };
-            (
-                repl,
-                "Use Nu's built-in 'which' to find command locations".to_string(),
-            )
-        }
-        "read" => {
-            let (repl, desc) = if args_text.contains(&"-s".to_string())
-                || args_text.contains(&"--silent".to_string())
-            {
-                (
-                    "input -s".to_string(),
-                    "Use 'input -s' for secure password input (hidden)".to_string(),
-                )
-            } else {
-                (
-                    "input".to_string(),
-                    "Use 'input' to read user input".to_string(),
-                )
-            };
-            (repl, desc)
-        }
-        "echo" | "printf" => (
-            if args_text.is_empty() {
-                "print".to_string()
-            } else {
-                format!("print {}", args_text.join(" "))
-            },
-            "Use 'print' for output (supports structured data)".to_string(),
-        ),
-
+        | "sleep" | "kill" => build_simple_replacement(cmd_text, &args_text, alternative),
+        "cd" => build_cd_replacement(&args_text),
+        "env" | "printenv" => build_env_replacement(&args_text),
+        "date" => build_date_replacement(),
+        "hostname" => build_hostname_replacement(),
+        "uname" => build_uname_replacement(),
+        "man" => build_man_replacement(&args_text),
+        "which" | "type" => build_which_replacement(&args_text),
+        "read" => build_read_replacement(&args_text),
+        "echo" | "printf" => build_print_replacement(&args_text),
         // Text transformation commands
-        "awk" => {
-            let desc = "Use Nu's data pipeline: 'where' for filtering, 'select' for columns, or \
-                        'each' for row processing"
-                .to_string();
-            ("where | select | each".to_string(), desc)
-        }
-        "cut" => {
-            let desc = "Use 'select' to choose columns from structured data".to_string();
-            ("select".to_string(), desc)
-        }
-        "wc" => {
-            let (repl, desc) = if args_text.contains(&"-l".to_string()) {
-                (
-                    "lines | length".to_string(),
-                    "Use 'lines | length' to count lines in a file".to_string(),
-                )
-            } else {
-                (
-                    "length".to_string(),
-                    "Use 'length' for item count or 'str length' for character count".to_string(),
-                )
-            };
-            (repl, desc)
-        }
-        "tr" => {
-            let desc = "Use 'str replace' for character replacement, or 'str upcase'/'str \
-                        downcase' for case conversion"
-                .to_string();
-            ("str replace".to_string(), desc)
-        }
-        "tee" => {
-            let repl = if let Some(file) = args_text.first() {
-                format!("tee {{ save {file} }}")
-            } else {
-                "tee { save ... }".to_string()
-            };
-            let desc = "Use 'tee { save file.txt }' to save data while passing it through the \
-                        pipeline"
-                .to_string();
-            (repl, desc)
-        }
-        "rev" => (
-            "str reverse".to_string(),
-            "Use 'str reverse' for string reversal or 'reverse' for list reversal".to_string(),
-        ),
+        "awk" => build_awk_replacement(),
+        "cut" => build_cut_replacement(),
+        "wc" => build_wc_replacement(&args_text),
+        "tr" => build_tr_replacement(),
+        "tee" => build_tee_replacement(&args_text),
+        "rev" => build_rev_replacement(),
         _ => (
             alternative.command.to_string(),
             format!("Use Nu's built-in '{}'", alternative.command),
@@ -311,6 +212,174 @@ fn build_fix(
             new_text: new_text.into(),
         }],
     }
+}
+
+fn build_simple_replacement(
+    cmd_text: &str,
+    args_text: &[String],
+    alternative: &BuiltinAlternative,
+) -> (String, String) {
+    let repl = if args_text.is_empty() {
+        cmd_text.to_string()
+    } else {
+        format!("{} {}", cmd_text, args_text.join(" "))
+    };
+    (repl, format!("Use Nu's built-in '{}'", alternative.command))
+}
+
+fn build_cd_replacement(args_text: &[String]) -> (String, String) {
+    let repl = if args_text.is_empty() {
+        "cd".to_string()
+    } else {
+        format!("cd {}", args_text[0])
+    };
+    (repl, "Use Nu's built-in 'cd'".to_string())
+}
+
+fn build_env_replacement(args_text: &[String]) -> (String, String) {
+    if args_text.is_empty() {
+        (
+            "$env".to_string(),
+            "Use '$env' to access all environment variables as a record".to_string(),
+        )
+    } else {
+        (
+            format!("$env.{}", args_text[0]),
+            format!(
+                "Use '$env.{}' to access environment variable directly",
+                args_text[0]
+            ),
+        )
+    }
+}
+
+fn build_date_replacement() -> (String, String) {
+    (
+        "date now".to_string(),
+        "Use 'date now' which returns a datetime object with timezone support".to_string(),
+    )
+}
+
+fn build_hostname_replacement() -> (String, String) {
+    (
+        "(sys host).hostname".to_string(),
+        "Use '(sys host).hostname' for hostname, or 'sys net | get ip' for IP addresses"
+            .to_string(),
+    )
+}
+
+fn build_uname_replacement() -> (String, String) {
+    (
+        "sys host".to_string(),
+        "Use 'sys host' which returns structured system information (name, kernel_version, \
+         os_version, etc.)"
+            .to_string(),
+    )
+}
+
+fn build_man_replacement(args_text: &[String]) -> (String, String) {
+    let repl = if let Some(cmd) = args_text.first() {
+        format!("help {cmd}")
+    } else {
+        "help commands".to_string()
+    };
+    (
+        repl,
+        "Use 'help <command>' for command help, or 'help commands' to list all commands"
+            .to_string(),
+    )
+}
+
+fn build_which_replacement(args_text: &[String]) -> (String, String) {
+    let repl = if let Some(cmd) = args_text.first() {
+        format!("which {cmd}")
+    } else {
+        "which".to_string()
+    };
+    (
+        repl,
+        "Use Nu's built-in 'which' to find command locations".to_string(),
+    )
+}
+
+fn build_read_replacement(args_text: &[String]) -> (String, String) {
+    if args_text.contains(&"-s".to_string()) || args_text.contains(&"--silent".to_string()) {
+        (
+            "input -s".to_string(),
+            "Use 'input -s' for secure password input (hidden)".to_string(),
+        )
+    } else {
+        (
+            "input".to_string(),
+            "Use 'input' to read user input".to_string(),
+        )
+    }
+}
+
+fn build_print_replacement(args_text: &[String]) -> (String, String) {
+    (
+        if args_text.is_empty() {
+            "print".to_string()
+        } else {
+            format!("print {}", args_text.join(" "))
+        },
+        "Use 'print' for output (supports structured data)".to_string(),
+    )
+}
+
+fn build_awk_replacement() -> (String, String) {
+    let desc = "Use Nu's data pipeline: 'where' for filtering, 'select' for columns, or 'each' \
+                for row processing"
+        .to_string();
+    ("where | select | each".to_string(), desc)
+}
+
+fn build_cut_replacement() -> (String, String) {
+    (
+        "select".to_string(),
+        "Use 'select' to choose columns from structured data".to_string(),
+    )
+}
+
+fn build_wc_replacement(args_text: &[String]) -> (String, String) {
+    if args_text.contains(&"-l".to_string()) {
+        (
+            "lines | length".to_string(),
+            "Use 'lines | length' to count lines in a file".to_string(),
+        )
+    } else {
+        (
+            "length".to_string(),
+            "Use 'length' for item count or 'str length' for character count".to_string(),
+        )
+    }
+}
+
+fn build_tr_replacement() -> (String, String) {
+    (
+        "str replace".to_string(),
+        "Use 'str replace' for character replacement, or 'str upcase'/'str downcase' for case \
+         conversion"
+            .to_string(),
+    )
+}
+
+fn build_tee_replacement(args_text: &[String]) -> (String, String) {
+    let repl = if let Some(file) = args_text.first() {
+        format!("tee {{ save {file} }}")
+    } else {
+        "tee { save ... }".to_string()
+    };
+    let desc = "Use 'tee { save file.txt }' to save data while passing it through the pipeline"
+        .to_string();
+    (repl, desc)
+}
+
+fn build_rev_replacement() -> (String, String) {
+    (
+        "str reverse".to_string(),
+        "Use 'str reverse' for string reversal or 'reverse' for list reversal".to_string(),
+    )
 }
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {

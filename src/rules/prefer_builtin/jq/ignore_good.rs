@@ -50,7 +50,8 @@ fn ignore_nushell_get_operations() {
 
 #[test]
 fn ignore_jq_with_function_definitions() {
-    // jq allows defining custom functions - no direct Nushell equivalent in jq syntax
+    // jq allows defining custom functions - no direct Nushell equivalent in jq
+    // syntax
     rule().assert_ignores("^jq 'def f: .; . | f' input.json");
 }
 
@@ -61,7 +62,7 @@ fn ignore_jq_with_complex_conditionals() {
         "^jq 'if .status == \"ok\" then .data else empty end' response.json",
         "^jq 'if .x > 0 then .y elif .x < 0 then .z else .w end' data.json",
     ];
-    
+
     for code in good_codes {
         rule().assert_ignores(code);
     }
@@ -74,7 +75,7 @@ fn ignore_jq_with_arithmetic_in_filters() {
         "^jq '.items[] | select(.price * .quantity > 100)' catalog.json",
         "^jq '.[] | select((.a + .b) / 2 > 10)' data.json",
     ];
-    
+
     for code in good_codes {
         rule().assert_ignores(code);
     }
@@ -87,7 +88,7 @@ fn ignore_jq_with_string_operations_in_select() {
         "^jq '.[] | select(.name | startswith(\"A\"))' people.json",
         "^jq '.[] | select(.email | contains(\"@example.com\"))' users.json",
     ];
-    
+
     for code in good_codes {
         rule().assert_ignores(code);
     }

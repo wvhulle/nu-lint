@@ -33,7 +33,8 @@ fn references_variable(expr: &nu_protocol::ast::Expression, var_id: VarId) -> bo
     }
 }
 
-/// Check if a pipeline uses parameter as first element and has data transformation commands
+/// Check if a pipeline uses parameter as first element and has data
+/// transformation commands
 fn pipeline_uses_parameter_for_data_operations(
     pipeline: &Pipeline,
     param_var_id: VarId,
@@ -68,32 +69,42 @@ fn pipeline_uses_parameter_for_data_operations(
     false
 }
 
-/// Check if any block in the function uses parameter for data operations using AST
+/// Check if any block in the function uses parameter for data operations using
+/// AST
 fn likely_uses_parameter_for_data_operations(param_var_id: VarId, context: &LintContext) -> bool {
     // Use AST traversal to find parameter usage in pipelines
-    let violations = context.collect_rule_violations(|expr, ctx| {
-        match &expr.expr {
-            Expr::Block(block_id) | Expr::Closure(block_id) => {
-                let block = ctx.working_set.get_block(*block_id);
-                for pipeline in &block.pipelines {
-                    if pipeline_uses_parameter_for_data_operations(pipeline, param_var_id, ctx) {
-                        return vec![RuleViolation::new_static(
-                            "temp_marker",
-                            "Found data operation usage",
-                            expr.span,
-                        )];
-                    }
-                }
-            }
-            _ => {}
-        }
-        vec![]
-    });
+    let violations = context
+        .collect_rule_violations(|expr, ctx| check_block_for_param_usage(expr, param_var_id, ctx));
 
     !violations.is_empty()
 }
 
-/// Extract the function body from its declaration span for generating specific suggestions
+/// Helper function to check if a block uses a parameter in data operations
+fn check_block_for_param_usage(
+    expr: &nu_protocol::ast::Expression,
+    param_var_id: VarId,
+    ctx: &LintContext,
+) -> Vec<RuleViolation> {
+    match &expr.expr {
+        Expr::Block(block_id) | Expr::Closure(block_id) => {
+            let block = ctx.working_set.get_block(*block_id);
+            for pipeline in &block.pipelines {
+                if pipeline_uses_parameter_for_data_operations(pipeline, param_var_id, ctx) {
+                    return vec![RuleViolation::new_static(
+                        "temp_marker",
+                        "Found data operation usage",
+                        expr.span,
+                    )];
+                }
+            }
+            vec![]
+        }
+        _ => vec![],
+    }
+}
+
+/// Extract the function body from its declaration span for generating specific
+/// suggestions
 fn extract_function_body(
     decl_name: &str,
     _param_name: &str,
@@ -125,16 +136,19 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
         .into_iter()
         .filter_map(|(_, decl)| {
             let signature = decl.signature();
-            log::debug!("Checking function: {} with {} required, {} optional, rest: {:?}",
-                       signature.name,
-                       signature.required_positional.len(),
-                       signature.optional_positional.len(),
-                       signature.rest_positional.is_some());
+            log::debug!(
+                "Checking function: {} with {} required, {} optional, rest: {:?}",
+                signature.name,
+                signature.required_positional.len(),
+                signature.optional_positional.len(),
+                signature.rest_positional.is_some()
+            );
 
             // Only consider functions with exactly one required positional parameter
             if signature.required_positional.len() != 1
                 || !signature.optional_positional.is_empty()
-                || signature.rest_positional.is_some() {
+                || signature.rest_positional.is_some()
+            {
                 log::debug!("Skipping {} - wrong parameter count", signature.name);
                 return None;
             }
@@ -151,17 +165,24 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 
             // Check if the function body uses the parameter for data operations
             if !likely_uses_parameter_for_data_operations(param_var_id, context) {
-                log::debug!("Function {} with param {} does not use parameter for data operations", signature.name, param.name);
+                log::debug!(
+                    "Function {} with param {} does not use parameter for data operations",
+                    signature.name,
+                    param.name
+                );
                 return None;
             }
 
             // Generate a specific suggestion based on the function body
-            let suggestion = if let Some(function_body) = extract_function_body(&signature.name, &param.name, context) {
+            let suggestion = if let Some(function_body) =
+                extract_function_body(&signature.name, &param.name, context)
+            {
                 let param_var = format!("${}", param.name);
 
                 // Check if the parameter is used at the start of a pipeline (can omit $in)
                 let suggested_body = if function_body.trim_start().starts_with(&param_var)
-                    && function_body.contains(" | ") {
+                    && function_body.contains(" | ")
+                {
                     // Parameter is at start of pipeline - can omit $in
                     function_body.replacen(&format!("{param_var} | "), "", 1)
                 } else {
@@ -170,25 +191,32 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
                 };
 
                 format!(
-                    "Change to: def {} [] {{ {} }}. Remove the '{}' parameter and use pipeline input.",
-                    signature.name, suggested_body.trim(), param.name
+                    "Change to: def {} [] {{ {} }}. Remove the '{}' parameter and use pipeline \
+                     input.",
+                    signature.name,
+                    suggested_body.trim(),
+                    param.name
                 )
             } else {
                 format!(
-                    "Remove the '{}' parameter and use pipeline input. Change to: def {} [] {{ ... }}",
+                    "Remove the '{}' parameter and use pipeline input. Change to: def {} [] {{ \
+                     ... }}",
                     param.name, signature.name
                 )
             };
 
-            Some(RuleViolation::new_dynamic(
-                "prefer_pipeline_input",
-                format!(
-                    "Custom command '{}' with single data parameter '{}' should use pipeline input ($in) instead",
-                    signature.name, param.name
-                ),
-                context.find_declaration_span(&signature.name),
+            Some(
+                RuleViolation::new_dynamic(
+                    "prefer_pipeline_input",
+                    format!(
+                        "Custom command '{}' with single data parameter '{}' should use pipeline \
+                         input ($in) instead",
+                        signature.name, param.name
+                    ),
+                    context.find_declaration_span(&signature.name),
+                )
+                .with_suggestion_dynamic(suggestion),
             )
-            .with_suggestion_dynamic(suggestion))
         })
         .collect()
 }
@@ -198,7 +226,8 @@ pub fn rule() -> Rule {
         "prefer_pipeline_input",
         RuleCategory::Idioms,
         Severity::Info,
-        "Custom commands with single data parameters should use pipeline input for better composability",
+        "Custom commands with single data parameters should use pipeline input for better \
+         composability",
         check,
     )
 }

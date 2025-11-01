@@ -2,7 +2,7 @@ use super::rule;
 
 #[test]
 fn test_functional_where_filter() {
-    crate::clean_log::log();
+    crate::log::instrument();
 
     let good = "$input | where $it > 5";
     rule().assert_ignores(good);
@@ -10,7 +10,7 @@ fn test_functional_where_filter() {
 
 #[test]
 fn test_filtering_with_transformation() {
-    crate::clean_log::log();
+    crate::log::instrument();
 
     // Should not flag when there's transformation applied
     let good = r"
@@ -26,7 +26,7 @@ for x in $input {
 
 #[test]
 fn test_multiple_statements_in_loop() {
-    crate::clean_log::log();
+    crate::log::instrument();
 
     // Should not flag when there are multiple statements
     let good = r"
@@ -43,7 +43,7 @@ for x in $input {
 
 #[test]
 fn test_simple_transformation_without_filtering() {
-    crate::clean_log::log();
+    crate::log::instrument();
 
     // Should not flag when there's no if statement
     let good = r"
@@ -57,7 +57,7 @@ for x in $input {
 
 #[test]
 fn test_direct_copy_without_filtering() {
-    crate::clean_log::log();
+    crate::log::instrument();
 
     // Should not flag simple copying
     let good = r"
@@ -71,7 +71,7 @@ for x in [1 2 3] {
 
 #[test]
 fn test_complex_filtering_logic() {
-    crate::clean_log::log();
+    crate::log::instrument();
 
     // Should not flag complex if-else structures
     let good = r"

@@ -2,7 +2,7 @@ use super::rule;
 
 #[test]
 fn test_ignore_where_usage() {
-    crate::clean_log::log();
+    crate::log::instrument();
 
     let good_code = r"
 ls | where size > 10kb
@@ -13,7 +13,7 @@ ls | where size > 10kb
 
 #[test]
 fn test_ignore_each_with_side_effects() {
-    crate::clean_log::log();
+    crate::log::instrument();
 
     let good_code = r"
 ls | each { |f| if $f.size > 100kb { print $f.name } }
@@ -24,7 +24,7 @@ ls | each { |f| if $f.size > 100kb { print $f.name } }
 
 #[test]
 fn test_ignore_each_without_if() {
-    crate::clean_log::log();
+    crate::log::instrument();
 
     let good_code = r"
 seq 1 10 | each { |x| $x * 2 }
@@ -35,7 +35,7 @@ seq 1 10 | each { |x| $x * 2 }
 
 #[test]
 fn test_ignore_each_if_with_mutation() {
-    crate::clean_log::log();
+    crate::log::instrument();
 
     let good_code = r"
 ls | each { |f| if $f.size > 100kb { mut name = $f.name; $name } }

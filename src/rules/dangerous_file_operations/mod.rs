@@ -4,51 +4,103 @@ use nu_protocol::{
 };
 
 use crate::{
+    ast::CallExt,
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
 };
 
+const DANGEROUS_COMMANDS: &[&str] = &["rm", "mv", "cp"];
+
+const SYSTEM_DIRECTORIES: &[&str] = &[
+    "/home", "/usr", "/etc", "/var", "/sys", "/proc", "/dev", "/boot", "/lib", "/bin", "/sbin",
+];
+
+const EXACT_DANGEROUS_PATHS: &[&str] = &["/", "~", "../", ".."];
+
+fn is_exact_dangerous_path(path: &str) -> bool {
+    EXACT_DANGEROUS_PATHS.contains(&path)
+}
+
+fn is_root_wildcard_pattern(path: &str) -> bool {
+    matches!(
+        path,
+        "/*" | "~/*"
+            | "/home/*"
+            | "/usr/*"
+            | "/etc/*"
+            | "/var/*"
+            | "/sys/*"
+            | "/proc/*"
+            | "/dev/*"
+            | "/boot/*"
+            | "/lib/*"
+            | "/bin/*"
+            | "/sbin/*"
+    )
+}
+
+fn is_system_directory(path: &str) -> bool {
+    SYSTEM_DIRECTORIES.contains(&path) || path == "/dev/null"
+}
+
+fn is_system_subdirectory(path: &str) -> bool {
+    if path.contains("/tmp/") {
+        return false;
+    }
+
+    SYSTEM_DIRECTORIES
+        .iter()
+        .any(|dir| path.starts_with(&format!("{dir}/")))
+}
+
+fn is_shallow_home_path(path: &str) -> bool {
+    if !path.starts_with("~.") && !path.starts_with("~/") {
+        return false;
+    }
+
+    let after_tilde = &path[1..];
+    let slash_count = after_tilde.matches('/').count();
+
+    slash_count <= 1
+}
+
 fn is_dangerous_path(path_str: &str) -> bool {
-    path_str == "/"
-        || path_str == "../"
-        || path_str == ".."
+    is_exact_dangerous_path(path_str)
+        || is_root_wildcard_pattern(path_str)
+        || is_system_directory(path_str)
+        || is_system_subdirectory(path_str)
+        || is_shallow_home_path(path_str)
         || path_str.starts_with("/..")
-        || path_str.contains("/*")
-        || path_str == "~"
-        || path_str.starts_with("/home")
-        || path_str.starts_with("/usr")
-        || path_str.starts_with("/etc")
-        || path_str.starts_with("/var")
-        || path_str.starts_with("/sys")
-        || path_str.starts_with("/proc")
 }
 
-fn has_recursive_flag(args: &[ExternalArgument], context: &LintContext) -> bool {
-    args.iter().any(|arg| {
-        let arg_text = match arg {
-            ExternalArgument::Regular(expr) | ExternalArgument::Spread(expr) => {
-                &context.source[expr.span.start..expr.span.end]
-            }
-        };
-
-        arg_text.contains("-r")
-            || arg_text.contains("--recursive")
-            || arg_text.contains("-rf")
-            || arg_text.contains("-fr")
-            || arg_text.contains("--force")
-    })
-}
-
-fn extract_path_from_arg(arg: &ExternalArgument, context: &LintContext) -> String {
+fn extract_arg_text<'a>(arg: &ExternalArgument, context: &'a LintContext) -> &'a str {
     match arg {
         ExternalArgument::Regular(expr) | ExternalArgument::Spread(expr) => {
-            context.source[expr.span.start..expr.span.end].to_string()
+            &context.source[expr.span.start..expr.span.end]
         }
     }
 }
 
-fn check_expr_for_if_block(
+fn has_recursive_flag(args: &[ExternalArgument], context: &LintContext) -> bool {
+    args.iter().any(|arg| {
+        let arg_text = extract_arg_text(arg, context);
+        matches!(
+            arg_text,
+            text if text.contains("-r")
+                || text.contains("--recursive")
+                || text.contains("-rf")
+                || text.contains("-fr")
+                || text.contains("--force")
+        )
+    })
+}
+
+fn extract_path_from_arg(arg: &ExternalArgument, context: &LintContext) -> String {
+    extract_arg_text(arg, context).to_string()
+}
+
+fn is_if_block_containing(
     expr: &nu_protocol::ast::Expression,
     command_span: Span,
     context: &LintContext,
@@ -57,12 +109,9 @@ fn check_expr_for_if_block(
         return false;
     };
 
-    let decl_name = context.working_set.get_decl(call.decl_id).name();
-    if decl_name != "if" {
-        return false;
-    }
-
-    expr.span.start <= command_span.start && expr.span.end >= command_span.end
+    call.is_call_to_command("if", context)
+        && expr.span.start <= command_span.start
+        && expr.span.end >= command_span.end
 }
 
 fn is_inside_if_block(context: &LintContext, command_span: Span) -> bool {
@@ -73,7 +122,7 @@ fn is_inside_if_block(context: &LintContext, command_span: Span) -> bool {
     context.ast.flat_map(
         context.working_set,
         &|expr| {
-            if check_expr_for_if_block(expr, command_span, context) {
+            if is_if_block_containing(expr, command_span, context) {
                 vec![true]
             } else {
                 vec![]
@@ -85,6 +134,10 @@ fn is_inside_if_block(context: &LintContext, command_span: Span) -> bool {
     !found_in_if.is_empty()
 }
 
+fn is_dangerous_command(cmd_name: &str) -> bool {
+    DANGEROUS_COMMANDS.contains(&cmd_name)
+}
+
 fn extract_dangerous_command(
     expr: &nu_protocol::ast::Expression,
     context: &LintContext,
@@ -92,15 +145,15 @@ fn extract_dangerous_command(
     match &expr.expr {
         Expr::ExternalCall(head, args) => {
             let cmd_name = &context.source[head.span.start..head.span.end];
-            if cmd_name == "rm" || cmd_name == "mv" || cmd_name == "cp" {
+            if is_dangerous_command(cmd_name) {
                 Some((expr.span, cmd_name.to_string(), args.to_vec()))
             } else {
                 None
             }
         }
         Expr::Call(call) => {
-            let decl_name = context.working_set.get_decl(call.decl_id).name();
-            if decl_name != "rm" && decl_name != "mv" && decl_name != "cp" {
+            let decl_name = call.get_call_name(context);
+            if !is_dangerous_command(&decl_name) {
                 return None;
             }
 
@@ -114,7 +167,7 @@ fn extract_dangerous_command(
                     _ => None,
                 })
                 .collect();
-            Some((expr.span, decl_name.to_string(), external_args))
+            Some((expr.span, decl_name, external_args))
         }
         _ => None,
     }
@@ -154,12 +207,53 @@ fn create_variable_validation_violation(
     ))
 }
 
+fn is_pipeline_variable(path: &str) -> bool {
+    path.starts_with("$in")
+}
+
+fn is_unvalidated_variable(path: &str, command_span: Span, context: &LintContext) -> bool {
+    path.starts_with('$')
+        && !is_pipeline_variable(path)
+        && !is_inside_if_block(context, command_span)
+}
+
+fn check_command_arguments(
+    cmd_name: &str,
+    args: &[ExternalArgument],
+    command_span: Span,
+    context: &LintContext,
+    violations: &mut Vec<RuleViolation>,
+) {
+    let is_recursive = cmd_name == "rm" && has_recursive_flag(args, context);
+
+    for arg in args {
+        let path_str = extract_path_from_arg(arg, context);
+
+        if is_dangerous_path(&path_str) {
+            violations.push(create_dangerous_path_violation(
+                cmd_name,
+                &path_str,
+                command_span,
+                is_recursive,
+            ));
+        }
+
+        if is_unvalidated_variable(&path_str, command_span, context) {
+            violations.push(create_variable_validation_violation(
+                cmd_name,
+                &path_str,
+                command_span,
+            ));
+        }
+    }
+}
+
 fn check(context: &LintContext) -> Vec<RuleViolation> {
     use nu_protocol::ast::Traverse;
 
     let mut violations = Vec::new();
-
     let mut dangerous_commands = Vec::new();
+
     context.ast.flat_map(
         context.working_set,
         &|expr| {
@@ -171,28 +265,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     );
 
     for (command_span, cmd_name, args) in dangerous_commands {
-        let is_recursive = cmd_name == "rm" && has_recursive_flag(&args, context);
-
-        for arg in &args {
-            let path_str = extract_path_from_arg(arg, context);
-
-            if is_dangerous_path(&path_str) {
-                violations.push(create_dangerous_path_violation(
-                    &cmd_name,
-                    &path_str,
-                    command_span,
-                    is_recursive,
-                ));
-            }
-
-            if path_str.starts_with('$') && !is_inside_if_block(context, command_span) {
-                violations.push(create_variable_validation_violation(
-                    &cmd_name,
-                    &path_str,
-                    command_span,
-                ));
-            }
-        }
+        check_command_arguments(&cmd_name, &args, command_span, context, &mut violations);
     }
 
     violations
@@ -202,7 +275,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "dangerous_file_operations",
         RuleCategory::ErrorHandling,
-        Severity::Error,
+        Severity::Warning,
         "Detect dangerous file operations that could cause data loss",
         check,
     )

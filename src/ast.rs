@@ -1,6 +1,6 @@
 use nu_protocol::{
     BlockId, Span,
-    ast::{Call, Expr, Expression, Operator, Pipeline, PipelineElement},
+    ast::{Call, Expr, Expression, Operator, PipelineElement},
 };
 
 use crate::context::LintContext;
@@ -25,11 +25,11 @@ pub trait ExpressionExt {
     /// Extract block ID if this expression is a block or closure
     fn extract_block_id(&self) -> Option<BlockId>;
 
-    /// Check if this expression has side effects
-    fn has_side_effects(&self, context: &LintContext) -> bool;
-
-    /// Check if this expression represents a side effect
-    fn is_side_effect_expression(&self, context: &LintContext) -> bool;
+    /// Check if this expression is likely pure (no side effects).
+    /// Returns true only for expressions that are definitively pure (variable
+    /// references, literals, cell paths). For anything else (including most
+    /// command calls), conservatively returns false.
+    fn is_likely_pure(&self) -> bool;
 
     /// Get the text span content for this expression
     fn span_text<'a>(&self, context: &'a LintContext) -> &'a str;
@@ -37,17 +37,33 @@ pub trait ExpressionExt {
     /// Check if this expression is a call to a specific command
     fn is_call_to(&self, command_name: &str, context: &LintContext) -> bool;
 
-    /// Check if this expression is a reference to a specific variable
-    fn is_variable_reference(&self, variable_name: &str, context: &LintContext) -> bool;
-
     /// Extract variable ID from assignment expressions
     fn extract_assigned_variable(&self) -> Option<nu_protocol::VarId>;
 
     /// Extract variable accesses with field access
     fn extract_field_access(&self, field_name: &str) -> Option<(nu_protocol::VarId, Span)>;
 
-    /// Extract all nested block IDs from this expression
-    fn extract_nested_blocks(&self, context: &LintContext) -> Vec<BlockId>;
+    /// Check if this expression is an external command call
+    fn is_external_call(&self) -> bool;
+
+    /// Extract external command name if this is an external call
+    fn extract_external_command_name(&self, context: &LintContext) -> Option<String>;
+
+    /// Check if this expression contains a call to a specific command
+    /// (recursive)
+    fn contains_call_to(&self, command_name: &str, context: &LintContext) -> bool;
+
+    /// Check if this expression contains any variable references (recursive)
+    fn contains_variables(&self, context: &LintContext) -> bool;
+
+    /// Extract the variable being compared in an equality comparison expression
+    /// Returns the variable name if this is a pattern like `$var == value` or
+    /// `$var != value`
+    fn extract_compared_variable(&self, context: &LintContext) -> Option<String>;
+
+    /// Extract the comparison value from an equality comparison expression
+    /// Returns the right-hand side value if this is `$var == value`
+    fn extract_comparison_value(&self, context: &LintContext) -> Option<String>;
 }
 
 impl ExpressionExt for Expression {
@@ -109,31 +125,43 @@ impl ExpressionExt for Expression {
         }
     }
 
-    fn has_side_effects(&self, context: &LintContext) -> bool {
+    fn is_likely_pure(&self) -> bool {
         match &self.expr {
-            Expr::Call(call) => {
-                let decl_name = call.get_call_name(context);
-                !matches!(
-                    decl_name.as_str(),
-                    "get" | "select" | "where" | "length" | "type"
-                )
-            }
-            _ => false,
-        }
-    }
+            // These are definitively pure
+            Expr::Bool(_)
+            | Expr::Int(_)
+            | Expr::Float(_)
+            | Expr::Binary(_)
+            | Expr::String(_)
+            | Expr::RawString(_)
+            | Expr::Filepath(_, _)
+            | Expr::Directory(_, _)
+            | Expr::GlobPattern(_, _)
+            | Expr::List(_)
+            | Expr::Record(_)
+            | Expr::Table(_)
+            | Expr::Keyword(_)
+            | Expr::Nothing
+            | Expr::ValueWithUnit(_)
+            | Expr::DateTime(_)
+            | Expr::Range(_)
+            | Expr::Var(_)
+            | Expr::VarDecl(_)
+            | Expr::FullCellPath(_) => true,
 
-    fn is_side_effect_expression(&self, context: &LintContext) -> bool {
-        match &self.expr {
-            Expr::Call(call) => {
-                let decl_name = call.get_call_name(context);
-                matches!(
-                    decl_name.as_str(),
-                    "print" | "save" | "download" | "exit" | "mut" | "cd" | "source" | "use"
-                )
+            // Operators can be pure if both sides are pure
+            Expr::BinaryOp(left, op, right) => {
+                // Assignment is not pure
+                if matches!(op.expr, Expr::Operator(Operator::Assignment(_))) {
+                    return false;
+                }
+                left.is_likely_pure() && right.is_likely_pure()
             }
-            Expr::BinaryOp(_, op, _) => {
-                matches!(op.expr, Expr::Operator(Operator::Assignment(_)))
-            }
+
+            Expr::UnaryNot(inner) => inner.is_likely_pure(),
+
+            // Conservatively assume calls, external calls, closures etc have side
+            // effects
             _ => false,
         }
     }
@@ -147,10 +175,6 @@ impl ExpressionExt for Expression {
             Expr::Call(call) => call.is_call_to_command(command_name, context),
             _ => false,
         }
-    }
-
-    fn is_variable_reference(&self, variable_name: &str, context: &LintContext) -> bool {
-        self.refers_to_variable(context, variable_name)
     }
 
     fn extract_assigned_variable(&self) -> Option<nu_protocol::VarId> {
@@ -186,16 +210,118 @@ impl ExpressionExt for Expression {
         }
     }
 
-    fn extract_nested_blocks(&self, context: &LintContext) -> Vec<BlockId> {
+    fn is_external_call(&self) -> bool {
+        matches!(&self.expr, Expr::ExternalCall(_, _))
+    }
+
+    fn extract_external_command_name(&self, context: &LintContext) -> Option<String> {
+        if let Expr::ExternalCall(head, _args) = &self.expr {
+            Some(head.span.text(context).to_string())
+        } else {
+            None
+        }
+    }
+
+    fn contains_call_to(&self, command_name: &str, context: &LintContext) -> bool {
         use nu_protocol::ast::Traverse;
 
-        let mut blocks = Vec::new();
+        let mut results = Vec::new();
         self.flat_map(
             context.working_set,
-            &|inner_expr| inner_expr.extract_block_id().into_iter().collect(),
-            &mut blocks,
+            &|inner_expr| {
+                if inner_expr.is_call_to(command_name, context) {
+                    vec![true]
+                } else {
+                    vec![]
+                }
+            },
+            &mut results,
         );
-        blocks
+        !results.is_empty()
+    }
+
+    fn contains_variables(&self, context: &LintContext) -> bool {
+        match &self.expr {
+            // Direct variable reference
+            Expr::Var(_) | Expr::VarDecl(_) => true,
+
+            // Cell paths (like $x.field)
+            Expr::FullCellPath(path) => path.head.contains_variables(context),
+
+            // Subexpressions, blocks, closures
+            Expr::Subexpression(block_id) | Expr::Block(block_id) | Expr::Closure(block_id) => {
+                block_id.contains_variables(context)
+            }
+
+            // Binary operators
+            Expr::BinaryOp(left, _, right) => {
+                left.contains_variables(context) || right.contains_variables(context)
+            }
+
+            // Unary operators
+            Expr::UnaryNot(inner) => inner.contains_variables(context),
+
+            // Lists and records might contain variables
+            Expr::List(items) => items.iter().any(|item| match item {
+                nu_protocol::ast::ListItem::Item(expr)
+                | nu_protocol::ast::ListItem::Spread(_, expr) => expr.contains_variables(context),
+            }),
+
+            Expr::Record(fields) => fields.iter().any(|field| match field {
+                nu_protocol::ast::RecordItem::Pair(key, val) => {
+                    key.contains_variables(context) || val.contains_variables(context)
+                }
+                nu_protocol::ast::RecordItem::Spread(_, expr) => expr.contains_variables(context),
+            }),
+
+            // Calls might have variables in arguments
+            Expr::Call(call) => call.arguments.iter().any(|arg| match arg {
+                nu_protocol::ast::Argument::Positional(expr)
+                | nu_protocol::ast::Argument::Unknown(expr)
+                | nu_protocol::ast::Argument::Named((_, _, Some(expr))) => {
+                    expr.contains_variables(context)
+                }
+                _ => false,
+            }),
+
+            // Everything else (literals, nothing, etc.) doesn't contain variables
+            _ => false,
+        }
+    }
+
+    fn extract_compared_variable(&self, context: &LintContext) -> Option<String> {
+        let Expr::BinaryOp(left, op, _right) = &self.expr else {
+            return None;
+        };
+
+        // Check if it's an equality comparison
+        let Expr::Operator(Operator::Comparison(
+            nu_protocol::ast::Comparison::Equal | nu_protocol::ast::Comparison::NotEqual,
+        )) = &op.expr
+        else {
+            return None;
+        };
+
+        // Try to extract variable name from left side
+        if let Some(var_name) = left.extract_variable_name(context) {
+            return Some(var_name);
+        }
+
+        // Fallback: if the left side looks like a variable reference (FullCellPath),
+        // extract the text even if the variable isn't properly declared
+        if let Expr::FullCellPath(cell_path) = &left.expr {
+            Some(cell_path.head.span.text(context).to_string())
+        } else {
+            None
+        }
+    }
+
+    fn extract_comparison_value(&self, context: &LintContext) -> Option<String> {
+        let Expr::BinaryOp(_left, _op, right) = &self.expr else {
+            return None;
+        };
+
+        Some(right.span_text(context).to_string())
     }
 }
 
@@ -236,6 +362,15 @@ pub trait CallExt {
         &self,
         context: &LintContext,
     ) -> Option<(nu_protocol::VarId, String, Span)>;
+
+    /// Get the else branch from an if call
+    ///
+    /// Returns `(is_else_if, nested_call_or_block_expr)` where:
+    /// - `is_else_if` = true if it's another if call (else if)
+    /// - `is_else_if` = false if it's a final else block
+    ///
+    /// Returns `None` if there's no else branch
+    fn get_else_branch(&self) -> Option<(bool, &Expression)>;
 }
 
 impl CallExt for Call {
@@ -324,37 +459,47 @@ impl CallExt for Call {
             None
         }
     }
-}
 
-/// Trait to extend Pipeline with utility methods
-pub trait PipelineExt {
-    /// Check if this pipeline has a specific number of elements
-    fn has_element_count(&self, count: usize) -> bool;
+    fn get_else_branch(&self) -> Option<(bool, &Expression)> {
+        // Get the else argument (3rd positional argument for if command)
+        let else_arg = self.get_positional_arg(2)?;
 
-    /// Get the first element of this pipeline if it exists
-    fn get_first_element(&self) -> Option<&PipelineElement>;
-
-    /// Get the last element of this pipeline if it exists
-    fn get_last_element(&self) -> Option<&PipelineElement>;
-}
-
-impl PipelineExt for Pipeline {
-    fn has_element_count(&self, count: usize) -> bool {
-        self.elements.len() == count
-    }
-
-    fn get_first_element(&self) -> Option<&PipelineElement> {
-        self.elements.first()
-    }
-
-    fn get_last_element(&self) -> Option<&PipelineElement> {
-        self.elements.last()
+        // The else argument can be either:
+        // 1. A Block (final else { ... })
+        // 2. A Keyword containing either:
+        //    - An if Call (else if ...)
+        //    - A Block (final else { ... } wrapped in Keyword)
+        match &else_arg.expr {
+            Expr::Keyword(keyword) => {
+                // Check what the Keyword contains
+                match &keyword.expr.expr {
+                    Expr::Call(_) => {
+                        // This is an else-if chain
+                        Some((true, &keyword.expr))
+                    }
+                    Expr::Block(_) => {
+                        // This is a final else block wrapped in a Keyword
+                        Some((false, &keyword.expr))
+                    }
+                    _ => None,
+                }
+            }
+            Expr::Block(_) => {
+                // This is a final else block (not wrapped in Keyword)
+                Some((false, else_arg))
+            }
+            _ => None,
+        }
     }
 }
 
 /// Trait to extend `BlockId` with utility methods
 pub trait BlockExt {
-    /// Check if this block contains side effects (commands that modify state)
+    /// Check if this block likely has side effects.
+    /// This is a conservative check: returns true if the block contains any
+    /// expressions that might have side effects (which includes most command
+    /// calls). Only returns false if all expressions are definitively pure
+    /// (literals, variables, pure operators).
     fn has_side_effects(&self, context: &LintContext) -> bool;
 
     /// Check if this block contains only an empty list
@@ -363,6 +508,20 @@ pub trait BlockExt {
     /// Check if a span is contained within this block
     #[must_use]
     fn contains_span(&self, span: Span, context: &LintContext) -> bool;
+
+    /// Get all pipeline elements from this block
+    fn all_elements<'a>(&self, context: &'a LintContext) -> Vec<&'a PipelineElement>;
+
+    /// Check if this block contains a call to a specific command
+    fn contains_call_to(&self, command_name: &str, context: &LintContext) -> bool;
+
+    /// Check if any element in this block matches a predicate
+    fn any_element<F>(&self, context: &LintContext, predicate: F) -> bool
+    where
+        F: Fn(&PipelineElement) -> bool;
+
+    /// Check if this block contains any variable references
+    fn contains_variables(&self, context: &LintContext) -> bool;
 }
 
 impl BlockExt for BlockId {
@@ -373,7 +532,7 @@ impl BlockExt for BlockId {
             .pipelines
             .iter()
             .flat_map(|p| &p.elements)
-            .any(|elem| elem.expr.is_side_effect_expression(context))
+            .any(|elem| !elem.expr.is_likely_pure())
     }
 
     fn is_empty_list_block(&self, context: &LintContext) -> bool {
@@ -382,7 +541,7 @@ impl BlockExt for BlockId {
         block
             .pipelines
             .first()
-            .and_then(|pipeline| pipeline.get_first_element())
+            .and_then(|pipeline| pipeline.elements.first())
             .is_some_and(|elem| elem.expr.is_empty_list())
     }
 
@@ -393,14 +552,37 @@ impl BlockExt for BlockId {
         }
         false
     }
+
+    fn all_elements<'a>(&self, context: &'a LintContext) -> Vec<&'a PipelineElement> {
+        let block = context.working_set.get_block(*self);
+        block.pipelines.iter().flat_map(|p| &p.elements).collect()
+    }
+
+    fn contains_call_to(&self, command_name: &str, context: &LintContext) -> bool {
+        self.all_elements(context)
+            .iter()
+            .any(|elem| elem.expr.is_call_to(command_name, context))
+    }
+
+    fn any_element<F>(&self, context: &LintContext, predicate: F) -> bool
+    where
+        F: Fn(&PipelineElement) -> bool,
+    {
+        self.all_elements(context).iter().any(|e| predicate(e))
+    }
+
+    fn contains_variables(&self, context: &LintContext) -> bool {
+        let block = context.working_set.get_block(*self);
+        block
+            .pipelines
+            .iter()
+            .flat_map(|p| &p.elements)
+            .any(|elem| elem.expr.contains_variables(context))
+    }
 }
 
 /// Trait to extend Span with utility methods
 pub trait SpanExt {
-    /// Check if this span is contained within a block
-    #[must_use]
-    fn is_in_block(&self, block_id: BlockId, context: &LintContext) -> bool;
-
     /// Get the text content for this span
     #[must_use]
     fn text<'a>(&self, context: &'a LintContext) -> &'a str;
@@ -416,10 +598,6 @@ pub trait SpanExt {
 }
 
 impl SpanExt for Span {
-    fn is_in_block(&self, block_id: BlockId, context: &LintContext) -> bool {
-        block_id.contains_span(*self, context)
-    }
-
     fn text<'a>(&self, context: &'a LintContext) -> &'a str {
         &context.source[self.start..self.end]
     }
@@ -431,7 +609,7 @@ impl SpanExt for Span {
     ) -> Option<String> {
         functions
             .iter()
-            .filter(|(block_id, _)| self.is_in_block(**block_id, context))
+            .filter(|(block_id, _)| block_id.contains_span(*self, context))
             .min_by_key(|(block_id, _)| {
                 let block = context.working_set.get_block(**block_id);
                 block.span.map_or(usize::MAX, |s| s.end - s.start)

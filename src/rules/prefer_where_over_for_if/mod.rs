@@ -1,7 +1,7 @@
 use nu_protocol::ast::Expr;
 
 use crate::{
-    ast::{BlockExt, CallExt, ExpressionExt, PipelineExt},
+    ast::{BlockExt, CallExt, ExpressionExt},
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -52,16 +52,14 @@ fn has_append_without_transformation(
     context: &LintContext,
     loop_var_name: &str,
 ) -> bool {
-    let block = context.working_set.get_block(block_id);
     log::debug!(
-        "Checking append pattern: block has {} pipelines",
-        block.pipelines.len()
+        "Checking append pattern: block has {} elements",
+        block_id.all_elements(context).len()
     );
 
-    block
-        .pipelines
+    block_id
+        .all_elements(context)
         .iter()
-        .flat_map(|p| &p.elements)
         .any(|elem| matches_append_assignment(&elem.expr, context, loop_var_name))
 }
 
@@ -107,7 +105,7 @@ fn is_filtering_only_pattern(
         return false;
     };
 
-    if !pipeline.has_element_count(1) {
+    if pipeline.elements.len() != 1 {
         log::debug!(
             "Pipeline has {} elements, expected 1",
             pipeline.elements.len()
@@ -123,7 +121,7 @@ fn is_filtering_only_pattern(
         return false;
     };
 
-    if !matches!(&elem.expr.expr, Expr::Call(call) if call.is_call_to_command("if", context)) {
+    if !call.is_call_to_command("if", context) {
         log::debug!("Command is not 'if'");
         return false;
     }

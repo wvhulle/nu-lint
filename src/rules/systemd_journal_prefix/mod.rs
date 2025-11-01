@@ -33,6 +33,7 @@ fn has_journal_prefix(text: &str) -> bool {
 }
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {
+    // TODO: Convert from regex to AST
     let mut violations = Vec::new();
     let print_pat = print_pattern();
     let echo_pat = echo_pattern();

@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use nu_protocol::ast::Expr;
 
 use crate::{
-    ast::{BlockExt, CallExt},
+    ast::{BlockExt, CallExt, ExpressionExt},
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -16,10 +16,7 @@ fn matches_transformation_pattern(
     loop_var_name: &str,
 ) -> bool {
     match &expr.expr {
-        Expr::Call(call) => {
-            let decl_name = context.working_set.get_decl(call.decl_id).name();
-            decl_name == "if"
-        }
+        Expr::Call(call) => call.is_call_to_command("if", context),
         Expr::BinaryOp(_lhs, op, rhs) => {
             matches!(
                 op.expr,
@@ -37,12 +34,9 @@ fn has_transformation_or_filter(
     context: &LintContext,
     loop_var_name: &str,
 ) -> bool {
-    let block = context.working_set.get_block(block_id);
-
-    block
-        .pipelines
+    block_id
+        .all_elements(context)
         .iter()
-        .flat_map(|p| &p.elements)
         .any(|elem| matches_transformation_pattern(&elem.expr, context, loop_var_name))
 }
 
@@ -53,8 +47,7 @@ fn has_transformation_in_append(
 ) -> bool {
     match &expr.expr {
         Expr::Call(call) => {
-            let decl_name = context.working_set.get_decl(call.decl_id).name();
-            if decl_name == "append"
+            if call.is_call_to_command("append", context)
                 && let Some(arg) = call.arguments.first()
             {
                 let (nu_protocol::ast::Argument::Positional(arg_expr)
@@ -64,13 +57,12 @@ fn has_transformation_in_append(
                 };
 
                 if let Expr::Var(_var_id) = &arg_expr.expr {
-                    let var_name = &context.source[arg_expr.span.start..arg_expr.span.end];
+                    let var_name = arg_expr.span_text(context);
                     return var_name != loop_var_name;
                 } else if let Expr::FullCellPath(cell_path) = &arg_expr.expr
                     && let Expr::Var(_var_id) = &cell_path.head.expr
                 {
-                    let var_name =
-                        &context.source[cell_path.head.span.start..cell_path.head.span.end];
+                    let var_name = cell_path.head.span_text(context);
                     return var_name == loop_var_name && !cell_path.tail.is_empty();
                 }
 
@@ -81,11 +73,9 @@ fn has_transformation_in_append(
             return has_transformation_in_append(&cell_path.head, context, loop_var_name);
         }
         Expr::Block(block_id) | Expr::Subexpression(block_id) => {
-            let block = context.working_set.get_block(*block_id);
-            return block
-                .pipelines
+            return block_id
+                .all_elements(context)
                 .iter()
-                .flat_map(|p| &p.elements)
                 .any(|elem| has_transformation_in_append(&elem.expr, context, loop_var_name));
         }
         _ => {}
@@ -174,8 +164,7 @@ fn extract_empty_list_vars(
         return vec![];
     };
 
-    let decl_name = context.working_set.get_decl(call.decl_id).name();
-    if decl_name != "mut" {
+    if !call.is_call_to_command("mut", context) {
         return vec![];
     }
 
@@ -218,7 +207,7 @@ fn extract_empty_list_vars(
 
     log::debug!("is_empty_list: {is_empty_list}");
     if is_empty_list {
-        let var_name = &context.source[var_expr.span.start..var_expr.span.end];
+        let var_name = var_expr.span_text(context);
         log::debug!("Found empty list var: {var_name} (id: {var_id:?})");
         vec![(*var_id, var_name.to_string(), expr.span)]
     } else {
@@ -235,8 +224,7 @@ fn extract_direct_copy_patterns(
         return vec![];
     };
 
-    let decl_name = context.working_set.get_decl(call.decl_id).name();
-    if decl_name != "for" {
+    if !call.is_call_to_command("for", context) {
         return vec![];
     }
 

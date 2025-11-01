@@ -1,8 +1,9 @@
 use nu_protocol::ast::{
-    Assignment, Bits, Block, Boolean, Comparison, Expr, FindMapResult, Math, Operator, Traverse,
+    Assignment, Bits, Boolean, Comparison, Expr, FindMapResult, Math, Operator, Traverse,
 };
 
 use crate::{
+    ast::ExpressionExt,
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -69,32 +70,6 @@ fn is_operator_keyword(s: &str) -> bool {
     ]
     .contains(&s)
 }
-/// Check if an expression contains variable references
-fn contains_variables(expr: &nu_protocol::ast::Expression, context: &LintContext) -> bool {
-    match &expr.expr {
-        Expr::Var(_) => true,
-        Expr::FullCellPath(path) => contains_variables(&path.head, context),
-        Expr::Subexpression(block_id) => {
-            let block = context.working_set.get_block(*block_id);
-            block_contains_variables(block, context)
-        }
-        Expr::BinaryOp(left, _, right) => {
-            contains_variables(left, context) || contains_variables(right, context)
-        }
-        Expr::UnaryNot(inner) => contains_variables(inner, context),
-        _ => false,
-    }
-}
-
-/// Check if a block contains variable references
-fn block_contains_variables(block: &Block, context: &LintContext) -> bool {
-    block.pipelines.iter().any(|pipeline| {
-        pipeline
-            .elements
-            .iter()
-            .any(|element| contains_variables(&element.expr, context))
-    })
-}
 
 /// Analyze an AST expression to detect problematic patterns
 /// Only detects patterns that are reliably identifiable via AST structure
@@ -118,7 +93,7 @@ fn analyze_ast_expression(
             }
 
             Expr::UnaryNot(inner) => {
-                if contains_variables(inner, context) {
+                if inner.as_ref().contains_variables(context) {
                     FindMapResult::Continue
                 } else {
                     FindMapResult::Found(ProblematicPattern::LiteralBinaryOp("not".to_string()))
@@ -181,7 +156,7 @@ fn analyze_binary_operation(
     match operator {
         // Boolean operators with literal operands are likely meant as text
         Operator::Boolean(Boolean::And | Boolean::Or)
-            if !contains_variables(left, context) && !contains_variables(right, context) =>
+            if !left.contains_variables(context) && !right.contains_variables(context) =>
         {
             Some(ProblematicPattern::LiteralBinaryOp(format!("{operator}")))
         }

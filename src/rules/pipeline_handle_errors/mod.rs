@@ -4,6 +4,7 @@ use nu_protocol::{
 };
 
 use crate::{
+    ast::CallExt,
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -29,9 +30,9 @@ fn is_alias_or_export_definition(pipeline: &Pipeline, context: &LintContext) -> 
         .first()
         .and_then(|element| {
             if let Expr::Call(call) = &element.expr.expr {
-                let decl_name = context.working_set.get_decl(call.decl_id).name();
+                let name = call.get_call_name(context);
                 Some(matches!(
-                    decl_name,
+                    name.as_str(),
                     "alias"
                         | "export"
                         | "export alias"
@@ -160,7 +161,7 @@ fn is_in_try_block(expr_span: Span, context: &LintContext) -> bool {
         context.working_set,
         &|expr| {
             matches!(&expr.expr, Expr::Call(call)
-            if context.working_set.get_decl(call.decl_id).name() == "try")
+            if call.is_call_to_command("try", context))
             .then_some(expr.span)
             .into_iter()
             .collect()
@@ -176,7 +177,7 @@ fn is_in_try_block(expr_span: Span, context: &LintContext) -> bool {
 fn pipeline_has_complete(pipeline: &Pipeline, context: &LintContext) -> bool {
     pipeline.elements.iter().any(|element| {
         matches!(&element.expr.expr, Expr::Call(call)
-            if context.working_set.get_decl(call.decl_id).name() == "complete")
+            if call.is_call_to_command("complete", context))
     })
 }
 
@@ -205,8 +206,7 @@ fn is_do_with_ignore_flag(expr: &nu_protocol::ast::Expression, context: &LintCon
         return false;
     };
 
-    let decl_name = context.working_set.get_decl(call.decl_id).name();
-    decl_name == "do" && has_ignore_errors_flag(call)
+    call.is_call_to_command("do", context) && has_ignore_errors_flag(call)
 }
 
 fn has_ignore_errors_flag(call: &nu_protocol::ast::Call) -> bool {

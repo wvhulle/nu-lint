@@ -1,7 +1,7 @@
 pub mod check_complete_exit_code;
 pub mod dangerous_file_operations;
 pub mod descriptive_error_messages;
-pub mod discourage_bare_ignore;
+pub mod error_suppression_over_ignore;
 pub mod escape_string_interpolation_operators;
 pub mod exit_only_in_main;
 pub mod exported_function_docs;
@@ -9,7 +9,6 @@ pub mod exported_function_docs;
 pub mod max_positional_params;
 pub mod missing_type_annotation;
 pub mod naming;
-pub mod never_use_echo;
 
 pub mod nu_parse_error;
 
@@ -21,7 +20,6 @@ pub mod prefer_error_make;
 pub mod prefer_is_not_empty;
 pub mod prefer_lines_over_split;
 pub mod prefer_match_over_if_chain;
-pub mod prefer_nushell_data_ops;
 pub mod prefer_parse_command;
 pub mod prefer_parse_over_each_split;
 pub mod prefer_pipeline_input;
@@ -30,7 +28,7 @@ pub mod prefer_where_over_each_if;
 pub mod prefer_where_over_for_if;
 pub mod remove_redundant_in;
 
-pub mod prefer_builtin;
+pub mod replace_by_builtin;
 pub mod spacing;
 pub mod systemd_journal_prefix;
 pub mod unnecessary_mut;
@@ -73,12 +71,13 @@ impl RuleRegistry {
     #[must_use]
     pub fn with_default_rules() -> Self {
         let mut registry = Self::new();
-
+        // TODO: add rule that detects custom commands with a body (apart from comments)
+        // of length 1, used just once and suggests inlining at call-site.
         registry.register(check_complete_exit_code::rule());
         registry.register(completion_function_naming::rule());
         registry.register(dangerous_file_operations::rule());
         registry.register(descriptive_error_messages::rule());
-        registry.register(discourage_bare_ignore::rule());
+        registry.register(error_suppression_over_ignore::rule());
         registry.register(escape_string_interpolation_operators::rule());
         registry.register(exit_only_in_main::rule());
         registry.register(exported_function_docs::rule());
@@ -86,29 +85,28 @@ impl RuleRegistry {
         registry.register(max_positional_params::rule());
         registry.register(missing_type_annotation::rule());
         registry.register(multiline_formatting::rule());
-        registry.register(never_use_echo::rule());
+        registry.register(replace_by_builtin::echo::rule());
         registry.register(no_trailing_spaces::rule());
         registry.register(nu_parse_error::rule());
         registry.register(omit_list_commas::rule());
         registry.register(pipeline_handle_errors::rule());
-        registry.register(prefer_builtin::cat::rule());
-        registry.register(prefer_builtin::find::rule());
-        registry.register(prefer_builtin::grep::rule());
-        registry.register(prefer_builtin::head::rule());
-        registry.register(prefer_builtin::jq::rule());
-        registry.register(prefer_builtin::ls::rule());
-        registry.register(prefer_builtin::other::rule());
-        registry.register(prefer_builtin::sed::rule());
-        registry.register(prefer_builtin::sort::rule());
-        registry.register(prefer_builtin::tail::rule());
-        registry.register(prefer_builtin::uniq::rule());
+        registry.register(replace_by_builtin::cat::rule());
+        registry.register(replace_by_builtin::find::rule());
+        registry.register(replace_by_builtin::grep::rule());
+        registry.register(replace_by_builtin::head::rule());
+        registry.register(replace_by_builtin::jq::rule());
+        registry.register(replace_by_builtin::ls::rule());
+        registry.register(replace_by_builtin::other::rule());
+        registry.register(replace_by_builtin::sed::rule());
+        registry.register(replace_by_builtin::sort::rule());
+        registry.register(replace_by_builtin::tail::rule());
+        registry.register(replace_by_builtin::uniq::rule());
         registry.register(prefer_compound_assignment::rule());
         registry.register(prefer_direct_use::rule());
         registry.register(prefer_error_make::rule());
         registry.register(prefer_is_not_empty::rule());
         registry.register(prefer_lines_over_split::rule());
         registry.register(prefer_match_over_if_chain::rule());
-        registry.register(prefer_nushell_data_ops::rule());
         registry.register(prefer_parse_command::rule());
         registry.register(prefer_parse_over_each_split::rule());
         registry.register(prefer_pipeline_input::rule());

@@ -187,17 +187,7 @@ def "nu-complete aerospace-layout" [] {
     ]
 }
 
-# Change layout of the focused window to the given layout
-export extern "aerospace layout" [
-    --help(-h)      # Print help
-    --window-id:int@"nu-complete aerospace-list-all-windows"      # Act on the specified window instead of the focues window
-    # TODO: find a way to support multiple options
-    command:string@"nu-complete aerospace-layout"
-]
 
-def "nu-complete aerospace-output-format-apps" [] {
-    # TODO: actually implement.
-}
 
 # Print the list of running applications that appears in the Dock and may have a user interface
 export extern "aerospace list-apps" [
@@ -220,9 +210,7 @@ export extern "aerospace list-modes" [
     --current       # only print the currently active mode
 ]
 
-def "nu-complete aerospace-output-format-monitors" [] {
-    # TODO: actually implement.
-}
+
 
 # Print monitors that satisfy conditions
 export extern "aerospace list-monitors" [
@@ -235,16 +223,12 @@ export extern "aerospace list-monitors" [
     --json          # Output in JSON format. Can be used in combination with --format to specify which data to include into the json. Incompatible with --count
 ]
 
-def "nu-complete aerospace-output-format-windows" [] {
-    # TODO: actually implement.
-}
 
 # Print windows that satisfy conditions
 export extern "aerospace list-windows" [
     --help(-h)      # Print help
     --all           # Alias for --monitor all. Use with caution. Check `man aerospace-list-windows` for more details.
     --focused       # Print the focused window. Please note that it is possible for no window to be in focus. In that case, an error is reported.
-    # TODO: create completions for these two
     --workspace     #Filter results to print windows that belong to either of specified workspaces.
     --monitor     #Filter results to print windows that belong to either of specified monitors.
     --pid           #Filter results to only print windows that belong to the Application with specified <pid>
@@ -260,7 +244,6 @@ export extern "aerospace list-workspaces" [
     --help(-h)      # Print help
     --all           # Alias for --monitor all. Use with caution. Check `man aerospace-list-windows` for more details.
     --focused       # Alias for --monitor focused --visible. Always prints a single workspace
-    # TODO: create completion for --monitor
     --monitor       # Filter results to print windows that belong to either of specified monitors.
     --visible       # Filter results to only print currently visible workspaces. [no] inverts the condition. Several workspaces can be visible in multi-monitor setup
     --empty         # Filter results to only print empty workspaces. [no] inverts the condition.

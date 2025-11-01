@@ -45,7 +45,7 @@ fn is_destructive_file_operation(call: &nu_protocol::ast::Call, context: &LintCo
     // Special case: save is only destructive with -f/--force flag
     if cmd_name == "save" {
         return call.arguments.iter().any(|arg| {
-            matches!(arg, nu_protocol::ast::Argument::Named(named)
+            matches!(arg, nu_protocol::ast::Argument::Named(named) 
                 if named.0.item == "force")
         });
     }

@@ -1,7 +1,7 @@
 use nu_protocol::ast::Expr;
 
 use crate::{
-    ast::{BlockUtils, CallExt},
+    ast::{CallExt, SpanExt},
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -24,9 +24,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
             }
 
             // Check if this exit is inside a function
-            let Some(function_name) =
-                BlockUtils::find_containing_function(call.head, &functions, ctx)
-            else {
+            let Some(function_name) = call.head.find_containing_function(&functions, ctx) else {
                 return vec![];
             };
 

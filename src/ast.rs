@@ -275,7 +275,7 @@ impl CallExt for Call {
         let var_id = block.signature.required_positional.first()?.var_id?;
 
         let var = context.working_set.get_variable(var_id);
-        Some(AstUtils::span_text(var.declaration_span, context).to_string())
+        Some(var.declaration_span.text(context).to_string())
     }
 
     fn loop_var_from_for(&self, context: &LintContext) -> Option<String> {
@@ -297,7 +297,7 @@ impl CallExt for Call {
 
         // First argument is the function name
         let name_arg = self.get_first_positional_arg()?;
-        let name = AstUtils::span_text(name_arg.span, context);
+        let name = name_arg.span.text(context);
 
         // Third argument is the function body block (can be Block or Closure)
         let body_expr = self.get_positional_arg(2)?;
@@ -318,7 +318,7 @@ impl CallExt for Call {
         let var_arg = self.get_first_positional_arg()?;
 
         if let Expr::VarDecl(var_id) = &var_arg.expr {
-            let var_name = AstUtils::span_text(var_arg.span, context);
+            let var_name = var_arg.span.text(context);
             Some((*var_id, var_name.to_string(), var_arg.span))
         } else {
             None
@@ -404,6 +404,15 @@ pub trait SpanExt {
     /// Get the text content for this span
     #[must_use]
     fn text<'a>(&self, context: &'a LintContext) -> &'a str;
+
+    /// Find which function contains a given span (returns the most specific
+    /// one)
+    #[must_use]
+    fn find_containing_function(
+        &self,
+        functions: &std::collections::HashMap<BlockId, String>,
+        context: &LintContext,
+    ) -> Option<String>;
 }
 
 impl SpanExt for Span {
@@ -414,16 +423,20 @@ impl SpanExt for Span {
     fn text<'a>(&self, context: &'a LintContext) -> &'a str {
         &context.source[self.start..self.end]
     }
-}
 
-/// Convenience methods that delegate to trait implementations
-pub struct AstUtils;
-
-impl AstUtils {
-    /// Get span text for convenience
-    #[must_use]
-    pub fn span_text<'a>(span: Span, context: &'a LintContext) -> &'a str {
-        span.text(context)
+    fn find_containing_function(
+        &self,
+        functions: &std::collections::HashMap<BlockId, String>,
+        context: &LintContext,
+    ) -> Option<String> {
+        functions
+            .iter()
+            .filter(|(block_id, _)| self.is_in_block(**block_id, context))
+            .min_by_key(|(block_id, _)| {
+                let block = context.working_set.get_block(**block_id);
+                block.span.map_or(usize::MAX, |s| s.end - s.start)
+            })
+            .map(|(_, name)| name.clone())
     }
 }
 
@@ -435,17 +448,6 @@ impl DeclarationUtils {
     #[must_use]
     pub fn is_def_command(decl_name: &str) -> bool {
         matches!(decl_name, "def" | "export def")
-    }
-
-    /// Check if a command is a variable declaration, returns (`is_declaration`,
-    /// `is_mutable`)
-    #[must_use]
-    pub fn is_var_declaration(decl_name: &str) -> Option<bool> {
-        match decl_name {
-            "let" => Some(false),
-            "mut" => Some(true),
-            _ => None,
-        }
     }
 }
 
@@ -462,28 +464,5 @@ impl VariableUtils {
                 nu_protocol::ast::PathMember::String { val, .. } if val == field_name
             )
         })
-    }
-}
-
-/// Utilities for working with blocks and nested structures
-pub struct BlockUtils;
-
-impl BlockUtils {
-    /// Find which function contains a given span (returns the most specific
-    /// one)
-    #[must_use]
-    pub fn find_containing_function(
-        span: Span,
-        functions: &std::collections::HashMap<BlockId, String>,
-        context: &LintContext,
-    ) -> Option<String> {
-        functions
-            .iter()
-            .filter(|(block_id, _)| span.is_in_block(**block_id, context))
-            .min_by_key(|(block_id, _)| {
-                let block = context.working_set.get_block(**block_id);
-                block.span.map_or(usize::MAX, |s| s.end - s.start)
-            })
-            .map(|(_, name)| name.clone())
     }
 }

@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use nu_protocol::ast::Expr;
 
 // Re-export Fix type for use by fix builders
-pub use crate::lint::Fix;
-use crate::{context::LintContext, lint::RuleViolation};
+pub use crate::violation::Fix;
+use crate::{context::LintContext, violation::RuleViolation};
 
 /// Extract external command arguments as strings
 #[must_use]

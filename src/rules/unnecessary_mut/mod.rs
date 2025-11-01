@@ -3,10 +3,10 @@ use std::collections::{HashMap, HashSet};
 use nu_protocol::{Span, VarId, ast::Expr};
 
 use crate::{
-    ast_utils::{AstUtils, DeclarationUtils, VariableUtils},
+    ast_utils::{CallExt, DeclarationUtils, VariableUtils},
     context::LintContext,
-    lint::{Fix, Replacement, RuleViolation, Severity},
     rule::{Rule, RuleCategory},
+    violation::{Fix, Replacement, RuleViolation, Severity},
 };
 
 /// Find the span of 'mut ' keyword before the variable name
@@ -32,12 +32,13 @@ fn extract_mut_declaration(
         return None;
     };
 
-    let decl_name = AstUtils::get_call_name(call, context);
+    let decl_name = call.get_call_name(context);
     if decl_name != "mut" {
         return None;
     }
 
-    let (var_id, var_name, var_span) = DeclarationUtils::extract_variable_declaration(call, context)?;
+    let (var_id, var_name, var_span) =
+        DeclarationUtils::extract_variable_declaration(call, context)?;
 
     if var_name.starts_with('_') {
         return None;
@@ -45,10 +46,6 @@ fn extract_mut_declaration(
 
     let mut_span = find_mut_keyword_span(context.source, var_span);
     Some((var_id, var_name, var_span, mut_span))
-}
-
-fn extract_reassigned_var(expr: &nu_protocol::ast::Expression) -> Option<VarId> {
-    VariableUtils::extract_assigned_variable(expr)
 }
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {
@@ -71,7 +68,11 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 
     context.ast.flat_map(
         context.working_set,
-        &|expr| extract_reassigned_var(expr).into_iter().collect(),
+        &|expr| {
+            VariableUtils::extract_assigned_variable(expr)
+                .into_iter()
+                .collect()
+        },
         &mut reassigned,
     );
 

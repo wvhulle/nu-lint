@@ -11,8 +11,8 @@ use jaq_core::{
 use crate::{
     context::LintContext,
     external_command::{BuiltinAlternative, extract_external_args},
-    lint::{Fix, Replacement, RuleViolation, Severity},
     rule::{Rule, RuleCategory},
+    violation::{Fix, Replacement, RuleViolation, Severity},
 };
 
 /// Extract field name from a path like .field

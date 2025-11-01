@@ -2,10 +2,10 @@ use heck::ToKebabCase;
 use nu_protocol::ast::Expr;
 
 use crate::{
-    ast_utils::{AstUtils, DeclarationUtils, NamingUtils},
+    ast_utils::{CallExt, DeclarationUtils, NamingUtils},
     context::LintContext,
-    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
+    violation::{RuleViolation, Severity},
 };
 
 /// Check if a command name follows kebab-case convention
@@ -40,7 +40,7 @@ fn is_valid_kebab_case(name: &str) -> bool {
 
 /// Check a single call expression for command naming violations
 fn check_call(call: &nu_protocol::ast::Call, ctx: &LintContext) -> Option<RuleViolation> {
-    let decl_name = AstUtils::get_call_name(call, ctx);
+    let decl_name = call.get_call_name(ctx);
 
     if !DeclarationUtils::is_def_command(&decl_name) {
         return None;

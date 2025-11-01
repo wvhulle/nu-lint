@@ -2,8 +2,8 @@ use nu_protocol::ast::{Block, Expr, PipelineElement};
 
 use crate::{
     context::LintContext,
-    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
+    violation::{RuleViolation, Severity},
 };
 
 /// Check if a pipeline element uses echo (builtin or external)

@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use crate::{
     context::LintContext,
     external_command::{BuiltinAlternative, extract_external_args},
-    lint::{Fix, Replacement, RuleViolation, Severity},
     rule::{Rule, RuleCategory},
+    violation::{Fix, Replacement, RuleViolation, Severity},
 };
 
 /// Complex jq operations that can be replaced with Nushell data operations

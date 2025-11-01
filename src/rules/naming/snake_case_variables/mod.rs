@@ -3,8 +3,8 @@ use nu_protocol::ast::{Argument, Expr};
 
 use crate::{
     context::LintContext,
-    lint::{Fix, Replacement, RuleViolation, Severity},
     rule::{Rule, RuleCategory},
+    violation::{Fix, Replacement, RuleViolation, Severity},
 };
 
 /// Check if a variable name follows `snake_case` convention

@@ -1,6 +1,6 @@
 use crate::{
     context::LintContext,
-    lint::{RuleViolation, Severity},
+    violation::{RuleViolation, Severity},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

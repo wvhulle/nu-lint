@@ -193,7 +193,7 @@ fn test_parse_error_has_error_severity() {
 
     // All parse errors should have Error severity
     for error in parse_errors {
-        use crate::lint::Severity;
+        use crate::violation::Severity;
         assert_eq!(
             error.severity,
             Severity::Error,

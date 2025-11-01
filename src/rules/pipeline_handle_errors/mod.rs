@@ -5,8 +5,8 @@ use nu_protocol::{
 
 use crate::{
     context::LintContext,
-    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
+    violation::{RuleViolation, Severity},
 };
 
 /// Whitelist of external commands that are generally safe and unlikely to fail

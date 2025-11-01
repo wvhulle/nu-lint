@@ -1,10 +1,10 @@
 use nu_protocol::ast::Expr;
 
 use crate::{
-    ast_utils::{AstUtils, DeclarationUtils},
+    ast_utils::{CallExt, DeclarationUtils},
     context::LintContext,
-    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
+    violation::{RuleViolation, Severity},
 };
 
 /// Check if there's a documentation comment before the given span
@@ -40,8 +40,11 @@ fn has_doc_comment_before(context: &LintContext, span: nu_protocol::Span) -> boo
     false
 }
 
-fn check_exported_function(call: &nu_protocol::ast::Call, context: &LintContext) -> Option<RuleViolation> {
-    let decl_name = AstUtils::get_call_name(call, context);
+fn check_exported_function(
+    call: &nu_protocol::ast::Call,
+    context: &LintContext,
+) -> Option<RuleViolation> {
+    let decl_name = call.get_call_name(context);
 
     if decl_name != "export def" {
         return None;
@@ -59,7 +62,8 @@ fn check_exported_function(call: &nu_protocol::ast::Call, context: &LintContext)
                 call.head,
             )
             .with_suggestion_dynamic(format!(
-                "Add a documentation comment above the function:\n# Description of {func_name}\nexport def {func_name} ..."
+                "Add a documentation comment above the function:\n# Description of \
+                 {func_name}\nexport def {func_name} ..."
             )),
         )
     } else {

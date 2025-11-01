@@ -5,19 +5,19 @@ pub mod config;
 pub mod context;
 pub mod engine;
 pub mod external_command;
-pub mod lint;
 pub mod output;
 pub mod rule;
 pub mod rules;
+pub mod violation;
 
 pub use config::Config;
 pub use context::LintContext;
 pub use engine::LintEngine;
-pub use lint::{Fix, Replacement, RuleViolation, Severity, Violation};
 use miette::Diagnostic;
 pub use output::{JsonFormatter, JsonOutput, OutputFormat, OutputFormatter, TextFormatter};
 pub use rule::{Rule, RuleCategory};
 use thiserror::Error;
+pub use violation::{Fix, Replacement, RuleViolation, Severity, Violation};
 
 #[derive(Error, Debug, Diagnostic)]
 pub enum LintError {

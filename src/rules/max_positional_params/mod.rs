@@ -1,7 +1,7 @@
 use crate::{
     context::LintContext,
-    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
+    violation::{RuleViolation, Severity},
 };
 
 const MAX_POSITIONAL: usize = 2;

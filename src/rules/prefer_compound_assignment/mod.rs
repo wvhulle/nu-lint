@@ -1,12 +1,11 @@
 use nu_protocol::ast::{Expr, Operator};
 
 use crate::{
-    ast_utils::AstUtils,
+    ast_utils::ExpressionExt,
     context::LintContext,
-    lint::{Fix, Replacement, RuleViolation, Severity},
     rule::{Rule, RuleCategory},
+    violation::{Fix, Replacement, RuleViolation, Severity},
 };
-
 
 fn build_fix(
     var_text: &str,
@@ -17,7 +16,7 @@ fn build_fix(
 ) -> Option<Fix> {
     // Extract the right operand from the binary operation
     if let Expr::BinaryOp(_left, _op, right) = &element.expr.expr {
-        let right_text = AstUtils::span_text(right.span, context);
+        let right_text = right.span_text(context);
         let new_text = format!("{var_text} {compound_op} {right_text}");
 
         Some(Fix::new_dynamic(
@@ -87,13 +86,13 @@ fn check_for_compound_assignment(
         return None;
     };
 
-    if !AstUtils::expressions_refer_to_same_variable(left, sub_left, ctx) {
+    if !left.refers_to_same_variable(sub_left, ctx) {
         return None;
     }
 
     let compound_op = get_compound_operator(*operator)?;
 
-    let var_text = AstUtils::span_text(left.span, ctx);
+    let var_text = left.span_text(ctx);
     let op_symbol = get_operator_symbol(*operator);
 
     let fix = build_fix(var_text, compound_op, element, expr.span, ctx);

@@ -1,41 +1,20 @@
-use std::collections::HashMap;
-
-use nu_protocol::{BlockId, ast::{Expr, Traverse}};
+use nu_protocol::ast::Expr;
 
 use crate::{
-    ast_utils::{AstUtils, BlockUtils, DeclarationUtils},
+    ast_utils::{BlockUtils, CallExt},
     context::LintContext,
-    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
+    violation::{RuleViolation, Severity},
 };
-
-/// Collect all function definitions with their names and block IDs
-fn collect_function_definitions(ctx: &LintContext) -> HashMap<BlockId, String> {
-    let mut functions = Vec::new();
-
-    ctx.ast.flat_map(
-        ctx.working_set,
-        &|expr| {
-            let Expr::Call(call) = &expr.expr else {
-                return vec![];
-            };
-
-            DeclarationUtils::extract_function_definition(&call, ctx).into_iter().collect()
-        },
-        &mut functions,
-    );
-
-    functions.into_iter().collect()
-}
 
 /// Check if a call is to the 'exit' command
 fn is_exit_call(call: &nu_protocol::ast::Call, ctx: &LintContext) -> bool {
-    AstUtils::get_call_name(call, ctx) == "exit"
+    call.get_call_name(ctx) == "exit"
 }
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {
     // First, collect all function definitions
-    let functions = collect_function_definitions(context);
+    let functions = BlockUtils::collect_function_definitions(context);
 
     // Then, find all exit calls and check if they're in non-main functions
     context.collect_rule_violations(|expr, ctx| {
@@ -45,7 +24,9 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
             }
 
             // Check if this exit is inside a function
-            let Some(function_name) = BlockUtils::find_containing_function(call.head, &functions, ctx) else {
+            let Some(function_name) =
+                BlockUtils::find_containing_function(call.head, &functions, ctx)
+            else {
                 return vec![];
             };
 

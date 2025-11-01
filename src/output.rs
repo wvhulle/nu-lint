@@ -3,7 +3,7 @@ use std::{fmt, fmt::Write};
 use miette::{Diagnostic, LabeledSpan, Report, SourceCode};
 use serde::Serialize;
 
-use crate::lint::{Severity, Violation};
+use crate::violation::{Severity, Violation};
 #[derive(Debug, Clone, Copy)]
 pub enum OutputFormat {
     Text,

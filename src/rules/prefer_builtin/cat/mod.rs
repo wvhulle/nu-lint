@@ -4,8 +4,8 @@ use crate::{
     RuleViolation,
     context::LintContext,
     external_command::{BuiltinAlternative, Fix, extract_external_args},
-    lint::{Replacement, Severity},
     rule::{Rule, RuleCategory},
+    violation::{Replacement, Severity},
 };
 
 fn get_builtin_alternatives() -> HashMap<&'static str, BuiltinAlternative> {

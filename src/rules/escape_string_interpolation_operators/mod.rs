@@ -4,8 +4,8 @@ use nu_protocol::ast::{
 
 use crate::{
     context::LintContext,
-    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
+    violation::{RuleViolation, Severity},
 };
 
 /// Detection categories for problematic AST patterns in string interpolations

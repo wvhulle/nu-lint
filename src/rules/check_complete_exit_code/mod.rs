@@ -3,10 +3,10 @@ use std::collections::HashMap;
 use nu_protocol::{Span, VarId, ast::Expr};
 
 use crate::{
-    ast_utils::{AstUtils, DeclarationUtils, VariableUtils},
+    ast_utils::{CallExt, DeclarationUtils, VariableUtils},
     context::LintContext,
-    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
+    violation::{RuleViolation, Severity},
 };
 
 fn extract_complete_assignment(
@@ -17,14 +17,15 @@ fn extract_complete_assignment(
         return None;
     };
 
-    let decl_name = AstUtils::get_call_name(call, context);
+    let decl_name = call.get_call_name(context);
     if !matches!(decl_name.as_str(), "let" | "mut") {
         return None;
     }
 
-    let (var_id, var_name, _var_span) = DeclarationUtils::extract_variable_declaration(call, context)?;
+    let (var_id, var_name, _var_span) =
+        DeclarationUtils::extract_variable_declaration(call, context)?;
 
-    let value_arg = AstUtils::get_positional_arg(call, 1)?;
+    let value_arg = call.get_positional_arg(1)?;
 
     if !assignment_has_complete(value_arg, context) {
         return None;
@@ -66,7 +67,7 @@ fn assignment_has_complete(
         context.working_set,
         &|inner_expr| {
             if let Expr::Call(inner_call) = &inner_expr.expr {
-                let inner_decl_name = AstUtils::get_call_name(inner_call, context);
+                let inner_decl_name = inner_call.get_call_name(context);
                 if inner_decl_name == "complete" {
                     return vec![true];
                 }
@@ -87,7 +88,9 @@ fn find_exit_code_checks(context: &LintContext) -> HashMap<VarId, Span> {
     context.ast.flat_map(
         context.working_set,
         &|expr| {
-            VariableUtils::extract_field_access(expr, "exit_code").into_iter().collect()
+            VariableUtils::extract_field_access(expr, "exit_code")
+                .into_iter()
+                .collect()
         },
         &mut exit_code_accesses,
     );

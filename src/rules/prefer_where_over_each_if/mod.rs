@@ -1,15 +1,11 @@
 use nu_protocol::ast::Expr;
 
 use crate::{
-    ast_utils::{AstUtils, LoopVariableExtractor},
+    ast_utils::{BlockExt, CallExt, ExpressionExt, LoopVariableExtractor},
     context::LintContext,
-    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
+    violation::{RuleViolation, Severity},
 };
-
-
-
-
 
 /// Check if a block is a filtering pattern: if <condition> { $loopvar }
 fn is_filtering_pattern(
@@ -46,7 +42,7 @@ fn is_filtering_pattern(
         return false;
     };
 
-    let decl_name = AstUtils::get_call_name(call, context);
+    let decl_name = call.get_call_name(context);
     log::debug!("Found command: {decl_name}");
 
     if decl_name != "if" {
@@ -81,7 +77,7 @@ fn is_filtering_pattern(
     log::debug!("Checking then-block for side effects");
 
     // Check for side effects
-    if AstUtils::has_side_effects(*then_block_id, context) {
+    if then_block_id.has_side_effects(context) {
         log::debug!("Then-block has side effects");
         return false;
     }
@@ -115,7 +111,7 @@ fn is_filtering_pattern(
     }
 
     let then_elem = &then_pipeline.elements[0];
-    let is_loop_var = AstUtils::refers_to_variable(&then_elem.expr, context, loop_var_name);
+    let is_loop_var = then_elem.expr.refers_to_variable(context, loop_var_name);
 
     log::debug!("Then-block returns loop var: {is_loop_var}");
 
@@ -131,7 +127,7 @@ fn check_expression(
         return vec![];
     };
 
-    let decl_name = AstUtils::get_call_name(call, context);
+    let decl_name = call.get_call_name(context);
     if decl_name != "each" {
         return vec![];
     }

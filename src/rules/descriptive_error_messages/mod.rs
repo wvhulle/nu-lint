@@ -1,23 +1,20 @@
 use nu_protocol::ast::{Expr, Expression};
 
 use crate::{
-    ast_utils::AstUtils,
+    ast_utils::{CallExt, ExpressionExt},
     context::LintContext,
-    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
+    violation::{RuleViolation, Severity},
 };
 
-const GENERIC_ERROR_MESSAGES: &[&str] = &[
-    "error",
-    "failed",
-    "err",
-    "something went wrong",
-];
+const GENERIC_ERROR_MESSAGES: &[&str] = &["error", "failed", "err", "something went wrong"];
 
 /// Check if a string literal contains a generic error message
 fn is_generic_error_message(text: &str) -> bool {
     let lower_text = text.to_lowercase();
-    GENERIC_ERROR_MESSAGES.iter().any(|&generic| lower_text == generic)
+    GENERIC_ERROR_MESSAGES
+        .iter()
+        .any(|&generic| lower_text == generic)
 }
 
 /// Extract string literal from an expression if it's a string
@@ -27,10 +24,11 @@ fn extract_string_literal(expr: &Expression, context: &LintContext) -> Option<St
         Expr::RawString(s) => Some(s.clone()),
         _ => {
             // Fallback to span text for other string representations
-            let text = AstUtils::span_text(expr.span, context);
-            if (text.starts_with('"') && text.ends_with('"')) ||
-               (text.starts_with('\'') && text.ends_with('\'')) {
-                Some(text[1..text.len()-1].to_string())
+            let text = expr.span_text(context);
+            if (text.starts_with('"') && text.ends_with('"'))
+                || (text.starts_with('\'') && text.ends_with('\''))
+            {
+                Some(text[1..text.len() - 1].to_string())
             } else {
                 None
             }
@@ -39,7 +37,10 @@ fn extract_string_literal(expr: &Expression, context: &LintContext) -> Option<St
 }
 
 /// Check a record for generic error messages in msg field
-fn check_record_for_generic_msg(record: &Vec<nu_protocol::ast::RecordItem>, context: &LintContext) -> Option<RuleViolation> {
+fn check_record_for_generic_msg(
+    record: &Vec<nu_protocol::ast::RecordItem>,
+    context: &LintContext,
+) -> Option<RuleViolation> {
     for item in record {
         if let nu_protocol::ast::RecordItem::Pair(key, value) = item {
             // Extract field name from key expression
@@ -47,10 +48,11 @@ fn check_record_for_generic_msg(record: &Vec<nu_protocol::ast::RecordItem>, cont
                 Expr::String(s) => s.clone(),
                 Expr::RawString(s) => s.clone(),
                 _ => {
-                    let text = AstUtils::span_text(key.span, context);
-                    if (text.starts_with('"') && text.ends_with('"')) ||
-                       (text.starts_with('\'') && text.ends_with('\'')) {
-                        text[1..text.len()-1].to_string()
+                    let text = key.span_text(context);
+                    if (text.starts_with('"') && text.ends_with('"'))
+                        || (text.starts_with('\'') && text.ends_with('\''))
+                    {
+                        text[1..text.len() - 1].to_string()
                     } else {
                         text.to_string()
                     }
@@ -67,7 +69,9 @@ fn check_record_for_generic_msg(record: &Vec<nu_protocol::ast::RecordItem>, cont
                                 value.span,
                             )
                             .with_suggestion_static(
-                                "Use a descriptive error message that explains what went wrong and how to fix it.\nExample: error make { msg: \"Failed to parse input: expected number, got string\" }",
+                                "Use a descriptive error message that explains what went wrong \
+                                 and how to fix it.\nExample: error make { msg: \"Failed to parse \
+                                 input: expected number, got string\" }",
                             ),
                         );
                     }
@@ -78,22 +82,25 @@ fn check_record_for_generic_msg(record: &Vec<nu_protocol::ast::RecordItem>, cont
     None
 }
 
-fn check_error_make_call(call: &nu_protocol::ast::Call, context: &LintContext) -> Option<RuleViolation> {
-    let decl_name = AstUtils::get_call_name(call, context);
+fn check_error_make_call(
+    call: &nu_protocol::ast::Call,
+    context: &LintContext,
+) -> Option<RuleViolation> {
+    let decl_name = call.get_call_name(context);
 
     if decl_name != "error make" {
         return None;
     }
 
     // Check the first argument which should be a record
-    let first_arg = AstUtils::get_first_positional_arg(call)?;
+    let first_arg = call.get_first_positional_arg()?;
 
     match &first_arg.expr {
-        Expr::Record(record) => check_record_for_generic_msg(record, context),
+        Expr::Record(record) => check_record_for_generic_msg(&record, context),
         Expr::FullCellPath(cell_path) => {
             // Handle case where record is wrapped in FullCellPath
             match &cell_path.head.expr {
-                Expr::Record(record) => check_record_for_generic_msg(record, context),
+                Expr::Record(record) => check_record_for_generic_msg(&record, context),
                 _ => None,
             }
         }

@@ -6,7 +6,7 @@ use nu_protocol::{
     engine::{Command, EngineState, StateWorkingSet},
 };
 
-use crate::lint::{RuleViolation, Violation};
+use crate::violation::{RuleViolation, Violation};
 
 /// Context containing all lint information (source, AST, and engine state)
 /// Rules can use whatever they need from this context

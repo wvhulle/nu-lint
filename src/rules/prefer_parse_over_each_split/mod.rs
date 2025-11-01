@@ -2,8 +2,8 @@ use nu_protocol::ast::Expr;
 
 use crate::{
     context::LintContext,
-    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
+    violation::{RuleViolation, Severity},
 };
 
 fn contains_split_row(expr: &nu_protocol::ast::Expression, ctx: &LintContext) -> bool {

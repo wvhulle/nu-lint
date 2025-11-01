@@ -3,10 +3,10 @@ use std::collections::{HashMap, HashSet};
 use nu_protocol::ast::Expr;
 
 use crate::{
-    ast_utils::{AstUtils, LoopVariableExtractor},
+    ast_utils::{BlockExt, LoopVariableExtractor},
     context::LintContext,
-    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
+    violation::{RuleViolation, Severity},
 };
 
 /// Check if an element matches a transformation pattern
@@ -93,7 +93,6 @@ fn has_transformation_in_append(
     false
 }
 
-
 fn is_literal_list(expr: &nu_protocol::ast::Expression) -> bool {
     match &expr.expr {
         Expr::List(_) => true,
@@ -102,7 +101,6 @@ fn is_literal_list(expr: &nu_protocol::ast::Expression) -> bool {
         _ => false,
     }
 }
-
 
 /// Extract variable IDs that are assigned to within a block (for append
 /// detection)
@@ -211,7 +209,7 @@ fn extract_empty_list_vars(
             log::debug!("Found List with {} items", items.len());
             items.is_empty()
         }
-        Expr::Block(block_id) => AstUtils::is_empty_list_block(*block_id, context),
+        Expr::Block(block_id) => block_id.is_empty_list_block(context),
         _ => {
             log::debug!("Init expr is neither List nor Block: {:?}", init_expr.expr);
             false

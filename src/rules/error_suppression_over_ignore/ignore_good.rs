@@ -55,3 +55,11 @@ try { rm /tmp/file.txt } catch { print "failed" }
 "#;
     rule().assert_ignores(acceptable_code);
 }
+
+#[test]
+fn test_http_get_with_ignore_acceptable() {
+    let acceptable_code = r"
+http get https://api.example.com/data | ignore
+";
+    rule().assert_ignores(acceptable_code);
+}

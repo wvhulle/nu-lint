@@ -71,7 +71,8 @@ impl RuleRegistry {
     #[must_use]
     pub fn with_default_rules() -> Self {
         let mut registry = Self::new();
-
+        // TODO: add rule that detects custom commands with a body (apart from comments)
+        // of length 1, used just once and suggests inlining at call-site.
         registry.register(check_complete_exit_code::rule());
         registry.register(completion_function_naming::rule());
         registry.register(dangerous_file_operations::rule());

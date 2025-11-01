@@ -7,6 +7,7 @@ use crate::{
 };
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {
+    // TODO: convert to AST
     let mut violations = Vec::new();
 
     // Pattern 1: split row followed by get/skip with index access

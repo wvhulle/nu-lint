@@ -38,8 +38,28 @@ fn test_touch_with_ignore_detected() {
 }
 
 #[test]
-fn test_rmdir_with_ignore_detected() {
-    let bad_code = "rmdir old_directory | ignore";
+fn test_save_force_with_ignore_detected() {
+    let bad_code = r"
+$data | save -f output.json | ignore
+";
+
+    rule().assert_detects(bad_code);
+}
+
+#[test]
+fn test_http_post_with_ignore_detected() {
+    let bad_code = r"
+http post https://api.example.com/data $payload | ignore
+";
+
+    rule().assert_detects(bad_code);
+}
+
+#[test]
+fn test_mktemp_with_ignore_detected() {
+    let bad_code = r"
+mktemp | ignore
+";
 
     rule().assert_detects(bad_code);
 }

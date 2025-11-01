@@ -1,6 +1,5 @@
-use crate::log::instrument;
-
 use super::rule;
+use crate::log::instrument;
 
 #[test]
 fn test_detect_manual_string_splitting_device() {

@@ -99,7 +99,8 @@ fn test_good_parse_temperature() {
 
 #[test]
 fn test_good_parse_structured_log() {
-    let good = "'ERROR [module:function] Something went wrong' | parse '{level} [{module}:{function}] {message}'";
+    let good = "'ERROR [module:function] Something went wrong' | parse '{level} \
+                [{module}:{function}] {message}'";
     rule().assert_ignores(good);
 }
 

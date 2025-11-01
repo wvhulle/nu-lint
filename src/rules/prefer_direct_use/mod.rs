@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use nu_protocol::ast::Expr;
 
 use crate::{
-    ast_utils::{BlockExt, LoopVariableExtractor},
+    ast_utils::{BlockExt, CallExt},
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -240,7 +240,7 @@ fn extract_direct_copy_patterns(
         return vec![];
     }
 
-    let Some(loop_var_name) = LoopVariableExtractor::from_for_call(call, context) else {
+    let Some(loop_var_name) = call.loop_var_from_for(context) else {
         log::debug!("Could not get loop var name");
         return vec![];
     };

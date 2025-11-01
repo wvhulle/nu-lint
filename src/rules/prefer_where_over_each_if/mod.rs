@@ -1,7 +1,7 @@
 use nu_protocol::ast::Expr;
 
 use crate::{
-    ast_utils::{BlockExt, CallExt, ExpressionExt, LoopVariableExtractor},
+    ast_utils::{BlockExt, CallExt, ExpressionExt},
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -134,7 +134,7 @@ fn check_expression(
 
     log::debug!("Found 'each' call at span {:?}", expr.span);
 
-    let Some(loop_var_name) = LoopVariableExtractor::from_each_call(call.as_ref(), context) else {
+    let Some(loop_var_name) = call.loop_var_from_each(context) else {
         log::debug!("Could not get loop var name");
         return vec![];
     };

@@ -1,42 +1,13 @@
 use heck::ToKebabCase;
 use nu_protocol::ast::Expr;
 
+use super::NuNaming;
 use crate::{
-    ast_utils::{CallExt, DeclarationUtils, NamingUtils},
+    ast_utils::{CallExt, DeclarationUtils},
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
 };
-
-/// Check if a command name follows kebab-case convention
-fn is_valid_kebab_case(name: &str) -> bool {
-    if name.is_empty() {
-        return false;
-    }
-
-    // Allow single characters
-    if name.len() == 1 {
-        return name.chars().all(|c| c.is_ascii_lowercase());
-    }
-
-    // Check kebab-case pattern: lowercase letters, numbers, and hyphens
-    // Must start with lowercase letter
-    // Cannot have consecutive hyphens
-    name.chars().enumerate().all(|(i, c)| {
-        match c {
-            'a'..='z' | '0'..='9' => true,
-            '-' => {
-                // Cannot start with hyphen
-                if i == 0 {
-                    return false;
-                }
-                // Cannot have consecutive hyphens
-                name.chars().nth(i + 1) != Some('-')
-            }
-            _ => false,
-        }
-    }) && name.chars().next().is_some_and(|c| c.is_ascii_lowercase())
-}
 
 /// Check a single call expression for command naming violations
 fn check_call(call: &nu_protocol::ast::Call, ctx: &LintContext) -> Option<RuleViolation> {
@@ -48,13 +19,12 @@ fn check_call(call: &nu_protocol::ast::Call, ctx: &LintContext) -> Option<RuleVi
 
     let (cmd_name, name_span) = DeclarationUtils::extract_declaration_name(call, ctx)?;
 
-    if !is_valid_kebab_case(&cmd_name) {
+    if !cmd_name.is_valid_kebab_case() {
         let kebab_case_name = cmd_name.to_kebab_case();
-        return Some(NamingUtils::create_naming_violation(
+        return Some(cmd_name.create_naming_violation(
             "kebab_case_commands",
             "Command",
-            &cmd_name,
-            kebab_case_name,
+            &kebab_case_name,
             name_span,
         ));
     }

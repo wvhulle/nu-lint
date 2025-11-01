@@ -1,10 +1,7 @@
 use nu_protocol::ast::Expr;
 
 use crate::{
-    ast_utils::{
-        BlockExt, CallExt, DeclarationUtils, ExpressionExt, LoopVariableExtractor, PipelineExt,
-        VariableUtils,
-    },
+    ast_utils::{BlockExt, CallExt, DeclarationUtils, ExpressionExt, PipelineExt, VariableUtils},
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -269,7 +266,7 @@ fn extract_filtering_vars(
     log::debug!("Found 'for' loop");
 
     // Get loop variable name
-    let Some(loop_var_name) = LoopVariableExtractor::from_for_call(call, context) else {
+    let Some(loop_var_name) = call.loop_var_from_for(context) else {
         log::debug!("Could not get loop var name");
         return vec![];
     };

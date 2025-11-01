@@ -54,7 +54,9 @@ fn check_exported_function(
 
     let has_docs = has_doc_comment_before(context, call.head);
 
-    if !has_docs {
+    if has_docs {
+        None
+    } else {
         Some(
             RuleViolation::new_dynamic(
                 "exported_function_docs",
@@ -66,8 +68,6 @@ fn check_exported_function(
                  {func_name}\nexport def {func_name} ..."
             )),
         )
-    } else {
-        None
     }
 }
 

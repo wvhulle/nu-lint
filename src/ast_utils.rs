@@ -3,10 +3,7 @@ use nu_protocol::{
     ast::{Call, Expr, Expression, Operator, Pipeline, PipelineElement},
 };
 
-use crate::{
-    context::LintContext,
-    violation::{Fix, Replacement, RuleViolation},
-};
+use crate::context::LintContext;
 
 /// Trait to extend Expression with utility methods
 pub trait ExpressionExt {
@@ -36,6 +33,12 @@ pub trait ExpressionExt {
 
     /// Get the text span content for this expression
     fn span_text<'a>(&self, context: &'a LintContext) -> &'a str;
+
+    /// Check if this expression is a call to a specific command
+    fn is_call_to(&self, command_name: &str, context: &LintContext) -> bool;
+
+    /// Check if this expression is a reference to a specific variable
+    fn is_variable_reference(&self, variable_name: &str, context: &LintContext) -> bool;
 }
 
 impl ExpressionExt for Expression {
@@ -47,14 +50,7 @@ impl ExpressionExt for Expression {
 
     fn extract_variable_name(&self, context: &LintContext) -> Option<String> {
         match &self.expr {
-            Expr::Var(var_id) => {
-                let var = context.working_set.get_variable(*var_id);
-                Some(
-                    context.source[var.declaration_span.start..var.declaration_span.end]
-                        .to_string(),
-                )
-            }
-            Expr::VarDecl(var_id) => {
+            Expr::Var(var_id) | Expr::VarDecl(var_id) => {
                 let var = context.working_set.get_variable(*var_id);
                 Some(
                     context.source[var.declaration_span.start..var.declaration_span.end]
@@ -136,6 +132,17 @@ impl ExpressionExt for Expression {
     fn span_text<'a>(&self, context: &'a LintContext) -> &'a str {
         &context.source[self.span.start..self.span.end]
     }
+
+    fn is_call_to(&self, command_name: &str, context: &LintContext) -> bool {
+        match &self.expr {
+            Expr::Call(call) => call.is_call_to_command(command_name, context),
+            _ => false,
+        }
+    }
+
+    fn is_variable_reference(&self, variable_name: &str, context: &LintContext) -> bool {
+        self.refers_to_variable(context, variable_name)
+    }
 }
 
 /// Trait to extend Call with utility methods
@@ -151,6 +158,14 @@ pub trait CallExt {
 
     /// Get a positional argument by index
     fn get_positional_arg(&self, index: usize) -> Option<&Expression>;
+
+    /// Extract loop variable name from 'each' command
+    #[must_use]
+    fn loop_var_from_each(&self, context: &LintContext) -> Option<String>;
+
+    /// Extract loop variable name from 'for' command
+    #[must_use]
+    fn loop_var_from_for(&self, context: &LintContext) -> Option<String>;
 }
 
 impl CallExt for Call {
@@ -181,6 +196,22 @@ impl CallExt for Call {
             _ => None,
         })
     }
+
+    fn loop_var_from_each(&self, context: &LintContext) -> Option<String> {
+        let first_arg = self.get_first_positional_arg()?;
+        let block_id = first_arg.extract_block_id()?;
+
+        let block = context.working_set.get_block(block_id);
+        let var_id = block.signature.required_positional.first()?.var_id?;
+
+        let var = context.working_set.get_variable(var_id);
+        Some(AstUtils::span_text(var.declaration_span, context).to_string())
+    }
+
+    fn loop_var_from_for(&self, context: &LintContext) -> Option<String> {
+        let var_arg = self.get_first_positional_arg()?;
+        var_arg.extract_variable_name(context)
+    }
 }
 
 /// Trait to extend Pipeline with utility methods
@@ -209,7 +240,7 @@ impl PipelineExt for Pipeline {
     }
 }
 
-/// Trait to extend BlockId with utility methods
+/// Trait to extend `BlockId` with utility methods
 pub trait BlockExt {
     /// Check if this block contains side effects (commands that modify state)
     fn has_side_effects(&self, context: &LintContext) -> bool;
@@ -236,8 +267,7 @@ impl BlockExt for BlockId {
             .pipelines
             .first()
             .and_then(|pipeline| pipeline.get_first_element())
-            .map(|elem| elem.expr.is_empty_list())
-            .unwrap_or(false)
+            .is_some_and(|elem| elem.expr.is_empty_list())
     }
 }
 
@@ -246,163 +276,9 @@ pub struct AstUtils;
 
 impl AstUtils {
     /// Get span text for convenience
+    #[must_use]
     pub fn span_text<'a>(span: Span, context: &'a LintContext) -> &'a str {
         &context.source[span.start..span.end]
-    }
-}
-
-/// Trait for pattern matching in AST expressions
-pub trait PatternMatcher {
-    fn matches(&self, expr: &Expression, context: &LintContext) -> bool;
-}
-
-/// Pattern for matching specific command calls
-pub struct CommandCallPattern {
-    pub command_name: String,
-}
-
-impl CommandCallPattern {
-    pub fn new(command_name: impl Into<String>) -> Self {
-        Self {
-            command_name: command_name.into(),
-        }
-    }
-}
-
-impl PatternMatcher for CommandCallPattern {
-    fn matches(&self, expr: &Expression, context: &LintContext) -> bool {
-        match &expr.expr {
-            Expr::Call(call) => call.is_call_to_command(&self.command_name, context),
-            _ => false,
-        }
-    }
-}
-
-/// Pattern for matching assignment operations
-pub struct AssignmentPattern;
-
-impl PatternMatcher for AssignmentPattern {
-    fn matches(&self, expr: &Expression, _context: &LintContext) -> bool {
-        expr.is_assignment()
-    }
-}
-
-/// Pattern for matching variable references
-pub struct VariablePattern {
-    pub variable_name: String,
-}
-
-impl VariablePattern {
-    pub fn new(variable_name: impl Into<String>) -> Self {
-        Self {
-            variable_name: variable_name.into(),
-        }
-    }
-}
-
-impl PatternMatcher for VariablePattern {
-    fn matches(&self, expr: &Expression, context: &LintContext) -> bool {
-        expr.refers_to_variable(context, &self.variable_name)
-    }
-}
-
-/// Utility for extracting loop variables from common control structures
-pub struct LoopVariableExtractor;
-
-impl LoopVariableExtractor {
-    /// Extract loop variable name from 'each' command
-    pub fn from_each_call(call: &Call, context: &LintContext) -> Option<String> {
-        let first_arg = call.get_first_positional_arg()?;
-        let block_id = first_arg.extract_block_id()?;
-
-        let block = context.working_set.get_block(block_id);
-        let var_id = block.signature.required_positional.first()?.var_id?;
-
-        let var = context.working_set.get_variable(var_id);
-        Some(AstUtils::span_text(var.declaration_span, context).to_string())
-    }
-
-    /// Extract loop variable name from 'for' command
-    pub fn from_for_call(call: &Call, context: &LintContext) -> Option<String> {
-        let var_arg = call.get_first_positional_arg()?;
-        var_arg.extract_variable_name(context)
-    }
-}
-
-/// Utilities for naming convention validation and fixes
-pub struct NamingUtils;
-
-impl NamingUtils {
-    /// Create a naming convention violation with fix
-    pub fn create_naming_violation(
-        rule_id: &'static str,
-        item_type: &str,
-        current_name: &str,
-        suggested_name: String,
-        name_span: Span,
-    ) -> RuleViolation {
-        let fix = Fix {
-            description: format!("Rename {item_type} '{current_name}' to '{suggested_name}'")
-                .into(),
-            replacements: vec![Replacement {
-                span: name_span,
-                new_text: suggested_name.clone().into(),
-            }],
-        };
-
-        RuleViolation::new_dynamic(
-            rule_id,
-            format!("{item_type} '{current_name}' should follow naming convention"),
-            name_span,
-        )
-        .with_suggestion_dynamic(format!("Consider renaming to: {suggested_name}"))
-        .with_fix(fix)
-    }
-
-    /// Check if a name is valid kebab-case
-    pub fn is_valid_kebab_case(name: &str) -> bool {
-        if name.is_empty() {
-            return false;
-        }
-
-        if name.len() == 1 {
-            return name.chars().all(|c| c.is_ascii_lowercase());
-        }
-
-        name.chars().enumerate().all(|(i, c)| match c {
-            'a'..='z' | '0'..='9' => true,
-            '-' => {
-                if i == 0 {
-                    return false;
-                }
-                name.chars().nth(i + 1) != Some('-')
-            }
-            _ => false,
-        }) && name.chars().next().is_some_and(|c| c.is_ascii_lowercase())
-    }
-
-    /// Check if a name is valid snake_case
-    pub fn is_valid_snake_case(name: &str) -> bool {
-        if name.is_empty() {
-            return false;
-        }
-
-        if name.len() == 1 {
-            return name.chars().all(|c| c.is_ascii_lowercase() || c == '_');
-        }
-
-        let first_char = name.chars().next().unwrap();
-        if !first_char.is_ascii_lowercase() && first_char != '_' {
-            return false;
-        }
-
-        let chars: Vec<char> = name.chars().collect();
-        chars.windows(2).all(|w| {
-            let (current, next) = (w[0], w[1]);
-            let valid_char = matches!(current, 'a'..='z' | '0'..='9' | '_');
-            let no_double_underscore = !(current == '_' && next == '_');
-            valid_char && no_double_underscore
-        }) && matches!(chars.last(), Some('a'..='z' | '0'..='9' | '_'))
     }
 }
 
@@ -411,12 +287,14 @@ pub struct DeclarationUtils;
 
 impl DeclarationUtils {
     /// Check if a command is a def declaration
+    #[must_use]
     pub fn is_def_command(decl_name: &str) -> bool {
         matches!(decl_name, "def" | "export def")
     }
 
-    /// Check if a command is a variable declaration, returns (is_declaration,
-    /// is_mutable)
+    /// Check if a command is a variable declaration, returns (`is_declaration`,
+    /// `is_mutable`)
+    #[must_use]
     pub fn is_var_declaration(decl_name: &str) -> Option<bool> {
         match decl_name {
             "let" => Some(false),
@@ -426,6 +304,7 @@ impl DeclarationUtils {
     }
 
     /// Extract the first argument (name) from a declaration call
+    #[must_use]
     pub fn extract_declaration_name(call: &Call, context: &LintContext) -> Option<(String, Span)> {
         let name_arg = call.get_first_positional_arg()?;
         let name = context.source.get(name_arg.span.start..name_arg.span.end)?;
@@ -433,6 +312,7 @@ impl DeclarationUtils {
     }
 
     /// Extract function definition information from a call
+    #[must_use]
     pub fn extract_function_definition(
         call: &Call,
         context: &LintContext,
@@ -453,8 +333,9 @@ impl DeclarationUtils {
         Some((block_id, name.to_string()))
     }
 
-    /// Extract variable declaration info (var_id, name, span) from let/mut
+    /// Extract variable declaration info (`var_id`, name, span) from let/mut
     /// calls
+    #[must_use]
     pub fn extract_variable_declaration(
         call: &Call,
         context: &LintContext,
@@ -480,6 +361,7 @@ pub struct VariableUtils;
 
 impl VariableUtils {
     /// Extract variable ID from assignment expressions
+    #[must_use]
     pub fn extract_assigned_variable(expr: &Expression) -> Option<nu_protocol::VarId> {
         let Expr::BinaryOp(lhs, _op, _rhs) = &expr.expr else {
             return None;
@@ -503,6 +385,7 @@ impl VariableUtils {
     }
 
     /// Check if a cell path accesses a specific field
+    #[must_use]
     pub fn accesses_field(path_tail: &[nu_protocol::ast::PathMember], field_name: &str) -> bool {
         path_tail.iter().any(|path_member| {
             matches!(
@@ -513,6 +396,7 @@ impl VariableUtils {
     }
 
     /// Extract variable accesses with field access
+    #[must_use]
     pub fn extract_field_access(
         expr: &Expression,
         field_name: &str,
@@ -533,6 +417,7 @@ pub struct BlockUtils;
 
 impl BlockUtils {
     /// Check if a span is contained within a block
+    #[must_use]
     pub fn span_in_block(span: Span, block_id: BlockId, context: &LintContext) -> bool {
         let block = context.working_set.get_block(block_id);
         if let Some(block_span) = block.span {
@@ -543,6 +428,7 @@ impl BlockUtils {
 
     /// Find which function contains a given span (returns the most specific
     /// one)
+    #[must_use]
     pub fn find_containing_function(
         span: Span,
         functions: &std::collections::HashMap<BlockId, String>,
@@ -559,6 +445,7 @@ impl BlockUtils {
     }
 
     /// Extract all nested block IDs from an expression
+    #[must_use]
     pub fn extract_nested_blocks(expr: &Expression, context: &LintContext) -> Vec<BlockId> {
         use nu_protocol::ast::Traverse;
 
@@ -572,6 +459,7 @@ impl BlockUtils {
     }
 
     /// Collect all function definitions with their names and block IDs
+    #[must_use]
     pub fn collect_function_definitions(
         context: &LintContext,
     ) -> std::collections::HashMap<BlockId, String> {

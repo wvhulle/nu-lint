@@ -20,8 +20,7 @@ fn is_generic_error_message(text: &str) -> bool {
 /// Extract string literal from an expression if it's a string
 fn extract_string_literal(expr: &Expression, context: &LintContext) -> Option<String> {
     match &expr.expr {
-        Expr::String(s) => Some(s.clone()),
-        Expr::RawString(s) => Some(s.clone()),
+        Expr::String(s) | Expr::RawString(s) => Some(s.clone()),
         _ => {
             // Fallback to span text for other string representations
             let text = expr.span_text(context);
@@ -36,47 +35,56 @@ fn extract_string_literal(expr: &Expression, context: &LintContext) -> Option<St
     }
 }
 
+/// Extract field name from a record key expression
+fn extract_field_name(key: &Expression, context: &LintContext) -> String {
+    match &key.expr {
+        Expr::String(s) | Expr::RawString(s) => s.clone(),
+        _ => {
+            let text = key.span_text(context);
+            if (text.starts_with('"') && text.ends_with('"'))
+                || (text.starts_with('\'') && text.ends_with('\''))
+            {
+                text[1..text.len() - 1].to_string()
+            } else {
+                text.to_string()
+            }
+        }
+    }
+}
+
 /// Check a record for generic error messages in msg field
 fn check_record_for_generic_msg(
     record: &Vec<nu_protocol::ast::RecordItem>,
     context: &LintContext,
 ) -> Option<RuleViolation> {
     for item in record {
-        if let nu_protocol::ast::RecordItem::Pair(key, value) = item {
-            // Extract field name from key expression
-            let field_name = match &key.expr {
-                Expr::String(s) => s.clone(),
-                Expr::RawString(s) => s.clone(),
-                _ => {
-                    let text = key.span_text(context);
-                    if (text.starts_with('"') && text.ends_with('"'))
-                        || (text.starts_with('\'') && text.ends_with('\''))
-                    {
-                        text[1..text.len() - 1].to_string()
-                    } else {
-                        text.to_string()
-                    }
-                }
-            };
+        let nu_protocol::ast::RecordItem::Pair(key, value) = item else {
+            continue;
+        };
 
-            if field_name == "msg" {
-                if let Some(msg_text) = extract_string_literal(value, context) {
-                    if is_generic_error_message(&msg_text) {
-                        return Some(
-                            RuleViolation::new_static(
-                                "descriptive_error_messages",
-                                "Error message is too generic and not descriptive",
-                                value.span,
-                            )
-                            .with_suggestion_static(
-                                "Use a descriptive error message that explains what went wrong \
-                                 and how to fix it.\nExample: error make { msg: \"Failed to parse \
-                                 input: expected number, got string\" }",
-                            ),
-                        );
-                    }
-                }
-            }
+        let field_name = extract_field_name(key, context);
+
+        if field_name != "msg" {
+            continue;
+        }
+
+        let Some(msg_text) = extract_string_literal(value, context) else {
+            continue;
+        };
+
+        if is_generic_error_message(&msg_text) {
+            return Some(
+                RuleViolation::new_static(
+                    "descriptive_error_messages",
+                    "Error message is too generic and not descriptive",
+                    value.span,
+                )
+                .with_suggestion_static(
+                    "Use a descriptive error message that explains what went wrong and how to fix \
+                     it.\nExample: error make { msg: \"Failed to parse input: expected number, \
+                     got string\" }",
+                ),
+            );
         }
     }
     None
@@ -96,11 +104,11 @@ fn check_error_make_call(
     let first_arg = call.get_first_positional_arg()?;
 
     match &first_arg.expr {
-        Expr::Record(record) => check_record_for_generic_msg(&record, context),
+        Expr::Record(record) => check_record_for_generic_msg(record, context),
         Expr::FullCellPath(cell_path) => {
             // Handle case where record is wrapped in FullCellPath
             match &cell_path.head.expr {
-                Expr::Record(record) => check_record_for_generic_msg(&record, context),
+                Expr::Record(record) => check_record_for_generic_msg(record, context),
                 _ => None,
             }
         }

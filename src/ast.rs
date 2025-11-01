@@ -55,6 +55,15 @@ pub trait ExpressionExt {
 
     /// Check if this expression contains any variable references (recursive)
     fn contains_variables(&self, context: &LintContext) -> bool;
+
+    /// Extract the variable being compared in an equality comparison expression
+    /// Returns the variable name if this is a pattern like `$var == value` or
+    /// `$var != value`
+    fn extract_compared_variable(&self, context: &LintContext) -> Option<String>;
+
+    /// Extract the comparison value from an equality comparison expression
+    /// Returns the right-hand side value if this is `$var == value`
+    fn extract_comparison_value(&self, context: &LintContext) -> Option<String>;
 }
 
 impl ExpressionExt for Expression {
@@ -279,6 +288,41 @@ impl ExpressionExt for Expression {
             _ => false,
         }
     }
+
+    fn extract_compared_variable(&self, context: &LintContext) -> Option<String> {
+        let Expr::BinaryOp(left, op, _right) = &self.expr else {
+            return None;
+        };
+
+        // Check if it's an equality comparison
+        let Expr::Operator(Operator::Comparison(
+            nu_protocol::ast::Comparison::Equal | nu_protocol::ast::Comparison::NotEqual,
+        )) = &op.expr
+        else {
+            return None;
+        };
+
+        // Try to extract variable name from left side
+        if let Some(var_name) = left.extract_variable_name(context) {
+            return Some(var_name);
+        }
+
+        // Fallback: if the left side looks like a variable reference (FullCellPath),
+        // extract the text even if the variable isn't properly declared
+        if let Expr::FullCellPath(cell_path) = &left.expr {
+            Some(cell_path.head.span.text(context).to_string())
+        } else {
+            None
+        }
+    }
+
+    fn extract_comparison_value(&self, context: &LintContext) -> Option<String> {
+        let Expr::BinaryOp(_left, _op, right) = &self.expr else {
+            return None;
+        };
+
+        Some(right.span_text(context).to_string())
+    }
 }
 
 /// Trait to extend Call with utility methods
@@ -318,6 +362,15 @@ pub trait CallExt {
         &self,
         context: &LintContext,
     ) -> Option<(nu_protocol::VarId, String, Span)>;
+
+    /// Get the else branch from an if call
+    ///
+    /// Returns `(is_else_if, nested_call_or_block_expr)` where:
+    /// - `is_else_if` = true if it's another if call (else if)
+    /// - `is_else_if` = false if it's a final else block
+    ///
+    /// Returns `None` if there's no else branch
+    fn get_else_branch(&self) -> Option<(bool, &Expression)>;
 }
 
 impl CallExt for Call {
@@ -404,6 +457,38 @@ impl CallExt for Call {
             Some((*var_id, var_name.to_string(), var_arg.span))
         } else {
             None
+        }
+    }
+
+    fn get_else_branch(&self) -> Option<(bool, &Expression)> {
+        // Get the else argument (3rd positional argument for if command)
+        let else_arg = self.get_positional_arg(2)?;
+
+        // The else argument can be either:
+        // 1. A Block (final else { ... })
+        // 2. A Keyword containing either:
+        //    - An if Call (else if ...)
+        //    - A Block (final else { ... } wrapped in Keyword)
+        match &else_arg.expr {
+            Expr::Keyword(keyword) => {
+                // Check what the Keyword contains
+                match &keyword.expr.expr {
+                    Expr::Call(_) => {
+                        // This is an else-if chain
+                        Some((true, &keyword.expr))
+                    }
+                    Expr::Block(_) => {
+                        // This is a final else block wrapped in a Keyword
+                        Some((false, &keyword.expr))
+                    }
+                    _ => None,
+                }
+            }
+            Expr::Block(_) => {
+                // This is a final else block (not wrapped in Keyword)
+                Some((false, else_arg))
+            }
+            _ => None,
         }
     }
 }

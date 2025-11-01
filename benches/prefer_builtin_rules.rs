@@ -5,7 +5,7 @@ use nu_cmd_lang::create_default_context;
 use nu_command::add_shell_command_context;
 use nu_lint::{
     context::LintContext,
-    rules::prefer_builtin::{
+    rules::replace_by_builtin::{
         cat::rule as prefer_builtin_cat, find::rule as prefer_builtin_find,
         grep::rule as prefer_builtin_grep, head::rule as prefer_builtin_head,
         ls::rule as prefer_builtin_ls, other::rule as prefer_builtin_other,

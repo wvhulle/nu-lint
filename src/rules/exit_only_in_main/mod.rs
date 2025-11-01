@@ -1,7 +1,7 @@
 use nu_protocol::ast::Expr;
 
 use crate::{
-    ast_utils::{BlockUtils, CallExt},
+    ast::{BlockUtils, CallExt},
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -14,7 +14,7 @@ fn is_exit_call(call: &nu_protocol::ast::Call, ctx: &LintContext) -> bool {
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {
     // First, collect all function definitions
-    let functions = BlockUtils::collect_function_definitions(context);
+    let functions = context.collect_function_definitions();
 
     // Then, find all exit calls and check if they're in non-main functions
     context.collect_rule_violations(|expr, ctx| {

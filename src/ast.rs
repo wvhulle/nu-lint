@@ -39,6 +39,15 @@ pub trait ExpressionExt {
 
     /// Check if this expression is a reference to a specific variable
     fn is_variable_reference(&self, variable_name: &str, context: &LintContext) -> bool;
+
+    /// Extract variable ID from assignment expressions
+    fn extract_assigned_variable(&self) -> Option<nu_protocol::VarId>;
+
+    /// Extract variable accesses with field access
+    fn extract_field_access(&self, field_name: &str) -> Option<(nu_protocol::VarId, Span)>;
+
+    /// Extract all nested block IDs from this expression
+    fn extract_nested_blocks(&self, context: &LintContext) -> Vec<BlockId>;
 }
 
 impl ExpressionExt for Expression {
@@ -143,6 +152,51 @@ impl ExpressionExt for Expression {
     fn is_variable_reference(&self, variable_name: &str, context: &LintContext) -> bool {
         self.refers_to_variable(context, variable_name)
     }
+
+    fn extract_assigned_variable(&self) -> Option<nu_protocol::VarId> {
+        let Expr::BinaryOp(lhs, _op, _rhs) = &self.expr else {
+            return None;
+        };
+
+        if !self.is_assignment() {
+            return None;
+        }
+
+        match &lhs.expr {
+            Expr::Var(var_id) => Some(*var_id),
+            Expr::FullCellPath(cell_path) => {
+                if let Expr::Var(var_id) = &cell_path.head.expr {
+                    Some(*var_id)
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
+    }
+
+    fn extract_field_access(&self, field_name: &str) -> Option<(nu_protocol::VarId, Span)> {
+        if let Expr::FullCellPath(cell_path) = &self.expr
+            && let Expr::Var(var_id) = &cell_path.head.expr
+            && VariableUtils::accesses_field(&cell_path.tail, field_name)
+        {
+            Some((*var_id, self.span))
+        } else {
+            None
+        }
+    }
+
+    fn extract_nested_blocks(&self, context: &LintContext) -> Vec<BlockId> {
+        use nu_protocol::ast::Traverse;
+
+        let mut blocks = Vec::new();
+        self.flat_map(
+            context.working_set,
+            &|inner_expr| inner_expr.extract_block_id().into_iter().collect(),
+            &mut blocks,
+        );
+        blocks
+    }
 }
 
 /// Trait to extend Call with utility methods
@@ -166,6 +220,22 @@ pub trait CallExt {
     /// Extract loop variable name from 'for' command
     #[must_use]
     fn loop_var_from_for(&self, context: &LintContext) -> Option<String>;
+
+    /// Extract the first argument (name) from a declaration call
+    #[must_use]
+    fn extract_declaration_name(&self, context: &LintContext) -> Option<(String, Span)>;
+
+    /// Extract function definition information from this call
+    #[must_use]
+    fn extract_function_definition(&self, context: &LintContext) -> Option<(BlockId, String)>;
+
+    /// Extract variable declaration info (`var_id`, name, span) from let/mut
+    /// calls
+    #[must_use]
+    fn extract_variable_declaration(
+        &self,
+        context: &LintContext,
+    ) -> Option<(nu_protocol::VarId, String, Span)>;
 }
 
 impl CallExt for Call {
@@ -212,6 +282,48 @@ impl CallExt for Call {
         let var_arg = self.get_first_positional_arg()?;
         var_arg.extract_variable_name(context)
     }
+
+    fn extract_declaration_name(&self, context: &LintContext) -> Option<(String, Span)> {
+        let name_arg = self.get_first_positional_arg()?;
+        let name = context.source.get(name_arg.span.start..name_arg.span.end)?;
+        Some((name.to_string(), name_arg.span))
+    }
+
+    fn extract_function_definition(&self, context: &LintContext) -> Option<(BlockId, String)> {
+        let decl_name = self.get_call_name(context);
+        if !DeclarationUtils::is_def_command(&decl_name) {
+            return None;
+        }
+
+        // First argument is the function name
+        let name_arg = self.get_first_positional_arg()?;
+        let name = AstUtils::span_text(name_arg.span, context);
+
+        // Third argument is the function body block (can be Block or Closure)
+        let body_expr = self.get_positional_arg(2)?;
+        let block_id = body_expr.extract_block_id()?;
+
+        Some((block_id, name.to_string()))
+    }
+
+    fn extract_variable_declaration(
+        &self,
+        context: &LintContext,
+    ) -> Option<(nu_protocol::VarId, String, Span)> {
+        let decl_name = self.get_call_name(context);
+        if !matches!(decl_name.as_str(), "let" | "mut") {
+            return None;
+        }
+
+        let var_arg = self.get_first_positional_arg()?;
+
+        if let Expr::VarDecl(var_id) = &var_arg.expr {
+            let var_name = AstUtils::span_text(var_arg.span, context);
+            Some((*var_id, var_name.to_string(), var_arg.span))
+        } else {
+            None
+        }
+    }
 }
 
 /// Trait to extend Pipeline with utility methods
@@ -247,6 +359,10 @@ pub trait BlockExt {
 
     /// Check if this block contains only an empty list
     fn is_empty_list_block(&self, context: &LintContext) -> bool;
+
+    /// Check if a span is contained within this block
+    #[must_use]
+    fn contains_span(&self, span: Span, context: &LintContext) -> bool;
 }
 
 impl BlockExt for BlockId {
@@ -269,6 +385,35 @@ impl BlockExt for BlockId {
             .and_then(|pipeline| pipeline.get_first_element())
             .is_some_and(|elem| elem.expr.is_empty_list())
     }
+
+    fn contains_span(&self, span: Span, context: &LintContext) -> bool {
+        let block = context.working_set.get_block(*self);
+        if let Some(block_span) = block.span {
+            return span.start >= block_span.start && span.end <= block_span.end;
+        }
+        false
+    }
+}
+
+/// Trait to extend Span with utility methods
+pub trait SpanExt {
+    /// Check if this span is contained within a block
+    #[must_use]
+    fn is_in_block(&self, block_id: BlockId, context: &LintContext) -> bool;
+
+    /// Get the text content for this span
+    #[must_use]
+    fn text<'a>(&self, context: &'a LintContext) -> &'a str;
+}
+
+impl SpanExt for Span {
+    fn is_in_block(&self, block_id: BlockId, context: &LintContext) -> bool {
+        block_id.contains_span(*self, context)
+    }
+
+    fn text<'a>(&self, context: &'a LintContext) -> &'a str {
+        &context.source[self.start..self.end]
+    }
 }
 
 /// Convenience methods that delegate to trait implementations
@@ -278,7 +423,7 @@ impl AstUtils {
     /// Get span text for convenience
     #[must_use]
     pub fn span_text<'a>(span: Span, context: &'a LintContext) -> &'a str {
-        &context.source[span.start..span.end]
+        span.text(context)
     }
 }
 
@@ -302,88 +447,12 @@ impl DeclarationUtils {
             _ => None,
         }
     }
-
-    /// Extract the first argument (name) from a declaration call
-    #[must_use]
-    pub fn extract_declaration_name(call: &Call, context: &LintContext) -> Option<(String, Span)> {
-        let name_arg = call.get_first_positional_arg()?;
-        let name = context.source.get(name_arg.span.start..name_arg.span.end)?;
-        Some((name.to_string(), name_arg.span))
-    }
-
-    /// Extract function definition information from a call
-    #[must_use]
-    pub fn extract_function_definition(
-        call: &Call,
-        context: &LintContext,
-    ) -> Option<(BlockId, String)> {
-        let decl_name = call.get_call_name(context);
-        if !Self::is_def_command(&decl_name) {
-            return None;
-        }
-
-        // First argument is the function name
-        let name_arg = call.get_first_positional_arg()?;
-        let name = AstUtils::span_text(name_arg.span, context);
-
-        // Third argument is the function body block (can be Block or Closure)
-        let body_expr = call.get_positional_arg(2)?;
-        let block_id = body_expr.extract_block_id()?;
-
-        Some((block_id, name.to_string()))
-    }
-
-    /// Extract variable declaration info (`var_id`, name, span) from let/mut
-    /// calls
-    #[must_use]
-    pub fn extract_variable_declaration(
-        call: &Call,
-        context: &LintContext,
-    ) -> Option<(nu_protocol::VarId, String, Span)> {
-        let decl_name = call.get_call_name(context);
-        if !matches!(decl_name.as_str(), "let" | "mut") {
-            return None;
-        }
-
-        let var_arg = call.get_first_positional_arg()?;
-
-        if let Expr::VarDecl(var_id) = &var_arg.expr {
-            let var_name = AstUtils::span_text(var_arg.span, context);
-            Some((*var_id, var_name.to_string(), var_arg.span))
-        } else {
-            None
-        }
-    }
 }
 
 /// Utilities for working with assignments and variable usage
 pub struct VariableUtils;
 
 impl VariableUtils {
-    /// Extract variable ID from assignment expressions
-    #[must_use]
-    pub fn extract_assigned_variable(expr: &Expression) -> Option<nu_protocol::VarId> {
-        let Expr::BinaryOp(lhs, _op, _rhs) = &expr.expr else {
-            return None;
-        };
-
-        if !expr.is_assignment() {
-            return None;
-        }
-
-        match &lhs.expr {
-            Expr::Var(var_id) => Some(*var_id),
-            Expr::FullCellPath(cell_path) => {
-                if let Expr::Var(var_id) = &cell_path.head.expr {
-                    Some(*var_id)
-                } else {
-                    None
-                }
-            }
-            _ => None,
-        }
-    }
-
     /// Check if a cell path accesses a specific field
     #[must_use]
     pub fn accesses_field(path_tail: &[nu_protocol::ast::PathMember], field_name: &str) -> bool {
@@ -394,38 +463,12 @@ impl VariableUtils {
             )
         })
     }
-
-    /// Extract variable accesses with field access
-    #[must_use]
-    pub fn extract_field_access(
-        expr: &Expression,
-        field_name: &str,
-    ) -> Option<(nu_protocol::VarId, Span)> {
-        if let Expr::FullCellPath(cell_path) = &expr.expr
-            && let Expr::Var(var_id) = &cell_path.head.expr
-            && Self::accesses_field(&cell_path.tail, field_name)
-        {
-            Some((*var_id, expr.span))
-        } else {
-            None
-        }
-    }
 }
 
 /// Utilities for working with blocks and nested structures
 pub struct BlockUtils;
 
 impl BlockUtils {
-    /// Check if a span is contained within a block
-    #[must_use]
-    pub fn span_in_block(span: Span, block_id: BlockId, context: &LintContext) -> bool {
-        let block = context.working_set.get_block(block_id);
-        if let Some(block_span) = block.span {
-            return span.start >= block_span.start && span.end <= block_span.end;
-        }
-        false
-    }
-
     /// Find which function contains a given span (returns the most specific
     /// one)
     #[must_use]
@@ -436,48 +479,11 @@ impl BlockUtils {
     ) -> Option<String> {
         functions
             .iter()
-            .filter(|(block_id, _)| Self::span_in_block(span, **block_id, context))
+            .filter(|(block_id, _)| span.is_in_block(**block_id, context))
             .min_by_key(|(block_id, _)| {
                 let block = context.working_set.get_block(**block_id);
                 block.span.map_or(usize::MAX, |s| s.end - s.start)
             })
             .map(|(_, name)| name.clone())
-    }
-
-    /// Extract all nested block IDs from an expression
-    #[must_use]
-    pub fn extract_nested_blocks(expr: &Expression, context: &LintContext) -> Vec<BlockId> {
-        use nu_protocol::ast::Traverse;
-
-        let mut blocks = Vec::new();
-        expr.flat_map(
-            context.working_set,
-            &|inner_expr| inner_expr.extract_block_id().into_iter().collect(),
-            &mut blocks,
-        );
-        blocks
-    }
-
-    /// Collect all function definitions with their names and block IDs
-    #[must_use]
-    pub fn collect_function_definitions(
-        context: &LintContext,
-    ) -> std::collections::HashMap<BlockId, String> {
-        use nu_protocol::ast::Traverse;
-
-        let mut functions = Vec::new();
-        context.ast.flat_map(
-            context.working_set,
-            &|expr| {
-                let Expr::Call(call) = &expr.expr else {
-                    return vec![];
-                };
-                DeclarationUtils::extract_function_definition(call, context)
-                    .into_iter()
-                    .collect()
-            },
-            &mut functions,
-        );
-        functions.into_iter().collect()
     }
 }

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use nu_protocol::{Span, VarId, ast::Expr};
 
 use crate::{
-    ast_utils::{CallExt, DeclarationUtils, VariableUtils},
+    ast::{CallExt, ExpressionExt},
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -22,8 +22,7 @@ fn extract_complete_assignment(
         return None;
     }
 
-    let (var_id, var_name, _var_span) =
-        DeclarationUtils::extract_variable_declaration(call, context)?;
+    let (var_id, var_name, _var_span) = call.extract_variable_declaration(context)?;
 
     let value_arg = call.get_positional_arg(1)?;
 
@@ -87,11 +86,7 @@ fn find_exit_code_checks(context: &LintContext) -> HashMap<VarId, Span> {
     let mut exit_code_accesses = Vec::new();
     context.ast.flat_map(
         context.working_set,
-        &|expr| {
-            VariableUtils::extract_field_access(expr, "exit_code")
-                .into_iter()
-                .collect()
-        },
+        &|expr| expr.extract_field_access("exit_code").into_iter().collect(),
         &mut exit_code_accesses,
     );
 

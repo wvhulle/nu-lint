@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use nu_protocol::{Span, VarId, ast::Expr};
 
 use crate::{
-    ast_utils::{CallExt, DeclarationUtils, VariableUtils},
+    ast::{CallExt, ExpressionExt},
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{Fix, Replacement, RuleViolation, Severity},
@@ -37,8 +37,7 @@ fn extract_mut_declaration(
         return None;
     }
 
-    let (var_id, var_name, var_span) =
-        DeclarationUtils::extract_variable_declaration(call, context)?;
+    let (var_id, var_name, var_span) = call.extract_variable_declaration(context)?;
 
     if var_name.starts_with('_') {
         return None;
@@ -68,11 +67,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 
     context.ast.flat_map(
         context.working_set,
-        &|expr| {
-            VariableUtils::extract_assigned_variable(expr)
-                .into_iter()
-                .collect()
-        },
+        &|expr| expr.extract_assigned_variable().into_iter().collect(),
         &mut reassigned,
     );
 

@@ -1,7 +1,7 @@
 use nu_protocol::ast::Expr;
 
 use crate::{
-    ast_utils::{CallExt, DeclarationUtils},
+    ast::CallExt,
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -50,7 +50,7 @@ fn check_exported_function(
         return None;
     }
 
-    let (func_name, _name_span) = DeclarationUtils::extract_declaration_name(call, context)?;
+    let (func_name, _name_span) = call.extract_declaration_name(context)?;
 
     let has_docs = has_doc_comment_before(context, call.head);
 

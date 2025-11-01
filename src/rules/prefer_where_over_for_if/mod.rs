@@ -1,7 +1,7 @@
 use nu_protocol::ast::Expr;
 
 use crate::{
-    ast_utils::{BlockExt, CallExt, DeclarationUtils, ExpressionExt, PipelineExt, VariableUtils},
+    ast::{BlockExt, CallExt, ExpressionExt, PipelineExt},
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -174,9 +174,7 @@ fn extract_empty_list_vars(
 
     log::debug!("Found 'mut' declaration");
 
-    let Some((var_id, var_name, _var_span)) =
-        DeclarationUtils::extract_variable_declaration(call, context)
-    else {
+    let Some((var_id, var_name, _var_span)) = call.extract_variable_declaration(context) else {
         log::debug!("Could not extract variable declaration");
         return vec![];
     };
@@ -242,7 +240,7 @@ fn extract_assigned_var_ids_from_if(
                 continue;
             }
 
-            if let Some(id) = VariableUtils::extract_assigned_variable(&e.expr) {
+            if let Some(id) = e.expr.extract_assigned_variable() {
                 var_ids.push(id);
             }
         }

@@ -1,7 +1,7 @@
 use nu_protocol::ast::{Expr, Operator};
 
 use crate::{
-    ast_utils::ExpressionExt,
+    ast::ExpressionExt,
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{Fix, Replacement, RuleViolation, Severity},

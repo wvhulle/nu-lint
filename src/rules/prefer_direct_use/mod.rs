@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use nu_protocol::ast::Expr;
 
 use crate::{
-    ast_utils::{BlockExt, CallExt},
+    ast::{BlockExt, CallExt},
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},

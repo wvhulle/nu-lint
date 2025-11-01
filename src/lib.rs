@@ -1,4 +1,4 @@
-pub mod ast_utils;
+pub mod ast;
 pub mod clean_log;
 pub mod cli;
 pub mod config;

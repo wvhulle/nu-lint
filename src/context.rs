@@ -147,6 +147,29 @@ impl LintContext<'_> {
         let total_count = self.working_set.num_decls();
         (base_count, total_count)
     }
+
+    /// Collect all function definitions with their names and block IDs
+    #[must_use]
+    pub fn collect_function_definitions(
+        &self,
+    ) -> std::collections::HashMap<nu_protocol::BlockId, String> {
+        use nu_protocol::ast::Expr;
+
+        use crate::ast::CallExt;
+
+        let mut functions = Vec::new();
+        self.ast.flat_map(
+            self.working_set,
+            &|expr| {
+                let Expr::Call(call) = &expr.expr else {
+                    return vec![];
+                };
+                call.extract_function_definition(self).into_iter().collect()
+            },
+            &mut functions,
+        );
+        functions.into_iter().collect()
+    }
 }
 
 #[cfg(test)]

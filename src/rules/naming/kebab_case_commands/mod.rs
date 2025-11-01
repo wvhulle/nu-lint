@@ -3,7 +3,7 @@ use nu_protocol::ast::Expr;
 
 use super::NuNaming;
 use crate::{
-    ast_utils::{CallExt, DeclarationUtils},
+    ast::{CallExt, DeclarationUtils},
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -17,7 +17,7 @@ fn check_call(call: &nu_protocol::ast::Call, ctx: &LintContext) -> Option<RuleVi
         return None;
     }
 
-    let (cmd_name, name_span) = DeclarationUtils::extract_declaration_name(call, ctx)?;
+    let (cmd_name, name_span) = call.extract_declaration_name(ctx)?;
 
     if !cmd_name.is_valid_kebab_case() {
         let kebab_case_name = cmd_name.to_kebab_case();

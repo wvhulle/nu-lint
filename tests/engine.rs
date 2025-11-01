@@ -1,6 +1,5 @@
 mod common;
 
-
 use nu_lint::{config::Config, engine::LintEngine};
 
 #[test]

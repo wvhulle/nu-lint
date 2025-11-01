@@ -121,8 +121,8 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     check_block(context.ast, context, &mut violations);
 
     // Recursively check all nested blocks (closures, functions, etc.)
-    violations.extend(context.collect_rule_violations(|expr, ctx| {
-        match &expr.expr {
+    violations.extend(
+        context.collect_rule_violations(|expr, ctx| match &expr.expr {
             Expr::Closure(block_id) | Expr::Block(block_id) => {
                 let mut nested_violations = Vec::new();
                 let block = ctx.working_set.get_block(*block_id);
@@ -130,8 +130,8 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
                 nested_violations
             }
             _ => vec![],
-        }
-    }));
+        }),
+    );
 
     violations
 }

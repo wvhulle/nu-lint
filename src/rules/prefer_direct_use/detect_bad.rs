@@ -2,7 +2,7 @@ use super::rule;
 
 #[test]
 fn test_detect_simple_copy_accumulation() {
-    let _ = env_logger::builder().is_test(true).try_init();
+    crate::clean_log::log();
 
     let bad_code = r"
 mut data = []
@@ -16,7 +16,7 @@ for x in [1 2 3] {
 
 #[test]
 fn test_detect_copy_from_literal_list() {
-    let _ = env_logger::builder().is_test(true).try_init();
+    crate::clean_log::log();
 
     let bad_code = r"
 mut items = []

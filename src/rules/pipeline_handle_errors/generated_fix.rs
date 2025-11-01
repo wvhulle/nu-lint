@@ -4,7 +4,7 @@ fn init_logger() {
     use std::sync::Once;
     static INIT: Once = Once::new();
     INIT.call_once(|| {
-        let _ = env_logger::builder().is_test(true).try_init();
+        crate::clean_log::log();
     });
 }
 

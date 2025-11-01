@@ -2,7 +2,7 @@ use super::rule;
 
 #[test]
 fn ignore_conditional_length_in() {
-    let _ = env_logger::try_init();
+    crate::clean_log::log();
 
     let good_code = "def check-length [] { if ($in | length) > 5 { \"big\" } else { \"small\" } }";
 
@@ -11,7 +11,7 @@ fn ignore_conditional_length_in() {
 
 #[test]
 fn ignore_conditional_in_empty() {
-    let _ = env_logger::try_init();
+    crate::clean_log::log();
 
     let good_code =
         "def conditional-process [] { if ($in | is-empty) { [] } else { $in | first 10 } }";

@@ -18,7 +18,6 @@ pub mod pipeline_handle_errors;
 
 pub mod prefer_compound_assignment;
 pub mod prefer_direct_use;
-pub mod prefer_each_over_for;
 // pub mod prefer_each_transformation;
 pub mod prefer_error_make;
 pub mod prefer_is_not_empty;
@@ -110,7 +109,6 @@ impl RuleRegistry {
         registry.register(pipeline_handle_errors::rule());
         registry.register(prefer_compound_assignment::rule());
         registry.register(prefer_direct_use::rule());
-        registry.register(prefer_each_over_for::rule());
         // registry.register(prefer_each_transformation::rule());
         registry.register(prefer_error_make::rule());
         registry.register(prefer_is_not_empty::rule());

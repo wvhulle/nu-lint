@@ -2,6 +2,8 @@ use super::rule;
 
 #[test]
 fn test_detect_each_if_simple_filter() {
+    crate::clean_log::log();
+
     let bad_code = r"
 ls | each { |f| if $f.size > 100kb { $f } }
 ";
@@ -11,6 +13,8 @@ ls | each { |f| if $f.size > 100kb { $f } }
 
 #[test]
 fn test_detect_each_if_complex_condition() {
+    crate::clean_log::log();
+
     let bad_code = r"
 open data.json | get items | each { |item| if ($item.status == 'active' and $item.count > 0) { $item } }
 ";
@@ -20,6 +24,8 @@ open data.json | get items | each { |item| if ($item.status == 'active' and $ite
 
 #[test]
 fn test_detect_each_if_with_property_access() {
+    crate::clean_log::log();
+
     let bad_code = r"
 open users.json | each { |u| if $u.age >= 18 { $u } }
 ";

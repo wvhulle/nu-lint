@@ -291,7 +291,7 @@ impl CallExt for Call {
 
     fn extract_function_definition(&self, context: &LintContext) -> Option<(BlockId, String)> {
         let decl_name = self.get_call_name(context);
-        if !DeclarationUtils::is_def_command(&decl_name) {
+        if !matches!(decl_name.as_str(), "def" | "export def") {
             return None;
         }
 
@@ -437,17 +437,6 @@ impl SpanExt for Span {
                 block.span.map_or(usize::MAX, |s| s.end - s.start)
             })
             .map(|(_, name)| name.clone())
-    }
-}
-
-/// Utilities for checking declaration commands (def, let, mut, etc.)
-pub struct DeclarationUtils;
-
-impl DeclarationUtils {
-    /// Check if a command is a def declaration
-    #[must_use]
-    pub fn is_def_command(decl_name: &str) -> bool {
-        matches!(decl_name, "def" | "export def")
     }
 }
 

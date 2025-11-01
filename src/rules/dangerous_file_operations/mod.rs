@@ -4,6 +4,7 @@ use nu_protocol::{
 };
 
 use crate::{
+    ast::CallExt,
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -57,8 +58,7 @@ fn check_expr_for_if_block(
         return false;
     };
 
-    let decl_name = context.working_set.get_decl(call.decl_id).name();
-    if decl_name != "if" {
+    if !call.is_call_to_command("if", context) {
         return false;
     }
 
@@ -99,7 +99,7 @@ fn extract_dangerous_command(
             }
         }
         Expr::Call(call) => {
-            let decl_name = context.working_set.get_decl(call.decl_id).name();
+            let decl_name = call.get_call_name(context);
             if decl_name != "rm" && decl_name != "mv" && decl_name != "cp" {
                 return None;
             }
@@ -114,7 +114,7 @@ fn extract_dangerous_command(
                     _ => None,
                 })
                 .collect();
-            Some((expr.span, decl_name.to_string(), external_args))
+            Some((expr.span, decl_name, external_args))
         }
         _ => None,
     }

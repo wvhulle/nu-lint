@@ -1,12 +1,13 @@
 use nu_protocol::{Span, VarId, ast::Expr};
 
 use crate::{
+    ast::CallExt,
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
 };
 
-/// Extract variable declaration from a `let` statement
+/// Extract variable declaration from a `let` statement  
 fn extract_let_declaration(
     expr: &nu_protocol::ast::Expression,
     context: &LintContext,
@@ -15,23 +16,14 @@ fn extract_let_declaration(
         return None;
     };
 
-    let decl_name = context.working_set.get_decl(call.decl_id).name();
-    if decl_name != "let" {
+    // Only check for 'let', not 'mut' - mut variables may be modified before return
+    if !call.is_call_to_command("let", context) {
         return None;
     }
 
-    let var_arg = call.arguments.first()?;
-    let nu_protocol::ast::Argument::Positional(var_expr) = var_arg else {
-        return None;
-    };
-
-    let Expr::VarDecl(var_id) = &var_expr.expr else {
-        return None;
-    };
-
-    let var_name = &context.source[var_expr.span.start..var_expr.span.end];
-
-    Some((*var_id, var_name.to_string(), expr.span))
+    // Use the helper but return the full expression span (the let statement)
+    let (var_id, var_name, _var_span) = call.extract_variable_declaration(context)?;
+    Some((var_id, var_name, expr.span))
 }
 
 /// Check if an expression is just a variable reference

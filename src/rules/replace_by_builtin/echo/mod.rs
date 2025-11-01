@@ -1,6 +1,7 @@
 use nu_protocol::ast::{Block, Expr, PipelineElement};
 
 use crate::{
+    ast::CallExt,
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -9,7 +10,7 @@ use crate::{
 /// Check if a pipeline element uses echo (builtin or external)
 fn uses_echo(element: &PipelineElement, context: &LintContext) -> bool {
     match &element.expr.expr {
-        Expr::Call(call) => context.working_set.get_decl(call.decl_id).name() == "echo",
+        Expr::Call(call) => call.is_call_to_command("echo", context),
         Expr::ExternalCall(head, _) => &context.source[head.span.start..head.span.end] == "echo",
         _ => false,
     }

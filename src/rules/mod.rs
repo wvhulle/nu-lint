@@ -18,7 +18,6 @@ pub mod pipeline_handle_errors;
 
 pub mod prefer_compound_assignment;
 pub mod prefer_direct_use;
-// pub mod prefer_each_transformation;
 pub mod prefer_error_make;
 pub mod prefer_is_not_empty;
 pub mod prefer_lines_over_split;
@@ -29,7 +28,7 @@ pub mod prefer_parse_over_each_split;
 pub mod prefer_pipeline_input;
 pub mod prefer_range_iteration;
 pub mod prefer_where_over_each_if;
-// pub mod prefer_where_over_for_if;
+pub mod prefer_where_over_for_if;
 pub mod remove_redundant_in;
 
 pub mod prefer_builtin;
@@ -109,7 +108,6 @@ impl RuleRegistry {
         registry.register(pipeline_handle_errors::rule());
         registry.register(prefer_compound_assignment::rule());
         registry.register(prefer_direct_use::rule());
-        // registry.register(prefer_each_transformation::rule());
         registry.register(prefer_error_make::rule());
         registry.register(prefer_is_not_empty::rule());
         registry.register(prefer_lines_over_split::rule());
@@ -120,7 +118,7 @@ impl RuleRegistry {
         registry.register(prefer_pipeline_input::rule());
         registry.register(prefer_range_iteration::rule());
         registry.register(prefer_where_over_each_if::rule());
-        // registry.register(prefer_where_over_for_if::rule());
+        registry.register(prefer_where_over_for_if::rule());
         registry.register(remove_redundant_in::rule());
         registry.register(screaming_snake_constants::rule());
         registry.register(sed::rule());

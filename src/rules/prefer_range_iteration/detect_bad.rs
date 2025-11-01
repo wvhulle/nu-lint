@@ -2,6 +2,7 @@ use super::rule;
 
 #[test]
 fn test_detect_while_loop_with_counter() {
+    crate::log::instrument();
     let bad_code = r"
 mut attempts = 0
 while $attempts < 10 {
@@ -15,6 +16,7 @@ while $attempts < 10 {
 
 #[test]
 fn test_detect_while_loop_with_compound_assignment() {
+    crate::log::instrument();
     let bad_code = r"
 mut count = 0
 while $count < 5 {

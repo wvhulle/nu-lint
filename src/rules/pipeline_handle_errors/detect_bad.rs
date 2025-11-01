@@ -5,7 +5,7 @@ fn init_logger() {
     use std::sync::Once;
     static INIT: Once = Once::new();
     INIT.call_once(|| {
-        crate::clean_log::log();
+        crate::log::instrument();
     });
 }
 

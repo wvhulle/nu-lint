@@ -2,7 +2,7 @@ use super::rule;
 
 #[test]
 fn detect_redundant_in_at_pipeline_start() {
-    crate::clean_log::log();
+    crate::log::instrument();
 
     let bad_codes = vec![
         // Commands that start with redundant $in

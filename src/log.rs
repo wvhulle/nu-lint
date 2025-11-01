@@ -1,4 +1,5 @@
-pub fn log() {
+// Custom logging setup with colored output and relative file paths
+pub fn instrument() {
     env_logger::builder()
         .format(format_log_record)
         .try_init()

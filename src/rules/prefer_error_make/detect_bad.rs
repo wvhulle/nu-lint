@@ -1,5 +1,5 @@
 use super::rule;
-use crate::clean_log::log;
+use crate::log::instrument;
 #[test]
 fn test_detect_print_exit_pattern() {
     let bad_code = r#"
@@ -46,7 +46,7 @@ def validate [input] {
 
 #[test]
 fn test_detect_print_exit_with_invalid_message() {
-    log();
+    instrument();
     let bad_code = r#"
 if ($args | is-empty) {
     print "Invalid arguments provided"

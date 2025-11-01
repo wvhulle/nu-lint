@@ -2,7 +2,7 @@ use super::rule;
 
 #[test]
 fn test_detect_simple_filtering() {
-    crate::clean_log::log();
+    crate::log::instrument();
 
     let bad_code = r"
 mut filtered = []
@@ -18,7 +18,7 @@ for x in $input {
 
 #[test]
 fn test_detect_filtering_with_condition() {
-    crate::clean_log::log();
+    crate::log::instrument();
 
     let bad_code = r"
 mut selected = []
@@ -34,7 +34,7 @@ for item in $items {
 
 #[test]
 fn test_detect_filtering_with_field_access() {
-    crate::clean_log::log();
+    crate::log::instrument();
 
     let bad_code = r"
 mut active = []

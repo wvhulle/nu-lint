@@ -1,11 +1,11 @@
 use super::rule;
-use crate::{LintContext, clean_log::log};
+use crate::{LintContext, log::instrument};
 // These tests verify that the automatic fix correctly converts if-else-if
 // chains into valid match expressions with proper variable names and syntax.
 
 #[test]
 fn test_simple_string_chain_fix() {
-    log();
+    instrument();
     let bad_code = r#"
 if $status == "ok" {
     "success"

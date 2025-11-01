@@ -1,10 +1,10 @@
 pub mod ast;
-pub mod clean_log;
 pub mod cli;
 pub mod config;
 pub mod context;
 pub mod engine;
 pub mod external_command;
+pub mod log;
 pub mod output;
 pub mod rule;
 pub mod rules;

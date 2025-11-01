@@ -3,7 +3,7 @@ use crate::LintContext;
 
 #[test]
 fn test_detect_unnecessary_variable_simple() {
-    crate::clean_log::log();
+    crate::log::instrument();
 
     let bad_code = r"
 def foo [] {

@@ -82,7 +82,8 @@ impl Iterator for ChainIterator<'_> {
             Some((false, else_expr)) => {
                 // Final else: store it for next iteration, return branch now
                 self.current = None;
-                self.final_else_pending = Some(else_expr.span_text(self.context).trim().to_string());
+                self.final_else_pending =
+                    Some(else_expr.span_text(self.context).trim().to_string());
                 Some(ChainIterResult::Branch(branch))
             }
             None => {
@@ -113,11 +114,7 @@ fn collect_chain_branches(
 }
 
 /// Build a fix that converts an if-else-if chain to a match expression
-fn build_match_fix(
-    call: &nu_protocol::ast::Call,
-    var_name: &str,
-    context: &LintContext,
-) -> Fix {
+fn build_match_fix(call: &nu_protocol::ast::Call, var_name: &str, context: &LintContext) -> Fix {
     let (branches, final_else) = collect_chain_branches(call, context);
 
     // Build match arms declaratively
@@ -144,7 +141,7 @@ fn walk_if_else_chain(
 ) -> ChainAnalysis {
     let mut current_call = first_call;
     let mut chain_length = 2; // First if + one else-if
-    
+
     // Collect all subsequent else-if branches
     let subsequent_branches = std::iter::from_fn(|| {
         // Check if current branch compares the same variable
@@ -195,7 +192,9 @@ fn analyze_if_chain(call: &nu_protocol::ast::Call, context: &LintContext) -> Opt
         return None;
     };
 
-    nested_call.is_call_to_command("if", context).then_some(())?;
+    nested_call
+        .is_call_to_command("if", context)
+        .then_some(())?;
 
     // Analyze chain properties
     let analysis = walk_if_else_chain(nested_call, &compared_var, context);
@@ -204,7 +203,9 @@ fn analyze_if_chain(call: &nu_protocol::ast::Call, context: &LintContext) -> Opt
     (analysis.length >= 3).then_some(())?;
 
     // Build fix if all branches compare the same variable
-    let fix = analysis.consistent_variable.then(|| build_match_fix(call, &compared_var, context));
+    let fix = analysis
+        .consistent_variable
+        .then(|| build_match_fix(call, &compared_var, context));
 
     // Create appropriate violation message
     let violation = if analysis.consistent_variable {

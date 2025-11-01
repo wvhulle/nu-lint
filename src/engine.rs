@@ -7,7 +7,7 @@ use nu_protocol::{
 };
 
 use crate::{
-    LintError, config::Config, context::LintContext, lint::Violation, rules::RuleRegistry,
+    LintError, config::Config, context::LintContext, rules::RuleRegistry, violation::Violation,
 };
 
 /// Parse Nushell source code into an AST and return both the Block and
@@ -140,7 +140,7 @@ impl LintEngine {
                     parse_error.to_string(),
                 );
                 if seen.insert(key.clone()) {
-                    use crate::lint::RuleViolation;
+                    use crate::violation::RuleViolation;
 
                     Some(
                         RuleViolation::new_dynamic(
@@ -195,7 +195,7 @@ impl LintEngine {
     }
 
     /// Get the effective severity for a rule (config override or rule default)
-    fn get_effective_rule_severity(&self, rule: &crate::rule::Rule) -> crate::lint::Severity {
+    fn get_effective_rule_severity(&self, rule: &crate::rule::Rule) -> crate::violation::Severity {
         if let Some(config_severity) = self.config.rule_severity(rule.id) {
             config_severity
         } else {
@@ -210,11 +210,11 @@ impl LintEngine {
     /// - "info": Show info, warnings, and errors (minimum threshold = Info,
     ///   i.e., all)
     /// - "off": Show nothing
-    fn get_minimum_severity_threshold(&self) -> Option<crate::lint::Severity> {
+    fn get_minimum_severity_threshold(&self) -> Option<crate::violation::Severity> {
         use crate::config::RuleSeverity;
         match self.config.general.min_severity {
-            RuleSeverity::Error => Some(crate::lint::Severity::Error), // Show only errors
-            RuleSeverity::Warning => Some(crate::lint::Severity::Warning), // Show warnings and
+            RuleSeverity::Error => Some(crate::violation::Severity::Error), // Show only errors
+            RuleSeverity::Warning => Some(crate::violation::Severity::Warning), // Show warnings and
             // above
             RuleSeverity::Info | RuleSeverity::Off => None, // Show all (no filtering)
         }

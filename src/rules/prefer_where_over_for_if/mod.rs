@@ -1,46 +1,11 @@
 use nu_protocol::ast::Expr;
 
 use crate::{
+    ast::{BlockExt, CallExt, ExpressionExt, PipelineExt},
     context::LintContext,
-    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
+    violation::{RuleViolation, Severity},
 };
-
-/// Get the loop variable name from a for loop  
-fn get_loop_var_name(call: &nu_protocol::ast::Call, context: &LintContext) -> Option<String> {
-    let var_arg = call.arguments.first()?;
-    let (nu_protocol::ast::Argument::Positional(var_expr)
-    | nu_protocol::ast::Argument::Unknown(var_expr)) = var_arg
-    else {
-        return None;
-    };
-
-    // Extract variable name from span
-    let var_name = &context.source[var_expr.span.start..var_expr.span.end];
-    log::debug!("Loop var name: {var_name}");
-    Some(var_name.to_string())
-}
-
-/// Check if an expression is just the loop variable or property access on it
-fn is_loop_var_reference(
-    expr: &nu_protocol::ast::Expression,
-    context: &LintContext,
-    loop_var_name: &str,
-) -> bool {
-    match &expr.expr {
-        Expr::Var(var_id) => {
-            let var = context.working_set.get_variable(*var_id);
-            let var_name = &context.source[var.declaration_span.start..var.declaration_span.end];
-            log::debug!("Checking var '{var_name}' against loop var '{loop_var_name}'");
-            var_name == loop_var_name
-        }
-        Expr::FullCellPath(cell_path) => {
-            // $x.property is also just the loop var
-            is_loop_var_reference(&cell_path.head, context, loop_var_name)
-        }
-        _ => false,
-    }
-}
 
 /// Check if an expression contains append of just the loop variable
 fn contains_loop_var_append(
@@ -50,17 +15,13 @@ fn contains_loop_var_append(
 ) -> bool {
     match &expr.expr {
         Expr::Call(call) => {
-            let decl_name = context.working_set.get_decl(call.decl_id).name();
+            let decl_name = call.get_call_name(context);
             log::debug!("Found call to: {decl_name}");
 
             if decl_name == "append" {
                 // Check the argument to append
-                if let Some(
-                    nu_protocol::ast::Argument::Positional(arg_expr)
-                    | nu_protocol::ast::Argument::Unknown(arg_expr),
-                ) = call.arguments.first()
-                {
-                    let is_loop_var = is_loop_var_reference(arg_expr, context, loop_var_name);
+                if let Some(arg_expr) = call.get_first_positional_arg() {
+                    let is_loop_var = arg_expr.refers_to_variable(context, loop_var_name);
                     log::debug!("Append argument is loop var: {is_loop_var}");
                     return is_loop_var;
                 }
@@ -70,15 +31,18 @@ fn contains_loop_var_append(
         Expr::FullCellPath(cell_path) => {
             contains_loop_var_append(&cell_path.head, context, loop_var_name)
         }
-        Expr::Block(block_id) | Expr::Subexpression(block_id) | Expr::Closure(block_id) => {
-            let block = context.working_set.get_block(*block_id);
-            block
-                .pipelines
-                .iter()
-                .flat_map(|p| &p.elements)
-                .any(|elem| contains_loop_var_append(&elem.expr, context, loop_var_name))
+        _ => {
+            if let Some(block_id) = expr.extract_block_id() {
+                let block = context.working_set.get_block(block_id);
+                block
+                    .pipelines
+                    .iter()
+                    .flat_map(|p| &p.elements)
+                    .any(|elem| contains_loop_var_append(&elem.expr, context, loop_var_name))
+            } else {
+                false
+            }
         }
-        _ => false,
     }
 }
 
@@ -137,17 +101,13 @@ fn is_filtering_only_pattern(
         block.pipelines.len()
     );
 
-    // Should have exactly one pipeline
-    if block.pipelines.len() != 1 {
-        log::debug!("Block has {} pipelines, expected 1", block.pipelines.len());
+    // Should have exactly one pipeline with one element
+    let Some(pipeline) = block.pipelines.first() else {
+        log::debug!("Block has no pipelines");
         return false;
-    }
+    };
 
-    let pipeline = &block.pipelines[0];
-    log::debug!("Pipeline has {} elements", pipeline.elements.len());
-
-    // Should have exactly one element (the if statement)
-    if pipeline.elements.len() != 1 {
+    if !pipeline.has_element_count(1) {
         log::debug!(
             "Pipeline has {} elements, expected 1",
             pipeline.elements.len()
@@ -163,10 +123,7 @@ fn is_filtering_only_pattern(
         return false;
     };
 
-    let decl_name = context.working_set.get_decl(call.decl_id).name();
-    log::debug!("Found command: {decl_name}");
-
-    if decl_name != "if" {
+    if !matches!(&elem.expr.expr, Expr::Call(call) if call.is_call_to_command("if", context)) {
         log::debug!("Command is not 'if'");
         return false;
     }
@@ -183,60 +140,20 @@ fn is_filtering_only_pattern(
     }
 
     // Get the then-block (second argument: condition, then-block)
-    let Some(then_block_arg) = call.arguments.get(1) else {
+    let Some(then_block_expr) = call.get_positional_arg(1) else {
         log::debug!("No then-block argument");
         return false;
     };
 
-    let (nu_protocol::ast::Argument::Positional(then_block_expr)
-    | nu_protocol::ast::Argument::Unknown(then_block_expr)) = then_block_arg
-    else {
-        log::debug!("Then-block is not positional");
+    let Some(then_block_id) = then_block_expr.extract_block_id() else {
+        log::debug!("Then-block is not a Block or Closure");
         return false;
-    };
-
-    let then_block_id = match &then_block_expr.expr {
-        Expr::Block(id) | Expr::Closure(id) => *id,
-        _ => {
-            log::debug!("Then-block is not a Block or Closure");
-            return false;
-        }
     };
 
     // Check if the then-block contains an append without transformation
     let result = has_append_without_transformation(then_block_id, context, loop_var_name);
     log::debug!("has_append_without_transformation: {result}");
     result
-}
-
-/// Check if a block contains just an empty list
-fn is_empty_list_in_block(block_id: nu_protocol::BlockId, context: &LintContext) -> bool {
-    log::debug!("Checking block for empty list");
-    let block = context.working_set.get_block(block_id);
-
-    let Some(pipeline) = block.pipelines.first() else {
-        log::debug!("No pipelines in block");
-        return false;
-    };
-
-    let Some(elem) = pipeline.elements.first() else {
-        log::debug!("No elements in pipeline");
-        return false;
-    };
-
-    match &elem.expr.expr {
-        Expr::List(items) => {
-            log::debug!("Found list in block with {} items", items.len());
-            items.is_empty()
-        }
-        Expr::FullCellPath(cell_path) => {
-            matches!(&cell_path.head.expr, Expr::List(items) if items.is_empty())
-        }
-        _ => {
-            log::debug!("Block contains: {:?}", elem.expr.expr);
-            false
-        }
-    }
 }
 
 /// Extract empty list variable declarations
@@ -248,7 +165,7 @@ fn extract_empty_list_vars(
         return vec![];
     };
 
-    let decl_name = context.working_set.get_decl(call.decl_id).name();
+    let decl_name = call.get_call_name(context);
     log::debug!("Checking call to: {decl_name}");
 
     if decl_name != "mut" {
@@ -257,79 +174,34 @@ fn extract_empty_list_vars(
 
     log::debug!("Found 'mut' declaration");
 
-    let Some(var_arg) = call.arguments.first() else {
-        log::debug!("No var argument");
-        return vec![];
-    };
-
-    let (nu_protocol::ast::Argument::Positional(var_expr)
-    | nu_protocol::ast::Argument::Unknown(var_expr)) = var_arg
-    else {
-        log::debug!("Var arg is not positional");
-        return vec![];
-    };
-
-    log::debug!("Var expr type: {:?}", var_expr.expr);
-
-    let Expr::VarDecl(var_id) = &var_expr.expr else {
-        log::debug!("Not a VarDecl");
+    let Some((var_id, var_name, _var_span)) = call.extract_variable_declaration(context) else {
+        log::debug!("Could not extract variable declaration");
         return vec![];
     };
 
     // Check if initialized to empty list
-    let Some(init_arg) = call.arguments.get(1) else {
+    let Some(init_expr) = call.get_positional_arg(1) else {
         log::debug!("No init argument");
-        return vec![];
-    };
-
-    let (nu_protocol::ast::Argument::Positional(init_expr)
-    | nu_protocol::ast::Argument::Unknown(init_expr)) = init_arg
-    else {
-        log::debug!("Init arg is not positional");
         return vec![];
     };
 
     log::debug!("Init expr type: {:?}", init_expr.expr);
 
-    let is_empty_list = match &init_expr.expr {
-        Expr::List(items) => {
-            log::debug!("Found list with {} items", items.len());
-            items.is_empty()
-        }
-        Expr::Block(block_id) => is_empty_list_in_block(*block_id, context),
-        _ => {
-            log::debug!("Init expr is neither List nor Block: {:?}", init_expr.expr);
-            false
-        }
+    let is_empty_list = if init_expr.is_empty_list() {
+        true
+    } else if let Some(block_id) = init_expr.extract_block_id() {
+        block_id.is_empty_list_block(context)
+    } else {
+        false
     };
 
     log::debug!("is_empty_list: {is_empty_list}");
 
     if is_empty_list {
-        let var_name = &context.source[var_expr.span.start..var_expr.span.end];
         log::debug!("Found empty list var: {var_name} (id: {var_id:?})");
-        vec![(*var_id, var_name.to_string(), expr.span)]
+        vec![(var_id, var_name, expr.span)]
     } else {
         vec![]
-    }
-}
-
-/// Extract variable ID from assignment LHS
-fn extract_var_id_from_lhs(lhs: &nu_protocol::ast::Expression) -> Option<nu_protocol::VarId> {
-    match &lhs.expr {
-        Expr::Var(id) => {
-            log::debug!("Found assigned var");
-            Some(*id)
-        }
-        Expr::FullCellPath(cell_path) => {
-            if let Expr::Var(id) = &cell_path.head.expr {
-                log::debug!("Found assigned var via cell path");
-                Some(*id)
-            } else {
-                None
-            }
-        }
-        _ => None,
     }
 }
 
@@ -356,7 +228,7 @@ fn extract_assigned_var_ids_from_if(
 
     for p in &then_block.pipelines {
         for e in &p.elements {
-            let Expr::BinaryOp(lhs, op, _rhs) = &e.expr.expr else {
+            let Expr::BinaryOp(_lhs, op, _rhs) = &e.expr.expr else {
                 continue;
             };
 
@@ -368,7 +240,7 @@ fn extract_assigned_var_ids_from_if(
                 continue;
             }
 
-            if let Some(id) = extract_var_id_from_lhs(lhs) {
+            if let Some(id) = e.expr.extract_assigned_variable() {
                 var_ids.push(id);
             }
         }
@@ -385,37 +257,31 @@ fn extract_filtering_vars(
         return vec![];
     };
 
-    let decl_name = context.working_set.get_decl(call.decl_id).name();
-    if decl_name != "for" {
+    if !call.is_call_to_command("for", context) {
         return vec![];
     }
 
     log::debug!("Found 'for' loop");
 
     // Get loop variable name
-    let Some(loop_var_name) = get_loop_var_name(call, context) else {
+    let Some(loop_var_name) = call.loop_var_from_for(context) else {
         log::debug!("Could not get loop var name");
         return vec![];
     };
 
     // Get the block (loop body) - last argument
-    let Some(block_arg) = call.arguments.last() else {
+    let Some(block_expr) = call.arguments.last().and_then(|arg| match arg {
+        nu_protocol::ast::Argument::Positional(expr)
+        | nu_protocol::ast::Argument::Unknown(expr) => Some(expr),
+        _ => None,
+    }) else {
         log::debug!("No block argument");
         return vec![];
     };
 
-    let (nu_protocol::ast::Argument::Positional(block_expr)
-    | nu_protocol::ast::Argument::Unknown(block_expr)) = block_arg
-    else {
+    let Some(block_id) = block_expr.extract_block_id() else {
+        log::debug!("Loop body is not a block or closure");
         return vec![];
-    };
-
-    let block_id = match &block_expr.expr {
-        Expr::Block(id) | Expr::Closure(id) => *id,
-        _ => {
-            log::debug!("Loop body is not a block or closure");
-            return vec![];
-        }
     };
 
     // Check if this is a filtering-only pattern

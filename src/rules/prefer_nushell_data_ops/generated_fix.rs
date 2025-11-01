@@ -3,7 +3,7 @@ mod tests {
     use crate::{context::LintContext, rules::prefer_nushell_data_ops::rule};
 
     fn assert_fix_text_equals(
-        violations: &[crate::lint::RuleViolation],
+        violations: &[crate::violation::RuleViolation],
         expected: &str,
         source: &str,
     ) {
@@ -16,7 +16,7 @@ mod tests {
         );
     }
 
-    fn assert_fix_contains_alternative(violations: &[crate::lint::RuleViolation]) {
+    fn assert_fix_contains_alternative(violations: &[crate::violation::RuleViolation]) {
         let Some(fix) = &violations[0].fix else {
             return;
         };

@@ -5,8 +5,8 @@ use regex::Regex;
 
 use crate::{
     context::LintContext,
-    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
+    violation::{RuleViolation, Severity},
 };
 
 fn screaming_snake_pattern() -> &'static Regex {

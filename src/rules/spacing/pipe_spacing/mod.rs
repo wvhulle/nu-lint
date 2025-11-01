@@ -2,8 +2,8 @@ use nu_protocol::Span;
 
 use crate::{
     context::LintContext,
-    lint::{Fix, Replacement, RuleViolation, Severity},
     rule::{Rule, RuleCategory},
+    violation::{Fix, Replacement, RuleViolation, Severity},
 };
 
 /// AST visitor that checks for pipe spacing issues

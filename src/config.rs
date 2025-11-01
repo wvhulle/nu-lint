@@ -6,7 +6,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::lint::Severity;
+use crate::violation::Severity;
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq)]
 pub struct Config {

@@ -3,8 +3,8 @@ use nu_protocol::ast::Expr;
 use crate::{
     Fix, Replacement,
     context::LintContext,
-    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
+    violation::{RuleViolation, Severity},
 };
 
 fn check_subexpression_for_is_empty(block_id: nu_protocol::BlockId, context: &LintContext) -> bool {

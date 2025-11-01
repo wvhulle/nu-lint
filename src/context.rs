@@ -6,7 +6,7 @@ use nu_protocol::{
     engine::{Command, EngineState, StateWorkingSet},
 };
 
-use crate::lint::{RuleViolation, Violation};
+use crate::violation::{RuleViolation, Violation};
 
 /// Context containing all lint information (source, AST, and engine state)
 /// Rules can use whatever they need from this context
@@ -146,6 +146,29 @@ impl LintContext<'_> {
         let base_count = self.engine_state.num_decls();
         let total_count = self.working_set.num_decls();
         (base_count, total_count)
+    }
+
+    /// Collect all function definitions with their names and block IDs
+    #[must_use]
+    pub fn collect_function_definitions(
+        &self,
+    ) -> std::collections::HashMap<nu_protocol::BlockId, String> {
+        use nu_protocol::ast::Expr;
+
+        use crate::ast::CallExt;
+
+        let mut functions = Vec::new();
+        self.ast.flat_map(
+            self.working_set,
+            &|expr| {
+                let Expr::Call(call) = &expr.expr else {
+                    return vec![];
+                };
+                call.extract_function_definition(self).into_iter().collect()
+            },
+            &mut functions,
+        );
+        functions.into_iter().collect()
     }
 }
 

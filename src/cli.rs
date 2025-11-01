@@ -4,7 +4,9 @@ use clap::{Parser, Subcommand};
 use ignore::WalkBuilder;
 use rayon::prelude::*;
 
-use crate::{Config, JsonFormatter, LintEngine, OutputFormatter, TextFormatter, lint::Violation};
+use crate::{
+    Config, JsonFormatter, LintEngine, OutputFormatter, TextFormatter, violation::Violation,
+};
 
 #[derive(Parser)]
 #[command(name = "nu-lint")]

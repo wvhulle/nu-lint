@@ -4,8 +4,8 @@ use regex::Regex;
 
 use crate::{
     context::LintContext,
-    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
+    violation::{RuleViolation, Severity},
 };
 
 fn trailing_space_pattern() -> &'static Regex {

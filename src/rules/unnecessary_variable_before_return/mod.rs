@@ -2,8 +2,8 @@ use nu_protocol::{Span, VarId, ast::Expr};
 
 use crate::{
     context::LintContext,
-    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
+    violation::{RuleViolation, Severity},
 };
 
 /// Extract variable declaration from a `let` statement

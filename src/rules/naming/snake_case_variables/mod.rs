@@ -3,39 +3,10 @@ use nu_protocol::ast::{Argument, Expr};
 
 use crate::{
     context::LintContext,
-    lint::{Fix, Replacement, RuleViolation, Severity},
     rule::{Rule, RuleCategory},
+    rules::naming::NuNaming,
+    violation::{Fix, Replacement, RuleViolation, Severity},
 };
-
-/// Check if a variable name follows `snake_case` convention
-fn is_valid_snake_case(name: &str) -> bool {
-    if name.is_empty() {
-        return false;
-    }
-
-    // Allow single characters
-    if name.len() == 1 {
-        return name.chars().all(|c| c.is_ascii_lowercase() || c == '_');
-    }
-
-    // Must start with lowercase letter or underscore
-    let first_char = name.chars().next().unwrap();
-    if !first_char.is_ascii_lowercase() && first_char != '_' {
-        return false;
-    }
-
-    // Check snake_case pattern: lowercase letters, numbers, and underscores
-    // Cannot have consecutive underscores
-    let chars: Vec<char> = name.chars().collect();
-    chars.windows(2).all(|w| {
-        let (current, next) = (w[0], w[1]);
-        // All characters must be valid
-        let valid_char = matches!(current, 'a'..='z' | '0'..='9' | '_');
-        // No consecutive underscores
-        let no_double_underscore = !(current == '_' && next == '_');
-        valid_char && no_double_underscore
-    }) && matches!(chars.last(), Some('a'..='z' | '0'..='9' | '_'))
-}
 
 /// Check if this is a let or mut declaration
 fn get_var_decl_type(decl_name: &str) -> Option<bool> {
@@ -87,7 +58,7 @@ fn check_call(call: &nu_protocol::ast::Call, ctx: &LintContext) -> Option<RuleVi
 
     let var_name = ctx.source.get(name_expr.span.start..name_expr.span.end)?;
 
-    (!is_valid_snake_case(var_name))
+    (!var_name.is_valid_snake_case())
         .then(|| create_snake_case_violation(var_name, is_mutable, name_expr.span))
 }
 

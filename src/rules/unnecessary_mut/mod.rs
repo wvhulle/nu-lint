@@ -3,9 +3,10 @@ use std::collections::{HashMap, HashSet};
 use nu_protocol::{Span, VarId, ast::Expr};
 
 use crate::{
+    ast::{CallExt, ExpressionExt},
     context::LintContext,
-    lint::{Fix, Replacement, RuleViolation, Severity},
     rule::{Rule, RuleCategory},
+    violation::{Fix, Replacement, RuleViolation, Severity},
 };
 
 /// Find the span of 'mut ' keyword before the variable name
@@ -31,53 +32,19 @@ fn extract_mut_declaration(
         return None;
     };
 
-    let decl_name = context.working_set.get_decl(call.decl_id).name();
+    let decl_name = call.get_call_name(context);
     if decl_name != "mut" {
         return None;
     }
 
-    let var_arg = call.arguments.first()?;
-
-    let (nu_protocol::ast::Argument::Positional(var_expr)
-    | nu_protocol::ast::Argument::Unknown(var_expr)) = var_arg
-    else {
-        return None;
-    };
-
-    let Expr::VarDecl(var_id) = &var_expr.expr else {
-        return None;
-    };
-
-    let var_name = &context.source[var_expr.span.start..var_expr.span.end];
+    let (var_id, var_name, var_span) = call.extract_variable_declaration(context)?;
 
     if var_name.starts_with('_') {
         return None;
     }
 
-    let mut_span = find_mut_keyword_span(context.source, var_expr.span);
-    Some((*var_id, var_name.to_string(), var_expr.span, mut_span))
-}
-
-fn extract_reassigned_var(expr: &nu_protocol::ast::Expression) -> Option<VarId> {
-    let Expr::BinaryOp(lhs, op, _rhs) = &expr.expr else {
-        return None;
-    };
-
-    let Expr::Operator(nu_protocol::ast::Operator::Assignment(_)) = &op.expr else {
-        return None;
-    };
-
-    match &lhs.expr {
-        Expr::Var(var_id) => Some(*var_id),
-        Expr::FullCellPath(cell_path) => {
-            if let Expr::Var(var_id) = &cell_path.head.expr {
-                Some(*var_id)
-            } else {
-                None
-            }
-        }
-        _ => None,
-    }
+    let mut_span = find_mut_keyword_span(context.source, var_span);
+    Some((var_id, var_name, var_span, mut_span))
 }
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {
@@ -100,7 +67,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 
     context.ast.flat_map(
         context.working_set,
-        &|expr| extract_reassigned_var(expr).into_iter().collect(),
+        &|expr| expr.extract_assigned_variable().into_iter().collect(),
         &mut reassigned,
     );
 

@@ -2,8 +2,8 @@ use nu_protocol::ast::{Expr, Pipeline};
 
 use crate::{
     context::LintContext,
-    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
+    violation::{RuleViolation, Severity},
 };
 
 /// Check if a pipeline starts with redundant $in

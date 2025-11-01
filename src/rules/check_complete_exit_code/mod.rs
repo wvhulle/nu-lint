@@ -3,9 +3,10 @@ use std::collections::HashMap;
 use nu_protocol::{Span, VarId, ast::Expr};
 
 use crate::{
+    ast::{CallExt, ExpressionExt},
     context::LintContext,
-    lint::{RuleViolation, Severity},
     rule::{Rule, RuleCategory},
+    violation::{RuleViolation, Severity},
 };
 
 fn extract_complete_assignment(
@@ -16,38 +17,20 @@ fn extract_complete_assignment(
         return None;
     };
 
-    let decl_name = context.working_set.get_decl(call.decl_id).name();
-    if decl_name != "let" && decl_name != "mut" {
+    let decl_name = call.get_call_name(context);
+    if !matches!(decl_name.as_str(), "let" | "mut") {
         return None;
     }
 
-    let var_arg = call.arguments.first()?;
+    let (var_id, var_name, _var_span) = call.extract_variable_declaration(context)?;
 
-    let (nu_protocol::ast::Argument::Positional(var_expr)
-    | nu_protocol::ast::Argument::Unknown(var_expr)) = var_arg
-    else {
-        return None;
-    };
+    let value_arg = call.get_positional_arg(1)?;
 
-    let Expr::VarDecl(var_id) = &var_expr.expr else {
-        return None;
-    };
-
-    let var_name = &context.source[var_expr.span.start..var_expr.span.end];
-
-    let value_arg = call.arguments.get(1)?;
-
-    let (nu_protocol::ast::Argument::Positional(value_expr)
-    | nu_protocol::ast::Argument::Unknown(value_expr)) = value_arg
-    else {
-        return None;
-    };
-
-    if !assignment_has_complete(value_expr, context) {
+    if !assignment_has_complete(value_arg, context) {
         return None;
     }
 
-    Some((*var_id, var_name.to_string(), expr.span))
+    Some((var_id, var_name, expr.span))
 }
 
 /// Find variable assignments that store complete results
@@ -83,7 +66,7 @@ fn assignment_has_complete(
         context.working_set,
         &|inner_expr| {
             if let Expr::Call(inner_call) = &inner_expr.expr {
-                let inner_decl_name = context.working_set.get_decl(inner_call.decl_id).name();
+                let inner_decl_name = inner_call.get_call_name(context);
                 if inner_decl_name == "complete" {
                     return vec![true];
                 }
@@ -103,29 +86,11 @@ fn find_exit_code_checks(context: &LintContext) -> HashMap<VarId, Span> {
     let mut exit_code_accesses = Vec::new();
     context.ast.flat_map(
         context.working_set,
-        &|expr| {
-            if let Expr::FullCellPath(cell_path) = &expr.expr
-                && let Expr::Var(var_id) = &cell_path.head.expr
-                && accesses_exit_code_field(&cell_path.tail)
-            {
-                return vec![(*var_id, expr.span)];
-            }
-            vec![]
-        },
+        &|expr| expr.extract_field_access("exit_code").into_iter().collect(),
         &mut exit_code_accesses,
     );
 
     exit_code_accesses.into_iter().collect()
-}
-
-/// Check if path accesses the `exit_code` field
-fn accesses_exit_code_field(path_tail: &[nu_protocol::ast::PathMember]) -> bool {
-    path_tail.iter().any(|path_member| {
-        matches!(
-            path_member,
-            nu_protocol::ast::PathMember::String { val, .. } if val == "exit_code"
-        )
-    })
 }
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {

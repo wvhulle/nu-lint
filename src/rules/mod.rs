@@ -25,6 +25,7 @@ pub mod prefer_lines_over_split;
 pub mod prefer_match_over_if_chain;
 pub mod prefer_parse_command;
 pub mod prefer_parse_over_each_split;
+pub mod prefer_path_type;
 pub mod prefer_pipeline_input;
 pub mod prefer_range_iteration;
 pub mod prefer_where_over_each_if;
@@ -115,6 +116,7 @@ impl RuleRegistry {
         registry.register(prefer_match_over_if_chain::rule());
         registry.register(prefer_parse_command::rule());
         registry.register(prefer_parse_over_each_split::rule());
+        registry.register(prefer_path_type::rule());
         registry.register(prefer_pipeline_input::rule());
         registry.register(prefer_range_iteration::rule());
         registry.register(prefer_where_over_each_if::rule());

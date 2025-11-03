@@ -48,10 +48,7 @@ impl ExpressionExt for Expression {
         match &self.expr {
             Expr::Var(var_id) | Expr::VarDecl(var_id) => {
                 let var = context.working_set.get_variable(*var_id);
-                Some(
-                    context.source[var.declaration_span.start..var.declaration_span.end]
-                        .to_string(),
-                )
+                Some(var.declaration_span.text(context).to_string())
             }
             Expr::FullCellPath(cell_path) => cell_path.head.extract_variable_name(context),
             _ => None,
@@ -116,8 +113,9 @@ impl ExpressionExt for Expression {
             | Expr::VarDecl(_)
             | Expr::FullCellPath(_) => true,
 
-            Expr::BinaryOp(left, op, right) => {
-                if matches!(op.expr, Expr::Operator(Operator::Assignment(_))) {
+            Expr::BinaryOp(left, _op, right) => {
+                // Assignment is not pure
+                if self.is_assignment() {
                     return false;
                 }
                 left.is_likely_pure() && right.is_likely_pure()

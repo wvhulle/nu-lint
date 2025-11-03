@@ -26,12 +26,8 @@ impl BlockExt for BlockId {
     fn has_side_effects(&self, context: &LintContext) -> bool {
         use super::ExpressionExt;
 
-        let block = context.working_set.get_block(*self);
-
-        block
-            .pipelines
+        self.all_elements(context)
             .iter()
-            .flat_map(|p| &p.elements)
             .any(|elem| !elem.expr.is_likely_pure())
     }
 
@@ -78,11 +74,8 @@ impl BlockExt for BlockId {
     fn contains_variables(&self, context: &LintContext) -> bool {
         use super::ExpressionExt;
 
-        let block = context.working_set.get_block(*self);
-        block
-            .pipelines
+        self.all_elements(context)
             .iter()
-            .flat_map(|p| &p.elements)
             .any(|elem| elem.expr.contains_variables(context))
     }
 

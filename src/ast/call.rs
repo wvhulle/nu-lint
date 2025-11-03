@@ -77,7 +77,7 @@ impl CallExt for Call {
 
     fn extract_declaration_name(&self, context: &LintContext) -> Option<(String, Span)> {
         let name_arg = self.get_first_positional_arg()?;
-        let name = context.source.get(name_arg.span.start..name_arg.span.end)?;
+        let name = name_arg.span.text(context);
         Some((name.to_string(), name_arg.span))
     }
 

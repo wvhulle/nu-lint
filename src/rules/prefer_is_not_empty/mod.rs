@@ -129,7 +129,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "prefer_is_not_empty",
         RuleCategory::Idioms,
-        Severity::Info,
+        Severity::Warning,
         "Use 'is-not-empty' instead of 'not ... is-empty' for better readability",
         check,
     )

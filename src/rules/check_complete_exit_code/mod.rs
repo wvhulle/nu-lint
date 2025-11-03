@@ -118,7 +118,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "check_complete_exit_code",
         RuleCategory::ErrorHandling,
-        Severity::Error,
+        Severity::Warning,
         "Check exit codes when using 'complete' to capture external command results",
         check,
     )

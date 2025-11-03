@@ -371,6 +371,24 @@ pub trait CallExt {
     ///
     /// Returns `None` if there's no else branch
     fn get_else_branch(&self) -> Option<(bool, &Expression)>;
+
+    /// Check if this if call has no else branch
+    fn has_no_else_branch(&self) -> bool;
+
+    /// Get the nested if call from the then-block if it's the only statement
+    ///
+    /// Returns the inner if call if:
+    /// - The then-block contains exactly one pipeline with one element
+    /// - That element is an if call
+    fn get_nested_single_if<'a>(&self, context: &'a LintContext<'a>) -> Option<&'a Call>;
+
+    /// Generate a collapsed if statement combining this if with a nested if
+    ///
+    /// Returns the combined fix text if:
+    /// - The outer if has no else clause
+    /// - The then-block contains only a single if statement
+    /// - The inner if has no else clause
+    fn generate_collapsed_if(&self, context: &LintContext) -> Option<String>;
 }
 
 impl CallExt for Call {
@@ -491,6 +509,39 @@ impl CallExt for Call {
             _ => None,
         }
     }
+
+    fn has_no_else_branch(&self) -> bool {
+        self.get_else_branch().is_none()
+    }
+
+    fn get_nested_single_if<'a>(&self, context: &'a LintContext<'a>) -> Option<&'a Call> {
+        let then_block = self.get_positional_arg(1)?;
+        let then_block_id = then_block.extract_block_id()?;
+        then_block_id.get_single_if_call(context)
+    }
+
+    fn generate_collapsed_if(&self, context: &LintContext) -> Option<String> {
+        // Both outer and inner if must have no else clauses
+        self.has_no_else_branch().then_some(())?;
+
+        // Get the nested if call (must be the only statement in then-block)
+        let inner_call = self.get_nested_single_if(context)?;
+
+        // Inner if must also have no else clause
+        inner_call.has_no_else_branch().then_some(())?;
+
+        // Extract conditions and body
+        let outer_condition = self.get_first_positional_arg()?;
+        let inner_condition = inner_call.get_first_positional_arg()?;
+        let inner_body = inner_call.get_positional_arg(1)?;
+
+        // Build the combined if statement
+        let outer_cond = outer_condition.span_text(context).trim();
+        let inner_cond = inner_condition.span_text(context).trim();
+        let body = inner_body.span_text(context).trim();
+
+        Some(format!("if {outer_cond} and {inner_cond} {body}"))
+    }
 }
 
 /// Trait to extend `BlockId` with utility methods
@@ -522,6 +573,12 @@ pub trait BlockExt {
 
     /// Check if this block contains any variable references
     fn contains_variables(&self, context: &LintContext) -> bool;
+
+    /// Check if this block contains a single if call
+    ///
+    /// Returns the if call if the block contains exactly one pipeline with one
+    /// element and that element is an if call
+    fn get_single_if_call<'a>(&self, context: &'a LintContext<'a>) -> Option<&'a Call>;
 }
 
 impl BlockExt for BlockId {
@@ -578,6 +635,22 @@ impl BlockExt for BlockId {
             .iter()
             .flat_map(|p| &p.elements)
             .any(|elem| elem.expr.contains_variables(context))
+    }
+
+    fn get_single_if_call<'a>(&self, context: &'a LintContext<'a>) -> Option<&'a Call> {
+        let block = context.working_set.get_block(*self);
+
+        // Must have exactly one pipeline
+        let pipeline = (block.pipelines.len() == 1).then(|| block.pipelines.first())??;
+
+        // Must have exactly one element
+        let element = (pipeline.elements.len() == 1).then(|| pipeline.elements.first())??;
+
+        // Element must be an if call
+        match &element.expr.expr {
+            Expr::Call(call) if call.is_call_to_command("if", context) => Some(call),
+            _ => None,
+        }
     }
 }
 

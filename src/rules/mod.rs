@@ -1,4 +1,5 @@
 pub mod check_complete_exit_code;
+pub mod collapsible_if;
 pub mod dangerous_file_operations;
 pub mod descriptive_error_messages;
 pub mod error_suppression_over_ignore;
@@ -74,6 +75,7 @@ impl RuleRegistry {
         // TODO: add rule that detects custom commands with a body (apart from comments)
         // of length 1, used just once and suggests inlining at call-site.
         registry.register(check_complete_exit_code::rule());
+        registry.register(collapsible_if::rule());
         registry.register(completion_function_naming::rule());
         registry.register(dangerous_file_operations::rule());
         registry.register(descriptive_error_messages::rule());

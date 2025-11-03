@@ -1,5 +1,5 @@
 use nu_protocol::{
-    BlockId, Span, VarId,
+    BlockId, Span, VarId, VarId,
     ast::{Call, Expr, Expression, Operator, PathMember, Pipeline, PipelineElement},
 };
 
@@ -64,6 +64,10 @@ pub trait ExpressionExt {
     /// Extract the comparison value from an equality comparison expression
     /// Returns the right-hand side value if this is `$var == value`
     fn extract_comparison_value(&self, context: &LintContext) -> Option<String>;
+
+    /// Check if this expression is an external call using a specific variable as
+    /// the command
+    fn is_external_call_with_variable(&self, var_id: VarId) -> bool;
 }
 
 impl ExpressionExt for Expression {
@@ -322,6 +326,22 @@ impl ExpressionExt for Expression {
         };
 
         Some(right.span_text(context).to_string())
+    }
+
+    fn is_external_call_with_variable(&self, var_id: VarId) -> bool {
+        let Expr::ExternalCall(head, _args) = &self.expr else {
+            return false;
+        };
+
+        // Check if the head (command) is a variable reference to our parameter
+        // In ^$variable, the head contains the variable
+        match &head.expr {
+            Expr::Var(id) => *id == var_id,
+            Expr::FullCellPath(cell_path) => {
+                matches!(&cell_path.head.expr, Expr::Var(id) if *id == var_id)
+            }
+            _ => false,
+        }
     }
 }
 
@@ -582,6 +602,10 @@ pub trait BlockExt {
 
     /// Check if this is a single-pipeline block containing a call to a specific command
     fn contains_call_in_single_pipeline(&self, command_name: &str, context: &LintContext) -> bool;
+
+    /// Check if this block contains external calls using a specific variable as
+    /// command
+    fn contains_external_call_with_variable(&self, var_id: VarId, context: &LintContext) -> bool;
 }
 
 impl BlockExt for BlockId {
@@ -659,6 +683,27 @@ impl BlockExt for BlockId {
             Expr::Call(call) if call.is_call_to_command("if", context) => Some(call),
             _ => None,
         }
+    }
+
+    fn contains_external_call_with_variable(&self, var_id: VarId, context: &LintContext) -> bool {
+        use nu_protocol::ast::Traverse;
+
+        let block = context.working_set.get_block(*self);
+        let mut results = Vec::new();
+
+        block.flat_map(
+            context.working_set,
+            &|expr| {
+                if expr.is_external_call_with_variable(var_id) {
+                    vec![true]
+                } else {
+                    vec![]
+                }
+            },
+            &mut results,
+        );
+
+        !results.is_empty()
     }
 }
 

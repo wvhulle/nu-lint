@@ -127,7 +127,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "prefer_compound_assignment",
         RuleCategory::Idioms,
-        Severity::Info,
+        Severity::Warning,
         "Use compound assignment operators (+=, -=, etc.) for clarity",
         check,
     )

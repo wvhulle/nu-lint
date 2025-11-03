@@ -130,7 +130,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "descriptive_error_messages",
         RuleCategory::ErrorHandling,
-        Severity::Warning,
+        Severity::Info,
         "Error messages should be descriptive and actionable",
         check,
     )

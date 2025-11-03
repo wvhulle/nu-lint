@@ -39,7 +39,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "collapsible_if",
         RuleCategory::CodeQuality,
-        Severity::Info,
+        Severity::Warning,
         "Collapse nested if statements without else clauses into a single if with combined \
          conditions",
         check,

@@ -225,7 +225,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "prefer_pipeline_input",
         RuleCategory::Idioms,
-        Severity::Info,
+        Severity::Warning,
         "Custom commands with single data parameters should use pipeline input for better \
          composability",
         check,

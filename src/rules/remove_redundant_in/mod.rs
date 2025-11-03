@@ -192,7 +192,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "remove_redundant_in",
         RuleCategory::Idioms,
-        Severity::Info,
+        Severity::Warning,
         "Remove redundant $in at the start of pipelines - it's implicit in Nushell",
         check,
     )

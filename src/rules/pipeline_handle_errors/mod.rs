@@ -260,7 +260,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "pipeline_handle_errors",
         RuleCategory::ErrorHandling,
-        Severity::Error,
+        Severity::Warning,
         "Ensure external commands in pipelines have proper error handling",
         check,
     )

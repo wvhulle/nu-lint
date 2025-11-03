@@ -19,6 +19,7 @@ pub mod pipeline_handle_errors;
 
 pub mod prefer_compound_assignment;
 pub mod prefer_direct_use;
+pub mod prefer_duration_type;
 pub mod prefer_error_make;
 pub mod prefer_is_not_empty;
 pub mod prefer_lines_over_split;
@@ -110,6 +111,7 @@ impl RuleRegistry {
         registry.register(replace_by_builtin::uniq::rule());
         registry.register(prefer_compound_assignment::rule());
         registry.register(prefer_direct_use::rule());
+        registry.register(prefer_duration_type::rule());
         registry.register(prefer_error_make::rule());
         registry.register(prefer_is_not_empty::rule());
         registry.register(prefer_lines_over_split::rule());

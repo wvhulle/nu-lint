@@ -1,6 +1,6 @@
 use nu_protocol::{
-    BlockId, Span,
-    ast::{Call, Expr, Expression, Operator, PipelineElement},
+    BlockId, Span, VarId,
+    ast::{Call, Expr, Expression, Operator, PathMember, Pipeline, PipelineElement},
 };
 
 use crate::context::LintContext;
@@ -522,6 +522,9 @@ pub trait BlockExt {
 
     /// Check if this block contains any variable references
     fn contains_variables(&self, context: &LintContext) -> bool;
+
+    /// Check if this is a single-pipeline block containing a call to a specific command
+    fn contains_call_in_single_pipeline(&self, command_name: &str, context: &LintContext) -> bool;
 }
 
 impl BlockExt for BlockId {
@@ -579,6 +582,11 @@ impl BlockExt for BlockId {
             .flat_map(|p| &p.elements)
             .any(|elem| elem.expr.contains_variables(context))
     }
+
+    fn contains_call_in_single_pipeline(&self, command_name: &str, context: &LintContext) -> bool {
+        let block = context.working_set.get_block(*self);
+        block.pipelines.len() == 1 && block.pipelines[0].contains_call_to(command_name, context)
+    }
 }
 
 /// Trait to extend Span with utility methods
@@ -624,12 +632,86 @@ pub struct VariableUtils;
 impl VariableUtils {
     /// Check if a cell path accesses a specific field
     #[must_use]
-    pub fn accesses_field(path_tail: &[nu_protocol::ast::PathMember], field_name: &str) -> bool {
+    pub fn accesses_field(path_tail: &[PathMember], field_name: &str) -> bool {
         path_tail.iter().any(|path_member| {
             matches!(
                 path_member,
-                nu_protocol::ast::PathMember::String { val, .. } if val == field_name
+                PathMember::String { val, .. } if val == field_name
             )
         })
+    }
+}
+
+/// Trait to extend Pipeline with utility methods
+pub trait PipelineExt {
+    /// Check if this pipeline contains a call to a specific command
+    fn contains_call_to(&self, command_name: &str, context: &LintContext) -> bool;
+
+    /// Check if this pipeline contains an indexed access call (get/skip with numeric index)
+    fn contains_indexed_access(&self, context: &LintContext) -> bool;
+
+    /// Check if a variable is used anywhere in this pipeline
+    fn variable_is_used(&self, var_id: VarId) -> bool;
+
+    /// Check if a variable is the first element being piped to something
+    fn variable_is_piped(&self, var_id: VarId) -> bool;
+}
+
+impl PipelineExt for Pipeline {
+    fn contains_call_to(&self, command_name: &str, context: &LintContext) -> bool {
+        fn check_expr_for_command(expr: &Expr, command_name: &str, context: &LintContext) -> bool {
+            match expr {
+                Expr::Call(call) if call.is_call_to_command(command_name, context) => true,
+                Expr::FullCellPath(cp) => {
+                    check_expr_for_command(&cp.head.expr, command_name, context)
+                }
+                Expr::Subexpression(block_id) => {
+                    let block = context.working_set.get_block(*block_id);
+                    block
+                        .pipelines
+                        .iter()
+                        .any(|p| p.contains_call_to(command_name, context))
+                }
+                _ => false,
+            }
+        }
+
+        self.elements
+            .iter()
+            .any(|element| check_expr_for_command(&element.expr.expr, command_name, context))
+    }
+
+    fn contains_indexed_access(&self, context: &LintContext) -> bool {
+        self.elements.iter().any(|element| {
+            let Expr::Call(call) = &element.expr.expr else {
+                return false;
+            };
+
+            let name = call.get_call_name(context);
+            matches!(name.as_str(), "get" | "skip")
+                && call.get_first_positional_arg().is_some_and(|arg| {
+                    let arg_text = arg.span.text(context);
+                    arg_text.parse::<usize>().is_ok()
+                })
+        })
+    }
+
+    fn variable_is_used(&self, var_id: VarId) -> bool {
+        self.elements.iter().any(|elem| match &elem.expr.expr {
+            Expr::Var(v_id) if *v_id == var_id => true,
+            Expr::FullCellPath(cp) => matches!(&cp.head.expr, Expr::Var(v_id) if *v_id == var_id),
+            _ => false,
+        })
+    }
+
+    fn variable_is_piped(&self, var_id: VarId) -> bool {
+        if self.elements.is_empty() {
+            return false;
+        }
+
+        let first = &self.elements[0];
+        matches!(&first.expr.expr, Expr::FullCellPath(cell_path)
+            if matches!(&cell_path.head.expr, Expr::Var(ref_var_id) if *ref_var_id == var_id)
+            && cell_path.tail.is_empty())
     }
 }

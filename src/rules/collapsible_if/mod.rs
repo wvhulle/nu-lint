@@ -25,16 +25,13 @@ fn create_violation(call: &nu_protocol::ast::Call, fix_text: String) -> RuleViol
 }
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {
-    context.collect_rule_violations(|expr, ctx| {
-        match &expr.expr {
-            Expr::Call(call) if call.is_call_to_command("if", ctx) => {
-                call.generate_collapsed_if(ctx)
-                    .map(|fix_text| create_violation(call, fix_text))
-                    .into_iter()
-                    .collect()
-            }
-            _ => vec![],
-        }
+    context.collect_rule_violations(|expr, ctx| match &expr.expr {
+        Expr::Call(call) if call.is_call_to_command("if", ctx) => call
+            .generate_collapsed_if(ctx)
+            .map(|fix_text| create_violation(call, fix_text))
+            .into_iter()
+            .collect(),
+        _ => vec![],
     })
 }
 
@@ -43,7 +40,8 @@ pub fn rule() -> Rule {
         "collapsible_if",
         RuleCategory::CodeQuality,
         Severity::Info,
-        "Collapse nested if statements without else clauses into a single if with combined conditions",
+        "Collapse nested if statements without else clauses into a single if with combined \
+         conditions",
         check,
     )
 }

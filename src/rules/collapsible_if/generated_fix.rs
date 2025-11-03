@@ -1,6 +1,5 @@
-use crate::context::LintContext;
-
 use super::rule;
+use crate::context::LintContext;
 
 #[test]
 fn test_fix_simple_nested_if() {

@@ -11,7 +11,7 @@ if $x > 0 {
     }
 }
 "#;
-    
+
     rule().assert_ignores(good_code);
 }
 
@@ -26,7 +26,7 @@ if $x > 0 {
     print "x not positive"
 }
 "#;
-    
+
     rule().assert_ignores(good_code);
 }
 
@@ -37,7 +37,7 @@ if $x > 0 {
     print "positive"
 }
 "#;
-    
+
     rule().assert_ignores(good_code);
 }
 
@@ -51,7 +51,7 @@ if $x > 0 {
     }
 }
 "#;
-    
+
     rule().assert_ignores(good_code);
 }
 
@@ -65,7 +65,7 @@ if $y > 0 {
     print "y positive"
 }
 "#;
-    
+
     rule().assert_ignores(good_code);
 }
 
@@ -76,7 +76,7 @@ if $x > 0 and $y > 0 {
     print "both positive"
 }
 "#;
-    
+
     rule().assert_ignores(good_code);
 }
 
@@ -91,6 +91,6 @@ if $x > 0 {
     }
 }
 "#;
-    
+
     rule().assert_ignores(good_code);
 }

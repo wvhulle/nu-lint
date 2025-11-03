@@ -54,10 +54,10 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
                         context.find_declaration_span(&signature.name),
                     )
                     .with_suggestion_dynamic(format!(
-                        "Instead of passing '{param_name}' as a script path argument, define \
-                         the functionality as a function in the same file. This makes the code \
-                         more maintainable and testable. For example: 'def {param_name} [] {{ \
-                         ... }}' and call it directly in main."
+                        "Instead of passing '{param_name}' as a script path argument, define the \
+                         functionality as a function in the same file. This makes the code more \
+                         maintainable and testable. For example: 'def {param_name} [] {{ ... }}' \
+                         and call it directly in main."
                     ))
                 })
         })

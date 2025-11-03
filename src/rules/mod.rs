@@ -9,6 +9,7 @@ pub mod exported_function_docs;
 pub mod external_script_as_argument;
 pub mod forbid_excessive_nesting;
 
+pub mod max_function_body_length;
 pub mod max_positional_params;
 pub mod missing_type_annotation;
 pub mod naming;
@@ -90,6 +91,7 @@ impl RuleRegistry {
         registry.register(forbid_excessive_nesting::rule());
         registry.register(external_script_as_argument::rule());
         registry.register(kebab_case_commands::rule());
+        registry.register(max_function_body_length::rule());
         registry.register(max_positional_params::rule());
         registry.register(missing_type_annotation::rule());
         registry.register(multiline_formatting::rule());

@@ -14,6 +14,7 @@ const FALSE_POSITIVE_KEYWORDS: &[&str] = &[
     "java_path",
     "python_path",
     "import_path",
+    "profile",
 ];
 
 fn is_likely_filesystem_path(param_name: &str) -> bool {

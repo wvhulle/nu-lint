@@ -15,25 +15,13 @@ fn is_data_type_parameter(param: &nu_protocol::PositionalArg) -> bool {
         SyntaxShape::List(_)
             | SyntaxShape::Table(_)
             | SyntaxShape::Record(_)
-            | SyntaxShape::String // String data processing
-            | SyntaxShape::Any // Untyped parameters might be data
+            | SyntaxShape::String
+            | SyntaxShape::Any
     )
 }
 
-/// Check if expression references a specific variable (comprehensive)
-fn references_variable(expr: &nu_protocol::ast::Expression, var_id: VarId) -> bool {
-    match &expr.expr {
-        Expr::Var(id) => *id == var_id,
-        Expr::FullCellPath(cell_path) => {
-            matches!(&cell_path.head.expr, Expr::Var(id) if *id == var_id)
-        }
-        _ => false,
-    }
-}
-
 fn is_data_processing_command(decl_name: &str, category: &Category) -> bool {
-    // Check by category first
-    if matches!(
+    matches!(
         category,
         Category::Filters
             | Category::Math
@@ -41,12 +29,7 @@ fn is_data_processing_command(decl_name: &str, category: &Category) -> bool {
             | Category::Strings
             | Category::Conversions
             | Category::Database
-    ) {
-        return true;
-    }
-
-    // Check specific commands that do data processing regardless of category
-    matches!(
+    ) || matches!(
         decl_name,
         "each"
             | "where"
@@ -93,6 +76,16 @@ fn is_data_processing_command(decl_name: &str, category: &Category) -> bool {
     )
 }
 
+fn references_variable(expr: &nu_protocol::ast::Expression, var_id: VarId) -> bool {
+    match &expr.expr {
+        Expr::Var(id) => *id == var_id,
+        Expr::FullCellPath(cell_path) => {
+            matches!(&cell_path.head.expr, Expr::Var(id) if *id == var_id)
+        }
+        _ => false,
+    }
+}
+
 /// Analyze parameter usage patterns to determine if it's used for data
 /// operations
 #[allow(clippy::struct_excessive_bools)]
@@ -113,47 +106,30 @@ struct ParameterUsageAnalysis {
 }
 
 impl ParameterUsageAnalysis {
-    /// Determine if this usage pattern suggests data operations
     fn suggests_data_operations(&self) -> bool {
-        // Must have some data-related usage
         let has_data_usage = self.used_as_pipeline_input
             || self.used_with_data_commands
             || self.used_for_data_access;
-
-        // Shouldn't be primarily used for file operations or generation
-        let primarily_non_data = self.used_with_file_operations && !has_data_usage;
-
-        has_data_usage && !primarily_non_data
+        has_data_usage && !self.used_with_file_operations
     }
 }
 
-/// Comprehensive analysis of how a parameter is used in a function
-fn analyze_parameter_usage(param_var_id: VarId, context: &LintContext) -> ParameterUsageAnalysis {
+/// Helper to analyze pipelines and collect usage information
+fn analyze_pipelines(
+    pipelines: &[nu_protocol::ast::Pipeline],
+    param_var_id: VarId,
+    context: &LintContext,
+) -> ParameterUsageAnalysis {
     let mut analysis = ParameterUsageAnalysis::default();
 
-    log::debug!("Starting analysis for parameter var_id: {param_var_id:?}");
-    log::debug!("Main AST has {} pipelines", context.ast.pipelines.len());
-
-    // Analyze the main AST block
-    for (i, pipeline) in context.ast.pipelines.iter().enumerate() {
+    pipelines.iter().enumerate().for_each(|(i, pipeline)| {
         log::debug!(
-            "Analyzing main pipeline {}: {} elements",
-            i,
+            "Analyzing pipeline {i}: {} elements",
             pipeline.elements.len()
         );
         analyze_pipeline_for_parameter_usage(pipeline, param_var_id, context, &mut analysis);
-    }
+    });
 
-    // Use AST traversal to find more complex usage patterns
-    let nested_analysis_count = context
-        .collect_rule_violations(|expr, ctx| {
-            log::debug!("Traversing expression: {:?}", expr.expr);
-            analyze_expression_for_parameter_usage_impl(expr, param_var_id, ctx, &analysis);
-            Vec::new() // We're not collecting violations here, just analyzing
-        })
-        .len();
-
-    log::debug!("Traversed {nested_analysis_count} nested expressions");
     log::debug!(
         "Analysis result: used_as_pipeline_input={}, used_with_data_commands={}, \
          used_for_data_access={}, usage_count={}",
@@ -163,6 +139,26 @@ fn analyze_parameter_usage(param_var_id: VarId, context: &LintContext) -> Parame
         analysis.usage_count
     );
 
+    analysis
+}
+
+/// Comprehensive analysis of how a parameter is used in a function
+fn analyze_parameter_usage(param_var_id: VarId, context: &LintContext) -> ParameterUsageAnalysis {
+    log::debug!("Starting analysis for parameter var_id: {param_var_id:?}");
+    log::debug!("Main AST has {} pipelines", context.ast.pipelines.len());
+
+    let analysis = analyze_pipelines(&context.ast.pipelines, param_var_id, context);
+
+    // Use AST traversal to find more complex usage patterns
+    let nested_analysis_count = context
+        .collect_rule_violations(|expr, ctx| {
+            log::debug!("Traversing expression: {:?}", expr.expr);
+            analyze_expression_for_parameter_usage_impl(expr, param_var_id, ctx, &analysis);
+            Vec::new()
+        })
+        .len();
+
+    log::debug!("Traversed {nested_analysis_count} nested expressions");
     analysis
 }
 
@@ -203,19 +199,6 @@ fn analyze_expression_for_parameter_usage_impl(
     }
 }
 
-/// Helper function to categorize command usage
-fn categorize_command_usage(
-    decl_name: &str,
-    category: &Category,
-    analysis: &mut ParameterUsageAnalysis,
-) {
-    if is_data_processing_command(decl_name, category) {
-        analysis.used_with_data_commands = true;
-    } else if is_file_operation_command(decl_name) {
-        analysis.used_with_file_operations = true;
-    }
-}
-
 /// Analyze a pipeline for parameter usage
 fn analyze_pipeline_for_parameter_usage(
     pipeline: &nu_protocol::ast::Pipeline,
@@ -223,33 +206,42 @@ fn analyze_pipeline_for_parameter_usage(
     ctx: &LintContext,
     analysis: &mut ParameterUsageAnalysis,
 ) {
-    if pipeline.elements.is_empty() {
+    let Some(first_element) = pipeline.elements.first() else {
         return;
-    }
+    };
 
     // Check if parameter is used as first element (pipeline input)
-    let first_element = &pipeline.elements[0];
     if references_variable(&first_element.expr, param_var_id) {
         analysis.used_as_pipeline_input = true;
         analysis.usage_count += 1;
 
         // Check if subsequent elements are data processing commands
-        for element in &pipeline.elements[1..] {
-            if let Expr::Call(call) = &element.expr.expr {
+        pipeline.elements[1..]
+            .iter()
+            .filter_map(|element| match &element.expr.expr {
+                Expr::Call(call) => Some(call),
+                _ => None,
+            })
+            .for_each(|call| {
                 let decl = ctx.working_set.get_decl(call.decl_id);
-                let decl_name = &decl.signature().name;
-                let category = decl.signature().category;
-                categorize_command_usage(decl_name, &category, analysis);
-            }
-        }
+                let sig = decl.signature();
+                if is_data_processing_command(&sig.name, &sig.category) {
+                    analysis.used_with_data_commands = true;
+                } else if is_file_operation_command(&sig.name) {
+                    analysis.used_with_file_operations = true;
+                }
+            });
     }
 
     // Also check each element for parameter usage in arguments
-    for element in &pipeline.elements {
-        if let Expr::Call(call) = &element.expr.expr {
-            analyze_call_for_parameter_usage(call, param_var_id, ctx, analysis);
-        }
-    }
+    pipeline
+        .elements
+        .iter()
+        .filter_map(|element| match &element.expr.expr {
+            Expr::Call(call) => Some(call),
+            _ => None,
+        })
+        .for_each(|call| analyze_call_for_parameter_usage(call, param_var_id, ctx, analysis));
 }
 
 /// Check if a command is a file operation
@@ -267,27 +259,23 @@ fn analyze_call_for_parameter_usage(
     ctx: &LintContext,
     analysis: &mut ParameterUsageAnalysis,
 ) {
-    let decl = ctx.working_set.get_decl(call.decl_id);
-    let decl_name = &decl.signature().name;
-    let category = decl.signature().category;
-
-    // Check if any arguments reference our parameter
-    let param_used_in_call = call
+    if !call
         .arguments
         .iter()
-        .any(|arg| argument_references_variable(arg, param_var_id));
+        .any(|arg| argument_references_variable(arg, param_var_id))
+    {
+        return;
+    }
 
-    if param_used_in_call {
-        analysis.usage_count += 1;
+    analysis.usage_count += 1;
 
-        // Categorize the command usage
-        if is_data_processing_command(decl_name, &category) {
-            analysis.used_with_data_commands = true;
-        } else if is_file_operation_command(decl_name) {
-            analysis.used_with_file_operations = true;
-        } else if is_generation_command(decl_name) {
-            analysis.used_for_generation = true;
-        }
+    let sig = ctx.working_set.get_decl(call.decl_id).signature();
+    if is_data_processing_command(&sig.name, &sig.category) {
+        analysis.used_with_data_commands = true;
+    } else if is_file_operation_command(&sig.name) {
+        analysis.used_with_file_operations = true;
+    } else if is_generation_command(&sig.name) {
+        analysis.used_for_generation = true;
     }
 }
 
@@ -340,11 +328,13 @@ fn expression_contains_variable(expr: &nu_protocol::ast::Expression, var_id: Var
             expression_contains_variable(expr, var_id)
         }),
         Expr::Table(table) => {
-            // Check columns
-            table.columns.iter().any(|col| expression_contains_variable(col, var_id))
-                // Check rows
+            table
+                .columns
+                .iter()
+                .any(|col| expression_contains_variable(col, var_id))
                 || table.rows.iter().any(|row| {
-                    row.iter().any(|cell| expression_contains_variable(cell, var_id))
+                    row.iter()
+                        .any(|cell| expression_contains_variable(cell, var_id))
                 })
         }
         Expr::Record(items) => items.iter().any(|item| match item {
@@ -367,7 +357,6 @@ fn extract_function_body(
     _param_name: &str,
     context: &LintContext,
 ) -> Option<String> {
-    // Find the function definition in the AST
     context
         .ast
         .pipelines
@@ -376,133 +365,53 @@ fn extract_function_body(
         .filter_map(|element| element.expr.extract_call())
         .find_map(|call| {
             let (block_id, name) = call.extract_function_definition(context)?;
-            if name == decl_name {
-                let block = context.working_set.get_block(block_id);
-                let block_span = block.span?;
-                let body_text = block_span.text(context);
-
-                // Remove outer braces from the body
-                let trimmed = body_text.trim();
-                if trimmed.starts_with('{') && trimmed.ends_with('}') {
-                    let inner = &trimmed[1..trimmed.len() - 1];
-                    Some(inner.trim().to_string())
-                } else {
-                    Some(trimmed.to_string())
-                }
-            } else {
-                None
+            if name != decl_name {
+                return None;
             }
+
+            let block = context.working_set.get_block(block_id);
+            let body_text = block.span?.text(context);
+            let trimmed = body_text.trim();
+
+            Some(
+                if let Some(stripped) = trimmed.strip_prefix('{').and_then(|s| s.strip_suffix('}'))
+                {
+                    stripped.trim().to_string()
+                } else {
+                    trimmed.to_string()
+                },
+            )
         })
 }
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {
     log::debug!("prefer_pipeline_input: Starting rule check");
 
-    // First try the engine-based approach for registered functions
     let user_functions: Vec<_> = context.new_user_functions().collect();
     log::debug!("Found {} registered user functions", user_functions.len());
 
-    // Also check function definitions from AST (for test cases and unregistered
-    // functions)
     let function_definitions = context.collect_function_definitions();
     log::debug!(
         "Found {} function definitions in AST",
         function_definitions.len()
     );
 
-    let mut violations = Vec::new();
-
-    // Process registered functions
-    for (_, decl) in user_functions {
-        if let Some(violation) = analyze_function_from_signature(&decl.signature(), context) {
-            violations.push(violation);
-        }
-    }
-
-    // Process AST function definitions
-    for (block_id, function_name) in function_definitions {
-        if let Some(violation) = analyze_function_from_ast(block_id, &function_name, context) {
-            violations.push(violation);
-        }
-    }
-
-    violations
+    user_functions
+        .iter()
+        .filter_map(|(_, decl)| analyze_function_from_signature(&decl.signature(), context))
+        .chain(
+            function_definitions
+                .iter()
+                .filter_map(|(block_id, name)| analyze_function_from_ast(*block_id, name, context)),
+        )
+        .collect()
 }
 
-/// Analyze a function from its signature (for registered functions)
-fn analyze_function_from_signature(
-    signature: &nu_protocol::Signature,
-    context: &LintContext,
-) -> Option<RuleViolation> {
-    log::debug!(
-        "Checking registered function: {} with {} required, {} optional, rest: {:?}",
-        signature.name,
-        signature.required_positional.len(),
-        signature.optional_positional.len(),
-        signature.rest_positional.is_some()
-    );
-
-    // Only consider functions with exactly one required positional parameter
-    if signature.required_positional.len() != 1
-        || !signature.optional_positional.is_empty()
-        || signature.rest_positional.is_some()
-    {
-        log::debug!("Skipping {} - wrong parameter count", signature.name);
-        return None;
-    }
-
-    let param = &signature.required_positional[0];
-
-    // Check if the parameter is a data type that would benefit from pipeline input
-    if !is_data_type_parameter(param) {
-        log::debug!(
-            "Skipping {} - parameter '{}' is not a data type",
-            signature.name,
-            param.name
-        );
-        return None;
-    }
-
-    // Get parameter variable ID to track usage
-    let param_var_id = param.var_id?;
-    log::debug!(
-        "Function {} parameter '{}' has var_id: {:?}",
-        signature.name,
-        param.name,
-        param_var_id
-    );
-
-    // Check if the function body uses the parameter for data operations
-    let analysis = analyze_parameter_usage(param_var_id, context);
-    if !analysis.suggests_data_operations() {
-        log::debug!(
-            "Function {} with param {} does not use parameter for data operations",
-            signature.name,
-            param.name
-        );
-        return None;
-    }
-
-    Some(create_violation(signature, param, context))
-}
-
-/// Analyze a function from AST definition (for unregistered functions)
-fn analyze_function_from_ast(
-    block_id: nu_protocol::BlockId,
+/// Common validation logic for function parameters
+fn should_analyze_function<'a>(
+    signature: &'a nu_protocol::Signature,
     function_name: &str,
-    context: &LintContext,
-) -> Option<RuleViolation> {
-    let block = context.working_set.get_block(block_id);
-    let signature = &block.signature;
-
-    log::debug!(
-        "Checking AST function: {} with {} required, {} optional, rest: {:?}",
-        function_name,
-        signature.required_positional.len(),
-        signature.optional_positional.len(),
-        signature.rest_positional.is_some()
-    );
-
+) -> Option<&'a nu_protocol::PositionalArg> {
     // Only consider functions with exactly one required positional parameter
     if signature.required_positional.len() != 1
         || !signature.optional_positional.is_empty()
@@ -514,39 +423,59 @@ fn analyze_function_from_ast(
 
     let param = &signature.required_positional[0];
 
-    // Check if the parameter is a data type that would benefit from pipeline input
     if !is_data_type_parameter(param) {
         log::debug!(
-            "Skipping {} - parameter '{}' is not a data type",
-            function_name,
+            "Skipping {function_name} - parameter '{}' is not a data type",
             param.name
         );
         return None;
     }
 
-    // Get parameter variable ID to track usage
+    Some(param)
+}
+
+/// Analyze a function from its signature (for registered functions)
+fn analyze_function_from_signature(
+    signature: &nu_protocol::Signature,
+    context: &LintContext,
+) -> Option<RuleViolation> {
+    let param = should_analyze_function(signature, &signature.name)?;
     let param_var_id = param.var_id?;
+
     log::debug!(
         "Function {} parameter '{}' has var_id: {:?}",
-        function_name,
+        signature.name,
         param.name,
         param_var_id
     );
 
-    // Check if the function body uses the parameter for data operations by
-    // analyzing the block directly
+    let analysis = analyze_parameter_usage(param_var_id, context);
+    analysis
+        .suggests_data_operations()
+        .then(|| create_violation(signature, param, context))
+}
+
+/// Analyze a function from AST definition (for unregistered functions)
+fn analyze_function_from_ast(
+    block_id: nu_protocol::BlockId,
+    function_name: &str,
+    context: &LintContext,
+) -> Option<RuleViolation> {
+    let block = context.working_set.get_block(block_id);
+    let param = should_analyze_function(&block.signature, function_name)?;
+    let param_var_id = param.var_id?;
+
+    log::debug!(
+        "Function {function_name} parameter '{}' has var_id: {param_var_id:?}",
+        param.name
+    );
+
     let analysis = analyze_parameter_usage_in_block(param_var_id, block, context);
     if !analysis.suggests_data_operations() {
-        log::debug!(
-            "Function {} with param {} does not use parameter for data operations",
-            function_name,
-            param.name
-        );
         return None;
     }
 
-    // Create a signature for violation creation
-    let mut function_signature = signature.clone();
+    let mut function_signature = block.signature.clone();
     function_signature.name = function_name.to_string();
     Some(create_violation(&function_signature, param, context))
 }
@@ -604,34 +533,11 @@ fn analyze_parameter_usage_in_block(
     block: &nu_protocol::ast::Block,
     context: &LintContext,
 ) -> ParameterUsageAnalysis {
-    let mut analysis = ParameterUsageAnalysis::default();
-
     log::debug!(
-        "Analyzing block with {} pipelines for var_id: {:?}",
-        block.pipelines.len(),
-        param_var_id
+        "Analyzing block with {} pipelines for var_id: {param_var_id:?}",
+        block.pipelines.len()
     );
-
-    // Analyze each pipeline in the block
-    for (i, pipeline) in block.pipelines.iter().enumerate() {
-        log::debug!(
-            "Analyzing block pipeline {}: {} elements",
-            i,
-            pipeline.elements.len()
-        );
-        analyze_pipeline_for_parameter_usage(pipeline, param_var_id, context, &mut analysis);
-    }
-
-    log::debug!(
-        "Block analysis result: used_as_pipeline_input={}, used_with_data_commands={}, \
-         used_for_data_access={}, usage_count={}",
-        analysis.used_as_pipeline_input,
-        analysis.used_with_data_commands,
-        analysis.used_for_data_access,
-        analysis.usage_count
-    );
-
-    analysis
+    analyze_pipelines(&block.pipelines, param_var_id, context)
 }
 
 pub fn rule() -> Rule {

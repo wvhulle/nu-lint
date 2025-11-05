@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use nu_protocol::ast::Expr;
 
-// Re-export Fix type for use by fix builders
 pub use crate::violation::Fix;
 use crate::{context::LintContext, violation::RuleViolation};
 
@@ -110,7 +109,6 @@ pub fn detect_external_commands<S: ::std::hash::BuildHasher>(
         if let Expr::ExternalCall(head, args) = &expr.expr {
             let cmd_text = &ctx.source[head.span.start..head.span.end];
 
-            // Check for custom suggestions first
             if let Some((custom_message, custom_suggestion)) =
                 get_custom_suggestion(cmd_text, args, ctx)
             {
@@ -120,7 +118,6 @@ pub fn detect_external_commands<S: ::std::hash::BuildHasher>(
                 ];
             }
 
-            // Check if this external command has a builtin alternative
             if let Some(alternative) = alternatives.get(cmd_text) {
                 let message = format!(
                     "Consider using Nushell's built-in '{}' instead of external '^{}'",

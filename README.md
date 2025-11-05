@@ -78,6 +78,8 @@ nu-lint script.nu                          # Lint a file
 nu-lint directory/                         # Lint directory
 ```
 
+Extra:
+
 ```bash
 nu-lint --config custom.toml script.nu     # Use custom config
 nu-lint list-rules                         # Show all rules
@@ -100,7 +102,6 @@ min_severity = "info"
 
 [rules]
 snake_case_variables = "warning"
-prefer_error_make = "info"
 ```
 
 The linter will automatically find and use this config file when you run it.
@@ -124,22 +125,40 @@ Ideas for future improvements:
 - Editor plugins such a VS Code extension
 - Use external parsers for DSLs such as `jq`
 - A lint plugin for Nu shell command line itself
+- Better fix suggestions
 
 ## Contributing
 
-Contributions are welcome. Please run tests and formatting before submitting:
-
-```bash
-cargo +nightly fmt
-cargo clippy --all-targets
-cargo clippy --fix --allow-dirty --all-targets
-```
+Contributions are welcome.
 
 Debugging
 
 ```bash
 cargo test
-RUST_LOG=debug cargo test --lib test_detect_unnecessary_variable_simple -- --nocapture
+```
+
+Show debug output using the `instrument` function and an environment variable:
+
+```bash
+RUST_LOG=debug cargo test test_detect_unnecessary_variable_simple -- --nocapture
+```
+
+Please run linter and formatter before submitting PRs. Many optional and restrictive rules of Clippy have been turned on.
+
+This will attempt to auto-fix violations in the Rust code.
+
+```bash
+cargo clippy --fix --allow-dirty --all-targets
+```
+
+Check if everything was fixed:
+
+```bash
+cargo clippy --all-targets
+```
+
+```
+cargo +nightly fmt
 ```
 
 Quick benchmark for performance testing:

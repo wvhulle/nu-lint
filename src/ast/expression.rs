@@ -111,7 +111,6 @@ impl ExpressionExt for Expression {
             | Expr::FullCellPath(_) => true,
 
             Expr::BinaryOp(left, _op, right) => {
-                // Assignment is not pure
                 if self.is_assignment() {
                     return false;
                 }

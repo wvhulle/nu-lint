@@ -89,53 +89,6 @@ impl RuleViolation {
             file: None,
         }
     }
-
-    /// Create a standard command replacement violation
-    #[must_use]
-    pub fn new_command_replacement(
-        rule_id: &'static str,
-        old_command: &str,
-        new_command: &str,
-        span: Span,
-        note: Option<&str>,
-    ) -> Self {
-        let message = format!("Use '{new_command}' instead of '{old_command}'");
-        let suggestion = if let Some(note) = note {
-            format!("Replace with '{new_command}': {note}")
-        } else {
-            format!("Replace with '{new_command}' for better performance and integration")
-        };
-
-        Self::new_dynamic(rule_id, message, span).with_suggestion_dynamic(suggestion)
-    }
-
-    /// Create a standard naming convention violation
-    #[must_use]
-    pub fn new_naming_violation(
-        rule_id: &'static str,
-        item_type: &str,
-        current_name: &str,
-        convention: &str,
-        span: Span,
-    ) -> Self {
-        let message =
-            format!("{item_type} '{current_name}' should follow {convention} naming convention");
-        let suggestion = format!("Rename to follow {convention} convention");
-
-        Self::new_dynamic(rule_id, message, span).with_suggestion_dynamic(suggestion)
-    }
-
-    /// Create a standard best practice violation
-    #[must_use]
-    pub fn new_best_practice(
-        rule_id: &'static str,
-        description: &str,
-        span: Span,
-        suggestion: &str,
-    ) -> Self {
-        Self::new_dynamic(rule_id, description.to_string(), span)
-            .with_suggestion_dynamic(suggestion.to_string())
-    }
 }
 
 /// A complete violation with severity (created by the engine)

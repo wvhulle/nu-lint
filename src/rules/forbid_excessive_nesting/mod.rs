@@ -4,7 +4,7 @@ use crate::{
     violation::{RuleViolation, Severity},
 };
 
-const MAX_INDENTATION_LEVELS: usize = 5;
+const MAX_INDENTATION_LEVELS: usize = 4;
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {
     let source = context.source;

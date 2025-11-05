@@ -28,6 +28,8 @@ pub trait CallExt {
     fn has_no_else_branch(&self) -> bool;
     fn get_nested_single_if<'a>(&self, context: &'a LintContext<'a>) -> Option<&'a Call>;
     fn generate_collapsed_if(&self, context: &LintContext) -> Option<String>;
+    fn uses_variable(&self, var_id: nu_protocol::VarId) -> bool;
+    fn is_filesystem_command(&self, context: &LintContext) -> bool;
 }
 
 impl CallExt for Call {
@@ -155,5 +157,22 @@ impl CallExt for Call {
         let body = inner_body.span_text(context).trim();
 
         Some(format!("if {outer_cond} and {inner_cond} {body}"))
+    }
+
+    fn uses_variable(&self, var_id: nu_protocol::VarId) -> bool {
+        self.arguments.iter().any(|arg| match arg {
+            nu_protocol::ast::Argument::Positional(expr)
+            | nu_protocol::ast::Argument::Unknown(expr)
+            | nu_protocol::ast::Argument::Named((_, _, Some(expr))) => expr.matches_var(var_id),
+            _ => false,
+        })
+    }
+
+    fn is_filesystem_command(&self, context: &LintContext) -> bool {
+        use nu_protocol::Category;
+
+        let decl = context.working_set.get_decl(self.decl_id);
+        let signature = decl.signature();
+        matches!(signature.category, Category::FileSystem | Category::Path)
     }
 }

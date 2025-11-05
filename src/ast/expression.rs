@@ -35,6 +35,9 @@ pub trait ExpressionExt {
     fn extract_compared_variable(&self, context: &LintContext) -> Option<String>;
     fn extract_comparison_value(&self, context: &LintContext) -> Option<String>;
     fn is_external_call_with_variable(&self, var_id: VarId) -> bool;
+    fn matches_var(&self, var_id: VarId) -> bool;
+    fn external_call_contains_variable(&self, var_id: VarId) -> bool;
+    fn is_external_filesystem_command(&self, context: &LintContext) -> bool;
 }
 
 impl ExpressionExt for Expression {
@@ -284,6 +287,45 @@ impl ExpressionExt for Expression {
                 matches!(&cell_path.head.expr, Expr::Var(id) if *id == var_id)
             }
             _ => false,
+        }
+    }
+
+    fn matches_var(&self, var_id: VarId) -> bool {
+        match &self.expr {
+            Expr::Var(id) => *id == var_id,
+            Expr::FullCellPath(cell_path) => {
+                matches!(&cell_path.head.expr, Expr::Var(id) if *id == var_id)
+            }
+            _ => false,
+        }
+    }
+
+    fn external_call_contains_variable(&self, var_id: VarId) -> bool {
+        if let Expr::ExternalCall(_head, args) = &self.expr {
+            args.iter().any(|arg| {
+                let arg_expr = match arg {
+                    nu_protocol::ast::ExternalArgument::Regular(e)
+                    | nu_protocol::ast::ExternalArgument::Spread(e) => e,
+                };
+                arg_expr.matches_var(var_id)
+            })
+        } else {
+            false
+        }
+    }
+
+    fn is_external_filesystem_command(&self, context: &LintContext) -> bool {
+        const EXTERNAL_FILESYSTEM_COMMANDS: &[&str] =
+            &["tar", "zip", "unzip", "rsync", "scp", "wget", "curl"];
+
+        if let Expr::ExternalCall(head, _) = &self.expr {
+            let cmd_name = &context.source[head.span.start..head.span.end];
+            let lower_cmd = cmd_name.to_lowercase();
+            EXTERNAL_FILESYSTEM_COMMANDS
+                .iter()
+                .any(|&cmd| lower_cmd == cmd)
+        } else {
+            false
         }
     }
 }

@@ -115,3 +115,71 @@ def run-java [class_path: string, main_class: string] {
 ";
     rule().assert_ignores(code);
 }
+
+#[test]
+fn test_ignore_external_command_without_path_name() {
+    let code = r"
+def compress [input: string, output: string] {
+    tar czf $output $input
+}
+";
+    rule().assert_ignores(code);
+}
+
+#[test]
+fn test_ignore_grep_with_pattern() {
+    let code = r"
+def search [pattern: string, text: string] {
+    grep $pattern $text
+}
+";
+    rule().assert_ignores(code);
+}
+
+#[test]
+fn test_ignore_sed_with_replacement() {
+    let code = r"
+def replace [pattern: string, replacement: string, input: string] {
+    sed $pattern $replacement $input
+}
+";
+    rule().assert_ignores(code);
+}
+
+#[test]
+fn test_ignore_docker_with_image_name() {
+    let code = r"
+def build [image: string, tag: string] {
+    docker build -t $image:$tag .
+}
+";
+    rule().assert_ignores(code);
+}
+
+#[test]
+fn test_ignore_git_with_branch() {
+    let code = r"
+def switch-branch [branch: string] {
+    git checkout $branch
+}
+";
+    rule().assert_ignores(code);
+}
+
+#[test]
+fn test_ignore_last_profile_false_positive() {
+    let code = r#"
+def handle_profile_change [last_profile: string] {
+    sleep 500ms
+    let profile = (get_current_profile)
+    if $profile != $last_profile {
+        print $"Profile changed from '($last_profile)' to '($profile)'"
+        trigger_profile_service $profile
+        $profile
+    } else {
+        $last_profile
+    }
+}
+"#;
+    rule().assert_ignores(code);
+}

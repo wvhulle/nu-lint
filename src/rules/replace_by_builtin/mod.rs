@@ -10,6 +10,7 @@ pub mod head;
 pub mod jq;
 pub mod ls;
 pub mod other;
+pub mod path;
 pub mod sed;
 pub mod sort;
 pub mod tail;

@@ -22,7 +22,7 @@ impl std::fmt::Display for Severity {
 
 /// A rule violation without severity (created by rules)
 #[derive(Debug, Clone)]
-pub struct RuleViolation {
+pub(crate) struct RuleViolation {
     pub rule_id: Cow<'static, str>,
     pub message: Cow<'static, str>,
     pub span: Span,
@@ -33,7 +33,11 @@ pub struct RuleViolation {
 impl RuleViolation {
     /// Create a new rule violation with static strings
     #[must_use]
-    pub const fn new_static(rule_id: &'static str, message: &'static str, span: Span) -> Self {
+    pub(crate) const fn new_static(
+        rule_id: &'static str,
+        message: &'static str,
+        span: Span,
+    ) -> Self {
         Self {
             rule_id: Cow::Borrowed(rule_id),
             message: Cow::Borrowed(message),
@@ -45,7 +49,7 @@ impl RuleViolation {
 
     /// Create a new rule violation with a dynamic message
     #[must_use]
-    pub fn new_dynamic(rule_id: &'static str, message: String, span: Span) -> Self {
+    pub(crate) fn new_dynamic(rule_id: &'static str, message: String, span: Span) -> Self {
         Self {
             rule_id: Cow::Borrowed(rule_id),
             message: Cow::Owned(message),
@@ -57,14 +61,14 @@ impl RuleViolation {
 
     /// Add a static suggestion to this violation
     #[must_use]
-    pub fn with_suggestion_static(mut self, suggestion: &'static str) -> Self {
+    pub(crate) fn with_suggestion_static(mut self, suggestion: &'static str) -> Self {
         self.suggestion = Some(Cow::Borrowed(suggestion));
         self
     }
 
     /// Add a dynamic suggestion to this violation
     #[must_use]
-    pub fn with_suggestion_dynamic(mut self, suggestion: String) -> Self {
+    pub(crate) fn with_suggestion_dynamic(mut self, suggestion: String) -> Self {
         self.suggestion = Some(Cow::Owned(suggestion));
         self
     }

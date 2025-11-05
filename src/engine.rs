@@ -74,7 +74,6 @@ impl LintEngine {
 
         let context = LintContext {
             source,
-            file_path: path,
             ast: &block,
             engine_state: self.engine_state,
             working_set: &working_set,

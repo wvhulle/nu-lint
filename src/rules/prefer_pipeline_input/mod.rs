@@ -76,16 +76,6 @@ fn is_data_processing_command(decl_name: &str, category: &Category) -> bool {
     )
 }
 
-fn references_variable(expr: &nu_protocol::ast::Expression, var_id: VarId) -> bool {
-    match &expr.expr {
-        Expr::Var(id) => *id == var_id,
-        Expr::FullCellPath(cell_path) => {
-            matches!(&cell_path.head.expr, Expr::Var(id) if *id == var_id)
-        }
-        _ => false,
-    }
-}
-
 /// Analyze parameter usage patterns to determine if it's used for data
 /// operations
 #[allow(clippy::struct_excessive_bools)]
@@ -146,57 +136,7 @@ fn analyze_pipelines(
 fn analyze_parameter_usage(param_var_id: VarId, context: &LintContext) -> ParameterUsageAnalysis {
     log::debug!("Starting analysis for parameter var_id: {param_var_id:?}");
     log::debug!("Main AST has {} pipelines", context.ast.pipelines.len());
-
-    let analysis = analyze_pipelines(&context.ast.pipelines, param_var_id, context);
-
-    // Use AST traversal to find more complex usage patterns
-    let nested_analysis_count = context
-        .collect_rule_violations(|expr, ctx| {
-            log::debug!("Traversing expression: {:?}", expr.expr);
-            analyze_expression_for_parameter_usage_impl(expr, param_var_id, ctx, &analysis);
-            Vec::new()
-        })
-        .len();
-
-    log::debug!("Traversed {nested_analysis_count} nested expressions");
-    analysis
-}
-
-/// Implementation that doesn't need mutable access to analysis (for closure
-/// compatibility)
-fn analyze_expression_for_parameter_usage_impl(
-    expr: &nu_protocol::ast::Expression,
-    _param_var_id: VarId,
-    ctx: &LintContext,
-    _analysis: &ParameterUsageAnalysis,
-) {
-    // This function will be used for complex nested analysis if needed
-    // For now, we handle most cases in the main pipeline analysis above
-    match &expr.expr {
-        Expr::Block(block_id) | Expr::Closure(block_id) | Expr::Subexpression(block_id) => {
-            let block = ctx.working_set.get_block(*block_id);
-            log::debug!(
-                "Found nested block with {} pipelines",
-                block.pipelines.len()
-            );
-            for (i, pipeline) in block.pipelines.iter().enumerate() {
-                log::debug!(
-                    "  Nested pipeline {}: {} elements",
-                    i,
-                    pipeline.elements.len()
-                );
-                // Additional nested analysis could go here if needed
-                // For now, the main analysis covers most cases
-            }
-        }
-        Expr::Call(call) => {
-            let decl = ctx.working_set.get_decl(call.decl_id);
-            log::debug!("Found call to: {}", decl.signature().name);
-        }
-        _ => {
-            // Track other usage patterns if needed
-        }
-    }
+    analyze_pipelines(&context.ast.pipelines, param_var_id, context)
 }
 
 /// Analyze a pipeline for parameter usage
@@ -211,7 +151,7 @@ fn analyze_pipeline_for_parameter_usage(
     };
 
     // Check if parameter is used as first element (pipeline input)
-    if references_variable(&first_element.expr, param_var_id) {
+    if first_element.expr.matches_var(param_var_id) {
         analysis.used_as_pipeline_input = true;
         analysis.usage_count += 1;
 
@@ -302,51 +242,8 @@ fn argument_references_variable(arg: &nu_protocol::ast::Argument, var_id: VarId)
         nu_protocol::ast::Argument::Positional(expr)
         | nu_protocol::ast::Argument::Named((_, _, Some(expr)))
         | nu_protocol::ast::Argument::Unknown(expr)
-        | nu_protocol::ast::Argument::Spread(expr) => expression_contains_variable(expr, var_id),
+        | nu_protocol::ast::Argument::Spread(expr) => expr.contains_variable(var_id),
         nu_protocol::ast::Argument::Named(_) => false,
-    }
-}
-
-/// Recursively check if an expression contains a variable reference
-fn expression_contains_variable(expr: &nu_protocol::ast::Expression, var_id: VarId) -> bool {
-    match &expr.expr {
-        Expr::Var(id) => *id == var_id,
-        Expr::FullCellPath(cell_path) => expression_contains_variable(&cell_path.head, var_id),
-        Expr::BinaryOp(left, _op, right) => {
-            expression_contains_variable(left, var_id)
-                || expression_contains_variable(right, var_id)
-        }
-        Expr::UnaryNot(inner) => expression_contains_variable(inner, var_id),
-        Expr::Call(call) => call
-            .arguments
-            .iter()
-            .any(|arg| argument_references_variable(arg, var_id)),
-        Expr::List(items) => items.iter().any(|item| {
-            let expr = match item {
-                nu_protocol::ast::ListItem::Item(e) | nu_protocol::ast::ListItem::Spread(_, e) => e,
-            };
-            expression_contains_variable(expr, var_id)
-        }),
-        Expr::Table(table) => {
-            table
-                .columns
-                .iter()
-                .any(|col| expression_contains_variable(col, var_id))
-                || table.rows.iter().any(|row| {
-                    row.iter()
-                        .any(|cell| expression_contains_variable(cell, var_id))
-                })
-        }
-        Expr::Record(items) => items.iter().any(|item| match item {
-            nu_protocol::ast::RecordItem::Pair(key, val) => {
-                expression_contains_variable(key, var_id)
-                    || expression_contains_variable(val, var_id)
-            }
-            nu_protocol::ast::RecordItem::Spread(_, expr) => {
-                expression_contains_variable(expr, var_id)
-            }
-        }),
-        _ => false,
     }
 }
 

@@ -39,6 +39,7 @@ pub trait ExpressionExt {
     fn external_call_contains_variable(&self, var_id: VarId) -> bool;
     fn is_external_filesystem_command(&self, context: &LintContext) -> bool;
     fn extract_call(&self) -> Option<&nu_protocol::ast::Call>;
+    fn contains_variable(&self, var_id: VarId) -> bool;
 }
 
 impl ExpressionExt for Expression {
@@ -334,6 +335,48 @@ impl ExpressionExt for Expression {
         match &self.expr {
             Expr::Call(call) => Some(call),
             _ => None,
+        }
+    }
+
+    fn contains_variable(&self, var_id: VarId) -> bool {
+        match &self.expr {
+            Expr::Var(id) => *id == var_id,
+            Expr::FullCellPath(cell_path) => cell_path.head.contains_variable(var_id),
+            Expr::BinaryOp(left, _op, right) => {
+                left.contains_variable(var_id) || right.contains_variable(var_id)
+            }
+            Expr::UnaryNot(inner) => inner.contains_variable(var_id),
+            Expr::Call(call) => call.arguments.iter().any(|arg| match arg {
+                nu_protocol::ast::Argument::Positional(expr)
+                | nu_protocol::ast::Argument::Named((_, _, Some(expr)))
+                | nu_protocol::ast::Argument::Unknown(expr)
+                | nu_protocol::ast::Argument::Spread(expr) => expr.contains_variable(var_id),
+                nu_protocol::ast::Argument::Named(_) => false,
+            }),
+            Expr::List(items) => items.iter().any(|item| {
+                let expr = match item {
+                    nu_protocol::ast::ListItem::Item(e)
+                    | nu_protocol::ast::ListItem::Spread(_, e) => e,
+                };
+                expr.contains_variable(var_id)
+            }),
+            Expr::Table(table) => {
+                table
+                    .columns
+                    .iter()
+                    .any(|col| col.contains_variable(var_id))
+                    || table
+                        .rows
+                        .iter()
+                        .any(|row| row.iter().any(|cell| cell.contains_variable(var_id)))
+            }
+            Expr::Record(items) => items.iter().any(|item| match item {
+                nu_protocol::ast::RecordItem::Pair(key, val) => {
+                    key.contains_variable(var_id) || val.contains_variable(var_id)
+                }
+                nu_protocol::ast::RecordItem::Spread(_, expr) => expr.contains_variable(var_id),
+            }),
+            _ => false,
         }
     }
 }

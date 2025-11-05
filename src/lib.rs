@@ -12,7 +12,7 @@ mod violation;
 pub use config::Config;
 pub use engine::LintEngine;
 use miette::Diagnostic;
-pub use output::{JsonFix, JsonFormatter, JsonOutput, JsonReplacement, JsonViolation, Summary};
+pub use output::{JsonFix, JsonOutput, JsonReplacement, JsonViolation, Summary, format_json};
 use thiserror::Error;
 pub(crate) use violation::{Fix, Replacement, RuleViolation};
 pub use violation::{Severity, Violation};

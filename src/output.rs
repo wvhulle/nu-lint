@@ -5,86 +5,73 @@ use serde::Serialize;
 
 use crate::violation::{Severity, Violation};
 
-pub(crate) trait OutputFormatter {
-    fn format(&self, violations: &[Violation], source: &str) -> String;
-}
-
-#[derive(Debug, Default)]
-pub(crate) struct TextFormatter;
-
-impl OutputFormatter for TextFormatter {
-    fn format(&self, violations: &[Violation], _source: &str) -> String {
-        if violations.is_empty() {
-            return String::from("No violations found!");
-        }
-
-        let mut output = String::new();
-
-        // Show summary at the beginning
-        let summary = Summary::from_violations(violations);
-        let _ = writeln!(output, "Found {}\n", summary.format_compact());
-
-        for (idx, violation) in violations.iter().enumerate() {
-            let source_code = violation
-                .file
-                .as_ref()
-                .and_then(|path| std::fs::read_to_string(path.as_ref()).ok())
-                .unwrap_or_default();
-
-            let (line, column) = calculate_line_column(&source_code, violation.span.start);
-            let (end_line, end_column) = calculate_line_column(&source_code, violation.span.end);
-
-            // Print a clear header with file path and rule name
-            if let Some(file_path) = &violation.file {
-                let _ = writeln!(output, "\n\x1b[1;4m{file_path}:{line}:{column}\x1b[0m");
-            }
-
-            let diagnostic = ViolationDiagnostic {
-                violation: violation.clone(),
-                source_code: source_code.clone(),
-                line,
-                column,
-                end_line,
-                end_column,
-            };
-
-            let report = Report::new(diagnostic);
-            let _ = writeln!(output, "{report:?}");
-
-            // Show fix information if available
-            if let Some(fix) = &violation.fix {
-                format_fix_info(&mut output, fix, &source_code);
-            }
-
-            // Add a horizontal ruler between errors (but not after the last one)
-            if idx < violations.len() - 1 {
-                let _ = writeln!(output, "\n{}", "─".repeat(80));
-            }
-        }
-
-        let summary = Summary::from_violations(violations);
-        let _ = writeln!(output, "\n{}", summary.format_compact());
-
-        output
+/// Format violations as human-readable text
+pub(crate) fn format_text(violations: &[Violation]) -> String {
+    if violations.is_empty() {
+        return String::from("No violations found!");
     }
-}
 
-#[derive(Debug, Default)]
-pub struct JsonFormatter;
+    let mut output = String::new();
 
-impl OutputFormatter for JsonFormatter {
-    fn format(&self, violations: &[Violation], _source: &str) -> String {
-        let json_violations: Vec<JsonViolation> =
-            violations.iter().map(violation_to_json).collect();
+    // Show summary at the beginning
+    let summary = Summary::from_violations(violations);
+    let _ = writeln!(output, "Found {}\n", summary.format_compact());
 
-        let summary = Summary::from_violations(violations);
-        let output = JsonOutput {
-            violations: json_violations,
-            summary,
+    for (idx, violation) in violations.iter().enumerate() {
+        let source_code = violation
+            .file
+            .as_ref()
+            .and_then(|path| std::fs::read_to_string(path.as_ref()).ok())
+            .unwrap_or_default();
+
+        let (line, column) = calculate_line_column(&source_code, violation.span.start);
+        let (end_line, end_column) = calculate_line_column(&source_code, violation.span.end);
+
+        // Print a clear header with file path and rule name
+        if let Some(file_path) = &violation.file {
+            let _ = writeln!(output, "\n\x1b[1;4m{file_path}:{line}:{column}\x1b[0m");
+        }
+
+        let diagnostic = ViolationDiagnostic {
+            violation: violation.clone(),
+            source_code: source_code.clone(),
+            line,
+            column,
+            end_line,
+            end_column,
         };
 
-        serde_json::to_string_pretty(&output).unwrap_or_default()
+        let report = Report::new(diagnostic);
+        let _ = writeln!(output, "{report:?}");
+
+        // Show fix information if available
+        if let Some(fix) = &violation.fix {
+            format_fix_info(&mut output, fix, &source_code);
+        }
+
+        // Add a horizontal ruler between errors (but not after the last one)
+        if idx < violations.len() - 1 {
+            let _ = writeln!(output, "\n{}", "─".repeat(80));
+        }
     }
+
+    let summary = Summary::from_violations(violations);
+    let _ = writeln!(output, "\n{}", summary.format_compact());
+
+    output
+}
+
+/// Format violations as JSON
+pub fn format_json(violations: &[Violation]) -> String {
+    let json_violations: Vec<JsonViolation> = violations.iter().map(violation_to_json).collect();
+
+    let summary = Summary::from_violations(violations);
+    let output = JsonOutput {
+        violations: json_violations,
+        summary,
+    };
+
+    serde_json::to_string_pretty(&output).unwrap_or_default()
 }
 
 /// Calculate line and column number from byte offset in source

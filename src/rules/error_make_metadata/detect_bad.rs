@@ -1,5 +1,4 @@
 use super::rule;
-
 use crate::context::LintContext;
 
 #[test]

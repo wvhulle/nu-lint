@@ -4,11 +4,7 @@ use clap::{Parser, Subcommand};
 use ignore::WalkBuilder;
 use rayon::prelude::*;
 
-use crate::{
-    output::{OutputFormatter, TextFormatter},
-    violation::Violation,
-    Config, JsonFormatter, LintEngine,
-};
+use crate::{Config, LintEngine, output, violation::Violation};
 
 #[derive(Parser)]
 #[command(name = "nu-lint")]
@@ -200,16 +196,10 @@ fn lint_files_sequential(engine: &LintEngine, files: &[PathBuf]) -> (Vec<Violati
 }
 
 /// Format and output linting results
-pub fn output_results(violations: &[Violation], files: &[PathBuf], format: Option<Format>) {
-    let source = if files.len() == 1 {
-        std::fs::read_to_string(&files[0]).unwrap_or_default()
-    } else {
-        String::new()
-    };
-
+pub fn output_results(violations: &[Violation], _files: &[PathBuf], format: Option<Format>) {
     let output = match format.unwrap_or(Format::Text) {
-        Format::Text | Format::Github => TextFormatter.format(violations, &source),
-        Format::Json => JsonFormatter.format(violations, &source),
+        Format::Text | Format::Github => output::format_text(violations),
+        Format::Json => output::format_json(violations),
     };
     println!("{output}");
 }

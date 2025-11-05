@@ -2,6 +2,7 @@ pub mod check_complete_exit_code;
 pub mod collapsible_if;
 pub mod dangerous_file_operations;
 pub mod descriptive_error_messages;
+pub mod error_make_metadata;
 pub mod error_suppression_over_ignore;
 pub mod escape_string_interpolation_operators;
 pub mod exit_only_in_main;
@@ -83,6 +84,7 @@ impl RuleRegistry {
         registry.register(completion_function_naming::rule());
         registry.register(dangerous_file_operations::rule());
         registry.register(descriptive_error_messages::rule());
+        registry.register(error_make_metadata::rule());
         registry.register(error_suppression_over_ignore::rule());
         registry.register(escape_string_interpolation_operators::rule());
         registry.register(exit_only_in_main::rule());

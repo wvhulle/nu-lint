@@ -3,10 +3,10 @@ use nu_protocol::{
     ast::{Call, Expr, Expression},
 };
 
-use super::{BlockExt, ExpressionExt, SpanExt};
-use crate::context::LintContext;
+use super::{block::BlockExt, expression::ExpressionExt};
+use crate::{ast::span::SpanExt, context::LintContext};
 
-pub(crate) trait CallExt {
+pub trait CallExt {
     fn get_call_name(&self, context: &LintContext) -> String;
     fn is_call_to_command(&self, command_name: &str, context: &LintContext) -> bool;
     fn get_first_positional_arg(&self) -> Option<&Expression>;

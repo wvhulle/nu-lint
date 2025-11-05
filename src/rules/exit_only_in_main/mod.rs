@@ -1,7 +1,7 @@
 use nu_protocol::ast::Expr;
 
 use crate::{
-    ast::{CallExt, SpanExt},
+    ast::{call::CallExt, span::SpanExt},
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -51,7 +51,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     })
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "exit_only_in_main",
         RuleCategory::CodeQuality,

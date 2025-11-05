@@ -4,7 +4,7 @@ use clap::Parser;
 use nu_lint::{
     LintEngine,
     cli::{Cli, collect_files_to_lint, handle_command, lint_files, output_results},
-    config::load_config,
+    config::Config,
 };
 
 fn main() {
@@ -31,7 +31,7 @@ fn main() {
             }
         }
     };
-    let config = load_config(cli.config.as_ref());
+    let config = Config::load(cli.config.as_ref());
 
     if let Some(command) = cli.command {
         handle_command(command, &config);

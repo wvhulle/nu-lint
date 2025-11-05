@@ -18,7 +18,7 @@ pub(crate) use violation::{Fix, Replacement, RuleViolation};
 pub use violation::{Severity, Violation};
 
 #[derive(Error, Debug, Diagnostic)]
-pub enum LintError {
+pub(crate) enum LintError {
     #[error("Failed to read file: {0}")]
     #[diagnostic(code(nu_lint::io_error))]
     IoError(#[from] std::io::Error),

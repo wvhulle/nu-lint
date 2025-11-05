@@ -208,7 +208,7 @@ fn list_rules(config: &Config) {
     let engine = LintEngine::new(config.clone());
     println!("Available rules:\n");
 
-    for rule in engine.registry().all_rules() {
+    for rule in engine.registry.all_rules() {
         println!(
             "{:<8} [{:<12}] {} - {}",
             rule.id, rule.category, rule.severity, rule.description
@@ -219,7 +219,7 @@ fn list_rules(config: &Config) {
 fn explain_rule(config: &Config, rule_id: &str) {
     let engine = LintEngine::new(config.clone());
 
-    if let Some(rule) = engine.registry().get_rule(rule_id) {
+    if let Some(rule) = engine.registry.get_rule(rule_id) {
         println!("Rule: {}", rule.id);
         println!("Category: {}", rule.category);
         println!("Severity: {}", rule.severity);

@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use nu_protocol::ast::Expr;
 
 use crate::{
-    ast::{BlockExt, CallExt, ExpressionExt},
+    ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -307,7 +307,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     create_violations(&empty_list_vars_map, &direct_copy_set)
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "prefer_direct_use",
         RuleCategory::CodeQuality,

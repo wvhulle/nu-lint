@@ -4,7 +4,7 @@ use nu_protocol::{
 };
 
 use crate::{
-    ast::CallExt,
+    ast::call::CallExt,
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -145,11 +145,7 @@ fn extract_dangerous_command(
     match &expr.expr {
         Expr::ExternalCall(head, args) => {
             let cmd_name = &context.source[head.span.start..head.span.end];
-            if is_dangerous_command(cmd_name) {
-                Some((expr.span, cmd_name.to_string(), args.to_vec()))
-            } else {
-                None
-            }
+            is_dangerous_command(cmd_name).then(|| (expr.span, cmd_name.to_string(), args.to_vec()))
         }
         Expr::Call(call) => {
             let decl_name = call.get_call_name(context);
@@ -271,7 +267,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     violations
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "dangerous_file_operations",
         RuleCategory::ErrorHandling,

@@ -320,7 +320,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     )
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "prefer_builtin_http",
         RuleCategory::Idioms,

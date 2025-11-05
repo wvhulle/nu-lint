@@ -3,10 +3,12 @@ use nu_protocol::{
     ast::{Expr, Pipeline},
 };
 
-use super::{CallExt, SpanExt};
-use crate::context::LintContext;
+use crate::{
+    ast::{call::CallExt, span::SpanExt},
+    context::LintContext,
+};
 
-pub(crate) trait PipelineExt {
+pub trait PipelineExt {
     fn contains_call_to(&self, command_name: &str, context: &LintContext) -> bool;
     fn contains_indexed_access(&self, context: &LintContext) -> bool;
     fn variable_is_used(&self, var_id: VarId) -> bool;

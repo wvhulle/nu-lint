@@ -1,7 +1,7 @@
 use nu_protocol::ast::{Assignment, Comparison, Expr, Expression, Math, Operator};
 
 use crate::{
-    ast::{CallExt, ExpressionExt},
+    ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -159,17 +159,14 @@ fn check_while_loop_for_counter(
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {
     // Find all `mut counter = 0` declarations
-    let counters: Vec<(String, nu_protocol::Span)> = context
+
+    // Find while loops that use these counters
+    context
         .ast
         .pipelines
         .iter()
         .flat_map(|pipeline| &pipeline.elements)
         .filter_map(|element| extract_counter_from_mut(&element.expr, context))
-        .collect();
-
-    // Find while loops that use these counters
-    counters
-        .into_iter()
         .flat_map(|(counter_name, counter_span)| {
             context.collect_rule_violations(|expr, ctx| {
                 let Expr::Call(call) = &expr.expr else {
@@ -186,7 +183,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
         .collect()
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "prefer_range_iteration",
         RuleCategory::Idioms,

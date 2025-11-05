@@ -4,7 +4,7 @@ use nu_protocol::{
 };
 
 use crate::{
-    ast::CallExt,
+    ast::call::CallExt,
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -256,7 +256,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     violations
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "pipeline_handle_errors",
         RuleCategory::ErrorHandling,

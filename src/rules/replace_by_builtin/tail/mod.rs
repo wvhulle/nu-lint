@@ -26,13 +26,16 @@ fn build_fix(
 ) -> Fix {
     let args_text = extract_external_args(args, context);
 
-    let replacement =
-        if let Some(num_arg) = args_text.iter().find(|a| a.starts_with('-') && a.len() > 1) {
-            let num = &num_arg[1..];
-            format!("last {num}")
-        } else {
-            "last 10".to_string()
-        };
+    let replacement = args_text
+        .iter()
+        .find(|a| a.starts_with('-') && a.len() > 1)
+        .map_or_else(
+            || "last 10".to_string(),
+            |num_arg| {
+                let num = &num_arg[1..];
+                format!("last {num}")
+            },
+        );
 
     let description = "Use 'last' with cleaner syntax: 'last N' instead of 'tail -N'";
 

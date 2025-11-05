@@ -70,11 +70,7 @@ fn test_collect_files_empty_directory() {
         .filter_map(|entry| {
             let entry = entry.ok()?;
             let path = entry.path();
-            if path.extension()?.to_str()? == "nu" {
-                Some(path)
-            } else {
-                None
-            }
+            (path.extension()?.to_str()? == "nu").then_some(path)
         })
         .collect();
     assert!(entries.is_empty());

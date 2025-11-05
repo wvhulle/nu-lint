@@ -4,14 +4,14 @@ use crate::{
     violation::{RuleViolation, Severity},
 };
 
-fn check(_context: &LintContext) -> Vec<RuleViolation> {
+const fn check(_context: &LintContext) -> Vec<RuleViolation> {
     // This rule doesn't perform traditional checking.
     // Parse errors are extracted directly from the StateWorkingSet
     // and converted to violations in the engine.
     vec![]
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "nu_parse_error",
         RuleCategory::CodeQuality,

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use nu_protocol::ast::Expr;
+use nu_protocol::ast::{Expr, Expression, ExternalArgument};
 
 use crate::{
     context::LintContext,
@@ -9,7 +9,7 @@ use crate::{
 
 /// Extract external command arguments as strings
 #[must_use]
-pub(crate) fn extract_external_args(
+pub fn extract_external_args(
     args: &[nu_protocol::ast::ExternalArgument],
     context: &LintContext,
 ) -> Vec<String> {
@@ -26,14 +26,14 @@ pub(crate) fn extract_external_args(
 }
 
 /// Metadata about a builtin alternative to an external command
-pub(crate) struct BuiltinAlternative {
+pub struct BuiltinAlternative {
     pub command: &'static str,
     pub note: Option<&'static str>,
 }
 
 impl BuiltinAlternative {
     #[must_use]
-    pub fn simple(command: &'static str) -> Self {
+    pub const fn simple(command: &'static str) -> Self {
         Self {
             command,
             note: None,
@@ -41,7 +41,7 @@ impl BuiltinAlternative {
     }
 
     #[must_use]
-    pub fn with_note(command: &'static str, note: &'static str) -> Self {
+    pub const fn with_note(command: &'static str, note: &'static str) -> Self {
         Self {
             command,
             note: Some(note),
@@ -50,7 +50,7 @@ impl BuiltinAlternative {
 }
 
 /// Type alias for a function that builds a fix for a specific external command
-pub(crate) type FixBuilder = fn(
+pub type FixBuilder = fn(
     cmd_text: &str,
     alternative: &BuiltinAlternative,
     args: &[nu_protocol::ast::ExternalArgument],
@@ -60,7 +60,7 @@ pub(crate) type FixBuilder = fn(
 
 /// Detect external commands with builtin alternatives
 #[must_use]
-pub(crate) fn detect_external_commands<S: ::std::hash::BuildHasher>(
+pub fn detect_external_commands<S: ::std::hash::BuildHasher>(
     context: &LintContext,
     rule_id: &'static str,
     alternatives: &HashMap<&'static str, BuiltinAlternative, S>,
@@ -71,38 +71,54 @@ pub(crate) fn detect_external_commands<S: ::std::hash::BuildHasher>(
             let cmd_text = &ctx.source[head.span.start..head.span.end];
 
             if let Some(alternative) = alternatives.get(cmd_text) {
-                let message = format!(
-                    "Consider using Nushell's built-in '{}' instead of external '^{}'",
-                    alternative.command, cmd_text
-                );
-
-                let suggestion = match alternative.note {
-                    Some(note) => format!(
-                        "Replace '^{}' with built-in command: {}\nBuilt-in commands are more \
-                         portable, faster, and provide better error handling.\n\nNote: {note}",
-                        cmd_text, alternative.command
-                    ),
-                    None => format!(
-                        "Replace '^{}' with built-in command: {}\nBuilt-in commands are more \
-                         portable, faster, and provide better error handling.",
-                        cmd_text, alternative.command
-                    ),
-                };
-
-                let fix =
-                    fix_builder.map(|builder| builder(cmd_text, alternative, args, expr.span, ctx));
-
-                let violation = RuleViolation::new_dynamic(rule_id, message, expr.span)
-                    .with_suggestion_dynamic(suggestion);
-
-                let violation = match fix {
-                    Some(f) => violation.with_fix(f),
-                    None => violation,
-                };
+                let violation =
+                    create_violation(rule_id, fix_builder, expr, ctx, cmd_text, alternative, args);
 
                 return vec![violation];
             }
         }
         vec![]
     })
+}
+
+fn create_violation(
+    rule_id: &'static str,
+    fix_builder: Option<FixBuilder>,
+    expr: &Expression,
+    ctx: &LintContext<'_>,
+    cmd_text: &str,
+    alternative: &BuiltinAlternative,
+    args: &[ExternalArgument],
+) -> RuleViolation {
+    let message = format!(
+        "Consider using Nushell's built-in '{}' instead of external '^{}'",
+        alternative.command, cmd_text
+    );
+
+    let suggestion = alternative.note.map_or_else(
+        || {
+            format!(
+                "Replace '^{}' with built-in command: {}\nBuilt-in commands are more \
+                         portable, faster, and provide better error handling.",
+                cmd_text, alternative.command
+            )
+        },
+        |note| {
+            format!(
+                "Replace '^{}' with built-in command: {}\nBuilt-in commands are more \
+                         portable, faster, and provide better error handling.\n\nNote: {note}",
+                cmd_text, alternative.command
+            )
+        },
+    );
+
+    let fix = fix_builder.map(|builder| builder(cmd_text, alternative, args, expr.span, ctx));
+
+    let violation =
+        RuleViolation::new_dynamic(rule_id, message, expr.span).with_suggestion_dynamic(suggestion);
+
+    match fix {
+        Some(f) => violation.with_fix(f),
+        None => violation,
+    }
 }

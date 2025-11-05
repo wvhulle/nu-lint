@@ -1,7 +1,7 @@
 use nu_protocol::ast::Expr;
 
 use crate::{
-    ast::{BlockExt, CallExt, ExpressionExt},
+    ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -31,18 +31,14 @@ fn contains_loop_var_append(
         Expr::FullCellPath(cell_path) => {
             contains_loop_var_append(&cell_path.head, context, loop_var_name)
         }
-        _ => {
-            if let Some(block_id) = expr.extract_block_id() {
-                let block = context.working_set.get_block(block_id);
-                block
-                    .pipelines
-                    .iter()
-                    .flat_map(|p| &p.elements)
-                    .any(|elem| contains_loop_var_append(&elem.expr, context, loop_var_name))
-            } else {
-                false
-            }
-        }
+        _ => expr.extract_block_id().is_some_and(|block_id| {
+            let block = context.working_set.get_block(block_id);
+            block
+                .pipelines
+                .iter()
+                .flat_map(|p| &p.elements)
+                .any(|elem| contains_loop_var_append(&elem.expr, context, loop_var_name))
+        }),
     }
 }
 
@@ -374,7 +370,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     violations
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "prefer_where_over_for_if",
         RuleCategory::Idioms,

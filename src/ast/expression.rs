@@ -3,10 +3,11 @@ use nu_protocol::{
     ast::{Expr, Expression, Operator, PathMember},
 };
 
-use super::{BlockExt, SpanExt};
 use crate::context::LintContext;
 
-pub(crate) trait ExpressionExt {
+use super::{block::BlockExt, span::SpanExt};
+
+pub trait ExpressionExt {
     fn refers_to_same_variable(&self, other: &Expression, context: &LintContext) -> bool;
     fn extract_variable_name(&self, context: &LintContext) -> Option<String>;
     fn refers_to_variable(&self, context: &LintContext, var_name: &str) -> bool;
@@ -52,11 +53,8 @@ impl ExpressionExt for Expression {
     }
 
     fn refers_to_variable(&self, context: &LintContext, var_name: &str) -> bool {
-        if let Some(name) = self.extract_variable_name(context) {
-            name == var_name
-        } else {
-            false
-        }
+        self.extract_variable_name(context)
+            .is_some_and(|name| name == var_name)
     }
 
     fn is_assignment(&self) -> bool {

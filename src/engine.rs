@@ -7,7 +7,11 @@ use nu_protocol::{
 };
 
 use crate::{
-    LintError, config::Config, context::LintContext, rules::RuleRegistry, violation::Violation,
+    LintError, RuleViolation, Severity,
+    config::{Config, RuleSeverity},
+    context::LintContext,
+    rules::RuleRegistry,
+    violation::Violation,
 };
 
 /// Parse Nushell source code into an AST and return both the Block and
@@ -20,7 +24,7 @@ fn parse_source<'a>(engine_state: &'a EngineState, source: &[u8]) -> (Block, Sta
 }
 
 pub struct LintEngine {
-    registry: RuleRegistry,
+    pub registry: RuleRegistry,
     config: Config,
     engine_state: &'static EngineState,
 }
@@ -63,7 +67,7 @@ impl LintEngine {
     /// # Errors
     ///
     /// Returns an error if the file cannot be read.
-    pub fn lint_file(&self, path: &Path) -> Result<Vec<Violation>, LintError> {
+    pub(crate) fn lint_file(&self, path: &Path) -> Result<Vec<Violation>, LintError> {
         let source = std::fs::read_to_string(path)?;
         Ok(self.lint_source(&source, Some(path)))
     }
@@ -138,20 +142,14 @@ impl LintEngine {
                     parse_error.span().end,
                     parse_error.to_string(),
                 );
-                if seen.insert(key.clone()) {
-                    use crate::violation::RuleViolation;
-
-                    Some(
-                        RuleViolation::new_dynamic(
-                            "nu_parse_error",
-                            parse_error.to_string(),
-                            parse_error.span(),
-                        )
-                        .into_violation(rule_severity),
+                seen.insert(key).then(|| {
+                    RuleViolation::new_dynamic(
+                        "nu_parse_error",
+                        parse_error.to_string(),
+                        parse_error.span(),
                     )
-                } else {
-                    None
-                }
+                    .into_violation(rule_severity)
+                })
             })
             .collect()
     }
@@ -186,20 +184,15 @@ impl LintEngine {
             }
 
             // Check if rule severity meets minimum threshold
-            match min_severity_threshold {
-                Some(min_threshold) => rule_severity >= min_threshold,
-                None => true, // min_severity = "info" means all rules are eligible
-            }
+            min_severity_threshold.is_none_or(|min_threshold| rule_severity >= min_threshold)
         })
     }
 
     /// Get the effective severity for a rule (config override or rule default)
     fn get_effective_rule_severity(&self, rule: &crate::rule::Rule) -> crate::violation::Severity {
-        if let Some(config_severity) = self.config.rule_severity(rule.id) {
-            config_severity
-        } else {
-            rule.severity
-        }
+        self.config
+            .rule_severity(rule.id)
+            .map_or(rule.severity, |config_severity| config_severity)
     }
 
     /// Get the minimum severity threshold from `min_severity` config
@@ -209,11 +202,10 @@ impl LintEngine {
     /// - "info": Show info, warnings, and errors (minimum threshold = Info,
     ///   i.e., all)
     /// - "off": Show nothing
-    fn get_minimum_severity_threshold(&self) -> Option<crate::violation::Severity> {
-        use crate::config::RuleSeverity;
+    const fn get_minimum_severity_threshold(&self) -> Option<Severity> {
         match self.config.general.min_severity {
-            RuleSeverity::Error => Some(crate::violation::Severity::Error), // Show only errors
-            RuleSeverity::Warning => Some(crate::violation::Severity::Warning), // Show warnings and
+            RuleSeverity::Error => Some(Severity::Error), // Show only errors
+            RuleSeverity::Warning => Some(Severity::Warning), // Show warnings and
             // above
             RuleSeverity::Info | RuleSeverity::Off => None, // Show all (no filtering)
         }
@@ -238,10 +230,5 @@ impl LintEngine {
                 .cmp(&b.span.start)
                 .then(a.severity.cmp(&b.severity))
         });
-    }
-
-    #[must_use]
-    pub fn registry(&self) -> &RuleRegistry {
-        &self.registry
     }
 }

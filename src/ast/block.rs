@@ -1,14 +1,15 @@
 use std::collections::{HashMap, HashSet};
 
+use crate::ast::expression::ExpressionExt;
+use crate::context::LintContext;
 use nu_protocol::{
     BlockId, Span, VarId,
     ast::{Call, Expr, PipelineElement, Traverse},
 };
 
-use super::{CallExt, PipelineExt};
-use crate::context::LintContext;
+use super::{call::CallExt, pipeline::PipelineExt};
 
-pub(crate) trait BlockExt {
+pub trait BlockExt {
     fn has_side_effects(&self, context: &LintContext) -> bool;
     fn is_empty_list_block(&self, context: &LintContext) -> bool;
     #[must_use]
@@ -31,16 +32,12 @@ pub(crate) trait BlockExt {
 
 impl BlockExt for BlockId {
     fn has_side_effects(&self, context: &LintContext) -> bool {
-        use super::ExpressionExt;
-
         self.all_elements(context)
             .iter()
             .any(|elem| !elem.expr.is_likely_pure())
     }
 
     fn is_empty_list_block(&self, context: &LintContext) -> bool {
-        use super::ExpressionExt;
-
         let block = context.working_set.get_block(*self);
 
         block
@@ -71,8 +68,6 @@ impl BlockExt for BlockId {
     }
 
     fn contains_variables(&self, context: &LintContext) -> bool {
-        use super::ExpressionExt;
-
         self.any_element(context, |elem| elem.expr.contains_variables(context))
     }
 
@@ -99,8 +94,6 @@ impl BlockExt for BlockId {
     }
 
     fn contains_external_call_with_variable(&self, var_id: VarId, context: &LintContext) -> bool {
-        use super::ExpressionExt;
-
         let block = context.working_set.get_block(*self);
         let mut results = Vec::new();
 

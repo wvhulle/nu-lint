@@ -1,7 +1,7 @@
 use nu_protocol::ast::{Expr, Expression};
 
 use crate::{
-    ast::{CallExt, ExpressionExt},
+    ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -22,15 +22,10 @@ fn extract_string_literal(expr: &Expression, context: &LintContext) -> Option<St
     match &expr.expr {
         Expr::String(s) | Expr::RawString(s) => Some(s.clone()),
         _ => {
-            // Fallback to span text for other string representations
             let text = expr.span_text(context);
-            if (text.starts_with('"') && text.ends_with('"'))
-                || (text.starts_with('\'') && text.ends_with('\''))
-            {
-                Some(text[1..text.len() - 1].to_string())
-            } else {
-                None
-            }
+            ((text.starts_with('"') && text.ends_with('"'))
+                || (text.starts_with('\'') && text.ends_with('\'')))
+            .then(|| text[1..text.len() - 1].to_string())
         }
     }
 }
@@ -100,18 +95,14 @@ fn check_error_make_call(
         return None;
     }
 
-    // Check the first argument which should be a record
     let first_arg = call.get_first_positional_arg()?;
 
     match &first_arg.expr {
         Expr::Record(record) => check_record_for_generic_msg(record, context),
-        Expr::FullCellPath(cell_path) => {
-            // Handle case where record is wrapped in FullCellPath
-            match &cell_path.head.expr {
-                Expr::Record(record) => check_record_for_generic_msg(record, context),
-                _ => None,
-            }
-        }
+        Expr::FullCellPath(cell_path) => match &cell_path.head.expr {
+            Expr::Record(record) => check_record_for_generic_msg(record, context),
+            _ => None,
+        },
         _ => None,
     }
 }
@@ -126,7 +117,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     })
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "descriptive_error_messages",
         RuleCategory::ErrorHandling,

@@ -1,7 +1,7 @@
 use nu_protocol::{Category, SyntaxShape, VarId, ast::Expr};
 
 use crate::{
-    ast::{CallExt, ExpressionExt, SpanExt},
+    ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{self, RuleViolation, Severity},
@@ -96,7 +96,7 @@ struct ParameterUsageAnalysis {
 }
 
 impl ParameterUsageAnalysis {
-    fn suggests_data_operations(&self) -> bool {
+    const fn suggests_data_operations(&self) -> bool {
         let has_data_usage = self.used_as_pipeline_input
             || self.used_with_data_commands
             || self.used_for_data_access;
@@ -271,12 +271,13 @@ fn extract_function_body(
             let trimmed = body_text.trim();
 
             Some(
-                if let Some(stripped) = trimmed.strip_prefix('{').and_then(|s| s.strip_suffix('}'))
-                {
-                    stripped.trim().to_string()
-                } else {
-                    trimmed.to_string()
-                },
+                trimmed
+                    .strip_prefix('{')
+                    .and_then(|s| s.strip_suffix('}'))
+                    .map_or_else(
+                        || trimmed.to_string(),
+                        |stripped| stripped.trim().to_string(),
+                    ),
             )
         })
 }
@@ -384,8 +385,14 @@ fn create_violation(
     context: &LintContext,
 ) -> violation::RuleViolation {
     // Generate a specific suggestion based on the function body
-    let suggestion =
-        if let Some(function_body) = extract_function_body(&signature.name, &param.name, context) {
+    let suggestion = extract_function_body(&signature.name, &param.name, context).map_or_else(
+        || {
+            format!(
+                "Remove the '{}' parameter and use pipeline input. Change to: def {} [] {{ ... }}",
+                param.name, signature.name
+            )
+        },
+        |function_body| {
             let param_var = format!("${}", param.name);
 
             // Check if the parameter is used at the start of a pipeline (can omit $in)
@@ -405,12 +412,8 @@ fn create_violation(
                 suggested_body.trim(),
                 param.name
             )
-        } else {
-            format!(
-                "Remove the '{}' parameter and use pipeline input. Change to: def {} [] {{ ... }}",
-                param.name, signature.name
-            )
-        };
+        },
+    );
 
     RuleViolation::new_dynamic(
         "prefer_pipeline_input",
@@ -437,7 +440,7 @@ fn analyze_parameter_usage_in_block(
     analyze_pipelines(&block.pipelines, param_var_id, context)
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "prefer_pipeline_input",
         RuleCategory::Idioms,

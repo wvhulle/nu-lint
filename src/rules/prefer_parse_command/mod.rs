@@ -1,7 +1,7 @@
 use nu_protocol::{Span, VarId, ast::Expr};
 
 use crate::{
-    ast::{BlockExt, CallExt, PipelineExt, SpanExt},
+    ast::{block::BlockExt, call::CallExt, pipeline::PipelineExt, span::SpanExt},
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -40,24 +40,21 @@ fn check_pipeline_for_split_get(
             return None;
         };
 
-        if is_split_row_call(current_call, context)
+        (is_split_row_call(current_call, context)
             && is_indexed_access_call(next_call, context)
-            && has_index_argument(next_call, context)
-        {
+            && has_index_argument(next_call, context))
+        .then(|| {
             let span = Span::new(current.expr.span.start, next.expr.span.end);
-            Some(
-                RuleViolation::new_static(
-                    "prefer_parse_command",
-                    "Manual string splitting with indexed access - consider using 'parse'",
-                    span,
-                )
-                .with_suggestion_static(
-                    "Use 'parse \"pattern {field1} {field2}\"' for structured text extraction",
-                ),
+
+            RuleViolation::new_static(
+                "prefer_parse_command",
+                "Manual string splitting with indexed access - consider using 'parse'",
+                span,
             )
-        } else {
-            None
-        }
+            .with_suggestion_static(
+                "Use 'parse \"pattern {field1} {field2}\"' for structured text extraction",
+            )
+        })
     })
 }
 
@@ -93,12 +90,10 @@ fn extract_split_row_assignment(
         _ => false,
     };
 
-    if is_split_row_assignment {
+    is_split_row_assignment.then(|| {
         log::debug!("Variable {var_name} assigned from split row");
-        Some((var_id, var_name, expr.span))
-    } else {
-        None
-    }
+        (var_id, var_name, expr.span)
+    })
 }
 
 fn is_var_used_in_indexed_access(
@@ -288,7 +283,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     violations
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "prefer_parse_command",
         RuleCategory::Idioms,

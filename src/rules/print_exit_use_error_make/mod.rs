@@ -1,7 +1,7 @@
 use nu_protocol::ast::{Expr, PipelineElement};
 
 use crate::{
-    ast::{CallExt, ExpressionExt, SpanExt},
+    ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -196,7 +196,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
         .collect()
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "print_exit_use_error_make",
         RuleCategory::ErrorHandling,

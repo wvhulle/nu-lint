@@ -116,12 +116,26 @@ impl Config {
     ///
     /// Returns an error if the file cannot be read or if the TOML content is
     /// invalid.
-    pub fn load_from_file(path: &Path) -> Result<Self, crate::LintError> {
+    pub(crate) fn load_from_file(path: &Path) -> Result<Self, crate::LintError> {
         let content = std::fs::read_to_string(path)?;
         Ok(toml::from_str(&content)?)
     }
 
-    pub fn rule_severity(&self, rule_id: &str) -> Option<Severity> {
+    /// Load configuration from file or use defaults
+    #[must_use]
+    pub fn load(config_path: Option<&PathBuf>) -> Self {
+        config_path
+            .cloned()
+            .or_else(find_config_file)
+            .map_or_else(Self::default, |path| {
+                Self::load_from_file(&path).unwrap_or_else(|e| {
+                    eprintln!("Error loading config from {}: {e}", path.display());
+                    process::exit(2);
+                })
+            })
+    }
+
+    pub(crate) fn rule_severity(&self, rule_id: &str) -> Option<Severity> {
         self.rules.get(rule_id).copied().and_then(Into::into)
     }
 }
@@ -144,18 +158,4 @@ pub fn find_config_file() -> Option<PathBuf> {
     }
 
     None
-}
-
-/// Load configuration from file or use defaults
-#[must_use]
-pub fn load_config(config_path: Option<&PathBuf>) -> Config {
-    config_path
-        .cloned()
-        .or_else(find_config_file)
-        .map_or_else(Config::default, |path| {
-            Config::load_from_file(&path).unwrap_or_else(|e| {
-                eprintln!("Error loading config from {}: {e}", path.display());
-                process::exit(2);
-            })
-        })
 }

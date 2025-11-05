@@ -108,13 +108,10 @@ fn test_multiple_parse_errors() {
     let code = "let x = (\nlet y = [";
     let violations = engine.lint_source(code, None);
 
-    let parse_errors: Vec<_> = violations
-        .iter()
-        .filter(|v| v.rule_id.as_ref() == "nu_parse_error")
-        .collect();
-
     assert!(
-        !parse_errors.is_empty(),
+        violations
+            .iter()
+            .any(|v| v.rule_id.as_ref() == "nu_parse_error"),
         "Expected at least one parse error"
     );
 }

@@ -13,7 +13,7 @@ struct PipeSpacingVisitor<'a> {
 }
 
 impl<'a> PipeSpacingVisitor<'a> {
-    fn new(source: &'a str) -> Self {
+    const fn new(source: &'a str) -> Self {
         Self {
             source,
             violations: Vec::new(),
@@ -96,7 +96,7 @@ impl<'a> PipeSpacingVisitor<'a> {
         }
     }
 
-    fn get_pipe_spacing_message(
+    const fn get_pipe_spacing_message(
         has_proper_space_before: bool,
         has_proper_space_after: bool,
         before_pipe: &str,
@@ -200,7 +200,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     violations
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "pipe_spacing",
         RuleCategory::Formatting,

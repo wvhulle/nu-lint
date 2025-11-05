@@ -125,7 +125,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     })
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "prefer_is_not_empty",
         RuleCategory::Idioms,

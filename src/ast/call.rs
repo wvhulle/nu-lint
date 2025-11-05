@@ -6,7 +6,7 @@ use nu_protocol::{
 use super::{BlockExt, ExpressionExt, SpanExt};
 use crate::context::LintContext;
 
-pub trait CallExt {
+pub(crate) trait CallExt {
     fn get_call_name(&self, context: &LintContext) -> String;
     fn is_call_to_command(&self, command_name: &str, context: &LintContext) -> bool;
     fn get_first_positional_arg(&self) -> Option<&Expression>;
@@ -28,6 +28,11 @@ pub trait CallExt {
     fn has_no_else_branch(&self) -> bool;
     fn get_nested_single_if<'a>(&self, context: &'a LintContext<'a>) -> Option<&'a Call>;
     fn generate_collapsed_if(&self, context: &LintContext) -> Option<String>;
+    fn uses_variable(&self, var_id: nu_protocol::VarId) -> bool;
+    fn is_filesystem_command(&self, context: &LintContext) -> bool;
+    fn extract_print_message(&self, context: &LintContext) -> Option<String>;
+    fn extract_exit_code(&self) -> Option<i64>;
+    fn has_named_flag(&self, flag_name: &str) -> bool;
 }
 
 impl CallExt for Call {
@@ -44,11 +49,7 @@ impl CallExt for Call {
     }
 
     fn get_first_positional_arg(&self) -> Option<&Expression> {
-        self.arguments.first().and_then(|arg| match arg {
-            nu_protocol::ast::Argument::Positional(expr)
-            | nu_protocol::ast::Argument::Unknown(expr) => Some(expr),
-            _ => None,
-        })
+        self.get_positional_arg(0)
     }
 
     fn get_positional_arg(&self, index: usize) -> Option<&Expression> {
@@ -155,5 +156,44 @@ impl CallExt for Call {
         let body = inner_body.span_text(context).trim();
 
         Some(format!("if {outer_cond} and {inner_cond} {body}"))
+    }
+
+    fn uses_variable(&self, var_id: nu_protocol::VarId) -> bool {
+        self.arguments.iter().any(|arg| match arg {
+            nu_protocol::ast::Argument::Positional(expr)
+            | nu_protocol::ast::Argument::Unknown(expr)
+            | nu_protocol::ast::Argument::Named((_, _, Some(expr))) => expr.matches_var(var_id),
+            _ => false,
+        })
+    }
+
+    fn is_filesystem_command(&self, context: &LintContext) -> bool {
+        use nu_protocol::Category;
+
+        let decl = context.working_set.get_decl(self.decl_id);
+        let signature = decl.signature();
+        matches!(signature.category, Category::FileSystem | Category::Path)
+    }
+
+    fn extract_print_message(&self, context: &LintContext) -> Option<String> {
+        self.get_first_positional_arg()
+            .map(|expr| expr.span_text(context).to_string())
+    }
+
+    fn extract_exit_code(&self) -> Option<i64> {
+        self.get_first_positional_arg()
+            .and_then(|code_expr| match &code_expr.expr {
+                Expr::Int(code) => Some(*code),
+                _ => None,
+            })
+    }
+
+    fn has_named_flag(&self, flag_name: &str) -> bool {
+        self.arguments.iter().any(|arg| {
+            matches!(
+                arg,
+                nu_protocol::ast::Argument::Named(named) if named.0.item == flag_name
+            )
+        })
     }
 }

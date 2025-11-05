@@ -119,3 +119,33 @@ do $checker
 "#;
     rule().assert_detects(bad_code);
 }
+
+#[test]
+fn test_detect_same_pipeline_pattern() {
+    let bad_code = r#"
+def validate [] {
+    print "Validation failed"; exit 1
+}
+"#;
+    rule().assert_detects(bad_code);
+}
+
+#[test]
+fn test_detect_same_pipeline_in_if_block() {
+    let bad_code = r#"
+def check [value: int] {
+    if $value < 0 {
+        print "Negative value not allowed"; exit 1
+    }
+}
+"#;
+    rule().assert_detects(bad_code);
+}
+
+#[test]
+fn test_detect_same_pipeline_multiple_commands() {
+    let bad_code = r#"
+let result = some_command; print "Command failed"; exit 2
+"#;
+    rule().assert_detects(bad_code);
+}

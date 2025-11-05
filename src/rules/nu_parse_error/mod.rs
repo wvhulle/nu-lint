@@ -11,7 +11,7 @@ fn check(_context: &LintContext) -> Vec<RuleViolation> {
     vec![]
 }
 
-pub fn rule() -> Rule {
+pub(crate) fn rule() -> Rule {
     Rule::new(
         "nu_parse_error",
         RuleCategory::CodeQuality,

@@ -1,78 +1,28 @@
-use std::path::Path;
-
 use nu_protocol::{
     DeclId, Span,
-    ast::{Block, Expression, FindMapResult, Traverse},
+    ast::{Block, Expression, Traverse},
     engine::{Command, EngineState, StateWorkingSet},
 };
 
-use crate::violation::{RuleViolation, Violation};
+use crate::violation::RuleViolation;
 
 /// Context containing all lint information (source, AST, and engine state)
 /// Rules can use whatever they need from this context
 pub struct LintContext<'a> {
     pub source: &'a str,
-    pub file_path: Option<&'a Path>,
     pub ast: &'a Block,
     pub engine_state: &'a EngineState,
     pub working_set: &'a StateWorkingSet<'a>,
 }
 
 impl LintContext<'_> {
-    /// Find violations by applying a conditional predicate to regex matches
-    pub fn violations_from_regex<MatchPredicate>(
-        &self,
-        pattern: &regex::Regex,
-        rule_id: &'static str,
-        predicate: MatchPredicate,
-    ) -> Vec<RuleViolation>
-    where
-        MatchPredicate: Fn(regex::Match) -> Option<(String, Option<String>)>,
-    {
-        pattern
-            .find_iter(self.source)
-            .filter_map(|mat| {
-                predicate(mat).map(|(message, suggestion)| {
-                    let violation = RuleViolation::new_dynamic(
-                        rule_id,
-                        message,
-                        Span::new(mat.start(), mat.end()),
-                    );
-                    match suggestion {
-                        Some(sug) => violation.with_suggestion_dynamic(sug),
-                        None => violation,
-                    }
-                })
-            })
-            .collect()
-    }
-
-    /// Collect all violations using a closure over expressions (Traverse-based)
-    ///
-    /// This method uses Nushell's upstream `Traverse` trait to walk the AST
-    /// and collect violations. The collector function is called for each
-    /// expression in the AST and should return a vector of violations.
-    pub fn collect_violations<F>(&self, collector: F) -> Vec<Violation>
-    where
-        F: Fn(&Expression, &Self) -> Vec<Violation>,
-    {
-        let mut violations = Vec::new();
-
-        let f = |expr: &Expression| collector(expr, self);
-
-        // Visit main AST
-        self.ast.flat_map(self.working_set, &f, &mut violations);
-
-        violations
-    }
-
     /// Collect all rule violations using a closure over expressions
     /// (Traverse-based)
     ///
     /// This method uses Nushell's upstream `Traverse` trait to walk the AST
     /// and collect rule violations. The collector function is called for each
     /// expression in the AST and should return a vector of rule violations.
-    pub fn collect_rule_violations<F>(&self, collector: F) -> Vec<RuleViolation>
+    pub(crate) fn collect_rule_violations<F>(&self, collector: F) -> Vec<RuleViolation>
     where
         F: Fn(&Expression, &Self) -> Vec<RuleViolation>,
     {
@@ -84,19 +34,6 @@ impl LintContext<'_> {
         self.ast.flat_map(self.working_set, &f, &mut violations);
 
         violations
-    }
-
-    /// Find first match using `find_map` (Traverse-based)
-    ///
-    /// This method uses Nushell's upstream `Traverse` trait to search the AST
-    /// for the first matching expression. The finder function should return
-    /// `FindMapResult::Found(value)` to return a value, `FindMapResult::Stop`
-    /// to stop searching, or `FindMapResult::Continue` to continue searching.
-    pub fn find_match<T, F>(&self, finder: F) -> Option<T>
-    where
-        F: Fn(&Expression) -> FindMapResult<T>,
-    {
-        self.ast.find_map(self.working_set, &finder)
     }
 
     /// Iterator over newly added user-defined function declarations
@@ -210,7 +147,6 @@ impl LintContext<'_> {
 
         let context = LintContext {
             source,
-            file_path: None,
             ast: &block,
             engine_state: &engine_state,
             working_set: &working_set,

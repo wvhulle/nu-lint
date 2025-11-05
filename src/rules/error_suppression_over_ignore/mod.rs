@@ -151,7 +151,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
         .collect()
 }
 
-pub fn rule() -> Rule {
+pub(crate) fn rule() -> Rule {
     Rule::new(
         "prefer_error_suppression_over_ignore",
         RuleCategory::ErrorHandling,

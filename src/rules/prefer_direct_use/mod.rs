@@ -307,7 +307,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     create_violations(&empty_list_vars_map, &direct_copy_set)
 }
 
-pub fn rule() -> Rule {
+pub(crate) fn rule() -> Rule {
     Rule::new(
         "prefer_direct_use",
         RuleCategory::CodeQuality,

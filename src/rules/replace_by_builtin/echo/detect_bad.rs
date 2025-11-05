@@ -56,8 +56,5 @@ fn test_detect_multiple_echo_uses() {
 echo "first"
 echo "second"
 "#;
-    let violations = crate::context::LintContext::test_with_parsed_source(bad_code, |context| {
-        rule().check(&context)
-    });
-    assert_eq!(violations.len(), 2, "Should detect both echo uses");
+    rule().assert_violation_count_exact(bad_code, 2);
 }

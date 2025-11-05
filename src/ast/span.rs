@@ -3,7 +3,7 @@ use nu_protocol::{BlockId, Span};
 use super::BlockExt;
 use crate::context::LintContext;
 
-pub trait SpanExt {
+pub(crate) trait SpanExt {
     #[must_use]
     fn text<'a>(&self, context: &'a LintContext) -> &'a str;
     #[must_use]

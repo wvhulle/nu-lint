@@ -97,7 +97,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     violations
 }
 
-pub fn rule() -> Rule {
+pub(crate) fn rule() -> Rule {
     Rule::new(
         "systemd_journal_prefix",
         RuleCategory::Idioms,

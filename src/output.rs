@@ -1,145 +1,174 @@
-use std::{fmt, fmt::Write};
+use std::fmt;
 
 use miette::{Diagnostic, LabeledSpan, Report, SourceCode};
 use serde::Serialize;
 
 use crate::violation::{Severity, Violation};
-#[derive(Debug, Clone, Copy)]
-pub enum OutputFormat {
-    Text,
-    Json,
-    Github,
-}
 
-pub trait OutputFormatter {
-    fn format(&self, violations: &[Violation], source: &str) -> String;
-}
-
-#[derive(Debug, Default)]
-pub struct TextFormatter;
-
-impl OutputFormatter for TextFormatter {
-    fn format(&self, violations: &[Violation], _source: &str) -> String {
-        if violations.is_empty() {
-            return String::from("No violations found!");
-        }
-
-        let mut output = String::new();
-
-        // Show summary at the beginning
-        let summary = Summary::from_violations(violations);
-        let _ = writeln!(output, "Found {}\n", summary.format_compact());
-
-        for (idx, violation) in violations.iter().enumerate() {
-            let source_code = violation
-                .file
-                .as_ref()
-                .and_then(|path| std::fs::read_to_string(path.as_ref()).ok())
-                .unwrap_or_default();
-
-            let (line, column) = calculate_line_column(&source_code, violation.span.start);
-            let (end_line, end_column) = calculate_line_column(&source_code, violation.span.end);
-
-            // Print a clear header with file path and rule name
-            if let Some(file_path) = &violation.file {
-                let _ = writeln!(output, "\n\x1b[1;4m{file_path}:{line}:{column}\x1b[0m");
-            }
-
-            let diagnostic = ViolationDiagnostic {
-                violation: violation.clone(),
-                source_code,
-                line,
-                column,
-                end_line,
-                end_column,
-            };
-
-            let report = Report::new(diagnostic);
-            let _ = writeln!(output, "{report:?}");
-
-            // Add a horizontal ruler between errors (but not after the last one)
-            if idx < violations.len() - 1 {
-                let _ = writeln!(output, "\n{}", "─".repeat(80));
-            }
-        }
-
-        let summary = Summary::from_violations(violations);
-        let _ = writeln!(output, "\n{}", summary.format_compact());
-
-        output
+/// Format violations as human-readable text
+pub(crate) fn format_text(violations: &[Violation]) -> String {
+    if violations.is_empty() {
+        return String::from("No violations found!");
     }
+
+    let summary = Summary::from_violations(violations);
+    let header = format!("Found {}\n", summary.format_compact());
+    
+    let violations_output: String = violations
+        .iter()
+        .enumerate()
+        .map(|(idx, violation)| {
+            format_violation_text(violation, idx < violations.len() - 1)
+        })
+        .collect();
+
+    let footer = format!("\n{}", summary.format_compact());
+
+    format!("{header}{violations_output}{footer}")
 }
 
-#[derive(Debug, Default)]
-pub struct JsonFormatter;
+/// Format a single violation as text
+fn format_violation_text(violation: &Violation, add_separator: bool) -> String {
+    let source_code = violation
+        .file
+        .as_ref()
+        .and_then(|path| std::fs::read_to_string(path.as_ref()).ok())
+        .unwrap_or_default();
 
-impl OutputFormatter for JsonFormatter {
-    fn format(&self, violations: &[Violation], _source: &str) -> String {
-        let json_violations: Vec<JsonViolation> = violations
-            .iter()
-            .map(|violation| {
-                let source_code = violation
-                    .file
-                    .as_ref()
-                    .and_then(|path| std::fs::read_to_string(path.as_ref()).ok())
-                    .unwrap_or_default();
+    let (line, column) = calculate_line_column(&source_code, violation.span.start);
+    let (end_line, end_column) = calculate_line_column(&source_code, violation.span.end);
 
-                let (line_start, column_start) =
-                    calculate_line_column(&source_code, violation.span.start);
-                let (line_end, column_end) =
-                    calculate_line_column(&source_code, violation.span.end);
+    let header = violation.file.as_ref().map_or(String::new(), |file_path| {
+        format!("\n\x1b[1;4m{file_path}:{line}:{column}\x1b[0m\n")
+    });
 
-                JsonViolation {
-                    rule_id: violation.rule_id.to_string(),
-                    severity: violation.severity.to_string(),
-                    message: violation.message.to_string(),
-                    file: violation
-                        .file
-                        .as_ref()
-                        .map(std::string::ToString::to_string),
-                    line_start,
-                    line_end,
-                    column_start,
-                    column_end,
-                    offset_start: violation.span.start,
-                    offset_end: violation.span.end,
-                    suggestion: violation
-                        .suggestion
-                        .as_ref()
-                        .map(std::string::ToString::to_string),
-                }
-            })
-            .collect();
+    let diagnostic = ViolationDiagnostic {
+        violation: violation.clone(),
+        source_code: source_code.clone(),
+        line,
+        column,
+        end_line,
+        end_column,
+    };
 
-        let summary = Summary::from_violations(violations);
-        let output = JsonOutput {
-            violations: json_violations,
-            summary,
-        };
+    let report = format!("{:?}", Report::new(diagnostic));
+    
+    let fix_info = violation
+        .fix
+        .as_ref()
+        .map(|fix| format_fix_info(fix, &source_code))
+        .unwrap_or_default();
 
-        serde_json::to_string_pretty(&output).unwrap_or_default()
-    }
+    let separator = if add_separator {
+        format!("\n\n{}\n", "─".repeat(80))
+    } else {
+        String::new()
+    };
+
+    format!("{header}{report}\n{fix_info}{separator}")
+}
+
+/// Format violations as JSON
+pub fn format_json(violations: &[Violation]) -> String {
+    let json_violations: Vec<JsonViolation> = violations.iter().map(violation_to_json).collect();
+
+    let summary = Summary::from_violations(violations);
+    let output = JsonOutput {
+        violations: json_violations,
+        summary,
+    };
+
+    serde_json::to_string_pretty(&output).unwrap_or_default()
 }
 
 /// Calculate line and column number from byte offset in source
 /// Returns (line, column) as 1-indexed values
 fn calculate_line_column(source: &str, offset: usize) -> (usize, usize) {
-    let mut line = 1;
-    let mut column = 1;
+    source
+        .char_indices()
+        .take_while(|(pos, _)| *pos < offset)
+        .fold((1, 1), |(line, column), (_, ch)| {
+            if ch == '\n' {
+                (line + 1, 1)
+            } else {
+                (line, column + 1)
+            }
+        })
+}
 
-    for (pos, ch) in source.char_indices() {
-        if pos >= offset {
-            break;
-        }
-        if ch == '\n' {
-            line += 1;
-            column = 1;
-        } else {
-            column += 1;
-        }
+/// Format fix information for text output
+fn format_fix_info(fix: &crate::violation::Fix, source_code: &str) -> String {
+    let header = format!("\n  \x1b[36mℹ Available fix:\x1b[0m {}", fix.description);
+
+    if fix.replacements.is_empty() {
+        return header;
     }
 
-    (line, column)
+    let replacements = fix
+        .replacements
+        .iter()
+        .map(|replacement| {
+            let (start_line, start_col) =
+                calculate_line_column(source_code, replacement.span.start);
+            let (end_line, end_col) = calculate_line_column(source_code, replacement.span.end);
+            format!(
+                "    • {}:{}-{}:{} → {}",
+                start_line, start_col, end_line, end_col, replacement.new_text
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    format!("{header}\n  \x1b[2mReplacements:\x1b[0m\n{replacements}")
+}
+
+/// Convert a violation to JSON format
+fn violation_to_json(violation: &Violation) -> JsonViolation {
+    let source_code = violation
+        .file
+        .as_ref()
+        .and_then(|path| std::fs::read_to_string(path.as_ref()).ok())
+        .unwrap_or_default();
+
+    let (line_start, column_start) = calculate_line_column(&source_code, violation.span.start);
+    let (line_end, column_end) = calculate_line_column(&source_code, violation.span.end);
+
+    JsonViolation {
+        rule_id: violation.rule_id.to_string(),
+        severity: violation.severity.to_string(),
+        message: violation.message.to_string(),
+        file: violation
+            .file
+            .as_ref()
+            .map(std::string::ToString::to_string),
+        line_start,
+        line_end,
+        column_start,
+        column_end,
+        offset_start: violation.span.start,
+        offset_end: violation.span.end,
+        suggestion: violation
+            .suggestion
+            .as_ref()
+            .map(std::string::ToString::to_string),
+        fix: violation.fix.as_ref().map(fix_to_json),
+    }
+}
+
+/// Convert a fix to JSON format
+fn fix_to_json(fix: &crate::violation::Fix) -> JsonFix {
+    JsonFix {
+        description: fix.description.to_string(),
+        replacements: fix
+            .replacements
+            .iter()
+            .map(|r| JsonReplacement {
+                offset_start: r.span.start,
+                offset_end: r.span.end,
+                new_text: r.new_text.to_string(),
+            })
+            .collect(),
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -225,6 +254,20 @@ pub struct JsonViolation {
     pub offset_start: usize,
     pub offset_end: usize,
     pub suggestion: Option<String>,
+    pub fix: Option<JsonFix>,
+}
+
+#[derive(Serialize)]
+pub struct JsonFix {
+    pub description: String,
+    pub replacements: Vec<JsonReplacement>,
+}
+
+#[derive(Serialize)]
+pub struct JsonReplacement {
+    pub offset_start: usize,
+    pub offset_end: usize,
+    pub new_text: String,
 }
 
 #[derive(Serialize)]
@@ -238,17 +281,14 @@ pub struct Summary {
 impl Summary {
     #[must_use]
     pub fn from_violations(violations: &[Violation]) -> Self {
-        let mut errors = 0;
-        let mut warnings = 0;
-        let mut info = 0;
-
-        for violation in violations {
-            match violation.severity {
-                Severity::Error => errors += 1,
-                Severity::Warning => warnings += 1,
-                Severity::Info => info += 1,
-            }
-        }
+        let (errors, warnings, info) = violations.iter().fold(
+            (0, 0, 0),
+            |(errors, warnings, info), violation| match violation.severity {
+                Severity::Error => (errors + 1, warnings, info),
+                Severity::Warning => (errors, warnings + 1, info),
+                Severity::Info => (errors, warnings, info + 1),
+            },
+        );
 
         Self {
             errors,
@@ -261,17 +301,14 @@ impl Summary {
     /// Format summary showing only non-zero severity counts
     #[must_use]
     pub fn format_compact(&self) -> String {
-        let mut parts = Vec::new();
-
-        if self.errors > 0 {
-            parts.push(format!("{} error(s)", self.errors));
-        }
-        if self.warnings > 0 {
-            parts.push(format!("{} warning(s)", self.warnings));
-        }
-        if self.info > 0 {
-            parts.push(format!("{} info", self.info));
-        }
+        let parts: Vec<String> = [
+            (self.errors > 0).then(|| format!("{} error(s)", self.errors)),
+            (self.warnings > 0).then(|| format!("{} warning(s)", self.warnings)),
+            (self.info > 0).then(|| format!("{} info", self.info)),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
 
         if parts.is_empty() {
             String::from("0 violations")

@@ -51,7 +51,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     })
 }
 
-pub fn rule() -> Rule {
+pub(crate) fn rule() -> Rule {
     Rule::new(
         "exit_only_in_main",
         RuleCategory::CodeQuality,

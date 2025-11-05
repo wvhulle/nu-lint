@@ -1,23 +1,21 @@
-pub mod ast;
+mod ast;
 pub mod cli;
 pub mod config;
-pub mod context;
-pub mod engine;
-pub mod external_command;
+mod context;
+mod engine;
+mod external_command;
 pub mod log;
-pub mod output;
-pub mod rule;
-pub mod rules;
-pub mod violation;
-
+mod output;
+mod rule;
+mod rules;
+mod violation;
 pub use config::Config;
-pub use context::LintContext;
 pub use engine::LintEngine;
 use miette::Diagnostic;
-pub use output::{JsonFormatter, JsonOutput, OutputFormat, OutputFormatter, TextFormatter};
-pub use rule::{Rule, RuleCategory};
+pub use output::{JsonFix, JsonOutput, JsonReplacement, JsonViolation, Summary, format_json};
 use thiserror::Error;
-pub use violation::{Fix, Replacement, RuleViolation, Severity, Violation};
+pub(crate) use violation::{Fix, Replacement, RuleViolation};
+pub use violation::{Severity, Violation};
 
 #[derive(Error, Debug, Diagnostic)]
 pub enum LintError {

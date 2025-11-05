@@ -126,7 +126,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     })
 }
 
-pub fn rule() -> Rule {
+pub(crate) fn rule() -> Rule {
     Rule::new(
         "descriptive_error_messages",
         RuleCategory::ErrorHandling,

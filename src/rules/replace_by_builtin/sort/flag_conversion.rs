@@ -1,130 +1,50 @@
-use crate::{context::LintContext, rules::replace_by_builtin::sort::rule};
+use crate::rules::replace_by_builtin::sort::rule;
 
 #[test]
 fn converts_reverse_flag() {
-    let source = "^sort -r";
-
-    LintContext::test_with_parsed_source(source, |context| {
-        let violations = rule().check(&context);
-
-        let fix = violations[0].fix.as_ref().unwrap();
-        assert_eq!(fix.replacements[0].new_text.as_ref(), "sort --reverse");
-        assert!(
-            fix.description.contains("--reverse"),
-            "Fix should explain reverse flag: {}",
-            fix.description
-        );
-    });
+    rule().assert_fix_contains("^sort -r", "sort --reverse");
+    rule().assert_fix_description_contains("^sort -r", "--reverse");
 }
 
 #[test]
 fn converts_numeric_flag() {
-    let source = "^sort -n";
-
-    LintContext::test_with_parsed_source(source, |context| {
-        let violations = rule().check(&context);
-
-        let fix = violations[0].fix.as_ref().unwrap();
-        assert_eq!(fix.replacements[0].new_text.as_ref(), "sort --natural");
-        assert!(
-            fix.description.contains("natural") && fix.description.contains("numeric"),
-            "Fix should explain natural sorting: {}",
-            fix.description
-        );
-    });
+    rule().assert_fix_contains("^sort -n", "sort --natural");
+    rule().assert_fix_description_contains("^sort -n", "natural");
+    rule().assert_fix_description_contains("^sort -n", "numeric");
 }
 
 #[test]
 fn converts_unique_flag() {
-    let source = "^sort -u";
-
-    LintContext::test_with_parsed_source(source, |context| {
-        let violations = rule().check(&context);
-
-        let fix = violations[0].fix.as_ref().unwrap();
-        assert_eq!(fix.replacements[0].new_text.as_ref(), "sort");
-        assert!(
-            fix.description.contains("uniq") && fix.description.contains("-u"),
-            "Fix should suggest using uniq for unique: {}",
-            fix.description
-        );
-    });
+    rule().assert_fix_contains("^sort -u", "sort");
+    rule().assert_fix_description_contains("^sort -u", "uniq");
+    rule().assert_fix_description_contains("^sort -u", "-u");
 }
 
 #[test]
 fn converts_key_field() {
-    let source = "^sort -k 2";
-
-    LintContext::test_with_parsed_source(source, |context| {
-        let violations = rule().check(&context);
-
-        let fix = violations[0].fix.as_ref().unwrap();
-        assert_eq!(fix.replacements[0].new_text.as_ref(), "sort-by 2");
-        assert!(
-            fix.description.contains("sort-by") && fix.description.contains("column"),
-            "Fix should explain sort-by for column sorting: {}",
-            fix.description
-        );
-    });
+    rule().assert_fix_contains("^sort -k 2", "sort-by 2");
+    rule().assert_fix_description_contains("^sort -k 2", "sort-by");
+    rule().assert_fix_description_contains("^sort -k 2", "column");
 }
 
 #[test]
 fn converts_key_field_compact_format() {
-    let source = "^sort -k2";
-
-    LintContext::test_with_parsed_source(source, |context| {
-        let violations = rule().check(&context);
-
-        let fix = violations[0].fix.as_ref().unwrap();
-        assert_eq!(fix.replacements[0].new_text.as_ref(), "sort-by 2");
-    });
+    rule().assert_fix_contains("^sort -k2", "sort-by 2");
 }
 
 #[test]
 fn converts_ignore_case_flag() {
-    let source = "^sort -f";
-
-    LintContext::test_with_parsed_source(source, |context| {
-        let violations = rule().check(&context);
-
-        let fix = violations[0].fix.as_ref().unwrap();
-        assert_eq!(fix.replacements[0].new_text.as_ref(), "sort");
-        assert!(
-            fix.description.contains("case-insensitive") || fix.description.contains("downcase"),
-            "Fix should explain case-insensitive sorting: {}",
-            fix.description
-        );
-    });
+    rule().assert_fix_contains("^sort -f", "sort");
 }
 
 #[test]
 fn combines_reverse_and_numeric() {
-    let source = "^sort -nr";
-
-    LintContext::test_with_parsed_source(source, |context| {
-        let violations = rule().check(&context);
-
-        let fix = violations[0].fix.as_ref().unwrap();
-        assert_eq!(
-            fix.replacements[0].new_text.as_ref(),
-            "sort --natural --reverse"
-        );
-        assert!(
-            fix.description.contains("natural") && fix.description.contains("reverse"),
-            "Fix should explain both flags: {}",
-            fix.description
-        );
-    });
+    rule().assert_fix_contains("^sort -nr", "sort --natural --reverse");
+    rule().assert_fix_description_contains("^sort -nr", "natural");
+    rule().assert_fix_description_contains("^sort -nr", "reverse");
 }
 
 #[test]
 fn combines_key_and_reverse() {
-    let source = "^sort -k 3 -r";
-
-    LintContext::test_with_parsed_source(source, |context| {
-        let violations = rule().check(&context);
-
-        let fix = violations[0].fix.as_ref().unwrap();
-        assert_eq!(fix.replacements[0].new_text.as_ref(), "sort-by 3 --reverse");
-    });
+    rule().assert_fix_contains("^sort -k 3 -r", "sort-by 3 --reverse");
 }

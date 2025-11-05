@@ -22,18 +22,22 @@ impl std::fmt::Display for Severity {
 
 /// A rule violation without severity (created by rules)
 #[derive(Debug, Clone)]
-pub struct RuleViolation {
+pub(crate) struct RuleViolation {
     pub rule_id: Cow<'static, str>,
     pub message: Cow<'static, str>,
     pub span: Span,
     pub suggestion: Option<Cow<'static, str>>,
-    pub fix: Option<Fix>,
+    pub(crate) fix: Option<Fix>,
 }
 
 impl RuleViolation {
     /// Create a new rule violation with static strings
     #[must_use]
-    pub const fn new_static(rule_id: &'static str, message: &'static str, span: Span) -> Self {
+    pub(crate) const fn new_static(
+        rule_id: &'static str,
+        message: &'static str,
+        span: Span,
+    ) -> Self {
         Self {
             rule_id: Cow::Borrowed(rule_id),
             message: Cow::Borrowed(message),
@@ -45,7 +49,7 @@ impl RuleViolation {
 
     /// Create a new rule violation with a dynamic message
     #[must_use]
-    pub fn new_dynamic(rule_id: &'static str, message: String, span: Span) -> Self {
+    pub(crate) fn new_dynamic(rule_id: &'static str, message: String, span: Span) -> Self {
         Self {
             rule_id: Cow::Borrowed(rule_id),
             message: Cow::Owned(message),
@@ -57,21 +61,21 @@ impl RuleViolation {
 
     /// Add a static suggestion to this violation
     #[must_use]
-    pub fn with_suggestion_static(mut self, suggestion: &'static str) -> Self {
+    pub(crate) fn with_suggestion_static(mut self, suggestion: &'static str) -> Self {
         self.suggestion = Some(Cow::Borrowed(suggestion));
         self
     }
 
     /// Add a dynamic suggestion to this violation
     #[must_use]
-    pub fn with_suggestion_dynamic(mut self, suggestion: String) -> Self {
+    pub(crate) fn with_suggestion_dynamic(mut self, suggestion: String) -> Self {
         self.suggestion = Some(Cow::Owned(suggestion));
         self
     }
 
     /// Add a fix to this violation
     #[must_use]
-    pub fn with_fix(mut self, fix: Fix) -> Self {
+    pub(crate) fn with_fix(mut self, fix: Fix) -> Self {
         self.fix = Some(fix);
         self
     }
@@ -89,53 +93,6 @@ impl RuleViolation {
             file: None,
         }
     }
-
-    /// Create a standard command replacement violation
-    #[must_use]
-    pub fn new_command_replacement(
-        rule_id: &'static str,
-        old_command: &str,
-        new_command: &str,
-        span: Span,
-        note: Option<&str>,
-    ) -> Self {
-        let message = format!("Use '{new_command}' instead of '{old_command}'");
-        let suggestion = if let Some(note) = note {
-            format!("Replace with '{new_command}': {note}")
-        } else {
-            format!("Replace with '{new_command}' for better performance and integration")
-        };
-
-        Self::new_dynamic(rule_id, message, span).with_suggestion_dynamic(suggestion)
-    }
-
-    /// Create a standard naming convention violation
-    #[must_use]
-    pub fn new_naming_violation(
-        rule_id: &'static str,
-        item_type: &str,
-        current_name: &str,
-        convention: &str,
-        span: Span,
-    ) -> Self {
-        let message =
-            format!("{item_type} '{current_name}' should follow {convention} naming convention");
-        let suggestion = format!("Rename to follow {convention} convention");
-
-        Self::new_dynamic(rule_id, message, span).with_suggestion_dynamic(suggestion)
-    }
-
-    /// Create a standard best practice violation
-    #[must_use]
-    pub fn new_best_practice(
-        rule_id: &'static str,
-        description: &str,
-        span: Span,
-        suggestion: &str,
-    ) -> Self {
-        Self::new_dynamic(rule_id, description.to_string(), span)
-            .with_suggestion_dynamic(suggestion.to_string())
-    }
 }
 
 /// A complete violation with severity (created by the engine)
@@ -146,7 +103,7 @@ pub struct Violation {
     pub message: Cow<'static, str>,
     pub span: Span,
     pub suggestion: Option<Cow<'static, str>>,
-    pub fix: Option<Fix>,
+    pub(crate) fix: Option<Fix>,
     pub file: Option<Cow<'static, str>>,
 }
 
@@ -205,21 +162,15 @@ impl Violation {
 
     /// Add a fix to this violation
     #[must_use]
-    pub fn with_fix(mut self, fix: Fix) -> Self {
-        self.fix = Some(fix);
-        self
-    }
-
-    #[must_use]
-    pub fn to_source_span(&self) -> SourceSpan {
+    pub(crate) fn to_source_span(&self) -> SourceSpan {
         SourceSpan::from((self.span.start, self.span.end - self.span.start))
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct Fix {
-    pub description: Cow<'static, str>,
-    pub replacements: Vec<Replacement>,
+pub(crate) struct Fix {
+    pub(crate) description: Cow<'static, str>,
+    pub(crate) replacements: Vec<Replacement>,
 }
 
 impl Fix {
@@ -234,7 +185,7 @@ impl Fix {
 
     /// Create a fix with a dynamic description
     #[must_use]
-    pub fn new_dynamic(description: String, replacements: Vec<Replacement>) -> Self {
+    pub(crate) fn new_dynamic(description: String, replacements: Vec<Replacement>) -> Self {
         Self {
             description: Cow::Owned(description),
             replacements,
@@ -243,9 +194,9 @@ impl Fix {
 }
 
 #[derive(Debug, Clone)]
-pub struct Replacement {
-    pub span: Span,
-    pub new_text: Cow<'static, str>,
+pub(crate) struct Replacement {
+    pub(crate) span: Span,
+    pub(crate) new_text: Cow<'static, str>,
 }
 
 impl Replacement {

@@ -134,34 +134,20 @@ fn truncate_message(msg: &str, max_len: usize) -> String {
 fn build_suggestion(missing_fields: &[&str], current_msg: &str, example_span: &str) -> String {
     match missing_fields {
         ["label", "help"] => format!(
-            "Add 'label' and 'help' fields to provide context.\nExample:\n\
-             error make {{\n\
-             \x20 msg: \"{current_msg}\"\n\
-             \x20 label: {{\n\
-             \x20   text: \"describe what's wrong here\"\n\
-             \x20   span: {example_span}\n\
-             \x20 }}\n\
-             \x20 help: \"explain how to fix this issue\"\n\
-             }}"
+            "Add 'label' and 'help' fields to provide context.\nExample:\nerror make {{\n\x20 \
+             msg: \"{current_msg}\"\n\x20 label: {{\n\x20   text: \"describe what's wrong \
+             here\"\n\x20   span: {example_span}\n\x20 }}\n\x20 help: \"explain how to fix this \
+             issue\"\n}}"
         ),
         ["label"] => format!(
-            "Add 'label' field to pinpoint the error location.\nExample:\n\
-             error make {{\n\
-             \x20 msg: \"{current_msg}\"\n\
-             \x20 label: {{\n\
-             \x20   text: \"describe what's wrong here\"\n\
-             \x20   span: {example_span}\n\
-             \x20 }}\n\
-             \x20 help: ...\n\
-             }}"
+            "Add 'label' field to pinpoint the error location.\nExample:\nerror make {{\n\x20 \
+             msg: \"{current_msg}\"\n\x20 label: {{\n\x20   text: \"describe what's wrong \
+             here\"\n\x20   span: {example_span}\n\x20 }}\n\x20 help: ...\n}}"
         ),
         ["help"] => format!(
-            "Add 'help' field to guide users toward a solution.\nExample:\n\
-             error make {{\n\
-             \x20 msg: \"{current_msg}\"\n\
-             \x20 label: ...\n\
-             \x20 help: \"explain how to fix this issue\"\n\
-             }}"
+            "Add 'help' field to guide users toward a solution.\nExample:\nerror make {{\n\x20 \
+             msg: \"{current_msg}\"\n\x20 label: ...\n\x20 help: \"explain how to fix this \
+             issue\"\n}}"
         ),
         _ => String::new(),
     }
@@ -238,7 +224,8 @@ pub fn rule() -> Rule {
         "error_make_metadata",
         RuleCategory::ErrorHandling,
         Severity::Info,
-        "error make calls should include metadata fields like label and help for better error context",
+        "error make calls should include metadata fields like label and help for better error \
+         context",
         check,
     )
 }

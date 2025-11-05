@@ -30,6 +30,9 @@ pub trait CallExt {
     fn generate_collapsed_if(&self, context: &LintContext) -> Option<String>;
     fn uses_variable(&self, var_id: nu_protocol::VarId) -> bool;
     fn is_filesystem_command(&self, context: &LintContext) -> bool;
+    fn extract_print_message(&self, context: &LintContext) -> Option<String>;
+    fn extract_exit_code(&self) -> Option<i64>;
+    fn has_named_flag(&self, flag_name: &str) -> bool;
 }
 
 impl CallExt for Call {
@@ -174,5 +177,30 @@ impl CallExt for Call {
         let decl = context.working_set.get_decl(self.decl_id);
         let signature = decl.signature();
         matches!(signature.category, Category::FileSystem | Category::Path)
+    }
+
+    fn extract_print_message(&self, context: &LintContext) -> Option<String> {
+        self.get_first_positional_arg()
+            .map(|message_expr| match &message_expr.expr {
+                Expr::String(s) | Expr::RawString(s) => s.clone(),
+                _ => message_expr.span_text(context).to_string(),
+            })
+    }
+
+    fn extract_exit_code(&self) -> Option<i64> {
+        self.get_first_positional_arg()
+            .and_then(|code_expr| match &code_expr.expr {
+                Expr::Int(code) => Some(*code),
+                _ => None,
+            })
+    }
+
+    fn has_named_flag(&self, flag_name: &str) -> bool {
+        self.arguments.iter().any(|arg| {
+            matches!(
+                arg,
+                nu_protocol::ast::Argument::Named(named) if named.0.item == flag_name
+            )
+        })
     }
 }

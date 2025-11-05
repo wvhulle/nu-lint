@@ -14,12 +14,21 @@ def validate [input: string] {
         assert_eq!(violations.len(), 1);
 
         let violation = &violations[0];
-        assert_eq!(violation.message, "error make call is missing metadata fields: label, help");
+        assert_eq!(
+            violation.message,
+            "error make call is missing metadata fields: label, help"
+        );
 
         let suggestion = violation.suggestion.as_ref().unwrap();
         assert!(suggestion.contains("Add 'label' and 'help' fields"));
-        assert!(suggestion.contains("Input cannot be empty"), "Should include actual msg");
-        assert!(suggestion.contains("(metadata $input).span"), "Should reference function parameter");
+        assert!(
+            suggestion.contains("Input cannot be empty"),
+            "Should include actual msg"
+        );
+        assert!(
+            suggestion.contains("(metadata $input).span"),
+            "Should reference function parameter"
+        );
         assert!(suggestion.contains("label:"));
         assert!(suggestion.contains("help:"));
     });
@@ -41,12 +50,24 @@ def process [data: string] {
         assert_eq!(violations.len(), 1);
 
         let violation = &violations[0];
-        assert_eq!(violation.message, "error make call is missing metadata fields: help");
-        assert!(!violation.message.contains("label"), "Should only mention missing help field");
+        assert_eq!(
+            violation.message,
+            "error make call is missing metadata fields: help"
+        );
+        assert!(
+            !violation.message.contains("label"),
+            "Should only mention missing help field"
+        );
 
         let suggestion = violation.suggestion.as_ref().unwrap();
-        assert!(suggestion.contains("Add 'help' field"), "Should reference help field");
-        assert!(suggestion.contains("Invalid data"), "Should include actual msg");
+        assert!(
+            suggestion.contains("Add 'help' field"),
+            "Should reference help field"
+        );
+        assert!(
+            suggestion.contains("Invalid data"),
+            "Should include actual msg"
+        );
         assert!(suggestion.contains("help:"));
     });
 }
@@ -67,13 +88,28 @@ def check [value: int] {
         assert_eq!(violations.len(), 1);
 
         let violation = &violations[0];
-        assert_eq!(violation.message, "error make call is missing metadata fields: label");
-        assert!(!violation.message.contains("help"), "Should only mention missing label field");
+        assert_eq!(
+            violation.message,
+            "error make call is missing metadata fields: label"
+        );
+        assert!(
+            !violation.message.contains("help"),
+            "Should only mention missing label field"
+        );
 
         let suggestion = violation.suggestion.as_ref().unwrap();
-        assert!(suggestion.contains("Add 'label' field"), "Should reference label field");
-        assert!(suggestion.contains("Value error"), "Should include actual msg");
-        assert!(suggestion.contains("(metadata $value).span"), "Should reference function parameter");
+        assert!(
+            suggestion.contains("Add 'label' field"),
+            "Should reference label field"
+        );
+        assert!(
+            suggestion.contains("Value error"),
+            "Should include actual msg"
+        );
+        assert!(
+            suggestion.contains("(metadata $value).span"),
+            "Should reference function parameter"
+        );
         assert!(suggestion.contains("label:"));
     });
 }
@@ -91,6 +127,9 @@ def test [arg: string] {
         assert_eq!(violations.len(), 1);
 
         let suggestion = violations[0].suggestion.as_ref().unwrap();
-        assert!(suggestion.contains("..."), "Long messages should be truncated");
+        assert!(
+            suggestion.contains("..."),
+            "Long messages should be truncated"
+        );
     });
 }

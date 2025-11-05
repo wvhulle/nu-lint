@@ -21,7 +21,6 @@ pub mod pipeline_handle_errors;
 
 pub mod prefer_compound_assignment;
 pub mod prefer_direct_use;
-pub mod prefer_error_make;
 pub mod prefer_error_make_for_stderr;
 pub mod prefer_is_not_empty;
 pub mod prefer_lines_over_split;
@@ -32,6 +31,7 @@ pub mod prefer_pipeline_input;
 pub mod prefer_range_iteration;
 pub mod prefer_where_over_each_if;
 pub mod prefer_where_over_for_if;
+pub mod print_exit_use_error_make;
 pub mod remove_redundant_in;
 
 pub mod replace_by_builtin;
@@ -114,8 +114,8 @@ impl RuleRegistry {
         registry.register(replace_by_builtin::uniq::rule());
         registry.register(prefer_compound_assignment::rule());
         registry.register(prefer_direct_use::rule());
-        registry.register(prefer_error_make::rule());
         registry.register(prefer_error_make_for_stderr::rule());
+        registry.register(print_exit_use_error_make::rule());
         registry.register(prefer_is_not_empty::rule());
         registry.register(prefer_lines_over_split::rule());
         registry.register(prefer_match_over_if_chain::rule());

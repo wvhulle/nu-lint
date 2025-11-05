@@ -38,6 +38,7 @@ pub trait ExpressionExt {
     fn matches_var(&self, var_id: VarId) -> bool;
     fn external_call_contains_variable(&self, var_id: VarId) -> bool;
     fn is_external_filesystem_command(&self, context: &LintContext) -> bool;
+    fn extract_call(&self) -> Option<&nu_protocol::ast::Call>;
 }
 
 impl ExpressionExt for Expression {
@@ -326,6 +327,13 @@ impl ExpressionExt for Expression {
                 .any(|&cmd| lower_cmd == cmd)
         } else {
             false
+        }
+    }
+
+    fn extract_call(&self) -> Option<&nu_protocol::ast::Call> {
+        match &self.expr {
+            Expr::Call(call) => Some(call),
+            _ => None,
         }
     }
 }

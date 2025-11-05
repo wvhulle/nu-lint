@@ -5,7 +5,9 @@ use ignore::WalkBuilder;
 use rayon::prelude::*;
 
 use crate::{
-    Config, JsonFormatter, LintEngine, OutputFormatter, TextFormatter, violation::Violation,
+    output::{OutputFormatter, TextFormatter},
+    violation::Violation,
+    Config, JsonFormatter, LintEngine,
 };
 
 #[derive(Parser)]

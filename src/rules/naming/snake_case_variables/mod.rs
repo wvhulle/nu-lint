@@ -33,7 +33,7 @@ fn create_snake_case_violation(
     let fix = Fix {
         description: format!("Rename variable '{var_name}' to '{snake_case_name}'").into(),
         replacements: vec![Replacement {
-            _span: name_span,
+            span: name_span,
             new_text: snake_case_name.clone().into(),
         }],
     };

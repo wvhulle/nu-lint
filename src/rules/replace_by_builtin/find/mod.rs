@@ -231,7 +231,7 @@ fn build_fix(
     Fix {
         description: description.into(),
         replacements: vec![Replacement {
-            _span: expr_span,
+            span: expr_span,
             new_text: replacement.into(),
         }],
     }

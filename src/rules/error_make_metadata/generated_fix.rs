@@ -1,5 +1,5 @@
 use super::rule;
-use crate::LintContext;
+use crate::context::LintContext;
 
 #[test]
 fn test_missing_both_label_and_help_includes_actual_msg() {

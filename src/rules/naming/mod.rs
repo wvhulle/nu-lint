@@ -46,7 +46,7 @@ impl NuNaming for str {
         let fix = Fix {
             description: format!("Rename {item_type} '{self}' to '{suggested_name}'").into(),
             replacements: vec![Replacement {
-                _span: name_span,
+                span: name_span,
                 new_text: suggested_name.to_string().into(),
             }],
         };

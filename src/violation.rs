@@ -157,7 +157,6 @@ impl Violation {
     }
 
     /// Add a fix to this violation
-
     #[must_use]
     pub(crate) fn to_source_span(&self) -> SourceSpan {
         SourceSpan::from((self.span.start, self.span.end - self.span.start))
@@ -166,7 +165,7 @@ impl Violation {
 
 #[derive(Debug, Clone)]
 pub(crate) struct Fix {
-    pub description: Cow<'static, str>,
+    pub(crate) description: Cow<'static, str>,
     pub(crate) replacements: Vec<Replacement>,
 }
 
@@ -192,7 +191,7 @@ impl Fix {
 
 #[derive(Debug, Clone)]
 pub(crate) struct Replacement {
-    pub(crate) _span: Span,
+    pub(crate) span: Span,
     pub(crate) new_text: Cow<'static, str>,
 }
 
@@ -201,7 +200,7 @@ impl Replacement {
     #[must_use]
     pub const fn new_static(span: Span, new_text: &'static str) -> Self {
         Self {
-            _span: span,
+            span,
             new_text: Cow::Borrowed(new_text),
         }
     }
@@ -210,7 +209,7 @@ impl Replacement {
     #[must_use]
     pub fn new_dynamic(span: Span, new_text: String) -> Self {
         Self {
-            _span: span,
+            span,
             new_text: Cow::Owned(new_text),
         }
     }

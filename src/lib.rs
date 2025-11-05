@@ -9,13 +9,10 @@ mod output;
 mod rule;
 mod rules;
 mod violation;
-
 pub use config::Config;
-// Internal re-exports for use within the crate
-pub(crate) use context::LintContext;
 pub use engine::LintEngine;
 use miette::Diagnostic;
-use output::{JsonFormatter, OutputFormatter, TextFormatter};
+pub use output::{JsonFix, JsonFormatter, JsonOutput, JsonReplacement, JsonViolation, Summary};
 use thiserror::Error;
 pub(crate) use violation::{Fix, Replacement, RuleViolation};
 pub use violation::{Severity, Violation};

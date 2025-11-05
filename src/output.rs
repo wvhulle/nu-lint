@@ -41,7 +41,7 @@ impl OutputFormatter for TextFormatter {
 
             let diagnostic = ViolationDiagnostic {
                 violation: violation.clone(),
-                source_code,
+                source_code: source_code.clone(),
                 line,
                 column,
                 end_line,
@@ -50,6 +50,11 @@ impl OutputFormatter for TextFormatter {
 
             let report = Report::new(diagnostic);
             let _ = writeln!(output, "{report:?}");
+
+            // Show fix information if available
+            if let Some(fix) = &violation.fix {
+                format_fix_info(&mut output, fix, &source_code);
+            }
 
             // Add a horizontal ruler between errors (but not after the last one)
             if idx < violations.len() - 1 {
@@ -69,41 +74,8 @@ pub struct JsonFormatter;
 
 impl OutputFormatter for JsonFormatter {
     fn format(&self, violations: &[Violation], _source: &str) -> String {
-        let json_violations: Vec<JsonViolation> = violations
-            .iter()
-            .map(|violation| {
-                let source_code = violation
-                    .file
-                    .as_ref()
-                    .and_then(|path| std::fs::read_to_string(path.as_ref()).ok())
-                    .unwrap_or_default();
-
-                let (line_start, column_start) =
-                    calculate_line_column(&source_code, violation.span.start);
-                let (line_end, column_end) =
-                    calculate_line_column(&source_code, violation.span.end);
-
-                JsonViolation {
-                    rule_id: violation.rule_id.to_string(),
-                    severity: violation.severity.to_string(),
-                    message: violation.message.to_string(),
-                    file: violation
-                        .file
-                        .as_ref()
-                        .map(std::string::ToString::to_string),
-                    line_start,
-                    line_end,
-                    column_start,
-                    column_end,
-                    offset_start: violation.span.start,
-                    offset_end: violation.span.end,
-                    suggestion: violation
-                        .suggestion
-                        .as_ref()
-                        .map(std::string::ToString::to_string),
-                }
-            })
-            .collect();
+        let json_violations: Vec<JsonViolation> =
+            violations.iter().map(violation_to_json).collect();
 
         let summary = Summary::from_violations(violations);
         let output = JsonOutput {
@@ -134,6 +106,79 @@ fn calculate_line_column(source: &str, offset: usize) -> (usize, usize) {
     }
 
     (line, column)
+}
+
+/// Format fix information for text output
+fn format_fix_info(output: &mut String, fix: &crate::violation::Fix, source_code: &str) {
+    let _ = writeln!(
+        output,
+        "\n  \x1b[36mℹ Available fix:\x1b[0m {}",
+        fix.description
+    );
+
+    if fix.replacements.is_empty() {
+        return;
+    }
+
+    let _ = writeln!(output, "  \x1b[2mReplacements:\x1b[0m");
+    for replacement in &fix.replacements {
+        let (start_line, start_col) = calculate_line_column(source_code, replacement.span.start);
+        let (end_line, end_col) = calculate_line_column(source_code, replacement.span.end);
+        let _ = writeln!(
+            output,
+            "    • {}:{}-{}:{} → {}",
+            start_line, start_col, end_line, end_col, replacement.new_text
+        );
+    }
+}
+
+/// Convert a violation to JSON format
+fn violation_to_json(violation: &Violation) -> JsonViolation {
+    let source_code = violation
+        .file
+        .as_ref()
+        .and_then(|path| std::fs::read_to_string(path.as_ref()).ok())
+        .unwrap_or_default();
+
+    let (line_start, column_start) = calculate_line_column(&source_code, violation.span.start);
+    let (line_end, column_end) = calculate_line_column(&source_code, violation.span.end);
+
+    JsonViolation {
+        rule_id: violation.rule_id.to_string(),
+        severity: violation.severity.to_string(),
+        message: violation.message.to_string(),
+        file: violation
+            .file
+            .as_ref()
+            .map(std::string::ToString::to_string),
+        line_start,
+        line_end,
+        column_start,
+        column_end,
+        offset_start: violation.span.start,
+        offset_end: violation.span.end,
+        suggestion: violation
+            .suggestion
+            .as_ref()
+            .map(std::string::ToString::to_string),
+        fix: violation.fix.as_ref().map(fix_to_json),
+    }
+}
+
+/// Convert a fix to JSON format
+fn fix_to_json(fix: &crate::violation::Fix) -> JsonFix {
+    JsonFix {
+        description: fix.description.to_string(),
+        replacements: fix
+            .replacements
+            .iter()
+            .map(|r| JsonReplacement {
+                offset_start: r.span.start,
+                offset_end: r.span.end,
+                new_text: r.new_text.to_string(),
+            })
+            .collect(),
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -219,6 +264,20 @@ pub struct JsonViolation {
     pub offset_start: usize,
     pub offset_end: usize,
     pub suggestion: Option<String>,
+    pub fix: Option<JsonFix>,
+}
+
+#[derive(Serialize)]
+pub struct JsonFix {
+    pub description: String,
+    pub replacements: Vec<JsonReplacement>,
+}
+
+#[derive(Serialize)]
+pub struct JsonReplacement {
+    pub offset_start: usize,
+    pub offset_end: usize,
+    pub new_text: String,
 }
 
 #[derive(Serialize)]

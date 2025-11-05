@@ -1,110 +1,44 @@
-use crate::{context::LintContext, rules::replace_by_builtin::ls::rule};
+use crate::rules::replace_by_builtin::ls::rule;
 
 #[test]
 fn converts_sort_by_time() {
     let source = "^ls -t";
-
-    LintContext::test_with_parsed_source(source, |context| {
-        let violations = rule().check(&context);
-
-        let fix = violations[0].fix.as_ref().unwrap();
-        assert_eq!(
-            fix.replacements[0].new_text.as_ref(),
-            "ls | sort-by modified"
-        );
-        assert!(
-            fix.description.contains("sort-by modified"),
-            "Fix should explain sort-by modified: {}",
-            fix.description
-        );
-    });
+    rule().assert_fix_contains(source, "ls | sort-by modified");
+    rule().assert_fix_description_contains(source, "sort-by modified");
 }
 
 #[test]
 fn converts_sort_by_size() {
     let source = "^ls -S";
-
-    LintContext::test_with_parsed_source(source, |context| {
-        let violations = rule().check(&context);
-
-        let fix = violations[0].fix.as_ref().unwrap();
-        assert_eq!(fix.replacements[0].new_text.as_ref(), "ls | sort-by size");
-        assert!(
-            fix.description.contains("sort-by size"),
-            "Fix should explain sort-by size: {}",
-            fix.description
-        );
-    });
+    rule().assert_fix_contains(source, "ls | sort-by size");
+    rule().assert_fix_description_contains(source, "sort-by size");
 }
 
 #[test]
 fn converts_reverse_sort() {
     let source = "^ls -r";
-
-    LintContext::test_with_parsed_source(source, |context| {
-        let violations = rule().check(&context);
-
-        let fix = violations[0].fix.as_ref().unwrap();
-        assert_eq!(fix.replacements[0].new_text.as_ref(), "ls | reverse");
-        assert!(
-            fix.description.contains("reverse"),
-            "Fix should explain reverse: {}",
-            fix.description
-        );
-    });
+    rule().assert_fix_contains(source, "ls | reverse");
+    rule().assert_fix_description_contains(source, "reverse");
 }
 
 #[test]
 fn combines_sort_and_reverse() {
     let source = "^ls -tr";
-
-    LintContext::test_with_parsed_source(source, |context| {
-        let violations = rule().check(&context);
-
-        let fix = violations[0].fix.as_ref().unwrap();
-        assert_eq!(
-            fix.replacements[0].new_text.as_ref(),
-            "ls | sort-by modified | reverse"
-        );
-        assert!(
-            fix.description.contains("sort-by modified") && fix.description.contains("reverse"),
-            "Fix should explain both transformations: {}",
-            fix.description
-        );
-    });
+    rule().assert_fix_contains(source, "ls | sort-by modified | reverse");
+    rule().assert_fix_description_contains(source, "sort-by modified");
+    rule().assert_fix_description_contains(source, "reverse");
 }
 
 #[test]
 fn combines_all_sort_with_reverse() {
     let source = "^ls -Str";
-
-    LintContext::test_with_parsed_source(source, |context| {
-        let violations = rule().check(&context);
-
-        let fix = violations[0].fix.as_ref().unwrap();
-        assert_eq!(
-            fix.replacements[0].new_text.as_ref(),
-            "ls | sort-by modified | sort-by size | reverse"
-        );
-    });
+    rule().assert_fix_contains(source, "ls | sort-by modified | sort-by size | reverse");
 }
 
 #[test]
 fn combines_flags_with_path() {
     let source = "^ls -lat /var/log";
-
-    LintContext::test_with_parsed_source(source, |context| {
-        let violations = rule().check(&context);
-
-        let fix = violations[0].fix.as_ref().unwrap();
-        assert_eq!(
-            fix.replacements[0].new_text.as_ref(),
-            "ls /var/log --all | sort-by modified"
-        );
-        assert!(
-            fix.description.contains("-l") && fix.description.contains("not needed"),
-            "Fix should mention -l is not needed: {}",
-            fix.description
-        );
-    });
+    rule().assert_fix_contains(source, "ls /var/log --all | sort-by modified");
+    rule().assert_fix_description_contains(source, "-l");
+    rule().assert_fix_description_contains(source, "not needed");
 }

@@ -1,5 +1,4 @@
 use super::rule;
-use crate::context::LintContext;
 
 fn init_logger() {
     use std::sync::Once;
@@ -120,12 +119,7 @@ ls | each { |file|
     ^cat $file.name | lines | length
 }
 ";
-    let violations =
-        LintContext::test_with_parsed_source(bad_code, |context| rule().check(&context));
-    assert!(
-        !violations.is_empty(),
-        "Should detect external commands in pipeline within closure"
-    );
+    rule().assert_detects(bad_code);
 }
 
 // Test complex pipelines

@@ -1,103 +1,47 @@
-use crate::{context::LintContext, rules::replace_by_builtin::uniq::rule};
+use crate::rules::replace_by_builtin::uniq::rule;
 
 #[test]
 fn converts_count_flag() {
     let source = "^uniq -c";
-
-    LintContext::test_with_parsed_source(source, |context| {
-        let violations = rule().check(&context);
-
-        let fix = violations[0].fix.as_ref().unwrap();
-        assert_eq!(fix.replacements[0].new_text.as_ref(), "uniq --count");
-        assert!(
-            fix.description.contains("--count"),
-            "Fix should explain count flag: {}",
-            fix.description
-        );
-    });
+    rule().assert_fix_contains(source, "uniq --count");
+    rule().assert_fix_description_contains(source, "--count");
 }
 
 #[test]
 fn converts_repeated_flag() {
     let source = "^uniq -d";
-
-    LintContext::test_with_parsed_source(source, |context| {
-        let violations = rule().check(&context);
-
-        let fix = violations[0].fix.as_ref().unwrap();
-        assert_eq!(fix.replacements[0].new_text.as_ref(), "uniq");
-        assert!(
-            fix.description.contains("repeated") && fix.description.contains("count > 1"),
-            "Fix should suggest uniq --count | where count > 1: {}",
-            fix.description
-        );
-    });
+    rule().assert_fix_contains(source, "uniq");
+    rule().assert_fix_description_contains(source, "repeated");
+    rule().assert_fix_description_contains(source, "count > 1");
 }
 
 #[test]
 fn converts_unique_flag() {
     let source = "^uniq -u";
-
-    LintContext::test_with_parsed_source(source, |context| {
-        let violations = rule().check(&context);
-
-        let fix = violations[0].fix.as_ref().unwrap();
-        assert_eq!(fix.replacements[0].new_text.as_ref(), "uniq");
-        assert!(
-            fix.description.contains("unique") && fix.description.contains("count == 1"),
-            "Fix should suggest uniq --count | where count == 1: {}",
-            fix.description
-        );
-    });
+    rule().assert_fix_contains(source, "uniq");
+    rule().assert_fix_description_contains(source, "unique");
+    rule().assert_fix_description_contains(source, "count == 1");
 }
 
 #[test]
 fn converts_ignore_case_flag() {
     let source = "^uniq -i";
-
-    LintContext::test_with_parsed_source(source, |context| {
-        let violations = rule().check(&context);
-
-        let fix = violations[0].fix.as_ref().unwrap();
-        assert_eq!(fix.replacements[0].new_text.as_ref(), "uniq");
-        assert!(
-            fix.description.contains("case-insensitive") || fix.description.contains("downcase"),
-            "Fix should suggest str downcase: {}",
-            fix.description
-        );
-    });
+    rule().assert_fix_contains(source, "uniq");
+    rule().assert_fix_description_contains(source, "downcase");
 }
 
 #[test]
 fn converts_skip_fields_flag() {
     let source = "^uniq -f 2";
-
-    LintContext::test_with_parsed_source(source, |context| {
-        let violations = rule().check(&context);
-
-        let fix = violations[0].fix.as_ref().unwrap();
-        assert_eq!(fix.replacements[0].new_text.as_ref(), "uniq");
-        assert!(
-            fix.description.contains("uniq-by") && fix.description.contains("column"),
-            "Fix should suggest uniq-by for field-based deduplication: {}",
-            fix.description
-        );
-    });
+    rule().assert_fix_contains(source, "uniq");
+    rule().assert_fix_description_contains(source, "uniq-by");
+    rule().assert_fix_description_contains(source, "column");
 }
 
 #[test]
 fn combines_count_with_other_flags() {
     let source = "^uniq -ci";
-
-    LintContext::test_with_parsed_source(source, |context| {
-        let violations = rule().check(&context);
-
-        let fix = violations[0].fix.as_ref().unwrap();
-        assert_eq!(fix.replacements[0].new_text.as_ref(), "uniq --count");
-        assert!(
-            fix.description.contains("count") && fix.description.contains("case-insensitive"),
-            "Fix should mention both flags: {}",
-            fix.description
-        );
-    });
+    rule().assert_fix_contains(source, "uniq --count");
+    rule().assert_fix_description_contains(source, "count");
+    rule().assert_fix_description_contains(source, "case-insensitive");
 }

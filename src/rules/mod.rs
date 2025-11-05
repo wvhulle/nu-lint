@@ -106,6 +106,7 @@ impl RuleRegistry {
         registry.register(replace_by_builtin::find::rule());
         registry.register(replace_by_builtin::grep::rule());
         registry.register(replace_by_builtin::head::rule());
+        registry.register(replace_by_builtin::http::rule());
         registry.register(replace_by_builtin::jq::rule());
         registry.register(replace_by_builtin::ls::rule());
         registry.register(replace_by_builtin::other::rule());

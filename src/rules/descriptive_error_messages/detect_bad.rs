@@ -1,5 +1,4 @@
 use super::rule;
-use crate::LintContext;
 
 #[test]
 fn test_detect_generic_error_message() {
@@ -25,14 +24,7 @@ def process [] {
 }
 "#;
 
-    LintContext::test_with_parsed_source(source, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            !violations.is_empty(),
-            "Should detect generic error message"
-        );
-        assert_eq!(violations[0].rule_id, "descriptive_error_messages");
-    });
+    rule().assert_detects(source);
 }
 
 #[test]
@@ -43,14 +35,7 @@ def process [] {
 }
 "#;
 
-    LintContext::test_with_parsed_source(source, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            !violations.is_empty(),
-            "Should detect 'failed' as generic message"
-        );
-        assert_eq!(violations[0].rule_id, "descriptive_error_messages");
-    });
+    rule().assert_detects(source);
 }
 
 #[test]

@@ -100,17 +100,17 @@ impl FindOptions {
     }
 
     fn build_glob_pattern(&self, base_path: &str) -> String {
-        match &self.name_pattern {
-            Some(pattern) => {
+        self.name_pattern.as_ref().map_or_else(
+            || format!("{base_path}/**/*"),
+            |pattern| {
                 let clean = pattern.trim_matches('"').trim_matches('\'');
                 if clean.contains('*') {
                     format!("{base_path}/**/{clean}")
                 } else {
                     format!("{base_path}/**/*{clean}*")
                 }
-            }
-            None => format!("{base_path}/**/*"),
-        }
+            },
+        )
     }
 
     fn build_filters(&self) -> (Vec<String>, Vec<String>) {
@@ -182,13 +182,13 @@ impl FindOptions {
 }
 
 fn parse_size_filter(size: &str) -> String {
-    let (op, value) = if let Some(stripped) = size.strip_prefix('+') {
-        (">", stripped)
-    } else if let Some(stripped) = size.strip_prefix('-') {
-        ("<", stripped)
-    } else {
-        ("==", size)
-    };
+    let (op, value) = size.strip_prefix('+').map_or_else(
+        || {
+            size.strip_prefix('-')
+                .map_or(("==", size), |stripped| ("<", stripped))
+        },
+        |stripped| (">", stripped),
+    );
 
     format!("where size {op} {}", convert_size_to_nu(value))
 }
@@ -206,13 +206,14 @@ fn convert_size_to_nu(size: &str) -> String {
 }
 
 fn parse_time_filter(mtime: &str) -> String {
-    let (op, days) = if let Some(stripped) = mtime.strip_prefix('+') {
-        ("<", stripped)
-    } else if let Some(stripped) = mtime.strip_prefix('-') {
-        (">", stripped)
-    } else {
-        (">", mtime)
-    };
+    let (op, days) = mtime.strip_prefix('+').map_or_else(
+        || {
+            mtime
+                .strip_prefix('-')
+                .map_or((">", mtime), |stripped| (">", stripped))
+        },
+        |stripped| ("<", stripped),
+    );
 
     format!("where modified {op} ((date now) - {days}day)")
 }

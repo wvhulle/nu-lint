@@ -110,7 +110,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     })
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "brace_spacing",
         RuleCategory::Formatting,

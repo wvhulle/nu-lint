@@ -240,11 +240,8 @@ where
         .filter_map(extract_field_from_part)
         .collect();
 
-    if fields.len() == path_parts.0.len() && !fields.is_empty() {
-        Some(wrap_with_open(&format!("get {}", fields.join("."))))
-    } else {
-        None
-    }
+    (fields.len() == path_parts.0.len() && !fields.is_empty())
+        .then(|| wrap_with_open(&format!("get {}", fields.join("."))))
 }
 
 /// Simple jq operations that have direct Nushell equivalents
@@ -388,7 +385,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
         .collect()
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "prefer_nushell_over_jq",
         RuleCategory::Performance,

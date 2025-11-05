@@ -1,10 +1,7 @@
 use nu_protocol::ast::Expr;
 
 use crate::{
-    ast::CallExt,
-    context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    ast::call::CallExt, context::LintContext, rule::{Rule, RuleCategory}, violation::{RuleViolation, Severity}
 };
 
 /// Destructive operations that users often mistakenly try to silence with `|
@@ -151,7 +148,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
         .collect()
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "prefer_error_suppression_over_ignore",
         RuleCategory::ErrorHandling,

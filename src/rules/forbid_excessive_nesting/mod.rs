@@ -50,7 +50,7 @@ fn count_indentation_level(line: &str) -> usize {
     leading_spaces / 2
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "forbid_excessive_nesting",
         RuleCategory::CodeQuality,

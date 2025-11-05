@@ -3,7 +3,7 @@ use nu_protocol::ast::{
 };
 
 use crate::{
-    ast::ExpressionExt,
+    ast::expression::ExpressionExt,
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -101,13 +101,8 @@ fn analyze_ast_expression(
             }
 
             // External calls to operators
-            Expr::ExternalCall(head, _args) => {
-                if let Some(p) = analyze_external_call(head, context) {
-                    FindMapResult::Found(p)
-                } else {
-                    FindMapResult::Continue
-                }
-            }
+            Expr::ExternalCall(head, _args) => analyze_external_call(head, context)
+                .map_or(FindMapResult::Continue, FindMapResult::Found),
 
             // For all other expressions, continue traversal
             _ => FindMapResult::Continue,
@@ -266,7 +261,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     })
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "escape_string_interpolation_operators",
         RuleCategory::ErrorHandling,

@@ -1,7 +1,7 @@
 use nu_protocol::ast::Expr;
 
 use crate::{
-    ast::{CallExt, ExpressionExt},
+    ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{Fix, Replacement, RuleViolation, Severity},
@@ -37,7 +37,7 @@ struct ChainIterator<'a> {
 }
 
 impl<'a> ChainIterator<'a> {
-    fn new(call: &'a nu_protocol::ast::Call, context: &'a LintContext<'a>) -> Self {
+    const fn new(call: &'a nu_protocol::ast::Call, context: &'a LintContext<'a>) -> Self {
         Self {
             current: Some(call),
             context,
@@ -247,7 +247,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     })
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "prefer_match_over_if_chain",
         RuleCategory::Idioms,

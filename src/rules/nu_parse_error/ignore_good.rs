@@ -6,13 +6,10 @@ fn test_valid_let_statement() {
     let code = "let x = 5";
     let violations = engine.lint_source(code, None);
 
-    let parse_errors: Vec<_> = violations
-        .iter()
-        .filter(|v| v.rule_id.as_ref() == "nu_parse_error")
-        .collect();
-
     assert!(
-        parse_errors.is_empty(),
+        !violations
+            .iter()
+            .any(|v| v.rule_id.as_ref() == "nu_parse_error"),
         "Expected no parse errors for valid let statement"
     );
 }
@@ -27,13 +24,10 @@ def greet [name: string] {
 "#;
     let violations = engine.lint_source(code, None);
 
-    let parse_errors: Vec<_> = violations
-        .iter()
-        .filter(|v| v.rule_id.as_ref() == "nu_parse_error")
-        .collect();
-
     assert!(
-        parse_errors.is_empty(),
+        !violations
+            .iter()
+            .any(|v| v.rule_id.as_ref() == "nu_parse_error"),
         "Expected no parse errors for valid function"
     );
 }
@@ -44,13 +38,10 @@ fn test_valid_pipeline() {
     let code = "ls | where size > 100 | sort-by name";
     let violations = engine.lint_source(code, None);
 
-    let parse_errors: Vec<_> = violations
-        .iter()
-        .filter(|v| v.rule_id.as_ref() == "nu_parse_error")
-        .collect();
-
     assert!(
-        parse_errors.is_empty(),
+        !violations
+            .iter()
+            .any(|v| v.rule_id.as_ref() == "nu_parse_error"),
         "Expected no parse errors for valid pipeline"
     );
 }
@@ -61,13 +52,10 @@ fn test_valid_list() {
     let code = "let items = [1, 2, 3, 4, 5]";
     let violations = engine.lint_source(code, None);
 
-    let parse_errors: Vec<_> = violations
-        .iter()
-        .filter(|v| v.rule_id.as_ref() == "nu_parse_error")
-        .collect();
-
     assert!(
-        parse_errors.is_empty(),
+        !violations
+            .iter()
+            .any(|v| v.rule_id.as_ref() == "nu_parse_error"),
         "Expected no parse errors for valid list"
     );
 }
@@ -78,13 +66,10 @@ fn test_valid_record() {
     let code = "let person = {name: 'John', age: 30}";
     let violations = engine.lint_source(code, None);
 
-    let parse_errors: Vec<_> = violations
-        .iter()
-        .filter(|v| v.rule_id.as_ref() == "nu_parse_error")
-        .collect();
-
     assert!(
-        parse_errors.is_empty(),
+        !violations
+            .iter()
+            .any(|v| v.rule_id.as_ref() == "nu_parse_error"),
         "Expected no parse errors for valid record"
     );
 }
@@ -95,13 +80,10 @@ fn test_valid_string() {
     let code = r#"let greeting = "Hello, world!""#;
     let violations = engine.lint_source(code, None);
 
-    let parse_errors: Vec<_> = violations
-        .iter()
-        .filter(|v| v.rule_id.as_ref() == "nu_parse_error")
-        .collect();
-
     assert!(
-        parse_errors.is_empty(),
+        !violations
+            .iter()
+            .any(|v| v.rule_id.as_ref() == "nu_parse_error"),
         "Expected no parse errors for valid string"
     );
 }
@@ -112,13 +94,10 @@ fn test_valid_closure() {
     let code = "let adder = {|x, y| $x + $y}";
     let violations = engine.lint_source(code, None);
 
-    let parse_errors: Vec<_> = violations
-        .iter()
-        .filter(|v| v.rule_id.as_ref() == "nu_parse_error")
-        .collect();
-
     assert!(
-        parse_errors.is_empty(),
+        !violations
+            .iter()
+            .any(|v| v.rule_id.as_ref() == "nu_parse_error"),
         "Expected no parse errors for valid closure"
     );
 }
@@ -136,13 +115,10 @@ if $x > 5 {
 "#;
     let violations = engine.lint_source(code, None);
 
-    let parse_errors: Vec<_> = violations
-        .iter()
-        .filter(|v| v.rule_id.as_ref() == "nu_parse_error")
-        .collect();
-
     assert!(
-        parse_errors.is_empty(),
+        !violations
+            .iter()
+            .any(|v| v.rule_id.as_ref() == "nu_parse_error"),
         "Expected no parse errors for valid if expression"
     );
 }

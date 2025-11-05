@@ -1,7 +1,7 @@
 use nu_protocol::ast::Expr;
 
 use crate::{
-    ast::{CallExt, ExpressionExt, SpanExt},
+    ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -24,7 +24,7 @@ impl MetadataFields {
         .collect()
     }
 
-    fn is_valid(&self) -> bool {
+    const fn is_valid(&self) -> bool {
         self.has_msg && self.has_label && self.has_help
     }
 }
@@ -219,7 +219,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     })
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "error_make_metadata",
         RuleCategory::ErrorHandling,

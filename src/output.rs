@@ -6,20 +6,18 @@ use serde::Serialize;
 use crate::violation::{Severity, Violation};
 
 /// Format violations as human-readable text
-pub(crate) fn format_text(violations: &[Violation]) -> String {
+pub fn format_text(violations: &[Violation]) -> String {
     if violations.is_empty() {
         return String::from("No violations found!");
     }
 
     let summary = Summary::from_violations(violations);
     let header = format!("Found {}\n", summary.format_compact());
-    
+
     let violations_output: String = violations
         .iter()
         .enumerate()
-        .map(|(idx, violation)| {
-            format_violation_text(violation, idx < violations.len() - 1)
-        })
+        .map(|(idx, violation)| format_violation_text(violation, idx < violations.len() - 1))
         .collect();
 
     let footer = format!("\n{}", summary.format_compact());
@@ -52,7 +50,7 @@ fn format_violation_text(violation: &Violation, add_separator: bool) -> String {
     };
 
     let report = format!("{:?}", Report::new(diagnostic));
-    
+
     let fix_info = violation
         .fix
         .as_ref()

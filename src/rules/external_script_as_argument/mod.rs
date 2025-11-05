@@ -1,7 +1,7 @@
 use nu_protocol::SyntaxShape;
 
 use crate::{
-    ast::BlockExt,
+    ast::block::BlockExt,
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -65,7 +65,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
         .collect()
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "external_script_as_argument",
         RuleCategory::CodeQuality,

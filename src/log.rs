@@ -35,7 +35,7 @@ fn get_relative_file_path<'a>(record: &'a log::Record) -> &'a str {
         .trim_start_matches('/')
 }
 
-fn get_level_colors(level: log::Level) -> (&'static str, &'static str) {
+const fn get_level_colors(level: log::Level) -> (&'static str, &'static str) {
     match level {
         log::Level::Error => ("\x1b[91m", "\x1b[0m"), // Red
         log::Level::Warn => ("\x1b[93m", "\x1b[0m"),  // Yellow

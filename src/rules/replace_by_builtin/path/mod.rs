@@ -1,7 +1,7 @@
 use nu_protocol::{VarId, ast::Expr};
 
 use crate::{
-    ast::{CallExt, ExpressionExt},
+    ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -174,7 +174,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
         .collect()
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "prefer_path_type",
         RuleCategory::TypeSafety,

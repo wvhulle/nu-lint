@@ -16,9 +16,6 @@ fn get_builtin_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
     add_process_control_alternatives(&mut map);
     add_file_operations_alternatives(&mut map);
     add_text_processing_alternatives(&mut map);
-    add_network_alternatives(&mut map);
-    add_archive_alternatives(&mut map);
-    add_misc_alternatives(&mut map);
     map
 }
 
@@ -154,21 +151,6 @@ fn add_text_processing_alternatives(map: &mut HashMap<&'static str, BuiltinAlter
     );
 }
 
-/// Add network command alternatives (placeholder)
-fn add_network_alternatives(_map: &mut HashMap<&'static str, BuiltinAlternative>) {
-    // Currently no network commands in this rule
-}
-
-/// Add archive command alternatives (placeholder)
-fn add_archive_alternatives(_map: &mut HashMap<&'static str, BuiltinAlternative>) {
-    // Currently no archive commands in this rule
-}
-
-/// Add miscellaneous command alternatives (placeholder)
-fn add_misc_alternatives(_map: &mut HashMap<&'static str, BuiltinAlternative>) {
-    // Currently no misc commands in this rule
-}
-
 fn build_fix(
     cmd_text: &str,
     alternative: &BuiltinAlternative,
@@ -278,11 +260,9 @@ fn build_uname_replacement() -> (String, String) {
 }
 
 fn build_man_replacement(args_text: &[String]) -> (String, String) {
-    let repl = if let Some(cmd) = args_text.first() {
-        format!("help {cmd}")
-    } else {
-        "help commands".to_string()
-    };
+    let repl = args_text
+        .first()
+        .map_or_else(|| "help commands".to_string(), |cmd| format!("help {cmd}"));
     (
         repl,
         "Use 'help <command>' for command help, or 'help commands' to list all commands"
@@ -291,11 +271,9 @@ fn build_man_replacement(args_text: &[String]) -> (String, String) {
 }
 
 fn build_which_replacement(args_text: &[String]) -> (String, String) {
-    let repl = if let Some(cmd) = args_text.first() {
-        format!("which {cmd}")
-    } else {
-        "which".to_string()
-    };
+    let repl = args_text
+        .first()
+        .map_or_else(|| "which".to_string(), |cmd| format!("which {cmd}"));
     (
         repl,
         "Use Nu's built-in 'which' to find command locations".to_string(),
@@ -365,11 +343,10 @@ fn build_tr_replacement() -> (String, String) {
 }
 
 fn build_tee_replacement(args_text: &[String]) -> (String, String) {
-    let repl = if let Some(file) = args_text.first() {
-        format!("tee {{ save {file} }}")
-    } else {
-        "tee { save ... }".to_string()
-    };
+    let repl = args_text.first().map_or_else(
+        || "tee { save ... }".to_string(),
+        |file| format!("tee {{ save {file} }}"),
+    );
     let desc = "Use 'tee { save file.txt }' to save data while passing it through the pipeline"
         .to_string();
     (repl, desc)

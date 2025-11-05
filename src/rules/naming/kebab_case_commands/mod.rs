@@ -3,7 +3,7 @@ use nu_protocol::ast::Expr;
 
 use super::NuNaming;
 use crate::{
-    ast::CallExt,
+    ast::call::CallExt,
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -37,7 +37,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     })
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "kebab_case_commands",
         RuleCategory::Naming,

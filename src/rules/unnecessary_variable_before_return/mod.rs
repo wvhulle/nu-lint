@@ -1,7 +1,7 @@
 use nu_protocol::{Span, VarId, ast::Expr};
 
 use crate::{
-    ast::CallExt,
+    ast::call::CallExt,
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -50,11 +50,7 @@ fn is_simple_var_reference(pipeline: &nu_protocol::ast::Pipeline, var_id: VarId)
     let element = pipeline.elements.first()?;
     let referenced_var_id = extract_var_reference(&element.expr)?;
 
-    if referenced_var_id == var_id {
-        Some(element.expr.span)
-    } else {
-        None
-    }
+    (referenced_var_id == var_id).then_some(element.expr.span)
 }
 
 /// Check a block for the unnecessary variable pattern
@@ -128,7 +124,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     violations
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "unnecessary_variable_before_return",
         RuleCategory::CodeQuality,

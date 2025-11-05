@@ -1,7 +1,7 @@
 use nu_protocol::ast::Expr;
 
 use crate::{
-    ast::CallExt,
+    ast::call::CallExt,
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -37,8 +37,6 @@ fn contains_split_row(expr: &nu_protocol::ast::Expression, ctx: &LintContext) ->
 }
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {
-    use crate::ast::CallExt;
-
     context.collect_rule_violations(|expr, ctx| match &expr.expr {
         Expr::Call(call) if call.is_call_to_command("each", ctx) => {
             let has_split = call
@@ -70,7 +68,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     })
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "prefer_parse_over_each_split",
         RuleCategory::Idioms,

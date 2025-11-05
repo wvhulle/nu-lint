@@ -5,7 +5,6 @@ fn detect_redundant_in_at_pipeline_start() {
     crate::log::instrument();
 
     let bad_codes = vec![
-        // Commands that start with redundant $in
         "def get-field [field] { $in | get $field }",
         "def has-key [key] { $in | columns | any { |col| $col == $key } }",
         "def select-column [column] { $in | select $column }",
@@ -22,7 +21,6 @@ fn detect_redundant_in_at_pipeline_start() {
 #[test]
 fn detect_redundant_in_no_parameters() {
     let bad_codes = vec![
-        // Commands with no parameters that use redundant $in
         "def process [] { $in | where active }",
         "def transform [] { $in | each { |x| $x * 2 } }",
         "def filter-positive [] { $in | where $it > 0 }",
@@ -37,10 +35,9 @@ fn detect_redundant_in_no_parameters() {
 #[test]
 fn detect_redundant_in_with_spaces() {
     let bad_codes = vec![
-        // Test different spacing patterns
-        "def process [] { $in| where active }", // No space after $in
-        "def process [] {    $in | where active }", // Leading spaces
-        "def process [] {\n    $in | where active\n}", // Multi-line
+        "def process [] { $in| where active }",
+        "def process [] {    $in | where active }",
+        "def process [] {\n    $in | where active\n}",
     ];
 
     for code in bad_codes {
@@ -51,7 +48,6 @@ fn detect_redundant_in_with_spaces() {
 #[test]
 fn detect_redundant_in_complex_pipelines() {
     let bad_codes = vec![
-        // Complex pipelines that start with redundant $in
         "def process [] { $in | where active | select name | sort-by name }",
         "def calculate [] { $in | each { |x| $x * 2 } | math sum }",
         "def filter-and-count [] { $in | where $it > 5 | length }",

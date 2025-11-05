@@ -62,30 +62,27 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
         .iter()
         .enumerate()
         .flat_map(|(line_num, line)| {
-            LINE_CHECKS.iter().filter_map(move |check| {
-                if (check.pattern)().is_match(line) && line.len() > check.max_length {
+            LINE_CHECKS
+                .iter()
+                .filter(|&check| (check.pattern)().is_match(line) && line.len() > check.max_length)
+                .map(move |check| {
                     let line_start = source[..]
                         .lines()
                         .take(line_num)
                         .map(|l| l.len() + 1)
                         .sum::<usize>();
-                    Some(
-                        RuleViolation::new_static(
-                            "multiline_formatting",
-                            check.message,
-                            nu_protocol::Span::new(line_start, line_start + line.len()),
-                        )
-                        .with_suggestion_static(check.suggestion),
+                    RuleViolation::new_static(
+                        "multiline_formatting",
+                        check.message,
+                        nu_protocol::Span::new(line_start, line_start + line.len()),
                     )
-                } else {
-                    None
-                }
-            })
+                    .with_suggestion_static(check.suggestion)
+                })
         })
         .collect()
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "multiline_formatting",
         RuleCategory::Formatting,

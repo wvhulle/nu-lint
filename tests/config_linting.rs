@@ -6,7 +6,7 @@ use common::CHDIR_MUTEX;
 use nu_lint::{
     LintEngine,
     cli::{collect_files_to_lint, lint_files},
-    config::{RuleSeverity, load_config},
+    config::{Config, RuleSeverity},
 };
 use tempfile::TempDir;
 
@@ -19,7 +19,7 @@ fn test_custom_config_file() {
     fs::write(&config_path, "[general]\nmin_severity = \"info\"\n").unwrap();
     fs::write(&nu_file_path, "let myVariable = 5\n").unwrap();
 
-    let config = load_config(Some(&config_path));
+    let config = Config::load(Some(&config_path));
     assert_eq!(config.general.min_severity, RuleSeverity::Info);
 
     let engine = LintEngine::new(config);
@@ -49,7 +49,7 @@ fn test_auto_discover_config_file() {
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         std::env::set_current_dir(temp_dir.path()).unwrap();
 
-        let config = load_config(None);
+        let config = Config::load(None);
         let engine = LintEngine::new(config);
         let files = collect_files_to_lint(&[PathBuf::from("test.nu")]);
         let (violations, _) = lint_files(&engine, &files, false);
@@ -91,7 +91,7 @@ fn test_auto_discover_config_in_parent_dir() {
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         std::env::set_current_dir(&subdir).unwrap();
 
-        let config = load_config(None);
+        let config = Config::load(None);
         let engine = LintEngine::new(config);
         let files = collect_files_to_lint(&[PathBuf::from("test.nu")]);
         let (violations, _) = lint_files(&engine, &files, false);
@@ -138,7 +138,7 @@ fn test_explicit_config_overrides_auto_discovery() {
         std::env::set_current_dir(temp_dir.path()).unwrap();
 
         // Explicit config should override auto-discovery
-        let config = load_config(Some(&explicit_config));
+        let config = Config::load(Some(&explicit_config));
         let engine = LintEngine::new(config);
         let files = collect_files_to_lint(&[PathBuf::from("test.nu")]);
         let (violations, _) = lint_files(&engine, &files, false);

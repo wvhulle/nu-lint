@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    ast::BlockExt,
+    ast::block::BlockExt,
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -38,7 +38,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
         .collect()
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "unused_helper_functions",
         RuleCategory::CodeQuality,

@@ -1,7 +1,7 @@
-use nu_protocol::ast::{Expr, Operator};
+use nu_protocol::ast::{Expr, Math, Operator};
 
 use crate::{
-    ast::ExpressionExt,
+    ast::expression::ExpressionExt,
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{Fix, Replacement, RuleViolation, Severity},
@@ -28,26 +28,26 @@ fn build_fix(
     }
 }
 
-fn get_compound_operator(operator: Operator) -> Option<&'static str> {
+const fn get_compound_operator(operator: Operator) -> Option<&'static str> {
     match operator {
         Operator::Math(math_op) => match math_op {
-            nu_protocol::ast::Math::Add => Some("+="),
-            nu_protocol::ast::Math::Subtract => Some("-="),
-            nu_protocol::ast::Math::Multiply => Some("*="),
-            nu_protocol::ast::Math::Divide => Some("/="),
+            Math::Add => Some("+="),
+            Math::Subtract => Some("-="),
+            Math::Multiply => Some("*="),
+            Math::Divide => Some("/="),
             _ => None,
         },
         _ => None,
     }
 }
 
-fn get_operator_symbol(operator: Operator) -> &'static str {
+const fn get_operator_symbol(operator: Operator) -> &'static str {
     match operator {
         Operator::Math(math_op) => match math_op {
-            nu_protocol::ast::Math::Add => "+",
-            nu_protocol::ast::Math::Subtract => "-",
-            nu_protocol::ast::Math::Multiply => "*",
-            nu_protocol::ast::Math::Divide => "/",
+            Math::Add => "+",
+            Math::Subtract => "-",
+            Math::Multiply => "*",
+            Math::Divide => "/",
             _ => "?",
         },
         _ => "?",
@@ -123,7 +123,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     })
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "prefer_compound_assignment",
         RuleCategory::Idioms,

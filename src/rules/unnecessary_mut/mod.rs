@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use nu_protocol::{Span, VarId, ast::Expr};
 
 use crate::{
-    ast::{CallExt, ExpressionExt},
+    ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{Fix, Replacement, RuleViolation, Severity},
@@ -97,7 +97,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     violations
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "unnecessary_mut",
         RuleCategory::CodeQuality,

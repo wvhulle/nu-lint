@@ -29,14 +29,14 @@ impl RuleCategory {
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
-            RuleCategory::Naming => "naming",
-            RuleCategory::Formatting => "formatting",
-            RuleCategory::Idioms => "idioms",
-            RuleCategory::ErrorHandling => "error-handling",
-            RuleCategory::CodeQuality => "code-quality",
-            RuleCategory::Documentation => "documentation",
-            RuleCategory::TypeSafety => "type-safety",
-            RuleCategory::Performance => "performance",
+            Self::Naming => "naming",
+            Self::Formatting => "formatting",
+            Self::Idioms => "idioms",
+            Self::ErrorHandling => "error-handling",
+            Self::CodeQuality => "code-quality",
+            Self::Documentation => "documentation",
+            Self::TypeSafety => "type-safety",
+            Self::Performance => "performance",
         }
     }
 }

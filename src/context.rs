@@ -1,10 +1,12 @@
+use crate::ast::call::CallExt;
+use crate::violation::RuleViolation;
+use nu_protocol::ast::Expr;
+use nu_protocol::engine::StateWorkingSet;
 use nu_protocol::{
     DeclId, Span,
     ast::{Block, Expression, Traverse},
-    engine::{Command, EngineState, StateWorkingSet},
+    engine::{Command, EngineState},
 };
-
-use crate::violation::RuleViolation;
 
 /// Context containing all lint information (source, AST, and engine state)
 /// Rules can use whatever they need from this context
@@ -90,10 +92,6 @@ impl LintContext<'_> {
     pub fn collect_function_definitions(
         &self,
     ) -> std::collections::HashMap<nu_protocol::BlockId, String> {
-        use nu_protocol::ast::Expr;
-
-        use crate::ast::CallExt;
-
         let mut functions = Vec::new();
         self.ast.flat_map(
             self.working_set,
@@ -118,7 +116,6 @@ impl LintContext<'_> {
         F: for<'b> FnOnce(LintContext<'b>) -> R,
     {
         use nu_parser::parse;
-        use nu_protocol::engine::StateWorkingSet;
 
         fn create_engine_with_stdlib() -> nu_protocol::engine::EngineState {
             use nu_protocol::engine::StateWorkingSet;

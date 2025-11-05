@@ -13,16 +13,16 @@ pub enum Severity {
 impl std::fmt::Display for Severity {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Severity::Error => write!(f, "error"),
-            Severity::Warning => write!(f, "warning"),
-            Severity::Info => write!(f, "info"),
+            Self::Error => write!(f, "error"),
+            Self::Warning => write!(f, "warning"),
+            Self::Info => write!(f, "info"),
         }
     }
 }
 
 /// A rule violation without severity (created by rules)
 #[derive(Debug, Clone)]
-pub(crate) struct RuleViolation {
+pub struct RuleViolation {
     pub rule_id: Cow<'static, str>,
     pub message: Cow<'static, str>,
     pub span: Span,
@@ -49,7 +49,7 @@ impl RuleViolation {
 
     /// Create a new rule violation with a dynamic message
     #[must_use]
-    pub(crate) fn new_dynamic(rule_id: &'static str, message: String, span: Span) -> Self {
+    pub(crate) const fn new_dynamic(rule_id: &'static str, message: String, span: Span) -> Self {
         Self {
             rule_id: Cow::Borrowed(rule_id),
             message: Cow::Owned(message),
@@ -129,7 +129,7 @@ impl Violation {
 
     /// Create a new violation with a dynamic message
     #[must_use]
-    pub fn new_dynamic(
+    pub const fn new_dynamic(
         rule_id: &'static str,
         severity: Severity,
         message: String,
@@ -168,7 +168,7 @@ impl Violation {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct Fix {
+pub struct Fix {
     pub(crate) description: Cow<'static, str>,
     pub(crate) replacements: Vec<Replacement>,
 }
@@ -176,7 +176,7 @@ pub(crate) struct Fix {
 impl Fix {
     /// Create a fix with a static description
     #[must_use]
-    pub fn new_static(description: &'static str, replacements: Vec<Replacement>) -> Self {
+    pub const fn new_static(description: &'static str, replacements: Vec<Replacement>) -> Self {
         Self {
             description: Cow::Borrowed(description),
             replacements,
@@ -185,7 +185,7 @@ impl Fix {
 
     /// Create a fix with a dynamic description
     #[must_use]
-    pub(crate) fn new_dynamic(description: String, replacements: Vec<Replacement>) -> Self {
+    pub(crate) const fn new_dynamic(description: String, replacements: Vec<Replacement>) -> Self {
         Self {
             description: Cow::Owned(description),
             replacements,
@@ -194,7 +194,7 @@ impl Fix {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct Replacement {
+pub struct Replacement {
     pub(crate) span: Span,
     pub(crate) new_text: Cow<'static, str>,
 }
@@ -211,7 +211,7 @@ impl Replacement {
 
     /// Create a replacement with dynamic text
     #[must_use]
-    pub fn new_dynamic(span: Span, new_text: String) -> Self {
+    pub const fn new_dynamic(span: Span, new_text: String) -> Self {
         Self {
             span,
             new_text: Cow::Owned(new_text),

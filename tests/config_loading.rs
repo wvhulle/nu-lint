@@ -3,7 +3,7 @@ mod common;
 use std::fs;
 
 use common::{CHDIR_MUTEX, with_temp_dir};
-use nu_lint::config::{Config, RuleSeverity, find_config_file, load_config};
+use nu_lint::config::{Config, RuleSeverity, find_config_file};
 use tempfile::TempDir;
 
 #[test]
@@ -56,7 +56,7 @@ fn test_load_config_with_explicit_path() {
     let config_path = temp_dir.path().join("config.toml");
     fs::write(&config_path, "[general]\nmin_severity = \"error\"\n").unwrap();
 
-    let config = load_config(Some(&config_path));
+    let config = Config::load(Some(&config_path));
     assert_eq!(config.general.min_severity, RuleSeverity::Error);
 }
 
@@ -72,7 +72,7 @@ fn test_load_config_auto_discover() {
 
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         std::env::set_current_dir(temp_dir.path()).unwrap();
-        load_config(None)
+        Config::load(None)
     }));
 
     std::env::set_current_dir(original_dir).unwrap();
@@ -84,7 +84,7 @@ fn test_load_config_auto_discover() {
 #[test]
 fn test_load_config_default() {
     with_temp_dir(|_temp_dir| {
-        let config = load_config(None);
+        let config = Config::load(None);
         assert_eq!(config, Config::default());
     });
 }

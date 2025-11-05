@@ -1,10 +1,7 @@
 use nu_protocol::ast::{Expr, PipelineElement};
 
 use crate::{
-    ast::CallExt,
-    context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    ast::call::CallExt, context::LintContext, rule::{Rule, RuleCategory}, violation::{RuleViolation, Severity}
 };
 
 fn check_sequential_stderr_exit(
@@ -78,7 +75,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     main_violations.chain(nested_violations).collect()
 }
 
-pub(crate) fn rule() -> Rule {
+pub fn rule() -> Rule {
     Rule::new(
         "prefer_error_make_for_stderr",
         RuleCategory::ErrorHandling,

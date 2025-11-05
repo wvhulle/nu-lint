@@ -49,11 +49,7 @@ impl CallExt for Call {
     }
 
     fn get_first_positional_arg(&self) -> Option<&Expression> {
-        self.arguments.first().and_then(|arg| match arg {
-            nu_protocol::ast::Argument::Positional(expr)
-            | nu_protocol::ast::Argument::Unknown(expr) => Some(expr),
-            _ => None,
-        })
+        self.get_positional_arg(0)
     }
 
     fn get_positional_arg(&self, index: usize) -> Option<&Expression> {
@@ -181,10 +177,7 @@ impl CallExt for Call {
 
     fn extract_print_message(&self, context: &LintContext) -> Option<String> {
         self.get_first_positional_arg()
-            .map(|message_expr| match &message_expr.expr {
-                Expr::String(s) | Expr::RawString(s) => s.clone(),
-                _ => message_expr.span_text(context).to_string(),
-            })
+            .map(|expr| expr.span_text(context).to_string())
     }
 
     fn extract_exit_code(&self) -> Option<i64> {

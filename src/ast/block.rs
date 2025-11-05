@@ -67,9 +67,7 @@ impl BlockExt for BlockId {
     fn contains_call_to(&self, command_name: &str, context: &LintContext) -> bool {
         use super::ExpressionExt;
 
-        self.all_elements(context)
-            .iter()
-            .any(|elem| elem.expr.is_call_to(command_name, context))
+        self.any_element(context, |elem| elem.expr.is_call_to(command_name, context))
     }
 
     fn any_element<F>(&self, context: &LintContext, predicate: F) -> bool
@@ -82,14 +80,16 @@ impl BlockExt for BlockId {
     fn contains_variables(&self, context: &LintContext) -> bool {
         use super::ExpressionExt;
 
-        self.all_elements(context)
-            .iter()
-            .any(|elem| elem.expr.contains_variables(context))
+        self.any_element(context, |elem| elem.expr.contains_variables(context))
     }
 
     fn contains_call_in_single_pipeline(&self, command_name: &str, context: &LintContext) -> bool {
         let block = context.working_set.get_block(*self);
-        block.pipelines.len() == 1 && block.pipelines[0].contains_call_to(command_name, context)
+        block.pipelines.len() == 1
+            && block
+                .pipelines
+                .first()
+                .is_some_and(|p| p.contains_call_to(command_name, context))
     }
 
     fn get_single_if_call<'a>(&self, context: &'a LintContext<'a>) -> Option<&'a Call> {

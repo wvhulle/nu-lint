@@ -6,16 +6,6 @@ use nu_protocol::{
 use super::{BlockExt, CallExt, SpanExt};
 use crate::context::LintContext;
 
-#[must_use]
-fn accesses_field(path_tail: &[PathMember], field_name: &str) -> bool {
-    path_tail.iter().any(|path_member| {
-        matches!(
-            path_member,
-            PathMember::String { val, .. } if val == field_name
-        )
-    })
-}
-
 pub trait ExpressionExt {
     fn refers_to_same_variable(&self, other: &Expression, context: &LintContext) -> bool;
     fn extract_variable_name(&self, context: &LintContext) -> Option<String>;
@@ -28,9 +18,7 @@ pub trait ExpressionExt {
     fn is_call_to(&self, command_name: &str, context: &LintContext) -> bool;
     fn extract_assigned_variable(&self) -> Option<VarId>;
     fn extract_field_access(&self, field_name: &str) -> Option<(VarId, Span)>;
-    fn is_external_call(&self) -> bool;
-    fn extract_external_command_name(&self, context: &LintContext) -> Option<String>;
-    fn contains_call_to(&self, command_name: &str, context: &LintContext) -> bool;
+
     fn contains_variables(&self, context: &LintContext) -> bool;
     fn extract_compared_variable(&self, context: &LintContext) -> Option<String>;
     fn extract_comparison_value(&self, context: &LintContext) -> Option<String>;
@@ -44,9 +32,13 @@ pub trait ExpressionExt {
 
 impl ExpressionExt for Expression {
     fn refers_to_same_variable(&self, other: &Expression, context: &LintContext) -> bool {
-        let text1 = self.span_text(context);
-        let text2 = other.span_text(context);
-        text1 == text2
+        match (
+            self.extract_variable_name(context),
+            other.extract_variable_name(context),
+        ) {
+            (Some(name1), Some(name2)) => name1 == name2,
+            _ => false,
+        }
     }
 
     fn extract_variable_name(&self, context: &LintContext) -> Option<String> {
@@ -168,42 +160,17 @@ impl ExpressionExt for Expression {
     fn extract_field_access(&self, field_name: &str) -> Option<(VarId, Span)> {
         if let Expr::FullCellPath(cell_path) = &self.expr
             && let Expr::Var(var_id) = &cell_path.head.expr
-            && accesses_field(&cell_path.tail, field_name)
+            && cell_path.tail.iter().any(|path_member| {
+                matches!(
+                    path_member,
+                    PathMember::String { val, .. } if val == field_name
+                )
+            })
         {
             Some((*var_id, self.span))
         } else {
             None
         }
-    }
-
-    fn is_external_call(&self) -> bool {
-        matches!(&self.expr, Expr::ExternalCall(_, _))
-    }
-
-    fn extract_external_command_name(&self, context: &LintContext) -> Option<String> {
-        if let Expr::ExternalCall(head, _args) = &self.expr {
-            Some(head.span.text(context).to_string())
-        } else {
-            None
-        }
-    }
-
-    fn contains_call_to(&self, command_name: &str, context: &LintContext) -> bool {
-        use nu_protocol::ast::Traverse;
-
-        let mut results = Vec::new();
-        self.flat_map(
-            context.working_set,
-            &|inner_expr| {
-                if inner_expr.is_call_to(command_name, context) {
-                    vec![true]
-                } else {
-                    vec![]
-                }
-            },
-            &mut results,
-        );
-        !results.is_empty()
     }
 
     fn contains_variables(&self, context: &LintContext) -> bool {
@@ -282,14 +249,7 @@ impl ExpressionExt for Expression {
         let Expr::ExternalCall(head, _args) = &self.expr else {
             return false;
         };
-
-        match &head.expr {
-            Expr::Var(id) => *id == var_id,
-            Expr::FullCellPath(cell_path) => {
-                matches!(&cell_path.head.expr, Expr::Var(id) if *id == var_id)
-            }
-            _ => false,
-        }
+        head.matches_var(var_id)
     }
 
     fn matches_var(&self, var_id: VarId) -> bool {

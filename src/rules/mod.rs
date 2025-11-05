@@ -39,6 +39,7 @@ pub mod spacing;
 pub mod systemd_journal_prefix;
 pub mod unnecessary_mut;
 pub mod unnecessary_variable_before_return;
+pub mod unused_helper_functions;
 use std::collections::HashMap;
 
 use naming::{
@@ -134,6 +135,7 @@ impl RuleRegistry {
         registry.register(systemd_journal_prefix::rule());
         registry.register(unnecessary_mut::rule());
         registry.register(unnecessary_variable_before_return::rule());
+        registry.register(unused_helper_functions::rule());
 
         registry
     }

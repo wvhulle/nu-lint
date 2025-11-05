@@ -1,6 +1,8 @@
+use std::collections::{HashMap, HashSet};
+
 use nu_protocol::{
     BlockId, Span, VarId,
-    ast::{Call, Expr, PipelineElement},
+    ast::{Call, Expr, PipelineElement, Traverse},
 };
 
 use super::{CallExt, PipelineExt};
@@ -20,6 +22,12 @@ pub trait BlockExt {
     fn get_single_if_call<'a>(&self, context: &'a LintContext<'a>) -> Option<&'a Call>;
     fn contains_call_in_single_pipeline(&self, command_name: &str, context: &LintContext) -> bool;
     fn contains_external_call_with_variable(&self, var_id: VarId, context: &LintContext) -> bool;
+    fn collect_user_function_calls(&self, context: &LintContext) -> Vec<String>;
+    fn find_transitively_called_functions(
+        &self,
+        context: &LintContext,
+        available_functions: &HashMap<String, BlockId>,
+    ) -> HashSet<String>;
 }
 
 impl BlockExt for BlockId {
@@ -98,8 +106,6 @@ impl BlockExt for BlockId {
     }
 
     fn contains_external_call_with_variable(&self, var_id: VarId, context: &LintContext) -> bool {
-        use nu_protocol::ast::Traverse;
-
         use super::ExpressionExt;
 
         let block = context.working_set.get_block(*self);
@@ -118,5 +124,43 @@ impl BlockExt for BlockId {
         );
 
         !results.is_empty()
+    }
+
+    fn collect_user_function_calls(&self, context: &LintContext) -> Vec<String> {
+        let block = context.working_set.get_block(*self);
+        let mut function_calls = Vec::new();
+
+        block.flat_map(
+            context.working_set,
+            &|expr| {
+                if let Expr::Call(call) = &expr.expr {
+                    vec![call.get_call_name(context)]
+                } else {
+                    vec![]
+                }
+            },
+            &mut function_calls,
+        );
+
+        function_calls
+    }
+
+    fn find_transitively_called_functions(
+        &self,
+        context: &LintContext,
+        available_functions: &HashMap<String, BlockId>,
+    ) -> HashSet<String> {
+        self.collect_user_function_calls(context)
+            .into_iter()
+            .filter_map(|func_name| {
+                available_functions.get(&func_name).map(|&callee_block_id| {
+                    let mut transitive = callee_block_id
+                        .find_transitively_called_functions(context, available_functions);
+                    transitive.insert(func_name);
+                    transitive
+                })
+            })
+            .flatten()
+            .collect()
     }
 }

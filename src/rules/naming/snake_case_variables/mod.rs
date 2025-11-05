@@ -33,7 +33,7 @@ fn create_snake_case_violation(
     let fix = Fix {
         description: format!("Rename variable '{var_name}' to '{snake_case_name}'").into(),
         replacements: vec![Replacement {
-            span: name_span,
+            _span: name_span,
             new_text: snake_case_name.clone().into(),
         }],
     };
@@ -72,7 +72,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     })
 }
 
-pub fn rule() -> Rule {
+pub(crate) fn rule() -> Rule {
     Rule::new(
         "snake_case_variables",
         RuleCategory::Naming,

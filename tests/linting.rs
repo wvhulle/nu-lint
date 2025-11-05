@@ -3,9 +3,9 @@ mod common;
 use std::fs;
 
 use nu_lint::{
+    LintEngine,
     cli::{collect_files_to_lint, lint_files},
     config::{Config, RuleSeverity},
-    engine::LintEngine,
 };
 use tempfile::TempDir;
 

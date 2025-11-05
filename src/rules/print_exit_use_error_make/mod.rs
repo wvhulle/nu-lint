@@ -196,7 +196,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
         .collect()
 }
 
-pub fn rule() -> Rule {
+pub(crate) fn rule() -> Rule {
     Rule::new(
         "print_exit_use_error_make",
         RuleCategory::ErrorHandling,

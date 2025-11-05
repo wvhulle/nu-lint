@@ -70,7 +70,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     })
 }
 
-pub fn rule() -> Rule {
+pub(crate) fn rule() -> Rule {
     Rule::new(
         "prefer_parse_over_each_split",
         RuleCategory::Idioms,

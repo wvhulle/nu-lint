@@ -27,7 +27,7 @@ pub struct RuleViolation {
     pub message: Cow<'static, str>,
     pub span: Span,
     pub suggestion: Option<Cow<'static, str>>,
-    pub fix: Option<Fix>,
+    pub(crate) fix: Option<Fix>,
 }
 
 impl RuleViolation {
@@ -71,7 +71,7 @@ impl RuleViolation {
 
     /// Add a fix to this violation
     #[must_use]
-    pub fn with_fix(mut self, fix: Fix) -> Self {
+    pub(crate) fn with_fix(mut self, fix: Fix) -> Self {
         self.fix = Some(fix);
         self
     }
@@ -99,7 +99,7 @@ pub struct Violation {
     pub message: Cow<'static, str>,
     pub span: Span,
     pub suggestion: Option<Cow<'static, str>>,
-    pub fix: Option<Fix>,
+    pub(crate) fix: Option<Fix>,
     pub file: Option<Cow<'static, str>>,
 }
 
@@ -157,22 +157,17 @@ impl Violation {
     }
 
     /// Add a fix to this violation
-    #[must_use]
-    pub fn with_fix(mut self, fix: Fix) -> Self {
-        self.fix = Some(fix);
-        self
-    }
 
     #[must_use]
-    pub fn to_source_span(&self) -> SourceSpan {
+    pub(crate) fn to_source_span(&self) -> SourceSpan {
         SourceSpan::from((self.span.start, self.span.end - self.span.start))
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct Fix {
+pub(crate) struct Fix {
     pub description: Cow<'static, str>,
-    pub replacements: Vec<Replacement>,
+    pub(crate) replacements: Vec<Replacement>,
 }
 
 impl Fix {
@@ -187,7 +182,7 @@ impl Fix {
 
     /// Create a fix with a dynamic description
     #[must_use]
-    pub fn new_dynamic(description: String, replacements: Vec<Replacement>) -> Self {
+    pub(crate) fn new_dynamic(description: String, replacements: Vec<Replacement>) -> Self {
         Self {
             description: Cow::Owned(description),
             replacements,
@@ -196,9 +191,9 @@ impl Fix {
 }
 
 #[derive(Debug, Clone)]
-pub struct Replacement {
-    pub span: Span,
-    pub new_text: Cow<'static, str>,
+pub(crate) struct Replacement {
+    pub(crate) _span: Span,
+    pub(crate) new_text: Cow<'static, str>,
 }
 
 impl Replacement {
@@ -206,7 +201,7 @@ impl Replacement {
     #[must_use]
     pub const fn new_static(span: Span, new_text: &'static str) -> Self {
         Self {
-            span,
+            _span: span,
             new_text: Cow::Borrowed(new_text),
         }
     }
@@ -215,7 +210,7 @@ impl Replacement {
     #[must_use]
     pub fn new_dynamic(span: Span, new_text: String) -> Self {
         Self {
-            span,
+            _span: span,
             new_text: Cow::Owned(new_text),
         }
     }

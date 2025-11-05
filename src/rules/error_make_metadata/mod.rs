@@ -219,7 +219,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     })
 }
 
-pub fn rule() -> Rule {
+pub(crate) fn rule() -> Rule {
     Rule::new(
         "error_make_metadata",
         RuleCategory::ErrorHandling,

@@ -114,7 +114,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
         .collect()
 }
 
-pub fn rule() -> Rule {
+pub(crate) fn rule() -> Rule {
     Rule::new(
         "check_complete_exit_code",
         RuleCategory::ErrorHandling,

@@ -266,7 +266,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     })
 }
 
-pub fn rule() -> Rule {
+pub(crate) fn rule() -> Rule {
     Rule::new(
         "escape_string_interpolation_operators",
         RuleCategory::ErrorHandling,

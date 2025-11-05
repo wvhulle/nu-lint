@@ -8,13 +8,12 @@ use nu_protocol::{
 use super::{CallExt, PipelineExt};
 use crate::context::LintContext;
 
-pub trait BlockExt {
+pub(crate) trait BlockExt {
     fn has_side_effects(&self, context: &LintContext) -> bool;
     fn is_empty_list_block(&self, context: &LintContext) -> bool;
     #[must_use]
     fn contains_span(&self, span: Span, context: &LintContext) -> bool;
     fn all_elements<'a>(&self, context: &'a LintContext) -> Vec<&'a PipelineElement>;
-    fn contains_call_to(&self, command_name: &str, context: &LintContext) -> bool;
     fn any_element<F>(&self, context: &LintContext, predicate: F) -> bool
     where
         F: Fn(&PipelineElement) -> bool;
@@ -62,12 +61,6 @@ impl BlockExt for BlockId {
     fn all_elements<'a>(&self, context: &'a LintContext) -> Vec<&'a PipelineElement> {
         let block = context.working_set.get_block(*self);
         block.pipelines.iter().flat_map(|p| &p.elements).collect()
-    }
-
-    fn contains_call_to(&self, command_name: &str, context: &LintContext) -> bool {
-        use super::ExpressionExt;
-
-        self.any_element(context, |elem| elem.expr.is_call_to(command_name, context))
     }
 
     fn any_element<F>(&self, context: &LintContext, predicate: F) -> bool

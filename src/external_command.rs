@@ -2,8 +2,10 @@ use std::collections::HashMap;
 
 use nu_protocol::ast::Expr;
 
-pub use crate::violation::Fix;
-use crate::{context::LintContext, violation::RuleViolation};
+use crate::{
+    context::LintContext,
+    violation::{Fix, RuleViolation},
+};
 
 /// Extract external command arguments as strings
 #[must_use]
@@ -48,7 +50,7 @@ impl BuiltinAlternative {
 }
 
 /// Type alias for a function that builds a fix for a specific external command
-pub type FixBuilder = fn(
+pub(crate) type FixBuilder = fn(
     cmd_text: &str,
     alternative: &BuiltinAlternative,
     args: &[nu_protocol::ast::ExternalArgument],
@@ -99,7 +101,7 @@ fn get_custom_suggestion(
 
 /// Detect external commands with builtin alternatives
 #[must_use]
-pub fn detect_external_commands<S: ::std::hash::BuildHasher>(
+pub(crate) fn detect_external_commands<S: ::std::hash::BuildHasher>(
     context: &LintContext,
     rule_id: &'static str,
     alternatives: &HashMap<&'static str, BuiltinAlternative, S>,

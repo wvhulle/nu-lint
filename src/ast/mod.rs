@@ -4,8 +4,8 @@ mod expression;
 mod pipeline;
 mod span;
 
-pub use block::BlockExt;
-pub use call::CallExt;
-pub use expression::ExpressionExt;
-pub use pipeline::PipelineExt;
-pub use span::SpanExt;
+pub(crate) use block::BlockExt;
+pub(crate) use call::CallExt;
+pub(crate) use expression::ExpressionExt;
+pub(crate) use pipeline::PipelineExt;
+pub(crate) use span::SpanExt;

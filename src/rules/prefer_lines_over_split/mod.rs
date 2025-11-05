@@ -42,7 +42,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     violations
 }
 
-pub fn rule() -> Rule {
+pub(crate) fn rule() -> Rule {
     Rule::new(
         "prefer_lines_over_split",
         RuleCategory::Idioms,

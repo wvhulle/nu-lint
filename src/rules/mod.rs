@@ -1,45 +1,45 @@
-pub mod check_complete_exit_code;
-pub mod collapsible_if;
-pub mod dangerous_file_operations;
-pub mod descriptive_error_messages;
-pub mod error_make_metadata;
-pub mod error_suppression_over_ignore;
-pub mod escape_string_interpolation_operators;
-pub mod exit_only_in_main;
-pub mod exported_function_docs;
-pub mod external_script_as_argument;
-pub mod forbid_excessive_nesting;
+mod check_complete_exit_code;
+mod collapsible_if;
+mod dangerous_file_operations;
+mod descriptive_error_messages;
+mod error_make_metadata;
+mod error_suppression_over_ignore;
+mod escape_string_interpolation_operators;
+mod exit_only_in_main;
+mod exported_function_docs;
+mod external_script_as_argument;
+mod forbid_excessive_nesting;
 
-pub mod max_function_body_length;
-pub mod max_positional_params;
-pub mod missing_type_annotation;
-pub mod naming;
+mod max_function_body_length;
+mod max_positional_params;
+mod missing_type_annotation;
+mod naming;
 
-pub mod nu_parse_error;
+mod nu_parse_error;
 
-pub mod pipeline_handle_errors;
+mod pipeline_handle_errors;
 
-pub mod prefer_compound_assignment;
-pub mod prefer_direct_use;
-pub mod prefer_error_make_for_stderr;
-pub mod prefer_is_not_empty;
-pub mod prefer_lines_over_split;
-pub mod prefer_match_over_if_chain;
-pub mod prefer_parse_command;
-pub mod prefer_parse_over_each_split;
-pub mod prefer_pipeline_input;
-pub mod prefer_range_iteration;
-pub mod prefer_where_over_each_if;
-pub mod prefer_where_over_for_if;
-pub mod print_exit_use_error_make;
-pub mod remove_redundant_in;
+mod prefer_compound_assignment;
+mod prefer_direct_use;
+mod prefer_error_make_for_stderr;
+mod prefer_is_not_empty;
+mod prefer_lines_over_split;
+mod prefer_match_over_if_chain;
+mod prefer_parse_command;
+mod prefer_parse_over_each_split;
+mod prefer_pipeline_input;
+mod prefer_range_iteration;
+mod prefer_where_over_each_if;
+mod prefer_where_over_for_if;
+mod print_exit_use_error_make;
+mod remove_redundant_in;
 
 pub mod replace_by_builtin;
-pub mod spacing;
-pub mod systemd_journal_prefix;
-pub mod unnecessary_mut;
-pub mod unnecessary_variable_before_return;
-pub mod unused_helper_functions;
+mod spacing;
+mod systemd_journal_prefix;
+mod unnecessary_mut;
+mod unnecessary_variable_before_return;
+mod unused_helper_functions;
 use std::collections::HashMap;
 
 use naming::{
@@ -56,13 +56,13 @@ pub struct RuleRegistry {
 
 impl RuleRegistry {
     #[must_use]
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             rules: HashMap::new(),
         }
     }
 
-    pub fn register(&mut self, rule: Rule) {
+    pub(crate) fn register(&mut self, rule: Rule) {
         self.rules.insert(rule.id, rule);
     }
 
@@ -76,7 +76,7 @@ impl RuleRegistry {
     }
 
     #[must_use]
-    pub fn with_default_rules() -> Self {
+    pub(crate) fn with_default_rules() -> Self {
         let mut registry = Self::new();
         // TODO: add rule that detects custom commands with a body (apart from comments)
         // of length 1, used just once and suggests inlining at call-site.

@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use crate::{
     RuleViolation,
     context::LintContext,
-    external_command::{BuiltinAlternative, Fix, extract_external_args},
+    external_command::{BuiltinAlternative, extract_external_args},
     rule::{Rule, RuleCategory},
-    violation::{Replacement, Severity},
+    violation::{Fix, Replacement, Severity},
 };
 
 fn get_builtin_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
@@ -305,7 +305,7 @@ fn build_fix(
     Fix {
         description: description.into(),
         replacements: vec![Replacement {
-            span: expr_span,
+            _span: expr_span,
             new_text: replacement.into(),
         }],
     }
@@ -320,7 +320,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     )
 }
 
-pub fn rule() -> Rule {
+pub(crate) fn rule() -> Rule {
     Rule::new(
         "prefer_builtin_http",
         RuleCategory::Idioms,

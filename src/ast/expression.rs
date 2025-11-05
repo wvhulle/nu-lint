@@ -3,10 +3,10 @@ use nu_protocol::{
     ast::{Expr, Expression, Operator, PathMember},
 };
 
-use super::{BlockExt, CallExt, SpanExt};
+use super::{BlockExt, SpanExt};
 use crate::context::LintContext;
 
-pub trait ExpressionExt {
+pub(crate) trait ExpressionExt {
     fn refers_to_same_variable(&self, other: &Expression, context: &LintContext) -> bool;
     fn extract_variable_name(&self, context: &LintContext) -> Option<String>;
     fn refers_to_variable(&self, context: &LintContext, var_name: &str) -> bool;
@@ -15,7 +15,6 @@ pub trait ExpressionExt {
     fn extract_block_id(&self) -> Option<BlockId>;
     fn is_likely_pure(&self) -> bool;
     fn span_text<'a>(&self, context: &'a LintContext) -> &'a str;
-    fn is_call_to(&self, command_name: &str, context: &LintContext) -> bool;
     fn extract_assigned_variable(&self) -> Option<VarId>;
     fn extract_field_access(&self, field_name: &str) -> Option<(VarId, Span)>;
 
@@ -125,13 +124,6 @@ impl ExpressionExt for Expression {
 
     fn span_text<'a>(&self, context: &'a LintContext) -> &'a str {
         &context.source[self.span.start..self.span.end]
-    }
-
-    fn is_call_to(&self, command_name: &str, context: &LintContext) -> bool {
-        match &self.expr {
-            Expr::Call(call) => call.is_call_to_command(command_name, context),
-            _ => false,
-        }
     }
 
     fn extract_assigned_variable(&self) -> Option<VarId> {

@@ -4,19 +4,13 @@ use miette::{Diagnostic, LabeledSpan, Report, SourceCode};
 use serde::Serialize;
 
 use crate::violation::{Severity, Violation};
-#[derive(Debug, Clone, Copy)]
-pub enum OutputFormat {
-    Text,
-    Json,
-    Github,
-}
 
-pub trait OutputFormatter {
+pub(crate) trait OutputFormatter {
     fn format(&self, violations: &[Violation], source: &str) -> String;
 }
 
 #[derive(Debug, Default)]
-pub struct TextFormatter;
+pub(crate) struct TextFormatter;
 
 impl OutputFormatter for TextFormatter {
     fn format(&self, violations: &[Violation], _source: &str) -> String {

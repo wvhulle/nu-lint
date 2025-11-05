@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use crate::{
     RuleViolation,
     context::LintContext,
-    external_command::{BuiltinAlternative, Fix, extract_external_args},
+    external_command::{BuiltinAlternative, extract_external_args},
     rule::{Rule, RuleCategory},
-    violation::{Replacement, Severity},
+    violation::{Fix, Replacement, Severity},
 };
 
 /// Map of less common system and text processing commands to their Nushell
@@ -208,7 +208,7 @@ fn build_fix(
     Fix {
         description: description.into(),
         replacements: vec![Replacement {
-            span: expr_span,
+            _span: expr_span,
             new_text: new_text.into(),
         }],
     }

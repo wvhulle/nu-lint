@@ -78,7 +78,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     main_violations.chain(nested_violations).collect()
 }
 
-pub fn rule() -> Rule {
+pub(crate) fn rule() -> Rule {
     Rule::new(
         "prefer_error_make_for_stderr",
         RuleCategory::ErrorHandling,

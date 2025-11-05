@@ -38,7 +38,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
         .collect()
 }
 
-pub fn rule() -> Rule {
+pub(crate) fn rule() -> Rule {
     Rule::new(
         "unused_helper_functions",
         RuleCategory::CodeQuality,

@@ -247,7 +247,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     })
 }
 
-pub fn rule() -> Rule {
+pub(crate) fn rule() -> Rule {
     Rule::new(
         "prefer_match_over_if_chain",
         RuleCategory::Idioms,

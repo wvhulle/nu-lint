@@ -65,7 +65,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
         .collect()
 }
 
-pub fn rule() -> Rule {
+pub(crate) fn rule() -> Rule {
     Rule::new(
         "external_script_as_argument",
         RuleCategory::CodeQuality,

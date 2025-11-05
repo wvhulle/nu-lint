@@ -41,7 +41,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     violations
 }
 
-pub fn rule() -> Rule {
+pub(crate) fn rule() -> Rule {
     Rule::new(
         "no_trailing_spaces",
         RuleCategory::Formatting,

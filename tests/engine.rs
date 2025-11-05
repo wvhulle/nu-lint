@@ -1,6 +1,6 @@
 mod common;
 
-use nu_lint::{config::Config, engine::LintEngine};
+use nu_lint::{LintEngine, config::Config};
 
 #[test]
 fn test_list_rules_returns_all_rules() {

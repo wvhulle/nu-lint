@@ -29,6 +29,8 @@ pub trait BlockExt {
     ) -> HashSet<String>;
     fn uses_pipeline_input(&self, context: &LintContext) -> bool;
     fn produces_output(&self, context: &LintContext) -> bool;
+    /// Finds the `$in` variable used in this block. Example: `def foo [] { $in | each { ... } }`
+    fn find_pipeline_input_variable(&self, context: &LintContext) -> Option<VarId>;
 }
 
 impl BlockExt for BlockId {
@@ -164,5 +166,14 @@ impl BlockExt for BlockId {
                 .last()
                 .is_some_and(|last_element| !matches!(&last_element.expr.expr, Expr::Nothing))
         })
+    }
+
+    fn find_pipeline_input_variable(&self, context: &LintContext) -> Option<VarId> {
+        let block = context.working_set.get_block(*self);
+        block
+            .pipelines
+            .iter()
+            .flat_map(|pipeline| &pipeline.elements)
+            .find_map(|element| element.expr.find_pipeline_input_variable(context))
     }
 }

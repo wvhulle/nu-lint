@@ -1,6 +1,6 @@
 use nu_protocol::{
     BlockId, Span, VarId,
-    ast::{Argument, Block, Call, Expr, Expression, PathMember},
+    ast::{Call, Expr, Expression, PathMember},
 };
 
 use crate::{
@@ -143,7 +143,7 @@ fn infer_command_output_type(cmd_name: &str) -> Option<&'static str> {
 
 fn infer_input_type(block_id: BlockId, ctx: &LintContext) -> String {
     let block = ctx.working_set.get_block(block_id);
-    let Some(in_var) = find_pipeline_input_in_block(block, ctx) else {
+    let Some(in_var) = block_id.find_pipeline_input_variable(ctx) else {
         return "any".to_string();
     };
 
@@ -153,50 +153,6 @@ fn infer_input_type(block_id: BlockId, ctx: &LintContext) -> String {
         .flat_map(|pipeline| &pipeline.elements)
         .find_map(|element| infer_input_from_expression(&element.expr, Some(in_var), ctx))
         .map_or_else(|| "any".to_string(), String::from)
-}
-
-fn find_pipeline_input_in_block(block: &Block, ctx: &LintContext) -> Option<VarId> {
-    block
-        .pipelines
-        .iter()
-        .flat_map(|pipeline| &pipeline.elements)
-        .find_map(|element| find_pipeline_input_in_expr(&element.expr, ctx))
-}
-
-fn find_pipeline_input_in_expr(expr: &Expression, ctx: &LintContext) -> Option<VarId> {
-    match &expr.expr {
-        Expr::Var(var_id) => {
-            let var = ctx.working_set.get_variable(*var_id);
-            // $in has declaration_span (0,0) or start==end
-            if (var.declaration_span.start == 0 && var.declaration_span.end == 0)
-                || (var.declaration_span.start == var.declaration_span.end
-                    && var.declaration_span.start > 0)
-            {
-                return Some(*var_id);
-            }
-            None
-        }
-        Expr::FullCellPath(cell_path) => find_pipeline_input_in_expr(&cell_path.head, ctx),
-        Expr::Call(call) => call.arguments.iter().find_map(|arg| match arg {
-            Argument::Positional(e)
-            | Argument::Unknown(e)
-            | Argument::Named((_, _, Some(e)))
-            | Argument::Spread(e) => find_pipeline_input_in_expr(e, ctx),
-            Argument::Named(_) => None,
-        }),
-        Expr::BinaryOp(lhs, _, rhs) => {
-            find_pipeline_input_in_expr(lhs, ctx).or_else(|| find_pipeline_input_in_expr(rhs, ctx))
-        }
-        Expr::UnaryNot(e) | Expr::Collect(_, e) => find_pipeline_input_in_expr(e, ctx),
-        Expr::Subexpression(block_id) | Expr::Block(block_id) | Expr::Closure(block_id) => {
-            let block = ctx.working_set.get_block(*block_id);
-            find_pipeline_input_in_block(block, ctx)
-        }
-        Expr::StringInterpolation(items) => items
-            .iter()
-            .find_map(|item| find_pipeline_input_in_expr(item, ctx)),
-        _ => None,
-    }
 }
 
 fn infer_input_from_expression(

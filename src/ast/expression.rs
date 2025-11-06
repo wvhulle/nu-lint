@@ -34,6 +34,8 @@ pub trait ExpressionExt: Traverse {
     #[allow(dead_code, reason = "Will be used later.")]
     fn any(&self, context: &LintContext, predicate: impl Fn(&Expression) -> bool) -> bool;
     fn uses_pipeline_input(&self, context: &LintContext) -> bool;
+    /// Finds the `$in` variable in this expression. Example: `$in.field` or `$in | length`
+    fn find_pipeline_input_variable(&self, context: &LintContext) -> Option<VarId>;
 }
 
 impl ExpressionExt for Expression {
@@ -369,6 +371,43 @@ impl ExpressionExt for Expression {
                 block_id.uses_pipeline_input(context)
             }
             _ => false,
+        }
+    }
+
+    fn find_pipeline_input_variable(&self, context: &LintContext) -> Option<VarId> {
+        use super::block::BlockExt;
+
+        match &self.expr {
+            Expr::Var(var_id) => {
+                let var = context.working_set.get_variable(*var_id);
+                // $in has declaration_span (0,0) or start==end
+                if (var.declaration_span.start == 0 && var.declaration_span.end == 0)
+                    || (var.declaration_span.start == var.declaration_span.end
+                        && var.declaration_span.start > 0)
+                {
+                    return Some(*var_id);
+                }
+                None
+            }
+            Expr::FullCellPath(cell_path) => cell_path.head.find_pipeline_input_variable(context),
+            Expr::Call(call) => call.arguments.iter().find_map(|arg| match arg {
+                Argument::Positional(e)
+                | Argument::Unknown(e)
+                | Argument::Named((_, _, Some(e)))
+                | Argument::Spread(e) => e.find_pipeline_input_variable(context),
+                Argument::Named(_) => None,
+            }),
+            Expr::BinaryOp(lhs, _, rhs) => lhs
+                .find_pipeline_input_variable(context)
+                .or_else(|| rhs.find_pipeline_input_variable(context)),
+            Expr::UnaryNot(e) | Expr::Collect(_, e) => e.find_pipeline_input_variable(context),
+            Expr::Subexpression(block_id) | Expr::Block(block_id) | Expr::Closure(block_id) => {
+                block_id.find_pipeline_input_variable(context)
+            }
+            Expr::StringInterpolation(items) => items
+                .iter()
+                .find_map(|item| item.find_pipeline_input_variable(context)),
+            _ => None,
         }
     }
 }

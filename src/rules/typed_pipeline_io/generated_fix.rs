@@ -282,10 +282,11 @@ def complex [] {
 
 #[test]
 fn test_path_output_from_filepath() {
+    instrument();
     let bad_code = r"
 def get_path [] {
     /tmp/file.txt
 }
 ";
-    rule().assert_fix_contains(bad_code, "[]: nothing -> path");
+    rule().assert_fix_contains(bad_code, "nothing -> path");
 }

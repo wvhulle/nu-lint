@@ -1,5 +1,3 @@
-use core::mem;
-
 use nu_protocol::{
     BlockId, Span, VarId,
     ast::{Argument, Block, Call, Expr, Expression, PathMember},
@@ -97,284 +95,168 @@ fn create_violations_for_untyped_io(
         .collect()
 }
 
-#[allow(clippy::excessive_nesting, reason = "Simple nested pattern matching")]
+const fn is_filepath_expr(expr: &Expr) -> bool {
+    matches!(expr, Expr::Filepath(..) | Expr::GlobPattern(..))
+}
+
 fn infer_output_type(block_id: BlockId, ctx: &LintContext) -> String {
     let block = ctx.working_set.get_block(block_id);
 
-    log::debug!("Inferring output type for block: {block_id:?}");
-    log::debug!("Block has {} pipelines", block.pipelines.len());
+    let Some(last_pipeline) = block.pipelines.last() else {
+        return block.output_type().to_string();
+    };
+    let Some(last_element) = last_pipeline.elements.last() else {
+        return block.output_type().to_string();
+    };
 
-    // Check if the last pipeline element is a command that produces a list
-    if let Some(last_pipeline) = block.pipelines.last()
-        && let Some(last_element) = last_pipeline.elements.last()
+    // Check for filepath/glob in ExternalCall or direct
+    if let Expr::ExternalCall(head, _) = &last_element.expr.expr
+        && is_filepath_expr(&head.expr)
     {
-        log::debug!(
-            "Last element expr type: {:?}",
-            mem::discriminant(&last_element.expr.expr)
-        );
-
-        // Unwrap Collect if present
-        let expr = match &last_element.expr.expr {
-            Expr::Collect(_, inner) => &inner.expr,
-            other => other,
-        };
-
-        if let Expr::Subexpression(block_id) | Expr::Block(block_id) = expr {
-            // Check the inner block's last pipeline element
-            let inner_block = ctx.working_set.get_block(*block_id);
-            if let Some(inner_pipeline) = inner_block.pipelines.last()
-                && let Some(inner_element) = inner_pipeline.elements.last()
-                && let Expr::Call(call) = &inner_element.expr.expr
-            {
-                let cmd_name = call.get_call_name(ctx);
-                log::debug!("Last command is: {cmd_name}");
-                match cmd_name.as_str() {
-                    "each" | "where" | "filter" | "map" => {
-                        log::debug!("Inferred output: list<any>");
-                        return "list<any>".to_string();
-                    }
-                    _ => {}
-                }
-            }
-        } else if let Expr::Call(call) = expr {
-            let cmd_name = call.get_call_name(ctx);
-            log::debug!("Last command is: {cmd_name}");
-            match cmd_name.as_str() {
-                "each" | "where" | "filter" | "map" => {
-                    log::debug!("Inferred output: list<any>");
-                    return "list<any>".to_string();
-                }
-                _ => {}
-            }
-        }
+        return "path".to_string();
+    }
+    if is_filepath_expr(&last_element.expr.expr) {
+        return "path".to_string();
     }
 
-    let last_expression = block.output_type();
-    log::debug!("Default output type: {last_expression}");
-    last_expression.to_string()
+    // Unwrap Collect if present and check again
+    let expr = match &last_element.expr.expr {
+        Expr::Collect(_, inner) => &inner.expr,
+        other => other,
+    };
+
+    if is_filepath_expr(expr) {
+        return "path".to_string();
+    }
+
+    // Check for command-based type inference
+    if let Expr::Subexpression(block_id) | Expr::Block(block_id) = expr {
+        let inner_block = ctx.working_set.get_block(*block_id);
+        if let Some(inner_pipeline) = inner_block.pipelines.last()
+            && let Some(inner_element) = inner_pipeline.elements.last()
+            && let Expr::Call(call) = &inner_element.expr.expr
+            && let Some(output_type) = infer_command_output_type(&call.get_call_name(ctx))
+        {
+            return output_type;
+        }
+    } else if let Expr::Call(call) = expr
+        && let Some(output_type) = infer_command_output_type(&call.get_call_name(ctx))
+    {
+        return output_type;
+    }
+
+    block.output_type().to_string()
+}
+
+fn infer_command_output_type(cmd_name: &str) -> Option<String> {
+    match cmd_name {
+        "each" | "where" | "filter" | "map" => Some("list<any>".to_string()),
+        "length" => Some("int".to_string()),
+        _ => None,
+    }
 }
 
 fn infer_input_type(block_id: BlockId, ctx: &LintContext) -> String {
-    log::debug!("Inferring input type for block: {block_id:?}");
     let block = ctx.working_set.get_block(block_id);
-    log::debug!("Block span: {:?}", block.span);
-    log::debug!("Block pipelines: {}", block.pipelines.len());
-
-    // Find if $in is used in the block by searching for variables with declaration_span (0,0)
-    let in_var = find_pipeline_input_in_block(block, ctx);
-    log::debug!("$in variable: {in_var:?}");
-
-    if in_var.is_none() {
+    let Some(in_var) = find_pipeline_input_in_block(block, ctx) else {
         return "any".to_string();
-    }
+    };
 
-    for pipeline in &block.pipelines {
-        for element in &pipeline.elements {
-            if let Some(input_type) = infer_input_from_expression(&element.expr, in_var, ctx) {
-                return input_type;
-            }
-        }
-    }
-
-    "any".to_string()
+    block
+        .pipelines
+        .iter()
+        .flat_map(|pipeline| &pipeline.elements)
+        .find_map(|element| infer_input_from_expression(&element.expr, Some(in_var), ctx))
+        .unwrap_or_else(|| "any".to_string())
 }
 
 fn find_pipeline_input_in_block(block: &Block, ctx: &LintContext) -> Option<VarId> {
-    // Search for a variable with declaration_span (0,0) which indicates $in
-    log::debug!(
-        "find_pipeline_input_in_block: searching {} pipelines",
-        block.pipelines.len()
-    );
-    for (i, pipeline) in block.pipelines.iter().enumerate() {
-        log::debug!("  Pipeline {}: {} elements", i, pipeline.elements.len());
-        for (j, element) in pipeline.elements.iter().enumerate() {
-            log::debug!(
-                "    Element {}: span={:?}, ty={:?}",
-                j,
-                element.expr.span,
-                element.expr.ty
-            );
-            if let Some(var_id) = find_pipeline_input_in_expr(&element.expr, ctx) {
-                return Some(var_id);
-            }
-        }
-    }
-    None
+    block
+        .pipelines
+        .iter()
+        .flat_map(|pipeline| &pipeline.elements)
+        .find_map(|element| find_pipeline_input_in_expr(&element.expr, ctx))
 }
 
-#[allow(
-    clippy::uninlined_format_args,
-    reason = "Debug logging with many format calls"
-)]
 fn find_pipeline_input_in_expr(expr: &Expression, ctx: &LintContext) -> Option<VarId> {
-    use Expr;
-    use std::mem::discriminant;
-
-    log::debug!("find_pipeline_input_in_expr: checking expr");
-
     match &expr.expr {
         Expr::Var(var_id) => {
             let var = ctx.working_set.get_variable(*var_id);
-            log::debug!(
-                "  Var: var_id={:?}, decl_span=({}, {}), expr_span=({}, {}), ty={:?}",
-                var_id,
-                var.declaration_span.start,
-                var.declaration_span.end,
-                expr.span.start,
-                expr.span.end,
-                var.ty
-            );
-            // $in is represented with declaration_span where start == end (pointing to usage location)
-            // OR with (0,0) if it's implicit
+            // $in has declaration_span (0,0) or start==end
             if (var.declaration_span.start == 0 && var.declaration_span.end == 0)
                 || (var.declaration_span.start == var.declaration_span.end
                     && var.declaration_span.start > 0)
             {
-                log::debug!("    -> Found $in variable!");
                 return Some(*var_id);
             }
             None
         }
         Expr::FullCellPath(cell_path) => find_pipeline_input_in_expr(&cell_path.head, ctx),
-        Expr::Call(call) => {
-            log::debug!("  Call: checking {} arguments", call.arguments.len());
-            for arg in &call.arguments {
-                let expr = match arg {
-                    Argument::Positional(e)
-                    | Argument::Unknown(e)
-                    | Argument::Named((_, _, Some(e)))
-                    | Argument::Spread(e) => Some(e),
-                    Argument::Named(_) => None,
-                };
-                if let Some(e) = expr
-                    && let Some(var_id) = find_pipeline_input_in_expr(e, ctx)
-                {
-                    return Some(var_id);
-                }
-            }
-            None
-        }
+        Expr::Call(call) => call.arguments.iter().find_map(|arg| match arg {
+            Argument::Positional(e)
+            | Argument::Unknown(e)
+            | Argument::Named((_, _, Some(e)))
+            | Argument::Spread(e) => find_pipeline_input_in_expr(e, ctx),
+            Argument::Named(_) => None,
+        }),
         Expr::BinaryOp(lhs, _, rhs) => {
             find_pipeline_input_in_expr(lhs, ctx).or_else(|| find_pipeline_input_in_expr(rhs, ctx))
         }
-        Expr::UnaryNot(e) => find_pipeline_input_in_expr(e, ctx),
-        Expr::Collect(_, inner) => {
-            log::debug!("  Collect: recursing into inner expression");
-            find_pipeline_input_in_expr(inner, ctx)
-        }
+        Expr::UnaryNot(e) | Expr::Collect(_, e) => find_pipeline_input_in_expr(e, ctx),
         Expr::Subexpression(block_id) | Expr::Block(block_id) | Expr::Closure(block_id) => {
-            log::debug!("  Subexpression/Block/Closure: block_id={:?}", block_id);
             let block = ctx.working_set.get_block(*block_id);
             find_pipeline_input_in_block(block, ctx)
         }
-        Expr::StringInterpolation(items) => {
-            for item in items {
-                if let Some(var_id) = find_pipeline_input_in_expr(item, ctx) {
-                    return Some(var_id);
-                }
-            }
-            None
-        }
-        other => {
-            log::debug!("  Other expression type: {:?}", discriminant(other));
-            None
-        }
+        Expr::StringInterpolation(items) => items
+            .iter()
+            .find_map(|item| find_pipeline_input_in_expr(item, ctx)),
+        _ => None,
     }
 }
 
 fn infer_input_from_expression(
     expr: &Expression,
-    in_var: Option<nu_protocol::VarId>,
+    in_var: Option<VarId>,
     ctx: &LintContext,
 ) -> Option<String> {
     let in_var_id = in_var?;
-    log::debug!("Inferring input type from expression type: {:?}", expr.expr);
+
     match &expr.expr {
-        Expr::FullCellPath(cell_path) => {
-            log::debug!("Branch: FullCellPath");
-            if let Expr::Var(var_id) = &cell_path.head.expr
-                && *var_id == in_var_id
-                && !cell_path.tail.is_empty()
-            {
-                log::debug!("$in is used in cell path");
-                if cell_path
+        Expr::FullCellPath(cell_path) if matches!(&cell_path.head.expr, Expr::Var(var_id) if *var_id == in_var_id) => {
+            if !cell_path.tail.is_empty()
+                && cell_path
                     .tail
                     .iter()
                     .any(|member| matches!(member, PathMember::String { .. }))
-                {
-                    log::debug!("Inferred: record (has string member)");
-                    return Some("record".to_string());
-                }
-                log::debug!("Inferred: list (no string member)");
-                return Some("list".to_string());
-            }
-            log::debug!("FullCellPath: no match, returning None");
-            None
-        }
-        Expr::Call(call) => {
-            log::debug!("Branch: Call");
-            let cmd_name = call.get_call_name(ctx);
-            log::debug!("Call command name: {cmd_name}");
-
-            // Check if this is a command that indicates the input type
-            // Commands like `each`, `where`, `filter` indicate list input
-            // Commands like `lines`, `split row` indicate string input
-            match cmd_name.as_str() {
-                "each" | "where" | "filter" | "reduce" | "map" => {
-                    log::debug!("Inferred: list (from {cmd_name} command)");
-                    Some("list<any>".to_string())
-                }
-                "lines" | "split row" => {
-                    log::debug!("Inferred: string (from {cmd_name} command)");
-                    Some("string".to_string())
-                }
-                _ => {
-                    log::debug!("Call: unknown command {cmd_name}, returning None");
-                    None
-                }
+            {
+                Some("record".to_string())
+            } else if !cell_path.tail.is_empty() {
+                Some("list".to_string())
+            } else {
+                None
             }
         }
-        Expr::Collect(_, inner) => {
-            log::debug!("Branch: Collect, recursing into inner expression");
-            let result = infer_input_from_expression(inner, in_var, ctx);
-            log::debug!("Collect result: {result:?}");
-            result
-        }
-        Expr::BinaryOp(left, _, right) => {
-            log::debug!("Branch: BinaryOp");
-            infer_input_from_expression(left, in_var, ctx)
-                .or_else(|| infer_input_from_expression(right, in_var, ctx))
-        }
-        Expr::UnaryNot(inner) => {
-            log::debug!("Branch: UnaryNot");
+        Expr::Call(call) => match call.get_call_name(ctx).as_str() {
+            "each" | "where" | "filter" | "reduce" | "map" | "length" => {
+                Some("list<any>".to_string())
+            }
+            "lines" | "split row" => Some("string".to_string()),
+            _ => None,
+        },
+        Expr::Collect(_, inner) | Expr::UnaryNot(inner) => {
             infer_input_from_expression(inner, in_var, ctx)
         }
+        Expr::BinaryOp(left, _, right) => infer_input_from_expression(left, in_var, ctx)
+            .or_else(|| infer_input_from_expression(right, in_var, ctx)),
         Expr::Subexpression(block_id) | Expr::Block(block_id) | Expr::Closure(block_id) => {
-            log::debug!("Branch: Subexpression/Block/Closure, block_id: {block_id:?}");
-            // Traverse into the block to find expressions that use $in
             let block = ctx.working_set.get_block(*block_id);
-            log::debug!("Block has {} pipelines", block.pipelines.len());
-            let result = block
+            block
                 .pipelines
                 .iter()
-                .flat_map(|pipeline| {
-                    log::debug!("Pipeline has {} elements", pipeline.elements.len());
-                    &pipeline.elements
-                })
-                .find_map(|element| {
-                    log::debug!(
-                        "Checking pipeline element expression type: {:?}",
-                        element.expr.expr
-                    );
-                    infer_input_from_expression(&element.expr, in_var, ctx)
-                });
-            log::debug!("Subexpression/Block/Closure result: {result:?}");
-            result
+                .flat_map(|pipeline| &pipeline.elements)
+                .find_map(|element| infer_input_from_expression(&element.expr, in_var, ctx))
         }
-        other => {
-            log::debug!("Branch: Other ({other:?}), returning None");
-            None
-        }
+        _ => None,
     }
 }
 
@@ -499,36 +381,24 @@ fn shape_to_string(shape: &nu_protocol::SyntaxShape) -> String {
 
 fn check_def_call(call: &Call, ctx: &LintContext) -> Vec<RuleViolation> {
     let Some((block_id, func_name)) = call.extract_function_definition(ctx) else {
-        log::debug!(
-            "Could not find function definition for call to '{}'",
-            call.get_call_name(ctx)
-        );
         return vec![];
     };
 
     let Some((_, name_span)) = call.extract_declaration_name(ctx) else {
-        log::debug!("Could not find declaration name span for function '{func_name}'");
         return vec![];
     };
-
-    log::debug!("Checking function definition for '{func_name}'");
 
     let block = ctx.working_set.get_block(block_id);
     let signature = &block.signature;
 
     let sig_span = find_signature_span(call, ctx);
     let uses_in = block_id.uses_pipeline_input(ctx);
-    log::debug!("Uses pipeline input: {uses_in}");
     let has_untyped_input = has_untyped_pipeline_input(signature, sig_span, ctx);
-    log::debug!("Has untyped pipeline input: {has_untyped_input}");
     let has_untyped_output = has_untyped_pipeline_output(signature, sig_span, ctx);
-    log::debug!("Has untyped pipeline output: {has_untyped_output}");
     let produces_out = block_id.produces_output(ctx);
-    log::debug!("Produces output: {produces_out}");
     let needs_input_type = uses_in && has_untyped_input;
-    log::debug!("Needs input type annotation: {needs_input_type}");
     let needs_output_type = produces_out && has_untyped_output;
-    log::debug!("Needs output type annotation: {needs_output_type}");
+
     if !needs_input_type && !needs_output_type {
         return vec![];
     }

@@ -266,16 +266,12 @@ fn generate_typed_signature(
     needs_input_type: bool,
     needs_output_type: bool,
 ) -> String {
-    log::debug!("Generating typed signature");
-
-    let has_params = signature.required_positional.is_empty()
+    let has_no_params = signature.required_positional.is_empty()
         && signature.optional_positional.is_empty()
         && signature.rest_positional.is_none()
         && signature.named.is_empty();
 
-    log::debug!("Has parameters: {has_params}");
-
-    let params_text = if has_params {
+    let params_text = if has_no_params {
         String::new()
     } else {
         extract_parameters_text(signature)
@@ -293,10 +289,16 @@ fn generate_typed_signature(
         "any".to_string()
     };
 
-    if needs_input_type || needs_output_type {
-        format!("[{params_text}]: {input_type} -> {output_type}")
-    } else {
-        format!("[{params_text}]")
+    match (needs_input_type, needs_output_type) {
+        (false, false) => format!("[{params_text}]"),
+        _ => format!("[{params_text}]: {input_type} -> {output_type}"),
+    }
+}
+
+fn format_param(name: &str, shape: &nu_protocol::SyntaxShape, suffix: &str) -> String {
+    match shape {
+        nu_protocol::SyntaxShape::Any => format!("{name}{suffix}"),
+        _ => format!("{name}{suffix}: {}", shape_to_string(shape)),
     }
 }
 
@@ -304,26 +306,17 @@ fn extract_parameters_text(signature: &nu_protocol::Signature) -> String {
     let required = signature
         .required_positional
         .iter()
-        .map(|param| match param.shape {
-            nu_protocol::SyntaxShape::Any => param.name.clone(),
-            _ => format!("{}: {}", param.name, shape_to_string(&param.shape)),
-        });
+        .map(|param| format_param(&param.name, &param.shape, ""));
 
     let optional = signature
         .optional_positional
         .iter()
-        .map(|param| match param.shape {
-            nu_protocol::SyntaxShape::Any => format!("{}?", param.name),
-            _ => format!("{}?: {}", param.name, shape_to_string(&param.shape)),
-        });
+        .map(|param| format_param(&param.name, &param.shape, "?"));
 
     let rest = signature
         .rest_positional
         .iter()
-        .map(|rest| match rest.shape {
-            nu_protocol::SyntaxShape::Any => format!("...{}", rest.name),
-            _ => format!("...{}: {}", rest.name, shape_to_string(&rest.shape)),
-        });
+        .map(|rest| format_param(&rest.name, &rest.shape, "..."));
 
     let flags = signature
         .named
@@ -357,12 +350,12 @@ fn shape_to_string(shape: &nu_protocol::SyntaxShape) -> String {
     use nu_protocol::SyntaxShape;
 
     match shape {
-        SyntaxShape::Int => "int".to_string(),
-        SyntaxShape::String => "string".to_string(),
-        SyntaxShape::Float => "float".to_string(),
-        SyntaxShape::Boolean => "bool".to_string(),
+        SyntaxShape::Int => "int".into(),
+        SyntaxShape::String => "string".into(),
+        SyntaxShape::Float => "float".into(),
+        SyntaxShape::Boolean => "bool".into(),
         SyntaxShape::List(inner) => format!("list<{}>", shape_to_string(inner)),
-        SyntaxShape::Table(cols) if cols.is_empty() => "table".to_string(),
+        SyntaxShape::Table(cols) if cols.is_empty() => "table".into(),
         SyntaxShape::Table(cols) => {
             let col_names = cols
                 .iter()
@@ -371,11 +364,11 @@ fn shape_to_string(shape: &nu_protocol::SyntaxShape) -> String {
                 .join(", ");
             format!("table<{col_names}>")
         }
-        SyntaxShape::Record(_) => "record".to_string(),
-        SyntaxShape::Filepath => "path".to_string(),
-        SyntaxShape::Directory => "directory".to_string(),
-        SyntaxShape::GlobPattern => "glob".to_string(),
-        SyntaxShape::Any => "any".to_string(),
+        SyntaxShape::Record(_) => "record".into(),
+        SyntaxShape::Filepath => "path".into(),
+        SyntaxShape::Directory => "directory".into(),
+        SyntaxShape::GlobPattern => "glob".into(),
+        SyntaxShape::Any => "any".into(),
         _ => format!("{shape:?}").to_lowercase(),
     }
 }

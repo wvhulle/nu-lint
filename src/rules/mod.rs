@@ -37,6 +37,7 @@ mod remove_redundant_in;
 pub mod replace_by_builtin;
 mod spacing;
 mod systemd_journal_prefix;
+mod typed_pipeline_io;
 mod unnecessary_mut;
 mod unnecessary_variable_before_return;
 mod unused_helper_functions;
@@ -135,6 +136,7 @@ impl RuleRegistry {
         registry.register(spacing::brace_spacing::rule());
         registry.register(spacing::pipe_spacing::rule());
         registry.register(systemd_journal_prefix::rule());
+        registry.register(typed_pipeline_io::rule());
         registry.register(unnecessary_mut::rule());
         registry.register(unnecessary_variable_before_return::rule());
         registry.register(unused_helper_functions::rule());

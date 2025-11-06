@@ -81,7 +81,7 @@ fn is_data_processing_command(decl_name: &str, category: &Category) -> bool {
 
 /// Analyze parameter usage patterns to determine if it's used for data
 /// operations
-#[allow(clippy::struct_excessive_bools)]
+
 #[derive(Default)]
 struct ParameterUsageAnalysis {
     /// Parameter used as pipeline input (first element in pipeline)

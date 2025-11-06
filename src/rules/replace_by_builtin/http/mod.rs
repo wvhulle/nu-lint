@@ -62,99 +62,111 @@ enum HttpMethod {
     Delete,
 }
 
+fn parse_method(method_str: &str) -> HttpMethod {
+    match method_str.to_uppercase().as_str() {
+        "POST" => HttpMethod::Post,
+        "PUT" => HttpMethod::Put,
+        "PATCH" => HttpMethod::Patch,
+        "DELETE" => HttpMethod::Delete,
+        _ => HttpMethod::Get,
+    }
+}
+
+fn parse_credentials(credentials: &str) -> (Option<String>, Option<String>) {
+    credentials
+        .split_once(':')
+        .map_or((Some(credentials.to_string()), None), |(user, pass)| {
+            (Some(user.to_string()), Some(pass.to_string()))
+        })
+}
+
+fn parse_header(header: &str) -> Option<(String, String)> {
+    header
+        .split_once(':')
+        .map(|(key, value)| (key.trim().to_string(), value.trim().to_string()))
+}
+
 impl HttpOptions {
-    #[allow(clippy::excessive_nesting)]
     fn parse_curl(args: &[String]) -> Self {
-        let mut opts = Self::default();
-        let mut iter = args.iter().peekable();
-
-        while let Some(arg) = iter.next() {
-            match arg.as_str() {
-                "-X" | "--request" => {
-                    if let Some(method) = iter.next() {
-                        opts.method = match method.to_uppercase().as_str() {
-                            "POST" => HttpMethod::Post,
-                            "PUT" => HttpMethod::Put,
-                            "PATCH" => HttpMethod::Patch,
-                            "DELETE" => HttpMethod::Delete,
-                            _ => HttpMethod::Get,
+        args.iter()
+            .fold(
+                (Self::default(), None::<&str>),
+                |(mut opts, expecting), arg| match (expecting, arg.as_str()) {
+                    (Some("-X" | "--request"), method) => {
+                        opts.method = parse_method(method);
+                        (opts, None)
+                    }
+                    (Some("-H" | "--header"), header) => {
+                        if let Some(h) = parse_header(header) {
+                            opts.headers.push(h);
+                        }
+                        (opts, None)
+                    }
+                    (Some("-u" | "--user"), credentials) => {
+                        let (user, password) = parse_credentials(credentials);
+                        opts.user = user;
+                        opts.password = password;
+                        (opts, None)
+                    }
+                    (Some("-d" | "--data" | "--data-raw"), data) => {
+                        opts.data = Some(data.to_string());
+                        opts.method = match opts.method {
+                            HttpMethod::Get => HttpMethod::Post,
+                            m => m,
                         };
+                        (opts, None)
                     }
-                }
-                "-H" | "--header" => {
-                    if let Some(header) = iter.next()
-                        && let Some((key, value)) = header.split_once(':')
-                    {
-                        opts.headers
-                            .push((key.trim().to_string(), value.trim().to_string()));
+                    (Some("-o" | "--output"), file) => {
+                        opts.output_file = Some(file.to_string());
+                        (opts, None)
                     }
-                }
-                "-u" | "--user" => {
-                    if let Some(credentials) = iter.next() {
-                        if let Some((user, pass)) = credentials.split_once(':') {
-                            opts.user = Some(user.to_string());
-                            opts.password = Some(pass.to_string());
-                        } else {
-                            opts.user = Some(credentials.clone());
-                        }
+                    (
+                        None,
+                        "-X" | "--request" | "-H" | "--header" | "-u" | "--user" | "-d" | "--data"
+                        | "--data-raw" | "-o" | "--output",
+                    ) => (opts, Some(arg.as_str())),
+                    (None, s) if !s.starts_with('-') && opts.url.is_none() => {
+                        opts.url = Some(s.to_string());
+                        (opts, None)
                     }
-                }
-                "-d" | "--data" | "--data-raw" => {
-                    if let Some(data) = iter.next() {
-                        opts.data = Some(data.clone());
-                        if opts.method == HttpMethod::Get {
-                            opts.method = HttpMethod::Post;
-                        }
-                    }
-                }
-                "-o" | "--output" => {
-                    if let Some(file) = iter.next() {
-                        opts.output_file = Some(file.clone());
-                    }
-                }
-                s if !s.starts_with('-') && opts.url.is_none() => {
-                    opts.url = Some(s.to_string());
-                }
-                _ => {}
-            }
-        }
-
-        opts
+                    _ => (opts, None),
+                },
+            )
+            .0
     }
 
-    #[allow(clippy::excessive_nesting)]
     fn parse_wget(args: &[String]) -> Self {
-        let mut opts = Self::default();
-        let mut iter = args.iter();
-
-        while let Some(arg) = iter.next() {
-            match arg.as_str() {
-                "-O" | "--output-document" => {
-                    if let Some(file) = iter.next() {
-                        opts.output_file = Some(file.clone());
+        args.iter()
+            .fold(
+                (Self::default(), None::<&str>),
+                |(mut opts, expecting), arg| match (expecting, arg.as_str()) {
+                    (Some("-O" | "--output-document"), file) => {
+                        opts.output_file = Some(file.to_string());
+                        (opts, None)
                     }
-                }
-                "-q" | "--quiet" => {
-                    opts.quiet = true;
-                }
-                "--user" => {
-                    if let Some(user) = iter.next() {
-                        opts.user = Some(user.clone());
+                    (Some("--user"), user) => {
+                        opts.user = Some(user.to_string());
+                        (opts, None)
                     }
-                }
-                "--password" => {
-                    if let Some(pass) = iter.next() {
-                        opts.password = Some(pass.clone());
+                    (Some("--password"), pass) => {
+                        opts.password = Some(pass.to_string());
+                        (opts, None)
                     }
-                }
-                s if !s.starts_with('-') && opts.url.is_none() => {
-                    opts.url = Some(s.to_string());
-                }
-                _ => {}
-            }
-        }
-
-        opts
+                    (None, "-O" | "--output-document" | "--user" | "--password") => {
+                        (opts, Some(arg.as_str()))
+                    }
+                    (None, "-q" | "--quiet") => {
+                        opts.quiet = true;
+                        (opts, None)
+                    }
+                    (None, s) if !s.starts_with('-') && opts.url.is_none() => {
+                        opts.url = Some(s.to_string());
+                        (opts, None)
+                    }
+                    _ => (opts, None),
+                },
+            )
+            .0
     }
 
     fn to_nushell(&self, cmd: &str) -> (String, String) {

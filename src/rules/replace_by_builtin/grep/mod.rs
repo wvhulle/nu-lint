@@ -35,7 +35,7 @@ fn get_builtin_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
 
 /// Grep option flags
 #[derive(Default)]
-#[allow(clippy::struct_excessive_bools)]
+
 struct GrepFlags {
     case_insensitive: bool,
     invert_match: bool,

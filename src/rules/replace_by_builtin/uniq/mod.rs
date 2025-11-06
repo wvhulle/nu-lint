@@ -26,7 +26,7 @@ fn get_builtin_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
 
 /// Parse uniq command arguments to extract key options
 #[derive(Default)]
-#[allow(clippy::struct_excessive_bools)]
+
 struct UniqOptions {
     count: bool,
     repeated: bool,

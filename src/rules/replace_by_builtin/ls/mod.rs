@@ -44,7 +44,7 @@ fn get_builtin_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
 
 /// Parse ls command arguments to extract key options
 #[derive(Default)]
-#[allow(clippy::struct_excessive_bools)]
+
 struct LsOptions {
     paths: Vec<String>,
     all: bool,

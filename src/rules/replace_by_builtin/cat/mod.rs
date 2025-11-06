@@ -51,7 +51,7 @@ fn get_builtin_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
 
 /// Parse cat command arguments to extract key options
 #[derive(Default)]
-#[allow(clippy::struct_excessive_bools)]
+
 struct CatOptions {
     files: Vec<String>,
     number_lines: bool,

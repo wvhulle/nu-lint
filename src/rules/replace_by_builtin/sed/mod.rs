@@ -53,7 +53,7 @@ pub fn rule() -> Rule {
 
 /// Parse sed command arguments to extract the operation and parameters
 #[derive(Default)]
-#[allow(clippy::struct_excessive_bools)]
+
 struct SedOptions {
     pattern: Option<String>,
     in_place: bool,

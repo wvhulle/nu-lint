@@ -4,10 +4,24 @@ Linter for the innovative [Nu](https://www.nushell.sh/) shell.
 
 Learning to use a new shell is a radical change that can use some assistance. This project is aimed at helping new users of the [Nu](https://www.nushell.sh/) shell. Nu shell has a lot of interesting and useful features and this program will give you hints to use all the features of Nu.
 
-Compatible with:
+For example, the rule `prefer_pipeline_input` in this program recommends to use pipelines instead of positional arguments:
 
-- The standard parser [nu-check](https://www.nushell.sh/commands/docs/nu-check.html).
-- The standard formatter [topiary-nushell](https://github.com/blindFS/topiary-nushell).
+```nu
+def filter-positive [numbers] { 
+    $numbers | where $it > 0 
+}
+```
+
+```nu
+def filter-positive [] { 
+    where $it > 0 
+}
+```
+
+All rules are optional and can be disabled with a configuration file. The rule definitions are designed to be compatible with:
+
+- The standard Nu parser  [nu-check](https://www.nushell.sh/commands/docs/nu-check.html).
+- The standard Nu formatter [topiary-nushell](https://github.com/blindFS/topiary-nushell).
 
 ## Installation
 

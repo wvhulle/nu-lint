@@ -33,6 +33,7 @@ pub trait ExpressionExt: Traverse {
 
     #[allow(dead_code, reason = "Will be used later.")]
     fn any(&self, context: &LintContext, predicate: impl Fn(&Expression) -> bool) -> bool;
+    fn uses_pipeline_input(&self, context: &LintContext) -> bool;
 }
 
 impl ExpressionExt for Expression {
@@ -335,6 +336,38 @@ impl ExpressionExt for Expression {
                 }
                 RecordItem::Spread(_, expr) => expr.contains_variable(var_id),
             }),
+            _ => false,
+        }
+    }
+
+    fn uses_pipeline_input(&self, context: &LintContext) -> bool {
+        use super::block::BlockExt;
+        
+        match &self.expr {
+            Expr::Var(var_id) => {
+                let var = context.working_set.get_variable(*var_id);
+                let span_start = var.declaration_span.start;
+                let span_end = var.declaration_span.end;
+                var.const_val.is_none() && span_start == 0 && span_end == 0
+            }
+            Expr::BinaryOp(left, _, right) => {
+                left.uses_pipeline_input(context) || right.uses_pipeline_input(context)
+            }
+            Expr::UnaryNot(inner) => inner.uses_pipeline_input(context),
+            Expr::Collect(_var_id, _inner_expr) => true,
+            Expr::Call(call) => call.arguments.iter().any(|arg| {
+                if let Argument::Positional(arg_expr) | Argument::Named((_, _, Some(arg_expr))) =
+                    arg
+                {
+                    arg_expr.uses_pipeline_input(context)
+                } else {
+                    false
+                }
+            }),
+            Expr::FullCellPath(cell_path) => cell_path.head.uses_pipeline_input(context),
+            Expr::Subexpression(block_id) | Expr::Block(block_id) | Expr::Closure(block_id) => {
+                block_id.uses_pipeline_input(context)
+            }
             _ => false,
         }
     }

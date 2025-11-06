@@ -27,6 +27,8 @@ pub trait BlockExt {
         context: &LintContext,
         available_functions: &HashMap<String, BlockId>,
     ) -> HashSet<String>;
+    fn uses_pipeline_input(&self, context: &LintContext) -> bool;
+    fn produces_output(&self, context: &LintContext) -> bool;
 }
 
 impl BlockExt for BlockId {
@@ -142,5 +144,25 @@ impl BlockExt for BlockId {
             })
             .flatten()
             .collect()
+    }
+
+    fn uses_pipeline_input(&self, context: &LintContext) -> bool {
+        let block = context.working_set.get_block(*self);
+        block.pipelines.iter().any(|pipeline| {
+            pipeline
+                .elements
+                .iter()
+                .any(|element| element.expr.uses_pipeline_input(context))
+        })
+    }
+
+    fn produces_output(&self, context: &LintContext) -> bool {
+        let block = context.working_set.get_block(*self);
+        block.pipelines.last().is_some_and(|pipeline| {
+            pipeline
+                .elements
+                .last()
+                .is_some_and(|last_element| !matches!(&last_element.expr.expr, Expr::Nothing))
+        })
     }
 }

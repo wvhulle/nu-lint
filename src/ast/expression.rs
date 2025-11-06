@@ -1,36 +1,92 @@
 use nu_protocol::{
     BlockId, Span, VarId,
-    ast::{Expr, Expression, Operator, PathMember},
+    ast::{
+        Argument, Call, Comparison, Expr, Expression, ExternalArgument, FindMapResult, ListItem,
+        Operator, PathMember, RecordItem, Traverse,
+    },
 };
 
+use super::{block::BlockExt, span::SpanExt};
 use crate::context::LintContext;
 
-use super::{block::BlockExt, span::SpanExt};
-
-pub trait ExpressionExt {
+pub trait ExpressionExt: Traverse {
+    /// Checks if two expressions refer to the same variable. Example: `$x` and
+    /// `$x`
     fn refers_to_same_variable(&self, other: &Expression, context: &LintContext) -> bool;
+    /// Extracts the variable name from an expression. Example: `$counter`
+    /// returns "counter"
     fn extract_variable_name(&self, context: &LintContext) -> Option<String>;
+    /// Checks if expression refers to a specific variable by name. Example:
+    /// `$item` matches "item"
     fn refers_to_variable(&self, context: &LintContext, var_name: &str) -> bool;
+    /// Checks if expression is an assignment operation. Example: `$x = 5` or
+    /// `$x += 1`
     fn is_assignment(&self) -> bool;
+    /// Checks if expression is an empty list literal. Example: `[]`
     fn is_empty_list(&self) -> bool;
+    /// Extracts block ID from block-like expressions. Example: `{ $in | length
+    /// }` or closure
     fn extract_block_id(&self) -> Option<BlockId>;
+    /// Has no side effects: `5`, `"text"`
     fn is_likely_pure(&self) -> bool;
+    /// Returns the source text of this expression's span. Example: `$in | each
+    /// { ... }`
     fn span_text<'a>(&self, context: &'a LintContext) -> &'a str;
+    /// Extracts the variable being assigned to. Example: `$result = 42` returns
+    /// `$result`
     fn extract_assigned_variable(&self) -> Option<VarId>;
+    /// Extracts field access from full cell path. Example: `$record.name`
+    /// matches "name"
     fn extract_field_access(&self, field_name: &str) -> Option<(VarId, Span)>;
 
+    /// Checks if expression contains any variable references. Example: `$x +
+    /// $y` or `[$item]`
     fn contains_variables(&self, context: &LintContext) -> bool;
+    /// Extracts variable from comparison expression. Example: `$status == 0`
+    /// returns "status"
     fn extract_compared_variable(&self, context: &LintContext) -> Option<String>;
+    /// Extracts comparison value from binary operation. Example: `$x ==
+    /// "value"` returns "value"
     fn extract_comparison_value(&self, context: &LintContext) -> Option<String>;
+    /// Checks if external call head uses a variable. Example: `^$cmd arg1 arg2`
     fn is_external_call_with_variable(&self, var_id: VarId) -> bool;
+    /// Checks if expression matches a specific variable. Example: `$var` or
+    /// `$var.field`
     fn matches_var(&self, var_id: VarId) -> bool;
+    /// Checks if external call arguments contain a variable. Example: `^ls
+    /// $path`
     fn external_call_contains_variable(&self, var_id: VarId) -> bool;
+    /// Checks if external call is a filesystem command. Example: `^tar`,
+    /// `^rsync`, or `^curl`
     fn is_external_filesystem_command(&self, context: &LintContext) -> bool;
-    fn extract_call(&self) -> Option<&nu_protocol::ast::Call>;
+    /// Extracts Call from a call expression. Example: `ls | where size > 1kb`
+    fn extract_call(&self) -> Option<&Call>;
+    /// Checks if expression contains a specific variable. Example: `$x + 1`
+    /// contains `$x`
     fn contains_variable(&self, var_id: VarId) -> bool;
+
+    #[allow(dead_code, reason = "Will be used later.")]
+    /// Tests if any nested expression matches predicate. Example: finds `$in`
+    /// in `$in.field + 1`
+    fn any(&self, context: &LintContext, predicate: impl Fn(&Expression) -> bool) -> bool;
+    /// Checks if expression uses pipeline input variable. Example: `$in` or
+    /// `$in | length`
+    fn uses_pipeline_input(&self, context: &LintContext) -> bool;
+    /// Finds the `$in` variable in this expression. Example: `$in.field` or
+    /// `$in | length`
+    fn find_pipeline_input_variable(&self, context: &LintContext) -> Option<VarId>;
 }
 
 impl ExpressionExt for Expression {
+    fn any(&self, context: &LintContext, predicate: impl Fn(&Self) -> bool) -> bool {
+        self.find_map(context.working_set, &|inner_expr| {
+            if predicate(inner_expr) {
+                return FindMapResult::Found(());
+            }
+            FindMapResult::Continue
+        })
+        .is_some()
+    }
     fn refers_to_same_variable(&self, other: &Expression, context: &LintContext) -> bool {
         match (
             self.extract_variable_name(context),
@@ -179,23 +235,22 @@ impl ExpressionExt for Expression {
             Expr::UnaryNot(inner) => inner.contains_variables(context),
 
             Expr::List(items) => items.iter().any(|item| match item {
-                nu_protocol::ast::ListItem::Item(expr)
-                | nu_protocol::ast::ListItem::Spread(_, expr) => expr.contains_variables(context),
+                ListItem::Item(expr) | ListItem::Spread(_, expr) => {
+                    expr.contains_variables(context)
+                }
             }),
 
             Expr::Record(fields) => fields.iter().any(|field| match field {
-                nu_protocol::ast::RecordItem::Pair(key, val) => {
+                RecordItem::Pair(key, val) => {
                     key.contains_variables(context) || val.contains_variables(context)
                 }
-                nu_protocol::ast::RecordItem::Spread(_, expr) => expr.contains_variables(context),
+                RecordItem::Spread(_, expr) => expr.contains_variables(context),
             }),
 
             Expr::Call(call) => call.arguments.iter().any(|arg| match arg {
-                nu_protocol::ast::Argument::Positional(expr)
-                | nu_protocol::ast::Argument::Unknown(expr)
-                | nu_protocol::ast::Argument::Named((_, _, Some(expr))) => {
-                    expr.contains_variables(context)
-                }
+                Argument::Positional(expr)
+                | Argument::Unknown(expr)
+                | Argument::Named((_, _, Some(expr))) => expr.contains_variables(context),
                 _ => false,
             }),
 
@@ -208,9 +263,8 @@ impl ExpressionExt for Expression {
             return None;
         };
 
-        let Expr::Operator(Operator::Comparison(
-            nu_protocol::ast::Comparison::Equal | nu_protocol::ast::Comparison::NotEqual,
-        )) = &op.expr
+        let Expr::Operator(Operator::Comparison(Comparison::Equal | Comparison::NotEqual)) =
+            &op.expr
         else {
             return None;
         };
@@ -255,8 +309,7 @@ impl ExpressionExt for Expression {
         if let Expr::ExternalCall(_head, args) = &self.expr {
             args.iter().any(|arg| {
                 let arg_expr = match arg {
-                    nu_protocol::ast::ExternalArgument::Regular(e)
-                    | nu_protocol::ast::ExternalArgument::Spread(e) => e,
+                    ExternalArgument::Regular(e) | ExternalArgument::Spread(e) => e,
                 };
                 arg_expr.matches_var(var_id)
             })
@@ -280,7 +333,7 @@ impl ExpressionExt for Expression {
         }
     }
 
-    fn extract_call(&self) -> Option<&nu_protocol::ast::Call> {
+    fn extract_call(&self) -> Option<&Call> {
         match &self.expr {
             Expr::Call(call) => Some(call),
             _ => None,
@@ -296,16 +349,15 @@ impl ExpressionExt for Expression {
             }
             Expr::UnaryNot(inner) => inner.contains_variable(var_id),
             Expr::Call(call) => call.arguments.iter().any(|arg| match arg {
-                nu_protocol::ast::Argument::Positional(expr)
-                | nu_protocol::ast::Argument::Named((_, _, Some(expr)))
-                | nu_protocol::ast::Argument::Unknown(expr)
-                | nu_protocol::ast::Argument::Spread(expr) => expr.contains_variable(var_id),
-                nu_protocol::ast::Argument::Named(_) => false,
+                Argument::Positional(expr)
+                | Argument::Named((_, _, Some(expr)))
+                | Argument::Unknown(expr)
+                | Argument::Spread(expr) => expr.contains_variable(var_id),
+                Argument::Named(_) => false,
             }),
             Expr::List(items) => items.iter().any(|item| {
                 let expr = match item {
-                    nu_protocol::ast::ListItem::Item(e)
-                    | nu_protocol::ast::ListItem::Spread(_, e) => e,
+                    ListItem::Item(e) | ListItem::Spread(_, e) => e,
                 };
                 expr.contains_variable(var_id)
             }),
@@ -320,12 +372,81 @@ impl ExpressionExt for Expression {
                         .any(|row| row.iter().any(|cell| cell.contains_variable(var_id)))
             }
             Expr::Record(items) => items.iter().any(|item| match item {
-                nu_protocol::ast::RecordItem::Pair(key, val) => {
+                RecordItem::Pair(key, val) => {
                     key.contains_variable(var_id) || val.contains_variable(var_id)
                 }
-                nu_protocol::ast::RecordItem::Spread(_, expr) => expr.contains_variable(var_id),
+                RecordItem::Spread(_, expr) => expr.contains_variable(var_id),
             }),
             _ => false,
+        }
+    }
+
+    fn uses_pipeline_input(&self, context: &LintContext) -> bool {
+        use super::block::BlockExt;
+
+        match &self.expr {
+            Expr::Var(var_id) => {
+                let var = context.working_set.get_variable(*var_id);
+                let span_start = var.declaration_span.start;
+                let span_end = var.declaration_span.end;
+                var.const_val.is_none() && span_start == 0 && span_end == 0
+            }
+            Expr::BinaryOp(left, _, right) => {
+                left.uses_pipeline_input(context) || right.uses_pipeline_input(context)
+            }
+            Expr::UnaryNot(inner) => inner.uses_pipeline_input(context),
+            Expr::Collect(_var_id, _inner_expr) => true,
+            Expr::Call(call) => call.arguments.iter().any(|arg| {
+                if let Argument::Positional(arg_expr) | Argument::Named((_, _, Some(arg_expr))) =
+                    arg
+                {
+                    arg_expr.uses_pipeline_input(context)
+                } else {
+                    false
+                }
+            }),
+            Expr::FullCellPath(cell_path) => cell_path.head.uses_pipeline_input(context),
+            Expr::Subexpression(block_id) | Expr::Block(block_id) | Expr::Closure(block_id) => {
+                block_id.uses_pipeline_input(context)
+            }
+            _ => false,
+        }
+    }
+
+    fn find_pipeline_input_variable(&self, context: &LintContext) -> Option<VarId> {
+        use super::block::BlockExt;
+
+        match &self.expr {
+            Expr::Var(var_id) => {
+                let var = context.working_set.get_variable(*var_id);
+                // $in has declaration_span (0,0) or start==end
+                if (var.declaration_span.start == 0 && var.declaration_span.end == 0)
+                    || (var.declaration_span.start == var.declaration_span.end
+                        && var.declaration_span.start > 0)
+                {
+                    return Some(*var_id);
+                }
+                None
+            }
+            Expr::FullCellPath(cell_path) => cell_path.head.find_pipeline_input_variable(context),
+            Expr::Call(call) => call.arguments.iter().find_map(|arg| match arg {
+                Argument::Positional(e)
+                | Argument::Unknown(e)
+                | Argument::Named((_, _, Some(e)))
+                | Argument::Spread(e) => e.find_pipeline_input_variable(context),
+                Argument::Named(_) => None,
+            }),
+            Expr::BinaryOp(lhs, _, rhs) => lhs
+                .find_pipeline_input_variable(context)
+                .or_else(|| rhs.find_pipeline_input_variable(context)),
+            Expr::UnaryNot(e) | Expr::Collect(_, e) => e.find_pipeline_input_variable(context),
+            Expr::Subexpression(block_id) | Expr::Block(block_id) | Expr::Closure(block_id) => {
+                block_id.find_pipeline_input_variable(context)
+            }
+            Expr::StringInterpolation(items) => items
+                .iter()
+                .find_map(|item| item.find_pipeline_input_variable(context)),
+            _ => None,
         }
     }
 }

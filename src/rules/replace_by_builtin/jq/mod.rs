@@ -2,15 +2,17 @@ use std::collections::HashMap;
 
 use jaq_core::{
     load::{
+        self,
         lex::{Lexer, StrPart},
         parse::{Parser, Term},
     },
-    path::{Opt, Part},
+    path::{self, Opt, Part},
 };
+use nu_protocol::ast::ExternalArgument;
 
 use crate::{
     context::LintContext,
-    external_command::{BuiltinAlternative, extract_external_args},
+    external_command::{BuiltinAlternative, detect_external_commands, extract_external_args},
     rule::{Rule, RuleCategory},
     violation::{Fix, Replacement, RuleViolation, Severity},
 };
@@ -34,7 +36,7 @@ fn extract_field_from_path<'a>(term: &'a Term<&str>) -> Option<&'a str> {
 fn extract_field_from_part<'a>(part: &(Part<Term<&'a str>>, Opt)) -> Option<&'a str> {
     if let Part::Index(Term::Str(_, parts)) = &part.0
         && parts.len() == 1
-        && let jaq_core::load::lex::StrPart::Str(field) = &parts[0]
+        && let load::lex::StrPart::Str(field) = &parts[0]
     {
         Some(*field)
     } else {
@@ -152,7 +154,7 @@ where
 
 /// Convert jq path expressions to Nushell
 fn convert_path_expression<F>(
-    path_parts: &jaq_core::path::Path<Term<&str>>,
+    path_parts: &path::Path<Term<&str>>,
     wrap_with_open: &F,
 ) -> Option<String>
 where
@@ -183,7 +185,7 @@ where
         Part::Range(None, None) => Some(wrap_with_open("each")),
         // Field access: .field is Index(Str(...))
         Part::Index(Term::Str(_, parts)) if parts.len() == 1 => {
-            if let jaq_core::load::lex::StrPart::Str(field) = &parts[0] {
+            if let load::lex::StrPart::Str(field) = &parts[0] {
                 Some(wrap_with_open(&format!("get {field}")))
             } else {
                 None
@@ -205,7 +207,7 @@ where
     // .users[] pattern: field access followed by array iteration
     if let Part::Index(Term::Str(_, parts)) = part1
         && parts.len() == 1
-        && let jaq_core::load::lex::StrPart::Str(field) = &parts[0]
+        && let load::lex::StrPart::Str(field) = &parts[0]
         && matches!(part2, Part::Range(None, None))
     {
         return Some(wrap_with_open(&format!("get {field} | each")));
@@ -216,8 +218,8 @@ where
         && let Part::Index(Term::Str(_, parts2)) = part2
         && parts1.len() == 1
         && parts2.len() == 1
-        && let jaq_core::load::lex::StrPart::Str(field1) = &parts1[0]
-        && let jaq_core::load::lex::StrPart::Str(field2) = &parts2[0]
+        && let load::lex::StrPart::Str(field1) = &parts1[0]
+        && let load::lex::StrPart::Str(field2) = &parts2[0]
     {
         return Some(wrap_with_open(&format!("get {field1}.{field2}")));
     }
@@ -227,7 +229,7 @@ where
 
 /// Convert multi-part path expressions (3+ parts)
 fn convert_multi_part_path<F>(
-    path_parts: &jaq_core::path::Path<Term<&str>>,
+    path_parts: &path::Path<Term<&str>>,
     wrap_with_open: &F,
 ) -> Option<String>
 where
@@ -313,7 +315,7 @@ fn format_jq_replacement(filter: &str, file_arg: Option<&str>) -> String {
 fn build_fix(
     cmd_text: &str,
     alternative: &BuiltinAlternative,
-    args: &[nu_protocol::ast::ExternalArgument],
+    args: &[ExternalArgument],
     expr_span: nu_protocol::Span,
     context: &LintContext,
 ) -> Fix {
@@ -368,7 +370,7 @@ fn contains_simple_jq_op(source_text: &str) -> bool {
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {
     // Detect jq commands that have direct Nushell equivalents
-    let violations = crate::external_command::detect_external_commands(
+    let violations = detect_external_commands(
         context,
         "prefer_nushell_over_jq",
         &get_simple_jq_alternatives(),

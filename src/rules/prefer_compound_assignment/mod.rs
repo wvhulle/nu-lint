@@ -1,4 +1,4 @@
-use nu_protocol::ast::{Expr, Math, Operator};
+use nu_protocol::ast::{Assignment, Expr, Expression, Math, Operator, PipelineElement};
 
 use crate::{
     ast::expression::ExpressionExt,
@@ -10,7 +10,7 @@ use crate::{
 fn build_fix(
     var_text: &str,
     compound_op: &str,
-    element: &nu_protocol::ast::PipelineElement,
+    element: &PipelineElement,
     full_span: nu_protocol::Span,
     context: &LintContext,
 ) -> Option<Fix> {
@@ -54,18 +54,12 @@ const fn get_operator_symbol(operator: Operator) -> &'static str {
     }
 }
 
-fn check_for_compound_assignment(
-    expr: &nu_protocol::ast::Expression,
-    ctx: &LintContext,
-) -> Option<RuleViolation> {
+fn check_for_compound_assignment(expr: &Expression, ctx: &LintContext) -> Option<RuleViolation> {
     let Expr::BinaryOp(left, op_expr, right) = &expr.expr else {
         return None;
     };
 
-    let Expr::Operator(nu_protocol::ast::Operator::Assignment(
-        nu_protocol::ast::Assignment::Assign,
-    )) = &op_expr.expr
-    else {
+    let Expr::Operator(Operator::Assignment(Assignment::Assign)) = &op_expr.expr else {
         return None;
     };
 

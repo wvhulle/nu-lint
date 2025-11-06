@@ -19,6 +19,18 @@ def fibonacci [n: int] {
 }
 
 #[test]
+fn test_unnecessary_mut_no_fix_for_reassigned() {
+    let bad_code = r"
+def process [] {
+    mut x = 5
+    $x = 10
+    echo $x
+}
+";
+    rule().assert_ignores(bad_code);
+}
+
+#[test]
 fn test_immutable_variable_not_flagged() {
     let good_code = r"
 def process [] {
@@ -51,19 +63,6 @@ def process [] {
     echo "done"
 }
 "#;
-
-    rule().assert_ignores(good_code);
-}
-
-#[test]
-fn test_necessary_mut_no_fix() {
-    let good_code = r"
-def increment [] {
-    mut counter = 0
-    $counter += 1
-    echo $counter
-}
-";
 
     rule().assert_ignores(good_code);
 }

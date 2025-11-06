@@ -1,4 +1,4 @@
-use nu_protocol::ast::Expr;
+use nu_protocol::ast::{Argument, Call, Expr, Expression};
 
 use crate::{
     ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
@@ -8,10 +8,9 @@ use crate::{
 };
 
 /// Extract the then-block expression from an if call
-fn get_if_then_block(call: &nu_protocol::ast::Call) -> Option<&nu_protocol::ast::Expression> {
+fn get_if_then_block(call: &Call) -> Option<&Expression> {
     call.arguments.get(1).and_then(|arg| match arg {
-        nu_protocol::ast::Argument::Positional(expr)
-        | nu_protocol::ast::Argument::Unknown(expr) => Some(expr),
+        Argument::Positional(expr) | Argument::Unknown(expr) => Some(expr),
         _ => None,
     })
 }
@@ -71,10 +70,9 @@ fn is_filtering_pattern(
 }
 
 /// Extract block ID from each call's first argument
-fn extract_each_block_id(call: &nu_protocol::ast::Call) -> Option<nu_protocol::BlockId> {
+fn extract_each_block_id(call: &Call) -> Option<nu_protocol::BlockId> {
     call.arguments.first().and_then(|arg| match arg {
-        nu_protocol::ast::Argument::Positional(expr)
-        | nu_protocol::ast::Argument::Unknown(expr) => match &expr.expr {
+        Argument::Positional(expr) | Argument::Unknown(expr) => match &expr.expr {
             Expr::Block(id) | Expr::Closure(id) => Some(*id),
             _ => None,
         },
@@ -83,10 +81,7 @@ fn extract_each_block_id(call: &nu_protocol::ast::Call) -> Option<nu_protocol::B
 }
 
 /// Check expression for the each-if pattern
-fn check_expression(
-    expr: &nu_protocol::ast::Expression,
-    context: &LintContext,
-) -> Vec<RuleViolation> {
+fn check_expression(expr: &Expression, context: &LintContext) -> Vec<RuleViolation> {
     let Expr::Call(call) = &expr.expr else {
         return vec![];
     };

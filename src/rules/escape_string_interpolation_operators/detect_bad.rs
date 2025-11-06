@@ -31,31 +31,20 @@ def write_sysfs [path: string, value: string] {
 }
 
 #[test]
-fn detects_and_keyword() {
+fn detects_boolean_keywords() {
     let rule = super::rule();
 
-    let code = r#"
-def test [] {
+    for (keyword, var_val) in [("and", "y"), ("or", "z")] {
+        let code = format!(
+            r#"
+def test [] {{
     let var = "x"
-    print $"($var) (and y)"
-}
-"#;
-
-    rule.assert_detects(code);
-}
-
-#[test]
-fn detects_or_keyword() {
-    let rule = super::rule();
-
-    let code = r#"
-def test [] {
-    let var = "x"
-    print $"($var) (or z)"
-}
-"#;
-
-    rule.assert_detects(code);
+    print $"($var) ({keyword} {var_val})"
+}}
+"#
+        );
+        rule.assert_detects(&code);
+    }
 }
 
 #[test]

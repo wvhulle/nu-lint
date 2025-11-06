@@ -1,48 +1,39 @@
 use super::rule;
 
-#[test]
-fn test_detect_function_with_81_lines() {
-    let rule = rule();
-    let long_function = format!(
-        r"def very_long_function [] {{
-{}
-}}",
-        (0..80)
-            .map(|i| format!("    let x{i} = {i}"))
-            .collect::<Vec<_>>()
-            .join("\n")
-    );
-    rule.assert_detects(&long_function);
-}
+type LineGenerator = fn(usize) -> String;
 
 #[test]
-fn test_detect_function_with_100_lines() {
+fn test_detect_long_functions_with_various_patterns() {
     let rule = rule();
-    let long_function = format!(
-        r"def extremely_long_function [] {{
-{}
-}}",
-        (0..99)
-            .map(|i| format!("    let x{i} = {i}"))
-            .collect::<Vec<_>>()
-            .join("\n")
-    );
-    rule.assert_detects(&long_function);
-}
 
-#[test]
-fn test_detect_function_with_many_if_statements() {
-    let rule = rule();
-    let long_function = format!(
-        r"def complex_function [value] {{
+    let test_cases: Vec<(usize, &str, LineGenerator)> = vec![
+        (81, "very_long_function", |i| format!("    let x{i} = {i}")),
+        (100, "extremely_long_function", |i| {
+            format!("    let x{i} = {i}")
+        }),
+        (85, "complex_function", |i| {
+            format!("    if $value == {i} {{ print {i} }}")
+        }),
+        (90, "process_data", |i| {
+            format!("    for item in $items {{ print {i} }}")
+        }),
+        (88, "process_pipeline", |i| {
+            format!("    $data | where value == {i} | each {{ |x| $x + 1 }}")
+        }),
+    ];
+
+    for (line_count, func_name, line_fn) in test_cases {
+        let long_function = format!(
+            r"def {func_name} [] {{
 {}
 }}",
-        (0..85)
-            .map(|i| format!("    if $value == {i} {{ print {i} }}"))
-            .collect::<Vec<_>>()
-            .join("\n")
-    );
-    rule.assert_detects(&long_function);
+            (0..line_count - 1)
+                .map(line_fn)
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
+        rule.assert_detects(&long_function);
+    }
 }
 
 #[test]
@@ -54,21 +45,6 @@ fn test_detect_exported_long_function() {
 }}",
         (0..82)
             .map(|i| format!("    let x{i} = {i}"))
-            .collect::<Vec<_>>()
-            .join("\n")
-    );
-    rule.assert_detects(&long_function);
-}
-
-#[test]
-fn test_detect_function_with_loops() {
-    let rule = rule();
-    let long_function = format!(
-        r"def process_data [items] {{
-{}
-}}",
-        (0..90)
-            .map(|i| format!("    for item in $items {{ print {i} }}"))
             .collect::<Vec<_>>()
             .join("\n")
     );
@@ -113,19 +89,4 @@ def second_long_function [] {{
             .join("\n")
     );
     rule.assert_violation_count_exact(&code, 2);
-}
-
-#[test]
-fn test_detect_function_with_pipeline_operations() {
-    let rule = rule();
-    let long_function = format!(
-        r"def process_pipeline [data] {{
-{}
-}}",
-        (0..88)
-            .map(|i| format!("    $data | where value == {i} | each {{ |x| $x + 1 }}"))
-            .collect::<Vec<_>>()
-            .join("\n")
-    );
-    rule.assert_detects(&long_function);
 }

@@ -1,15 +1,20 @@
+use std::collections::HashMap;
+
 use nu_protocol::{BlockId, Span};
 
-use crate::ast::block::BlockExt;
-use crate::context::LintContext;
+use crate::{ast::block::BlockExt, context::LintContext};
 
 pub trait SpanExt {
     #[must_use]
+    /// Returns source text for this span. Example: span of `$x + 1` returns "$x
+    /// + 1"
     fn text<'a>(&self, context: &'a LintContext) -> &'a str;
     #[must_use]
+    /// Finds function containing this span. Example: statement span inside `def
+    /// process [] { ... }`
     fn find_containing_function(
         &self,
-        functions: &std::collections::HashMap<BlockId, String>,
+        functions: &HashMap<BlockId, String>,
         context: &LintContext,
     ) -> Option<String>;
 }
@@ -21,7 +26,7 @@ impl SpanExt for Span {
 
     fn find_containing_function(
         &self,
-        functions: &std::collections::HashMap<BlockId, String>,
+        functions: &HashMap<BlockId, String>,
         context: &LintContext,
     ) -> Option<String> {
         functions

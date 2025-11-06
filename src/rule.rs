@@ -1,3 +1,5 @@
+use core::fmt::{self, Display, Formatter};
+
 use crate::{
     context::LintContext,
     violation::{RuleViolation, Severity},
@@ -41,8 +43,8 @@ impl RuleCategory {
     }
 }
 
-impl std::fmt::Display for RuleCategory {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Display for RuleCategory {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.write_str(self.as_str())
     }
 }
@@ -75,7 +77,6 @@ impl Rule {
     }
 
     #[cfg(test)]
-    #[allow(clippy::missing_panics_doc)]
     #[track_caller]
     /// Test helper: assert that the rule finds violations in the given code
     pub fn assert_detects(&self, code: &str) {
@@ -89,7 +90,6 @@ impl Rule {
     }
 
     #[cfg(test)]
-    #[allow(clippy::missing_panics_doc)]
     #[track_caller]
     /// Test helper: assert that the rule finds no violations in the given code
     pub fn assert_ignores(&self, code: &str) {
@@ -104,7 +104,6 @@ impl Rule {
     }
 
     #[cfg(test)]
-    #[allow(clippy::missing_panics_doc)]
     #[track_caller]
     /// Test helper: assert that the rule finds at least the expected number of
     /// violations
@@ -121,7 +120,6 @@ impl Rule {
     }
 
     #[cfg(test)]
-    #[allow(clippy::missing_panics_doc)]
     #[track_caller]
     /// Test helper: assert that the rule finds exactly the expected number of
     /// violations
@@ -139,7 +137,6 @@ impl Rule {
     }
 
     #[cfg(test)]
-    #[allow(clippy::missing_panics_doc)]
     #[track_caller]
     /// Test helper: assert that the rule generates a fix with replacement text
     /// containing the expected string
@@ -171,7 +168,6 @@ impl Rule {
     }
 
     #[cfg(test)]
-    #[allow(clippy::missing_panics_doc)]
     #[track_caller]
     /// Test helper: assert that the rule generates a fix with description
     /// containing the expected string
@@ -197,7 +193,6 @@ impl Rule {
     }
 
     #[cfg(test)]
-    #[allow(clippy::missing_panics_doc)]
     #[track_caller]
     /// Test helper: assert that the rule generates a suggestion containing the
     /// expected string

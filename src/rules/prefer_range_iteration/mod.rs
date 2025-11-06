@@ -1,4 +1,4 @@
-use nu_protocol::ast::{Assignment, Comparison, Expr, Expression, Math, Operator};
+use nu_protocol::ast::{Assignment, Call, Comparison, Expr, Expression, Math, Operator};
 
 use crate::{
     ast::{call::CallExt, expression::ExpressionExt},
@@ -134,7 +134,7 @@ fn extract_counter_from_mut(
 
 /// Check if while loop uses counter pattern and create violation
 fn check_while_loop_for_counter(
-    call: &nu_protocol::ast::Call,
+    call: &Call,
     counter_name: &str,
     counter_span: nu_protocol::Span,
     context: &LintContext,

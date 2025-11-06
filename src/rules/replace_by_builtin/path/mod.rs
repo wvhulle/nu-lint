@@ -1,4 +1,7 @@
-use nu_protocol::{VarId, ast::Expr};
+use nu_protocol::{
+    VarId,
+    ast::{Block, Expr, Expression, FindMapResult, Traverse},
+};
 
 use crate::{
     ast::{call::CallExt, expression::ExpressionExt},
@@ -20,11 +23,7 @@ fn is_likely_filesystem_param(param_name: &str) -> bool {
         })
 }
 
-fn check_nu_builtin_usage(
-    expr: &nu_protocol::ast::Expression,
-    var_id: VarId,
-    context: &LintContext,
-) -> bool {
+fn check_nu_builtin_usage(expr: &Expression, var_id: VarId, context: &LintContext) -> bool {
     if let Expr::Call(call) = &expr.expr {
         call.is_filesystem_command(context) && call.uses_variable(var_id)
     } else {
@@ -33,7 +32,7 @@ fn check_nu_builtin_usage(
 }
 
 fn check_external_command_usage(
-    expr: &nu_protocol::ast::Expression,
+    expr: &Expression,
     var_id: VarId,
     param_name: &str,
     context: &LintContext,
@@ -44,34 +43,27 @@ fn check_external_command_usage(
 }
 
 fn parameter_used_as_path(
-    block: &nu_protocol::ast::Block,
+    block: &Block,
     var_id: VarId,
     param_name: &str,
     context: &LintContext,
 ) -> bool {
-    use nu_protocol::ast::Traverse;
-
-    let mut results = Vec::new();
-    block.flat_map(
-        context.working_set,
-        &|expr| {
+    block
+        .find_map(context.working_set, &|expr| {
             if check_nu_builtin_usage(expr, var_id, context)
                 || check_external_command_usage(expr, var_id, param_name, context)
             {
-                vec![true]
+                FindMapResult::Found(())
             } else {
-                Vec::new()
+                FindMapResult::Continue
             }
-        },
-        &mut results,
-    );
-
-    !results.is_empty()
+        })
+        .is_some()
 }
 fn check_parameter(
     param: &nu_protocol::PositionalArg,
     param_var_id: VarId,
-    block: &nu_protocol::ast::Block,
+    block: &Block,
     function_name: &str,
     function_span: nu_protocol::Span,
     is_optional: bool,
@@ -121,7 +113,7 @@ fn check_parameter(
 }
 
 fn check_function_parameters(
-    block: &nu_protocol::ast::Block,
+    block: &Block,
     function_name: &str,
     function_span: nu_protocol::Span,
     context: &LintContext,

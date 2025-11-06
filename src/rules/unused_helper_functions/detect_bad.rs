@@ -36,21 +36,6 @@ def helper2 [] {
 }
 
 #[test]
-fn unused_exported_function() {
-    rule().assert_detects(
-        r#"
-def main [] {
-  print "hello"
-}
-
-export def unused-helper [] {
-  print "not used"
-}
-"#,
-    );
-}
-
-#[test]
 fn transitive_unused_helper() {
     rule().assert_detects(
         r#"

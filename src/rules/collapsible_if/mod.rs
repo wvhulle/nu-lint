@@ -1,4 +1,4 @@
-use nu_protocol::ast::Expr;
+use nu_protocol::ast::{Call, Expr};
 
 use crate::{
     Fix, Replacement,
@@ -9,7 +9,7 @@ use crate::{
 };
 
 /// Creates a violation with fix for a collapsible if statement
-fn create_violation(call: &nu_protocol::ast::Call, fix_text: String) -> RuleViolation {
+fn create_violation(call: &Call, fix_text: String) -> RuleViolation {
     let fix = Fix::new_static(
         "Collapse nested if statements",
         vec![Replacement::new_dynamic(call.span(), fix_text)],

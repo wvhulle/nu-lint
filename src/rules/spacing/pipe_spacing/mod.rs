@@ -1,4 +1,7 @@
-use nu_protocol::Span;
+use nu_protocol::{
+    Span,
+    ast::{Block, Expr, Expression, Pipeline},
+};
 
 use crate::{
     context::LintContext,
@@ -130,10 +133,7 @@ impl<'a> PipeSpacingVisitor<'a> {
     }
 }
 
-fn check_pipeline_spacing(
-    pipeline: &nu_protocol::ast::Pipeline,
-    source: &str,
-) -> Vec<RuleViolation> {
+fn check_pipeline_spacing(pipeline: &Pipeline, source: &str) -> Vec<RuleViolation> {
     let mut violations = Vec::new();
     let mut visitor = PipeSpacingVisitor::new(source);
 
@@ -149,7 +149,7 @@ fn check_pipeline_spacing(
 }
 
 fn walk_block_for_pipelines(
-    block: &nu_protocol::ast::Block,
+    block: &Block,
     working_set: &nu_protocol::engine::StateWorkingSet,
     source: &str,
     violations: &mut Vec<RuleViolation>,
@@ -165,20 +165,20 @@ fn walk_block_for_pipelines(
 }
 
 fn walk_expr_for_pipelines(
-    expr: &nu_protocol::ast::Expression,
+    expr: &Expression,
     working_set: &nu_protocol::engine::StateWorkingSet,
     source: &str,
     violations: &mut Vec<RuleViolation>,
 ) {
     match &expr.expr {
-        nu_protocol::ast::Expr::Block(block_id)
-        | nu_protocol::ast::Expr::Closure(block_id)
-        | nu_protocol::ast::Expr::Subexpression(block_id)
-        | nu_protocol::ast::Expr::RowCondition(block_id) => {
+        Expr::Block(block_id)
+        | Expr::Closure(block_id)
+        | Expr::Subexpression(block_id)
+        | Expr::RowCondition(block_id) => {
             let block = working_set.get_block(*block_id);
             walk_block_for_pipelines(block, working_set, source, violations);
         }
-        nu_protocol::ast::Expr::Call(call) => {
+        Expr::Call(call) => {
             for arg in &call.arguments {
                 if let Some(expr) = arg.expr() {
                     walk_expr_for_pipelines(expr, working_set, source, violations);

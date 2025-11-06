@@ -1,37 +1,67 @@
 use nu_protocol::{
     BlockId, Span,
-    ast::{Call, Expr, Expression},
+    ast::{Argument, Call, Expr, Expression},
 };
 
 use super::{block::BlockExt, expression::ExpressionExt};
 use crate::{ast::span::SpanExt, context::LintContext};
 
 pub trait CallExt {
+    /// Gets the command name of this call. Example: `ls -la` returns "ls"
     fn get_call_name(&self, context: &LintContext) -> String;
+    /// Checks if call is to a specific command. Example: `if $x { }` matches
+    /// "if"
     fn is_call_to_command(&self, command_name: &str, context: &LintContext) -> bool;
+    /// Gets first positional argument. Example: `ls /tmp` returns `/tmp`
     fn get_first_positional_arg(&self) -> Option<&Expression>;
+    /// Gets positional argument at index. Example: `parse "{x} {y}"` at index 0
+    /// returns pattern
     fn get_positional_arg(&self, index: usize) -> Option<&Expression>;
     #[must_use]
+    /// Extracts loop variable from each closure. Example: `each { |item| ... }`
+    /// returns "item"
     fn loop_var_from_each(&self, context: &LintContext) -> Option<String>;
     #[must_use]
+    /// Extracts loop variable from for loop. Example: `for item in $list { }`
+    /// returns "item"
     fn loop_var_from_for(&self, context: &LintContext) -> Option<String>;
     #[must_use]
+    /// Extracts declaration name and span. Example: `def foo [] { }` returns
+    /// ("foo", span)
     fn extract_declaration_name(&self, context: &LintContext) -> Option<(String, Span)>;
     #[must_use]
+    /// Extracts function definition block and name. Example: `def process [] {
+    /// ls }` returns block and "process"
     fn extract_function_definition(&self, context: &LintContext) -> Option<(BlockId, String)>;
     #[must_use]
+    /// Extracts variable declaration. Example: `let x = 5` returns `(var_id,
+    /// "x", span)`
     fn extract_variable_declaration(
         &self,
         context: &LintContext,
     ) -> Option<(nu_protocol::VarId, String, Span)>;
+    /// Gets else branch from if call. Example: `if $x { } else { }` returns
+    /// else block
     fn get_else_branch(&self) -> Option<(bool, &Expression)>;
+    /// Checks if if call has no else branch. Example: `if $x { 1 }` returns
+    /// true
     fn has_no_else_branch(&self) -> bool;
+    /// Gets nested single if call from then branch. Example: `if $x { if $y { }
+    /// }`
     fn get_nested_single_if<'a>(&self, context: &'a LintContext<'a>) -> Option<&'a Call>;
+    /// Generates collapsed if condition text. Example: `if $x { if $y { } }`
+    /// becomes `if $x and $y { }`
     fn generate_collapsed_if(&self, context: &LintContext) -> Option<String>;
+    /// Checks if call uses a variable. Example: `print $msg` uses `$msg`
     fn uses_variable(&self, var_id: nu_protocol::VarId) -> bool;
+    /// Checks if call is a filesystem command. Example: `mkdir`, `cd`, or `rm`
     fn is_filesystem_command(&self, context: &LintContext) -> bool;
+    /// Extracts message from print call. Example: `print "Error: failed"`
+    /// returns "Error: failed"
     fn extract_print_message(&self, context: &LintContext) -> Option<String>;
+    /// Extracts exit code from exit call. Example: `exit 1` returns 1
     fn extract_exit_code(&self) -> Option<i64>;
+    /// Checks if call has a named flag. Example: `ls --all` has flag "all"
     fn has_named_flag(&self, flag_name: &str) -> bool;
 }
 
@@ -54,8 +84,7 @@ impl CallExt for Call {
 
     fn get_positional_arg(&self, index: usize) -> Option<&Expression> {
         self.arguments.get(index).and_then(|arg| match arg {
-            nu_protocol::ast::Argument::Positional(expr)
-            | nu_protocol::ast::Argument::Unknown(expr) => Some(expr),
+            Argument::Positional(expr) | Argument::Unknown(expr) => Some(expr),
             _ => None,
         })
     }
@@ -160,9 +189,9 @@ impl CallExt for Call {
 
     fn uses_variable(&self, var_id: nu_protocol::VarId) -> bool {
         self.arguments.iter().any(|arg| match arg {
-            nu_protocol::ast::Argument::Positional(expr)
-            | nu_protocol::ast::Argument::Unknown(expr)
-            | nu_protocol::ast::Argument::Named((_, _, Some(expr))) => expr.matches_var(var_id),
+            Argument::Positional(expr)
+            | Argument::Unknown(expr)
+            | Argument::Named((_, _, Some(expr))) => expr.matches_var(var_id),
             _ => false,
         })
     }
@@ -192,7 +221,7 @@ impl CallExt for Call {
         self.arguments.iter().any(|arg| {
             matches!(
                 arg,
-                nu_protocol::ast::Argument::Named(named) if named.0.item == flag_name
+                Argument::Named(named) if named.0.item == flag_name
             )
         })
     }

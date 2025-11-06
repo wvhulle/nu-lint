@@ -1,9 +1,13 @@
-use std::fmt;
+use core::{error::Error, iter};
+use std::{fmt, fs};
 
 use miette::{Diagnostic, LabeledSpan, Report, SourceCode};
 use serde::Serialize;
 
-use crate::violation::{Severity, Violation};
+use crate::{
+    Fix,
+    violation::{Severity, Violation},
+};
 
 /// Format violations as human-readable text
 pub fn format_text(violations: &[Violation]) -> String {
@@ -30,7 +34,7 @@ fn format_violation_text(violation: &Violation, add_separator: bool) -> String {
     let source_code = violation
         .file
         .as_ref()
-        .and_then(|path| std::fs::read_to_string(path.as_ref()).ok())
+        .and_then(|path| fs::read_to_string(path.as_ref()).ok())
         .unwrap_or_default();
 
     let (line, column) = calculate_line_column(&source_code, violation.span.start);
@@ -95,7 +99,7 @@ fn calculate_line_column(source: &str, offset: usize) -> (usize, usize) {
 }
 
 /// Format fix information for text output
-fn format_fix_info(fix: &crate::violation::Fix, source_code: &str) -> String {
+fn format_fix_info(fix: &Fix, source_code: &str) -> String {
     let header = format!("\n  \x1b[36mℹ Available fix:\x1b[0m {}", fix.description);
 
     if fix.replacements.is_empty() {
@@ -125,7 +129,7 @@ fn violation_to_json(violation: &Violation) -> JsonViolation {
     let source_code = violation
         .file
         .as_ref()
-        .and_then(|path| std::fs::read_to_string(path.as_ref()).ok())
+        .and_then(|path| fs::read_to_string(path.as_ref()).ok())
         .unwrap_or_default();
 
     let (line_start, column_start) = calculate_line_column(&source_code, violation.span.start);
@@ -135,26 +139,20 @@ fn violation_to_json(violation: &Violation) -> JsonViolation {
         rule_id: violation.rule_id.to_string(),
         severity: violation.severity.to_string(),
         message: violation.message.to_string(),
-        file: violation
-            .file
-            .as_ref()
-            .map(std::string::ToString::to_string),
+        file: violation.file.as_ref().map(ToString::to_string),
         line_start,
         line_end,
         column_start,
         column_end,
         offset_start: violation.span.start,
         offset_end: violation.span.end,
-        suggestion: violation
-            .suggestion
-            .as_ref()
-            .map(std::string::ToString::to_string),
+        suggestion: violation.suggestion.as_ref().map(ToString::to_string),
         fix: violation.fix.as_ref().map(fix_to_json),
     }
 }
 
 /// Convert a fix to JSON format
-fn fix_to_json(fix: &crate::violation::Fix) -> JsonFix {
+fn fix_to_json(fix: &Fix) -> JsonFix {
     JsonFix {
         description: fix.description.to_string(),
         replacements: fix
@@ -185,7 +183,7 @@ impl fmt::Display for ViolationDiagnostic {
     }
 }
 
-impl std::error::Error for ViolationDiagnostic {}
+impl Error for ViolationDiagnostic {}
 
 impl Diagnostic for ViolationDiagnostic {
     fn code<'a>(&'a self) -> Option<Box<dyn fmt::Display + 'a>> {
@@ -221,7 +219,7 @@ impl Diagnostic for ViolationDiagnostic {
             )
         };
 
-        Some(Box::new(std::iter::once(LabeledSpan::new(
+        Some(Box::new(iter::once(LabeledSpan::new(
             Some(label_text),
             span.offset(),
             span.len(),

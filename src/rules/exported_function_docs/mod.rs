@@ -1,4 +1,4 @@
-use nu_protocol::ast::Expr;
+use nu_protocol::ast::{Call, Expr};
 
 use crate::{
     ast::call::CallExt,
@@ -40,10 +40,7 @@ fn has_doc_comment_before(context: &LintContext, span: nu_protocol::Span) -> boo
     false
 }
 
-fn check_exported_function(
-    call: &nu_protocol::ast::Call,
-    context: &LintContext,
-) -> Option<RuleViolation> {
+fn check_exported_function(call: &Call, context: &LintContext) -> Option<RuleViolation> {
     let decl_name = call.get_call_name(context);
 
     if decl_name != "export def" {

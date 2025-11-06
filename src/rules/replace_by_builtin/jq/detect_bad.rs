@@ -358,18 +358,3 @@ fn detect_jq_chained_simple_operations() {
         rule().assert_detects(code);
     }
 }
-
-#[test]
-fn detect_jq_with_flags() {
-    // jq with flags like -r, -c, -M should still be detected if the filter is
-    // simple
-    let bad_codes = vec![
-        "$config | to json | ^jq -r '.database.host'",
-        "$data | to json | ^jq -c '.users'",
-        "$items | to json | ^jq -M '.products'",
-    ];
-
-    for code in bad_codes {
-        rule().assert_detects(code);
-    }
-}

@@ -1,4 +1,7 @@
-use nu_protocol::{Span, VarId, ast::Expr};
+use nu_protocol::{
+    Span, VarId,
+    ast::{Argument, Block, Call, Expr, Expression, Pipeline, PipelineElement},
+};
 
 use crate::{
     ast::{block::BlockExt, call::CallExt, pipeline::PipelineExt, span::SpanExt},
@@ -7,16 +10,16 @@ use crate::{
     violation::{RuleViolation, Severity},
 };
 
-fn is_split_row_call(call: &nu_protocol::ast::Call, context: &LintContext) -> bool {
+fn is_split_row_call(call: &Call, context: &LintContext) -> bool {
     call.is_call_to_command("split row", context)
 }
 
-fn is_indexed_access_call(call: &nu_protocol::ast::Call, context: &LintContext) -> bool {
+fn is_indexed_access_call(call: &Call, context: &LintContext) -> bool {
     let name = call.get_call_name(context);
     matches!(name.as_str(), "get" | "skip")
 }
 
-fn has_index_argument(call: &nu_protocol::ast::Call, context: &LintContext) -> bool {
+fn has_index_argument(call: &Call, context: &LintContext) -> bool {
     call.get_first_positional_arg().is_some_and(|arg| {
         let arg_text = arg.span.text(context);
         arg_text.parse::<usize>().is_ok()
@@ -24,7 +27,7 @@ fn has_index_argument(call: &nu_protocol::ast::Call, context: &LintContext) -> b
 }
 
 fn check_pipeline_for_split_get(
-    pipeline: &nu_protocol::ast::Pipeline,
+    pipeline: &Pipeline,
     context: &LintContext,
 ) -> Option<RuleViolation> {
     if pipeline.elements.len() < 2 {
@@ -59,7 +62,7 @@ fn check_pipeline_for_split_get(
 }
 
 fn extract_split_row_assignment(
-    expr: &nu_protocol::ast::Expression,
+    expr: &Expression,
     context: &LintContext,
 ) -> Option<(VarId, String, Span)> {
     let Expr::Call(call) = &expr.expr else {
@@ -96,11 +99,7 @@ fn extract_split_row_assignment(
     })
 }
 
-fn is_var_used_in_indexed_access(
-    var_id: VarId,
-    call: &nu_protocol::ast::Call,
-    context: &LintContext,
-) -> bool {
+fn is_var_used_in_indexed_access(var_id: VarId, call: &Call, context: &LintContext) -> bool {
     if !is_indexed_access_call(call, context) || !has_index_argument(call, context) {
         return false;
     }
@@ -108,8 +107,8 @@ fn is_var_used_in_indexed_access(
     call.arguments.iter().any(|arg| {
         matches!(
             arg,
-            nu_protocol::ast::Argument::Positional(arg_expr)
-            | nu_protocol::ast::Argument::Unknown(arg_expr)
+            Argument::Positional(arg_expr)
+            | Argument::Unknown(arg_expr)
             if matches!(&arg_expr.expr, Expr::Var(ref_var_id) if *ref_var_id == var_id)
         )
     })
@@ -127,16 +126,14 @@ fn create_indexed_access_violation(var_name: &str, decl_span: Span) -> RuleViola
 }
 
 fn check_call_arguments_for_violation(
-    call: &nu_protocol::ast::Call,
+    call: &Call,
     var_id: VarId,
     var_name: &str,
     decl_span: Span,
     context: &LintContext,
 ) -> Option<RuleViolation> {
     call.arguments.iter().find_map(|arg| {
-        let (nu_protocol::ast::Argument::Positional(arg_expr)
-        | nu_protocol::ast::Argument::Unknown(arg_expr)) = arg
-        else {
+        let (Argument::Positional(arg_expr) | Argument::Unknown(arg_expr)) = arg else {
             return None;
         };
 
@@ -150,11 +147,11 @@ fn check_call_arguments_for_violation(
 }
 
 fn check_element_for_indexed_access(
-    element: &nu_protocol::ast::PipelineElement,
+    element: &PipelineElement,
     var_id: VarId,
     var_name: &str,
     decl_span: Span,
-    pipeline: &nu_protocol::ast::Pipeline,
+    pipeline: &Pipeline,
     context: &LintContext,
 ) -> Option<RuleViolation> {
     match &element.expr.expr {
@@ -194,7 +191,7 @@ fn check_for_indexed_variable_access(
     var_id: VarId,
     var_name: &str,
     decl_span: Span,
-    block: &nu_protocol::ast::Block,
+    block: &Block,
     context: &LintContext,
 ) -> Option<RuleViolation> {
     log::debug!("Checking for indexed access of variable: {var_name}");
@@ -216,11 +213,7 @@ fn check_for_indexed_variable_access(
     })
 }
 
-fn check_block(
-    block: &nu_protocol::ast::Block,
-    context: &LintContext,
-    violations: &mut Vec<RuleViolation>,
-) {
+fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<RuleViolation>) {
     // Check for inline split row | get/skip patterns
     for pipeline in &block.pipelines {
         if let Some(violation) = check_pipeline_for_split_get(pipeline, context) {
@@ -249,7 +242,7 @@ fn check_block(
                         var_id,
                         &var_name,
                         decl_span,
-                        &nu_protocol::ast::Block {
+                        &Block {
                             pipelines: vec![future_pipeline.clone()],
                             ..Default::default()
                         },

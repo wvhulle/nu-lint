@@ -1,4 +1,7 @@
-use nu_protocol::{Span, ast::Expr};
+use nu_protocol::{
+    Span,
+    ast::{Expr, ListItem},
+};
 
 use crate::{
     context::LintContext,
@@ -6,11 +9,7 @@ use crate::{
     violation::{RuleViolation, Severity},
 };
 
-fn check_list_commas(
-    source: &str,
-    span: Span,
-    items: &[nu_protocol::ast::ListItem],
-) -> Vec<RuleViolation> {
+fn check_list_commas(source: &str, span: Span, items: &[ListItem]) -> Vec<RuleViolation> {
     let mut violations = Vec::new();
 
     if items.len() < 2 || span.end > source.len() {
@@ -27,12 +26,10 @@ fn check_list_commas(
     // Check for commas between list items
     for i in 0..items.len() - 1 {
         let current_expr = match &items[i] {
-            nu_protocol::ast::ListItem::Item(expr)
-            | nu_protocol::ast::ListItem::Spread(_, expr) => expr,
+            ListItem::Item(expr) | ListItem::Spread(_, expr) => expr,
         };
         let next_expr = match &items[i + 1] {
-            nu_protocol::ast::ListItem::Item(expr)
-            | nu_protocol::ast::ListItem::Spread(_, expr) => expr,
+            ListItem::Item(expr) | ListItem::Spread(_, expr) => expr,
         };
 
         if current_expr.span.end >= next_expr.span.start {

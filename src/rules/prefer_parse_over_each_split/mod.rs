@@ -1,4 +1,4 @@
-use nu_protocol::ast::Expr;
+use nu_protocol::ast::{Argument, Expr, Expression};
 
 use crate::{
     ast::call::CallExt,
@@ -7,14 +7,13 @@ use crate::{
     violation::{RuleViolation, Severity},
 };
 
-fn contains_split_row(expr: &nu_protocol::ast::Expression, ctx: &LintContext) -> bool {
+fn contains_split_row(expr: &Expression, ctx: &LintContext) -> bool {
     match &expr.expr {
         Expr::Call(call) => {
             let name = call.get_call_name(ctx);
             (name == "split row" || name == "split")
                 || call.arguments.iter().any(|arg| match arg {
-                    nu_protocol::ast::Argument::Positional(e)
-                    | nu_protocol::ast::Argument::Named((_, _, Some(e))) => {
+                    Argument::Positional(e) | Argument::Named((_, _, Some(e))) => {
                         contains_split_row(e, ctx)
                     }
                     _ => false,
@@ -43,7 +42,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
                 .arguments
                 .iter()
                 .filter_map(|arg| match arg {
-                    nu_protocol::ast::Argument::Positional(expr) => Some(expr),
+                    Argument::Positional(expr) => Some(expr),
                     _ => None,
                 })
                 .any(|expr| contains_split_row(expr, ctx));

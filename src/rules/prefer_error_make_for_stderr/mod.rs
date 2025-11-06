@@ -1,7 +1,10 @@
-use nu_protocol::ast::{Expr, PipelineElement};
+use nu_protocol::ast::{Argument, Block, Expr, PipelineElement};
 
 use crate::{
-    ast::call::CallExt, context::LintContext, rule::{Rule, RuleCategory}, violation::{RuleViolation, Severity}
+    ast::call::CallExt,
+    context::LintContext,
+    rule::{Rule, RuleCategory},
+    violation::{RuleViolation, Severity},
 };
 
 fn check_sequential_stderr_exit(
@@ -15,7 +18,7 @@ fn check_sequential_stderr_exit(
     };
 
     let has_stderr_flag = print_call.arguments.iter().any(|arg| {
-        matches!(arg, nu_protocol::ast::Argument::Named(named) 
+        matches!(arg, Argument::Named(named)
             if named.0.item == "stderr")
     });
 
@@ -42,7 +45,7 @@ fn check_sequential_stderr_exit(
 }
 
 fn check_block_pipelines<'a>(
-    block: &'a nu_protocol::ast::Block,
+    block: &'a Block,
     context: &'a LintContext<'a>,
 ) -> impl Iterator<Item = RuleViolation> + 'a {
     block.pipelines.windows(2).filter_map(move |pipelines| {

@@ -1,8 +1,9 @@
 use super::rule;
+use crate::log::instrument;
 
 #[test]
 fn test_detect_unnecessary_variable_simple() {
-    crate::log::instrument();
+    instrument();
 
     let bad_code = r"
 def foo [] {

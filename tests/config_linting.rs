@@ -1,14 +1,18 @@
-mod common;
+use std::{
+    env::{current_dir, set_current_dir},
+    fs,
+    path::PathBuf,
+    sync::Mutex,
+};
 
-use std::{fs, path::PathBuf};
-
-use common::CHDIR_MUTEX;
 use nu_lint::{
     LintEngine,
     cli::{collect_files_to_lint, lint_files},
     config::{Config, RuleSeverity},
 };
 use tempfile::TempDir;
+
+pub static CHDIR_MUTEX: Mutex<()> = Mutex::new(());
 
 #[test]
 fn test_custom_config_file() {
@@ -44,22 +48,16 @@ fn test_auto_discover_config_file() {
     .unwrap();
     fs::write(&nu_file_path, "let myVariable = 5\n").unwrap();
 
-    let original_dir = std::env::current_dir().unwrap();
+    let original_dir = current_dir().unwrap();
 
-    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        std::env::set_current_dir(temp_dir.path()).unwrap();
+    set_current_dir(temp_dir.path()).unwrap();
 
-        let config = Config::load(None);
-        let engine = LintEngine::new(config);
-        let files = collect_files_to_lint(&[PathBuf::from("test.nu")]);
-        let (violations, _) = lint_files(&engine, &files, false);
+    let config = Config::load(None);
+    let engine = LintEngine::new(config);
+    let files = collect_files_to_lint(&[PathBuf::from("test.nu")]);
+    let (violations, _) = lint_files(&engine, &files, false);
 
-        violations
-    }));
-
-    std::env::set_current_dir(original_dir).unwrap();
-
-    let violations = result.unwrap();
+    set_current_dir(original_dir).unwrap();
 
     // Should have no violations because snake_case_variables is off
     assert!(
@@ -86,22 +84,16 @@ fn test_auto_discover_config_in_parent_dir() {
     .unwrap();
     fs::write(&nu_file_path, "let myVariable = 5\n").unwrap();
 
-    let original_dir = std::env::current_dir().unwrap();
+    let original_dir = current_dir().unwrap();
 
-    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        std::env::set_current_dir(&subdir).unwrap();
+    set_current_dir(&subdir).unwrap();
 
-        let config = Config::load(None);
-        let engine = LintEngine::new(config);
-        let files = collect_files_to_lint(&[PathBuf::from("test.nu")]);
-        let (violations, _) = lint_files(&engine, &files, false);
+    let config = Config::load(None);
+    let engine = LintEngine::new(config);
+    let files = collect_files_to_lint(&[PathBuf::from("test.nu")]);
+    let (violations, _) = lint_files(&engine, &files, false);
 
-        violations
-    }));
-
-    std::env::set_current_dir(original_dir).unwrap();
-
-    let violations = result.unwrap();
+    set_current_dir(original_dir).unwrap();
 
     // Should have no violations because snake_case_variables is off
     assert!(
@@ -132,23 +124,17 @@ fn test_explicit_config_overrides_auto_discovery() {
     .unwrap();
     fs::write(&nu_file_path, "let myVariable = 5\n").unwrap();
 
-    let original_dir = std::env::current_dir().unwrap();
+    let original_dir = current_dir().unwrap();
 
-    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        std::env::set_current_dir(temp_dir.path()).unwrap();
+    set_current_dir(temp_dir.path()).unwrap();
 
-        // Explicit config should override auto-discovery
-        let config = Config::load(Some(&explicit_config));
-        let engine = LintEngine::new(config);
-        let files = collect_files_to_lint(&[PathBuf::from("test.nu")]);
-        let (violations, _) = lint_files(&engine, &files, false);
+    // Explicit config should override auto-discovery
+    let config = Config::load(Some(&explicit_config));
+    let engine = LintEngine::new(config);
+    let files = collect_files_to_lint(&[PathBuf::from("test.nu")]);
+    let (violations, _) = lint_files(&engine, &files, false);
 
-        violations
-    }));
-
-    std::env::set_current_dir(original_dir).unwrap();
-
-    let violations = result.unwrap();
+    set_current_dir(original_dir).unwrap();
 
     // Should have violations because explicit config doesn't disable the rule
     assert!(

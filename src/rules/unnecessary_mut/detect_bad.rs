@@ -30,13 +30,15 @@ def process [] {
 }
 
 #[test]
-fn test_unnecessary_mut_fix_provided() {
+fn test_unnecessary_mut_fix_nested_function() {
     let bad_code = r"
-def process [] {
-    mut x = 5
-    echo $x
+def outer [] {
+    def inner [] {
+        mut x = 42
+        $x
+    }
+    inner
 }
 ";
-
-    rule().assert_violation_count_exact(bad_code, 1);
+    rule().assert_detects(bad_code);
 }

@@ -1,27 +1,19 @@
 use super::rule;
 
 #[test]
-fn test_detect_print_without_prefix() {
-    let bad_code = r#"print "Hello, World!""#;
-    rule().assert_detects(bad_code);
+fn test_detect_print_or_echo_without_prefix() {
+    for (cmd, msg) in [("print", "Hello, World!"), ("echo", "Starting process")] {
+        let bad_code = format!(r#"{cmd} "{msg}""#);
+        rule().assert_detects(&bad_code);
+    }
 }
 
 #[test]
-fn test_detect_echo_without_prefix() {
-    let bad_code = r#"echo "Starting process""#;
-    rule().assert_detects(bad_code);
-}
-
-#[test]
-fn test_detect_print_single_quotes() {
-    let bad_code = r"print 'Error occurred'";
-    rule().assert_detects(bad_code);
-}
-
-#[test]
-fn test_detect_echo_single_quotes() {
-    let bad_code = r"echo 'Process completed'";
-    rule().assert_detects(bad_code);
+fn test_detect_print_or_echo_with_single_quotes() {
+    for (cmd, msg) in [("print", "Error occurred"), ("echo", "Process completed")] {
+        let bad_code = format!(r"{cmd} '{msg}'");
+        rule().assert_detects(&bad_code);
+    }
 }
 
 #[test]
@@ -34,23 +26,20 @@ print "Task completed"
 }
 
 #[test]
-fn test_detect_print_in_function() {
-    let bad_code = r#"
-def deploy [] {
-    print "Deploying application"
-}
-"#;
-    rule().assert_detects(bad_code);
-}
-
-#[test]
-fn test_detect_echo_in_function() {
-    let bad_code = r#"
-def backup [] {
-    echo "Backing up files"
-}
-"#;
-    rule().assert_detects(bad_code);
+fn test_detect_print_or_echo_in_function() {
+    for (cmd, func, msg) in [
+        ("print", "deploy", "Deploying application"),
+        ("echo", "backup", "Backing up files"),
+    ] {
+        let bad_code = format!(
+            r#"
+def {func} [] {{
+    {cmd} "{msg}"
+}}
+"#
+        );
+        rule().assert_detects(&bad_code);
+    }
 }
 
 #[test]

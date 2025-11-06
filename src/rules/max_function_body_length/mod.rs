@@ -1,4 +1,4 @@
-use nu_protocol::Id;
+use nu_protocol::{Id, marker::Block};
 
 use crate::{
     context::LintContext,
@@ -31,7 +31,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 
 fn function_violation(
     context: &LintContext<'_>,
-    block_id: Id<nu_protocol::marker::Block>,
+    block_id: Id<Block>,
     function_name: &String,
 ) -> Option<RuleViolation> {
     let block = context.working_set.get_block(block_id);
@@ -42,13 +42,13 @@ fn function_violation(
 
     (line_count > MAX_LINES).then(|| {
         let message = format!(
-            "Function `{function_name}` has {line_count} lines, which exceeds the maximum \
-                     of {MAX_LINES} lines"
+            "Function `{function_name}` has {line_count} lines, which exceeds the maximum of \
+             {MAX_LINES} lines"
         );
 
         let suggestion = format!(
-            "Consider refactoring `{function_name}` into smaller, more focused functions. \
-                     Break down complex logic into helper functions with clear responsibilities."
+            "Consider refactoring `{function_name}` into smaller, more focused functions. Break \
+             down complex logic into helper functions with clear responsibilities."
         );
 
         RuleViolation::new_dynamic("max_function_body_length", message, function_span)

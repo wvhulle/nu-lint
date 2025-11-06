@@ -10,7 +10,7 @@ fn init_logger() {
 
 #[test]
 fn test_suggestion_recommends_do_ignore_when_appropriate() {
-    init_logger();
+    instrument();
     let bad_code = r"^mkdir -p /tmp/test | ignore";
     rule().assert_fix_description_contains(bad_code, "do -i");
     rule().assert_fix_description_contains(bad_code, "ignore");
@@ -18,7 +18,7 @@ fn test_suggestion_recommends_do_ignore_when_appropriate() {
 
 #[test]
 fn test_suggestion_recommends_complete_for_custom_handling() {
-    init_logger();
+    instrument();
     let bad_code = r"^docker build -t myapp . | lines";
     rule().assert_fix_description_contains(bad_code, "complete");
     rule().assert_fix_description_contains(bad_code, "custom");
@@ -27,7 +27,7 @@ fn test_suggestion_recommends_complete_for_custom_handling() {
 
 #[test]
 fn test_suggestion_recommends_try_for_simple_cases() {
-    init_logger();
+    instrument();
     let bad_code = r"^git status | lines";
     rule().assert_fix_description_contains(bad_code, "try");
     rule().assert_fix_description_contains(bad_code, "simple");

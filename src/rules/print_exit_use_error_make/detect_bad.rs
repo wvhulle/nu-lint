@@ -1,5 +1,6 @@
 use super::rule;
 use crate::log::instrument;
+
 #[test]
 fn test_detect_print_exit_pattern() {
     let bad_code = r#"
@@ -12,36 +13,19 @@ def bad-error [] {
 }
 
 #[test]
-fn test_detect_print_exit_with_error_message() {
-    let bad_code = r#"
-def process-file [path: string] {
-    if not ($path | path exists) {
-        print "Error: File not found"
-        exit 1
+fn test_detect_various_error_messages() {
+    for msg in [
+        "Error: File not found",
+        "Failed to connect to server",
+        "Cannot parse input",
+        "Unable to access resource",
+        "Missing configuration file",
+        "Access denied",
+        "Connection timeout",
+    ] {
+        let bad_code = format!(r#"print "{msg}"; exit 1"#);
+        rule().assert_detects(&bad_code);
     }
-}
-"#;
-    rule().assert_detects(bad_code);
-}
-
-#[test]
-fn test_detect_print_exit_with_failed_message() {
-    let bad_code = r#"
-print "Failed to connect to server"
-exit 2
-"#;
-    rule().assert_detects(bad_code);
-}
-
-#[test]
-fn test_detect_print_exit_with_cannot_message() {
-    let bad_code = r#"
-def validate [input] {
-    print "Cannot parse input"
-    exit 1
-}
-"#;
-    rule().assert_detects(bad_code);
 }
 
 #[test]
@@ -54,44 +38,6 @@ if ($args | is-empty) {
 }
 "#;
     rule().assert_violation_count_exact(bad_code, 1);
-}
-
-#[test]
-fn test_detect_print_exit_with_unable_message() {
-    let bad_code = r#"
-print "Unable to access resource"
-exit 3
-"#;
-    rule().assert_detects(bad_code);
-}
-
-#[test]
-fn test_detect_print_exit_with_missing_message() {
-    let bad_code = r#"
-def check-config [] {
-    print "Missing configuration file"
-    exit 1
-}
-"#;
-    rule().assert_detects(bad_code);
-}
-
-#[test]
-fn test_detect_print_exit_with_denied_message() {
-    let bad_code = r#"
-print "Access denied"
-exit 1
-"#;
-    rule().assert_detects(bad_code);
-}
-
-#[test]
-fn test_detect_print_exit_with_timeout_message() {
-    let bad_code = r#"
-print "Connection timeout"
-exit 1
-"#;
-    rule().assert_detects(bad_code);
 }
 
 #[test]
@@ -121,31 +67,15 @@ do $checker
 }
 
 #[test]
-fn test_detect_same_pipeline_pattern() {
-    let bad_code = r#"
-def validate [] {
-    print "Validation failed"; exit 1
-}
-"#;
-    rule().assert_detects(bad_code);
-}
-
-#[test]
-fn test_detect_same_pipeline_in_if_block() {
+fn test_detect_same_pipeline_variations() {
+    rule().assert_detects(r#"def validate [] { print "Validation failed"; exit 1 }"#);
+    rule().assert_detects(r#"let result = some_command; print "Command failed"; exit 2"#);
     let bad_code = r#"
 def check [value: int] {
     if $value < 0 {
         print "Negative value not allowed"; exit 1
     }
 }
-"#;
-    rule().assert_detects(bad_code);
-}
-
-#[test]
-fn test_detect_same_pipeline_multiple_commands() {
-    let bad_code = r#"
-let result = some_command; print "Command failed"; exit 2
 "#;
     rule().assert_detects(bad_code);
 }

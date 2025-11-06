@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 
+use nu_protocol::ast::ExternalArgument;
+
 use crate::{
     RuleViolation,
     context::LintContext,
-    external_command::{BuiltinAlternative, extract_external_args},
+    external_command::{BuiltinAlternative, detect_external_commands, extract_external_args},
     rule::{Rule, RuleCategory},
     violation::{Fix, Replacement, Severity},
 };
@@ -49,7 +51,7 @@ fn get_builtin_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
 
 /// Parse cat command arguments to extract key options
 #[derive(Default)]
-#[allow(clippy::struct_excessive_bools)]
+
 struct CatOptions {
     files: Vec<String>,
     number_lines: bool,
@@ -190,7 +192,7 @@ impl CatOptions {
 fn build_fix(
     _cmd_text: &str,
     _alternative: &BuiltinAlternative,
-    args: &[nu_protocol::ast::ExternalArgument],
+    args: &[ExternalArgument],
     expr_span: nu_protocol::Span,
     context: &LintContext,
 ) -> Fix {
@@ -208,7 +210,7 @@ fn build_fix(
 }
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {
-    crate::external_command::detect_external_commands(
+    detect_external_commands(
         context,
         "prefer_builtin_cat",
         &get_builtin_alternatives(),

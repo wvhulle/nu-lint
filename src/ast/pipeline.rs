@@ -1,6 +1,6 @@
 use nu_protocol::{
     VarId,
-    ast::{Expr, Pipeline},
+    ast::{Expr, Expression, Pipeline},
 };
 
 use crate::{
@@ -9,10 +9,22 @@ use crate::{
 };
 
 pub trait PipelineExt {
+    /// Checks if pipeline contains call to command. Example: `ls | where size >
+    /// 1kb` contains "where"
     fn contains_call_to(&self, command_name: &str, context: &LintContext) -> bool;
+    /// Checks if pipeline contains indexed access. Example: `split row ":" |
+    /// get 0`
     fn contains_indexed_access(&self, context: &LintContext) -> bool;
+    /// Checks if variable is used in pipeline. Example: `$list | length` uses
+    /// `$list`
     fn variable_is_used(&self, var_id: VarId) -> bool;
+    /// Checks if variable is piped. Example: `$data | to json` pipes `$data`
     fn variable_is_piped(&self, var_id: VarId) -> bool;
+    /// Checks if pipeline ends with ignore. Example: `ls | ignore`
+    fn ends_with_ignore(&self, context: &LintContext) -> bool;
+    /// Gets element before ignore. Example: `mkdir tmp | ignore` returns `mkdir
+    /// tmp`
+    fn element_before_ignore(&self, context: &LintContext) -> Option<&Expression>;
 }
 
 impl PipelineExt for Pipeline {
@@ -71,5 +83,16 @@ impl PipelineExt for Pipeline {
         matches!(&first.expr.expr, Expr::FullCellPath(cell_path)
             if matches!(&cell_path.head.expr, Expr::Var(ref_var_id) if *ref_var_id == var_id)
             && cell_path.tail.is_empty())
+    }
+
+    fn ends_with_ignore(&self, context: &LintContext) -> bool {
+        self.elements.last().is_some_and(|elem| {
+            matches!(&elem.expr.expr, Expr::Call(call) if call.is_call_to_command("ignore", context))
+        })
+    }
+
+    fn element_before_ignore(&self, context: &LintContext) -> Option<&Expression> {
+        (self.elements.len() >= 2 && self.ends_with_ignore(context))
+            .then(|| &self.elements[self.elements.len() - 2].expr)
     }
 }

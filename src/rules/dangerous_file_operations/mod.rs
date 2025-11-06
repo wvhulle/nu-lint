@@ -1,6 +1,6 @@
 use nu_protocol::{
     Span,
-    ast::{Expr, ExternalArgument},
+    ast::{Argument, Expr, Expression, ExternalArgument},
 };
 
 use crate::{
@@ -100,11 +100,7 @@ fn extract_path_from_arg(arg: &ExternalArgument, context: &LintContext) -> Strin
     extract_arg_text(arg, context).to_string()
 }
 
-fn is_if_block_containing(
-    expr: &nu_protocol::ast::Expression,
-    command_span: Span,
-    context: &LintContext,
-) -> bool {
+fn is_if_block_containing(expr: &Expression, command_span: Span, context: &LintContext) -> bool {
     let Expr::Call(call) = &expr.expr else {
         return false;
     };
@@ -123,7 +119,7 @@ fn is_inside_if_block(context: &LintContext, command_span: Span) -> bool {
         context.working_set,
         &|expr| {
             if is_if_block_containing(expr, command_span, context) {
-                vec![true]
+                vec![()]
             } else {
                 vec![]
             }
@@ -139,7 +135,7 @@ fn is_dangerous_command(cmd_name: &str) -> bool {
 }
 
 fn extract_dangerous_command(
-    expr: &nu_protocol::ast::Expression,
+    expr: &Expression,
     context: &LintContext,
 ) -> Option<(Span, String, Vec<ExternalArgument>)> {
     match &expr.expr {
@@ -157,9 +153,7 @@ fn extract_dangerous_command(
                 .arguments
                 .iter()
                 .filter_map(|arg| match arg {
-                    nu_protocol::ast::Argument::Positional(expr) => {
-                        Some(ExternalArgument::Regular(expr.clone()))
-                    }
+                    Argument::Positional(expr) => Some(ExternalArgument::Regular(expr.clone())),
                     _ => None,
                 })
                 .collect();

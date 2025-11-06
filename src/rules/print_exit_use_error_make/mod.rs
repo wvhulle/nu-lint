@@ -1,4 +1,4 @@
-use nu_protocol::ast::{Expr, PipelineElement};
+use nu_protocol::ast::{Block, Call, Expr, Pipeline, PipelineElement};
 
 use crate::{
     ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
@@ -14,8 +14,8 @@ struct PrintExitPattern {
 }
 
 fn check_print_exit_calls(
-    print_call: &nu_protocol::ast::Call,
-    exit_call: &nu_protocol::ast::Call,
+    print_call: &Call,
+    exit_call: &Call,
     context: &LintContext,
 ) -> Option<PrintExitPattern> {
     (print_call.is_call_to_command("print", context) && !print_call.has_named_flag("stderr"))
@@ -46,7 +46,7 @@ fn check_sequential_print_exit(
 }
 
 fn check_same_pipeline_print_exit(
-    pipeline: &nu_protocol::ast::Pipeline,
+    pipeline: &Pipeline,
     context: &LintContext,
 ) -> Option<PrintExitPattern> {
     (pipeline.elements.len() >= 2).then_some(()).and_then(|()| {
@@ -140,7 +140,7 @@ fn create_violation(pattern: &PrintExitPattern, context: &LintContext) -> RuleVi
 }
 
 fn check_sequential_patterns<'a>(
-    block: &'a nu_protocol::ast::Block,
+    block: &'a Block,
     context: &'a LintContext,
 ) -> impl Iterator<Item = PrintExitPattern> + 'a {
     block.pipelines.windows(2).filter_map(move |pipelines| {
@@ -160,7 +160,7 @@ fn check_sequential_patterns<'a>(
 }
 
 fn check_same_pipeline_patterns<'a>(
-    block: &'a nu_protocol::ast::Block,
+    block: &'a Block,
     context: &'a LintContext,
 ) -> impl Iterator<Item = PrintExitPattern> + 'a {
     block
@@ -169,10 +169,7 @@ fn check_same_pipeline_patterns<'a>(
         .filter_map(move |pipeline| check_same_pipeline_print_exit(pipeline, context))
 }
 
-fn check_block_patterns(
-    block: &nu_protocol::ast::Block,
-    context: &LintContext,
-) -> Vec<RuleViolation> {
+fn check_block_patterns(block: &Block, context: &LintContext) -> Vec<RuleViolation> {
     check_same_pipeline_patterns(block, context)
         .chain(check_sequential_patterns(block, context))
         .map(|pattern| create_violation(&pattern, context))

@@ -24,11 +24,10 @@ fn has_untyped_pipeline_input(
     ctx: &LintContext,
 ) -> bool {
     !has_explicit_type_annotation(signature_span, ctx)
-        && (signature.input_output_types.is_empty()
-            || signature
-                .input_output_types
-                .iter()
-                .all(|(input_type, _)| matches!(input_type, nu_protocol::Type::Any)))
+        && signature
+            .input_output_types
+            .iter()
+            .all(|(input_type, _)| matches!(input_type, nu_protocol::Type::Any))
 }
 
 fn has_untyped_pipeline_output(
@@ -37,11 +36,10 @@ fn has_untyped_pipeline_output(
     ctx: &LintContext,
 ) -> bool {
     !has_explicit_type_annotation(signature_span, ctx)
-        && (signature.input_output_types.is_empty()
-            || signature
-                .input_output_types
-                .iter()
-                .all(|(_, output_type)| matches!(output_type, nu_protocol::Type::Any)))
+        && signature
+            .input_output_types
+            .iter()
+            .all(|(_, output_type)| matches!(output_type, nu_protocol::Type::Any))
 }
 
 fn find_signature_span(call: &Call, _ctx: &LintContext) -> Option<Span> {
@@ -57,26 +55,22 @@ fn create_violations_for_untyped_io(
     needs_output_type: bool,
     fix: &Fix,
 ) -> Vec<RuleViolation> {
-    let mut violations = Vec::new();
+    let input_violation = needs_input_type.then(|| {
+        RuleViolation::new_dynamic(
+            "typed_pipeline_io",
+            format!(
+                "Custom command '{func_name}' uses pipeline input ($in) but lacks input type \
+                 annotation"
+            ),
+            name_span,
+        )
+        .with_suggestion_static(
+            "Add pipeline input type annotation (e.g., `: string -> any` or `: list<int> -> any`)",
+        )
+        .with_fix(fix.clone())
+    });
 
-    if needs_input_type {
-        let suggestion = "Add pipeline input type annotation (e.g., `: string -> any` or `: \
-                          list<int> -> any`)";
-        violations.push(
-            RuleViolation::new_dynamic(
-                "typed_pipeline_io",
-                format!(
-                    "Custom command '{func_name}' uses pipeline input ($in) but lacks input type \
-                     annotation"
-                ),
-                name_span,
-            )
-            .with_suggestion_static(suggestion)
-            .with_fix(fix.clone()),
-        );
-    }
-
-    if needs_output_type {
+    let output_violation = needs_output_type.then(|| {
         let suggestion = if uses_in {
             "Add pipeline output type annotation (e.g., `: any -> string` or `: list<int> -> \
              table`)"
@@ -84,21 +78,21 @@ fn create_violations_for_untyped_io(
             "Add pipeline output type annotation (e.g., `: nothing -> string` or `: nothing -> \
              list<int>`)"
         };
-        violations.push(
-            RuleViolation::new_dynamic(
-                "typed_pipeline_io",
-                format!(
-                    "Custom command '{func_name}' produces output but lacks output type \
-                     annotation"
-                ),
-                name_span,
-            )
-            .with_suggestion_static(suggestion)
-            .with_fix(fix.clone()),
-        );
-    }
+        RuleViolation::new_dynamic(
+            "typed_pipeline_io",
+            format!(
+                "Custom command '{func_name}' produces output but lacks output type annotation"
+            ),
+            name_span,
+        )
+        .with_suggestion_static(suggestion)
+        .with_fix(fix.clone())
+    });
 
-    violations
+    input_violation
+        .into_iter()
+        .chain(output_violation)
+        .collect()
 }
 
 fn generate_typed_signature(
@@ -108,11 +102,12 @@ fn generate_typed_signature(
     needs_input_type: bool,
     needs_output_type: bool,
 ) -> String {
-    let params_text = if signature.required_positional.is_empty()
+    let has_params = signature.required_positional.is_empty()
         && signature.optional_positional.is_empty()
         && signature.rest_positional.is_none()
-        && signature.named.is_empty()
-    {
+        && signature.named.is_empty();
+
+    let params_text = if has_params {
         String::new()
     } else {
         extract_parameters_text(signature)
@@ -132,75 +127,83 @@ fn generate_typed_signature(
 }
 
 fn extract_parameters_text(signature: &nu_protocol::Signature) -> String {
-    let mut params = Vec::new();
+    let required = signature
+        .required_positional
+        .iter()
+        .map(|param| match param.shape {
+            nu_protocol::SyntaxShape::Any => param.name.clone(),
+            _ => format!("{}: {}", param.name, shape_to_string(&param.shape)),
+        });
 
-    params.extend(signature.required_positional.iter().map(|param| {
-        if param.shape == nu_protocol::SyntaxShape::Any {
-            param.name.clone()
-        } else {
-            format!("{}: {}", param.name, shape_to_string(&param.shape))
-        }
-    }));
+    let optional = signature
+        .optional_positional
+        .iter()
+        .map(|param| match param.shape {
+            nu_protocol::SyntaxShape::Any => format!("{}?", param.name),
+            _ => format!("{}?: {}", param.name, shape_to_string(&param.shape)),
+        });
 
-    params.extend(signature.optional_positional.iter().map(|param| {
-        if param.shape == nu_protocol::SyntaxShape::Any {
-            format!("{}?", param.name)
-        } else {
-            format!("{}?: {}", param.name, shape_to_string(&param.shape))
-        }
-    }));
+    let rest = signature
+        .rest_positional
+        .iter()
+        .map(|rest| match rest.shape {
+            nu_protocol::SyntaxShape::Any => format!("...{}", rest.name),
+            _ => format!("...{}: {}", rest.name, shape_to_string(&rest.shape)),
+        });
 
-    if let Some(rest) = &signature.rest_positional {
-        let param = if rest.shape == nu_protocol::SyntaxShape::Any {
-            format!("...{}", rest.name)
-        } else {
-            format!("...{}: {}", rest.name, shape_to_string(&rest.shape))
-        };
-        params.push(param);
-    }
+    let flags = signature
+        .named
+        .iter()
+        .filter(|flag| flag.long != "help")
+        .map(|flag| match (&flag.short, &flag.arg) {
+            (Some(short), Some(arg_shape)) => {
+                format!(
+                    "--{} (-{}): {}",
+                    flag.long,
+                    short,
+                    shape_to_string(arg_shape)
+                )
+            }
+            (Some(short), None) => format!("--{} (-{})", flag.long, short),
+            (None, Some(arg_shape)) => {
+                format!("--{}: {}", flag.long, shape_to_string(arg_shape))
+            }
+            (None, None) => format!("--{}", flag.long),
+        });
 
-    params.extend(
-        signature
-            .named
-            .iter()
-            .filter(|flag| flag.long != "help")
-            .map(|flag| match (&flag.short, &flag.arg) {
-                (Some(short), Some(arg_shape)) => {
-                    format!("--{} (-{}): {}", flag.long, short, shape_to_string(arg_shape))
-                }
-                (Some(short), None) => format!("--{} (-{})", flag.long, short),
-                (None, Some(arg_shape)) => {
-                    format!("--{}: {}", flag.long, shape_to_string(arg_shape))
-                }
-                (None, None) => format!("--{}", flag.long),
-            }),
-    );
-
-    params.join(", ")
+    required
+        .chain(optional)
+        .chain(rest)
+        .chain(flags)
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 fn shape_to_string(shape: &nu_protocol::SyntaxShape) -> String {
     use nu_protocol::SyntaxShape;
-    
+
     match shape {
-        SyntaxShape::Int => "int",
-        SyntaxShape::String => "string",
-        SyntaxShape::Float => "float",
-        SyntaxShape::Boolean => "bool",
-        SyntaxShape::List(inner) => return format!("list<{}>", shape_to_string(inner)),
-        SyntaxShape::Table(cols) if cols.is_empty() => "table",
+        SyntaxShape::Int => "int".to_string(),
+        SyntaxShape::String => "string".to_string(),
+        SyntaxShape::Float => "float".to_string(),
+        SyntaxShape::Boolean => "bool".to_string(),
+        SyntaxShape::List(inner) => format!("list<{}>", shape_to_string(inner)),
+        SyntaxShape::Table(cols) if cols.is_empty() => "table".to_string(),
         SyntaxShape::Table(cols) => {
-            let col_names: Vec<_> = cols.iter().map(|(name, _)| name.as_str()).collect();
-            return format!("table<{}>", col_names.join(", "));
+            let col_names = cols
+                .iter()
+                .map(|(name, _)| name.as_str())
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("table<{col_names}>")
         }
-        SyntaxShape::Record(_) => "record",
-        SyntaxShape::Filepath => "path",
-        SyntaxShape::Directory => "directory",
-        SyntaxShape::GlobPattern => "glob",
-        SyntaxShape::Any => "any",
-        _ => return format!("{shape:?}").to_lowercase(),
+        SyntaxShape::Record(_) => "record".to_string(),
+        SyntaxShape::Filepath => "path".to_string(),
+        SyntaxShape::Directory => "directory".to_string(),
+        SyntaxShape::GlobPattern => "glob".to_string(),
+        SyntaxShape::Any => "any".to_string(),
+        _ => format!("{shape:?}").to_lowercase(),
     }
-    .to_string()
 }
 
 fn check_def_call(call: &Call, ctx: &LintContext) -> Vec<RuleViolation> {
@@ -261,7 +264,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "typed_pipeline_io",
         RuleCategory::TypeSafety,
-        Severity::Info,
+        Severity::Warning,
         "Custom commands that use pipeline input or produce output should have type annotations",
         check,
     )

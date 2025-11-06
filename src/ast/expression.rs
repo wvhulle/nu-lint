@@ -342,7 +342,7 @@ impl ExpressionExt for Expression {
 
     fn uses_pipeline_input(&self, context: &LintContext) -> bool {
         use super::block::BlockExt;
-        
+
         match &self.expr {
             Expr::Var(var_id) => {
                 let var = context.working_set.get_variable(*var_id);

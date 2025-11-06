@@ -1,24 +1,16 @@
 use super::rule;
 use crate::log::instrument;
 
-fn init_logger() {
-    use std::sync::Once;
-    static INIT: Once = Once::new();
-    INIT.call_once(|| {
-        instrument();
-    });
-}
-
 #[test]
 fn test_ignore_useful_try_dangerous_command() {
-    init_logger();
+    instrument();
     let good_code = "try { sysctl -n kernel.arch kernel.ostype | lines }";
     rule().assert_ignores(good_code);
 }
 
 #[test]
 fn test_ignore_with_complete_and_exit_code_check() {
-    init_logger();
+    instrument();
     let good_code = r"
 let result = (sysctl -n kernel.arch kernel.ostype | complete)
 if $result.exit_code != 0 {
@@ -31,7 +23,7 @@ $result.stdout | lines
 
 #[test]
 fn test_ignore_with_complete_equality_check() {
-    init_logger();
+    instrument();
     let good_code = r"
 let result = (git status | complete)
 if $result.exit_code == 0 {
@@ -43,35 +35,35 @@ if $result.exit_code == 0 {
 
 #[test]
 fn test_ignore_pipeline_ending_with_complete() {
-    init_logger();
+    instrument();
     let good_code = "curl https://example.com | complete";
     rule().assert_ignores(good_code);
 }
 
 #[test]
 fn test_ignore_error_redirection_with_complete() {
-    init_logger();
+    instrument();
     let good_code = "git status err> /dev/null | complete";
     rule().assert_ignores(good_code);
 }
 
 #[test]
 fn test_ignore_safe_git_command() {
-    init_logger();
+    instrument();
     let good_code = r#"git branch --merged | lines | where ($it != "* master" and $it != "* main") | each {|br| git branch -D ($br | str trim) } | str trim"#;
     rule().assert_ignores(good_code);
 }
 
 #[test]
 fn test_ignore_sequential_statements_semicolon() {
-    init_logger();
+    instrument();
     let good_code = "sysctl -n kernel.arch kernel.ostype; lines";
     rule().assert_ignores(good_code);
 }
 
 #[test]
 fn test_ignore_with_conditional_between() {
-    init_logger();
+    instrument();
     let good_code = r"
 let result = (^command1 | complete)
 if $result.exit_code == 0 {
@@ -83,7 +75,7 @@ if $result.exit_code == 0 {
 
 #[test]
 fn test_ignore_single_external() {
-    init_logger();
+    instrument();
     let good_code = r"
 ^command1
 ";
@@ -92,7 +84,7 @@ fn test_ignore_single_external() {
 
 #[test]
 fn test_ignore_alias_definitions() {
-    init_logger();
+    instrument();
     let good_code = r"
 alias b = bat
 alias bn = bat --number
@@ -103,7 +95,7 @@ alias bnl = bat --number --line-range
 
 #[test]
 fn test_ignore_export_alias_definitions() {
-    init_logger();
+    instrument();
     let good_code = r"
 export alias b = bat
 export alias bn = bat --number
@@ -117,7 +109,7 @@ export alias bl = bat --line-range
 
 #[test]
 fn test_ignore_separate_top_level_commands() {
-    init_logger();
+    instrument();
     let good_code = r"
 def setup [] {
     ^make
@@ -132,7 +124,7 @@ def build [] {
 
 #[test]
 fn test_ignore_builtin_print_commands() {
-    init_logger();
+    instrument();
     let good_code = r#"
 def test_func [] {
     "test output"
@@ -148,7 +140,7 @@ def main [] {
 
 #[test]
 fn test_ignore_builtin_commands_with_help() {
-    init_logger();
+    instrument();
     let good_code = r#"
 export def main [] {
     print -n (help bm)
@@ -160,7 +152,7 @@ export def main [] {
 
 #[test]
 fn test_ignore_nested_pipeline_in_try() {
-    init_logger();
+    instrument();
     let good_code = "def test [] { try { git status | grep modified } }";
     rule().assert_ignores(good_code);
 }

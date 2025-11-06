@@ -3,12 +3,12 @@ mod collapsible_if;
 mod dangerous_file_operations;
 mod descriptive_error_messages;
 mod error_make_metadata;
-mod error_suppression_over_ignore;
 mod escape_string_interpolation_operators;
 mod exit_only_in_main;
 mod exported_function_docs;
 mod external_script_as_argument;
 mod forbid_excessive_nesting;
+mod unnecessary_ignore;
 
 mod max_function_body_length;
 mod max_positional_params;
@@ -40,6 +40,7 @@ mod systemd_journal_prefix;
 mod unnecessary_mut;
 mod unnecessary_variable_before_return;
 mod unused_helper_functions;
+mod unused_output;
 use std::collections::HashMap;
 
 use naming::{
@@ -86,9 +87,9 @@ impl RuleRegistry {
         registry.register(dangerous_file_operations::rule());
         registry.register(descriptive_error_messages::rule());
         registry.register(error_make_metadata::rule());
-        registry.register(error_suppression_over_ignore::rule());
         registry.register(escape_string_interpolation_operators::rule());
         registry.register(exit_only_in_main::rule());
+        registry.register(unnecessary_ignore::rule());
         registry.register(exported_function_docs::rule());
         registry.register(forbid_excessive_nesting::rule());
         registry.register(external_script_as_argument::rule());
@@ -137,6 +138,7 @@ impl RuleRegistry {
         registry.register(unnecessary_mut::rule());
         registry.register(unnecessary_variable_before_return::rule());
         registry.register(unused_helper_functions::rule());
+        registry.register(unused_output::rule());
 
         registry
     }

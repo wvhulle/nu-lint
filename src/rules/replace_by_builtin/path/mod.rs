@@ -1,6 +1,6 @@
 use nu_protocol::{
     VarId,
-    ast::{Block, Expr, Expression, Traverse},
+    ast::{Block, Expr, Expression, FindMapResult, Traverse},
 };
 
 use crate::{
@@ -48,22 +48,17 @@ fn parameter_used_as_path(
     param_name: &str,
     context: &LintContext,
 ) -> bool {
-    let mut results = Vec::new();
-    block.flat_map(
-        context.working_set,
-        &|expr| {
+    block
+        .find_map(context.working_set, &|expr| {
             if check_nu_builtin_usage(expr, var_id, context)
                 || check_external_command_usage(expr, var_id, param_name, context)
             {
-                vec![true]
+                FindMapResult::Found(())
             } else {
-                Vec::new()
+                FindMapResult::Continue
             }
-        },
-        &mut results,
-    );
-
-    !results.is_empty()
+        })
+        .is_some()
 }
 fn check_parameter(
     param: &nu_protocol::PositionalArg,

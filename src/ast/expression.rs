@@ -1,15 +1,15 @@
 use nu_protocol::{
     BlockId, Span, VarId,
     ast::{
-        Argument, Call, Comparison, Expr, Expression, ExternalArgument, ListItem, Operator,
-        PathMember, RecordItem,
+        Argument, Call, Comparison, Expr, Expression, ExternalArgument, FindMapResult, ListItem,
+        Operator, PathMember, RecordItem, Traverse,
     },
 };
 
 use super::{block::BlockExt, span::SpanExt};
 use crate::context::LintContext;
 
-pub trait ExpressionExt {
+pub trait ExpressionExt: Traverse {
     fn refers_to_same_variable(&self, other: &Expression, context: &LintContext) -> bool;
     fn extract_variable_name(&self, context: &LintContext) -> Option<String>;
     fn refers_to_variable(&self, context: &LintContext, var_name: &str) -> bool;
@@ -30,9 +30,21 @@ pub trait ExpressionExt {
     fn is_external_filesystem_command(&self, context: &LintContext) -> bool;
     fn extract_call(&self) -> Option<&Call>;
     fn contains_variable(&self, var_id: VarId) -> bool;
+
+    #[allow(dead_code, reason = "Will be used later.")]
+    fn any(&self, context: &LintContext, predicate: impl Fn(&Expression) -> bool) -> bool;
 }
 
 impl ExpressionExt for Expression {
+    fn any(&self, context: &LintContext, predicate: impl Fn(&Self) -> bool) -> bool {
+        self.find_map(context.working_set, &|inner_expr| {
+            if predicate(inner_expr) {
+                return FindMapResult::Found(());
+            }
+            FindMapResult::Continue
+        })
+        .is_some()
+    }
     fn refers_to_same_variable(&self, other: &Expression, context: &LintContext) -> bool {
         match (
             self.extract_variable_name(context),

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use nu_protocol::{
     Span, VarId,
-    ast::{Expr, Expression},
+    ast::{Expr, Expression, FindMapResult},
 };
 
 use crate::{
@@ -61,22 +61,17 @@ fn find_complete_assignments(context: &LintContext) -> HashMap<VarId, (String, S
 fn assignment_has_complete(value_expr: &Expression, context: &LintContext) -> bool {
     use nu_protocol::ast::Traverse;
 
-    let mut has_complete = Vec::new();
-    value_expr.flat_map(
-        context.working_set,
-        &|inner_expr| {
+    value_expr
+        .find_map(context.working_set, &|inner_expr| {
             if let Expr::Call(inner_call) = &inner_expr.expr {
                 let inner_decl_name = inner_call.get_call_name(context);
                 if inner_decl_name == "complete" {
-                    return vec![true];
+                    return FindMapResult::Found(inner_call);
                 }
             }
-            vec![]
-        },
-        &mut has_complete,
-    );
-
-    !has_complete.is_empty()
+            FindMapResult::Continue
+        })
+        .is_some()
 }
 
 /// Find all exit code checks in the AST

@@ -1,0 +1,73 @@
+# Contributing
+
+Contributions are welcome.
+
+## Ideas
+
+Ideas for future improvements:
+
+- Editor plugins such a VS Code extension
+- Use external parsers for DSLs such as `jq`
+- A lint plugin for Nu shell command line itself
+- Better fix suggestions
+
+Maybe useful for people who want to create editor integration:
+
+```bash
+nu-lint --format json                      # Lint and output JSON
+```
+
+## Testing
+
+Debugging is primarily done with the tests.
+
+```bash
+cargo test
+```
+
+Tests follow a pattern where each rule has 'detect', 'fix' and 'ignore' tests.
+
+Show debug output using the `instrument` function and an environment variable:
+
+```bash
+RUST_LOG=debug cargo test test_detect_unnecessary_variable_simple -- --nocapture
+```
+
+(It would be possible to use the [test-log](https://crates.io/crates/test-log) crate but I prefered a custom formatter displaying file links.)
+
+## Linting
+
+Please run linter and formatter before submitting PRs. Many optional and restrictive rules of Clippy have been turned on.
+
+This will attempt to auto-fix violations in the Rust code.
+
+```bash
+cargo clippy --fix --allow-dirty --all-targets
+```
+
+Check if everything was fixed:
+
+```bash
+cargo clippy --all-targets
+```
+
+```bash
+cargo +nightly fmt
+```
+
+## Benchmarks
+
+Quick benchmark for performance testing:
+
+```bash
+cargo bench --bench prefer_builtin_rules prefer_builtin_small
+```
+
+Comparative benchmarks
+
+```bash
+git checkout main
+cargo bench -- --save-baseline main
+git checkout branch
+cargo bench -- --baseline main
+```

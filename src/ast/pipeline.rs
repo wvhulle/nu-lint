@@ -1,6 +1,6 @@
 use nu_protocol::{
     VarId,
-    ast::{Expr, Pipeline},
+    ast::{Expr, Expression, Pipeline},
 };
 
 use crate::{
@@ -13,6 +13,8 @@ pub trait PipelineExt {
     fn contains_indexed_access(&self, context: &LintContext) -> bool;
     fn variable_is_used(&self, var_id: VarId) -> bool;
     fn variable_is_piped(&self, var_id: VarId) -> bool;
+    fn ends_with_ignore(&self, context: &LintContext) -> bool;
+    fn element_before_ignore(&self, context: &LintContext) -> Option<&Expression>;
 }
 
 impl PipelineExt for Pipeline {
@@ -71,5 +73,16 @@ impl PipelineExt for Pipeline {
         matches!(&first.expr.expr, Expr::FullCellPath(cell_path)
             if matches!(&cell_path.head.expr, Expr::Var(ref_var_id) if *ref_var_id == var_id)
             && cell_path.tail.is_empty())
+    }
+
+    fn ends_with_ignore(&self, context: &LintContext) -> bool {
+        self.elements.last().is_some_and(|elem| {
+            matches!(&elem.expr.expr, Expr::Call(call) if call.is_call_to_command("ignore", context))
+        })
+    }
+
+    fn element_before_ignore(&self, context: &LintContext) -> Option<&Expression> {
+        (self.elements.len() >= 2 && self.ends_with_ignore(context))
+            .then(|| &self.elements[self.elements.len() - 2].expr)
     }
 }

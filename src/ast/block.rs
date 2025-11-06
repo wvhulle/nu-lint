@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use nu_protocol::{
     BlockId, Span, VarId,
-    ast::{Call, Expr, PipelineElement, Traverse},
+    ast::{Call, Expr, FindMapResult, PipelineElement, Traverse},
 };
 
 use super::{call::CallExt, pipeline::PipelineExt};
@@ -94,21 +94,16 @@ impl BlockExt for BlockId {
 
     fn contains_external_call_with_variable(&self, var_id: VarId, context: &LintContext) -> bool {
         let block = context.working_set.get_block(*self);
-        let mut results = Vec::new();
 
-        block.flat_map(
-            context.working_set,
-            &|expr| {
+        block
+            .find_map(context.working_set, &|expr| {
                 if expr.is_external_call_with_variable(var_id) {
-                    vec![true]
+                    FindMapResult::Found(())
                 } else {
-                    vec![]
+                    FindMapResult::Continue
                 }
-            },
-            &mut results,
-        );
-
-        !results.is_empty()
+            })
+            .is_some()
     }
 
     fn collect_user_function_calls(&self, context: &LintContext) -> Vec<String> {

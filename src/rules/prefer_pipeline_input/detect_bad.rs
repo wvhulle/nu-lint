@@ -1,118 +1,38 @@
 use super::rule;
 
 #[test]
-fn detect_single_data_parameter_with_each() {
-    let bad_codes = vec![
+fn detect_single_data_parameter_with_pipeline_operations() {
+    let test_cases = vec![
+        // each operations
         "def process-items [items] { $items | each { |x| $x * 2 } }",
         "def transform-data [data] { $data | each { |item| $item + 1 } }",
-        "def double-values [values] { $values | each { |v| $v * 2 } }",
-    ];
-
-    for code in bad_codes {
-        rule().assert_detects(code);
-    }
-}
-
-#[test]
-fn detect_single_data_parameter_with_where() {
-    let bad_codes = vec![
+        // where operations
         "def filter-positive [numbers] { $numbers | where $it > 0 }",
         "def find-active [items] { $items | where active == true }",
-        "def select-large [data] { $data | where size > 100 }",
-    ];
-
-    for code in bad_codes {
-        rule().assert_detects(code);
-    }
-}
-
-#[test]
-fn detect_single_data_parameter_with_select() {
-    let bad_codes = vec![
+        // select operations
         "def get-names [records] { $records | select name }",
         "def extract-info [data] { $data | select id name email }",
-        "def pick-columns [table] { $table | select col1 col2 }",
-    ];
-
-    for code in bad_codes {
-        rule().assert_detects(code);
-    }
-}
-
-#[test]
-fn detect_single_data_parameter_with_sort_by() {
-    let bad_codes = vec![
+        // sort-by operations
         "def sort-by-name [items] { $items | sort-by name }",
         "def order-data [records] { $records | sort-by modified }",
-        "def arrange-list [data] { $data | sort-by size }",
-    ];
-
-    for code in bad_codes {
-        rule().assert_detects(code);
-    }
-}
-
-#[test]
-fn detect_single_data_parameter_with_group_by() {
-    let bad_codes = vec![
+        // group-by operations
         "def group-items [data] { $data | group-by category }",
         "def categorize [records] { $records | group-by type }",
-        "def organize-data [items] { $items | group-by status }",
-    ];
-
-    for code in bad_codes {
-        rule().assert_detects(code);
-    }
-}
-
-#[test]
-fn detect_single_data_parameter_with_reduce() {
-    let bad_codes = vec![
+        // reduce operations
         "def sum-values [numbers] { $numbers | reduce { |acc, val| $acc + $val } }",
         "def calculate-total [data] { $data | reduce { |acc, item| $acc + $item.amount } }",
-        "def aggregate [items] { $items | reduce { |acc, x| $acc + $x } }",
-    ];
-
-    for code in bad_codes {
-        rule().assert_detects(code);
-    }
-}
-
-#[test]
-fn detect_single_data_parameter_with_multiple_pipeline_operations() {
-    let bad_codes = vec![
+        // multiple pipeline operations
         "def process [data] { $data | where active | select name | sort-by name }",
         "def transform [items] { $items | each { |x| $x * 2 } | where $it > 5 }",
-        "def analyze [records] { $records | group-by type | each { |group| $group | length } }",
-    ];
-
-    for code in bad_codes {
-        rule().assert_detects(code);
-    }
-}
-
-#[test]
-fn detect_single_data_parameter_with_math_operations() {
-    let bad_codes = vec![
+        // math operations
         "def sum-all [numbers] { $numbers | math sum }",
         "def get-average [values] { $values | math avg }",
-        "def find-max [data] { $data | math max }",
-    ];
-
-    for code in bad_codes {
-        rule().assert_detects(code);
-    }
-}
-
-#[test]
-fn detect_single_data_parameter_with_length() {
-    let bad_codes = vec![
+        // length operations
         "def count-items [data] { $data | length }",
         "def get-size [items] { $items | length }",
-        "def measure [collection] { $collection | length }",
     ];
 
-    for code in bad_codes {
+    for code in test_cases {
         rule().assert_detects(code);
     }
 }

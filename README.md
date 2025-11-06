@@ -92,21 +92,13 @@ nu-lint script.nu                          # Lint a file
 nu-lint directory/                         # Lint directory
 ```
 
-Extra:
-
-```bash
-nu-lint --config custom.toml script.nu     # Use custom config
-nu-lint list-rules                         # Show all rules
-nu-lint explain snake_case_variables       # Explain a rule
-```
-
-For editor plugins (for LLMs / creators):
-
-```bash
-nu-lint --format json                      # Lint and output JSON
-```
-
 ## Configuration
+
+Show all rules:
+
+```bash
+nu-lint list-rules                         
+```
 
 Create `.nu-lint.toml` in your project root (or any parent directory):
 
@@ -118,11 +110,15 @@ min_severity = "info"
 snake_case_variables = "warning"
 ```
 
-The linter will automatically find and use this config file when you run it.
+The linter will automatically find and use this config file when you run it. Otherwise:
+
+```bash
+nu-lint --config custom.toml script.nu  
+```
 
 ## Rules
 
-Categories:
+The rules are categorised roughly in the following categories (but don't rely on the category being completely correct):
 
 - naming
 - formatting
@@ -132,54 +128,7 @@ Categories:
 - documentation
 - type safety
 
-## Planned features
-
-Ideas for future improvements:
-
-- Editor plugins such a VS Code extension
-- Use external parsers for DSLs such as `jq`
-- A lint plugin for Nu shell command line itself
-- Better fix suggestions
-
-## Contributing
-
-Contributions are welcome.
-
-Debugging
-
-```bash
-cargo test
-```
-
-Show debug output using the `instrument` function and an environment variable:
-
-```bash
-RUST_LOG=debug cargo test test_detect_unnecessary_variable_simple -- --nocapture
-```
-
-Please run linter and formatter before submitting PRs. Many optional and restrictive rules of Clippy have been turned on.
-
-This will attempt to auto-fix violations in the Rust code.
-
-```bash
-cargo clippy --fix --allow-dirty --all-targets
-```
-
-Check if everything was fixed:
-
-```bash
-cargo clippy --all-targets
-```
-
-```
-cargo +nightly fmt
-```
-
-Quick benchmark for performance testing:
-
-```bash
-cargo bench --bench prefer_builtin_rules prefer_builtin_small
-```
+You can add, remove or change rules by forking this repo and opening a PR (see [./CONTRIBUTING.md](./CONTRIBUTING.md)).
 
 ## License
 

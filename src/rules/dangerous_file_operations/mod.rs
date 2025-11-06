@@ -119,7 +119,7 @@ fn is_inside_if_block(context: &LintContext, command_span: Span) -> bool {
         context.working_set,
         &|expr| {
             if is_if_block_containing(expr, command_span, context) {
-                vec![true]
+                vec![()]
             } else {
                 vec![]
             }

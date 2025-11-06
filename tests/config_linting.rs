@@ -1,8 +1,6 @@
-use core::panic::AssertUnwindSafe;
 use std::{
     env::{current_dir, set_current_dir},
     fs,
-    panic::catch_unwind,
     path::PathBuf,
     sync::Mutex,
 };
@@ -52,20 +50,14 @@ fn test_auto_discover_config_file() {
 
     let original_dir = current_dir().unwrap();
 
-    let result = catch_unwind(AssertUnwindSafe(|| {
-        set_current_dir(temp_dir.path()).unwrap();
+    set_current_dir(temp_dir.path()).unwrap();
 
-        let config = Config::load(None);
-        let engine = LintEngine::new(config);
-        let files = collect_files_to_lint(&[PathBuf::from("test.nu")]);
-        let (violations, _) = lint_files(&engine, &files, false);
-
-        violations
-    }));
+    let config = Config::load(None);
+    let engine = LintEngine::new(config);
+    let files = collect_files_to_lint(&[PathBuf::from("test.nu")]);
+    let (violations, _) = lint_files(&engine, &files, false);
 
     set_current_dir(original_dir).unwrap();
-
-    let violations = result.unwrap();
 
     // Should have no violations because snake_case_variables is off
     assert!(
@@ -94,20 +86,14 @@ fn test_auto_discover_config_in_parent_dir() {
 
     let original_dir = current_dir().unwrap();
 
-    let result = catch_unwind(AssertUnwindSafe(|| {
-        set_current_dir(&subdir).unwrap();
+    set_current_dir(&subdir).unwrap();
 
-        let config = Config::load(None);
-        let engine = LintEngine::new(config);
-        let files = collect_files_to_lint(&[PathBuf::from("test.nu")]);
-        let (violations, _) = lint_files(&engine, &files, false);
-
-        violations
-    }));
+    let config = Config::load(None);
+    let engine = LintEngine::new(config);
+    let files = collect_files_to_lint(&[PathBuf::from("test.nu")]);
+    let (violations, _) = lint_files(&engine, &files, false);
 
     set_current_dir(original_dir).unwrap();
-
-    let violations = result.unwrap();
 
     // Should have no violations because snake_case_variables is off
     assert!(
@@ -140,21 +126,15 @@ fn test_explicit_config_overrides_auto_discovery() {
 
     let original_dir = current_dir().unwrap();
 
-    let result = catch_unwind(AssertUnwindSafe(|| {
-        set_current_dir(temp_dir.path()).unwrap();
+    set_current_dir(temp_dir.path()).unwrap();
 
-        // Explicit config should override auto-discovery
-        let config = Config::load(Some(&explicit_config));
-        let engine = LintEngine::new(config);
-        let files = collect_files_to_lint(&[PathBuf::from("test.nu")]);
-        let (violations, _) = lint_files(&engine, &files, false);
-
-        violations
-    }));
+    // Explicit config should override auto-discovery
+    let config = Config::load(Some(&explicit_config));
+    let engine = LintEngine::new(config);
+    let files = collect_files_to_lint(&[PathBuf::from("test.nu")]);
+    let (violations, _) = lint_files(&engine, &files, false);
 
     set_current_dir(original_dir).unwrap();
-
-    let violations = result.unwrap();
 
     // Should have violations because explicit config doesn't disable the rule
     assert!(

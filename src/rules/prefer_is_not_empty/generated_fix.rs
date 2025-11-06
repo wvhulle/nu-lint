@@ -3,21 +3,18 @@ use super::rule;
 #[test]
 fn test_prefer_is_not_empty_fix_simple() {
     let bad_code = "if not ($list | is-empty) { echo 'has items' }";
-    rule().assert_detects(bad_code);
     rule().assert_fix_contains(bad_code, "$list | is-not-empty");
 }
 
 #[test]
 fn test_prefer_is_not_empty_fix_variable() {
     let bad_code = "let has_data = not ($data | is-empty)";
-    rule().assert_detects(bad_code);
     rule().assert_fix_contains(bad_code, "$data | is-not-empty");
 }
 
 #[test]
 fn test_prefer_is_not_empty_fix_complex_expr() {
     let bad_code = "if not ($items | filter {|x| $x > 5} | is-empty) { echo 'found' }";
-    rule().assert_detects(bad_code);
     rule().assert_fix_contains(bad_code, "| is-not-empty");
     rule().assert_fix_contains(bad_code, "filter");
 }

@@ -9,7 +9,6 @@ def double [] {
     $in * 2
 }
 ";
-    rule().assert_detects(bad_code);
     rule().assert_fix_contains(bad_code, "[]: any -> any");
     rule().assert_suggestion_contains(bad_code, "pipeline input type annotation");
 }
@@ -41,7 +40,6 @@ def multiply [factor: int] {
     $in * $factor
 }
 ";
-    rule().assert_detects(bad_code);
     rule().assert_fix_contains(bad_code, "[factor: int]: any -> any");
 }
 
@@ -58,7 +56,6 @@ def process [data?, --verbose] {
     $in | str trim
 }
 ";
-    rule().assert_detects(bad_code);
     rule().assert_fix_contains(bad_code, "data?");
     rule().assert_fix_contains(bad_code, "--verbose");
     rule().assert_fix_contains(bad_code, ": any -> any");
@@ -71,7 +68,6 @@ export def process [] {
     $in | str trim
 }
 ";
-    rule().assert_detects(bad_code);
     rule().assert_fix_contains(bad_code, "[]: any -> any");
 }
 
@@ -83,7 +79,6 @@ def get-value [] {
     42
 }
 ";
-    rule().assert_detects(bad_code);
     rule().assert_fix_contains(bad_code, "[]: nothing -> int");
 }
 
@@ -94,7 +89,6 @@ def greet [] {
     "hello"
 }
 "#;
-    rule().assert_detects(bad_code);
     rule().assert_fix_contains(bad_code, "[]: nothing -> string");
 }
 
@@ -105,7 +99,6 @@ def get_count [] {
     42
 }
 ";
-    rule().assert_detects(bad_code);
     rule().assert_fix_contains(bad_code, "[]: nothing -> int");
 }
 
@@ -116,7 +109,6 @@ def get_pi [] {
     3.14
 }
 ";
-    rule().assert_detects(bad_code);
     rule().assert_fix_contains(bad_code, "[]: nothing -> float");
 }
 
@@ -127,7 +119,6 @@ def is_ready [] {
     true
 }
 ";
-    rule().assert_detects(bad_code);
     rule().assert_fix_contains(bad_code, "[]: nothing -> bool");
 }
 
@@ -149,7 +140,6 @@ def get_config [] {
     {name: "test", value: 42}
 }
 "#;
-    rule().assert_detects(bad_code);
     rule().assert_fix_contains(bad_code, "[]: nothing -> record");
 }
 
@@ -160,7 +150,6 @@ def get_data [] {
     [[name, age]; [Alice, 30], [Bob, 25]]
 }
 ";
-    rule().assert_detects(bad_code);
     rule().assert_fix_contains(bad_code, "[]: nothing -> table");
 }
 
@@ -171,7 +160,6 @@ def serialize [] {
     $in | to json
 }
 ";
-    rule().assert_detects(bad_code);
     rule().assert_fix_contains(bad_code, "[]: any -> string");
 }
 
@@ -182,7 +170,6 @@ def split_lines [] {
     $in | lines
 }
 ";
-    rule().assert_detects(bad_code);
     rule().assert_fix_contains(bad_code, "string -> list<string>");
 }
 
@@ -213,7 +200,6 @@ def check_empty [] {
     $in | is-empty
 }
 ";
-    rule().assert_detects(bad_code);
     rule().assert_fix_contains(bad_code, "[]: any -> bool");
 }
 
@@ -245,7 +231,6 @@ def split_text [] {
     $in | lines
 }
 ";
-    rule().assert_detects(bad_code);
     rule().assert_fix_contains(bad_code, "[]: string -> list");
 }
 

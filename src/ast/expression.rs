@@ -10,29 +10,68 @@ use super::{block::BlockExt, span::SpanExt};
 use crate::context::LintContext;
 
 pub trait ExpressionExt: Traverse {
+    /// Checks if two expressions refer to the same variable. Example: `$x` and
+    /// `$x`
     fn refers_to_same_variable(&self, other: &Expression, context: &LintContext) -> bool;
+    /// Extracts the variable name from an expression. Example: `$counter`
+    /// returns "counter"
     fn extract_variable_name(&self, context: &LintContext) -> Option<String>;
+    /// Checks if expression refers to a specific variable by name. Example:
+    /// `$item` matches "item"
     fn refers_to_variable(&self, context: &LintContext, var_name: &str) -> bool;
+    /// Checks if expression is an assignment operation. Example: `$x = 5` or
+    /// `$x += 1`
     fn is_assignment(&self) -> bool;
+    /// Checks if expression is an empty list literal. Example: `[]`
     fn is_empty_list(&self) -> bool;
+    /// Extracts block ID from block-like expressions. Example: `{ $in | length
+    /// }` or closure
     fn extract_block_id(&self) -> Option<BlockId>;
+    /// Checks if expression has no side effects. Example: `5`, `"text"`, or `$x
+    /// + 1`
     fn is_likely_pure(&self) -> bool;
+    /// Returns the source text of this expression's span. Example: `$in | each
+    /// { ... }`
     fn span_text<'a>(&self, context: &'a LintContext) -> &'a str;
+    /// Extracts the variable being assigned to. Example: `$result = 42` returns
+    /// `$result`
     fn extract_assigned_variable(&self) -> Option<VarId>;
+    /// Extracts field access from full cell path. Example: `$record.name`
+    /// matches "name"
     fn extract_field_access(&self, field_name: &str) -> Option<(VarId, Span)>;
 
+    /// Checks if expression contains any variable references. Example: `$x +
+    /// $y` or `[$item]`
     fn contains_variables(&self, context: &LintContext) -> bool;
+    /// Extracts variable from comparison expression. Example: `$status == 0`
+    /// returns "status"
     fn extract_compared_variable(&self, context: &LintContext) -> Option<String>;
+    /// Extracts comparison value from binary operation. Example: `$x ==
+    /// "value"` returns "value"
     fn extract_comparison_value(&self, context: &LintContext) -> Option<String>;
+    /// Checks if external call head uses a variable. Example: `^$cmd arg1 arg2`
     fn is_external_call_with_variable(&self, var_id: VarId) -> bool;
+    /// Checks if expression matches a specific variable. Example: `$var` or
+    /// `$var.field`
     fn matches_var(&self, var_id: VarId) -> bool;
+    /// Checks if external call arguments contain a variable. Example: `^ls
+    /// $path`
     fn external_call_contains_variable(&self, var_id: VarId) -> bool;
+    /// Checks if external call is a filesystem command. Example: `^tar`,
+    /// `^rsync`, or `^curl`
     fn is_external_filesystem_command(&self, context: &LintContext) -> bool;
+    /// Extracts Call from a call expression. Example: `ls | where size > 1kb`
     fn extract_call(&self) -> Option<&Call>;
+    /// Checks if expression contains a specific variable. Example: `$x + 1`
+    /// contains `$x`
     fn contains_variable(&self, var_id: VarId) -> bool;
 
     #[allow(dead_code, reason = "Will be used later.")]
+    /// Tests if any nested expression matches predicate. Example: finds `$in`
+    /// in `$in.field + 1`
     fn any(&self, context: &LintContext, predicate: impl Fn(&Expression) -> bool) -> bool;
+    /// Checks if expression uses pipeline input variable. Example: `$in` or
+    /// `$in | length`
     fn uses_pipeline_input(&self, context: &LintContext) -> bool;
     /// Finds the `$in` variable in this expression. Example: `$in.field` or
     /// `$in | length`

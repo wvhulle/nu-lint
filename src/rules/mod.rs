@@ -33,8 +33,7 @@ mod prefer_where_over_each_if;
 mod prefer_where_over_for_if;
 mod print_exit_use_error_make;
 mod remove_redundant_in;
-
-pub mod replace_by_builtin;
+mod replace_by_builtin;
 mod spacing;
 mod systemd_journal_prefix;
 mod typed_pipeline_io;

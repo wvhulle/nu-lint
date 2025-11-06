@@ -9,11 +9,21 @@ use crate::{
 };
 
 pub trait PipelineExt {
+    /// Checks if pipeline contains call to command. Example: `ls | where size >
+    /// 1kb` contains "where"
     fn contains_call_to(&self, command_name: &str, context: &LintContext) -> bool;
+    /// Checks if pipeline contains indexed access. Example: `split row ":" |
+    /// get 0`
     fn contains_indexed_access(&self, context: &LintContext) -> bool;
+    /// Checks if variable is used in pipeline. Example: `$list | length` uses
+    /// `$list`
     fn variable_is_used(&self, var_id: VarId) -> bool;
+    /// Checks if variable is piped. Example: `$data | to json` pipes `$data`
     fn variable_is_piped(&self, var_id: VarId) -> bool;
+    /// Checks if pipeline ends with ignore. Example: `ls | ignore`
     fn ends_with_ignore(&self, context: &LintContext) -> bool;
+    /// Gets element before ignore. Example: `mkdir tmp | ignore` returns `mkdir
+    /// tmp`
     fn element_before_ignore(&self, context: &LintContext) -> Option<&Expression>;
 }
 

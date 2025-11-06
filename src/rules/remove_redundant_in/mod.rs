@@ -1,6 +1,7 @@
 use nu_protocol::ast::{Expr, Pipeline};
 
 use crate::{
+    Fix, Replacement,
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -84,22 +85,105 @@ fn pipeline_starts_with_redundant_in(pipeline: &Pipeline, context: &LintContext)
     false
 }
 
-/// Extract the function body from its declaration span for generating specific
-/// suggestions
-fn extract_function_body(decl_name: &str, context: &LintContext) -> Option<String> {
-    // Find the declaration span and extract the body
+fn extract_function_body_from_source(decl_name: &str, context: &LintContext) -> Option<String> {
     let decl_span = context.find_declaration_span(decl_name);
     let contents = String::from_utf8_lossy(context.working_set.get_span_contents(decl_span));
 
-    // Look for the function body between braces
-    if let Some(start) = contents.find('{')
-        && let Some(end) = contents.rfind('}')
-    {
-        let body = &contents[start + 1..end].trim();
-        return Some((*body).to_string());
-    }
+    log::debug!(
+        "Extracting body for '{decl_name}' from source: span={decl_span:?}, contents='{contents}'"
+    );
 
-    None
+    contents
+        .find('{')
+        .and_then(|start| contents.rfind('}').map(|end| (start, end)))
+        .map(|(start, end)| {
+            let body = contents[start + 1..end].trim().to_string();
+            log::debug!("Extracted body: '{body}'");
+            body
+        })
+}
+
+fn extract_function_body_from_block(
+    block_span: Option<nu_protocol::Span>,
+    context: &LintContext,
+) -> Option<String> {
+    block_span.and_then(|span| {
+        let contents = String::from_utf8_lossy(context.working_set.get_span_contents(span));
+        let trimmed = contents.trim();
+
+        trimmed
+            .strip_prefix('{')
+            .and_then(|s| s.strip_suffix('}'))
+            .map(|stripped| stripped.trim().to_string())
+    })
+}
+
+fn remove_redundant_in_from_body(function_body: &str) -> String {
+    let trimmed = function_body.trim_start();
+    if trimmed.starts_with("$in | ") {
+        function_body.replacen("$in | ", "", 1)
+    } else if trimmed.starts_with("$in|") {
+        function_body.replacen("$in|", "", 1)
+    } else {
+        function_body.replace("$in | ", "").replace("$in|", "")
+    }
+}
+
+fn format_parameters(signature: &nu_protocol::Signature) -> String {
+    signature
+        .required_positional
+        .iter()
+        .chain(signature.optional_positional.iter())
+        .map(|p| p.name.as_str())
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+fn generate_fix_text(
+    signature: &nu_protocol::Signature,
+    block_span: Option<nu_protocol::Span>,
+    context: &LintContext,
+) -> Option<String> {
+    let body = extract_function_body_from_block(block_span, context)
+        .or_else(|| extract_function_body_from_source(&signature.name, context))?;
+
+    let transformed = remove_redundant_in_from_body(&body);
+    Some(format!(
+        "def {} [{}] {{ {} }}",
+        signature.name,
+        format_parameters(signature),
+        transformed.trim()
+    ))
+}
+
+fn create_fix(fix_text: String, span: nu_protocol::Span) -> Fix {
+    Fix::new_dynamic(
+        fix_text.clone(),
+        vec![Replacement::new_dynamic(span, fix_text)],
+    )
+}
+
+fn create_violation(
+    signature: &nu_protocol::Signature,
+    block_span: Option<nu_protocol::Span>,
+    context: &LintContext,
+) -> RuleViolation {
+    let span = context.find_declaration_span(&signature.name);
+    let suggestion = "Remove redundant $in - it's implicit at the start of pipelines";
+
+    let violation = RuleViolation::new_dynamic(
+        "remove_redundant_in",
+        format!(
+            "Redundant $in usage in function '{}' - $in is implicit at the start of pipelines",
+            signature.name
+        ),
+        span,
+    )
+    .with_suggestion_dynamic(suggestion.to_string());
+
+    generate_fix_text(signature, block_span, context).map_or(violation.clone(), |fix_text| {
+        violation.with_fix(create_fix(fix_text, span))
+    })
 }
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {
@@ -144,46 +228,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
                 return None;
             }
 
-            // Generate a specific suggestion based on the function body
-            let suggestion =
-                if let Some(function_body) = extract_function_body(&signature.name, context) {
-                    // Remove the redundant $in | from the start
-                    let suggested_body = if function_body.trim_start().starts_with("$in | ") {
-                        function_body.replacen("$in | ", "", 1)
-                    } else if function_body.trim_start().starts_with("$in|") {
-                        function_body.replacen("$in|", "", 1)
-                    } else {
-                        function_body.replace("$in | ", "").replace("$in|", "")
-                    };
-
-                    format!(
-                        "Remove redundant $in. Change to: def {} [{}] {{ {} }}",
-                        signature.name,
-                        signature
-                            .required_positional
-                            .iter()
-                            .chain(signature.optional_positional.iter())
-                            .map(|p| p.name.as_str())
-                            .collect::<Vec<_>>()
-                            .join(", "),
-                        suggested_body.trim()
-                    )
-                } else {
-                    "Remove redundant $in - it's implicit at the start of pipelines".to_string()
-                };
-
-            Some(
-                RuleViolation::new_dynamic(
-                    "remove_redundant_in",
-                    format!(
-                        "Redundant $in usage in function '{}' - $in is implicit at the start of \
-                         pipelines",
-                        signature.name
-                    ),
-                    context.find_declaration_span(&signature.name),
-                )
-                .with_suggestion_dynamic(suggestion),
-            )
+            Some(create_violation(&signature, block.span, context))
         })
         .collect()
 }

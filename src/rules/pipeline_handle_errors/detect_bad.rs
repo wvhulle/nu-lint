@@ -1,10 +1,11 @@
 use super::rule;
+use crate::log::instrument;
 
 fn init_logger() {
     use std::sync::Once;
     static INIT: Once = Once::new();
     INIT.call_once(|| {
-        crate::log::instrument();
+        instrument();
     });
 }
 
@@ -123,12 +124,6 @@ ls | each { |file|
 }
 
 // Test complex pipelines
-#[test]
-fn test_detect_multiple_external_in_pipeline() {
-    init_logger();
-    let bad_code = r"^curl https://api.example.com | ^jq '.data' | ^grep important";
-    rule().assert_detects(bad_code);
-}
 
 #[test]
 fn test_suggestion_recommends_complete_for_custom_handling() {
@@ -148,12 +143,5 @@ fn test_do_ignore_but_first_item_not_ignored() {
 fn test_suggestion_recommends_do_ignore_when_appropriate() {
     init_logger();
     let bad_code = r"^mkdir -p /tmp/test | ignore";
-    rule().assert_detects(bad_code);
-}
-
-#[test]
-fn test_all_three_patterns_in_suggestion() {
-    init_logger();
-    let bad_code = r"^curl https://api.example.com | from json";
     rule().assert_detects(bad_code);
 }

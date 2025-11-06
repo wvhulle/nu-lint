@@ -1,4 +1,6 @@
-use nu_protocol::ast::Expr;
+use core::iter;
+
+use nu_protocol::ast::{Call, Expr};
 
 use crate::{
     ast::{call::CallExt, expression::ExpressionExt},
@@ -31,13 +33,13 @@ enum ChainIterResult {
 
 /// Iterator over if-else-if chain branches
 struct ChainIterator<'a> {
-    current: Option<&'a nu_protocol::ast::Call>,
+    current: Option<&'a Call>,
     context: &'a LintContext<'a>,
     final_else_pending: Option<String>,
 }
 
 impl<'a> ChainIterator<'a> {
-    const fn new(call: &'a nu_protocol::ast::Call, context: &'a LintContext<'a>) -> Self {
+    const fn new(call: &'a Call, context: &'a LintContext<'a>) -> Self {
         Self {
             current: Some(call),
             context,
@@ -97,7 +99,7 @@ impl Iterator for ChainIterator<'_> {
 
 /// Collects all branches from an if-else-if chain
 fn collect_chain_branches(
-    call: &nu_protocol::ast::Call,
+    call: &Call,
     context: &LintContext,
 ) -> (Vec<MatchBranch>, Option<String>) {
     let mut branches = Vec::new();
@@ -114,7 +116,7 @@ fn collect_chain_branches(
 }
 
 /// Build a fix that converts an if-else-if chain to a match expression
-fn build_match_fix(call: &nu_protocol::ast::Call, var_name: &str, context: &LintContext) -> Fix {
+fn build_match_fix(call: &Call, var_name: &str, context: &LintContext) -> Fix {
     let (branches, final_else) = collect_chain_branches(call, context);
 
     // Build match arms declaratively
@@ -135,7 +137,7 @@ fn build_match_fix(call: &nu_protocol::ast::Call, var_name: &str, context: &Lint
 
 /// Walks the else-if chain and analyzes its properties
 fn walk_if_else_chain(
-    first_call: &nu_protocol::ast::Call,
+    first_call: &Call,
     compared_var: &str,
     context: &LintContext,
 ) -> ChainAnalysis {
@@ -143,7 +145,7 @@ fn walk_if_else_chain(
     let mut chain_length = 2; // First if + one else-if
 
     // Collect all subsequent else-if branches
-    let subsequent_branches = std::iter::from_fn(|| {
+    let subsequent_branches = iter::from_fn(|| {
         // Check if current branch compares the same variable
         let compares_same_var = current_call
             .get_first_positional_arg()
@@ -175,7 +177,7 @@ fn walk_if_else_chain(
 }
 
 /// Analyze an if-call and its else branch to detect if-else-if chains
-fn analyze_if_chain(call: &nu_protocol::ast::Call, context: &LintContext) -> Option<RuleViolation> {
+fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<RuleViolation> {
     // Get the condition expression and check if it compares a variable
     let compared_var = call
         .get_first_positional_arg()?

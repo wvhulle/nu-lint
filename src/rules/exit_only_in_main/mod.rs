@@ -1,4 +1,4 @@
-use nu_protocol::ast::Expr;
+use nu_protocol::ast::{Call, Expr};
 
 use crate::{
     ast::{call::CallExt, span::SpanExt},
@@ -8,7 +8,7 @@ use crate::{
 };
 
 /// Check if a call is to the 'exit' command
-fn is_exit_call(call: &nu_protocol::ast::Call, ctx: &LintContext) -> bool {
+fn is_exit_call(call: &Call, ctx: &LintContext) -> bool {
     call.get_call_name(ctx) == "exit"
 }
 

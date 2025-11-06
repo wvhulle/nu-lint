@@ -1,17 +1,16 @@
-// Custom logging setup with colored output and relative file paths
+use std::{env::current_dir, io, io::Write};
+
+use env_logger::fmt::Formatter;
+
 pub fn instrument() {
     env_logger::builder()
         .format(format_log_record)
+        .is_test(true)
         .try_init()
         .ok();
 }
 
-fn format_log_record(
-    buf: &mut env_logger::fmt::Formatter,
-    record: &log::Record,
-) -> std::io::Result<()> {
-    use std::io::Write;
-
+fn format_log_record(buf: &mut Formatter, record: &log::Record) -> io::Result<()> {
     let relative_file = get_relative_file_path(record);
     let (color_start, color_end) = get_level_colors(record.level());
 
@@ -28,7 +27,7 @@ fn format_log_record(
 
 fn get_relative_file_path<'a>(record: &'a log::Record) -> &'a str {
     let file = record.file().unwrap_or("unknown");
-    std::env::current_dir()
+    current_dir()
         .ok()
         .and_then(|cwd| file.strip_prefix(&*cwd.to_string_lossy()))
         .unwrap_or(file)

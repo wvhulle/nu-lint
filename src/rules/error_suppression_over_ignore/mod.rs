@@ -1,7 +1,10 @@
-use nu_protocol::ast::Expr;
+use nu_protocol::ast::{Argument, Call, Expr, Expression, Pipeline};
 
 use crate::{
-    ast::call::CallExt, context::LintContext, rule::{Rule, RuleCategory}, violation::{RuleViolation, Severity}
+    ast::call::CallExt,
+    context::LintContext,
+    rule::{Rule, RuleCategory},
+    violation::{RuleViolation, Severity},
 };
 
 /// Destructive operations that users often mistakenly try to silence with `|
@@ -31,7 +34,7 @@ const DESTRUCTIVE_OPERATIONS: &[&str] = &[
 ];
 
 /// Check if a call is a destructive operation
-fn is_destructive_file_operation(call: &nu_protocol::ast::Call, context: &LintContext) -> bool {
+fn is_destructive_file_operation(call: &Call, context: &LintContext) -> bool {
     let cmd_name = call.get_call_name(context);
 
     // Check if it's in our list of always-destructive operations
@@ -42,7 +45,7 @@ fn is_destructive_file_operation(call: &nu_protocol::ast::Call, context: &LintCo
     // Special case: save is only destructive with -f/--force flag
     if cmd_name == "save" {
         return call.arguments.iter().any(|arg| {
-            matches!(arg, nu_protocol::ast::Argument::Named(named) 
+            matches!(arg, Argument::Named(named)
                 if named.0.item == "force")
         });
     }
@@ -51,17 +54,14 @@ fn is_destructive_file_operation(call: &nu_protocol::ast::Call, context: &LintCo
 }
 
 /// Recursively check if an expression contains a file operation call
-fn contains_file_operation_in_expr(
-    expr: &nu_protocol::ast::Expression,
-    context: &LintContext,
-) -> bool {
+fn contains_file_operation_in_expr(expr: &Expression, context: &LintContext) -> bool {
     match &expr.expr {
         Expr::Call(call) => {
             is_destructive_file_operation(call, context)
                 || call.arguments.iter().any(|arg| {
                     matches!(
                         arg,
-                        nu_protocol::ast::Argument::Positional(e)
+                        Argument::Positional(e)
                             if contains_file_operation_in_expr(e, context)
                     )
                 })
@@ -82,10 +82,7 @@ fn contains_file_operation_in_expr(
 }
 
 /// Check if a pipeline ends with `| ignore` and contains file operations
-fn check_pipeline(
-    pipeline: &nu_protocol::ast::Pipeline,
-    context: &LintContext,
-) -> Option<RuleViolation> {
+fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<RuleViolation> {
     let last_elem = (pipeline.elements.len() >= 2).then(|| pipeline.elements.last())??;
 
     let Expr::Call(last_call) = &last_elem.expr.expr else {

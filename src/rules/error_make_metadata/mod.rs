@@ -1,4 +1,4 @@
-use nu_protocol::ast::Expr;
+use nu_protocol::ast::{Call, Expr, Expression, RecordItem};
 
 use crate::{
     ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
@@ -29,7 +29,7 @@ impl MetadataFields {
     }
 }
 
-fn extract_field_name(key: &nu_protocol::ast::Expression, context: &LintContext) -> String {
+fn extract_field_name(key: &Expression, context: &LintContext) -> String {
     match &key.expr {
         Expr::String(s) | Expr::RawString(s) => s.clone(),
         _ => key
@@ -39,14 +39,9 @@ fn extract_field_name(key: &nu_protocol::ast::Expression, context: &LintContext)
     }
 }
 
-fn extract_msg_value(
-    record: &[nu_protocol::ast::RecordItem],
-    context: &LintContext,
-) -> Option<String> {
+fn extract_msg_value(record: &[RecordItem], context: &LintContext) -> Option<String> {
     record.iter().find_map(|item| match item {
-        nu_protocol::ast::RecordItem::Pair(key, value)
-            if extract_field_name(key, context) == "msg" =>
-        {
+        RecordItem::Pair(key, value) if extract_field_name(key, context) == "msg" => {
             Some(match &value.expr {
                 Expr::String(s) | Expr::RawString(s) => s.clone(),
                 _ => value.span_text(context).to_string(),
@@ -95,15 +90,12 @@ fn extract_first_function_parameter(
         })
 }
 
-fn analyze_record_fields(
-    record: &[nu_protocol::ast::RecordItem],
-    context: &LintContext,
-) -> MetadataFields {
+fn analyze_record_fields(record: &[RecordItem], context: &LintContext) -> MetadataFields {
     record
         .iter()
         .filter_map(|item| match item {
-            nu_protocol::ast::RecordItem::Pair(key, _) => Some(extract_field_name(key, context)),
-            nu_protocol::ast::RecordItem::Spread(..) => None,
+            RecordItem::Pair(key, _) => Some(extract_field_name(key, context)),
+            RecordItem::Spread(..) => None,
         })
         .fold(
             MetadataFields {
@@ -154,7 +146,7 @@ fn build_suggestion(missing_fields: &[&str], current_msg: &str, example_span: &s
 }
 
 fn check_error_make_metadata(
-    record: &[nu_protocol::ast::RecordItem],
+    record: &[RecordItem],
     context: &LintContext,
     call_span: nu_protocol::Span,
 ) -> Option<RuleViolation> {
@@ -188,9 +180,7 @@ fn check_error_make_metadata(
     )
 }
 
-fn extract_record_from_expr(
-    expr: &nu_protocol::ast::Expression,
-) -> Option<&Vec<nu_protocol::ast::RecordItem>> {
+fn extract_record_from_expr(expr: &Expression) -> Option<&Vec<RecordItem>> {
     match &expr.expr {
         Expr::Record(record) => Some(record),
         Expr::FullCellPath(cell_path) => match &cell_path.head.expr {
@@ -201,10 +191,7 @@ fn extract_record_from_expr(
     }
 }
 
-fn check_error_make_call(
-    call: &nu_protocol::ast::Call,
-    context: &LintContext,
-) -> Option<RuleViolation> {
+fn check_error_make_call(call: &Call, context: &LintContext) -> Option<RuleViolation> {
     call.is_call_to_command("error make", context)
         .then_some(())
         .and_then(|()| call.get_first_positional_arg())

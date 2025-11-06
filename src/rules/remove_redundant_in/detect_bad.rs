@@ -1,8 +1,9 @@
 use super::rule;
+use crate::log::instrument;
 
 #[test]
 fn detect_redundant_in_at_pipeline_start() {
-    crate::log::instrument();
+    instrument();
 
     let bad_codes = vec![
         "def get-field [field] { $in | get $field }",

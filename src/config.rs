@@ -1,5 +1,7 @@
 use std::{
     collections::HashMap,
+    env::current_dir,
+    fs,
     path::{Path, PathBuf},
     process,
 };
@@ -117,7 +119,7 @@ impl Config {
     /// Returns an error if the file cannot be read or if the TOML content is
     /// invalid.
     pub(crate) fn load_from_file(path: &Path) -> Result<Self, crate::LintError> {
-        let content = std::fs::read_to_string(path)?;
+        let content = fs::read_to_string(path)?;
         Ok(toml::from_str(&content)?)
     }
 
@@ -143,7 +145,7 @@ impl Config {
 /// Search for .nu-lint.toml in current directory and parent directories
 #[must_use]
 pub fn find_config_file() -> Option<PathBuf> {
-    let mut current_dir = std::env::current_dir().ok()?;
+    let mut current_dir = current_dir().ok()?;
 
     loop {
         let config_path = current_dir.join(".nu-lint.toml");

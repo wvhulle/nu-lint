@@ -1,8 +1,9 @@
 use super::rule;
+use crate::log::instrument;
 
 #[test]
 fn test_detect_simple_copy_accumulation() {
-    crate::log::instrument();
+    instrument();
 
     let bad_code = r"
 mut data = []
@@ -16,7 +17,7 @@ for x in [1 2 3] {
 
 #[test]
 fn test_detect_copy_from_literal_list() {
-    crate::log::instrument();
+    instrument();
 
     let bad_code = r"
 mut items = []

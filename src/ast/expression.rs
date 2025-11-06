@@ -1,11 +1,13 @@
 use nu_protocol::{
     BlockId, Span, VarId,
-    ast::{Expr, Expression, Operator, PathMember},
+    ast::{
+        Argument, Call, Comparison, Expr, Expression, ExternalArgument, ListItem, Operator,
+        PathMember, RecordItem,
+    },
 };
 
-use crate::context::LintContext;
-
 use super::{block::BlockExt, span::SpanExt};
+use crate::context::LintContext;
 
 pub trait ExpressionExt {
     fn refers_to_same_variable(&self, other: &Expression, context: &LintContext) -> bool;
@@ -26,7 +28,7 @@ pub trait ExpressionExt {
     fn matches_var(&self, var_id: VarId) -> bool;
     fn external_call_contains_variable(&self, var_id: VarId) -> bool;
     fn is_external_filesystem_command(&self, context: &LintContext) -> bool;
-    fn extract_call(&self) -> Option<&nu_protocol::ast::Call>;
+    fn extract_call(&self) -> Option<&Call>;
     fn contains_variable(&self, var_id: VarId) -> bool;
 }
 
@@ -179,23 +181,22 @@ impl ExpressionExt for Expression {
             Expr::UnaryNot(inner) => inner.contains_variables(context),
 
             Expr::List(items) => items.iter().any(|item| match item {
-                nu_protocol::ast::ListItem::Item(expr)
-                | nu_protocol::ast::ListItem::Spread(_, expr) => expr.contains_variables(context),
+                ListItem::Item(expr) | ListItem::Spread(_, expr) => {
+                    expr.contains_variables(context)
+                }
             }),
 
             Expr::Record(fields) => fields.iter().any(|field| match field {
-                nu_protocol::ast::RecordItem::Pair(key, val) => {
+                RecordItem::Pair(key, val) => {
                     key.contains_variables(context) || val.contains_variables(context)
                 }
-                nu_protocol::ast::RecordItem::Spread(_, expr) => expr.contains_variables(context),
+                RecordItem::Spread(_, expr) => expr.contains_variables(context),
             }),
 
             Expr::Call(call) => call.arguments.iter().any(|arg| match arg {
-                nu_protocol::ast::Argument::Positional(expr)
-                | nu_protocol::ast::Argument::Unknown(expr)
-                | nu_protocol::ast::Argument::Named((_, _, Some(expr))) => {
-                    expr.contains_variables(context)
-                }
+                Argument::Positional(expr)
+                | Argument::Unknown(expr)
+                | Argument::Named((_, _, Some(expr))) => expr.contains_variables(context),
                 _ => false,
             }),
 
@@ -208,9 +209,8 @@ impl ExpressionExt for Expression {
             return None;
         };
 
-        let Expr::Operator(Operator::Comparison(
-            nu_protocol::ast::Comparison::Equal | nu_protocol::ast::Comparison::NotEqual,
-        )) = &op.expr
+        let Expr::Operator(Operator::Comparison(Comparison::Equal | Comparison::NotEqual)) =
+            &op.expr
         else {
             return None;
         };
@@ -255,8 +255,7 @@ impl ExpressionExt for Expression {
         if let Expr::ExternalCall(_head, args) = &self.expr {
             args.iter().any(|arg| {
                 let arg_expr = match arg {
-                    nu_protocol::ast::ExternalArgument::Regular(e)
-                    | nu_protocol::ast::ExternalArgument::Spread(e) => e,
+                    ExternalArgument::Regular(e) | ExternalArgument::Spread(e) => e,
                 };
                 arg_expr.matches_var(var_id)
             })
@@ -280,7 +279,7 @@ impl ExpressionExt for Expression {
         }
     }
 
-    fn extract_call(&self) -> Option<&nu_protocol::ast::Call> {
+    fn extract_call(&self) -> Option<&Call> {
         match &self.expr {
             Expr::Call(call) => Some(call),
             _ => None,
@@ -296,16 +295,15 @@ impl ExpressionExt for Expression {
             }
             Expr::UnaryNot(inner) => inner.contains_variable(var_id),
             Expr::Call(call) => call.arguments.iter().any(|arg| match arg {
-                nu_protocol::ast::Argument::Positional(expr)
-                | nu_protocol::ast::Argument::Named((_, _, Some(expr)))
-                | nu_protocol::ast::Argument::Unknown(expr)
-                | nu_protocol::ast::Argument::Spread(expr) => expr.contains_variable(var_id),
-                nu_protocol::ast::Argument::Named(_) => false,
+                Argument::Positional(expr)
+                | Argument::Named((_, _, Some(expr)))
+                | Argument::Unknown(expr)
+                | Argument::Spread(expr) => expr.contains_variable(var_id),
+                Argument::Named(_) => false,
             }),
             Expr::List(items) => items.iter().any(|item| {
                 let expr = match item {
-                    nu_protocol::ast::ListItem::Item(e)
-                    | nu_protocol::ast::ListItem::Spread(_, e) => e,
+                    ListItem::Item(e) | ListItem::Spread(_, e) => e,
                 };
                 expr.contains_variable(var_id)
             }),
@@ -320,10 +318,10 @@ impl ExpressionExt for Expression {
                         .any(|row| row.iter().any(|cell| cell.contains_variable(var_id)))
             }
             Expr::Record(items) => items.iter().any(|item| match item {
-                nu_protocol::ast::RecordItem::Pair(key, val) => {
+                RecordItem::Pair(key, val) => {
                     key.contains_variable(var_id) || val.contains_variable(var_id)
                 }
-                nu_protocol::ast::RecordItem::Spread(_, expr) => expr.contains_variable(var_id),
+                RecordItem::Spread(_, expr) => expr.contains_variable(var_id),
             }),
             _ => false,
         }

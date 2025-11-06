@@ -1,6 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
-use nu_protocol::{Span, VarId, ast::Expr};
+use nu_protocol::{
+    Span, VarId,
+    ast::{Expr, Expression},
+};
 
 use crate::{
     ast::{call::CallExt, expression::ExpressionExt},
@@ -25,7 +28,7 @@ fn find_mut_keyword_span(source: &str, var_span: Span) -> Span {
 }
 
 fn extract_mut_declaration(
-    expr: &nu_protocol::ast::Expression,
+    expr: &Expression,
     context: &LintContext,
 ) -> Option<(VarId, String, Span, Span)> {
     let Expr::Call(call) = &expr.expr else {

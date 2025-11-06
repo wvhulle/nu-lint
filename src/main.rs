@@ -1,6 +1,6 @@
-use std::process;
+use std::{env::current_dir, process};
 
-use clap::Parser;
+use clap::{Parser, error::ErrorKind};
 use nu_lint::{
     LintEngine,
     cli::{Cli, collect_files_to_lint, handle_command, lint_files, output_results},
@@ -13,7 +13,7 @@ fn main() {
         Err(err) => {
             // Custom error handling to provide better error messages
             match err.kind() {
-                clap::error::ErrorKind::UnknownArgument => {
+                ErrorKind::UnknownArgument => {
                     eprintln!("Error: Unknown argument or option");
                     eprintln!();
                     eprintln!(
@@ -39,7 +39,7 @@ fn main() {
     }
 
     let paths_to_lint = if cli.paths.is_empty() {
-        vec![std::env::current_dir().unwrap_or_else(|_| {
+        vec![current_dir().unwrap_or_else(|_| {
             eprintln!("Error: Unable to determine current directory");
             process::exit(2);
         })]

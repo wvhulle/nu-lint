@@ -1,4 +1,4 @@
-use nu_protocol::ast::Expr;
+use nu_protocol::ast::{Argument, Call, Expr};
 
 use crate::{
     context::LintContext,
@@ -25,7 +25,7 @@ fn check_signature(sig: &nu_protocol::Signature) -> Vec<RuleViolation> {
         .collect()
 }
 
-fn check_def_call(call: &nu_protocol::ast::Call, ctx: &LintContext) -> Vec<RuleViolation> {
+fn check_def_call(call: &Call, ctx: &LintContext) -> Vec<RuleViolation> {
     let decl = ctx.working_set.get_decl(call.decl_id);
     if decl.name() != "def" {
         return vec![];
@@ -34,7 +34,7 @@ fn check_def_call(call: &nu_protocol::ast::Call, ctx: &LintContext) -> Vec<RuleV
     call.arguments
         .iter()
         .filter_map(|arg| {
-            if let nu_protocol::ast::Argument::Positional(arg_expr) = arg
+            if let Argument::Positional(arg_expr) = arg
                 && let Expr::Signature(sig) = &arg_expr.expr
             {
                 return Some(check_signature(sig));

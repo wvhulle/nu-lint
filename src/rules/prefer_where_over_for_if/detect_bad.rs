@@ -1,8 +1,9 @@
 use super::rule;
+use crate::log::instrument;
 
 #[test]
 fn test_detect_simple_filtering() {
-    crate::log::instrument();
+    instrument();
 
     let bad_code = r"
 mut filtered = []
@@ -18,7 +19,7 @@ for x in $input {
 
 #[test]
 fn test_detect_filtering_with_condition() {
-    crate::log::instrument();
+    instrument();
 
     let bad_code = r"
 mut selected = []
@@ -34,7 +35,7 @@ for item in $items {
 
 #[test]
 fn test_detect_filtering_with_field_access() {
-    crate::log::instrument();
+    instrument();
 
     let bad_code = r"
 mut active = []

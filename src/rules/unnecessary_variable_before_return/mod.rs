@@ -1,4 +1,7 @@
-use nu_protocol::{Span, VarId, ast::Expr};
+use nu_protocol::{
+    Span, VarId,
+    ast::{Block, Expr, Expression, Pipeline},
+};
 
 use crate::{
     ast::call::CallExt,
@@ -9,7 +12,7 @@ use crate::{
 
 /// Extract variable declaration from a `let` statement  
 fn extract_let_declaration(
-    expr: &nu_protocol::ast::Expression,
+    expr: &Expression,
     context: &LintContext,
 ) -> Option<(VarId, String, Span)> {
     let Expr::Call(call) = &expr.expr else {
@@ -27,7 +30,7 @@ fn extract_let_declaration(
 }
 
 /// Check if an expression is just a variable reference
-fn extract_var_reference(expr: &nu_protocol::ast::Expression) -> Option<VarId> {
+fn extract_var_reference(expr: &Expression) -> Option<VarId> {
     match &expr.expr {
         Expr::Var(var_id) | Expr::VarDecl(var_id) => Some(*var_id),
         Expr::FullCellPath(cell_path) if cell_path.tail.is_empty() => {
@@ -42,7 +45,7 @@ fn extract_var_reference(expr: &nu_protocol::ast::Expression) -> Option<VarId> {
 }
 
 /// Check if a pipeline contains only a single variable reference
-fn is_simple_var_reference(pipeline: &nu_protocol::ast::Pipeline, var_id: VarId) -> Option<Span> {
+fn is_simple_var_reference(pipeline: &Pipeline, var_id: VarId) -> Option<Span> {
     if pipeline.elements.len() != 1 {
         return None;
     }
@@ -54,11 +57,7 @@ fn is_simple_var_reference(pipeline: &nu_protocol::ast::Pipeline, var_id: VarId)
 }
 
 /// Check a block for the unnecessary variable pattern
-fn check_block(
-    block: &nu_protocol::ast::Block,
-    context: &LintContext,
-    violations: &mut Vec<RuleViolation>,
-) {
+fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<RuleViolation>) {
     let pipelines = &block.pipelines;
 
     for i in 0..pipelines.len().saturating_sub(1) {

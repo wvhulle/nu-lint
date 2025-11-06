@@ -1,13 +1,12 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::ast::expression::ExpressionExt;
-use crate::context::LintContext;
 use nu_protocol::{
     BlockId, Span, VarId,
     ast::{Call, Expr, PipelineElement, Traverse},
 };
 
 use super::{call::CallExt, pipeline::PipelineExt};
+use crate::{ast::expression::ExpressionExt, context::LintContext};
 
 pub trait BlockExt {
     fn has_side_effects(&self, context: &LintContext) -> bool;

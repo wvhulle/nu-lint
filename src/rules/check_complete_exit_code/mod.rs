@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use nu_protocol::{Span, VarId, ast::Expr};
+use nu_protocol::{
+    Span, VarId,
+    ast::{Expr, Expression},
+};
 
 use crate::{
     ast::{call::CallExt, expression::ExpressionExt},
@@ -10,7 +13,7 @@ use crate::{
 };
 
 fn extract_complete_assignment(
-    expr: &nu_protocol::ast::Expression,
+    expr: &Expression,
     context: &LintContext,
 ) -> Option<(VarId, String, Span)> {
     let Expr::Call(call) = &expr.expr else {
@@ -55,10 +58,7 @@ fn find_complete_assignments(context: &LintContext) -> HashMap<VarId, (String, S
 }
 
 /// Check if an assignment value contains a complete command
-fn assignment_has_complete(
-    value_expr: &nu_protocol::ast::Expression,
-    context: &LintContext,
-) -> bool {
+fn assignment_has_complete(value_expr: &Expression, context: &LintContext) -> bool {
     use nu_protocol::ast::Traverse;
 
     let mut has_complete = Vec::new();

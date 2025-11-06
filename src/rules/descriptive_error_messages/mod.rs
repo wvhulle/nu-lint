@@ -1,4 +1,4 @@
-use nu_protocol::ast::{Expr, Expression};
+use nu_protocol::ast::{Call, Expr, Expression, RecordItem};
 
 use crate::{
     ast::{call::CallExt, expression::ExpressionExt},
@@ -49,11 +49,11 @@ fn extract_field_name(key: &Expression, context: &LintContext) -> String {
 
 /// Check a record for generic error messages in msg field
 fn check_record_for_generic_msg(
-    record: &Vec<nu_protocol::ast::RecordItem>,
+    record: &Vec<RecordItem>,
     context: &LintContext,
 ) -> Option<RuleViolation> {
     for item in record {
-        let nu_protocol::ast::RecordItem::Pair(key, value) = item else {
+        let RecordItem::Pair(key, value) = item else {
             continue;
         };
 
@@ -85,10 +85,7 @@ fn check_record_for_generic_msg(
     None
 }
 
-fn check_error_make_call(
-    call: &nu_protocol::ast::Call,
-    context: &LintContext,
-) -> Option<RuleViolation> {
+fn check_error_make_call(call: &Call, context: &LintContext) -> Option<RuleViolation> {
     let decl_name = call.get_call_name(context);
 
     if decl_name != "error make" {

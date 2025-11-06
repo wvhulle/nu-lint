@@ -1,6 +1,6 @@
 use nu_protocol::{
     BlockId, Span,
-    ast::{Call, Expr, Expression},
+    ast::{Argument, Call, Expr, Expression},
 };
 
 use super::{block::BlockExt, expression::ExpressionExt};
@@ -54,8 +54,7 @@ impl CallExt for Call {
 
     fn get_positional_arg(&self, index: usize) -> Option<&Expression> {
         self.arguments.get(index).and_then(|arg| match arg {
-            nu_protocol::ast::Argument::Positional(expr)
-            | nu_protocol::ast::Argument::Unknown(expr) => Some(expr),
+            Argument::Positional(expr) | Argument::Unknown(expr) => Some(expr),
             _ => None,
         })
     }
@@ -160,9 +159,9 @@ impl CallExt for Call {
 
     fn uses_variable(&self, var_id: nu_protocol::VarId) -> bool {
         self.arguments.iter().any(|arg| match arg {
-            nu_protocol::ast::Argument::Positional(expr)
-            | nu_protocol::ast::Argument::Unknown(expr)
-            | nu_protocol::ast::Argument::Named((_, _, Some(expr))) => expr.matches_var(var_id),
+            Argument::Positional(expr)
+            | Argument::Unknown(expr)
+            | Argument::Named((_, _, Some(expr))) => expr.matches_var(var_id),
             _ => false,
         })
     }
@@ -192,7 +191,7 @@ impl CallExt for Call {
         self.arguments.iter().any(|arg| {
             matches!(
                 arg,
-                nu_protocol::ast::Argument::Named(named) if named.0.item == flag_name
+                Argument::Named(named) if named.0.item == flag_name
             )
         })
     }

@@ -1,8 +1,9 @@
 use super::rule;
+use crate::log::instrument;
 
 #[test]
 fn ignore_conditional_length_in() {
-    crate::log::instrument();
+    instrument();
 
     let good_code = "def check-length [] { if ($in | length) > 5 { \"big\" } else { \"small\" } }";
 
@@ -11,7 +12,7 @@ fn ignore_conditional_length_in() {
 
 #[test]
 fn ignore_conditional_in_empty() {
-    crate::log::instrument();
+    instrument();
 
     let good_code =
         "def conditional-process [] { if ($in | is-empty) { [] } else { $in | first 10 } }";

@@ -1,4 +1,4 @@
-use nu_protocol::ast::Expr;
+use nu_protocol::ast::{Expr, Expression, Pipeline};
 
 use crate::{
     Fix, Replacement,
@@ -16,7 +16,7 @@ fn check_subexpression_for_is_empty(block_id: nu_protocol::BlockId, context: &Li
 }
 
 /// Check if an expression represents a "not ... is-empty" pattern
-fn is_not_is_empty_pattern(expr: &nu_protocol::ast::Expression, context: &LintContext) -> bool {
+fn is_not_is_empty_pattern(expr: &Expression, context: &LintContext) -> bool {
     // Look for: not (expr | is-empty)
     let Expr::UnaryNot(inner_expr) = &expr.expr else {
         return false;
@@ -35,10 +35,7 @@ fn is_not_is_empty_pattern(expr: &nu_protocol::ast::Expression, context: &LintCo
     }
 }
 
-fn check_pipeline_for_is_empty(
-    pipeline: &nu_protocol::ast::Pipeline,
-    context: &LintContext,
-) -> bool {
+fn check_pipeline_for_is_empty(pipeline: &Pipeline, context: &LintContext) -> bool {
     if pipeline.elements.len() >= 2 {
         // Check if the last element is "is-empty"
         if let Some(last_element) = pipeline.elements.last()
@@ -51,10 +48,7 @@ fn check_pipeline_for_is_empty(
     false
 }
 
-fn extract_pipeline_text(
-    pipeline: &nu_protocol::ast::Pipeline,
-    context: &LintContext,
-) -> Option<String> {
+fn extract_pipeline_text(pipeline: &Pipeline, context: &LintContext) -> Option<String> {
     if pipeline.elements.len() < 2 {
         return None;
     }
@@ -81,7 +75,7 @@ fn generate_fix_from_subexpression(
 }
 
 /// Generate the fix text for "not (expr | is-empty)" -> "expr | is-not-empty"
-fn generate_fix_text(expr: &nu_protocol::ast::Expression, context: &LintContext) -> Option<String> {
+fn generate_fix_text(expr: &Expression, context: &LintContext) -> Option<String> {
     let Expr::UnaryNot(inner_expr) = &expr.expr else {
         return None;
     };

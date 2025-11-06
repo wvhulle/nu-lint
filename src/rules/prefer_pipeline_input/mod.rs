@@ -1,4 +1,7 @@
-use nu_protocol::{Category, SyntaxShape, VarId, ast::Expr};
+use nu_protocol::{
+    Category, SyntaxShape, VarId,
+    ast::{Argument, Block, Call, Expr, Pipeline},
+};
 
 use crate::{
     ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
@@ -106,7 +109,7 @@ impl ParameterUsageAnalysis {
 
 /// Helper to analyze pipelines and collect usage information
 fn analyze_pipelines(
-    pipelines: &[nu_protocol::ast::Pipeline],
+    pipelines: &[Pipeline],
     param_var_id: VarId,
     context: &LintContext,
 ) -> ParameterUsageAnalysis {
@@ -141,7 +144,7 @@ fn analyze_parameter_usage(param_var_id: VarId, context: &LintContext) -> Parame
 
 /// Analyze a pipeline for parameter usage
 fn analyze_pipeline_for_parameter_usage(
-    pipeline: &nu_protocol::ast::Pipeline,
+    pipeline: &Pipeline,
     param_var_id: VarId,
     ctx: &LintContext,
     analysis: &mut ParameterUsageAnalysis,
@@ -194,7 +197,7 @@ fn is_file_operation_command(decl_name: &str) -> bool {
 
 /// Analyze a function call for parameter usage
 fn analyze_call_for_parameter_usage(
-    call: &nu_protocol::ast::Call,
+    call: &Call,
     param_var_id: VarId,
     ctx: &LintContext,
     analysis: &mut ParameterUsageAnalysis,
@@ -237,13 +240,13 @@ fn is_generation_command(decl_name: &str) -> bool {
 }
 
 /// Check if an argument references a variable
-fn argument_references_variable(arg: &nu_protocol::ast::Argument, var_id: VarId) -> bool {
+fn argument_references_variable(arg: &Argument, var_id: VarId) -> bool {
     match arg {
-        nu_protocol::ast::Argument::Positional(expr)
-        | nu_protocol::ast::Argument::Named((_, _, Some(expr)))
-        | nu_protocol::ast::Argument::Unknown(expr)
-        | nu_protocol::ast::Argument::Spread(expr) => expr.contains_variable(var_id),
-        nu_protocol::ast::Argument::Named(_) => false,
+        Argument::Positional(expr)
+        | Argument::Named((_, _, Some(expr)))
+        | Argument::Unknown(expr)
+        | Argument::Spread(expr) => expr.contains_variable(var_id),
+        Argument::Named(_) => false,
     }
 }
 
@@ -378,41 +381,50 @@ fn analyze_function_from_ast(
     Some(create_violation(&function_signature, param, context))
 }
 
-/// Create a violation for a function that should use pipeline input
+fn transform_parameter_to_pipeline_input(function_body: &str, param_name: &str) -> String {
+    let param_var = format!("${param_name}");
+    let is_pipeline_start =
+        function_body.trim_start().starts_with(&param_var) && function_body.contains(" | ");
+
+    if is_pipeline_start {
+        function_body.replacen(&format!("{param_var} | "), "", 1)
+    } else {
+        function_body.replace(&param_var, "$in")
+    }
+}
+
+fn generate_fix_text(
+    signature: &nu_protocol::Signature,
+    param: &nu_protocol::PositionalArg,
+    context: &LintContext,
+) -> String {
+    extract_function_body(&signature.name, &param.name, context).map_or_else(
+        || format!("def {} [] {{ ... }}", signature.name),
+        |body| {
+            let transformed = transform_parameter_to_pipeline_input(&body, &param.name);
+            format!("def {} [] {{ {} }}", signature.name, transformed.trim())
+        },
+    )
+}
+
+fn create_fix(fix_text: String, span: nu_protocol::Span) -> violation::Fix {
+    violation::Fix::new_dynamic(
+        fix_text.clone(),
+        vec![violation::Replacement::new_dynamic(span, fix_text)],
+    )
+}
+
 fn create_violation(
     signature: &nu_protocol::Signature,
     param: &nu_protocol::PositionalArg,
     context: &LintContext,
 ) -> violation::RuleViolation {
-    // Generate a specific suggestion based on the function body
-    let suggestion = extract_function_body(&signature.name, &param.name, context).map_or_else(
-        || {
-            format!(
-                "Remove the '{}' parameter and use pipeline input. Change to: def {} [] {{ ... }}",
-                param.name, signature.name
-            )
-        },
-        |function_body| {
-            let param_var = format!("${}", param.name);
-
-            // Check if the parameter is used at the start of a pipeline (can omit $in)
-            let suggested_body = if function_body.trim_start().starts_with(&param_var)
-                && function_body.contains(" | ")
-            {
-                // Parameter is at start of pipeline - can omit $in
-                function_body.replacen(&format!("{param_var} | "), "", 1)
-            } else {
-                // Parameter is used elsewhere - need explicit $in
-                function_body.replace(&param_var, "$in")
-            };
-
-            format!(
-                "Change to: def {} [] {{ {} }}. Remove the '{}' parameter and use pipeline input.",
-                signature.name,
-                suggested_body.trim(),
-                param.name
-            )
-        },
+    let span = context.find_declaration_span(&signature.name);
+    let fix_text = generate_fix_text(signature, param, context);
+    let fix = create_fix(fix_text, span);
+    let suggestion = format!(
+        "Remove the '{}' parameter and use pipeline input",
+        param.name
     );
 
     RuleViolation::new_dynamic(
@@ -422,15 +434,16 @@ fn create_violation(
              instead",
             signature.name, param.name
         ),
-        context.find_declaration_span(&signature.name),
+        span,
     )
+    .with_fix(fix)
     .with_suggestion_dynamic(suggestion)
 }
 
 /// Analyze parameter usage in a specific block
 fn analyze_parameter_usage_in_block(
     param_var_id: VarId,
-    block: &nu_protocol::ast::Block,
+    block: &Block,
     context: &LintContext,
 ) -> ParameterUsageAnalysis {
     log::debug!(

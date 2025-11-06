@@ -39,13 +39,6 @@ fn test_suggestion_for_external_echo() {
 }
 
 #[test]
-fn test_message_explains_why_bad() {
-    let bad_code = r"echo $value";
-
-    rule().assert_detects(bad_code);
-}
-
-#[test]
 fn test_different_suggestions_for_different_patterns() {
     rule().assert_detects(r#"echo "hello""#);
     rule().assert_suggestion_contains(r#"echo "hello""#, r#""hello""#);

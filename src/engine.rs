@@ -1,4 +1,4 @@
-use std::{collections::HashSet, path::Path, sync::OnceLock};
+use std::{collections::HashSet, fs, path::Path, sync::OnceLock};
 
 use nu_parser::parse;
 use nu_protocol::{
@@ -10,6 +10,7 @@ use crate::{
     LintError, RuleViolation, Severity,
     config::{Config, RuleSeverity},
     context::LintContext,
+    rule::Rule,
     rules::RuleRegistry,
     violation::Violation,
 };
@@ -68,7 +69,7 @@ impl LintEngine {
     ///
     /// Returns an error if the file cannot be read.
     pub(crate) fn lint_file(&self, path: &Path) -> Result<Vec<Violation>, LintError> {
-        let source = std::fs::read_to_string(path)?;
+        let source = fs::read_to_string(path)?;
         Ok(self.lint_source(&source, Some(path)))
     }
 
@@ -155,31 +156,25 @@ impl LintEngine {
     }
 
     /// Get all rules that are enabled according to the configuration
-    fn get_enabled_rules(&self) -> impl Iterator<Item = &crate::rule::Rule> {
+    fn get_enabled_rules(&self) -> impl Iterator<Item = &Rule> {
         self.registry.all_rules().filter(|rule| {
             // If not in config, use default (enabled). If in config, check if it's not
             // turned off.
-            !matches!(
-                self.config.rules.get(rule.id),
-                Some(&crate::config::RuleSeverity::Off)
-            )
+            !matches!(self.config.rules.get(rule.id), Some(&RuleSeverity::Off))
         })
     }
 
     /// Get all rules that are enabled and meet the `min_severity` threshold
     /// This is more efficient as it avoids running rules that would be filtered
     /// out anyway
-    fn get_eligible_rules(&self) -> impl Iterator<Item = &crate::rule::Rule> {
+    fn get_eligible_rules(&self) -> impl Iterator<Item = &Rule> {
         let min_severity_threshold = self.get_minimum_severity_threshold();
 
         self.get_enabled_rules().filter(move |rule| {
             let rule_severity = self.get_effective_rule_severity(rule);
 
             // Handle special case: min_severity = "off" means no rules are eligible
-            if matches!(
-                self.config.general.min_severity,
-                crate::config::RuleSeverity::Off
-            ) {
+            if matches!(self.config.general.min_severity, RuleSeverity::Off) {
                 return false;
             }
 
@@ -189,7 +184,7 @@ impl LintEngine {
     }
 
     /// Get the effective severity for a rule (config override or rule default)
-    fn get_effective_rule_severity(&self, rule: &crate::rule::Rule) -> crate::violation::Severity {
+    fn get_effective_rule_severity(&self, rule: &Rule) -> Severity {
         self.config
             .rule_severity(rule.id)
             .map_or(rule.severity, |config_severity| config_severity)

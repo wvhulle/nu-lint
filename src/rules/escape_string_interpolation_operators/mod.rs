@@ -1,5 +1,6 @@
 use nu_protocol::ast::{
-    Assignment, Bits, Boolean, Comparison, Expr, FindMapResult, Math, Operator, Traverse,
+    Assignment, Bits, Boolean, Comparison, Expr, Expression, FindMapResult, Math, Operator,
+    Traverse,
 };
 
 use crate::{
@@ -74,10 +75,7 @@ fn is_operator_keyword(s: &str) -> bool {
 /// Analyze an AST expression to detect problematic patterns
 /// Only detects patterns that are reliably identifiable via AST structure
 /// Uses `nu_protocol`'s `Traverse` trait for comprehensive AST traversal
-fn analyze_ast_expression(
-    expr: &nu_protocol::ast::Expression,
-    context: &LintContext,
-) -> Option<ProblematicPattern> {
+fn analyze_ast_expression(expr: &Expression, context: &LintContext) -> Option<ProblematicPattern> {
     // Use Traverse to check all subexpressions
     // The closure decides what to flag as problematic
     expr.find_map(context.working_set, &|sub_expr| {
@@ -112,9 +110,9 @@ fn analyze_ast_expression(
 
 /// Handle binary operation analysis separately to reduce nesting
 fn handle_binary_op(
-    left: &nu_protocol::ast::Expression,
-    op: &nu_protocol::ast::Expression,
-    right: &nu_protocol::ast::Expression,
+    left: &Expression,
+    op: &Expression,
+    right: &Expression,
     context: &LintContext,
 ) -> FindMapResult<ProblematicPattern> {
     // Analyze the binary operation as a whole
@@ -139,9 +137,9 @@ fn handle_binary_op(
 /// Analyze binary operations for problematic patterns
 /// Only flag when both operands are literals (no variables)
 fn analyze_binary_operation(
-    left: &nu_protocol::ast::Expression,
-    op: &nu_protocol::ast::Expression,
-    right: &nu_protocol::ast::Expression,
+    left: &Expression,
+    op: &Expression,
+    right: &Expression,
     context: &LintContext,
 ) -> Option<ProblematicPattern> {
     let Expr::Operator(operator) = &op.expr else {
@@ -160,10 +158,7 @@ fn analyze_binary_operation(
 }
 
 /// Analyze external calls - detect operators used as external commands
-fn analyze_external_call(
-    head: &nu_protocol::ast::Expression,
-    context: &LintContext,
-) -> Option<ProblematicPattern> {
+fn analyze_external_call(head: &Expression, context: &LintContext) -> Option<ProblematicPattern> {
     let (Expr::GlobPattern(pattern, _) | Expr::String(pattern)) = &head.expr else {
         return None;
     };
@@ -182,7 +177,7 @@ fn analyze_external_call(
 }
 
 /// Check if an interpolation expression is valid
-fn is_valid_interpolation(expr: &nu_protocol::ast::Expression, context: &LintContext) -> bool {
+fn is_valid_interpolation(expr: &Expression, context: &LintContext) -> bool {
     match &expr.expr {
         // Subexpressions: check for problematic patterns
         Expr::Subexpression(_) => analyze_ast_expression(expr, context).is_none(),
@@ -231,7 +226,7 @@ fn create_violation(span: nu_protocol::Span, pattern: ProblematicPattern) -> Rul
 }
 
 fn check_string_interpolation(
-    exprs: &[nu_protocol::ast::Expression],
+    exprs: &[Expression],
     span: nu_protocol::Span,
     context: &LintContext,
 ) -> Option<RuleViolation> {

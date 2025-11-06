@@ -1,3 +1,4 @@
+use core::fmt::{self, Display, Formatter};
 use std::borrow::Cow;
 
 use miette::SourceSpan;
@@ -10,8 +11,8 @@ pub enum Severity {
     Error,
 }
 
-impl std::fmt::Display for Severity {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Display for Severity {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::Error => write!(f, "error"),
             Self::Warning => write!(f, "warning"),

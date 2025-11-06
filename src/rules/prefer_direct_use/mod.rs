@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use nu_protocol::ast::Expr;
+use nu_protocol::ast::{Argument, Expr, Expression, Operator};
 
 use crate::{
     ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
@@ -11,17 +11,15 @@ use crate::{
 
 /// Check if an element matches a transformation pattern
 fn matches_transformation_pattern(
-    expr: &nu_protocol::ast::Expression,
+    expr: &Expression,
     context: &LintContext,
     loop_var_name: &str,
 ) -> bool {
     match &expr.expr {
         Expr::Call(call) => call.is_call_to_command("if", context),
         Expr::BinaryOp(_lhs, op, rhs) => {
-            matches!(
-                op.expr,
-                Expr::Operator(nu_protocol::ast::Operator::Assignment(_))
-            ) && has_transformation_in_append(rhs, context, loop_var_name)
+            matches!(op.expr, Expr::Operator(Operator::Assignment(_)))
+                && has_transformation_in_append(rhs, context, loop_var_name)
         }
         _ => false,
     }
@@ -41,7 +39,7 @@ fn has_transformation_or_filter(
 }
 
 fn has_transformation_in_append(
-    expr: &nu_protocol::ast::Expression,
+    expr: &Expression,
     context: &LintContext,
     loop_var_name: &str,
 ) -> bool {
@@ -50,9 +48,7 @@ fn has_transformation_in_append(
             if call.is_call_to_command("append", context)
                 && let Some(arg) = call.arguments.first()
             {
-                let (nu_protocol::ast::Argument::Positional(arg_expr)
-                | nu_protocol::ast::Argument::Unknown(arg_expr)) = arg
-                else {
+                let (Argument::Positional(arg_expr) | Argument::Unknown(arg_expr)) = arg else {
                     return false;
                 };
 
@@ -83,7 +79,7 @@ fn has_transformation_in_append(
     false
 }
 
-fn is_literal_list(expr: &nu_protocol::ast::Expression) -> bool {
+fn is_literal_list(expr: &Expression) -> bool {
     match &expr.expr {
         Expr::List(_) => true,
         Expr::FullCellPath(cell_path) => matches!(&cell_path.head.expr, Expr::List(_)),
@@ -106,10 +102,7 @@ fn extract_assigned_vars(
                 continue;
             };
 
-            if !matches!(
-                op.expr,
-                Expr::Operator(nu_protocol::ast::Operator::Assignment(_))
-            ) {
+            if !matches!(op.expr, Expr::Operator(Operator::Assignment(_))) {
                 continue;
             }
 
@@ -157,7 +150,7 @@ fn create_violations(
 
 /// Extract empty list variable declarations from mut statements
 fn extract_empty_list_vars(
-    expr: &nu_protocol::ast::Expression,
+    expr: &Expression,
     context: &LintContext,
 ) -> Vec<(nu_protocol::VarId, String, nu_protocol::Span)> {
     let Expr::Call(call) = &expr.expr else {
@@ -172,9 +165,7 @@ fn extract_empty_list_vars(
         return vec![];
     };
 
-    let (nu_protocol::ast::Argument::Positional(var_expr)
-    | nu_protocol::ast::Argument::Unknown(var_expr)) = var_arg
-    else {
+    let (Argument::Positional(var_expr) | Argument::Unknown(var_expr)) = var_arg else {
         return vec![];
     };
 
@@ -187,9 +178,7 @@ fn extract_empty_list_vars(
         return vec![];
     };
 
-    let (nu_protocol::ast::Argument::Positional(init_expr)
-    | nu_protocol::ast::Argument::Unknown(init_expr)) = init_arg
-    else {
+    let (Argument::Positional(init_expr) | Argument::Unknown(init_expr)) = init_arg else {
         return vec![];
     };
 
@@ -217,7 +206,7 @@ fn extract_empty_list_vars(
 
 /// Extract direct copy patterns from for loops
 fn extract_direct_copy_patterns(
-    expr: &nu_protocol::ast::Expression,
+    expr: &Expression,
     context: &LintContext,
 ) -> Vec<nu_protocol::VarId> {
     let Expr::Call(call) = &expr.expr else {
@@ -240,9 +229,7 @@ fn extract_direct_copy_patterns(
         return vec![];
     };
 
-    let (nu_protocol::ast::Argument::Positional(iter_expr)
-    | nu_protocol::ast::Argument::Unknown(iter_expr)) = iter_arg
-    else {
+    let (Argument::Positional(iter_expr) | Argument::Unknown(iter_expr)) = iter_arg else {
         return vec![];
     };
 
@@ -257,9 +244,7 @@ fn extract_direct_copy_patterns(
         return vec![];
     };
 
-    let (nu_protocol::ast::Argument::Positional(block_expr)
-    | nu_protocol::ast::Argument::Unknown(block_expr)) = block_arg
-    else {
+    let (Argument::Positional(block_expr) | Argument::Unknown(block_expr)) = block_arg else {
         return vec![];
     };
 

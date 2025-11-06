@@ -1,3 +1,5 @@
+use core::fmt::{self, Display, Formatter};
+
 use crate::{
     context::LintContext,
     violation::{RuleViolation, Severity},
@@ -41,8 +43,8 @@ impl RuleCategory {
     }
 }
 
-impl std::fmt::Display for RuleCategory {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Display for RuleCategory {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.write_str(self.as_str())
     }
 }

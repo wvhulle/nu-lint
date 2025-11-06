@@ -1,5 +1,5 @@
 use heck::ToSnakeCase;
-use nu_protocol::ast::{Argument, Expr};
+use nu_protocol::ast::{Argument, Call, Expr};
 
 use crate::{
     context::LintContext,
@@ -48,7 +48,7 @@ fn create_snake_case_violation(
 }
 
 /// Check a single call expression for variable naming violations
-fn check_call(call: &nu_protocol::ast::Call, ctx: &LintContext) -> Option<RuleViolation> {
+fn check_call(call: &Call, ctx: &LintContext) -> Option<RuleViolation> {
     let decl = ctx.working_set.get_decl(call.decl_id);
     let is_mutable = get_var_decl_type(decl.name())?;
 

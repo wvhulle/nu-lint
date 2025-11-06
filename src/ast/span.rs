@@ -1,7 +1,8 @@
+use std::collections::HashMap;
+
 use nu_protocol::{BlockId, Span};
 
-use crate::ast::block::BlockExt;
-use crate::context::LintContext;
+use crate::{ast::block::BlockExt, context::LintContext};
 
 pub trait SpanExt {
     #[must_use]
@@ -9,7 +10,7 @@ pub trait SpanExt {
     #[must_use]
     fn find_containing_function(
         &self,
-        functions: &std::collections::HashMap<BlockId, String>,
+        functions: &HashMap<BlockId, String>,
         context: &LintContext,
     ) -> Option<String>;
 }
@@ -21,7 +22,7 @@ impl SpanExt for Span {
 
     fn find_containing_function(
         &self,
-        functions: &std::collections::HashMap<BlockId, String>,
+        functions: &HashMap<BlockId, String>,
         context: &LintContext,
     ) -> Option<String> {
         functions

@@ -1,3 +1,4 @@
+use core::hash::BuildHasher;
 use std::collections::HashMap;
 
 use nu_protocol::ast::{Expr, Expression, ExternalArgument};
@@ -9,16 +10,13 @@ use crate::{
 
 /// Extract external command arguments as strings
 #[must_use]
-pub fn extract_external_args(
-    args: &[nu_protocol::ast::ExternalArgument],
-    context: &LintContext,
-) -> Vec<String> {
+pub fn extract_external_args(args: &[ExternalArgument], context: &LintContext) -> Vec<String> {
     args.iter()
         .map(|arg| match arg {
-            nu_protocol::ast::ExternalArgument::Regular(expr) => {
+            ExternalArgument::Regular(expr) => {
                 context.source[expr.span.start..expr.span.end].to_string()
             }
-            nu_protocol::ast::ExternalArgument::Spread(expr) => {
+            ExternalArgument::Spread(expr) => {
                 format!("...{}", &context.source[expr.span.start..expr.span.end])
             }
         })
@@ -53,14 +51,14 @@ impl BuiltinAlternative {
 pub type FixBuilder = fn(
     cmd_text: &str,
     alternative: &BuiltinAlternative,
-    args: &[nu_protocol::ast::ExternalArgument],
+    args: &[ExternalArgument],
     expr_span: nu_protocol::Span,
     context: &LintContext,
 ) -> Fix;
 
 /// Detect external commands with builtin alternatives
 #[must_use]
-pub fn detect_external_commands<S: ::std::hash::BuildHasher>(
+pub fn detect_external_commands<S: BuildHasher>(
     context: &LintContext,
     rule_id: &'static str,
     alternatives: &HashMap<&'static str, BuiltinAlternative, S>,
@@ -98,15 +96,15 @@ fn create_violation(
     let suggestion = alternative.note.map_or_else(
         || {
             format!(
-                "Replace '^{}' with built-in command: {}\nBuilt-in commands are more \
-                         portable, faster, and provide better error handling.",
+                "Replace '^{}' with built-in command: {}\nBuilt-in commands are more portable, \
+                 faster, and provide better error handling.",
                 cmd_text, alternative.command
             )
         },
         |note| {
             format!(
-                "Replace '^{}' with built-in command: {}\nBuilt-in commands are more \
-                         portable, faster, and provide better error handling.\n\nNote: {note}",
+                "Replace '^{}' with built-in command: {}\nBuilt-in commands are more portable, \
+                 faster, and provide better error handling.\n\nNote: {note}",
                 cmd_text, alternative.command
             )
         },

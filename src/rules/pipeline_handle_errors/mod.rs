@@ -1,6 +1,6 @@
 use nu_protocol::{
     Span,
-    ast::{Block, Expr, Pipeline},
+    ast::{Argument, Block, Call, Expr, Expression, Pipeline},
 };
 
 use crate::{
@@ -52,10 +52,7 @@ fn is_alias_or_export_definition(pipeline: &Pipeline, context: &LintContext) -> 
 
 /// Check if an external command is dangerous (likely to fail)
 /// Returns the command name if it's dangerous, None otherwise
-fn get_dangerous_external_command(
-    expr: &nu_protocol::ast::Expression,
-    context: &LintContext,
-) -> Option<String> {
+fn get_dangerous_external_command(expr: &Expression, context: &LintContext) -> Option<String> {
     use nu_protocol::ast::Traverse;
 
     let mut commands = Vec::new();
@@ -201,7 +198,7 @@ fn pipeline_has_do_ignore(pipeline: &Pipeline, context: &LintContext) -> bool {
     })
 }
 
-fn is_do_with_ignore_flag(expr: &nu_protocol::ast::Expression, context: &LintContext) -> bool {
+fn is_do_with_ignore_flag(expr: &Expression, context: &LintContext) -> bool {
     let Expr::Call(call) = &expr.expr else {
         return false;
     };
@@ -209,9 +206,9 @@ fn is_do_with_ignore_flag(expr: &nu_protocol::ast::Expression, context: &LintCon
     call.is_call_to_command("do", context) && has_ignore_errors_flag(call)
 }
 
-fn has_ignore_errors_flag(call: &nu_protocol::ast::Call) -> bool {
+fn has_ignore_errors_flag(call: &Call) -> bool {
     call.arguments.iter().any(|arg| {
-        matches!(arg, nu_protocol::ast::Argument::Named(named)
+        matches!(arg, Argument::Named(named)
             if named.0.item == "ignore_errors" || named.0.item == "i")
     })
 }

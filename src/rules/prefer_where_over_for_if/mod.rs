@@ -1,4 +1,4 @@
-use nu_protocol::ast::Expr;
+use nu_protocol::ast::{Argument, Block, Call, Expr, Expression, Operator};
 
 use crate::{
     ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
@@ -8,11 +8,7 @@ use crate::{
 };
 
 /// Check if an expression contains append of just the loop variable
-fn contains_loop_var_append(
-    expr: &nu_protocol::ast::Expression,
-    context: &LintContext,
-    loop_var_name: &str,
-) -> bool {
+fn contains_loop_var_append(expr: &Expression, context: &LintContext, loop_var_name: &str) -> bool {
     match &expr.expr {
         Expr::Call(call) => {
             let decl_name = call.get_call_name(context);
@@ -61,7 +57,7 @@ fn has_append_without_transformation(
 
 /// Check if an expression is an assignment with append
 fn matches_append_assignment(
-    expr: &nu_protocol::ast::Expression,
+    expr: &Expression,
     context: &LintContext,
     loop_var_name: &str,
 ) -> bool {
@@ -69,10 +65,7 @@ fn matches_append_assignment(
         return false;
     };
 
-    if !matches!(
-        op.expr,
-        Expr::Operator(nu_protocol::ast::Operator::Assignment(_))
-    ) {
+    if !matches!(op.expr, Expr::Operator(Operator::Assignment(_))) {
         return false;
     }
 
@@ -152,7 +145,7 @@ fn is_filtering_only_pattern(
 
 /// Extract empty list variable declarations
 fn extract_empty_list_vars(
-    expr: &nu_protocol::ast::Expression,
+    expr: &Expression,
     context: &LintContext,
 ) -> Vec<(nu_protocol::VarId, String, nu_protocol::Span)> {
     let Expr::Call(call) = &expr.expr else {
@@ -201,15 +194,13 @@ fn extract_empty_list_vars(
 
 /// Extract variable IDs assigned in an if statement's then block
 fn extract_assigned_var_ids_from_if(
-    if_call: &nu_protocol::ast::Call,
+    if_call: &Call,
     context: &LintContext,
 ) -> Vec<nu_protocol::VarId> {
     let mut var_ids = Vec::new();
 
-    let Some(
-        nu_protocol::ast::Argument::Positional(then_expr)
-        | nu_protocol::ast::Argument::Unknown(then_expr),
-    ) = if_call.arguments.get(1)
+    let Some(Argument::Positional(then_expr) | Argument::Unknown(then_expr)) =
+        if_call.arguments.get(1)
     else {
         return var_ids;
     };
@@ -226,10 +217,7 @@ fn extract_assigned_var_ids_from_if(
                 continue;
             };
 
-            let is_assignment = matches!(
-                op.expr,
-                Expr::Operator(nu_protocol::ast::Operator::Assignment(_))
-            );
+            let is_assignment = matches!(op.expr, Expr::Operator(Operator::Assignment(_)));
             if !is_assignment {
                 continue;
             }
@@ -243,10 +231,7 @@ fn extract_assigned_var_ids_from_if(
     var_ids
 }
 /// Extract variables used in filtering for loops
-fn extract_filtering_vars(
-    expr: &nu_protocol::ast::Expression,
-    context: &LintContext,
-) -> Vec<nu_protocol::VarId> {
+fn extract_filtering_vars(expr: &Expression, context: &LintContext) -> Vec<nu_protocol::VarId> {
     let Expr::Call(call) = &expr.expr else {
         return vec![];
     };
@@ -265,8 +250,7 @@ fn extract_filtering_vars(
 
     // Get the block (loop body) - last argument
     let Some(block_expr) = call.arguments.last().and_then(|arg| match arg {
-        nu_protocol::ast::Argument::Positional(expr)
-        | nu_protocol::ast::Argument::Unknown(expr) => Some(expr),
+        Argument::Positional(expr) | Argument::Unknown(expr) => Some(expr),
         _ => None,
     }) else {
         log::debug!("No block argument");
@@ -293,7 +277,7 @@ fn extract_filtering_vars(
 
 /// Extract variable IDs from if statements in a block
 fn extract_var_ids_from_if_statements(
-    block: &nu_protocol::ast::Block,
+    block: &Block,
     context: &LintContext,
 ) -> Vec<nu_protocol::VarId> {
     let mut var_ids = Vec::new();

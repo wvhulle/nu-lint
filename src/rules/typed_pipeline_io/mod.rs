@@ -102,50 +102,48 @@ const fn is_filepath_expr(expr: &Expr) -> bool {
 fn infer_output_type(block_id: BlockId, ctx: &LintContext) -> String {
     let block = ctx.working_set.get_block(block_id);
 
-    let Some(last_pipeline) = block.pipelines.last() else {
-        return block.output_type().to_string();
-    };
-    let Some(last_element) = last_pipeline.elements.last() else {
-        return block.output_type().to_string();
-    };
+    block
+        .pipelines
+        .last()
+        .and_then(|pipeline| pipeline.elements.last())
+        .and_then(|last_element| {
+            // Check for filepath/glob in ExternalCall or direct
+            if let Expr::ExternalCall(head, _) = &last_element.expr.expr
+                && is_filepath_expr(&head.expr)
+            {
+                return Some("path".to_string());
+            }
+            if is_filepath_expr(&last_element.expr.expr) {
+                return Some("path".to_string());
+            }
 
-    // Check for filepath/glob in ExternalCall or direct
-    if let Expr::ExternalCall(head, _) = &last_element.expr.expr
-        && is_filepath_expr(&head.expr)
-    {
-        return "path".to_string();
-    }
-    if is_filepath_expr(&last_element.expr.expr) {
-        return "path".to_string();
-    }
+            // Unwrap Collect if present and check again
+            let expr = match &last_element.expr.expr {
+                Expr::Collect(_, inner) => &inner.expr,
+                other => other,
+            };
 
-    // Unwrap Collect if present and check again
-    let expr = match &last_element.expr.expr {
-        Expr::Collect(_, inner) => &inner.expr,
-        other => other,
-    };
+            if is_filepath_expr(expr) {
+                return Some("path".to_string());
+            }
 
-    if is_filepath_expr(expr) {
-        return "path".to_string();
-    }
-
-    // Check for command-based type inference
-    if let Expr::Subexpression(block_id) | Expr::Block(block_id) = expr {
-        let inner_block = ctx.working_set.get_block(*block_id);
-        if let Some(inner_pipeline) = inner_block.pipelines.last()
-            && let Some(inner_element) = inner_pipeline.elements.last()
-            && let Expr::Call(call) = &inner_element.expr.expr
-            && let Some(output_type) = infer_command_output_type(&call.get_call_name(ctx))
-        {
-            return output_type;
-        }
-    } else if let Expr::Call(call) = expr
-        && let Some(output_type) = infer_command_output_type(&call.get_call_name(ctx))
-    {
-        return output_type;
-    }
-
-    block.output_type().to_string()
+            // Check for command-based type inference
+            match expr {
+                Expr::Subexpression(block_id) | Expr::Block(block_id) => ctx
+                    .working_set
+                    .get_block(*block_id)
+                    .pipelines
+                    .last()
+                    .and_then(|inner_pipeline| inner_pipeline.elements.last())
+                    .and_then(|inner_element| match &inner_element.expr.expr {
+                        Expr::Call(call) => infer_command_output_type(&call.get_call_name(ctx)),
+                        _ => None,
+                    }),
+                Expr::Call(call) => infer_command_output_type(&call.get_call_name(ctx)),
+                _ => None,
+            }
+        })
+        .unwrap_or_else(|| block.output_type().to_string())
 }
 
 fn infer_command_output_type(cmd_name: &str) -> Option<String> {
@@ -269,11 +267,14 @@ fn generate_typed_signature(
     needs_output_type: bool,
 ) -> String {
     log::debug!("Generating typed signature");
+
     let has_params = signature.required_positional.is_empty()
         && signature.optional_positional.is_empty()
         && signature.rest_positional.is_none()
         && signature.named.is_empty();
+
     log::debug!("Has parameters: {has_params}");
+
     let params_text = if has_params {
         String::new()
     } else {

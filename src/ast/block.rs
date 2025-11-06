@@ -29,7 +29,8 @@ pub trait BlockExt {
     ) -> HashSet<String>;
     fn uses_pipeline_input(&self, context: &LintContext) -> bool;
     fn produces_output(&self, context: &LintContext) -> bool;
-    /// Finds the `$in` variable used in this block. Example: `def foo [] { $in | each { ... } }`
+    /// Finds the `$in` variable used in this block. Example: `def foo [] { $in
+    /// | each { ... } }`
     fn find_pipeline_input_variable(&self, context: &LintContext) -> Option<VarId>;
 }
 

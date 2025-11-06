@@ -47,17 +47,27 @@ fn create_violations_for_untyped_io(
     fix: &Fix,
 ) -> Vec<RuleViolation> {
     [
-        (needs_input_type, 
-         format!("Custom command '{func_name}' uses pipeline input ($in) but lacks input type annotation"),
-         "Add pipeline input type annotation (e.g., `: string -> any` or `: list<int> -> any`)"),
-        
-        (needs_output_type,
-         format!("Custom command '{func_name}' produces output but lacks output type annotation"),
-         if uses_in {
-             "Add pipeline output type annotation (e.g., `: any -> string` or `: list<int> -> table`)"
-         } else {
-             "Add pipeline output type annotation (e.g., `: nothing -> string` or `: nothing -> list<int>`)"
-         }),
+        (
+            needs_input_type,
+            format!(
+                "Custom command '{func_name}' uses pipeline input ($in) but lacks input type \
+                 annotation"
+            ),
+            "Add pipeline input type annotation (e.g., `: string -> any` or `: list<int> -> any`)",
+        ),
+        (
+            needs_output_type,
+            format!(
+                "Custom command '{func_name}' produces output but lacks output type annotation"
+            ),
+            if uses_in {
+                "Add pipeline output type annotation (e.g., `: any -> string` or `: list<int> -> \
+                 table`)"
+            } else {
+                "Add pipeline output type annotation (e.g., `: nothing -> string` or `: nothing -> \
+                 list<int>`)"
+            },
+        ),
     ]
     .into_iter()
     .filter_map(|(needs, message, suggestion)| {
@@ -76,20 +86,24 @@ const fn is_filepath_expr(expr: &Expr) -> bool {
 
 fn check_filepath_output(expr: &Expr) -> Option<&'static str> {
     // Check ExternalCall head
-    if let Expr::ExternalCall(head, _) = expr && is_filepath_expr(&head.expr) {
+    if let Expr::ExternalCall(head, _) = expr
+        && is_filepath_expr(&head.expr)
+    {
         return Some("path");
     }
-    
+
     // Check direct expression
     if is_filepath_expr(expr) {
         return Some("path");
     }
-    
+
     // Check inside Collect
-    if let Expr::Collect(_, inner) = expr && is_filepath_expr(&inner.expr) {
+    if let Expr::Collect(_, inner) = expr
+        && is_filepath_expr(&inner.expr)
+    {
         return Some("path");
     }
-    
+
     None
 }
 
@@ -102,7 +116,7 @@ fn infer_output_type(block_id: BlockId, ctx: &LintContext) -> String {
         .and_then(|pipeline| pipeline.elements.last())
         .and_then(|last_element| {
             let expr = &last_element.expr.expr;
-            
+
             // Check for filepath expressions first
             if let Some(path_type) = check_filepath_output(expr) {
                 return Some(path_type.to_string());
@@ -116,17 +130,21 @@ fn infer_output_type(block_id: BlockId, ctx: &LintContext) -> String {
 
             // Check for command-based type inference
             match expr {
-                Expr::Subexpression(block_id) | Expr::Block(block_id) => ctx
-                    .working_set
-                    .get_block(*block_id)
-                    .pipelines
-                    .last()
-                    .and_then(|inner_pipeline| inner_pipeline.elements.last())
-                    .and_then(|inner_element| match &inner_element.expr.expr {
-                        Expr::Call(call) => infer_command_output_type(&call.get_call_name(ctx)).map(String::from),
-                        _ => None,
-                    }),
-                Expr::Call(call) => infer_command_output_type(&call.get_call_name(ctx)).map(String::from),
+                Expr::Subexpression(block_id) | Expr::Block(block_id) => {
+                    ctx.working_set
+                        .get_block(*block_id)
+                        .pipelines
+                        .last()
+                        .and_then(|inner_pipeline| inner_pipeline.elements.last())
+                        .and_then(|inner_element| match &inner_element.expr.expr {
+                            Expr::Call(call) => infer_command_output_type(&call.get_call_name(ctx))
+                                .map(String::from),
+                            _ => None,
+                        })
+                }
+                Expr::Call(call) => {
+                    infer_command_output_type(&call.get_call_name(ctx)).map(String::from)
+                }
                 _ => None,
             }
         })
@@ -280,10 +298,15 @@ fn extract_parameters_text(signature: &nu_protocol::Signature) -> String {
         .join(", ")
 }
 
-fn format_positional(name: &str, shape: &nu_protocol::SyntaxShape, optional: bool, rest: bool) -> String {
+fn format_positional(
+    name: &str,
+    shape: &nu_protocol::SyntaxShape,
+    optional: bool,
+    rest: bool,
+) -> String {
     let prefix = if rest { "..." } else { "" };
     let suffix = if optional { "?" } else { "" };
-    
+
     match shape {
         nu_protocol::SyntaxShape::Any => format!("{prefix}{name}{suffix}"),
         _ => format!("{prefix}{name}{suffix}: {}", shape_to_string(shape)),
@@ -333,7 +356,8 @@ fn check_def_call(call: &Call, ctx: &LintContext) -> Vec<RuleViolation> {
     let uses_in = block_id.uses_pipeline_input(ctx);
     let produces_out = block_id.produces_output(ctx);
     let needs_input_type = uses_in && is_untyped(signature, sig_span, ctx, |(input, _)| input);
-    let needs_output_type = produces_out && is_untyped(signature, sig_span, ctx, |(_, output)| output);
+    let needs_output_type =
+        produces_out && is_untyped(signature, sig_span, ctx, |(_, output)| output);
 
     if !needs_input_type && !needs_output_type {
         return vec![];

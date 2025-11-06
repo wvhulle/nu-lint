@@ -34,7 +34,8 @@ pub trait ExpressionExt: Traverse {
     #[allow(dead_code, reason = "Will be used later.")]
     fn any(&self, context: &LintContext, predicate: impl Fn(&Expression) -> bool) -> bool;
     fn uses_pipeline_input(&self, context: &LintContext) -> bool;
-    /// Finds the `$in` variable in this expression. Example: `$in.field` or `$in | length`
+    /// Finds the `$in` variable in this expression. Example: `$in.field` or
+    /// `$in | length`
     fn find_pipeline_input_variable(&self, context: &LintContext) -> Option<VarId>;
 }
 

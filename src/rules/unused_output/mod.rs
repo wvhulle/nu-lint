@@ -158,7 +158,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "unused_output",
         RuleCategory::Idioms,
-        Severity::Info,
+        Severity::Warning,
         "Commands producing output that is discarded with '| ignore'",
         check,
     )

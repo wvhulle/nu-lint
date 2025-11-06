@@ -124,7 +124,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "unnecessary_ignore",
         RuleCategory::Idioms,
-        Severity::Info,
+        Severity::Warning,
         "Commands that produce no output don't need '| ignore'",
         check,
     )

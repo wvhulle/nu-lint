@@ -18,8 +18,7 @@ pub trait BlockExt {
     /// Checks if block contains a specific span. Example: function body
     /// contains statement span
     fn contains_span(&self, span: Span, context: &LintContext) -> bool;
-    /// Returns all pipeline elements in this block. Example: `{ ls | where size
-    /// > 1kb }`
+    /// All pipeline elements: `{ ls | where size > 1kb }`
     fn all_elements<'a>(&self, context: &'a LintContext) -> Vec<&'a PipelineElement>;
     /// Tests if any pipeline element matches predicate. Example: finds `print`
     /// call

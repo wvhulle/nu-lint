@@ -27,8 +27,7 @@ pub trait ExpressionExt: Traverse {
     /// Extracts block ID from block-like expressions. Example: `{ $in | length
     /// }` or closure
     fn extract_block_id(&self) -> Option<BlockId>;
-    /// Checks if expression has no side effects. Example: `5`, `"text"`, or `$x
-    /// + 1`
+    /// Has no side effects: `5`, `"text"`
     fn is_likely_pure(&self) -> bool;
     /// Returns the source text of this expression's span. Example: `$in | each
     /// { ... }`

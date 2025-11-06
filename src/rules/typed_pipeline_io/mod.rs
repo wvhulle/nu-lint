@@ -4,7 +4,7 @@ use nu_protocol::{
 };
 
 use crate::{
-    ast::{block::BlockExt, call::CallExt},
+    ast::{block::BlockExt, call::CallExt, syntax_shape::SyntaxShapeExt},
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{Fix, Replacement, RuleViolation, Severity},
@@ -314,30 +314,7 @@ fn format_positional(
 }
 
 fn shape_to_string(shape: &nu_protocol::SyntaxShape) -> String {
-    use nu_protocol::SyntaxShape;
-
-    match shape {
-        SyntaxShape::Int => "int".into(),
-        SyntaxShape::String => "string".into(),
-        SyntaxShape::Float => "float".into(),
-        SyntaxShape::Boolean => "bool".into(),
-        SyntaxShape::List(inner) => format!("list<{}>", shape_to_string(inner)),
-        SyntaxShape::Table(cols) if cols.is_empty() => "table".into(),
-        SyntaxShape::Table(cols) => {
-            let col_names = cols
-                .iter()
-                .map(|(name, _)| name.as_str())
-                .collect::<Vec<_>>()
-                .join(", ");
-            format!("table<{col_names}>")
-        }
-        SyntaxShape::Record(_) => "record".into(),
-        SyntaxShape::Filepath => "path".into(),
-        SyntaxShape::Directory => "directory".into(),
-        SyntaxShape::GlobPattern => "glob".into(),
-        SyntaxShape::Any => "any".into(),
-        _ => format!("{shape:?}").to_lowercase(),
-    }
+    shape.to_type_string()
 }
 
 fn check_def_call(call: &Call, ctx: &LintContext) -> Vec<RuleViolation> {

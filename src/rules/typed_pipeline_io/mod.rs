@@ -13,33 +13,24 @@ use crate::{
 fn has_explicit_type_annotation(signature_span: Option<Span>, ctx: &LintContext) -> bool {
     signature_span.is_some_and(|span| {
         let sig_text = ctx.working_set.get_span_contents(span);
-        let sig_str = String::from_utf8_lossy(sig_text);
-        sig_str.contains("->")
+        String::from_utf8_lossy(sig_text).contains("->")
     })
 }
 
-fn has_untyped_pipeline_input(
+fn is_untyped<F>(
     signature: &nu_protocol::Signature,
     signature_span: Option<Span>,
     ctx: &LintContext,
-) -> bool {
+    selector: F,
+) -> bool
+where
+    F: Fn(&(nu_protocol::Type, nu_protocol::Type)) -> &nu_protocol::Type,
+{
     !has_explicit_type_annotation(signature_span, ctx)
         && signature
             .input_output_types
             .iter()
-            .all(|(input_type, _)| matches!(input_type, nu_protocol::Type::Any))
-}
-
-fn has_untyped_pipeline_output(
-    signature: &nu_protocol::Signature,
-    signature_span: Option<Span>,
-    ctx: &LintContext,
-) -> bool {
-    !has_explicit_type_annotation(signature_span, ctx)
-        && signature
-            .input_output_types
-            .iter()
-            .all(|(_, output_type)| matches!(output_type, nu_protocol::Type::Any))
+            .all(|types| matches!(selector(types), nu_protocol::Type::Any))
 }
 
 fn find_signature_span(call: &Call, _ctx: &LintContext) -> Option<Span> {
@@ -55,48 +46,51 @@ fn create_violations_for_untyped_io(
     needs_output_type: bool,
     fix: &Fix,
 ) -> Vec<RuleViolation> {
-    let input_violation = needs_input_type.then(|| {
-        RuleViolation::new_dynamic(
-            "typed_pipeline_io",
-            format!(
-                "Custom command '{func_name}' uses pipeline input ($in) but lacks input type \
-                 annotation"
-            ),
-            name_span,
-        )
-        .with_suggestion_static(
-            "Add pipeline input type annotation (e.g., `: string -> any` or `: list<int> -> any`)",
-        )
-        .with_fix(fix.clone())
-    });
-
-    let output_violation = needs_output_type.then(|| {
-        let suggestion = if uses_in {
-            "Add pipeline output type annotation (e.g., `: any -> string` or `: list<int> -> \
-             table`)"
-        } else {
-            "Add pipeline output type annotation (e.g., `: nothing -> string` or `: nothing -> \
-             list<int>`)"
-        };
-        RuleViolation::new_dynamic(
-            "typed_pipeline_io",
-            format!(
-                "Custom command '{func_name}' produces output but lacks output type annotation"
-            ),
-            name_span,
-        )
-        .with_suggestion_static(suggestion)
-        .with_fix(fix.clone())
-    });
-
-    input_violation
-        .into_iter()
-        .chain(output_violation)
-        .collect()
+    [
+        (needs_input_type, 
+         format!("Custom command '{func_name}' uses pipeline input ($in) but lacks input type annotation"),
+         "Add pipeline input type annotation (e.g., `: string -> any` or `: list<int> -> any`)"),
+        
+        (needs_output_type,
+         format!("Custom command '{func_name}' produces output but lacks output type annotation"),
+         if uses_in {
+             "Add pipeline output type annotation (e.g., `: any -> string` or `: list<int> -> table`)"
+         } else {
+             "Add pipeline output type annotation (e.g., `: nothing -> string` or `: nothing -> list<int>`)"
+         }),
+    ]
+    .into_iter()
+    .filter_map(|(needs, message, suggestion)| {
+        needs.then(|| {
+            RuleViolation::new_dynamic("typed_pipeline_io", message, name_span)
+                .with_suggestion_static(suggestion)
+                .with_fix(fix.clone())
+        })
+    })
+    .collect()
 }
 
 const fn is_filepath_expr(expr: &Expr) -> bool {
     matches!(expr, Expr::Filepath(..) | Expr::GlobPattern(..))
+}
+
+fn check_filepath_output(expr: &Expr) -> Option<&'static str> {
+    // Check ExternalCall head
+    if let Expr::ExternalCall(head, _) = expr && is_filepath_expr(&head.expr) {
+        return Some("path");
+    }
+    
+    // Check direct expression
+    if is_filepath_expr(expr) {
+        return Some("path");
+    }
+    
+    // Check inside Collect
+    if let Expr::Collect(_, inner) = expr && is_filepath_expr(&inner.expr) {
+        return Some("path");
+    }
+    
+    None
 }
 
 fn infer_output_type(block_id: BlockId, ctx: &LintContext) -> String {
@@ -107,25 +101,18 @@ fn infer_output_type(block_id: BlockId, ctx: &LintContext) -> String {
         .last()
         .and_then(|pipeline| pipeline.elements.last())
         .and_then(|last_element| {
-            // Check for filepath/glob in ExternalCall or direct
-            if let Expr::ExternalCall(head, _) = &last_element.expr.expr
-                && is_filepath_expr(&head.expr)
-            {
-                return Some("path".to_string());
-            }
-            if is_filepath_expr(&last_element.expr.expr) {
-                return Some("path".to_string());
+            let expr = &last_element.expr.expr;
+            
+            // Check for filepath expressions first
+            if let Some(path_type) = check_filepath_output(expr) {
+                return Some(path_type.to_string());
             }
 
-            // Unwrap Collect if present and check again
-            let expr = match &last_element.expr.expr {
+            // Unwrap Collect for command checking
+            let expr = match expr {
                 Expr::Collect(_, inner) => &inner.expr,
                 other => other,
             };
-
-            if is_filepath_expr(expr) {
-                return Some("path".to_string());
-            }
 
             // Check for command-based type inference
             match expr {
@@ -136,20 +123,20 @@ fn infer_output_type(block_id: BlockId, ctx: &LintContext) -> String {
                     .last()
                     .and_then(|inner_pipeline| inner_pipeline.elements.last())
                     .and_then(|inner_element| match &inner_element.expr.expr {
-                        Expr::Call(call) => infer_command_output_type(&call.get_call_name(ctx)),
+                        Expr::Call(call) => infer_command_output_type(&call.get_call_name(ctx)).map(String::from),
                         _ => None,
                     }),
-                Expr::Call(call) => infer_command_output_type(&call.get_call_name(ctx)),
+                Expr::Call(call) => infer_command_output_type(&call.get_call_name(ctx)).map(String::from),
                 _ => None,
             }
         })
         .unwrap_or_else(|| block.output_type().to_string())
 }
 
-fn infer_command_output_type(cmd_name: &str) -> Option<String> {
+fn infer_command_output_type(cmd_name: &str) -> Option<&'static str> {
     match cmd_name {
-        "each" | "where" | "filter" | "map" => Some("list<any>".to_string()),
-        "length" => Some("int".to_string()),
+        "each" | "where" | "filter" | "map" => Some("list<any>"),
+        "length" => Some("int"),
         _ => None,
     }
 }
@@ -165,7 +152,7 @@ fn infer_input_type(block_id: BlockId, ctx: &LintContext) -> String {
         .iter()
         .flat_map(|pipeline| &pipeline.elements)
         .find_map(|element| infer_input_from_expression(&element.expr, Some(in_var), ctx))
-        .unwrap_or_else(|| "any".to_string())
+        .map_or_else(|| "any".to_string(), String::from)
 }
 
 fn find_pipeline_input_in_block(block: &Block, ctx: &LintContext) -> Option<VarId> {
@@ -216,7 +203,7 @@ fn infer_input_from_expression(
     expr: &Expression,
     in_var: Option<VarId>,
     ctx: &LintContext,
-) -> Option<String> {
+) -> Option<&'static str> {
     let in_var_id = in_var?;
 
     match &expr.expr {
@@ -227,18 +214,16 @@ fn infer_input_from_expression(
                     .iter()
                     .any(|member| matches!(member, PathMember::String { .. }))
             {
-                Some("record".to_string())
+                Some("record")
             } else if !cell_path.tail.is_empty() {
-                Some("list".to_string())
+                Some("list")
             } else {
                 None
             }
         }
         Expr::Call(call) => match call.get_call_name(ctx).as_str() {
-            "each" | "where" | "filter" | "reduce" | "map" | "length" => {
-                Some("list<any>".to_string())
-            }
-            "lines" | "split row" => Some("string".to_string()),
+            "each" | "where" | "filter" | "reduce" | "map" | "length" => Some("list<any>"),
+            "lines" | "split row" => Some("string"),
             _ => None,
         },
         Expr::Collect(_, inner) | Expr::UnaryNot(inner) => {
@@ -295,28 +280,21 @@ fn generate_typed_signature(
     }
 }
 
-fn format_param(name: &str, shape: &nu_protocol::SyntaxShape, suffix: &str) -> String {
-    match shape {
-        nu_protocol::SyntaxShape::Any => format!("{name}{suffix}"),
-        _ => format!("{name}{suffix}: {}", shape_to_string(shape)),
-    }
-}
-
 fn extract_parameters_text(signature: &nu_protocol::Signature) -> String {
     let required = signature
         .required_positional
         .iter()
-        .map(|param| format_param(&param.name, &param.shape, ""));
+        .map(|param| format_positional(&param.name, &param.shape, false, false));
 
     let optional = signature
         .optional_positional
         .iter()
-        .map(|param| format_param(&param.name, &param.shape, "?"));
+        .map(|param| format_positional(&param.name, &param.shape, true, false));
 
     let rest = signature
         .rest_positional
         .iter()
-        .map(|rest| format_param(&rest.name, &rest.shape, "..."));
+        .map(|rest| format_positional(&rest.name, &rest.shape, false, true));
 
     let flags = signature
         .named
@@ -344,6 +322,16 @@ fn extract_parameters_text(signature: &nu_protocol::Signature) -> String {
         .chain(flags)
         .collect::<Vec<_>>()
         .join(", ")
+}
+
+fn format_positional(name: &str, shape: &nu_protocol::SyntaxShape, optional: bool, rest: bool) -> String {
+    let prefix = if rest { "..." } else { "" };
+    let suffix = if optional { "?" } else { "" };
+    
+    match shape {
+        nu_protocol::SyntaxShape::Any => format!("{prefix}{name}{suffix}"),
+        _ => format!("{prefix}{name}{suffix}: {}", shape_to_string(shape)),
+    }
 }
 
 fn shape_to_string(shape: &nu_protocol::SyntaxShape) -> String {
@@ -384,14 +372,12 @@ fn check_def_call(call: &Call, ctx: &LintContext) -> Vec<RuleViolation> {
 
     let block = ctx.working_set.get_block(block_id);
     let signature = &block.signature;
-
     let sig_span = find_signature_span(call, ctx);
+
     let uses_in = block_id.uses_pipeline_input(ctx);
-    let has_untyped_input = has_untyped_pipeline_input(signature, sig_span, ctx);
-    let has_untyped_output = has_untyped_pipeline_output(signature, sig_span, ctx);
     let produces_out = block_id.produces_output(ctx);
-    let needs_input_type = uses_in && has_untyped_input;
-    let needs_output_type = produces_out && has_untyped_output;
+    let needs_input_type = uses_in && is_untyped(signature, sig_span, ctx, |(input, _)| input);
+    let needs_output_type = produces_out && is_untyped(signature, sig_span, ctx, |(_, output)| output);
 
     if !needs_input_type && !needs_output_type {
         return vec![];

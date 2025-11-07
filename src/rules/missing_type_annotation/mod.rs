@@ -7,167 +7,31 @@ use crate::{
     violation::{Fix, Replacement, RuleViolation, Severity},
 };
 
-fn refers_to_param(expr: &Expression, param_name: &str, ctx: &LintContext) -> bool {
+fn normalize_param_name(var_span_text: &str) -> &str {
+    var_span_text
+        .trim_end_matches('?')
+        .trim_start_matches("...")
+}
+
+fn is_reference_to_param(expr: &Expression, param_name: &str, ctx: &LintContext) -> bool {
     match &expr.expr {
         Expr::Var(var_id) => {
             let var = ctx.working_set.get_variable(*var_id);
             let var_span_text = &ctx.source[var.declaration_span.start..var.declaration_span.end];
-            let var_name_normalized = var_span_text.trim_end_matches('?').trim_start_matches("...");
-            let matches = var_name_normalized == param_name;
-            log::debug!("    refers_to_param: comparing '{var_name_normalized}' (from '{var_span_text}') == '{param_name}' -> {matches}");
+            let normalized = normalize_param_name(var_span_text);
+            let matches = normalized == param_name;
+            log::debug!(
+                "    is_reference: '{normalized}' (from '{var_span_text}') == '{param_name}' -> \
+                 {matches}"
+            );
             matches
         }
-        Expr::FullCellPath(cell_path) => refers_to_param(&cell_path.head, param_name, ctx),
+        Expr::FullCellPath(cell_path) => is_reference_to_param(&cell_path.head, param_name, ctx),
         _ => false,
     }
 }
 
-fn infer_param_type_from_usage(
-    param_name: &str,
-    body_block_id: nu_protocol::BlockId,
-    ctx: &LintContext,
-) -> &'static str {
-    let block = ctx.working_set.get_block(body_block_id);
-    log::debug!("Inferring type for parameter '{param_name}' in block");
-
-    for pipeline in &block.pipelines {
-        if let Some(value) = infer_from_pipe_into(param_name, ctx, pipeline) {
-            log::debug!("Found type from pipe: {value}");
-            return value;
-        }
-
-        for element in &pipeline.elements {
-            if let Some(inferred) = check_expr_for_type_hint(&element.expr, param_name, ctx) {
-                log::debug!("Found type hint: {inferred}");
-                return inferred;
-            }
-        }
-    }
-
-    log::debug!("No type hint found, defaulting to 'any'");
-    "any"
-}
-
-fn infer_from_pipe_into(
-    param_name: &str,
-    ctx: &LintContext<'_>,
-    pipeline: &Pipeline,
-) -> Option<&'static str> {
-    for i in 0..pipeline.elements.len() {
-        if i > 0 && refers_to_param(&pipeline.elements[i - 1].expr, param_name, ctx) {
-            // Parameter is input to this command
-            if let Expr::Call(call) = &pipeline.elements[i].expr.expr
-                && let Some(inferred) = infer_type_from_command(&call.get_call_name(ctx))
-            {
-                return Some(inferred);
-            }
-        }
-    }
-    None
-}
-
-fn check_expr_for_type_hint(
-    expr: &Expression,
-    param_name: &str,
-    ctx: &LintContext,
-) -> Option<&'static str> {
-    log::debug!(
-        "Checking expression for type hint, param: {param_name}, expr: {:?}",
-        &expr.expr
-    );
-
-    let result = match &expr.expr {
-        Expr::Call(call) => {
-            let cmd_name = call.get_call_name(ctx);
-            log::debug!("  Found Call to '{cmd_name}'");
-
-            if refers_to_param(expr, param_name, ctx) {
-                log::debug!("  Expression refers to param, inferring from command");
-                infer_type_from_command(&cmd_name)
-            } else {
-                log::debug!("  Checking call arguments");
-                call.arguments.iter().find_map(|arg| match arg {
-                    Argument::Positional(arg_expr) | Argument::Unknown(arg_expr) => {
-                        check_expr_for_type_hint(arg_expr, param_name, ctx)
-                    }
-                    _ => None,
-                })
-            }
-        }
-        Expr::FullCellPath(cell_path) => {
-            let refers = refers_to_param(&cell_path.head, param_name, ctx);
-            let has_tail = !cell_path.tail.is_empty();
-            log::debug!("  FullCellPath: refers={refers}, has_tail={has_tail}");
-
-            if refers && has_tail {
-                Some("record")
-            } else {
-                check_expr_for_type_hint(&cell_path.head, param_name, ctx)
-            }
-        }
-        Expr::BinaryOp(left, op_expr, right) if matches!(&op_expr.expr, Expr::Operator(op) if matches!(op, Operator::Math(_) | Operator::Comparison(_))) =>
-        {
-            let left_refers = refers_to_param(left, param_name, ctx);
-            let right_refers = refers_to_param(right, param_name, ctx);
-            log::debug!(
-                "  BinaryOp (math/comparison): left_refers={left_refers}, right_refers={right_refers}"
-            );
-
-            if left_refers || right_refers {
-                Some("int")
-            } else {
-                check_expr_for_type_hint(left, param_name, ctx)
-                    .or_else(|| check_expr_for_type_hint(right, param_name, ctx))
-            }
-        }
-        Expr::BinaryOp(left, _, right) => {
-            log::debug!("  BinaryOp (other)");
-            check_expr_for_type_hint(left, param_name, ctx)
-                .or_else(|| check_expr_for_type_hint(right, param_name, ctx))
-        }
-        Expr::Subexpression(block_id) | Expr::Block(block_id) | Expr::Closure(block_id) => {
-            log::debug!("  Recursing into block");
-            let block = ctx.working_set.get_block(*block_id);
-
-            block
-                .pipelines
-                .iter()
-                .find_map(|pipeline| {
-                    infer_from_pipe_into(param_name, ctx, pipeline).or_else(|| {
-                        pipeline
-                            .elements
-                            .iter()
-                            .find_map(|element| check_expr_for_type_hint(&element.expr, param_name, ctx))
-                    })
-                })
-        }
-        Expr::MatchBlock(match_patterns) => {
-            log::debug!("  MatchBlock with {} patterns", match_patterns.len());
-            match_patterns
-                .iter()
-                .find_map(|(_, block_expr)| check_expr_for_type_hint(block_expr, param_name, ctx))
-        }
-        Expr::Collect(_, inner) | Expr::UnaryNot(inner) => {
-            log::debug!("  Collect/UnaryNot, checking inner");
-            check_expr_for_type_hint(inner, param_name, ctx)
-        }
-        other => {
-            log::debug!(
-                "  Unhandled expression type: {:?}",
-                std::mem::discriminant(other)
-            );
-            None
-        }
-    };
-
-    if let Some(inferred) = result {
-        log::debug!("  -> Inferred type: {inferred}");
-    }
-
-    result
-}
-
-fn infer_type_from_command(cmd_name: &str) -> Option<&'static str> {
+fn infer_type_from_command_name(cmd_name: &str) -> Option<&'static str> {
     match cmd_name {
         "str trim" | "str replace" | "str upcase" | "str downcase" | "str contains" => {
             Some("string")
@@ -175,6 +39,120 @@ fn infer_type_from_command(cmd_name: &str) -> Option<&'static str> {
         "each" | "where" | "filter" | "reduce" | "append" | "prepend" => Some("list"),
         _ => None,
     }
+}
+
+fn infer_type_from_pipeline(
+    param_name: &str,
+    pipeline: &Pipeline,
+    ctx: &LintContext,
+) -> Option<&'static str> {
+    for i in 0..pipeline.elements.len() {
+        if i > 0 && is_reference_to_param(&pipeline.elements[i - 1].expr, param_name, ctx)
+            && let Expr::Call(call) = &pipeline.elements[i].expr.expr {
+                let cmd_name = call.get_call_name(ctx);
+                if let Some(inferred) = infer_type_from_command_name(&cmd_name) {
+                    return Some(inferred);
+                }
+            }
+    }
+    None
+}
+
+fn infer_type_from_block(
+    param_name: &str,
+    block_id: nu_protocol::BlockId,
+    ctx: &LintContext,
+) -> Option<&'static str> {
+    let block = ctx.working_set.get_block(block_id);
+
+    block.pipelines.iter().find_map(|pipeline| {
+        infer_type_from_pipeline(param_name, pipeline, ctx).or_else(|| {
+            pipeline
+                .elements
+                .iter()
+                .find_map(|element| infer_type_from_expr(&element.expr, param_name, ctx))
+        })
+    })
+}
+
+fn infer_type_from_expr(
+    expr: &Expression,
+    param_name: &str,
+    ctx: &LintContext,
+) -> Option<&'static str> {
+    log::debug!("Checking expr for param '{param_name}': {:?}", &expr.expr);
+
+    let result = match &expr.expr {
+        Expr::Call(call) => {
+            let cmd_name = call.get_call_name(ctx);
+            log::debug!("  Call: '{cmd_name}'");
+
+            if is_reference_to_param(expr, param_name, ctx) {
+                infer_type_from_command_name(&cmd_name)
+            } else {
+                call.arguments.iter().find_map(|arg| match arg {
+                    Argument::Positional(arg_expr) | Argument::Unknown(arg_expr) => {
+                        infer_type_from_expr(arg_expr, param_name, ctx)
+                    }
+                    _ => None,
+                })
+            }
+        }
+        Expr::FullCellPath(cell_path) => {
+            let has_tail = !cell_path.tail.is_empty();
+            let is_ref = is_reference_to_param(&cell_path.head, param_name, ctx);
+
+            if is_ref && has_tail {
+                Some("record")
+            } else {
+                infer_type_from_expr(&cell_path.head, param_name, ctx)
+            }
+        }
+        Expr::BinaryOp(left, op_expr, right)
+            if matches!(&op_expr.expr, Expr::Operator(op) if matches!(op, Operator::Math(_) | Operator::Comparison(_))) =>
+        {
+            if is_reference_to_param(left, param_name, ctx)
+                || is_reference_to_param(right, param_name, ctx)
+            {
+                Some("int")
+            } else {
+                infer_type_from_expr(left, param_name, ctx)
+                    .or_else(|| infer_type_from_expr(right, param_name, ctx))
+            }
+        }
+        Expr::BinaryOp(left, _, right) => infer_type_from_expr(left, param_name, ctx)
+            .or_else(|| infer_type_from_expr(right, param_name, ctx)),
+        Expr::Subexpression(block_id) | Expr::Block(block_id) | Expr::Closure(block_id) => {
+            log::debug!("  Recursing into block");
+            infer_type_from_block(param_name, *block_id, ctx)
+        }
+        Expr::MatchBlock(patterns) => patterns
+            .iter()
+            .find_map(|(_, block_expr)| infer_type_from_expr(block_expr, param_name, ctx)),
+        Expr::Collect(_, inner) | Expr::UnaryNot(inner) => {
+            infer_type_from_expr(inner, param_name, ctx)
+        }
+        _ => None,
+    };
+
+    if let Some(inferred) = result {
+        log::debug!("  -> Inferred: {inferred}");
+    }
+
+    result
+}
+
+fn infer_param_type(
+    param_name: &str,
+    body_block_id: nu_protocol::BlockId,
+    ctx: &LintContext,
+) -> &'static str {
+    log::debug!("Inferring type for parameter '{param_name}'");
+
+    infer_type_from_block(param_name, body_block_id, ctx).unwrap_or_else(|| {
+        log::debug!("  Defaulting to 'any'");
+        "any"
+    })
 }
 
 fn generate_fix(
@@ -191,6 +169,22 @@ fn generate_fix(
     )
 }
 
+fn format_param_with_type(
+    name: &str,
+    shape: &nu_protocol::SyntaxShape,
+    prefix: &str,
+    suffix: &str,
+    body_block_id: nu_protocol::BlockId,
+    ctx: &LintContext,
+) -> String {
+    let type_str = if *shape == nu_protocol::SyntaxShape::Any {
+        infer_param_type(name, body_block_id, ctx)
+    } else {
+        &shape.to_type_string()
+    };
+    format!("{prefix}{name}{suffix}: {type_str}")
+}
+
 fn generate_typed_signature(
     signature: &nu_protocol::Signature,
     body_block_id: nu_protocol::BlockId,
@@ -199,30 +193,19 @@ fn generate_typed_signature(
     let params: Vec<String> = signature
         .required_positional
         .iter()
-        .map(|param| {
-            let type_str = if param.shape == nu_protocol::SyntaxShape::Any {
-                infer_param_type_from_usage(&param.name, body_block_id, ctx).to_string()
-            } else {
-                param.shape.to_type_string()
-            };
-            format!("{}: {}", param.name, type_str)
-        })
-        .chain(signature.optional_positional.iter().map(|param| {
-            let type_str = if param.shape == nu_protocol::SyntaxShape::Any {
-                infer_param_type_from_usage(&param.name, body_block_id, ctx).to_string()
-            } else {
-                param.shape.to_type_string()
-            };
-            format!("{}?: {}", param.name, type_str)
-        }))
-        .chain(signature.rest_positional.iter().map(|param| {
-            let type_str = if param.shape == nu_protocol::SyntaxShape::Any {
-                infer_param_type_from_usage(&param.name, body_block_id, ctx).to_string()
-            } else {
-                param.shape.to_type_string()
-            };
-            format!("...{}: {}", param.name, type_str)
-        }))
+        .map(|p| format_param_with_type(&p.name, &p.shape, "", "", body_block_id, ctx))
+        .chain(
+            signature
+                .optional_positional
+                .iter()
+                .map(|p| format_param_with_type(&p.name, &p.shape, "", "?", body_block_id, ctx)),
+        )
+        .chain(
+            signature
+                .rest_positional
+                .iter()
+                .map(|p| format_param_with_type(&p.name, &p.shape, "...", "", body_block_id, ctx)),
+        )
         .collect();
 
     format!("[{}]", params.join(", "))

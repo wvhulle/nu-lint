@@ -19,11 +19,6 @@ pub struct LintContext<'a> {
 
 impl LintContext<'_> {
     /// Collect all rule violations using a closure over expressions
-    /// (Traverse-based)
-    ///
-    /// This method uses Nushell's upstream `Traverse` trait to walk the AST
-    /// and collect rule violations. The collector function is called for each
-    /// expression in the AST and should return a vector of rule violations.
     pub(crate) fn collect_rule_violations<F>(&self, collector: F) -> Vec<RuleViolation>
     where
         F: Fn(&Expression, &Self) -> Vec<RuleViolation>,

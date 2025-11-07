@@ -1,0 +1,102 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'nu_lint'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=nu-lint"
+                ],
+                "filter": {
+                    "name": "nu_lint",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'nu-lint'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=nu-lint",
+                    "--package=nu-lint"
+                ],
+                "filter": {
+                    "name": "nu-lint",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'nu-lint'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=nu-lint",
+                    "--package=nu-lint"
+                ],
+                "filter": {
+                    "name": "nu-lint",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'config_linting'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=config_linting",
+                    "--package=nu-lint"
+                ],
+                "filter": {
+                    "name": "config_linting",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug benchmark 'prefer_builtin_rules'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bench=prefer_builtin_rules",
+                    "--package=nu-lint"
+                ],
+                "filter": {
+                    "name": "prefer_builtin_rules",
+                    "kind": "bench"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

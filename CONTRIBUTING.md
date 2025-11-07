@@ -72,14 +72,14 @@ cargo +nightly fmt
 Quick benchmark for performance testing:
 
 ```bash
-cargo bench --bench prefer_builtin_rules prefer_builtin_small
+cargo bench --bench lint_performance lint_small_file
 ```
 
 Comparative benchmarks
 
 ```bash
 git checkout main
-cargo bench -- --save-baseline main
+cargo bench --bench lint_performance lint_with_violations -- --save-baseline main
 git checkout branch
-cargo bench -- --baseline main
+cargo bench --bench lint_performance lint_with_violations -- --baseline main
 ```

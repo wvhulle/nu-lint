@@ -1,431 +1,178 @@
-# AeroSpace is an i3-like tiling window manager for macOS
-export extern "aerospace" [
-    command?:string
-    --help(-h)              # Print help
-    --version(-v)           # Print the current version
-]
+use argx
+use utils.nu *
 
-def "nu-complete aerospace-list-all-workspaces" [] {
-    ^aerospace list-workspaces --all
-    | lines
+export def "nu-complete kube ctx" [] {
+    let k = (kube-config)
+    let cache = $'($env.HOME)/.cache/nu-complete/k8s/($k.path | path basename).json'
+    let data = ensure-cache-by-lines $cache $k.path { ||
+        let clusters = $k.data | get clusters | select name cluster.server
+        let data = $k.data
+            | get contexts
+            | reduce -f {completion:[], mx_ns: 0, mx_cl: 0} {|x, a|
+                let ns = if ($x.context.namespace? | is-empty) { '' } else { $x.context.namespace }
+                let max_ns = $ns | str length
+                let cluster = $"($x.context.user)@($clusters | where name == $x.context.cluster | get cluster_server.0)"
+                let max_cl = $cluster | str length
+                $a
+                | upsert mx_ns (if $max_ns > $a.mx_ns { $max_ns } else $a.mx_ns)
+                | upsert mx_cl (if $max_cl > $a.mx_cl { $max_cl } else $a.mx_cl)
+                | upsert completion ($a.completion | append {value: $x.name, ns: $ns, cluster: $cluster})
+            }
+        {completion: $data.completion, max: {ns: $data.mx_ns, cluster: $data.mx_cl}}
+    }
+
+    $data.completion | each {|x|
+        let ns = $x.ns | fill -a l -w $data.max.ns -c ' '
+        let cl = $x.cluster | fill -a l -w $data.max.cluster -c ' '
+        {value: $x.value, description: $"\t($ns) ($cl)"}
+    }
 }
 
-# Balance sizes of all windows in the current workspace
-export extern "aerospace balance-sizes" [
-    --help(-h)              # Print help
-    --workspace:int@"nu-complete aerospace-list-all-workspaces"        # Act on the specified workspace instead of the focused workspace
-]
-
-def "nu-complete aerospace-list-all-windows" [] {
-    aerospace list-windows --all
-    | lines
-    | split column "|" -n 3
-    | rename window-id application title
-    | str trim
+export def "nu-complete kube ns" [] {
+    kubectl get namespaces
+    | from ssv -a
+    | each {|x|
+        {value: $x.NAME, description: $"($x.AGE)\t($x.STATUS)"}
+    }
 }
 
-# Close the focused window.
-export extern "aerospace close" [
-    --help(-h)              # Print help
-    --quit-if-last-window   # Quit the app instead of closing if it's the last window of the app
-    --window-id:int@"nu-complete aerospace-list-all-windows"         # Act on the specified window instead of the focused window
-]
+export def "nu-complete kube kind" [] {
+    let ctx = (kube-config)
+    let cache = $'($env.HOME)/.cache/nu-complete/k8s-api-resources/($ctx.data.current-context).json'
+    ensure-cache-by-lines $cache $ctx.path {||
+        kubectl api-resources | from ssv -a
+        | each {|x| {value: $x.NAME description: $x.SHORTNAMES} }
+        | append (kubectl get crd | from ssv -a | get NAME | wrap value)
+    }
+}
 
-# On the focused workspace, close all windows but current
-export extern "aerospace close-all-windows-but-current" [
-    --help(-h)              # Print help
-    --quit-if-last-window   # Quit the apps instead of closing them if it's their last window
-]
+export def "nu-complete kube res" [context: string, offset: int] {
+    let ctx = $context | argx parse
+    let kind = $ctx | get _args.1
+    let ns = if ($ctx.namespace? | is-empty) { [] } else { [-n $ctx.namespace] }
+    kubectl get ...$ns $kind | from ssv -a | get NAME
+}
 
-# Query AeroSpace config options
-export extern "aerospace config" [
-    --help(-h)              # Print help
-    --get:string            # Get the value for a given key. You can inspect available keys with --major-keys or --all-keys
-    --major-keys            # Print major keys
-    --all-keys              # Print all available keys recursively
-    --config-path           # Print absolute path to the loaded config
-]
+export def "nu-complete kube res via name" [context: string, offset: int] {
+    let ctx = $context | argx parse
+    let kind = $env.KUBERNETES_RESOURCE_ABBR | get ($ctx | get _args.0 | str substring (-1..))
+    let ns = if ($ctx.namespace? | is-empty) { [] } else { [-n $ctx.namespace] }
+    kubectl get ...$ns $kind | from ssv -a | get NAME
+}
 
-def "nu-complete aerospace-config-list-all-keys" [] {
-    aerospace config --all-keys
-    | lines
+export def "nu-complete kube jsonpath" [context: string] {
+    let ctx = $context | argx parse
+    let kind = $ctx | get _args.1
+    let res = $ctx | get _args.2
+    let path = $ctx.jsonpath?
+    let ns = if ($ctx.namespace? | is-empty) { [] } else { [-n $ctx.namespace] }
+    mut r = []
+    if ($path | is-empty) {
+        if ($context | str ends-with '-p ') {
+            $r = ['.']
+        } else {
+            $r = ['']
+        }
+    } else if ($path | str starts-with '.') {
+        let row = $path | split row '.'
+        let p = $row  | slice ..-2 | str join '.'
+        if ($p | is-empty) {
+            $r = ( kubectl get ...$ns -o json $kind $res
+                 | from json
+                 | columns
+                 | each {|x| $'($p).($x)'}
+                 )
+        } else {
+            let m = kubectl get ...$ns $kind $res $"--output=jsonpath={($p)}" | from json
+            let l = $row | last
+            let c = do -i {$m | get $l}
+            if ($c | is-not-empty) and ($c | describe | str substring 0..5) == 'table' {
+                $r = (0..(($c | length) - 1) | each {|x| $'($p).($l)[($x)]'})
+            } else {
+                $r = ($m | columns | each {|x| $'($p).($x)'})
+            }
+        }
+    } else {
+        $r = ['']
+    }
+    $r
 }
 
 
-# Interactive command to record Accessibility API debug information to create bug reports
-export extern "aerospace debug-windows" [
-    --help(-h)              # Print help
-    --window-id:int@"nu-complete aerospace-list-all-windows"         # Print debug information of the specified window right away. Usage of this flag disables interactive mode
-]
-
-def "nu-complete aerospace-enable" [] {
-    ['toggle', 'on', 'off']
+export def "nu-complete kube nodes" [context: string, offset: int] {
+    let ctx = $context | argx parse
+    kubectl get nodes -o wide | from ssv -a
+    | each {|x| {value: $x.NAME, description: $"($x.INTERNAL-IP)(char tab)($x.ROLES)"} }
 }
 
-# Temporarily disable window management
-export extern "aerospace enable" [
-    --help(-h)              # Print help
-    command:string@"nu-complete aerospace-enable"
-]
-
-# Run /bin/bash -c '<bash-script>', and don’t wait for the command termination. Stdout, stderr and exit code are ignored.
-export extern "aerospace exec-and-forget" [
-    command:string
-]
-
-# Flatten the tree of the focused workspace
-export extern "aerospace flatten-workspace-tree" [
-    --help(-h)      # Print help
-    --workspace:int@"nu-complete aerospace-list-all-workspaces"        # Act on the specified workspace instead of the focused workspace
-]
-
-def "nu-complete aerospace-focus" [] {
-    ['left','down','up','right']
+export def "nu-complete kube deploys" [context: string, offset: int] {
+    let ctx = $context | argx parse
+    let ns = $ctx.namespace? | with-flag -n
+    kubectl get ...$ns deployments | from ssv -a | get NAME
 }
 
-# Set focus to the nearest window in the given direction
-export extern "aerospace focus" [
-    --help(-h)      # Print help
-    command?:string@"nu-complete aerospace-focus"
-    --window-id:int@"nu-complete aerospace-list-all-windows"
-    --dfs-index:int
-    # --dfs-index:int@"nu-complete aerospace-list-dfs-indices"
-]
-
-def "nu-complete aerospace-focus-boundaries" [] {
-    ['workspace', 'all-monitors-outer-frame']
+export def "nu-complete kube deploys and pods" [context: string, offset: int] {
+    let ctx = $context | argx parse
+    let ns = $ctx.namespace? | with-flag -n
+    let all_pods = ($ctx.a? | default false) or ($ctx.all-pods? | default false)
+    if $all_pods or ($ctx._pos.pod? | default '' | str ends-with '-') {
+        kubectl get ...$ns pods | from ssv -a | get NAME
+    } else {
+        kubectl get ...$ns deployments | from ssv -a | get NAME | each {|x| $"($x)-"}
+    }
 }
 
-def "nu-complete aerospace-focus-boundaries-action" [] {
-    ['stop', 'wrap-around-the-workspace', 'wrap-around-all-monitors']
+export def "nu-complete kube ctns" [context: string, offset: int] {
+    let ctx = $context | argx parse
+    let ns = $ctx.namespace? | with-flag -n
+    let pod = $ctx | get _args.1
+    kubectl get ...$ns pod $pod -o jsonpath={.spec.containers[*].name} | split row ' '
 }
 
-# Switch between the current and previously foxused elements back and forth. The element is either a window or an empty workspace
-export extern "aerospace focus-back-and-forth" [
-    --help(-h)      # Print help
-]
-
-def "nu-complete aerospace-focus-monitor-numbers" [] {
-    ^aerospace list-monitors -count
-    | 1..$in
-    | into string
+export def "nu-complete port forward type" [] {
+    [pod svc]
 }
 
-def "nu-complete aerospace-focus-monitor-regex" [] {
-    ^aerospace list-monitors
-    | parse "{number} | {name}" 
-    | str trim
-    | get name
+export def "nu-complete kube port" [context: string, offset: int] {
+    let ctx = $context | argx parse
+    let kind = $ctx | get _args.1
+    let ns = if ($ctx.namespace? | is-empty) { [] } else { [-n $ctx.namespace] }
+    let res = $ctx | get _args.2
+    if ($kind | str starts-with 's') {
+        kubectl get ...$ns svc $res --output=jsonpath="{.spec.ports}"
+        | from json
+        | each {|x| {value: $x.port  description: $x.name} }
+    } else {
+        kubectl get ...$ns pods $res --output=jsonpath="{.spec.containers[].ports}"
+        | from json
+        | each {|x| {value: $x.containerPort description: $x.name?} }
+    }
 }
 
-def "nu-complete aerospace-focus-monitor" [] {
+export def "nu-complete kube cp" [cmd: string, offset: int] {
+    let ctx = $cmd | str substring ..$offset | argx parse
+    let p = $ctx._args | get (($ctx._args | length) - 1)
+    let ns = $ctx.namespace? | with-flag -n
+    let c = $ctx.container? | with-flag -c
+    let ctn = kubectl get pod ...$ns | from ssv -a | each {|x| {description: $x.READY value: $"($x.NAME):" }}
+    let n = $p | split row ':'
+    if $"($n | get 0):" in ($ctn | get value) {
+        kubectl exec ...$ns ($n | get 0) ...$c -- sh -c $"ls -dp ($n | get 1)*"
+        | lines
+        | each {|x| $"($n | get 0):($x)"}
+    } else {
+        let files = do -i { ls -a ($"($p)*" | into glob)
+            | each {|x| if $x.type == dir { $"($x.name)/"} else { $x.name }}
+        }
+        $files | append $ctn
+    }
+}
+
+export def "nu-complete kube kind with image" [] {
     [
-        'left',
-        'down',
-        'up',
-        'right',
-        'next',
-        'prev',
-        'main',
-        'secondary',
-        ...(nu-complete aerospace-focus-monitor-numbers),
-        ...(nu-complete aerospace-focus-monitor-regex)
+        deployment daemonset statefulset
+        pod replicationcontroller
+        cronjob replicaset
     ]
 }
-
-# Focus monitor by relative direction, by order, or by pattern
-export extern "aerospace focus-monitor" [
-    --help(-h)      # Print help
-    command:string@"nu-complete aerospace-focus-monitor"
-]
-
-
-def "nu-complete aerospace-fullscreen" [] {
-    [
-        "on",
-        "off"
-    ]
-}
-
-# Toggle the fullscreen mode for the focused window
-export extern "aerospace fullscreen" [
-    --help(-h)      # Print help
-    --no-outer-gaps # Remove the outer gaps when in fullscreen mode
-    --window-id:int@"nu-complete aerospace-list-all-windows"      # Act on the specified window instead of the focues window
-    command?:string@"nu-complete aerospace-fullscreen"
-]
-
-
-def "nu-complete aerospace-join-with" [] {
-    [
-        "left",
-        "down",
-        "up",
-        "right"
-    ]
-}
-
-# Put the focused window and the nearest node in the specified direction under a common parent container
-export extern "aerospace join-with" [
-    --help(-h)      # Print help
-    --window-id:int@"nu-complete aerospace-list-all-windows"      # Act on the specified window instead of the focues window
-    command:string@"nu-complete aerospace-join-with"
-]
-
-def "nu-complete aerospace-layout" [] {
-    [
-        "h_tiles",
-        "v_tiles",
-        "h_accordion",
-        "v_accordion",
-        "tiles",
-        "accordion",
-        "horizontal",
-        "vertical",
-        "tiling",
-        "floating"
-    ]
-}
-
-
-
-# Print the list of running applications that appears in the Dock and may have a user interface
-export extern "aerospace list-apps" [
-    --help(-h)      # Print help
-    --macos-native-hidden # Filter results to on ly print hidden applications. [no] inverts the condition
-    --format:string # Specify output format. See "Output Format" section for more details. Incompatible with --count
-    # --format:string@"nu-complete aerospace-output-format-apps" # Specify output format. See "Output Format" section for more details. Incompatible with --count
-    --count         # Output only the number of apps. Incompatible with --format, --json
-    --json          # Output in JSON format. Can be used in combination with --format to specify which data to include into the json. Incompatible with --count
-]
-
-# List environment variables that exec-* commands and callbacks are run with
-export extern "aerospace list-exec-env-vars" [
-    --help(-h)      # Print help
-]
-
-# Print a list of modes currently specified in the configuration
-export extern "aerospace list-modes" [
-    --help(-h)      # Print help
-    --current       # only print the currently active mode
-]
-
-
-
-# Print monitors that satisfy conditions
-export extern "aerospace list-monitors" [
-    --help(-h)      # Print help
-    --focused       # Filter results to only print the focused monitor. [no] inverts the condition
-    --mouse         # Filter results to only print the monitor with the mouse. [no] inverts the condition
-    --format:string # Specify output format. See "Output Format" section for more details. Incompatible with --count
-    # --format:string@"nu-complete aerospace-output-format-monitors" # Specify output format. See "Output Format" section for more details. Incompatible with --count
-    --count         # Output only the number of workspaces. Incompatible with --format, --json
-    --json          # Output in JSON format. Can be used in combination with --format to specify which data to include into the json. Incompatible with --count
-]
-
-
-# Print windows that satisfy conditions
-export extern "aerospace list-windows" [
-    --help(-h)      # Print help
-    --all           # Alias for --monitor all. Use with caution. Check `man aerospace-list-windows` for more details.
-    --focused       # Print the focused window. Please note that it is possible for no window to be in focus. In that case, an error is reported.
-    --workspace     #Filter results to print windows that belong to either of specified workspaces.
-    --monitor     #Filter results to print windows that belong to either of specified monitors.
-    --pid           #Filter results to only print windows that belong to the Application with specified <pid>
-    --app-bundle-id           #Filter results to only print windows that belong to the Application with specified Bundle ID
-    --format:string # Specify output format. See "Output Format" section for more details. Incompatible with --count
-    # --format:string@"nu-complete aerospace-output-format-windows" # Specify output format. See "Output Format" section for more details. Incompatible with --count
-    --count         # Output only the number of workspaces. Incompatible with --format, --json
-    --json          # Output in JSON format. Can be used in combination with --format to specify which data to include into the json. Incompatible with --count
-]
-
-# Print workspaces that satisfy conditions
-export extern "aerospace list-workspaces" [
-    --help(-h)      # Print help
-    --all           # Alias for --monitor all. Use with caution. Check `man aerospace-list-windows` for more details.
-    --focused       # Alias for --monitor focused --visible. Always prints a single workspace
-    --monitor       # Filter results to print windows that belong to either of specified monitors.
-    --visible       # Filter results to only print currently visible workspaces. [no] inverts the condition. Several workspaces can be visible in multi-monitor setup
-    --empty         # Filter results to only print empty workspaces. [no] inverts the condition.
-    --format:string # Specify output format. See "Output Format" section for more details. Incompatible with --count
-    # --format:string@"nu-complete aerospace-output-format-windows" # Specify output format. See "Output Format" section for more details. Incompatible with --count
-    --count         # Output only the number of workspaces. Incompatible with --format, --json
-    --json          # Output in JSON format. Can be used in combination with --format to specify which data to include into the json. Incompatible with --count
-]
-
-def "nu-complete aerospace-macos-native-fullscreen" [] {
-    [
-        "on",
-        "off"
-    ]
-}
-
-# Toggle macOS fullscreen for the focused window
-export extern "aerospace macos-native-fullscreen" [
-    --help(-h)      # Print help
-    --window-id:int@"nu-complete aerospace-list-all-windows"         # Act on the specified window instead of the focused window
-    command?:string@"nu-complete aerospace-macos-native-fullscreen"
-]
-
-# Minimize focused window
-export extern "aerospace macos-native-minimize" [
-    --help(-h)      # Print help
-    --window-id:int@"nu-complete aerospace-list-all-windows"         # Act on the specified window instead of the focused window
-]
-
-def "nu-complete aerospace-binding-mode" [] {
-    ^aerospace list-modes 
-    | lines
-}
-
-# Activate the specified binding mode
-export extern "aerospace mode" [
-    --help(-h)      # Print help
-    command:string@"nu-complete aerospace-binding-mode"
-]
-
-def "nu-complete aerospace-move" [] {
-    [
-        "left",
-        "down",
-        "up",
-        "right"
-    ]
-}
-
-# Move the focused window in the given direction
-export extern "aerospace move" [
-    --help(-h)      # Print help
-    command:string@"nu-complete aerospace-move"
-    --window-id:int@"nu-complete aerospace-list-all-windows"         # Act on the specified window instead of the focused window
-]
-
-def "nu-complete aerospace-move-mouse" [] {
-    [
-        "monitor-lazy-center",
-        "monitor-force-center",
-        "window-lazy-center",
-        "window-force-center"
-    ]
-}
-
-# Move mouse to the requested position
-export extern "aerospace move-mouse" [
-    --help(-h)      # Print help
-    command:string@"nu-complete aerospace-move-mouse"
-]
-
-# Move window to monitor targeted by relative direction, by order, or by pattern
-export extern "aerospace move-node-to-monitor" [
-    --help(-h)      # Print help
-    --wrap-around   # Make it possible to jump between first and last workspaces using (next|prev)
-    --fail-if-noop  # Exit with non-zero code if moving a window to a workspace it already belongs to
-    --focus-follows-window  #Make sure that the window in question receives focus after moving.
-    --window-id:int@"nu-complete aerospace-list-all-windows"         # Act on the specified window instead of the focused window
-    command:string
-]
-
-# Move the focused window to the specified workspace
-export extern "aerospace move-node-to-workspace" [
-    --help(-h)      # Print help
-    --wrap-around   # Make it possible to jump between first and last workspaces using (next|prev)
-    --fail-if-noop  # Exit with non-zero code if moving a window to a workspace it already belongs to
-    --focus-follows-window  #Make sure that the window in question receives focus after moving.
-    --window-id:int@"nu-complete aerospace-list-all-windows"         # Act on the specified window instead of the focused window
-    command:string
-]
-
-# Move workspace to monitor targeted by relative direction, by order, or by pattern. Focus follows the focused workspace, so the workspace stays focused.
-export extern "aerospace move-workspace-to-monitor" [
-    --help(-h)      # Print help
-    --wrap-around   # Make it possible to jump between first and last monitors
-    --workspace     # Act on the specified workspace instead of the focused workspace
-]
-
-# Reload currently active config
-export extern "aerospace reload-config" [
-    --help(-h)      # Print help
-    --no-gui        # Don't open GUI to show error. Only use stdout to report errors
-    --dry-run       # Validate the config and show errors (if any) but don't reload the config
-]
-
-def "nu-complete aerospace-resize" [] {
-    [
-        "smart",
-        "smart-opposite",
-        "width",
-        "height",
-    ]
-}
-
-# Resize the focused window
-export extern "aerospace-resize" [
-    --help(-h)      # Print help
-    --window-id:int@"nu-complete aerospace-list-all-windows"         # Act on the specified window instead of the focused window
-    command:string@"nu-complete aerospace-resize"
-]
-
-def "nu-complete aerospace-split" [] {
-    [
-        "horizontal",
-        "vertical",
-        "opposite"
-    ]
-}
-
-# split command exist solely for compatibility with i3. Unless you’re hardcore i3 user who knows what they are doing, it’s recommended to use join-with
-export extern "aerospace split" [
-    --help(-h)      # Print help
-    --window-id:int@"nu-complete aerospace-list-all-windows"         # Act on the specified window instead of the focused window
-    command:string@"nu-complete aerospace-split"
-]
-
-# Move the requested workspace to the focused monitor. The moved workspace becomes focused. The behavior is identical to Xmonad.
-export extern "aerospace summon-workspace" [
-    --help(-h)      # Print help
-    --fail-if-noop  # Exit with non-zero code if moving a window to a workspace it already belongs to
-    command:string
-]
-
-# Trigger AeroSpace binding as if it was pressed by user
-export extern "aerospace trigger-binding" [
-    --help(-h)      # Print help
-    command:string
-    --mode:string   # Moe to search <binding> in
-]
-
-def "nu-complete aerospace-volume" [] {
-    [
-        "up",
-        "down",
-        "mute-toggle",
-        "mute-off",
-        "mute-on",
-        "set"
-        ]
-}
-
-# Manipulate volume
-export extern "aerospace volume" [
-    --help(-h)      # Print help
-    command:string@"nu-complete aerospace-volume"
-]
-
-def "nu-complete aerospace-volume-set" [] {
-    0..100
-}
-
-# Focus the specified workspace OR focuses next or previous workspace in the list
-export extern "aerospace workspace" [
-    --help(-h)      # Print help
-    --wrap-around   # Make it possible to jump between first and last workspaces using (next|prev)
-    --auto-back-and-forth   # Autmatic back-and-forth when switching to already focused workspace. Incompatible with --fail-if-noop
-    --fail-if-noop  # Exit with non-zero exit code if switching to the already focused workspace. Incompatible with --auto-back-and-forth
-    command:string
-]
-
-# Switch between the focused workspace and previously focused workspace back and forth
-export extern "aerospace workspace-back-and-forth" [
-    --help(-h)      # Print help
-]
 

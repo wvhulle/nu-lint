@@ -3,7 +3,6 @@ pub mod cli;
 pub mod config;
 mod context;
 mod engine;
-mod external_command;
 pub mod log;
 mod output;
 mod rule;

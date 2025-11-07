@@ -58,7 +58,7 @@ def process [data?, --verbose] {
 ";
     rule().assert_fix_contains(bad_code, "data?");
     rule().assert_fix_contains(bad_code, "--verbose");
-    rule().assert_fix_contains(bad_code, ": any -> any");
+    rule().assert_fix_contains(bad_code, ": any -> string");
 }
 
 #[test]
@@ -68,7 +68,7 @@ export def process [] {
     $in | str trim
 }
 ";
-    rule().assert_fix_contains(bad_code, "[]: any -> any");
+    rule().assert_fix_contains(bad_code, "[]: any -> string");
 }
 
 #[test]

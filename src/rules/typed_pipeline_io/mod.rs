@@ -4,9 +4,11 @@ use nu_protocol::{
 };
 
 use crate::{
-    ast::{block::BlockExt, call::CallExt, span::SpanExt, syntax_shape::SyntaxShapeExt},
+    ast::{
+        block::BlockExt, builtin_command::CommandExt, call::CallExt,
+        ext_command::ExternalCommandExt, span::SpanExt, syntax_shape::SyntaxShapeExt,
+    },
     context::LintContext,
-    external_command::{KNOWN_EXTERNAL_NO_OUTPUT_COMMANDS, KNOWN_EXTERNAL_OUTPUT_COMMANDS},
     rule::{Rule, RuleCategory},
     violation::{Fix, Replacement, RuleViolation, Severity},
 };
@@ -166,9 +168,9 @@ fn infer_command_output_type_external(
     context: &LintContext,
 ) -> Option<&'static str> {
     let cmd_name = external_call.span.text(context);
-    if KNOWN_EXTERNAL_NO_OUTPUT_COMMANDS.contains(&cmd_name) {
+    if cmd_name.is_known_external_no_output_command() {
         Some("nothing")
-    } else if KNOWN_EXTERNAL_OUTPUT_COMMANDS.contains(&cmd_name) {
+    } else if cmd_name.is_known_external_output_command() {
         Some("string")
     } else {
         None
@@ -176,22 +178,21 @@ fn infer_command_output_type_external(
 }
 
 fn infer_command_output_type_internal(call: &Call, context: &LintContext) -> String {
+    let cmd_name = call.get_call_name(context);
+
+    if cmd_name.as_str().is_side_effect_only() {
+        return "nothing".into();
+    }
+
+    if let Some(output_type) = cmd_name.as_str().output_type() {
+        return output_type.to_string();
+    }
+
     let decl = context.working_set.get_decl(call.decl_id);
     let signature = decl.signature();
-    let cmd_name = decl.name();
-
-    match cmd_name {
-        "each" | "where" | "filter" | "map" => "list<any>".into(),
-        "length" => "int".into(),
-        "print" | "println" | "eprintln" | "error" | "mkdir" | "rm" | "cp" | "mv" | "touch"
-        | "cd" | "hide" | "use" | "overlay" | "export" | "def" | "alias" | "module" | "const"
-        | "let" | "mut" | "source" | "source-env" => "nothing".into(),
-        _ => {
-            let output_type = signature.get_output_type().to_string();
-            log::debug!("Command '{cmd_name}' has signature output type: {output_type}");
-            output_type
-        }
-    }
+    let output_type = signature.get_output_type().to_string();
+    log::debug!("Command '{cmd_name}' has signature output type: {output_type}");
+    output_type
 }
 
 fn infer_input_type(block_id: BlockId, ctx: &LintContext) -> String {
@@ -230,11 +231,7 @@ fn infer_input_from_expression(
                 None
             }
         }
-        Expr::Call(call) => match call.get_call_name(ctx).as_str() {
-            "each" | "where" | "filter" | "reduce" | "map" | "length" => Some("list<any>"),
-            "lines" | "split row" => Some("string"),
-            _ => None,
-        },
+        Expr::Call(call) => call.get_call_name(ctx).as_str().input_type(),
         Expr::Collect(_, inner) | Expr::UnaryNot(inner) => {
             infer_input_from_expression(inner, in_var, ctx)
         }

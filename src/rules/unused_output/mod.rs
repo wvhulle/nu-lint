@@ -1,12 +1,11 @@
 use nu_protocol::ast::{Expr, Expression, Pipeline};
 
 use crate::{
-    ast::{call::CallExt, pipeline::PipelineExt, span::SpanExt},
-    context::LintContext,
-    external_command::{
-        KNOWN_BUILTIN_OUTPUT_COMMANDS, KNOWN_EXTERNAL_NO_OUTPUT_COMMANDS,
-        KNOWN_EXTERNAL_OUTPUT_COMMANDS,
+    ast::{
+        builtin_command::CommandExt, call::CallExt, ext_command::ExternalCommandExt,
+        pipeline::PipelineExt, span::SpanExt,
     },
+    context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
 };
@@ -18,8 +17,8 @@ fn command_produces_output(expr: &Expression, context: &LintContext) -> bool {
         Expr::ExternalCall(call, _) => {
             let cmd_name = call.span.text(context);
 
-            KNOWN_EXTERNAL_OUTPUT_COMMANDS.contains(&cmd_name)
-                || !KNOWN_EXTERNAL_NO_OUTPUT_COMMANDS.contains(&cmd_name)
+            cmd_name.is_known_external_output_command()
+                || !cmd_name.is_known_external_no_output_command()
         }
         Expr::Call(call) => {
             let cmd_name = call.get_call_name(context);
@@ -38,7 +37,7 @@ fn command_produces_output(expr: &Expression, context: &LintContext) -> bool {
                 nu_protocol::Type::Any => {
                     // Type system doesn't know - fall back to whitelist
                     log::debug!("Command '{cmd_name}' has output type Any, checking whitelist");
-                    KNOWN_BUILTIN_OUTPUT_COMMANDS.contains(&cmd_name.as_str())
+                    cmd_name.as_str().is_known_builtin_output_command()
                 }
                 _ => {
                     // Has a specific output type (String, List, etc.) - produces output

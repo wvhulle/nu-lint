@@ -11,10 +11,11 @@ use jaq_core::{
 use nu_protocol::ast::ExternalArgument;
 
 use crate::{
+    RuleViolation,
+    ast::ext_command::{BuiltinAlternative, ExternalArgumentExt, detect_external_commands},
     context::LintContext,
-    external_command::{BuiltinAlternative, detect_external_commands, extract_external_args},
     rule::{Rule, RuleCategory},
-    violation::{Fix, Replacement, RuleViolation, Severity},
+    violation::{Fix, Replacement, Severity},
 };
 
 /// Extract field name from a path like .field
@@ -319,7 +320,7 @@ fn build_fix(
     expr_span: nu_protocol::Span,
     context: &LintContext,
 ) -> Fix {
-    let args_text = extract_external_args(args, context);
+    let args_text = args.extract_as_strings(context);
 
     let new_text = match cmd_text {
         "jq" => {

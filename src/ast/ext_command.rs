@@ -3,11 +3,9 @@ use std::collections::HashMap;
 
 use nu_protocol::ast::{Expr, Expression, ExternalArgument};
 
-use crate::{
-    context::LintContext,
-    violation::{Fix, RuleViolation},
-};
+use crate::{Fix, RuleViolation, context::LintContext};
 
+/// Constants for known external commands that produce output
 pub const KNOWN_EXTERNAL_OUTPUT_COMMANDS: &[&str] = &[
     "echo", "ls", "cat", "find", "grep", "curl", "wget", "head", "tail", "sort",
     "whoami",   // Prints the effective username
@@ -21,10 +19,10 @@ pub const KNOWN_EXTERNAL_OUTPUT_COMMANDS: &[&str] = &[
     "uname",    // Prints system information (e.g., "Linux", "Darwin")
     "df",       // Prints filesystem disk space usage (always lists mounts)
     "ps",       // Prints process status (at least lists itself and the parent shell)
-    "echo",     // Prints its arguments. `echo` alone prints a newline.
     "history",  // Prints the command history
 ];
 
+/// Constants for known external commands that don't produce output
 pub const KNOWN_EXTERNAL_NO_OUTPUT_COMMANDS: &[&str] = &[
     "cd", "mkdir", "rm", "mv", "cp", "touch", "exit", "clear", "ln",    // Creates a link
     "chmod", // Changes file permissions
@@ -34,39 +32,40 @@ pub const KNOWN_EXTERNAL_NO_OUTPUT_COMMANDS: &[&str] = &[
     "sleep", // Pauses execution for a set time
 ];
 
-/// Commands that are known to produce output but may have `Type::Any` in their
-/// signature
-pub const KNOWN_BUILTIN_OUTPUT_COMMANDS: &[&str] = &[
-    "ls",
-    "http get",
-    "http post",
-    "open",
-    "from json",
-    "from csv",
-    "select",
-    "where",
-    "get",
-    "find",
-    "each",
-    "reduce",
-    "sort-by",
-    "group-by",
-    "echo",
-];
+/// Extension trait for checking external command categories
+pub trait ExternalCommandExt {
+    fn is_known_external_output_command(&self) -> bool;
+    fn is_known_external_no_output_command(&self) -> bool;
+}
 
-/// Extract external command arguments as strings
-#[must_use]
-pub fn extract_external_args(args: &[ExternalArgument], context: &LintContext) -> Vec<String> {
-    args.iter()
-        .map(|arg| match arg {
-            ExternalArgument::Regular(expr) => {
-                context.source[expr.span.start..expr.span.end].to_string()
-            }
-            ExternalArgument::Spread(expr) => {
-                format!("...{}", &context.source[expr.span.start..expr.span.end])
-            }
-        })
-        .collect()
+impl ExternalCommandExt for str {
+    fn is_known_external_output_command(&self) -> bool {
+        KNOWN_EXTERNAL_OUTPUT_COMMANDS.contains(&self)
+    }
+
+    fn is_known_external_no_output_command(&self) -> bool {
+        KNOWN_EXTERNAL_NO_OUTPUT_COMMANDS.contains(&self)
+    }
+}
+
+/// Extension trait for external arguments
+pub trait ExternalArgumentExt {
+    fn extract_as_strings(&self, context: &LintContext) -> Vec<String>;
+}
+
+impl ExternalArgumentExt for [ExternalArgument] {
+    fn extract_as_strings(&self, context: &LintContext) -> Vec<String> {
+        self.iter()
+            .map(|arg| match arg {
+                ExternalArgument::Regular(expr) => {
+                    context.source[expr.span.start..expr.span.end].to_string()
+                }
+                ExternalArgument::Spread(expr) => {
+                    format!("...{}", &context.source[expr.span.start..expr.span.end])
+                }
+            })
+            .collect()
+    }
 }
 
 /// Metadata about a builtin alternative to an external command

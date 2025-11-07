@@ -1,7 +1,10 @@
 use nu_protocol::ast::{Argument, Call, Expr, Expression, Operator, Pipeline};
 
 use crate::{
-    ast::{call::CallExt, expression::ExpressionExt, syntax_shape::SyntaxShapeExt},
+    ast::{
+        builtin_command::CommandExt, call::CallExt, expression::ExpressionExt,
+        syntax_shape::SyntaxShapeExt,
+    },
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{Fix, Replacement, RuleViolation, Severity},
@@ -12,21 +15,13 @@ fn is_reference_to_param(expr: &Expression, param_name: &str, ctx: &LintContext)
         Expr::Var(var_id) => {
             let var = ctx.working_set.get_variable(*var_id);
             let var_span_text = &ctx.source[var.declaration_span.start..var.declaration_span.end];
-            let normalized = var_span_text.trim_end_matches('?').trim_start_matches("...");
+            let normalized = var_span_text
+                .trim_end_matches('?')
+                .trim_start_matches("...");
             normalized == param_name
         }
         Expr::FullCellPath(cell_path) => is_reference_to_param(&cell_path.head, param_name, ctx),
         _ => false,
-    }
-}
-
-fn infer_type_from_command_name(cmd_name: &str) -> Option<&'static str> {
-    match cmd_name {
-        "str trim" | "str replace" | "str upcase" | "str downcase" | "str contains" => {
-            Some("string")
-        }
-        "each" | "where" | "filter" | "reduce" | "append" | "prepend" => Some("list"),
-        _ => None,
     }
 }
 
@@ -40,7 +35,7 @@ fn infer_type_from_pipeline(
         .windows(2)
         .find_map(|window| match &window[1].expr.expr {
             Expr::Call(call) if is_reference_to_param(&window[0].expr, param_name, ctx) => {
-                infer_type_from_command_name(&call.get_call_name(ctx))
+                call.get_call_name(ctx).as_str().output_type()
             }
             _ => None,
         })
@@ -70,7 +65,7 @@ fn infer_type_from_expr(
 ) -> Option<&'static str> {
     match &expr.expr {
         Expr::Call(call) if is_reference_to_param(expr, param_name, ctx) => {
-            infer_type_from_command_name(&call.get_call_name(ctx))
+            call.get_call_name(ctx).as_str().output_type()
         }
         Expr::Call(call) => call.arguments.iter().find_map(|arg| match arg {
             Argument::Positional(arg_expr) | Argument::Unknown(arg_expr) => {
@@ -136,12 +131,26 @@ fn generate_typed_signature(
     let params = signature
         .required_positional
         .iter()
-        .map(|p| format!("{}: {}", p.name, get_param_type_str(&p.shape, &p.name, body_block_id, ctx)))
+        .map(|p| {
+            format!(
+                "{}: {}",
+                p.name,
+                get_param_type_str(&p.shape, &p.name, body_block_id, ctx)
+            )
+        })
         .chain(signature.optional_positional.iter().map(|p| {
-            format!("{}?: {}", p.name, get_param_type_str(&p.shape, &p.name, body_block_id, ctx))
+            format!(
+                "{}?: {}",
+                p.name,
+                get_param_type_str(&p.shape, &p.name, body_block_id, ctx)
+            )
         }))
         .chain(signature.rest_positional.iter().map(|p| {
-            format!("...{}: {}", p.name, get_param_type_str(&p.shape, &p.name, body_block_id, ctx))
+            format!(
+                "...{}: {}",
+                p.name,
+                get_param_type_str(&p.shape, &p.name, body_block_id, ctx)
+            )
         }))
         .collect::<Vec<_>>()
         .join(", ");

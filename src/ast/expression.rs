@@ -75,6 +75,12 @@ pub trait ExpressionExt: Traverse {
     /// Finds the `$in` variable in this expression. Example: `$in.field` or
     /// `$in | length`
     fn find_pipeline_input_variable(&self, context: &LintContext) -> Option<VarId>;
+    /// Infers the output type of an expression. Example: `ls` returns "table",
+    /// `1 + 2` returns "int"
+    fn infer_output_type(&self, context: &LintContext) -> Option<String>;
+    /// Infers the input type expected by an expression. Example: `$in | length`
+    /// expects "list"
+    fn infer_input_type(&self, in_var: Option<VarId>, context: &LintContext) -> Option<&'static str>;
 }
 
 impl ExpressionExt for Expression {
@@ -449,4 +455,137 @@ impl ExpressionExt for Expression {
             _ => None,
         }
     }
+
+    fn infer_output_type(&self, context: &LintContext) -> Option<String> {
+        use super::builtin_command::CommandExt;
+        use super::call::CallExt;
+        use super::ext_command::ExternalCommandExt;
+
+        const fn is_filepath_expr(expr: &Expr) -> bool {
+            matches!(expr, Expr::Filepath(..) | Expr::GlobPattern(..))
+        }
+
+        fn check_filepath_output(expr: &Expr) -> Option<&'static str> {
+            match expr {
+                Expr::ExternalCall(head, _) if is_filepath_expr(&head.expr) => Some("path"),
+                Expr::Collect(_, inner) if is_filepath_expr(&inner.expr) => Some("path"),
+                expr if is_filepath_expr(expr) => Some("path"),
+                _ => None,
+            }
+        }
+
+        let inner_expr = match &self.expr {
+            Expr::Collect(_, inner) => &inner.expr,
+            _ => &self.expr,
+        };
+
+        match inner_expr {
+            expr if check_filepath_output(expr).is_some() => {
+                check_filepath_output(expr).map(String::from)
+            }
+            Expr::Subexpression(block_id) | Expr::Block(block_id) => {
+                Some(block_id.infer_output_type(context))
+            }
+            Expr::ExternalCall(call, _) => {
+                let cmd_name = call.span.text(context);
+                if cmd_name.is_known_external_no_output_command() {
+                    Some("nothing".into())
+                } else if cmd_name.is_known_external_output_command() {
+                    Some("string".into())
+                } else {
+                    None
+                }
+            }
+            Expr::Call(call) => {
+                let decl = context.working_set.get_decl(call.decl_id);
+                let cmd_name = decl.name();
+
+                if matches!(cmd_name, "if" | "match" | "try" | "do") 
+                    && let Some(unified_type) = infer_from_call_with_blocks(call, context)
+                {
+                    return Some(unified_type);
+                }
+
+                let cmd_name_str = call.get_call_name(context);
+                if cmd_name_str.as_str().is_side_effect_only() {
+                    Some("nothing".into())
+                } else if let Some(output_type) = cmd_name_str.as_str().output_type() {
+                    Some(output_type.to_string())
+                } else {
+                    let signature = decl.signature();
+                    Some(signature.get_output_type().to_string())
+                }
+            }
+            _ => None,
+        }
+    }
+
+    fn infer_input_type(&self, in_var: Option<VarId>, context: &LintContext) -> Option<&'static str> {
+        use super::call::CallExt;
+
+        let in_var_id = in_var?;
+
+        match &self.expr {
+            Expr::FullCellPath(cell_path) if matches!(&cell_path.head.expr, Expr::Var(var_id) if *var_id == in_var_id) => {
+                if !cell_path.tail.is_empty()
+                    && cell_path
+                        .tail
+                        .iter()
+                        .any(|member| matches!(member, PathMember::String { .. }))
+                {
+                    Some("record")
+                } else if !cell_path.tail.is_empty() {
+                    Some("list")
+                } else {
+                    None
+                }
+            }
+            Expr::Call(call) => {
+                use super::builtin_command::CommandExt;
+                call.get_call_name(context).as_str().input_type()
+            }
+            Expr::Collect(_, inner) | Expr::UnaryNot(inner) => {
+                inner.infer_input_type(in_var, context)
+            }
+            Expr::BinaryOp(left, _, right) => left.infer_input_type(in_var, context)
+                .or_else(|| right.infer_input_type(in_var, context)),
+            Expr::Subexpression(block_id) | Expr::Block(block_id) | Expr::Closure(block_id) => {
+                let block = context.working_set.get_block(*block_id);
+                block
+                    .pipelines
+                    .iter()
+                    .flat_map(|pipeline| &pipeline.elements)
+                    .find_map(|element| element.expr.infer_input_type(in_var, context))
+            }
+            _ => None,
+        }
+    }
 }
+
+fn infer_from_call_with_blocks(call: &Call, context: &LintContext) -> Option<String> {
+    let block_types: Vec<String> = call
+        .positional_iter()
+        .filter_map(|arg| match &arg.expr {
+            Expr::Block(block_id) | Expr::Closure(block_id) => {
+                Some(block_id.infer_output_type(context))
+            }
+            _ => None,
+        })
+        .collect();
+
+    if block_types.is_empty() {
+        return None;
+    }
+
+    if block_types.iter().all(|t| t == &block_types[0]) {
+        return Some(block_types[0].clone());
+    }
+
+    if block_types.iter().all(|t| t == "nothing") {
+        return Some("nothing".into());
+    }
+
+    None
+}
+
+

@@ -17,6 +17,10 @@ pub trait SpanExt {
         functions: &HashMap<BlockId, String>,
         context: &LintContext,
     ) -> Option<String>;
+    #[must_use]
+    /// Finds the span of a substring within this span. Example: finding
+    /// parameter name within signature span
+    fn find_substring_span(&self, substring: &str, context: &LintContext) -> Span;
 }
 
 impl SpanExt for Span {
@@ -37,5 +41,15 @@ impl SpanExt for Span {
                 block.span.map_or(usize::MAX, |s| s.end - s.start)
             })
             .map(|(_, name)| name.clone())
+    }
+
+    fn find_substring_span(&self, substring: &str, context: &LintContext) -> Span {
+        self.text(context)
+            .as_bytes()
+            .windows(substring.len())
+            .position(|window| window == substring.as_bytes())
+            .map_or(*self, |offset| {
+                Self::new(self.start + offset, self.start + offset + substring.len())
+            })
     }
 }

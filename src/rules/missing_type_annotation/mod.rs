@@ -3,7 +3,7 @@ use nu_protocol::ast::{Argument, Call, Expr, Expression, Operator, Pipeline};
 use crate::{
     ast::{
         builtin_command::CommandExt, call::CallExt, expression::ExpressionExt,
-        syntax_shape::SyntaxShapeExt,
+        span::SpanExt, syntax_shape::SyntaxShapeExt,
     },
     context::LintContext,
     rule::{Rule, RuleCategory},
@@ -151,26 +151,6 @@ fn generate_typed_signature(
     format!("[{params}]")
 }
 
-fn find_param_span(
-    signature_span: nu_protocol::Span,
-    param_name: &str,
-    ctx: &LintContext,
-) -> nu_protocol::Span {
-    use crate::ast::span::SpanExt;
-    
-    signature_span
-        .text(ctx)
-        .as_bytes()
-        .windows(param_name.len())
-        .position(|window| window == param_name.as_bytes())
-        .map_or(signature_span, |offset| {
-            nu_protocol::Span::new(
-                signature_span.start + offset,
-                signature_span.start + offset + param_name.len(),
-            )
-        })
-}
-
 fn check_signature(
     sig: &nu_protocol::Signature,
     signature_span: nu_protocol::Span,
@@ -198,7 +178,7 @@ fn check_signature(
     params_needing_types
         .into_iter()
         .map(|param| {
-            let param_span = find_param_span(signature_span, &param.name, ctx);
+            let param_span = signature_span.find_substring_span(&param.name, ctx);
             RuleViolation::new_dynamic(
                 "missing_type_annotation",
                 format!("Parameter '{}' is missing type annotation", param.name),

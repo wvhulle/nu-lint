@@ -54,6 +54,11 @@ pub trait BlockExt {
     /// Finds the `$in` variable used in this block. Example: `def foo [] { $in
     /// | each { ... } }`
     fn find_pipeline_input_variable(&self, context: &LintContext) -> Option<VarId>;
+    /// Infers the output type of a block. Example: `{ ls }` returns "table"
+    fn infer_output_type(&self, context: &LintContext) -> String;
+    /// Infers the input type expected by a block. Example: `{ $in | length }`
+    /// expects "list"
+    fn infer_input_type(&self, context: &LintContext) -> String;
 }
 
 impl BlockExt for BlockId {
@@ -199,4 +204,35 @@ impl BlockExt for BlockId {
             .flat_map(|pipeline| &pipeline.elements)
             .find_map(|element| element.expr.find_pipeline_input_variable(context))
     }
+
+    fn infer_output_type(&self, context: &LintContext) -> String {
+        use super::expression::ExpressionExt;
+
+        let block = context.working_set.get_block(*self);
+        log::debug!("Inferring output type for block {self:?}");
+
+        block
+            .pipelines
+            .last()
+            .and_then(|pipeline| pipeline.elements.last())
+            .and_then(|elem| elem.expr.infer_output_type(context))
+            .unwrap_or_else(|| block.output_type().to_string())
+    }
+
+    fn infer_input_type(&self, context: &LintContext) -> String {
+        use super::expression::ExpressionExt;
+
+        let block = context.working_set.get_block(*self);
+        let Some(in_var) = self.find_pipeline_input_variable(context) else {
+            return "any".to_string();
+        };
+
+        block
+            .pipelines
+            .iter()
+            .flat_map(|pipeline| &pipeline.elements)
+            .find_map(|element| element.expr.infer_input_type(Some(in_var), context))
+            .map_or_else(|| "any".to_string(), String::from)
+    }
 }
+

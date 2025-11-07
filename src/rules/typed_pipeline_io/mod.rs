@@ -1,13 +1,10 @@
 use nu_protocol::{
-    BlockId, Span, VarId,
-    ast::{Call, Expr, Expression, PathMember},
+    BlockId, Span,
+    ast::{Call, Expr},
 };
 
 use crate::{
-    ast::{
-        block::BlockExt, builtin_command::CommandExt, call::CallExt,
-        ext_command::ExternalCommandExt, span::SpanExt, syntax_shape::SyntaxShapeExt,
-    },
+    ast::{block::BlockExt, call::CallExt, span::SpanExt, syntax_shape::SyntaxShapeExt},
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{Fix, Replacement, RuleViolation, Severity},
@@ -80,172 +77,6 @@ fn create_violations_for_untyped_io(
     .collect()
 }
 
-const fn is_filepath_expr(expr: &Expr) -> bool {
-    matches!(expr, Expr::Filepath(..) | Expr::GlobPattern(..))
-}
-
-fn check_filepath_output(expr: &Expr) -> Option<&'static str> {
-    match expr {
-        Expr::ExternalCall(head, _) if is_filepath_expr(&head.expr) => Some("path"),
-        Expr::Collect(_, inner) if is_filepath_expr(&inner.expr) => Some("path"),
-        expr if is_filepath_expr(expr) => Some("path"),
-        _ => None,
-    }
-}
-
-fn infer_output_type(block_id: BlockId, ctx: &LintContext) -> String {
-    let block = ctx.working_set.get_block(block_id);
-    log::debug!("Inferring output type for block {block_id:?}");
-
-    block
-        .pipelines
-        .last()
-        .and_then(|pipeline| pipeline.elements.last())
-        .and_then(|elem| infer_from_expression(&elem.expr, ctx))
-        .unwrap_or_else(|| block.output_type().to_string())
-}
-
-fn infer_from_expression(expr: &Expression, ctx: &LintContext) -> Option<String> {
-    let inner_expr = match &expr.expr {
-        Expr::Collect(_, inner) => &inner.expr,
-        _ => &expr.expr,
-    };
-
-    match inner_expr {
-        expr if check_filepath_output(expr).is_some() => {
-            check_filepath_output(expr).map(String::from)
-        }
-        Expr::Subexpression(block_id) | Expr::Block(block_id) => {
-            Some(infer_output_type(*block_id, ctx))
-        }
-        Expr::ExternalCall(call, _) => {
-            infer_command_output_type_external(call, ctx).map(String::from)
-        }
-        Expr::Call(call) => infer_from_call_with_blocks(call, ctx)
-            .or_else(|| Some(infer_command_output_type_internal(call, ctx))),
-        _ => None,
-    }
-}
-
-fn infer_from_call_with_blocks(call: &Call, ctx: &LintContext) -> Option<String> {
-    let decl = ctx.working_set.get_decl(call.decl_id);
-    let cmd_name = decl.name();
-
-    if !matches!(cmd_name, "if" | "match" | "try" | "do") {
-        return None;
-    }
-
-    let block_types: Vec<String> = call
-        .positional_iter()
-        .filter_map(|arg| match &arg.expr {
-            Expr::Block(block_id) | Expr::Closure(block_id) => {
-                Some(infer_output_type(*block_id, ctx))
-            }
-            _ => None,
-        })
-        .collect();
-
-    if block_types.is_empty() {
-        return None;
-    }
-
-    if block_types.iter().all(|t| t == &block_types[0]) {
-        return Some(block_types[0].clone());
-    }
-
-    if block_types.iter().all(|t| t == "nothing") {
-        return Some("nothing".into());
-    }
-
-    None
-}
-
-fn infer_command_output_type_external(
-    external_call: &Expression,
-    context: &LintContext,
-) -> Option<&'static str> {
-    let cmd_name = external_call.span.text(context);
-    if cmd_name.is_known_external_no_output_command() {
-        Some("nothing")
-    } else if cmd_name.is_known_external_output_command() {
-        Some("string")
-    } else {
-        None
-    }
-}
-
-fn infer_command_output_type_internal(call: &Call, context: &LintContext) -> String {
-    let cmd_name = call.get_call_name(context);
-
-    if cmd_name.as_str().is_side_effect_only() {
-        return "nothing".into();
-    }
-
-    if let Some(output_type) = cmd_name.as_str().output_type() {
-        return output_type.to_string();
-    }
-
-    let decl = context.working_set.get_decl(call.decl_id);
-    let signature = decl.signature();
-    let output_type = signature.get_output_type().to_string();
-    log::debug!("Command '{cmd_name}' has signature output type: {output_type}");
-    output_type
-}
-
-fn infer_input_type(block_id: BlockId, ctx: &LintContext) -> String {
-    let block = ctx.working_set.get_block(block_id);
-    let Some(in_var) = block_id.find_pipeline_input_variable(ctx) else {
-        return "any".to_string();
-    };
-
-    block
-        .pipelines
-        .iter()
-        .flat_map(|pipeline| &pipeline.elements)
-        .find_map(|element| infer_input_from_expression(&element.expr, Some(in_var), ctx))
-        .map_or_else(|| "any".to_string(), String::from)
-}
-
-fn infer_input_from_expression(
-    expr: &Expression,
-    in_var: Option<VarId>,
-    ctx: &LintContext,
-) -> Option<&'static str> {
-    let in_var_id = in_var?;
-
-    match &expr.expr {
-        Expr::FullCellPath(cell_path) if matches!(&cell_path.head.expr, Expr::Var(var_id) if *var_id == in_var_id) => {
-            if !cell_path.tail.is_empty()
-                && cell_path
-                    .tail
-                    .iter()
-                    .any(|member| matches!(member, PathMember::String { .. }))
-            {
-                Some("record")
-            } else if !cell_path.tail.is_empty() {
-                Some("list")
-            } else {
-                None
-            }
-        }
-        Expr::Call(call) => call.get_call_name(ctx).as_str().input_type(),
-        Expr::Collect(_, inner) | Expr::UnaryNot(inner) => {
-            infer_input_from_expression(inner, in_var, ctx)
-        }
-        Expr::BinaryOp(left, _, right) => infer_input_from_expression(left, in_var, ctx)
-            .or_else(|| infer_input_from_expression(right, in_var, ctx)),
-        Expr::Subexpression(block_id) | Expr::Block(block_id) | Expr::Closure(block_id) => {
-            let block = ctx.working_set.get_block(*block_id);
-            block
-                .pipelines
-                .iter()
-                .flat_map(|pipeline| &pipeline.elements)
-                .find_map(|element| infer_input_from_expression(&element.expr, in_var, ctx))
-        }
-        _ => None,
-    }
-}
-
 fn generate_typed_signature(
     signature: &nu_protocol::Signature,
     ctx: &LintContext,
@@ -270,13 +101,13 @@ fn generate_typed_signature(
     };
 
     let input_type = if uses_in || needs_input_type {
-        infer_input_type(block_id, ctx)
+        block_id.infer_input_type(ctx)
     } else {
         "nothing".to_string()
     };
 
     let output_type = if needs_output_type {
-        infer_output_type(block_id, ctx)
+        block_id.infer_output_type(ctx)
     } else {
         "any".to_string()
     };

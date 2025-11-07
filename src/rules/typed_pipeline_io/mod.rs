@@ -14,10 +14,7 @@ use crate::{
 };
 
 fn has_explicit_type_annotation(signature_span: Option<Span>, ctx: &LintContext) -> bool {
-    signature_span.is_some_and(|span| {
-        let sig_text = ctx.working_set.get_span_contents(span);
-        String::from_utf8_lossy(sig_text).contains("->")
-    })
+    signature_span.is_some_and(|span| span.text(ctx).contains("->"))
 }
 
 fn is_untyped<F>(

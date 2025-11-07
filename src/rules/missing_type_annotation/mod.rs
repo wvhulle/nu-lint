@@ -11,18 +11,11 @@ use crate::{
 };
 
 fn is_reference_to_param(expr: &Expression, param_name: &str, ctx: &LintContext) -> bool {
-    match &expr.expr {
-        Expr::Var(var_id) => {
-            let var = ctx.working_set.get_variable(*var_id);
-            let var_span_text = &ctx.source[var.declaration_span.start..var.declaration_span.end];
-            let normalized = var_span_text
-                .trim_end_matches('?')
-                .trim_start_matches("...");
+    expr.extract_variable_name(ctx)
+        .is_some_and(|var_name| {
+            let normalized = var_name.trim_end_matches('?').trim_start_matches("...");
             normalized == param_name
-        }
-        Expr::FullCellPath(cell_path) => is_reference_to_param(&cell_path.head, param_name, ctx),
-        _ => false,
-    }
+        })
 }
 
 fn infer_type_from_pipeline(
@@ -163,8 +156,11 @@ fn find_param_span(
     param_name: &str,
     ctx: &LintContext,
 ) -> nu_protocol::Span {
-    ctx.working_set
-        .get_span_contents(signature_span)
+    use crate::ast::span::SpanExt;
+    
+    signature_span
+        .text(ctx)
+        .as_bytes()
         .windows(param_name.len())
         .position(|window| window == param_name.as_bytes())
         .map_or(signature_span, |offset| {

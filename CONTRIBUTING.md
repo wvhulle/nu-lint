@@ -17,6 +17,26 @@ Maybe useful for people who want to create editor integration:
 nu-lint --format json                      # Lint and output JSON
 ```
 
+## Adding new lints
+
+Use Nu shells AST command.
+
+```bash
+ast --json update-vscode-settings.nu | get block | from json | explore
+```
+
+## Debugging
+
+Use `lldb` extension to step through code.
+
+Show debug output using the `instrument` function and an environment variable:
+
+```bash
+RUST_LOG=debug cargo test test_detect_unnecessary_variable_simple -- --nocapture
+```
+
+(It would be possible to use the [test-log](https://crates.io/crates/test-log) crate but I prefered a custom formatter displaying file links.)
+
 ## Testing
 
 Debugging is primarily done with the tests.
@@ -26,14 +46,6 @@ cargo test
 ```
 
 Tests follow a pattern where each rule has 'detect', 'fix' and 'ignore' tests.
-
-Show debug output using the `instrument` function and an environment variable:
-
-```bash
-RUST_LOG=debug cargo test test_detect_unnecessary_variable_simple -- --nocapture
-```
-
-(It would be possible to use the [test-log](https://crates.io/crates/test-log) crate but I prefered a custom formatter displaying file links.)
 
 ## Linting
 

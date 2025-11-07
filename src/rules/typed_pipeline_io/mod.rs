@@ -4,8 +4,9 @@ use nu_protocol::{
 };
 
 use crate::{
-    ast::{block::BlockExt, call::CallExt, syntax_shape::SyntaxShapeExt},
+    ast::{block::BlockExt, call::CallExt, span::SpanExt, syntax_shape::SyntaxShapeExt},
     context::LintContext,
+    external_command::{KNOWN_EXTERNAL_NO_OUTPUT_COMMANDS, KNOWN_EXTERNAL_OUTPUT_COMMANDS},
     rule::{Rule, RuleCategory},
     violation::{Fix, Replacement, RuleViolation, Severity},
 };
@@ -109,53 +110,129 @@ fn check_filepath_output(expr: &Expr) -> Option<&'static str> {
 
 fn infer_output_type(block_id: BlockId, ctx: &LintContext) -> String {
     let block = ctx.working_set.get_block(block_id);
-
-    block
+    log::debug!("Inferring output type for block {block_id:?}");
+    
+    // Try to get more specific type info from the last expression
+    let specific_type = block
         .pipelines
         .last()
         .and_then(|pipeline| pipeline.elements.last())
-        .and_then(|last_element| {
-            let expr = &last_element.expr.expr;
-
-            // Check for filepath expressions first
-            if let Some(path_type) = check_filepath_output(expr) {
-                return Some(path_type.to_string());
-            }
-
-            // Unwrap Collect for command checking
-            let expr = match expr {
-                Expr::Collect(_, inner) => &inner.expr,
-                other => other,
-            };
-
-            // Check for command-based type inference
-            match expr {
-                Expr::Subexpression(block_id) | Expr::Block(block_id) => {
-                    ctx.working_set
-                        .get_block(*block_id)
-                        .pipelines
-                        .last()
-                        .and_then(|inner_pipeline| inner_pipeline.elements.last())
-                        .and_then(|inner_element| match &inner_element.expr.expr {
-                            Expr::Call(call) => infer_command_output_type(&call.get_call_name(ctx))
-                                .map(String::from),
-                            _ => None,
-                        })
-                }
-                Expr::Call(call) => {
-                    infer_command_output_type(&call.get_call_name(ctx)).map(String::from)
-                }
-                _ => None,
-            }
-        })
-        .unwrap_or_else(|| block.output_type().to_string())
+        .and_then(|last_element| infer_from_expression(&last_element.expr, ctx));
+    
+    // Use specific type if we found one, otherwise fall back to Nu's type inference
+    specific_type.unwrap_or_else(|| block.output_type().to_string())
 }
 
-fn infer_command_output_type(cmd_name: &str) -> Option<&'static str> {
-    match cmd_name {
-        "each" | "where" | "filter" | "map" => Some("list<any>"),
-        "length" => Some("int"),
+fn infer_from_expression(expr: &Expression, ctx: &LintContext) -> Option<String> {
+    // Check for filepath expressions first
+    if let Some(path_type) = check_filepath_output(&expr.expr) {
+        return Some(path_type.to_string());
+    }
+
+    // Unwrap Collect for command checking
+    let inner_expr = match &expr.expr {
+        Expr::Collect(_, inner) => &inner.expr,
+        other => other,
+    };
+
+    // Check specific expression types
+    match inner_expr {
+        Expr::Call(call) => {
+            // For control flow commands (if, match, try, etc.), recursively analyze their blocks
+            // instead of trusting their conservative signature types
+            infer_from_call_with_blocks(call, ctx)
+                .or_else(|| Some(infer_command_output_type_internal(call, ctx)))
+        }
+        Expr::ExternalCall(call, _) => {
+            infer_command_output_type_external(call, ctx).map(String::from)
+        }
+        // For control flow (if, match, etc.) and blocks, recursively infer
+        Expr::Subexpression(block_id) | Expr::Block(block_id) => {
+            Some(infer_output_type(*block_id, ctx))
+        }
         _ => None,
+    }
+}
+
+/// Try to infer output type from a call by analyzing blocks passed as arguments.
+/// This handles control flow commands (if, match, try, etc.) more precisely than their signatures.
+fn infer_from_call_with_blocks(call: &Call, ctx: &LintContext) -> Option<String> {
+    let decl = ctx.working_set.get_decl(call.decl_id);
+    let cmd_name = decl.name();
+    
+    // Only apply this logic to known control flow commands
+    if !matches!(cmd_name, "if" | "match" | "try" | "do") {
+        return None;
+    }
+    
+    // Collect all block arguments
+    let block_types: Vec<String> = call
+        .positional_iter()
+        .filter_map(|arg| {
+            if let Expr::Block(block_id) | Expr::Closure(block_id) = &arg.expr {
+                Some(infer_output_type(*block_id, ctx))
+            } else {
+                None
+            }
+        })
+        .collect();
+    
+    if block_types.is_empty() {
+        return None;
+    }
+    
+    // If all blocks return the same type, use that
+    if block_types.iter().all(|t| t == &block_types[0]) {
+        return Some(block_types[0].clone());
+    }
+    
+    // If all blocks return nothing, the result is nothing
+    if block_types.iter().all(|t| t == "nothing") {
+        return Some("nothing".into());
+    }
+    
+    // Otherwise fall back to None, which will use the command's signature
+    None
+}
+
+fn infer_command_output_type_external(
+    external_call: &Expression,
+    context: &LintContext,
+) -> Option<&'static str> {
+    let cmd_name = external_call.span.text(context);
+    if KNOWN_EXTERNAL_NO_OUTPUT_COMMANDS.contains(&cmd_name) {
+        Some("nothing")
+    } else if KNOWN_EXTERNAL_OUTPUT_COMMANDS.contains(&cmd_name) {
+        Some("string")
+    } else {
+        None
+    }
+}
+
+fn infer_command_output_type_internal(call: &Call, context: &LintContext) -> String {
+    let decl = context.working_set.get_decl(call.decl_id);
+    let signature = decl.signature();
+    let cmd_name = decl.name();
+
+    match cmd_name {
+        // Commands that return specific collection types
+        "each" | "where" | "filter" | "map" => "list<any>".into(),
+        "length" => "int".into(),
+
+        // Commands that return nothing (side-effect only)
+        // Note: We override the signature here because some commands have Type::Any in their signature
+        // but we know they return nothing in practice
+        "print" | "println" | "eprintln" | "error" | "mkdir" | "rm" | "cp" | "mv" | "touch"
+        | "cd" | "hide" | "use" | "overlay" | "export" | "def" | "alias" | "module" | "const"
+        | "let" | "mut" | "source" | "source-env" => "nothing".into(),
+
+        _ => {
+            // Use signature output type - Nu's type system already handles control flow recursively
+            // This works for if, match, try, loops, etc. without special-casing each one
+            let output_type = signature.get_output_type().to_string();
+            log::debug!("Command '{cmd_name}' has signature output type: {output_type}");
+            output_type
+        }
     }
 }
 
@@ -229,7 +306,10 @@ fn generate_typed_signature(
         && signature.optional_positional.is_empty()
         && signature.rest_positional.is_none()
         && signature.named.is_empty();
-
+    log::debug!(
+        "Generating typed signature for block {block_id:?}: has_no_params={has_no_params}, \
+         uses_in={uses_in}, needs_input_type={needs_input_type}, needs_output_type={needs_output_type}"
+    );
     let params_text = if has_no_params {
         String::new()
     } else {
@@ -321,6 +401,7 @@ fn check_def_call(call: &Call, ctx: &LintContext) -> Vec<RuleViolation> {
     let Some((block_id, func_name)) = call.extract_function_definition(ctx) else {
         return vec![];
     };
+    log::debug!("Checking function definition for typed_pipeline_io: {func_name}");
 
     let Some((_, name_span)) = call.extract_declaration_name(ctx) else {
         return vec![];

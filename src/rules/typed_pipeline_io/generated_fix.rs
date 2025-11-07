@@ -261,7 +261,7 @@ def complex [] {
     if true { "string" } else { 42 }
 }
 "#;
-    rule().assert_fix_contains(bad_code, "[]: nothing -> any");
+    rule().assert_fix_contains(bad_code, "[]: nothing -> string");
 }
 
 #[test]
@@ -273,4 +273,92 @@ def get_path [] {
 }
 ";
     rule().assert_fix_contains(bad_code, "nothing -> path");
+}
+
+#[test]
+fn test_longer_script() {
+    instrument();
+    let bad_code = r#"
+def main [source_file: path] {
+  let settings_file = $"($env.HOME)/.config/Code/User/settings.json"
+
+  # Create directory if it doesn't exist
+  mkdir ($settings_file | path dirname)
+
+  # Determine if we should update the file
+  let should_update = (
+    not ($settings_file | path exists)
+    or ($settings_file | path type) == "symlink"
+    or (open --raw $source_file) != (open --raw $settings_file)
+  )
+
+  if $should_update {
+    rm --force $settings_file
+    cp $source_file $settings_file
+    chmod 644 $settings_file
+    print "Created/updated writable VSCode settings.json"
+  }
+}
+"#;
+    rule().assert_fix_contains(bad_code, "nothing -> nothing");
+}
+
+#[test]
+fn test_if_with_side_effects_only() {
+    instrument();
+    let bad_code = r#"
+def conditional_print [] {
+    if true {
+        print "yes"
+    } else {
+        print "no"
+    }
+}
+"#;
+    rule().assert_fix_contains(bad_code, "[]: nothing -> nothing");
+}
+
+#[test]
+fn test_if_without_else_returns_nothing() {
+    instrument();
+    let bad_code = r#"
+def conditional_action [flag: bool] {
+    if $flag {
+        print "flag is true"
+    }
+}
+"#;
+    rule().assert_fix_contains(bad_code, "[flag: bool]: nothing -> nothing");
+}
+
+#[test]
+fn test_nested_if_with_side_effects() {
+    instrument();
+    let bad_code = r#"
+def nested_conditional [] {
+    if true {
+        if false {
+            print "inner"
+        } else {
+            mkdir /tmp/test
+        }
+    } else {
+        rm /tmp/test
+    }
+}
+"#;
+    rule().assert_fix_contains(bad_code, "[]: nothing -> nothing");
+}
+
+#[test]
+fn test_complex_body_with_let_and_side_effects() {
+    instrument();
+    let bad_code = r"
+def complex_script [] {
+    let x = 42
+    print $x
+    mkdir /tmp/dir
+}
+";
+    rule().assert_fix_contains(bad_code, "[]: nothing -> nothing");
 }

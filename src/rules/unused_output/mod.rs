@@ -3,60 +3,13 @@ use nu_protocol::ast::{Expr, Expression, Pipeline};
 use crate::{
     ast::{call::CallExt, pipeline::PipelineExt, span::SpanExt},
     context::LintContext,
+    external_command::{
+        KNOWN_BUILTIN_OUTPUT_COMMANDS, KNOWN_EXTERNAL_NO_OUTPUT_COMMANDS,
+        KNOWN_EXTERNAL_OUTPUT_COMMANDS,
+    },
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
 };
-
-/// Commands that are known to produce output but may have `Type::Any` in their
-/// signature
-const FALLBACK_KNOWN_BUILTIN_OUTPUT_COMMANDS: &[&str] = &[
-    "print",
-    "ls",
-    "http get",
-    "http post",
-    "open",
-    "cat",
-    "parse",
-    "from json",
-    "from csv",
-    "to json",
-    "to csv",
-    "select",
-    "where",
-    "get",
-    "find",
-    "each",
-    "reduce",
-    "sort-by",
-    "group-by",
-    "echo",
-];
-
-const KNOWN_EXTERNAL_OUTPUT_COMMANDS: &[&str] = &[
-    "echo", "ls", "cat", "find", "grep", "curl", "wget", "head", "tail", "sort",
-    "whoami",   // Prints the effective username
-    "hostname", // Prints the system's hostname
-    "pwd",      // Prints the present working directory
-    "tty",      // Prints the file name of the terminal connected to stdin
-    "id",       // Prints real and effective user and group IDs
-    "who",      // Prints who is logged on (always lists at least the current session)
-    "date",     // Prints the current date and time
-    "uptime",   // Prints system uptime and load
-    "uname",    // Prints system information (e.g., "Linux", "Darwin")
-    "df",       // Prints filesystem disk space usage (always lists mounts)
-    "ps",       // Prints process status (at least lists itself and the parent shell)
-    "echo",     // Prints its arguments. `echo` alone prints a newline.
-    "history",  // Prints the command history
-];
-
-const KNOWN_EXTERNAL_NO_OUTPUT_COMMANDS: &[&str] = &[
-    "cd", "mkdir", "rm", "mv", "cp", "touch", "exit", "clear", "ln",    // Creates a link
-    "chmod", // Changes file permissions
-    "chown", // Changes file ownership
-    "chgrp", // Changes file group
-    "kill",  // Sends a signal to a process (like SIGTERM)
-    "sleep", // Pauses execution for a set time
-];
 
 /// Check if a command produces output based on its signature's output type
 /// Falls back to a whitelist for commands with `Type::Any`
@@ -85,7 +38,7 @@ fn command_produces_output(expr: &Expression, context: &LintContext) -> bool {
                 nu_protocol::Type::Any => {
                     // Type system doesn't know - fall back to whitelist
                     log::debug!("Command '{cmd_name}' has output type Any, checking whitelist");
-                    FALLBACK_KNOWN_BUILTIN_OUTPUT_COMMANDS.contains(&cmd_name.as_str())
+                    KNOWN_BUILTIN_OUTPUT_COMMANDS.contains(&cmd_name.as_str())
                 }
                 _ => {
                     // Has a specific output type (String, List, etc.) - produces output

@@ -1,6 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
-use nu_protocol::ast::{Argument, Expr, Expression, Operator};
+use nu_protocol::{
+    Span, VarId,
+    ast::{Argument, Call, Expr, Expression, Operator, Traverse},
+};
 
 use crate::{
     ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
@@ -8,6 +11,14 @@ use crate::{
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
 };
+
+/// Information about an empty list variable declaration
+type EmptyListVar = (VarId, String, Span);
+/// Collection of variables that perform direct copying
+type DirectCopyVars = Vec<VarId>;
+/// Analysis result containing both empty list variables and direct copy
+/// patterns
+type AnalysisPattern = (Vec<EmptyListVar>, DirectCopyVars);
 
 /// Check if an element matches a transformation pattern
 fn matches_transformation_pattern(
@@ -44,94 +55,51 @@ fn has_transformation_in_append(
     loop_var_name: &str,
 ) -> bool {
     match &expr.expr {
-        Expr::Call(call) => {
-            if call.is_call_to_command("append", context)
-                && let Some(arg) = call.arguments.first()
-            {
-                let (Argument::Positional(arg_expr) | Argument::Unknown(arg_expr)) = arg else {
-                    return false;
-                };
+        Expr::Call(call) if call.is_call_to_command("append", context) => {
+            let Some(arg) = call.arguments.first() else {
+                return false;
+            };
 
-                if let Expr::Var(_var_id) = &arg_expr.expr {
+            let (Argument::Positional(arg_expr) | Argument::Unknown(arg_expr)) = arg else {
+                return false;
+            };
+
+            match &arg_expr.expr {
+                Expr::Var(_) => {
                     let var_name = arg_expr.span_text(context);
-                    return var_name != loop_var_name;
-                } else if let Expr::FullCellPath(cell_path) = &arg_expr.expr
-                    && let Expr::Var(_var_id) = &cell_path.head.expr
-                {
-                    let var_name = cell_path.head.span_text(context);
-                    return var_name == loop_var_name && !cell_path.tail.is_empty();
+                    var_name != loop_var_name
                 }
-
-                return true;
+                Expr::FullCellPath(cell_path) if matches!(&cell_path.head.expr, Expr::Var(_)) => {
+                    let var_name = cell_path.head.span_text(context);
+                    var_name == loop_var_name && !cell_path.tail.is_empty()
+                }
+                _ => true,
             }
         }
         Expr::FullCellPath(cell_path) => {
-            return has_transformation_in_append(&cell_path.head, context, loop_var_name);
+            has_transformation_in_append(&cell_path.head, context, loop_var_name)
         }
-        Expr::Block(block_id) | Expr::Subexpression(block_id) => {
-            return block_id
-                .all_elements(context)
-                .iter()
-                .any(|elem| has_transformation_in_append(&elem.expr, context, loop_var_name));
-        }
-        _ => {}
-    }
-    false
-}
-
-fn is_literal_list(expr: &Expression) -> bool {
-    match &expr.expr {
-        Expr::List(_) => true,
-        Expr::FullCellPath(cell_path) => matches!(&cell_path.head.expr, Expr::List(_)),
-        Expr::Keyword(keyword) => is_literal_list(&keyword.expr),
+        Expr::Block(block_id) | Expr::Subexpression(block_id) => block_id
+            .all_elements(context)
+            .iter()
+            .any(|elem| has_transformation_in_append(&elem.expr, context, loop_var_name)),
         _ => false,
     }
 }
 
-/// Extract variable IDs that are assigned to within a block (for append
-/// detection)
-fn extract_assigned_vars(
-    block_id: nu_protocol::BlockId,
-    context: &LintContext,
-) -> Vec<nu_protocol::VarId> {
-    let mut var_ids = Vec::new();
-    let block = context.working_set.get_block(block_id);
-    for pipeline in &block.pipelines {
-        for elem in &pipeline.elements {
-            let Expr::BinaryOp(lhs, op, _rhs) = &elem.expr.expr else {
-                continue;
-            };
-
-            if !matches!(op.expr, Expr::Operator(Operator::Assignment(_))) {
-                continue;
-            }
-
-            let var_id = match &lhs.expr {
-                Expr::Var(var_id) => Some(*var_id),
-                Expr::FullCellPath(cell_path) => match &cell_path.head.expr {
-                    Expr::Var(var_id) => Some(*var_id),
-                    _ => None,
-                },
-                _ => None,
-            };
-
-            if let Some(id) = var_id {
-                var_ids.push(id);
-            }
-        }
-    }
-    var_ids
-}
+/// Type alias for the empty list variables map
+type EmptyListVarsMap = HashMap<VarId, (String, Span)>;
 
 /// Create violations for variables that match the direct copy pattern
 fn create_violations(
-    empty_list_vars_map: &HashMap<nu_protocol::VarId, (String, nu_protocol::Span)>,
-    direct_copy_set: &HashSet<nu_protocol::VarId>,
+    empty_list_vars_map: &EmptyListVarsMap,
+    direct_copy_set: &HashSet<VarId>,
 ) -> Vec<RuleViolation> {
-    let mut violations = Vec::new();
-    for (var_id, (var_name, span)) in empty_list_vars_map {
-        if direct_copy_set.contains(var_id) {
-            let violation = RuleViolation::new_dynamic(
+    empty_list_vars_map
+        .iter()
+        .filter(|&(var_id, _)| direct_copy_set.contains(var_id))
+        .map(|(_, (var_name, span))| {
+            RuleViolation::new_dynamic(
                 "prefer_direct_use",
                 format!(
                     "Variable '{var_name}' is initialized as empty list and filled by copying \
@@ -141,18 +109,13 @@ fn create_violations(
             )
             .with_suggestion_static(
                 "Use the list directly instead of copying: 'let data = [1 2 3]'",
-            );
-            violations.push(violation);
-        }
-    }
-    violations
+            )
+        })
+        .collect()
 }
 
 /// Extract empty list variable declarations from mut statements
-fn extract_empty_list_vars(
-    expr: &Expression,
-    context: &LintContext,
-) -> Vec<(nu_protocol::VarId, String, nu_protocol::Span)> {
+fn extract_empty_list_vars(expr: &Expression, context: &LintContext) -> Vec<EmptyListVar> {
     let Expr::Call(call) = &expr.expr else {
         return vec![];
     };
@@ -164,7 +127,6 @@ fn extract_empty_list_vars(
     let Some(var_arg) = call.arguments.first() else {
         return vec![];
     };
-
     let (Argument::Positional(var_expr) | Argument::Unknown(var_expr)) = var_arg else {
         return vec![];
     };
@@ -173,42 +135,44 @@ fn extract_empty_list_vars(
         return vec![];
     };
 
-    // Check if initialized to empty list
     let Some(init_arg) = call.arguments.get(1) else {
         return vec![];
     };
-
     let (Argument::Positional(init_expr) | Argument::Unknown(init_expr)) = init_arg else {
         return vec![];
     };
 
     let is_empty_list = match &init_expr.expr {
-        Expr::List(items) => {
-            log::debug!("Found List with {} items", items.len());
-            items.is_empty()
-        }
+        Expr::List(items) => items.is_empty(),
         Expr::Block(block_id) => block_id.is_empty_list_block(context),
-        _ => {
-            log::debug!("Init expr is neither List nor Block: {:?}", init_expr.expr);
-            false
-        }
+        _ => false,
     };
 
-    log::debug!("is_empty_list: {is_empty_list}");
     if is_empty_list {
         let var_name = var_expr.span_text(context);
-        log::debug!("Found empty list var: {var_name} (id: {var_id:?})");
         vec![(*var_id, var_name.to_string(), expr.span)]
     } else {
         vec![]
     }
 }
 
-/// Extract direct copy patterns from for loops
-fn extract_direct_copy_patterns(
-    expr: &Expression,
+/// Check if a for loop performs direct copying without transformation
+fn is_direct_copy_for_loop(
+    call: &Call,
     context: &LintContext,
-) -> Vec<nu_protocol::VarId> {
+) -> Option<(String, nu_protocol::BlockId)> {
+    let loop_var_name = call.loop_var_from_for(context)?;
+    let iter_expr = call.get_for_loop_iterator()?;
+    let block_id = call.get_for_loop_body()?;
+
+    // Must iterate over a literal list and have no transformations
+    (iter_expr.is_literal_list()
+        && !has_transformation_or_filter(block_id, context, &loop_var_name))
+    .then_some((loop_var_name, block_id))
+}
+
+/// Extract direct copy patterns from for loops
+fn extract_direct_copy_patterns(expr: &Expression, context: &LintContext) -> DirectCopyVars {
     let Expr::Call(call) = &expr.expr else {
         return vec![];
     };
@@ -217,79 +181,44 @@ fn extract_direct_copy_patterns(
         return vec![];
     }
 
-    let Some(loop_var_name) = call.loop_var_from_for(context) else {
-        log::debug!("Could not get loop var name");
-        return vec![];
-    };
-
-    log::debug!("Loop var name: {loop_var_name}");
-
-    let Some(iter_arg) = call.arguments.get(1) else {
-        log::debug!("No iterator argument");
-        return vec![];
-    };
-
-    let (Argument::Positional(iter_expr) | Argument::Unknown(iter_expr)) = iter_arg else {
-        return vec![];
-    };
-
-    let is_literal = is_literal_list(iter_expr);
-    log::debug!(
-        "Is literal list: {} (expr: {:?})",
-        is_literal,
-        iter_expr.expr
-    );
-
-    let Some(block_arg) = call.arguments.last() else {
-        return vec![];
-    };
-
-    let (Argument::Positional(block_expr) | Argument::Unknown(block_expr)) = block_arg else {
-        return vec![];
-    };
-
-    let Expr::Block(block_id) = &block_expr.expr else {
-        return vec![];
-    };
-
-    if !has_transformation_or_filter(*block_id, context, &loop_var_name) && is_literal {
-        log::debug!("Found direct copy pattern for loop var: {loop_var_name}");
-        extract_assigned_vars(*block_id, context)
+    if let Some((_, block_id)) = is_direct_copy_for_loop(call, context) {
+        block_id.extract_assigned_vars(context)
     } else {
         vec![]
     }
 }
 
+/// Extract both patterns in a single pass
+fn extract_patterns(expr: &Expression, context: &LintContext) -> AnalysisPattern {
+    (
+        extract_empty_list_vars(expr, context),
+        extract_direct_copy_patterns(expr, context),
+    )
+}
+
 fn check(context: &LintContext) -> Vec<RuleViolation> {
-    use nu_protocol::ast::Traverse;
-
-    let mut empty_list_vars: Vec<(nu_protocol::VarId, String, nu_protocol::Span)> = Vec::new();
+    let mut patterns: Vec<AnalysisPattern> = Vec::new();
 
     context.ast.flat_map(
         context.working_set,
-        &|expr| extract_empty_list_vars(expr, context),
-        &mut empty_list_vars,
+        &|expr| vec![extract_patterns(expr, context)],
+        &mut patterns,
     );
 
-    log::debug!("Total empty list vars found: {}", empty_list_vars.len());
+    // Flatten the results from the single traversal
+    let empty_list_vars: EmptyListVarsMap = patterns
+        .iter()
+        .flat_map(|(empty_vars, _)| empty_vars.iter())
+        .map(|(id, name, span)| (*id, (name.clone(), *span)))
+        .collect();
 
-    let empty_list_vars_map: HashMap<nu_protocol::VarId, (String, nu_protocol::Span)> =
-        empty_list_vars
-            .into_iter()
-            .map(|(id, name, span)| (id, (name, span)))
-            .collect();
+    let direct_copy_set: HashSet<VarId> = patterns
+        .iter()
+        .flat_map(|(_, direct_copies)| direct_copies.iter())
+        .copied()
+        .collect();
 
-    let mut direct_copy_patterns: Vec<nu_protocol::VarId> = Vec::new();
-
-    context.ast.flat_map(
-        context.working_set,
-        &|expr| extract_direct_copy_patterns(expr, context),
-        &mut direct_copy_patterns,
-    );
-
-    let direct_copy_set: HashSet<nu_protocol::VarId> = direct_copy_patterns.into_iter().collect();
-
-    create_violations(&empty_list_vars_map, &direct_copy_set)
+    create_violations(&empty_list_vars, &direct_copy_set)
 }
 
 pub fn rule() -> Rule {

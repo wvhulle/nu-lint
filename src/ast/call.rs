@@ -63,6 +63,12 @@ pub trait CallExt {
     fn extract_exit_code(&self) -> Option<i64>;
     /// Checks if call has a named flag. Example: `ls --all` has flag "all"
     fn has_named_flag(&self, flag_name: &str) -> bool;
+    /// Extracts iterator expression from for loop call. Example: `for x in
+    /// $list { }` returns `$list`
+    fn get_for_loop_iterator(&self) -> Option<&Expression>;
+    /// Extracts body block from for loop call. Example: `for x in $list { ...
+    /// }` returns body block
+    fn get_for_loop_body(&self) -> Option<nu_protocol::BlockId>;
 }
 
 impl CallExt for Call {
@@ -224,5 +230,25 @@ impl CallExt for Call {
                 Argument::Named(named) if named.0.item == flag_name
             )
         })
+    }
+
+    fn get_for_loop_iterator(&self) -> Option<&Expression> {
+        let iter_arg = self.arguments.get(1)?;
+        match iter_arg {
+            Argument::Positional(expr) | Argument::Unknown(expr) => Some(expr),
+            _ => None,
+        }
+    }
+
+    fn get_for_loop_body(&self) -> Option<nu_protocol::BlockId> {
+        let block_arg = self.arguments.last()?;
+        let (Argument::Positional(block_expr) | Argument::Unknown(block_expr)) = block_arg else {
+            return None;
+        };
+
+        match &block_expr.expr {
+            Expr::Block(block_id) => Some(*block_id),
+            _ => None,
+        }
     }
 }

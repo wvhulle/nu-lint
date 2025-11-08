@@ -6,7 +6,10 @@ use nu_protocol::{
     },
 };
 
-use super::{block::BlockExt, span::SpanExt};
+use super::{
+    block::BlockExt, builtin_command::CommandExt, call::CallExt, ext_command::ExternalCommandExt,
+    span::SpanExt,
+};
 use crate::context::LintContext;
 
 pub trait ExpressionExt: Traverse {
@@ -80,7 +83,13 @@ pub trait ExpressionExt: Traverse {
     fn infer_output_type(&self, context: &LintContext) -> Option<String>;
     /// Infers the input type expected by an expression. Example: `$in | length`
     /// expects "list"
-    fn infer_input_type(&self, in_var: Option<VarId>, context: &LintContext) -> Option<&'static str>;
+    fn infer_input_type(
+        &self,
+        in_var: Option<VarId>,
+        context: &LintContext,
+    ) -> Option<&'static str>;
+    /// Checks if expression is a literal list. Example: `[1 2 3]` or `[]`
+    fn is_literal_list(&self) -> bool;
 }
 
 impl ExpressionExt for Expression {
@@ -457,10 +466,6 @@ impl ExpressionExt for Expression {
     }
 
     fn infer_output_type(&self, context: &LintContext) -> Option<String> {
-        use super::builtin_command::CommandExt;
-        use super::call::CallExt;
-        use super::ext_command::ExternalCommandExt;
-
         const fn is_filepath_expr(expr: &Expr) -> bool {
             matches!(expr, Expr::Filepath(..) | Expr::GlobPattern(..))
         }
@@ -500,7 +505,7 @@ impl ExpressionExt for Expression {
                 let decl = context.working_set.get_decl(call.decl_id);
                 let cmd_name = decl.name();
 
-                if matches!(cmd_name, "if" | "match" | "try" | "do") 
+                if matches!(cmd_name, "if" | "match" | "try" | "do")
                     && let Some(unified_type) = infer_from_call_with_blocks(call, context)
                 {
                     return Some(unified_type);
@@ -520,7 +525,11 @@ impl ExpressionExt for Expression {
         }
     }
 
-    fn infer_input_type(&self, in_var: Option<VarId>, context: &LintContext) -> Option<&'static str> {
+    fn infer_input_type(
+        &self,
+        in_var: Option<VarId>,
+        context: &LintContext,
+    ) -> Option<&'static str> {
         use super::call::CallExt;
 
         let in_var_id = in_var?;
@@ -547,7 +556,8 @@ impl ExpressionExt for Expression {
             Expr::Collect(_, inner) | Expr::UnaryNot(inner) => {
                 inner.infer_input_type(in_var, context)
             }
-            Expr::BinaryOp(left, _, right) => left.infer_input_type(in_var, context)
+            Expr::BinaryOp(left, _, right) => left
+                .infer_input_type(in_var, context)
                 .or_else(|| right.infer_input_type(in_var, context)),
             Expr::Subexpression(block_id) | Expr::Block(block_id) | Expr::Closure(block_id) => {
                 let block = context.working_set.get_block(*block_id);
@@ -558,6 +568,15 @@ impl ExpressionExt for Expression {
                     .find_map(|element| element.expr.infer_input_type(in_var, context))
             }
             _ => None,
+        }
+    }
+
+    fn is_literal_list(&self) -> bool {
+        match &self.expr {
+            Expr::List(_) => true,
+            Expr::FullCellPath(cell_path) => matches!(&cell_path.head.expr, Expr::List(_)),
+            Expr::Keyword(keyword) => keyword.expr.is_literal_list(),
+            _ => false,
         }
     }
 }
@@ -587,5 +606,3 @@ fn infer_from_call_with_blocks(call: &Call, context: &LintContext) -> Option<Str
 
     None
 }
-
-

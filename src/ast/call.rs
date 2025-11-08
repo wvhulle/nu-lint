@@ -69,6 +69,15 @@ pub trait CallExt {
     /// Extracts body block from for loop call. Example: `for x in $list { ...
     /// }` returns body block
     fn get_for_loop_body(&self) -> Option<nu_protocol::BlockId>;
+    /// Gets named argument expression by flag name. Example: `try { ... }
+    /// --catch { ... }` returns catch block
+    fn get_named_arg_expr(&self, flag_name: &str) -> Option<&Expression>;
+    /// Checks if this is a control flow command. Example: `if`, `for`,
+    /// `while`, `match`, `try`
+    fn is_control_flow_command(&self, context: &LintContext) -> bool;
+    /// Gets all argument expressions from a call. Example: positional, named,
+    /// spread arguments
+    fn all_arg_expressions(&self) -> Vec<&Expression>;
 }
 
 impl CallExt for Call {
@@ -250,5 +259,34 @@ impl CallExt for Call {
             Expr::Block(block_id) => Some(*block_id),
             _ => None,
         }
+    }
+
+    fn get_named_arg_expr(&self, flag_name: &str) -> Option<&Expression> {
+        self.arguments.iter().find_map(|arg| {
+            if let Argument::Named(named) = arg
+                && named.0.item == flag_name
+            {
+                named.2.as_ref()
+            } else {
+                None
+            }
+        })
+    }
+
+    fn is_control_flow_command(&self, context: &LintContext) -> bool {
+        matches!(
+            self.get_call_name(context).as_str(),
+            "if" | "for" | "while" | "match" | "try"
+        )
+    }
+
+    fn all_arg_expressions(&self) -> Vec<&Expression> {
+        self.arguments
+            .iter()
+            .filter_map(|arg| match arg {
+                Argument::Positional(e) | Argument::Unknown(e) | Argument::Spread(e) => Some(e),
+                Argument::Named(named) => named.2.as_ref(),
+            })
+            .collect()
     }
 }

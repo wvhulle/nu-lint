@@ -8,11 +8,12 @@ mod exit_only_in_main;
 mod exported_function_docs;
 mod external_script_as_argument;
 mod forbid_excessive_nesting;
+mod inline_single_use_function;
 mod unnecessary_ignore;
 
 mod max_function_body_length;
 mod max_positional_params;
-mod missing_type_annotation;
+mod missing_type_annotations;
 mod naming;
 
 mod nu_parse_error;
@@ -36,18 +37,17 @@ mod remove_redundant_in;
 mod replace_by_builtin;
 mod spacing;
 mod systemd_journal_prefix;
-mod typed_pipeline_io;
 mod unnecessary_mut;
 mod unnecessary_variable_before_return;
 mod unused_helper_functions;
 mod unused_output;
 use std::collections::HashMap;
 
-use naming::{
-    completion_function_naming, kebab_case_commands, screaming_snake_constants,
-    snake_case_variables,
+use naming::{kebab_case_commands, screaming_snake_constants, snake_case_variables};
+use spacing::{
+    no_trailing_spaces, omit_list_commas, prefer_multiline_functions, prefer_multiline_lists,
+    prefer_multiline_records,
 };
-use spacing::{multiline_formatting, no_trailing_spaces, omit_list_commas};
 
 use crate::rule::Rule;
 
@@ -79,11 +79,8 @@ impl RuleRegistry {
     #[must_use]
     pub(crate) fn with_default_rules() -> Self {
         let mut registry = Self::new();
-        // TODO: add rule that detects custom commands with a body (apart from comments)
-        // of length 1, used just once and suggests inlining at call-site.
         registry.register(check_complete_exit_code::rule());
         registry.register(collapsible_if::rule());
-        registry.register(completion_function_naming::rule());
         registry.register(dangerous_file_operations::rule());
         registry.register(descriptive_error_messages::rule());
         registry.register(error_make_metadata::rule());
@@ -93,11 +90,15 @@ impl RuleRegistry {
         registry.register(exported_function_docs::rule());
         registry.register(forbid_excessive_nesting::rule());
         registry.register(external_script_as_argument::rule());
+        registry.register(inline_single_use_function::rule());
         registry.register(kebab_case_commands::rule());
         registry.register(max_function_body_length::rule());
         registry.register(max_positional_params::rule());
-        registry.register(missing_type_annotation::rule());
-        registry.register(multiline_formatting::rule());
+        registry.register(missing_type_annotations::argument::rule());
+        registry.register(missing_type_annotations::pipeline::rule());
+        registry.register(prefer_multiline_functions::rule());
+        registry.register(prefer_multiline_lists::rule());
+        registry.register(prefer_multiline_records::rule());
         registry.register(replace_by_builtin::echo::rule());
         registry.register(no_trailing_spaces::rule());
         registry.register(nu_parse_error::rule());
@@ -135,7 +136,6 @@ impl RuleRegistry {
         registry.register(spacing::brace_spacing::rule());
         registry.register(spacing::pipe_spacing::rule());
         registry.register(systemd_journal_prefix::rule());
-        registry.register(typed_pipeline_io::rule());
         registry.register(unnecessary_mut::rule());
         registry.register(unnecessary_variable_before_return::rule());
         registry.register(unused_helper_functions::rule());

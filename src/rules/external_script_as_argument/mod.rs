@@ -16,52 +16,64 @@ const fn is_string_parameter(param: &nu_protocol::PositionalArg) -> bool {
     )
 }
 
+/// Generate suggestion message based on function context
+fn create_suggestion_message(param_name: &str, function_name: &str) -> String {
+    if function_name == "main" {
+        format!(
+            "Instead of passing '{param_name}' as a script path argument, define the \
+             functionality as a function in the same file. This makes the code more maintainable \
+             and testable. For example: 'def {param_name}-handler [] {{ ... }}' and call it \
+             directly in main."
+        )
+    } else {
+        format!(
+            "Instead of passing '{param_name}' as a script path argument to function \
+             '{function_name}', consider defining the external script logic as an internal \
+             function. This improves code maintainability and testability."
+        )
+    }
+}
+
+/// Create a violation for a parameter that's used as an external command
+fn create_violation(param_name: &str, function_name: &str, context: &LintContext) -> RuleViolation {
+    RuleViolation::new_dynamic(
+        "external_script_as_argument",
+        format!(
+            "Function '{function_name}' parameter '{param_name}' is used as an external command. \
+             This is an anti-pattern."
+        ),
+        context.find_declaration_span(function_name),
+    )
+    .with_suggestion_dynamic(create_suggestion_message(param_name, function_name))
+}
+
 fn check(context: &LintContext) -> Vec<RuleViolation> {
-    // Find the main function's body block
     let function_bodies = context.collect_function_definitions();
-    let main_block_id = function_bodies
-        .iter()
-        .find_map(|(block_id, name)| (name.as_str() == "main").then_some(*block_id));
 
-    let Some(main_block_id) = main_block_id else {
-        return Vec::new();
-    };
-
-    // Find all user functions and filter for "main"
     context
         .new_user_functions()
-        .find(|(_, decl)| decl.signature().name == "main")
-        .and_then(|(_, decl)| {
+        .filter_map(|(_, decl)| {
             let signature = decl.signature();
 
-            // Collect string-type parameters that are used as external commands
+            // Find the function body block
+            function_bodies
+                .iter()
+                .find_map(|(block_id, name)| (name == &signature.name).then_some(*block_id))
+                .map(|function_block_id| (signature, function_block_id))
+        })
+        .flat_map(|(signature, function_block_id)| {
             signature
                 .required_positional
                 .iter()
                 .chain(&signature.optional_positional)
                 .filter(|param| is_string_parameter(param))
-                .filter_map(|param| param.var_id.map(|var_id| (var_id, &param.name)))
-                .find(|(var_id, _)| {
-                    main_block_id.contains_external_call_with_variable(*var_id, context)
+                .filter_map(|param| param.var_id.map(|var_id| (param, var_id)))
+                .filter(|(_, var_id)| {
+                    function_block_id.contains_external_call_with_variable(*var_id, context)
                 })
-                .map(|(_, param_name)| {
-                    RuleViolation::new_dynamic(
-                        "external_script_as_argument",
-                        format!(
-                            "Main function parameter '{param_name}' is used as an external \
-                             command. This is an anti-pattern."
-                        ),
-                        context.find_declaration_span(&signature.name),
-                    )
-                    .with_suggestion_dynamic(format!(
-                        "Instead of passing '{param_name}' as a script path argument, define the \
-                         functionality as a function in the same file. This makes the code more \
-                         maintainable and testable. For example: 'def {param_name} [] {{ ... }}' \
-                         and call it directly in main."
-                    ))
-                })
+                .map(|(param, _)| create_violation(&param.name, &signature.name, context))
+                .collect::<Vec<_>>()
         })
-        .into_iter()
         .collect()
 }
 
@@ -70,7 +82,8 @@ pub fn rule() -> Rule {
         "external_script_as_argument",
         RuleCategory::CodeQuality,
         Severity::Warning,
-        "Avoid passing external scripts as arguments to main; define them as functions instead",
+        "Avoid passing external scripts as arguments to custom commands; define them as functions \
+         instead",
         check,
     )
 }

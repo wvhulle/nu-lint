@@ -17,12 +17,13 @@ fn ignores_multiline_list() {
 }
 
 #[test]
-fn ignores_multiline_function() {
-    let code = r#"def process_data [
-    input: string
-    output: string
-] {
-    echo "processing"
-}"#;
+fn ignores_empty_list() {
+    let code = "let items = []";
+    rule().assert_ignores(code);
+}
+
+#[test]
+fn ignores_short_list_with_few_items() {
+    let code = r"let coords = [1.0, 2.0]";
     rule().assert_ignores(code);
 }

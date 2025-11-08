@@ -11,7 +11,6 @@ def validate [input: string] {
 }
 "#;
 
-    rule().assert_detects(bad_code);
     rule().assert_violation_count_exact(bad_code, 1);
 }
 

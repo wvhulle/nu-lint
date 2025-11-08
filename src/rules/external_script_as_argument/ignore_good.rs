@@ -25,17 +25,6 @@ def main [] {
 }
 
 #[test]
-fn helper_function_with_script_parameter() {
-    rule().assert_ignores(
-        r"
-def run-script [script_path: string] {
-  ^$script_path
-}
-",
-    );
-}
-
-#[test]
 fn main_with_string_param_not_used_as_external() {
     rule().assert_ignores(
         r#"
@@ -57,19 +46,6 @@ def main [count: int] {
   }
 }
 ",
-    );
-}
-
-#[test]
-fn no_main_function() {
-    rule().assert_ignores(
-        r#"
-def helper [script: string] {
-  ^$script
-}
-
-print "Hello"
-"#,
     );
 }
 

@@ -70,3 +70,45 @@ def main [handler?: string] {
 ",
     );
 }
+
+#[test]
+fn helper_function_with_script_parameter() {
+    rule().assert_detects(
+        r"
+def run-script [script_path: string] {
+  ^$script_path
+}
+",
+    );
+}
+
+#[test]
+fn custom_command_with_filepath_parameter() {
+    rule().assert_detects(
+        r"
+def execute-handler [handler: path] {
+  let result = (^$handler --check | complete)
+  print $result.stdout
+}
+",
+    );
+}
+
+#[test]
+fn multiple_custom_commands_with_script_parameters() {
+    rule().assert_detects(
+        r#"
+def run-backup [backup_script: string] {
+  ^$backup_script --verbose
+}
+
+def cleanup [cleanup_tool: path] {
+  ^$cleanup_tool /tmp
+}
+
+def main [] {
+  print "Running tasks..."
+}
+"#,
+    );
+}

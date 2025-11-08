@@ -2,8 +2,8 @@ use nu_protocol::ast::{Argument, Call, Expr, Expression, Operator, Pipeline};
 
 use crate::{
     ast::{
-        builtin_command::CommandExt, call::CallExt, expression::ExpressionExt,
-        span::SpanExt, syntax_shape::SyntaxShapeExt,
+        builtin_command::CommandExt, call::CallExt, expression::ExpressionExt, span::SpanExt,
+        syntax_shape::SyntaxShapeExt,
     },
     context::LintContext,
     rule::{Rule, RuleCategory},
@@ -11,11 +11,10 @@ use crate::{
 };
 
 fn is_reference_to_param(expr: &Expression, param_name: &str, ctx: &LintContext) -> bool {
-    expr.extract_variable_name(ctx)
-        .is_some_and(|var_name| {
-            let normalized = var_name.trim_end_matches('?').trim_start_matches("...");
-            normalized == param_name
-        })
+    expr.extract_variable_name(ctx).is_some_and(|var_name| {
+        let normalized = var_name.trim_end_matches('?').trim_start_matches("...");
+        normalized == param_name
+    })
 }
 
 fn infer_type_from_pipeline(

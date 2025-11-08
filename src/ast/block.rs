@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use nu_protocol::{
     BlockId, Span, VarId,
-    ast::{Call, Expr, FindMapResult, PipelineElement, Traverse},
+    ast::{Call, Expr, FindMapResult, Operator, PipelineElement, Traverse},
 };
 
 use super::{call::CallExt, pipeline::PipelineExt};
@@ -59,6 +59,9 @@ pub trait BlockExt {
     /// Infers the input type expected by a block. Example: `{ $in | length }`
     /// expects "list"
     fn infer_input_type(&self, context: &LintContext) -> String;
+    /// Extracts variable IDs that are assigned to within a block. Example: `{
+    /// $x = 5; $y += 1 }` returns [x, y]
+    fn extract_assigned_vars(&self, context: &LintContext) -> Vec<VarId>;
 }
 
 impl BlockExt for BlockId {
@@ -206,8 +209,6 @@ impl BlockExt for BlockId {
     }
 
     fn infer_output_type(&self, context: &LintContext) -> String {
-        use super::expression::ExpressionExt;
-
         let block = context.working_set.get_block(*self);
         log::debug!("Inferring output type for block {self:?}");
 
@@ -234,5 +235,31 @@ impl BlockExt for BlockId {
             .find_map(|element| element.expr.infer_input_type(Some(in_var), context))
             .map_or_else(|| "any".to_string(), String::from)
     }
-}
 
+    fn extract_assigned_vars(&self, context: &LintContext) -> Vec<VarId> {
+        let block = context.working_set.get_block(*self);
+        block
+            .pipelines
+            .iter()
+            .flat_map(|pipeline| &pipeline.elements)
+            .filter_map(|elem| {
+                let Expr::BinaryOp(lhs, op, _) = &elem.expr.expr else {
+                    return None;
+                };
+
+                if !matches!(op.expr, Expr::Operator(Operator::Assignment(_))) {
+                    return None;
+                }
+
+                match &lhs.expr {
+                    Expr::Var(var_id) => Some(*var_id),
+                    Expr::FullCellPath(cell_path) => match &cell_path.head.expr {
+                        Expr::Var(var_id) => Some(*var_id),
+                        _ => None,
+                    },
+                    _ => None,
+                }
+            })
+            .collect()
+    }
+}

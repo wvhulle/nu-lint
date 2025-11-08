@@ -206,8 +206,6 @@ impl BlockExt for BlockId {
     }
 
     fn infer_output_type(&self, context: &LintContext) -> String {
-        use super::expression::ExpressionExt;
-
         let block = context.working_set.get_block(*self);
         log::debug!("Inferring output type for block {self:?}");
 
@@ -235,4 +233,3 @@ impl BlockExt for BlockId {
             .map_or_else(|| "any".to_string(), String::from)
     }
 }
-

@@ -12,7 +12,7 @@ mod unnecessary_ignore;
 
 mod max_function_body_length;
 mod max_positional_params;
-mod missing_type_annotation;
+mod missing_type_annotations;
 mod naming;
 
 mod nu_parse_error;
@@ -36,7 +36,6 @@ mod remove_redundant_in;
 mod replace_by_builtin;
 mod spacing;
 mod systemd_journal_prefix;
-mod typed_pipeline_io;
 mod unnecessary_mut;
 mod unnecessary_variable_before_return;
 mod unused_helper_functions;
@@ -96,7 +95,8 @@ impl RuleRegistry {
         registry.register(kebab_case_commands::rule());
         registry.register(max_function_body_length::rule());
         registry.register(max_positional_params::rule());
-        registry.register(missing_type_annotation::rule());
+        registry.register(missing_type_annotations::argument::rule());
+        registry.register(missing_type_annotations::pipeline::rule());
         registry.register(multiline_formatting::rule());
         registry.register(replace_by_builtin::echo::rule());
         registry.register(no_trailing_spaces::rule());
@@ -135,7 +135,6 @@ impl RuleRegistry {
         registry.register(spacing::brace_spacing::rule());
         registry.register(spacing::pipe_spacing::rule());
         registry.register(systemd_journal_prefix::rule());
-        registry.register(typed_pipeline_io::rule());
         registry.register(unnecessary_mut::rule());
         registry.register(unnecessary_variable_before_return::rule());
         registry.register(unused_helper_functions::rule());

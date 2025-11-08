@@ -46,7 +46,10 @@ use naming::{
     completion_function_naming, kebab_case_commands, screaming_snake_constants,
     snake_case_variables,
 };
-use spacing::{multiline_formatting, no_trailing_spaces, omit_list_commas};
+use spacing::{
+    no_trailing_spaces, omit_list_commas, prefer_multiline_functions, prefer_multiline_lists,
+    prefer_multiline_records,
+};
 
 use crate::rule::Rule;
 
@@ -97,7 +100,9 @@ impl RuleRegistry {
         registry.register(max_positional_params::rule());
         registry.register(missing_type_annotations::argument::rule());
         registry.register(missing_type_annotations::pipeline::rule());
-        registry.register(multiline_formatting::rule());
+        registry.register(prefer_multiline_functions::rule());
+        registry.register(prefer_multiline_lists::rule());
+        registry.register(prefer_multiline_records::rule());
         registry.register(replace_by_builtin::echo::rule());
         registry.register(no_trailing_spaces::rule());
         registry.register(nu_parse_error::rule());

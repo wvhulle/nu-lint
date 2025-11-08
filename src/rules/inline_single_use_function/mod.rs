@@ -6,40 +6,39 @@ use crate::{
     violation::{RuleViolation, Severity},
 };
 
-fn count_non_comment_statements(pipeline: &Pipeline) -> usize {
+fn is_non_comment_statement(pipeline: &Pipeline) -> bool {
     pipeline
         .elements
         .iter()
-        .filter(|elem| !matches!(&elem.expr.expr, Expr::Nothing))
-        .count()
+        .any(|elem| !matches!(&elem.expr.expr, Expr::Nothing))
+}
+
+fn is_single_line_in_source(block_span: nu_protocol::Span, context: &LintContext) -> bool {
+    let source_text = &context.source[block_span.start..block_span.end];
+    source_text.lines().count() <= 3
 }
 
 fn has_single_statement_body(block_id: nu_protocol::BlockId, context: &LintContext) -> bool {
     let block = context.working_set.get_block(block_id);
 
-    // Count pipelines that have actual content (not just comments/nothing)
-    let non_empty_pipelines: Vec<_> = block
+    let has_single_pipeline = block
         .pipelines
         .iter()
-        .filter(|p| count_non_comment_statements(p) > 0)
-        .collect();
+        .filter(|p| is_non_comment_statement(p))
+        .count()
+        == 1;
 
-    // Must have exactly one non-empty pipeline with exactly one element
-    if !(non_empty_pipelines.len() == 1 && non_empty_pipelines[0].elements.len() == 1) {
-        return false;
-    }
+    let has_single_element = block
+        .pipelines
+        .iter()
+        .find(|p| is_non_comment_statement(p))
+        .is_some_and(|p| p.elements.len() == 1);
 
-    // Check if the function body is truly single-line in source
-    if let Some(block_span) = block.span {
-        let source_text = &context.source[block_span.start..block_span.end];
-        let line_count = source_text.lines().count();
-        // If body spans more than 3 lines (accounting for braces), consider it multi-line
-        if line_count > 3 {
-            return false;
-        }
-    }
-
-    true
+    has_single_pipeline
+        && has_single_element
+        && block
+            .span
+            .is_none_or(|span| is_single_line_in_source(span, context))
 }
 
 fn count_function_calls(function_name: &str, context: &LintContext) -> usize {
@@ -52,23 +51,18 @@ fn count_function_calls(function_name: &str, context: &LintContext) -> usize {
     context.ast.flat_map(
         context.working_set,
         &|expr| {
-            if let Expr::Call(call) = &expr.expr {
-                vec![call.decl_id]
-            } else {
-                vec![]
-            }
+            matches!(&expr.expr, Expr::Call(call) if call.decl_id == function_decl_id)
+                .then_some(function_decl_id)
+                .into_iter()
+                .collect()
         },
         &mut all_calls,
     );
 
-    all_calls
-        .iter()
-        .filter(|&&id| id == function_decl_id)
-        .count()
+    all_calls.len()
 }
 
 fn is_exported_function(function_name: &str, context: &LintContext) -> bool {
-    // Check if the source code contains "export def <function_name>"
     context
         .source
         .contains(&format!("export def {function_name}"))
@@ -77,50 +71,29 @@ fn is_exported_function(function_name: &str, context: &LintContext) -> bool {
 fn check(context: &LintContext) -> Vec<RuleViolation> {
     let function_definitions = context.collect_function_definitions();
 
-    // Only check if there's a main function (similar to unused_helper_functions)
-    if !function_definitions.values().any(|name| name == "main") {
+    let has_main = function_definitions.values().any(|name| name == "main");
+    if !has_main {
         return vec![];
     }
 
-    let mut violations = Vec::new();
-
-    for (block_id, function_name) in &function_definitions {
-        // Skip main function
-        if function_name == "main" {
-            continue;
-        }
-
-        // Skip exported functions
-        if is_exported_function(function_name, context) {
-            continue;
-        }
-
-        if !has_single_statement_body(*block_id, context) {
-            continue;
-        }
-
-        let call_count = count_function_calls(function_name, context);
-
-        if call_count == 1 {
-            let span = context.find_declaration_span(function_name);
-            violations.push(
-                RuleViolation::new_dynamic(
-                    "inline_single_use_function",
-                    format!(
-                        "Function `{function_name}` has a single-line body and is only used once"
-                    ),
-                    span,
-                )
-                .with_suggestion_static(
-                    "Consider inlining this function at its call site. Single-line helper \
-                     functions used only once may add unnecessary indirection and reduce code \
-                     clarity.",
-                ),
-            );
-        }
-    }
-
-    violations
+    function_definitions
+        .iter()
+        .filter(|(_, name)| *name != "main")
+        .filter(|(_, name)| !is_exported_function(name, context))
+        .filter(|(block_id, _)| has_single_statement_body(**block_id, context))
+        .filter(|(_, name)| count_function_calls(name, context) == 1)
+        .map(|(_, function_name)| {
+            RuleViolation::new_dynamic(
+                "inline_single_use_function",
+                format!("Function `{function_name}` has a single-line body and is only used once"),
+                context.find_declaration_span(function_name),
+            )
+            .with_suggestion_static(
+                "Consider inlining this function at its call site. Single-line helper functions \
+                 used only once may add unnecessary indirection and reduce code clarity.",
+            )
+        })
+        .collect()
 }
 
 pub fn rule() -> Rule {

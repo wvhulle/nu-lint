@@ -1,6 +1,5 @@
-use crate::log::instrument;
-
 use super::rule;
+use crate::log::instrument;
 
 #[test]
 fn function_used_multiple_times() {

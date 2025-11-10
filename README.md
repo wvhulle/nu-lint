@@ -42,6 +42,10 @@ cargo install --path .
 cargo install --git . "$THIS_GIT_URL"
 ```
 
+### VS Code extension
+
+Available at [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=WillemVanhulle.nu-lint).
+
 ### Nix
 
 To install in Nix or NixOS, add to `configuration.nix`:

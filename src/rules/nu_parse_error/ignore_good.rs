@@ -1,4 +1,4 @@
-use crate::{config::Config, engine::LintEngine};
+use crate::{config::Config, engine::LintEngine, log::instrument};
 
 #[test]
 fn test_valid_let_statement() {
@@ -120,5 +120,38 @@ if $x > 5 {
             .iter()
             .any(|v| v.rule_id.as_ref() == "nu_parse_error"),
         "Expected no parse errors for valid if expression"
+    );
+}
+
+#[test]
+fn test_valid_use_std_modules() {
+    instrument();
+    let engine = LintEngine::new(Config::default());
+    let code = r#"
+use std/config light-theme
+use std/config dark-theme
+
+export def refresh-theme [] {
+    let current_theme = "dark"
+    match $current_theme {
+        "dark" => {
+            $env.config = ($env.config | merge {color_config: (dark-theme)})
+        }
+        "light" => {
+            $env.config = ($env.config | merge {color_config: (light-theme)})
+        }
+        _ => {
+            $env.config = ($env.config | merge {color_config: (dark-theme)})
+        }
+    }
+}
+"#;
+    let violations = engine.lint_source(code, None);
+
+    assert!(
+        !violations
+            .iter()
+            .any(|v| v.rule_id.as_ref() == "nu_parse_error"),
+        "Expected no parse errors for valid use statements with std modules"
     );
 }

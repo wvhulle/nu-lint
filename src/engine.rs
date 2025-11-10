@@ -2,6 +2,7 @@ use std::{collections::HashSet, fs, path::Path, sync::OnceLock};
 
 use nu_parser::parse;
 use nu_protocol::{
+    ParseError,
     ast::Block,
     engine::{EngineState, StateWorkingSet},
 };
@@ -134,9 +135,11 @@ impl LintEngine {
         let mut seen = HashSet::new();
 
         // Convert each parse error to a violation, deduplicating by span and message
+        // Filter out module-related errors since the linter works at AST level only
         working_set
             .parse_errors
             .iter()
+            .filter(|parse_error| !matches!(parse_error, ParseError::ModuleNotFound(_, _)))
             .filter_map(|parse_error| {
                 let key = (
                     parse_error.span().start,

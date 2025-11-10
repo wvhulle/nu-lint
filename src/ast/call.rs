@@ -133,12 +133,15 @@ impl CallExt for Call {
         }
 
         let name_arg = self.get_first_positional_arg()?;
-        let name = name_arg.span.text(context);
+        let name = match &name_arg.expr {
+            Expr::String(s) | Expr::RawString(s) => s.clone(),
+            _ => name_arg.span.text(context).to_string(),
+        };
 
         let body_expr = self.get_positional_arg(2)?;
         let block_id = body_expr.extract_block_id()?;
 
-        Some((block_id, name.to_string()))
+        Some((block_id, name))
     }
 
     fn extract_variable_declaration(

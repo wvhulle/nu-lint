@@ -55,6 +55,29 @@ def helper2 [] {
 }
 
 #[test]
+fn transitive_call_chain_spaces() {
+    rule().assert_ignores(
+        r#"
+def helper2 [] {
+  print "transitively used"
+}
+
+def "helper foo" [] {
+  helper2
+}
+
+
+def main [] {
+  helper foo
+}
+
+
+
+"#,
+    );
+}
+
+#[test]
 fn helper_called_from_helper() {
     rule().assert_ignores(
         r"

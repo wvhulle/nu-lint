@@ -1,4 +1,10 @@
-use std::{path::PathBuf, process, sync::Mutex};
+use std::{
+    fs,
+    io::{self, BufRead},
+    path::PathBuf,
+    process,
+    sync::Mutex,
+};
 
 use clap::{Parser, Subcommand};
 use ignore::WalkBuilder;
@@ -72,6 +78,24 @@ pub fn handle_command(command: Commands, config: &Config) {
     }
 }
 
+fn is_nushell_file(path: &PathBuf) -> bool {
+    if path.extension().and_then(|s| s.to_str()) == Some("nu") {
+        return true;
+    }
+
+    if let Ok(file) = fs::File::open(path) {
+        let mut reader = io::BufReader::new(file);
+        let mut first_line = String::new();
+        if reader.read_line(&mut first_line).is_ok() && first_line.starts_with("#!") {
+            return first_line
+                .split_whitespace()
+                .any(|word| word.ends_with("/nu") || word == "nu");
+        }
+    }
+
+    false
+}
+
 /// Collect all files to lint from the provided paths, respecting .gitignore
 /// files
 #[must_use]
@@ -89,7 +113,7 @@ pub fn collect_files_to_lint(paths: &[PathBuf]) -> Vec<PathBuf> {
         if path.is_file() {
             // For individual files, add them directly (don't check gitignore for explicitly
             // specified files)
-            if path.extension().and_then(|s| s.to_str()) == Some("nu") {
+            if is_nushell_file(path) {
                 files_to_lint.push(path.clone());
             }
         } else if path.is_dir() {
@@ -124,7 +148,7 @@ pub fn collect_nu_files_with_gitignore(dir: &PathBuf) -> Vec<PathBuf> {
         match result {
             Ok(entry) => {
                 let path = entry.path();
-                if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("nu") {
+                if path.is_file() && is_nushell_file(&path.to_path_buf()) {
                     nu_files.push(path.to_path_buf());
                 }
             }

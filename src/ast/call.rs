@@ -336,12 +336,10 @@ impl CallExt for Call {
     }
 
     fn get_for_loop_body(&self) -> Option<nu_protocol::BlockId> {
-        self.arguments
-            .last()
-            .and_then(|arg| match arg {
-                Argument::Positional(expr) | Argument::Unknown(expr) => expr.extract_block_id(),
-                _ => None,
-            })
+        self.arguments.last().and_then(|arg| match arg {
+            Argument::Positional(expr) | Argument::Unknown(expr) => expr.extract_block_id(),
+            _ => None,
+        })
     }
 
     fn get_named_arg_expr(&self, flag_name: &str) -> Option<&Expression> {

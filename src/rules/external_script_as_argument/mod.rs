@@ -62,6 +62,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
                 .map(|function_block_id| (signature, function_block_id))
         })
         .flat_map(|(signature, function_block_id)| {
+            let function_block = context.working_set.get_block(function_block_id);
             signature
                 .required_positional
                 .iter()
@@ -69,7 +70,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
                 .filter(|param| is_string_parameter(param))
                 .filter_map(|param| param.var_id.map(|var_id| (param, var_id)))
                 .filter(|(_, var_id)| {
-                    function_block_id.contains_external_call_with_variable(*var_id, context)
+                    function_block.contains_external_call_with_variable(*var_id, context)
                 })
                 .map(|(param, _)| create_violation(&param.name, &signature.name, context))
                 .collect::<Vec<_>>()

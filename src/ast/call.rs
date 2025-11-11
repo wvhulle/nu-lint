@@ -6,6 +6,21 @@ use nu_protocol::{
 use super::{block::BlockExt, expression::ExpressionExt};
 use crate::{ast::span::SpanExt, context::LintContext};
 
+/// Checks if `actual_type` is compatible with `expected_type` for command
+/// signature matching
+fn is_type_compatible(expected: &nu_protocol::Type, actual: &nu_protocol::Type) -> bool {
+    use nu_protocol::Type;
+
+    match (expected, actual) {
+        (e, a) if e == a => true,
+        (Type::Any, _) | (_, Type::Any) => true,
+        (Type::List(expected_inner), Type::List(actual_inner)) => {
+            is_type_compatible(expected_inner, actual_inner)
+        }
+        _ => false,
+    }
+}
+
 pub trait CallExt {
     /// Gets the command name of this call. Example: `ls -la` returns "ls"
     fn get_call_name(&self, context: &LintContext) -> String;
@@ -78,9 +93,78 @@ pub trait CallExt {
     /// Gets all argument expressions from a call. Example: positional, named,
     /// spread arguments
     fn all_arg_expressions(&self) -> Vec<&Expression>;
+
+    fn get_output_type(
+        &self,
+        context: &LintContext,
+        pipeline_input: Option<nu_protocol::Type>,
+    ) -> nu_protocol::Type;
+
+    /// Infers unified output type from block arguments in control flow
+    /// commands. Example: `if $x { "str" } else { "other" }` returns `string`
+    fn infer_from_blocks(&self, context: &LintContext) -> Option<nu_protocol::Type>;
 }
 
 impl CallExt for Call {
+    fn get_output_type(
+        &self,
+        context: &LintContext,
+        pipeline_input: Option<nu_protocol::Type>,
+    ) -> nu_protocol::Type {
+        let decl = context.working_set.get_decl(self.decl_id);
+        let sig = decl.signature();
+
+        log::debug!(
+            "get_output_type called for '{}': pipeline_input={pipeline_input:?}",
+            self.get_call_name(context)
+        );
+
+        log::debug!(
+            "Nu parser parsed output type for call '{}': {:?}",
+            self.get_call_name(context),
+            sig.get_output_type()
+        );
+
+        let has_pipeline_input = pipeline_input.is_some();
+        let input_type = pipeline_input.unwrap_or_else(|| sig.get_input_type());
+        log::debug!(
+            "Final input_type used for call '{}': {:?} (from pipeline_input: {})",
+            self.get_call_name(context),
+            input_type,
+            has_pipeline_input
+        );
+
+        log::debug!(
+            "Command '{}' input_output_types: {:?}",
+            self.get_call_name(context),
+            sig.input_output_types
+        );
+
+        for (in_ty, out_ty) in &sig.input_output_types {
+            if is_type_compatible(in_ty, &input_type) && !matches!(out_ty, nu_protocol::Type::Any) {
+                log::debug!(
+                    "Found compatible type mapping for '{}': {:?} -> {:?} (actual input: {:?})",
+                    self.get_call_name(context),
+                    in_ty,
+                    out_ty,
+                    input_type
+                );
+                return out_ty.clone();
+            }
+            log::debug!(
+                "The signature with input type {:?} is not compatible with actual input type {:?} \
+                 for command '{}'",
+                in_ty,
+                input_type,
+                self.get_call_name(context)
+            );
+        }
+        log::debug!(
+            "Could not find compatible type mapping for '{}'",
+            self.get_call_name(context)
+        );
+        sig.get_output_type()
+    }
     fn get_call_name(&self, context: &LintContext) -> String {
         context
             .working_set
@@ -184,7 +268,10 @@ impl CallExt for Call {
     fn get_nested_single_if<'a>(&self, context: &'a LintContext<'a>) -> Option<&'a Call> {
         let then_block = self.get_positional_arg(1)?;
         let then_block_id = then_block.extract_block_id()?;
-        then_block_id.get_single_if_call(context)
+        context
+            .working_set
+            .get_block(then_block_id)
+            .get_single_if_call(context)
     }
 
     fn generate_collapsed_if(&self, context: &LintContext) -> Option<String> {
@@ -245,23 +332,16 @@ impl CallExt for Call {
     }
 
     fn get_for_loop_iterator(&self) -> Option<&Expression> {
-        let iter_arg = self.arguments.get(1)?;
-        match iter_arg {
-            Argument::Positional(expr) | Argument::Unknown(expr) => Some(expr),
-            _ => None,
-        }
+        self.get_positional_arg(1)
     }
 
     fn get_for_loop_body(&self) -> Option<nu_protocol::BlockId> {
-        let block_arg = self.arguments.last()?;
-        let (Argument::Positional(block_expr) | Argument::Unknown(block_expr)) = block_arg else {
-            return None;
-        };
-
-        match &block_expr.expr {
-            Expr::Block(block_id) => Some(*block_id),
-            _ => None,
-        }
+        self.arguments
+            .last()
+            .and_then(|arg| match arg {
+                Argument::Positional(expr) | Argument::Unknown(expr) => expr.extract_block_id(),
+                _ => None,
+            })
     }
 
     fn get_named_arg_expr(&self, flag_name: &str) -> Option<&Expression> {
@@ -291,5 +371,37 @@ impl CallExt for Call {
                 Argument::Named(named) => named.2.as_ref(),
             })
             .collect()
+    }
+
+    fn infer_from_blocks(&self, context: &LintContext) -> Option<nu_protocol::Type> {
+        log::debug!("Inferring type from call with blocks");
+        let block_types: Vec<nu_protocol::Type> = self
+            .positional_iter()
+            .filter_map(|arg| {
+                arg.extract_block_id().map(|block_id| {
+                    context
+                        .working_set
+                        .get_block(block_id)
+                        .infer_output_type(context)
+                })
+            })
+            .collect();
+
+        if block_types.is_empty() {
+            log::debug!("No block types found");
+            return None;
+        }
+
+        if block_types.iter().all(|t| t == &block_types[0]) {
+            log::debug!("All block types are the same");
+            return Some(block_types[0].clone());
+        }
+
+        if block_types.iter().all(|t| t == &nu_protocol::Type::Nothing) {
+            log::debug!("All block types are Nothing");
+            return Some(nu_protocol::Type::Nothing);
+        }
+
+        None
     }
 }

@@ -35,7 +35,12 @@ impl SpanExt for Span {
     ) -> Option<String> {
         functions
             .iter()
-            .filter(|(block_id, _)| block_id.contains_span(*self, context))
+            .filter(|(block_id, _)| {
+                context
+                    .working_set
+                    .get_block(**block_id)
+                    .contains_span(*self)
+            })
             .min_by_key(|(block_id, _)| {
                 let block = context.working_set.get_block(**block_id);
                 block.span.map_or(usize::MAX, |s| s.end - s.start)

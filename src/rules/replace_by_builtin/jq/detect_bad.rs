@@ -220,8 +220,6 @@ if $condition {
     rule().assert_detects(bad_code);
 }
 
-// Test cases for JSON filtering that Nushell can handle
-
 #[test]
 fn detect_jq_simple_field_access() {
     // .name -> get name

@@ -1,13 +1,13 @@
 use nu_protocol::{
-    BlockId, Span, VarId,
+    BlockId, Span, Type, VarId,
     ast::{
-        Argument, Call, Comparison, Expr, Expression, ExternalArgument, FindMapResult, ListItem,
-        Operator, PathMember, RecordItem, Traverse,
+        Argument, Call, Comparison, Expr, Expression, ExternalArgument, FindMapResult,
+        FullCellPath, ListItem, Operator, PathMember, RecordItem, Traverse,
     },
 };
 
 use super::{
-    block::BlockExt, builtin_command::CommandExt, call::CallExt, ext_command::ExternalCommandExt,
+    block::BlockExt, call::CallExt, ext_command::ExternalCommandExt, pipeline::PipelineExt,
     span::SpanExt,
 };
 use crate::context::LintContext;
@@ -80,16 +80,26 @@ pub trait ExpressionExt: Traverse {
     fn find_pipeline_input_variable(&self, context: &LintContext) -> Option<VarId>;
     /// Infers the output type of an expression. Example: `ls` returns "table",
     /// `1 + 2` returns "int"
-    fn infer_output_type(&self, context: &LintContext) -> Option<String>;
+    fn infer_output_type(&self, context: &LintContext) -> Option<Type>;
     /// Infers the input type expected by an expression. Example: `$in | length`
     /// expects "list"
-    fn infer_input_type(
-        &self,
-        in_var: Option<VarId>,
-        context: &LintContext,
-    ) -> Option<&'static str>;
+    fn infer_input_type(&self, in_var: Option<VarId>, context: &LintContext) -> Option<Type>;
     /// Checks if expression is a literal list. Example: `[1 2 3]` or `[]`
     fn is_literal_list(&self) -> bool;
+}
+
+fn is_pipeline_input_var(var_id: VarId, context: &LintContext) -> bool {
+    let var = context.working_set.get_variable(var_id);
+    (var.declaration_span.start == 0 && var.declaration_span.end == 0)
+        || (var.declaration_span.start == var.declaration_span.end
+            && var.declaration_span.start > 0)
+}
+
+const fn extract_var_from_full_cell_path(cell_path: &FullCellPath) -> Option<VarId> {
+    match &cell_path.head.expr {
+        Expr::Var(var_id) => Some(*var_id),
+        _ => None,
+    }
 }
 
 impl ExpressionExt for Expression {
@@ -206,20 +216,14 @@ impl ExpressionExt for Expression {
 
         match &lhs.expr {
             Expr::Var(var_id) => Some(*var_id),
-            Expr::FullCellPath(cell_path) => {
-                if let Expr::Var(var_id) = &cell_path.head.expr {
-                    Some(*var_id)
-                } else {
-                    None
-                }
-            }
+            Expr::FullCellPath(cell_path) => extract_var_from_full_cell_path(cell_path),
             _ => None,
         }
     }
 
     fn extract_field_access(&self, field_name: &str) -> Option<(VarId, Span)> {
         if let Expr::FullCellPath(cell_path) = &self.expr
-            && let Expr::Var(var_id) = &cell_path.head.expr
+            && let Some(var_id) = extract_var_from_full_cell_path(cell_path)
             && cell_path.tail.iter().any(|path_member| {
                 matches!(
                     path_member,
@@ -227,7 +231,7 @@ impl ExpressionExt for Expression {
                 )
             })
         {
-            Some((*var_id, self.span))
+            Some((var_id, self.span))
         } else {
             None
         }
@@ -240,7 +244,10 @@ impl ExpressionExt for Expression {
             Expr::FullCellPath(path) => path.head.contains_variables(context),
 
             Expr::Subexpression(block_id) | Expr::Block(block_id) | Expr::Closure(block_id) => {
-                block_id.contains_variables(context)
+                context
+                    .working_set
+                    .get_block(*block_id)
+                    .contains_variables(context)
             }
 
             Expr::BinaryOp(left, _, right) => {
@@ -313,9 +320,7 @@ impl ExpressionExt for Expression {
     fn matches_var(&self, var_id: VarId) -> bool {
         match &self.expr {
             Expr::Var(id) => *id == var_id,
-            Expr::FullCellPath(cell_path) => {
-                matches!(&cell_path.head.expr, Expr::Var(id) if *id == var_id)
-            }
+            Expr::FullCellPath(cell_path) => extract_var_from_full_cell_path(cell_path) == Some(var_id),
             _ => false,
         }
     }
@@ -402,9 +407,7 @@ impl ExpressionExt for Expression {
         match &self.expr {
             Expr::Var(var_id) => {
                 let var = context.working_set.get_variable(*var_id);
-                let span_start = var.declaration_span.start;
-                let span_end = var.declaration_span.end;
-                var.const_val.is_none() && span_start == 0 && span_end == 0
+                is_pipeline_input_var(*var_id, context) && var.const_val.is_none()
             }
             Expr::BinaryOp(left, _, right) => {
                 left.uses_pipeline_input(context) || right.uses_pipeline_input(context)
@@ -421,9 +424,10 @@ impl ExpressionExt for Expression {
                 }
             }),
             Expr::FullCellPath(cell_path) => cell_path.head.uses_pipeline_input(context),
-            Expr::Subexpression(block_id) | Expr::Block(block_id) | Expr::Closure(block_id) => {
-                block_id.uses_pipeline_input(context)
-            }
+            Expr::Subexpression(block_id) | Expr::Block(block_id) => context
+                .working_set
+                .get_block(*block_id)
+                .uses_pipeline_input(context),
             _ => false,
         }
     }
@@ -432,17 +436,7 @@ impl ExpressionExt for Expression {
         use super::block::BlockExt;
 
         match &self.expr {
-            Expr::Var(var_id) => {
-                let var = context.working_set.get_variable(*var_id);
-                // $in has declaration_span (0,0) or start==end
-                if (var.declaration_span.start == 0 && var.declaration_span.end == 0)
-                    || (var.declaration_span.start == var.declaration_span.end
-                        && var.declaration_span.start > 0)
-                {
-                    return Some(*var_id);
-                }
-                None
-            }
+            Expr::Var(var_id) => is_pipeline_input_var(*var_id, context).then_some(*var_id),
             Expr::FullCellPath(cell_path) => cell_path.head.find_pipeline_input_variable(context),
             Expr::Call(call) => call.arguments.iter().find_map(|arg| match arg {
                 Argument::Positional(e)
@@ -456,7 +450,10 @@ impl ExpressionExt for Expression {
                 .or_else(|| rhs.find_pipeline_input_variable(context)),
             Expr::UnaryNot(e) | Expr::Collect(_, e) => e.find_pipeline_input_variable(context),
             Expr::Subexpression(block_id) | Expr::Block(block_id) | Expr::Closure(block_id) => {
-                block_id.find_pipeline_input_variable(context)
+                context
+                    .working_set
+                    .get_block(*block_id)
+                    .find_pipeline_input_variable(context)
             }
             Expr::StringInterpolation(items) => items
                 .iter()
@@ -465,38 +462,76 @@ impl ExpressionExt for Expression {
         }
     }
 
-    fn infer_output_type(&self, context: &LintContext) -> Option<String> {
-        const fn is_filepath_expr(expr: &Expr) -> bool {
-            matches!(expr, Expr::Filepath(..) | Expr::GlobPattern(..))
-        }
-
-        fn check_filepath_output(expr: &Expr) -> Option<&'static str> {
-            match expr {
-                Expr::ExternalCall(head, _) if is_filepath_expr(&head.expr) => Some("path"),
-                Expr::Collect(_, inner) if is_filepath_expr(&inner.expr) => Some("path"),
-                expr if is_filepath_expr(expr) => Some("path"),
-                _ => None,
-            }
-        }
+    #[allow(
+        clippy::too_many_lines,
+        reason = "Type inference requires many match arms"
+    )]
+    fn infer_output_type(&self, context: &LintContext) -> Option<Type> {
+        log::debug!(
+            "Inferring output type for expression: '{}'",
+            self.span_text(context)
+        );
 
         let inner_expr = match &self.expr {
-            Expr::Collect(_, inner) => &inner.expr,
+            Expr::Collect(_, inner) => {
+                log::debug!(
+                    "Replacing Expr::Collect with inner expression: '{}'",
+                    inner.span_text(context)
+                );
+                &inner.expr
+            }
             _ => &self.expr,
         };
 
+        log::debug!("About to match against expression variant");
+
         match inner_expr {
-            expr if check_filepath_output(expr).is_some() => {
-                check_filepath_output(expr).map(String::from)
+            expr if check_filepath_output(expr).is_some() => check_filepath_output(expr),
+            Expr::Bool(_)
+            | Expr::Int(_)
+            | Expr::Float(_)
+            | Expr::String(_)
+            | Expr::StringInterpolation(_)
+            | Expr::RawString(_)
+            | Expr::Record(_)
+            | Expr::Table(_) => {
+                log::debug!("Matched literal expression, using AST type: {:?}", self.ty);
+                Some(self.ty.clone())
+            }
+            Expr::List(items) => {
+                log::debug!("Matched List literal with {} items", items.len());
+                Some(infer_list_element_type(items))
+            }
+            Expr::Nothing => {
+                log::debug!("Matched Nothing");
+                Some(Type::Nothing)
+            }
+            Expr::FullCellPath(path) => {
+                log::debug!("Matched FullCellPath, checking head");
+                if let Expr::List(items) = &path.head.expr {
+                    log::debug!("FullCellPath contains List with {} items", items.len());
+                    return Some(infer_list_element_type(items));
+                }
+
+                log::debug!("Using head type for FullCellPath: {:?}", path.head.ty);
+                Some(path.head.ty.clone())
             }
             Expr::Subexpression(block_id) | Expr::Block(block_id) => {
-                Some(block_id.infer_output_type(context))
+                log::debug!("Encountered Subexpression");
+                Some(
+                    context
+                        .working_set
+                        .get_block(*block_id)
+                        .infer_output_type(context),
+                )
             }
             Expr::ExternalCall(call, _) => {
                 let cmd_name = call.span.text(context);
+                log::debug!("Encountered ExternalCall: '{cmd_name}'");
                 if cmd_name.is_known_external_no_output_command() {
-                    Some("nothing".into())
+                    Some(Type::Nothing)
                 } else if cmd_name.is_known_external_output_command() {
-                    Some("string".into())
+                    Some(Type::String)
                 } else {
                     None
                 }
@@ -504,71 +539,126 @@ impl ExpressionExt for Expression {
             Expr::Call(call) => {
                 let decl = context.working_set.get_decl(call.decl_id);
                 let cmd_name = decl.name();
-
+                log::debug!("Encountered Call: '{cmd_name}'");
                 if matches!(cmd_name, "if" | "match" | "try" | "do")
-                    && let Some(unified_type) = infer_from_call_with_blocks(call, context)
+                    && let Some(unified_type) = call.infer_from_blocks(context)
                 {
+                    log::debug!(
+                        "Inferred unified type from blocks for '{cmd_name}': {unified_type:?}"
+                    );
                     return Some(unified_type);
                 }
 
-                let cmd_name_str = call.get_call_name(context);
-                if cmd_name_str.as_str().is_side_effect_only() {
-                    Some("nothing".into())
-                } else if let Some(output_type) = cmd_name_str.as_str().output_type() {
-                    Some(output_type.to_string())
-                } else {
-                    let signature = decl.signature();
-                    Some(signature.get_output_type().to_string())
-                }
+                Some(call.get_output_type(context, None))
             }
-            _ => None,
+            _other => {
+                log::debug!("No specific match, using default case");
+                None
+            }
         }
     }
 
-    fn infer_input_type(
-        &self,
-        in_var: Option<VarId>,
-        context: &LintContext,
-    ) -> Option<&'static str> {
-        use super::call::CallExt;
-
+    fn infer_input_type(&self, in_var: Option<VarId>, context: &LintContext) -> Option<Type> {
         let in_var_id = in_var?;
+        log::debug!(
+            "infer_input_type: checking expr='{}', var_id={in_var_id:?}",
+            self.span_text(context)
+        );
 
-        match &self.expr {
-            Expr::FullCellPath(cell_path) if matches!(&cell_path.head.expr, Expr::Var(var_id) if *var_id == in_var_id) => {
+        let result = match &self.expr {
+            Expr::FullCellPath(cell_path) if matches!(&cell_path.head.expr, Expr::Var(var_id) if *var_id == in_var_id) =>
+            {
+                log::debug!(
+                    "  -> FullCellPath with matching var, tail_len={}",
+                    cell_path.tail.len()
+                );
                 if !cell_path.tail.is_empty()
                     && cell_path
                         .tail
                         .iter()
                         .any(|member| matches!(member, PathMember::String { .. }))
                 {
-                    Some("record")
+                    Some(Type::Record(Box::new([])))
                 } else if !cell_path.tail.is_empty() {
-                    Some("list")
+                    Some(Type::List(Box::new(Type::Any)))
                 } else {
                     None
                 }
             }
+            Expr::FullCellPath(cell_path)
+                if matches!(
+                    &cell_path.head.expr,
+                    Expr::Subexpression(_) | Expr::Block(_) | Expr::Closure(_)
+                ) =>
+            {
+                log::debug!("  -> FullCellPath wrapping block-like expression");
+                cell_path.head.infer_input_type(in_var, context)
+            }
             Expr::Call(call) => {
-                use super::builtin_command::CommandExt;
-                call.get_call_name(context).as_str().input_type()
+                log::debug!("  -> Call expression, checking arguments");
+                infer_from_call(call, in_var_id, in_var, context)
+            }
+            Expr::BinaryOp(left, op_expr, right) => {
+                log::debug!("  -> BinaryOp, checking if math/comparison with variable");
+                if matches!(&op_expr.expr, Expr::Operator(op) if matches!(op, Operator::Math(_) | Operator::Comparison(_)))
+                    && (left.contains_variable(in_var_id) || right.contains_variable(in_var_id))
+                {
+                    log::debug!("  -> Found math/comparison op with variable, returning Int");
+                    return Some(Type::Int);
+                }
+
+                log::debug!("  -> Recursing into BinaryOp operands");
+                left.infer_input_type(in_var, context)
+                    .or_else(|| right.infer_input_type(in_var, context))
             }
             Expr::Collect(_, inner) | Expr::UnaryNot(inner) => {
+                log::debug!("  -> Collect/UnaryNot, checking inner");
                 inner.infer_input_type(in_var, context)
             }
-            Expr::BinaryOp(left, _, right) => left
-                .infer_input_type(in_var, context)
-                .or_else(|| right.infer_input_type(in_var, context)),
             Expr::Subexpression(block_id) | Expr::Block(block_id) | Expr::Closure(block_id) => {
+                log::debug!("  -> Subexpression/Block/Closure, block_id={block_id:?}");
                 let block = context.working_set.get_block(*block_id);
+                log::debug!("     Block has {} pipelines", block.pipelines.len());
+
+                let pipeline_type = block
+                    .pipelines
+                    .iter()
+                    .find_map(|pipeline| pipeline.infer_param_type(in_var_id, context));
+
+                if pipeline_type.is_some() {
+                    log::debug!("     Found type from pipeline analysis: {pipeline_type:?}");
+                    return pipeline_type;
+                }
+
                 block
                     .pipelines
                     .iter()
                     .flat_map(|pipeline| &pipeline.elements)
-                    .find_map(|element| element.expr.infer_input_type(in_var, context))
+                    .find_map(|element| {
+                        log::debug!(
+                            "    -> Checking pipeline element, expr='{}', variant={:?}",
+                            element.expr.span_text(context),
+                            &element.expr.expr
+                        );
+                        let result = element.expr.infer_input_type(in_var, context);
+                        log::debug!("       Result: {result:?}");
+                        result
+                    })
             }
-            _ => None,
-        }
+            Expr::MatchBlock(patterns) => {
+                log::debug!("  -> MatchBlock, checking patterns");
+                patterns
+                    .iter()
+                    .find_map(|(_, expr)| expr.infer_input_type(in_var, context))
+            }
+            _ => {
+                log::debug!("  -> No match for expression type");
+                None
+            }
+        };
+
+        log::debug!("infer_input_type result: {result:?}");
+        result
     }
 
     fn is_literal_list(&self) -> bool {
@@ -581,28 +671,89 @@ impl ExpressionExt for Expression {
     }
 }
 
-fn infer_from_call_with_blocks(call: &Call, context: &LintContext) -> Option<String> {
-    let block_types: Vec<String> = call
-        .positional_iter()
-        .filter_map(|arg| match &arg.expr {
-            Expr::Block(block_id) | Expr::Closure(block_id) => {
-                Some(block_id.infer_output_type(context))
+fn infer_from_call(
+    call: &Call,
+    in_var_id: VarId,
+    in_var: Option<VarId>,
+    context: &LintContext,
+) -> Option<Type> {
+    log::debug!("infer_from_call: checking call for var_id={in_var_id:?}");
+
+    for (idx, arg) in call.arguments.iter().enumerate() {
+        if let Argument::Positional(arg_expr) | Argument::Unknown(arg_expr) = arg {
+            log::debug!("  -> Checking positional arg {idx}");
+            if !arg_expr.contains_variable(in_var_id) {
+                log::debug!("    -> Does not contain variable");
+                continue;
             }
-            _ => None,
+
+            log::debug!("    -> Contains variable! Checking signature");
+            let decl = context.working_set.get_decl(call.decl_id);
+            let signature = decl.signature();
+
+            log::debug!(
+                "    -> Command: '{}', input_output_types: {:?}",
+                decl.name(),
+                signature.input_output_types
+            );
+
+            if let Some((input_type, _)) = signature.input_output_types.first()
+                && !matches!(input_type, nu_protocol::Type::Any)
+            {
+                log::debug!("    -> Found input type from signature: {input_type:?}");
+                return Some(input_type.clone());
+            }
+            log::debug!("    -> Signature has no specific input type");
+        }
+    }
+
+    log::debug!("  -> Recursively checking call arguments");
+    let result = call.arguments.iter().find_map(|arg| match arg {
+        Argument::Positional(arg_expr) | Argument::Unknown(arg_expr) => {
+            arg_expr.infer_input_type(in_var, context)
+        }
+        _ => None,
+    });
+
+    log::debug!("infer_from_call result: {result:?}");
+    result
+}
+
+const fn is_filepath_expr(expr: &Expr) -> bool {
+    matches!(expr, Expr::Filepath(..) | Expr::GlobPattern(..))
+}
+
+fn check_filepath_output(expr: &Expr) -> Option<Type> {
+    let ty = Type::Custom("path".into());
+    match expr {
+        Expr::ExternalCall(head, _) if is_filepath_expr(&head.expr) => Some(ty),
+        Expr::Collect(_, inner) if is_filepath_expr(&inner.expr) => Some(ty),
+        expr if is_filepath_expr(expr) => Some(ty),
+        _ => None,
+    }
+}
+
+fn infer_list_element_type(items: &[ListItem]) -> Type {
+    if items.is_empty() {
+        return Type::List(Box::new(Type::Any));
+    }
+
+    let element_types: Vec<Type> = items
+        .iter()
+        .map(|item| match item {
+            ListItem::Item(expr) | ListItem::Spread(_, expr) => expr.ty.clone(),
         })
         .collect();
 
-    if block_types.is_empty() {
-        return None;
+    if element_types.is_empty() {
+        return Type::List(Box::new(Type::Any));
     }
 
-    if block_types.iter().all(|t| t == &block_types[0]) {
-        return Some(block_types[0].clone());
+    if element_types.iter().all(|t| t == &element_types[0]) {
+        log::debug!("All list elements have type: {:?}", element_types[0]);
+        Type::List(Box::new(element_types[0].clone()))
+    } else {
+        log::debug!("List has mixed types, using Any");
+        Type::List(Box::new(Type::Any))
     }
-
-    if block_types.iter().all(|t| t == "nothing") {
-        return Some("nothing".into());
-    }
-
-    None
 }

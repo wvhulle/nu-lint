@@ -43,8 +43,9 @@ fn has_transformation_or_filter(
     context: &LintContext,
     loop_var_name: &str,
 ) -> bool {
-    block_id
-        .all_elements(context)
+    let block = context.working_set.get_block(block_id);
+    block
+        .all_elements()
         .iter()
         .any(|elem| matches_transformation_pattern(&elem.expr, context, loop_var_name))
 }
@@ -79,10 +80,13 @@ fn has_transformation_in_append(
         Expr::FullCellPath(cell_path) => {
             has_transformation_in_append(&cell_path.head, context, loop_var_name)
         }
-        Expr::Block(block_id) | Expr::Subexpression(block_id) => block_id
-            .all_elements(context)
-            .iter()
-            .any(|elem| has_transformation_in_append(&elem.expr, context, loop_var_name)),
+        Expr::Block(block_id) | Expr::Subexpression(block_id) => {
+            let block = context.working_set.get_block(*block_id);
+            block
+                .all_elements()
+                .iter()
+                .any(|elem| has_transformation_in_append(&elem.expr, context, loop_var_name))
+        }
         _ => false,
     }
 }
@@ -144,7 +148,10 @@ fn extract_empty_list_vars(expr: &Expression, context: &LintContext) -> Vec<Empt
 
     let is_empty_list = match &init_expr.expr {
         Expr::List(items) => items.is_empty(),
-        Expr::Block(block_id) => block_id.is_empty_list_block(context),
+        Expr::Block(block_id) => context
+            .working_set
+            .get_block(*block_id)
+            .is_empty_list_block(),
         _ => false,
     };
 
@@ -182,7 +189,10 @@ fn extract_direct_copy_patterns(expr: &Expression, context: &LintContext) -> Dir
     }
 
     if let Some((_, block_id)) = is_direct_copy_for_loop(call, context) {
-        block_id.extract_assigned_vars(context)
+        context
+            .working_set
+            .get_block(block_id)
+            .extract_assigned_vars()
     } else {
         vec![]
     }

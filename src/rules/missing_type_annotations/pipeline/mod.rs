@@ -1,5 +1,5 @@
 use nu_protocol::{
-    BlockId, Span,
+    BlockId, Span, Type,
     ast::{Call, Expr},
 };
 
@@ -43,17 +43,27 @@ fn create_violations_for_untyped_io(
     needs_output_type: bool,
     fix: &Fix,
 ) -> Vec<RuleViolation> {
-    [
-        (
-            needs_input_type,
+    if !needs_input_type && !needs_output_type {
+        return vec![];
+    }
+
+    let (message, suggestion) = match (needs_input_type, needs_output_type) {
+        (true, true) => (
+            format!(
+                "Custom command '{func_name}' uses pipeline input ($in) and produces output but \
+                 lacks type annotations"
+            ),
+            "Add pipeline input and output type annotations (e.g., `: string -> list<int>` or `: \
+             any -> table`)",
+        ),
+        (true, false) => (
             format!(
                 "Custom command '{func_name}' uses pipeline input ($in) but lacks input type \
                  annotation"
             ),
             "Add pipeline input type annotation (e.g., `: string -> any` or `: list<int> -> any`)",
         ),
-        (
-            needs_output_type,
+        (false, true) => (
             format!(
                 "Custom command '{func_name}' produces output but lacks output type annotation"
             ),
@@ -65,16 +75,14 @@ fn create_violations_for_untyped_io(
                  list<int>`)"
             },
         ),
+        (false, false) => unreachable!(),
+    };
+
+    vec![
+        RuleViolation::new_dynamic("typed_pipeline_io", message, name_span)
+            .with_suggestion_static(suggestion)
+            .with_fix(fix.clone()),
     ]
-    .into_iter()
-    .filter_map(|(needs, message, suggestion)| {
-        needs.then(|| {
-            RuleViolation::new_dynamic("typed_pipeline_io", message, name_span)
-                .with_suggestion_static(suggestion)
-                .with_fix(fix.clone())
-        })
-    })
-    .collect()
 }
 
 fn generate_typed_signature(
@@ -100,16 +108,18 @@ fn generate_typed_signature(
         extract_parameters_text(signature)
     };
 
+    let block = ctx.working_set.get_block(block_id);
+
     let input_type = if uses_in || needs_input_type {
-        block_id.infer_input_type(ctx)
+        block.infer_input_type(ctx)
     } else {
-        "nothing".to_string()
+        Type::Nothing
     };
 
     let output_type = if needs_output_type {
-        block_id.infer_output_type(ctx)
+        block.infer_output_type(ctx)
     } else {
-        "any".to_string()
+        Type::Any
     };
 
     match (needs_input_type, needs_output_type) {
@@ -195,8 +205,8 @@ fn check_def_call(call: &Call, ctx: &LintContext) -> Vec<RuleViolation> {
     let signature = &block.signature;
     let sig_span = find_signature_span(call, ctx);
 
-    let uses_in = block_id.uses_pipeline_input(ctx);
-    let produces_out = block_id.produces_output(ctx);
+    let uses_in = block.uses_pipeline_input(ctx);
+    let produces_out = block.produces_output();
     let needs_input_type = uses_in && is_untyped(signature, sig_span, ctx, |(input, _)| input);
     let needs_output_type =
         produces_out && is_untyped(signature, sig_span, ctx, |(_, output)| output);

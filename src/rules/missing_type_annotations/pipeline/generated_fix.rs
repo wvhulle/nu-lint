@@ -9,12 +9,30 @@ def double [] {
     $in * 2
 }
 ";
-    rule().assert_fix_contains(bad_code, "[]: any -> any");
-    rule().assert_suggestion_contains(bad_code, "pipeline input type annotation");
+    rule().assert_fix_contains(bad_code, "[]: int -> int");
+    rule().assert_suggestion_contains(bad_code, "pipeline input and output type annotations");
+}
+
+#[test]
+fn test_missing_pipeline_annot_git() {
+    instrument();
+
+    let bad_code = r#"
+export def "git age" [] {
+  git branch | lines | str substring 2.. | wrap name | insert last_commit {
+    get name | each {
+      git show $in --no-patch --format=%as | into datetime
+    }
+  } | sort-by last_commit
+}
+"#;
+    rule().assert_violation_count_exact(bad_code, 1);
+    rule().assert_fix_contains(bad_code, "nothing -> table");
 }
 
 #[test]
 fn test_fix_untyped_output() {
+    instrument();
     let bad_code = r"
 def create-list [] {
     [1, 2, 3]
@@ -25,6 +43,7 @@ def create-list [] {
 
 #[test]
 fn test_fix_both_input_and_output() {
+    instrument();
     let bad_code = r"
 def transform [] {
     $in | each { |x| $x + 1 }
@@ -40,7 +59,7 @@ def multiply [factor: int] {
     $in * $factor
 }
 ";
-    rule().assert_fix_contains(bad_code, "[factor: int]: any -> any");
+    rule().assert_fix_contains(bad_code, "[factor: int]: int -> int");
 }
 
 #[test]
@@ -58,7 +77,7 @@ def process [data?, --verbose] {
 ";
     rule().assert_fix_contains(bad_code, "data?");
     rule().assert_fix_contains(bad_code, "--verbose");
-    rule().assert_fix_contains(bad_code, ": any -> string");
+    rule().assert_fix_contains(bad_code, "string -> string");
 }
 
 #[test]
@@ -68,7 +87,7 @@ export def process [] {
     $in | str trim
 }
 ";
-    rule().assert_fix_contains(bad_code, "[]: any -> string");
+    rule().assert_fix_contains(bad_code, "string -> string");
 }
 
 #[test]
@@ -114,6 +133,7 @@ def get_pi [] {
 
 #[test]
 fn test_infers_bool_output() {
+    instrument();
     let bad_code = r"
 def is_ready [] {
     true
@@ -170,7 +190,7 @@ def split_lines [] {
     $in | lines
 }
 ";
-    rule().assert_fix_contains(bad_code, "string -> list<string>");
+    rule().assert_fix_contains(bad_code, "any -> list<string>");
 }
 
 #[test]
@@ -231,7 +251,7 @@ def split_text [] {
     $in | lines
 }
 ";
-    rule().assert_fix_contains(bad_code, "[]: string -> list");
+    rule().assert_fix_contains(bad_code, "[]: any -> list<string>");
 }
 
 #[test]
@@ -261,7 +281,7 @@ def complex [] {
     if true { "string" } else { 42 }
 }
 "#;
-    rule().assert_fix_contains(bad_code, "[]: nothing -> string");
+    rule().assert_fix_contains(bad_code, "[]: nothing -> any");
 }
 
 #[test]
@@ -300,7 +320,7 @@ def main [source_file: path] {
   }
 }
 "#;
-    rule().assert_fix_contains(bad_code, "nothing -> nothing");
+    rule().assert_fix_contains(bad_code, "nothing -> any");
 }
 
 #[test]
@@ -315,7 +335,7 @@ def conditional_print [] {
     }
 }
 "#;
-    rule().assert_fix_contains(bad_code, "[]: nothing -> nothing");
+    rule().assert_fix_contains(bad_code, "[]: nothing -> any");
 }
 
 #[test]
@@ -328,7 +348,7 @@ def conditional_action [flag: bool] {
     }
 }
 "#;
-    rule().assert_fix_contains(bad_code, "[flag: bool]: nothing -> nothing");
+    rule().assert_fix_contains(bad_code, "[flag: bool]: nothing -> any");
 }
 
 #[test]
@@ -347,7 +367,7 @@ def nested_conditional [] {
     }
 }
 "#;
-    rule().assert_fix_contains(bad_code, "[]: nothing -> nothing");
+    rule().assert_fix_contains(bad_code, "[]: nothing -> any");
 }
 
 #[test]

@@ -96,7 +96,7 @@ impl RuleViolation {
     }
 }
 
-/// A complete violation with severity (created by the engine)
+/// A complete violation with severity
 #[derive(Debug, Clone)]
 pub struct Violation {
     pub rule_id: Cow<'static, str>,

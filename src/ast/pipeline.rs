@@ -1,6 +1,6 @@
 use nu_protocol::{
     Type, VarId,
-    ast::{Expr, Expression, Pipeline},
+    ast::{Expr, Expression, Pipeline, PipelineElement},
 };
 
 use crate::{
@@ -116,13 +116,9 @@ impl PipelineExt for Pipeline {
     }
 }
 
-#[allow(
-    clippy::absolute_paths,
-    reason = "PipelineElement is not exposed in public API"
-)]
 fn infer_from_pipeline_window(
     param_var_id: VarId,
-    window: &[nu_protocol::ast::PipelineElement],
+    window: &[PipelineElement],
     context: &LintContext,
 ) -> Option<Type> {
     // Check if first element uses the parameter variable

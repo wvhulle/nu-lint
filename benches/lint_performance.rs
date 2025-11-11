@@ -3,8 +3,7 @@ use std::{fs, hint::black_box};
 use criterion::{Criterion, criterion_group, criterion_main};
 use nu_lint::{Config, LintEngine};
 
-// Benchmark using small real-world module (~1 KB)
-// File: ultimate_extractor.nu from nu_scripts/modules/data_extraction
+// Benchmark using small real-world module
 fn bench_lint_small_file(c: &mut Criterion) {
     let source =
         fs::read_to_string("benches/fixtures/small_file.nu").expect("Failed to read small_file.nu");
@@ -23,8 +22,7 @@ fn bench_lint_small_file(c: &mut Criterion) {
     group.finish();
 }
 
-// Benchmark using medium real-world module (~7 KB)
-// File: complete.nu from nu_scripts/modules/kubernetes
+// Benchmark using medium real-world module
 fn bench_lint_medium_file(c: &mut Criterion) {
     let source = fs::read_to_string("benches/fixtures/medium_file.nu")
         .expect("Failed to read medium_file.nu");

@@ -1,7 +1,5 @@
-// Individual rules for prefer_builtin_* commands
-//
-// Each common command has its own rule for better maintainability.
-// Less common commands are grouped in the 'other' subrule.
+//!  Each common command has its own rule for better maintainability.
+//!  Less common commands are grouped in the 'other' subrule.
 pub mod cat;
 pub mod echo;
 pub mod find;

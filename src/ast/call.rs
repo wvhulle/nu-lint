@@ -11,24 +11,20 @@ use crate::{ast::span::SpanExt, context::LintContext};
 fn is_type_compatible(expected: &nu_protocol::Type, actual: &nu_protocol::Type) -> bool {
     use nu_protocol::Type;
 
-    // Exact match
-    if expected == actual {
-        return true;
+    match (expected, actual) {
+        // Exact match
+        (e, a) if e == a => true,
+        // Any is compatible with everything (both ways)
+        // - If expected is Any, any actual type can be passed (Any accepts all)
+        // - If actual is Any, it can match any expected type (Any is a supertype)
+        (Type::Any, _) | (_, Type::Any) => true,
+        // List compatibility: check inner types recursively
+        (Type::List(expected_inner), Type::List(actual_inner)) => {
+            is_type_compatible(expected_inner, actual_inner)
+        }
+        // No compatibility
+        _ => false,
     }
-
-    // Any is compatible with everything (both ways)
-    // - If expected is Any, any actual type can be passed (Any accepts all)
-    // - If actual is Any, it can match any expected type (Any is a supertype)
-    if matches!(expected, Type::Any) || matches!(actual, Type::Any) {
-        return true;
-    }
-
-    // List compatibility: check inner types recursively
-    if let (Type::List(expected_inner), Type::List(actual_inner)) = (expected, actual) {
-        return is_type_compatible(expected_inner, actual_inner);
-    }
-
-    false
 }
 
 pub trait CallExt {
@@ -109,6 +105,10 @@ pub trait CallExt {
         context: &LintContext,
         pipeline_input: Option<nu_protocol::Type>,
     ) -> nu_protocol::Type;
+
+    /// Infers unified output type from block arguments in control flow
+    /// commands. Example: `if $x { "str" } else { "other" }` returns `string`
+    fn infer_from_blocks(&self, context: &LintContext) -> Option<nu_protocol::Type>;
 }
 
 impl CallExt for Call {
@@ -388,5 +388,41 @@ impl CallExt for Call {
                 Argument::Named(named) => named.2.as_ref(),
             })
             .collect()
+    }
+
+    fn infer_from_blocks(&self, context: &LintContext) -> Option<nu_protocol::Type> {
+        log::debug!("Inferring type from call with blocks");
+        let block_types: Vec<nu_protocol::Type> = self
+            .positional_iter()
+            .filter_map(|arg| match &arg.expr {
+                Expr::Block(block_id) | Expr::Closure(block_id) => Some(
+                    context
+                        .working_set
+                        .get_block(*block_id)
+                        .infer_output_type(context),
+                ),
+                _ => None,
+            })
+            .collect();
+
+        if block_types.is_empty() {
+            log::debug!("No block types found");
+            return None;
+        }
+
+        if block_types.iter().all(|t| t == &block_types[0]) {
+            log::debug!("All block types are the same");
+            return Some(block_types[0].clone());
+        }
+
+        if block_types
+            .iter()
+            .all(|t| t == &nu_protocol::Type::Nothing)
+        {
+            log::debug!("All block types are Nothing");
+            return Some(nu_protocol::Type::Nothing);
+        }
+
+        None
     }
 }

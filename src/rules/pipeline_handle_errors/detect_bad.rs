@@ -106,8 +106,6 @@ ls | each { |file|
     rule().assert_detects(bad_code);
 }
 
-// Test complex pipelines
-
 #[test]
 fn test_suggestion_recommends_complete_for_custom_handling() {
     instrument();

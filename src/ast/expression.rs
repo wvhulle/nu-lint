@@ -2,40 +2,15 @@ use nu_protocol::{
     BlockId, Span, Type, VarId,
     ast::{
         Argument, Call, Comparison, Expr, Expression, ExternalArgument, FindMapResult, ListItem,
-        Operator, PathMember, Pipeline, RecordItem, Traverse,
+        Operator, PathMember, RecordItem, Traverse,
     },
 };
 
-use super::{block::BlockExt, call::CallExt, ext_command::ExternalCommandExt, span::SpanExt};
+use super::{
+    block::BlockExt, call::CallExt, ext_command::ExternalCommandExt, pipeline::PipelineExt,
+    span::SpanExt,
+};
 use crate::context::LintContext;
-
-/// Infers type from a pipeline pattern where a variable is used before a
-/// command
-fn infer_type_from_pipeline_internal(
-    param_var_id: VarId,
-    pipeline: &Pipeline,
-    ctx: &LintContext,
-) -> Option<Type> {
-    pipeline.elements.windows(2).find_map(|window| {
-        let contains_param = window[0].expr.contains_variable(param_var_id);
-
-        match &window[1].expr.expr {
-            Expr::Call(call) if contains_param => {
-                let decl = ctx.working_set.get_decl(call.decl_id);
-                let sig = decl.signature();
-
-                if let Some((input_type, _)) = sig.input_output_types.first()
-                    && !matches!(input_type, Type::Any)
-                {
-                    return Some(input_type.clone());
-                }
-
-                None
-            }
-            _ => None,
-        }
-    })
-}
 
 pub trait ExpressionExt: Traverse {
     /// Checks if two expressions refer to the same variable. Example: `$x` and
@@ -576,7 +551,7 @@ impl ExpressionExt for Expression {
                 let cmd_name = decl.name();
                 log::debug!("Encountered Call: '{cmd_name}'");
                 if matches!(cmd_name, "if" | "match" | "try" | "do")
-                    && let Some(unified_type) = infer_from_call_with_blocks(call, context)
+                    && let Some(unified_type) = call.infer_from_blocks(context)
                 {
                     log::debug!(
                         "Inferred unified type from blocks for '{cmd_name}': {unified_type:?}"
@@ -659,9 +634,10 @@ impl ExpressionExt for Expression {
                 log::debug!("     Block has {} pipelines", block.pipelines.len());
 
                 // First try pipeline-based inference for this block
-                let pipeline_type = block.pipelines.iter().find_map(|pipeline| {
-                    infer_type_from_pipeline_internal(in_var_id, pipeline, context)
-                });
+                let pipeline_type = block
+                    .pipelines
+                    .iter()
+                    .find_map(|pipeline| pipeline.infer_param_type(in_var_id, context));
 
                 if pipeline_type.is_some() {
                     log::debug!("     Found type from pipeline analysis: {pipeline_type:?}");
@@ -773,39 +749,6 @@ fn check_filepath_output(expr: &Expr) -> Option<Type> {
         expr if is_filepath_expr(expr) => Some(ty),
         _ => None,
     }
-}
-
-fn infer_from_call_with_blocks(call: &Call, context: &LintContext) -> Option<Type> {
-    log::debug!("Inferring type from call with blocks");
-    let block_types: Vec<Type> = call
-        .positional_iter()
-        .filter_map(|arg| match &arg.expr {
-            Expr::Block(block_id) | Expr::Closure(block_id) => Some(
-                context
-                    .working_set
-                    .get_block(*block_id)
-                    .infer_output_type(context),
-            ),
-            _ => None,
-        })
-        .collect();
-
-    if block_types.is_empty() {
-        log::debug!("No block types found");
-        return None;
-    }
-
-    if block_types.iter().all(|t| t == &block_types[0]) {
-        log::debug!("All block types are the same");
-        return Some(block_types[0].clone());
-    }
-
-    if block_types.iter().all(|t| t == &Type::Nothing) {
-        log::debug!("All block types are Nothing");
-        return Some(Type::Nothing);
-    }
-
-    None
 }
 
 fn infer_list_element_type(items: &[ListItem]) -> Type {

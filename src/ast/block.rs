@@ -221,10 +221,10 @@ impl BlockExt for BlockId {
         let block_input_type = self.infer_input_type(context);
         log::debug!("Block {self:?} inferred input type: {block_input_type:?}");
         let mut current_type = Some(block_input_type);
-        
+
         for (idx, element) in pipeline.elements.iter().enumerate() {
             log::debug!("Pipeline element {idx}: current_type before = {current_type:?}");
-            
+
             // If this is a call, pass the current pipeline type as input
             if let Expr::Call(call) = &element.expr.expr {
                 let output = call.get_output_type(context, current_type);
@@ -232,7 +232,7 @@ impl BlockExt for BlockId {
                 current_type = Some(output);
                 continue;
             }
-            
+
             // For other expressions, try to infer their type
             let inferred = element.expr.infer_output_type(context);
             log::debug!("Pipeline element {idx} (Expression): inferred type = {inferred:?}");
@@ -249,8 +249,6 @@ impl BlockExt for BlockId {
     }
 
     fn infer_input_type(&self, context: &LintContext) -> Type {
-        use super::expression::ExpressionExt;
-
         let block = context.working_set.get_block(*self);
         let Some(in_var) = self.find_pipeline_input_variable(context) else {
             return Type::Any;

@@ -1,69 +1,17 @@
 use nu_protocol::{
     Type, VarId,
-    ast::{Call, Expr, Pipeline},
+    ast::{Call, Expr},
 };
 
 use crate::{
-    ast::{call::CallExt, expression::ExpressionExt, span::SpanExt, syntax_shape::SyntaxShapeExt},
+    ast::{
+        call::CallExt, expression::ExpressionExt, pipeline::PipelineExt, span::SpanExt,
+        syntax_shape::SyntaxShapeExt,
+    },
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{Fix, Replacement, RuleViolation, Severity},
 };
-
-pub(crate) fn infer_type_from_pipeline(
-    param_var_id: VarId,
-    pipeline: &Pipeline,
-    ctx: &LintContext,
-) -> Option<Type> {
-    log::debug!(
-        "infer_type_from_pipeline: param_var_id={:?}, pipeline_elements={}",
-        param_var_id,
-        pipeline.elements.len()
-    );
-
-    let result = pipeline.elements.windows(2).find_map(|window| {
-        // Check if first element uses the parameter variable
-        let contains_param = window[0].expr.contains_variable(param_var_id);
-        log::debug!(
-            "  Checking pipeline window: contains_param={}, first_expr={:?}, second_expr={:?}",
-            contains_param,
-            &window[0].expr.expr,
-            &window[1].expr.expr
-        );
-
-        match &window[1].expr.expr {
-            Expr::Call(call) if contains_param => {
-                let decl = ctx.working_set.get_decl(call.decl_id);
-                let sig = decl.signature();
-
-                // Get the input type from the signature's input_output_types
-                if let Some((input_type, _)) = sig.input_output_types.first()
-                    && !matches!(input_type, Type::Any)
-                {
-                    log::debug!(
-                        "  -> Found call to '{}', input_type={:?}",
-                        decl.name(),
-                        input_type
-                    );
-                    return Some(input_type.clone());
-                }
-
-                log::debug!(
-                    "  -> Found call to '{}', but input_type is Any",
-                    decl.name()
-                );
-                None
-            }
-            _ => {
-                log::debug!("  -> Not a call expression or parameter not used");
-                None
-            }
-        }
-    });
-
-    log::debug!("infer_type_from_pipeline result: {result:?}");
-    result
-}
 
 fn infer_param_type(
     param_var_id: VarId,
@@ -78,7 +26,7 @@ fn infer_param_type(
     let pipeline_type = block
         .pipelines
         .iter()
-        .find_map(|pipeline| infer_type_from_pipeline(param_var_id, pipeline, ctx));
+        .find_map(|pipeline| pipeline.infer_param_type(param_var_id, ctx));
 
     if let Some(ty) = &pipeline_type {
         log::debug!("  -> Pipeline-based inference found: {ty:?}");

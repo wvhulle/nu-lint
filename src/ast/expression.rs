@@ -320,7 +320,9 @@ impl ExpressionExt for Expression {
     fn matches_var(&self, var_id: VarId) -> bool {
         match &self.expr {
             Expr::Var(id) => *id == var_id,
-            Expr::FullCellPath(cell_path) => extract_var_from_full_cell_path(cell_path) == Some(var_id),
+            Expr::FullCellPath(cell_path) => {
+                extract_var_from_full_cell_path(cell_path) == Some(var_id)
+            }
             _ => false,
         }
     }

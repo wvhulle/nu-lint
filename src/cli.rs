@@ -89,9 +89,8 @@ pub fn collect_files_to_lint(paths: &[PathBuf]) -> Vec<PathBuf> {
         if path.is_file() {
             // For individual files, add them directly (don't check gitignore for explicitly
             // specified files)
-            if path.extension().and_then(|s| s.to_str()) == Some("nu") {
-                files_to_lint.push(path.clone());
-            }
+
+            files_to_lint.push(path.clone());
         } else if path.is_dir() {
             let files = collect_nu_files_with_gitignore(path);
             if files.is_empty() {

@@ -12,17 +12,11 @@ fn is_type_compatible(expected: &nu_protocol::Type, actual: &nu_protocol::Type) 
     use nu_protocol::Type;
 
     match (expected, actual) {
-        // Exact match
         (e, a) if e == a => true,
-        // Any is compatible with everything (both ways)
-        // - If expected is Any, any actual type can be passed (Any accepts all)
-        // - If actual is Any, it can match any expected type (Any is a supertype)
         (Type::Any, _) | (_, Type::Any) => true,
-        // List compatibility: check inner types recursively
         (Type::List(expected_inner), Type::List(actual_inner)) => {
             is_type_compatible(expected_inner, actual_inner)
         }
-        // No compatibility
         _ => false,
     }
 }
@@ -131,7 +125,6 @@ impl CallExt for Call {
             sig.get_output_type()
         );
 
-        // Use the pipeline input type if provided, otherwise get it from signature
         let has_pipeline_input = pipeline_input.is_some();
         let input_type = pipeline_input.unwrap_or_else(|| sig.get_input_type());
         log::debug!(
@@ -141,7 +134,6 @@ impl CallExt for Call {
             has_pipeline_input
         );
 
-        // Look through input_output_types for the best match
         log::debug!(
             "Command '{}' input_output_types: {:?}",
             self.get_call_name(context),
@@ -149,7 +141,6 @@ impl CallExt for Call {
         );
 
         for (in_ty, out_ty) in &sig.input_output_types {
-            // If we have a compatible match for the input type, use it
             if is_type_compatible(in_ty, &input_type) && !matches!(out_ty, nu_protocol::Type::Any) {
                 log::debug!(
                     "Found compatible type mapping for '{}': {:?} -> {:?} (actual input: {:?})",
@@ -172,7 +163,6 @@ impl CallExt for Call {
             "Could not find compatible type mapping for '{}'",
             self.get_call_name(context)
         );
-        // Fallback to the default output type
         sig.get_output_type()
     }
     fn get_call_name(&self, context: &LintContext) -> String {

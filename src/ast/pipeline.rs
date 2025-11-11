@@ -114,7 +114,6 @@ fn infer_from_pipeline_window(
     window: &[PipelineElement],
     context: &LintContext,
 ) -> Option<Type> {
-    // Check if first element uses the parameter variable
     let contains_param = window[0].expr.contains_variable(param_var_id);
     log::debug!(
         "  Checking pipeline window: contains_param={}, first_expr={:?}, second_expr={:?}",
@@ -136,7 +135,6 @@ fn infer_from_pipeline_window(
     let decl = context.working_set.get_decl(call.decl_id);
     let sig = decl.signature();
 
-    // Get the input type from the signature's input_output_types
     let Some((input_type, _)) = sig.input_output_types.first() else {
         log::debug!("  -> No input/output types for '{}'", decl.name());
         return None;

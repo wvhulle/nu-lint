@@ -508,13 +508,11 @@ impl ExpressionExt for Expression {
             }
             Expr::FullCellPath(path) => {
                 log::debug!("Matched FullCellPath, checking head");
-                // For FullCellPath wrapping a list, check the list elements
                 if let Expr::List(items) = &path.head.expr {
                     log::debug!("FullCellPath contains List with {} items", items.len());
                     return Some(infer_list_element_type(items));
                 }
 
-                // For other FullCellPath cases, use the head type
                 log::debug!("Using head type for FullCellPath: {:?}", path.head.ty);
                 Some(path.head.ty.clone())
             }
@@ -587,8 +585,6 @@ impl ExpressionExt for Expression {
                     None
                 }
             }
-            // Handle FullCellPath wrapping a block-like expression (e.g., parenthesized
-            // subexpressions)
             Expr::FullCellPath(cell_path)
                 if matches!(
                     &cell_path.head.expr,
@@ -604,7 +600,6 @@ impl ExpressionExt for Expression {
             }
             Expr::BinaryOp(left, op_expr, right) => {
                 log::debug!("  -> BinaryOp, checking if math/comparison with variable");
-                // Check if this is a math or comparison operation involving the variable
                 if matches!(&op_expr.expr, Expr::Operator(op) if matches!(op, Operator::Math(_) | Operator::Comparison(_)))
                     && (left.contains_variable(in_var_id) || right.contains_variable(in_var_id))
                 {
@@ -625,7 +620,6 @@ impl ExpressionExt for Expression {
                 let block = context.working_set.get_block(*block_id);
                 log::debug!("     Block has {} pipelines", block.pipelines.len());
 
-                // First try pipeline-based inference for this block
                 let pipeline_type = block
                     .pipelines
                     .iter()
@@ -636,7 +630,6 @@ impl ExpressionExt for Expression {
                     return pipeline_type;
                 }
 
-                // Fall back to expression-based recursion
                 block
                     .pipelines
                     .iter()
@@ -686,7 +679,6 @@ fn infer_from_call(
 ) -> Option<Type> {
     log::debug!("infer_from_call: checking call for var_id={in_var_id:?}");
 
-    // Check if the variable is used as a positional argument
     for (idx, arg) in call.arguments.iter().enumerate() {
         if let Argument::Positional(arg_expr) | Argument::Unknown(arg_expr) = arg {
             log::debug!("  -> Checking positional arg {idx}");
@@ -705,7 +697,6 @@ fn infer_from_call(
                 signature.input_output_types
             );
 
-            // Get the input type from the signature's input_output_types
             if let Some((input_type, _)) = signature.input_output_types.first()
                 && !matches!(input_type, nu_protocol::Type::Any)
             {
@@ -717,7 +708,6 @@ fn infer_from_call(
     }
 
     log::debug!("  -> Recursively checking call arguments");
-    // Recursively check arguments
     let result = call.arguments.iter().find_map(|arg| match arg {
         Argument::Positional(arg_expr) | Argument::Unknown(arg_expr) => {
             arg_expr.infer_input_type(in_var, context)
@@ -759,7 +749,6 @@ fn infer_list_element_type(items: &[ListItem]) -> Type {
         return Type::List(Box::new(Type::Any));
     }
 
-    // If all elements have the same type, use it; otherwise fall back to Any
     if element_types.iter().all(|t| t == &element_types[0]) {
         log::debug!("All list elements have type: {:?}", element_types[0]);
         Type::List(Box::new(element_types[0].clone()))

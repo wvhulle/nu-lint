@@ -190,12 +190,10 @@ impl BlockExt for Block {
     fn infer_output_type(&self, context: &LintContext) -> Type {
         log::debug!("Inferring output type for block");
 
-        // Get the last pipeline
         let Some(pipeline) = self.pipelines.last() else {
             return self.output_type();
         };
 
-        // Start with the block's input type as the initial pipeline input
         let block_input_type = self.infer_input_type(context);
         log::debug!("Block inferred input type: {block_input_type:?}");
         let mut current_type = Some(block_input_type);
@@ -203,7 +201,6 @@ impl BlockExt for Block {
         for (idx, element) in pipeline.elements.iter().enumerate() {
             log::debug!("Pipeline element {idx}: current_type before = {current_type:?}");
 
-            // If this is a call, pass the current pipeline type as input
             if let Expr::Call(call) = &element.expr.expr {
                 let output = call.get_output_type(context, current_type);
                 log::debug!("Pipeline element {idx} (Call): output type = {output:?}");
@@ -211,14 +208,11 @@ impl BlockExt for Block {
                 continue;
             }
 
-            // For other expressions, try to infer their type
             let inferred = element.expr.infer_output_type(context);
             log::debug!("Pipeline element {idx} (Expression): inferred type = {inferred:?}");
-            // If we can't infer a type, keep the current pipeline type flowing
             if inferred.is_some() {
                 current_type = inferred;
             }
-            // else: keep current_type unchanged (e.g., for $in variable)
         }
 
         let final_type = current_type.unwrap_or_else(|| self.output_type());

@@ -3,6 +3,7 @@ use crate::log::instrument;
 
 #[test]
 fn test_infer_string_type_from_string_operations() {
+    instrument();
     let bad_code = r"
 def process [text] {
     $text | str trim

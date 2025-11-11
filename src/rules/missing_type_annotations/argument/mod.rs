@@ -25,12 +25,28 @@ fn infer_type_from_pipeline(
     pipeline
         .elements
         .windows(2)
-        .find_map(|window| match &window[1].expr.expr {
-            Expr::Call(call) if is_reference_to_param(&window[0].expr, param_name, ctx) => {
-                let decl = ctx.working_set.get_decl(call.decl_id);
-                Some(decl.signature().get_output_type())
+        .find_map(|window| {
+            let is_param_ref = is_reference_to_param(&window[0].expr, param_name, ctx);
+            log::debug!("Checking pipeline window: is_param_ref={}, expr={:?}", is_param_ref, &window[1].expr.expr);
+            
+            match &window[1].expr.expr {
+                Expr::Call(call) if is_param_ref => {
+                    let decl = ctx.working_set.get_decl(call.decl_id);
+                    let sig = decl.signature();
+                    
+                    // Get the input type from the signature's input_output_types
+                    if let Some((input_type, _)) = sig.input_output_types.first() 
+                        && !matches!(input_type, Type::Any)
+                    {
+                        log::debug!("Found call to '{}', input_type={:?}", decl.name(), input_type);
+                        return Some(input_type.clone());
+                    }
+                    
+                    log::debug!("Found call to '{}', but input_type is Any", decl.name());
+                    None
+                }
+                _ => None,
             }
-            _ => None,
         })
 }
 

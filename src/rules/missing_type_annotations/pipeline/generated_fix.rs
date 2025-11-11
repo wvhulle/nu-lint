@@ -230,7 +230,7 @@ def get_name [] {
     $in.name
 }
 ";
-    rule().assert_fix_contains(bad_code, "[]: record -> record");
+    rule().assert_fix_contains(bad_code, "[]: record -> any");
 }
 
 #[test]
@@ -320,7 +320,7 @@ def main [source_file: path] {
   }
 }
 "#;
-    rule().assert_fix_contains(bad_code, "nothing -> nothing");
+    rule().assert_fix_contains(bad_code, "nothing -> any");
 }
 
 #[test]
@@ -335,7 +335,7 @@ def conditional_print [] {
     }
 }
 "#;
-    rule().assert_fix_contains(bad_code, "[]: nothing -> nothing");
+    rule().assert_fix_contains(bad_code, "[]: nothing -> any");
 }
 
 #[test]
@@ -367,7 +367,7 @@ def nested_conditional [] {
     }
 }
 "#;
-    rule().assert_fix_contains(bad_code, "[]: nothing -> nothing");
+    rule().assert_fix_contains(bad_code, "[]: nothing -> any");
 }
 
 #[test]

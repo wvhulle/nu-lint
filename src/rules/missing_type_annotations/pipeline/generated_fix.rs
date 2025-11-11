@@ -9,7 +9,7 @@ def double [] {
     $in * 2
 }
 ";
-    rule().assert_fix_contains(bad_code, "[]: any -> any");
+    rule().assert_fix_contains(bad_code, "[]: int -> int");
     rule().assert_suggestion_contains(bad_code, "pipeline input and output type annotations");
 }
 
@@ -59,7 +59,7 @@ def multiply [factor: int] {
     $in * $factor
 }
 ";
-    rule().assert_fix_contains(bad_code, "[factor: int]: any -> any");
+    rule().assert_fix_contains(bad_code, "[factor: int]: int -> int");
 }
 
 #[test]

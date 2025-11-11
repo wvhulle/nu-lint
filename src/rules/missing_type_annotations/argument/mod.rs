@@ -1,6 +1,6 @@
 use nu_protocol::{
-    Type,
-    ast::{Argument, Call, Expr, Expression, Operator, Pipeline},
+    Type, VarId,
+    ast::{Call, Expr, Pipeline},
 };
 
 use crate::{
@@ -10,122 +10,114 @@ use crate::{
     violation::{Fix, Replacement, RuleViolation, Severity},
 };
 
-fn is_reference_to_param(expr: &Expression, param_name: &str, ctx: &LintContext) -> bool {
-    expr.extract_variable_name(ctx).is_some_and(|var_name| {
-        let normalized = var_name.trim_end_matches('?').trim_start_matches("...");
-        normalized == param_name
-    })
-}
-
-fn infer_type_from_pipeline(
-    param_name: &str,
+pub(crate) fn infer_type_from_pipeline(
+    param_var_id: VarId,
     pipeline: &Pipeline,
     ctx: &LintContext,
 ) -> Option<Type> {
-    pipeline
-        .elements
-        .windows(2)
-        .find_map(|window| {
-            let is_param_ref = is_reference_to_param(&window[0].expr, param_name, ctx);
-            log::debug!("Checking pipeline window: is_param_ref={}, expr={:?}", is_param_ref, &window[1].expr.expr);
-            
-            match &window[1].expr.expr {
-                Expr::Call(call) if is_param_ref => {
-                    let decl = ctx.working_set.get_decl(call.decl_id);
-                    let sig = decl.signature();
-                    
-                    // Get the input type from the signature's input_output_types
-                    if let Some((input_type, _)) = sig.input_output_types.first() 
-                        && !matches!(input_type, Type::Any)
-                    {
-                        log::debug!("Found call to '{}', input_type={:?}", decl.name(), input_type);
-                        return Some(input_type.clone());
-                    }
-                    
-                    log::debug!("Found call to '{}', but input_type is Any", decl.name());
-                    None
+    log::debug!(
+        "infer_type_from_pipeline: param_var_id={:?}, pipeline_elements={}",
+        param_var_id,
+        pipeline.elements.len()
+    );
+
+    let result = pipeline.elements.windows(2).find_map(|window| {
+        // Check if first element uses the parameter variable
+        let contains_param = window[0].expr.contains_variable(param_var_id);
+        log::debug!(
+            "  Checking pipeline window: contains_param={}, first_expr={:?}, second_expr={:?}",
+            contains_param,
+            &window[0].expr.expr,
+            &window[1].expr.expr
+        );
+
+        match &window[1].expr.expr {
+            Expr::Call(call) if contains_param => {
+                let decl = ctx.working_set.get_decl(call.decl_id);
+                let sig = decl.signature();
+
+                // Get the input type from the signature's input_output_types
+                if let Some((input_type, _)) = sig.input_output_types.first()
+                    && !matches!(input_type, Type::Any)
+                {
+                    log::debug!(
+                        "  -> Found call to '{}', input_type={:?}",
+                        decl.name(),
+                        input_type
+                    );
+                    return Some(input_type.clone());
                 }
-                _ => None,
+
+                log::debug!(
+                    "  -> Found call to '{}', but input_type is Any",
+                    decl.name()
+                );
+                None
             }
-        })
-}
-
-fn infer_type_from_block(
-    param_name: &str,
-    block_id: nu_protocol::BlockId,
-    ctx: &LintContext,
-) -> Option<Type> {
-    let block = ctx.working_set.get_block(block_id);
-
-    block.pipelines.iter().find_map(|pipeline| {
-        infer_type_from_pipeline(param_name, pipeline, ctx).or_else(|| {
-            pipeline
-                .elements
-                .iter()
-                .find_map(|element| infer_type_from_expr(&element.expr, param_name, ctx))
-        })
-    })
-}
-
-fn infer_type_from_expr(expr: &Expression, param_name: &str, ctx: &LintContext) -> Option<Type> {
-    match &expr.expr {
-        Expr::Call(call) if is_reference_to_param(expr, param_name, ctx) => {
-            // call.get_call_name(ctx).as_str().output_type()
-            // call.get_call_name(ct)
-            let decl = ctx.working_set.get_decl(call.decl_id);
-            Some(decl.signature().get_output_type())
-        }
-        Expr::Call(call) => call.arguments.iter().find_map(|arg| match arg {
-            Argument::Positional(arg_expr) | Argument::Unknown(arg_expr) => {
-                infer_type_from_expr(arg_expr, param_name, ctx)
+            _ => {
+                log::debug!("  -> Not a call expression or parameter not used");
+                None
             }
-            _ => None,
-        }),
-        Expr::FullCellPath(cell_path)
-            if is_reference_to_param(&cell_path.head, param_name, ctx)
-                && !cell_path.tail.is_empty() =>
-        {
-            Some(Type::Record(Box::new([])))
         }
-        Expr::FullCellPath(cell_path) => infer_type_from_expr(&cell_path.head, param_name, ctx),
-        Expr::BinaryOp(left, op_expr, right)
-            if matches!(&op_expr.expr, Expr::Operator(op) if matches!(op, Operator::Math(_) | Operator::Comparison(_)))
-                && (is_reference_to_param(left, param_name, ctx)
-                    || is_reference_to_param(right, param_name, ctx)) =>
-        {
-            Some(Type::Int)
-        }
-        Expr::BinaryOp(left, _, right) => infer_type_from_expr(left, param_name, ctx)
-            .or_else(|| infer_type_from_expr(right, param_name, ctx)),
-        Expr::Subexpression(block_id) | Expr::Block(block_id) | Expr::Closure(block_id) => {
-            infer_type_from_block(param_name, *block_id, ctx)
-        }
-        Expr::MatchBlock(patterns) => patterns
-            .iter()
-            .find_map(|(_, expr)| infer_type_from_expr(expr, param_name, ctx)),
-        Expr::Collect(_, inner) | Expr::UnaryNot(inner) => {
-            infer_type_from_expr(inner, param_name, ctx)
-        }
-        _ => None,
-    }
+    });
+
+    log::debug!("infer_type_from_pipeline result: {result:?}");
+    result
 }
 
 fn infer_param_type(
-    param_name: &str,
+    param_var_id: VarId,
     body_block_id: nu_protocol::BlockId,
     ctx: &LintContext,
 ) -> Type {
-    infer_type_from_block(param_name, body_block_id, ctx).unwrap_or(Type::Any)
+    log::debug!("infer_param_type: param_var_id={param_var_id:?}, body_block_id={body_block_id:?}");
+    let block = ctx.working_set.get_block(body_block_id);
+
+    // First try pipeline-based inference
+    log::debug!("  Trying pipeline-based inference...");
+    let pipeline_type = block
+        .pipelines
+        .iter()
+        .find_map(|pipeline| infer_type_from_pipeline(param_var_id, pipeline, ctx));
+
+    if let Some(ty) = &pipeline_type {
+        log::debug!("  -> Pipeline-based inference found: {ty:?}");
+        return ty.clone();
+    }
+
+    // Fall back to expression-based inference (handles arguments, closures, binary ops, etc.)
+    log::debug!("  Trying expression-based inference...");
+    let expr_type = block
+        .pipelines
+        .iter()
+        .flat_map(|pipeline| &pipeline.elements)
+        .find_map(|element| {
+            let result = element.expr.infer_input_type(Some(param_var_id), ctx);
+            log::debug!("    Checked element, result: {result:?}");
+            result
+        });
+
+    if let Some(ty) = &expr_type {
+        log::debug!("  -> Expression-based inference found: {ty:?}");
+        return ty.clone();
+    }
+
+    log::debug!("  -> No type found, returning Type::Any");
+    Type::Any
 }
 
 fn get_param_type_str(
     shape: &nu_protocol::SyntaxShape,
-    name: &str,
+    var_id: Option<VarId>,
     body_block_id: nu_protocol::BlockId,
     ctx: &LintContext,
 ) -> String {
     if *shape == nu_protocol::SyntaxShape::Any {
-        infer_param_type(name, body_block_id, ctx).to_string()
+        log::debug!("Inferring type for parameter {var_id:?} with shape Any");
+        var_id.map_or_else(
+            || Type::Any.to_string(),
+            |var_id| infer_param_type(var_id, body_block_id, ctx).to_string(),
+        )
     } else {
         shape.to_type_string()
     }
@@ -136,6 +128,7 @@ fn generate_typed_signature(
     body_block_id: nu_protocol::BlockId,
     ctx: &LintContext,
 ) -> String {
+    log::debug!("Generating typed signature for: {signature:?}");
     let params = signature
         .required_positional
         .iter()
@@ -143,21 +136,21 @@ fn generate_typed_signature(
             format!(
                 "{}: {}",
                 p.name,
-                get_param_type_str(&p.shape, &p.name, body_block_id, ctx)
+                get_param_type_str(&p.shape, p.var_id, body_block_id, ctx)
             )
         })
         .chain(signature.optional_positional.iter().map(|p| {
             format!(
                 "{}?: {}",
                 p.name,
-                get_param_type_str(&p.shape, &p.name, body_block_id, ctx)
+                get_param_type_str(&p.shape, p.var_id, body_block_id, ctx)
             )
         }))
         .chain(signature.rest_positional.iter().map(|p| {
             format!(
                 "...{}: {}",
                 p.name,
-                get_param_type_str(&p.shape, &p.name, body_block_id, ctx)
+                get_param_type_str(&p.shape, p.var_id, body_block_id, ctx)
             )
         }))
         .collect::<Vec<_>>()
@@ -172,6 +165,7 @@ fn check_signature(
     body_block_id: nu_protocol::BlockId,
     ctx: &LintContext,
 ) -> Vec<RuleViolation> {
+    log::debug!("Checking signature for missing type annotations: {sig:?}");
     let params_needing_types: Vec<_> = sig
         .required_positional
         .iter()
@@ -181,6 +175,7 @@ fn check_signature(
         .collect();
 
     if params_needing_types.is_empty() {
+        log::debug!("No parameters need type annotations");
         return vec![];
     }
 

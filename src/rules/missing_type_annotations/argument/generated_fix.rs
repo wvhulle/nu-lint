@@ -273,7 +273,8 @@ def add_item [items] {
     $items | append 42
 }
 ";
-    rule().assert_fix_contains(bad_code, "items: list");
+    // append accepts 'any' as input, so inference will yield 'any'
+    rule().assert_fix_contains(bad_code, "items: any");
 }
 
 #[test]
@@ -283,7 +284,8 @@ def add_first [collection] {
     $collection | prepend 0
 }
 ";
-    rule().assert_fix_contains(bad_code, "collection: list");
+    // prepend accepts 'any' as input, so inference will yield 'any'
+    rule().assert_fix_contains(bad_code, "collection: any");
 }
 
 #[test]

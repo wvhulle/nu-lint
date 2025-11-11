@@ -421,9 +421,10 @@ impl ExpressionExt for Expression {
                 }
             }),
             Expr::FullCellPath(cell_path) => cell_path.head.uses_pipeline_input(context),
-            Expr::Subexpression(block_id) | Expr::Block(block_id) | Expr::Closure(block_id) => {
+            Expr::Subexpression(block_id) | Expr::Block(block_id) => {
                 block_id.uses_pipeline_input(context)
             }
+            // Closures have their own scope, so $in inside them doesn't count as function-level usage
             _ => false,
         }
     }

@@ -35,6 +35,9 @@ impl CommandExt for str {
         match self {
             "each" | "where" | "filter" | "reduce" | "map" | "length" => Some("list<any>"),
             "lines" | "split row" => Some("string"),
+            "str trim" | "str replace" | "str upcase" | "str downcase" | "str contains" => {
+                Some("string")
+            }
             _ => None,
         }
     }
@@ -50,6 +53,9 @@ impl CommandExt for str {
             "to json" => Some("string"),
             "lines" => Some("list<string>"),
             "is-empty" => Some("bool"),
+            "wrap" | "insert" | "update" | "upsert" | "sort-by" | "group-by" | "select" => {
+                Some("table")
+            }
             _ => None,
         }
     }

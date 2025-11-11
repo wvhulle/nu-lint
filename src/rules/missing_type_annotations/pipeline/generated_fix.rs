@@ -10,7 +10,24 @@ def double [] {
 }
 ";
     rule().assert_fix_contains(bad_code, "[]: any -> any");
-    rule().assert_suggestion_contains(bad_code, "pipeline input type annotation");
+    rule().assert_suggestion_contains(bad_code, "pipeline input and output type annotations");
+}
+
+#[test]
+fn test_missing_pipeline_annot_git() {
+    instrument();
+
+    let bad_code = r#"
+export def "git age" [] {
+  git branch | lines | str substring 2.. | wrap name | insert last_commit {
+    get name | each {
+      git show $in --no-patch --format=%as | into datetime
+    }
+  } | sort-by last_commit
+}
+"#;
+    rule().assert_violation_count_exact(bad_code, 1);
+    rule().assert_fix_contains(bad_code, "nothing -> table");
 }
 
 #[test]
@@ -58,7 +75,7 @@ def process [data?, --verbose] {
 ";
     rule().assert_fix_contains(bad_code, "data?");
     rule().assert_fix_contains(bad_code, "--verbose");
-    rule().assert_fix_contains(bad_code, ": any -> string");
+    rule().assert_fix_contains(bad_code, "string -> string");
 }
 
 #[test]
@@ -68,7 +85,7 @@ export def process [] {
     $in | str trim
 }
 ";
-    rule().assert_fix_contains(bad_code, "[]: any -> string");
+    rule().assert_fix_contains(bad_code, "string -> string");
 }
 
 #[test]

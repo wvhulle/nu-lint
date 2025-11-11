@@ -70,22 +70,15 @@ impl PipelineExt for Pipeline {
     }
 
     fn variable_is_used(&self, var_id: VarId) -> bool {
-        self.elements.iter().any(|elem| match &elem.expr.expr {
-            Expr::Var(v_id) if *v_id == var_id => true,
-            Expr::FullCellPath(cp) => matches!(&cp.head.expr, Expr::Var(v_id) if *v_id == var_id),
-            _ => false,
-        })
+        self.elements
+            .iter()
+            .any(|elem| elem.expr.matches_var(var_id))
     }
 
     fn variable_is_piped(&self, var_id: VarId) -> bool {
-        if self.elements.is_empty() {
-            return false;
-        }
-
-        let first = &self.elements[0];
-        matches!(&first.expr.expr, Expr::FullCellPath(cell_path)
-            if matches!(&cell_path.head.expr, Expr::Var(ref_var_id) if *ref_var_id == var_id)
-            && cell_path.tail.is_empty())
+        self.elements
+            .first()
+            .is_some_and(|elem| elem.expr.matches_var(var_id))
     }
 
     fn ends_with_ignore(&self, context: &LintContext) -> bool {

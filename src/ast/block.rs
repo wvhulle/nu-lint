@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use nu_protocol::{
     BlockId, Span, Type, VarId,
-    ast::{Block, Call, Expr, FindMapResult, Operator, PipelineElement, Traverse},
+    ast::{Block, Call, Expr, FindMapResult, PipelineElement, Traverse},
 };
 
 use super::{call::CallExt, pipeline::PipelineExt};
@@ -169,12 +169,7 @@ impl BlockExt for Block {
     }
 
     fn uses_pipeline_input(&self, context: &LintContext) -> bool {
-        self.pipelines.iter().any(|pipeline| {
-            pipeline
-                .elements
-                .iter()
-                .any(|element| element.expr.uses_pipeline_input(context))
-        })
+        self.any_element(|elem| elem.expr.uses_pipeline_input(context))
     }
 
     fn produces_output(&self) -> bool {
@@ -187,9 +182,8 @@ impl BlockExt for Block {
     }
 
     fn find_pipeline_input_variable(&self, context: &LintContext) -> Option<VarId> {
-        self.pipelines
+        self.all_elements()
             .iter()
-            .flat_map(|pipeline| &pipeline.elements)
             .find_map(|element| element.expr.find_pipeline_input_variable(context))
     }
 
@@ -237,35 +231,16 @@ impl BlockExt for Block {
             return Type::Any;
         };
 
-        self.pipelines
+        self.all_elements()
             .iter()
-            .flat_map(|pipeline| &pipeline.elements)
             .find_map(|element| element.expr.infer_input_type(Some(in_var), context))
             .unwrap_or(Type::Any)
     }
 
     fn extract_assigned_vars(&self) -> Vec<VarId> {
-        self.pipelines
+        self.all_elements()
             .iter()
-            .flat_map(|pipeline| &pipeline.elements)
-            .filter_map(|elem| {
-                let Expr::BinaryOp(lhs, op, _) = &elem.expr.expr else {
-                    return None;
-                };
-
-                if !matches!(op.expr, Expr::Operator(Operator::Assignment(_))) {
-                    return None;
-                }
-
-                match &lhs.expr {
-                    Expr::Var(var_id) => Some(*var_id),
-                    Expr::FullCellPath(cell_path) => match &cell_path.head.expr {
-                        Expr::Var(var_id) => Some(*var_id),
-                        _ => None,
-                    },
-                    _ => None,
-                }
-            })
+            .filter_map(|elem| elem.expr.extract_assigned_variable())
             .collect()
     }
 }

@@ -1,8 +1,8 @@
 use nu_protocol::{
     BlockId, Span, Type, VarId,
     ast::{
-        Argument, Call, Comparison, Expr, Expression, ExternalArgument, FindMapResult, ListItem,
-        Operator, PathMember, RecordItem, Traverse,
+        Argument, Call, Comparison, Expr, Expression, ExternalArgument, FindMapResult,
+        FullCellPath, ListItem, Operator, PathMember, RecordItem, Traverse,
     },
 };
 
@@ -86,6 +86,20 @@ pub trait ExpressionExt: Traverse {
     fn infer_input_type(&self, in_var: Option<VarId>, context: &LintContext) -> Option<Type>;
     /// Checks if expression is a literal list. Example: `[1 2 3]` or `[]`
     fn is_literal_list(&self) -> bool;
+}
+
+fn is_pipeline_input_var(var_id: VarId, context: &LintContext) -> bool {
+    let var = context.working_set.get_variable(var_id);
+    (var.declaration_span.start == 0 && var.declaration_span.end == 0)
+        || (var.declaration_span.start == var.declaration_span.end
+            && var.declaration_span.start > 0)
+}
+
+const fn extract_var_from_full_cell_path(cell_path: &FullCellPath) -> Option<VarId> {
+    match &cell_path.head.expr {
+        Expr::Var(var_id) => Some(*var_id),
+        _ => None,
+    }
 }
 
 impl ExpressionExt for Expression {
@@ -202,20 +216,14 @@ impl ExpressionExt for Expression {
 
         match &lhs.expr {
             Expr::Var(var_id) => Some(*var_id),
-            Expr::FullCellPath(cell_path) => {
-                if let Expr::Var(var_id) = &cell_path.head.expr {
-                    Some(*var_id)
-                } else {
-                    None
-                }
-            }
+            Expr::FullCellPath(cell_path) => extract_var_from_full_cell_path(cell_path),
             _ => None,
         }
     }
 
     fn extract_field_access(&self, field_name: &str) -> Option<(VarId, Span)> {
         if let Expr::FullCellPath(cell_path) = &self.expr
-            && let Expr::Var(var_id) = &cell_path.head.expr
+            && let Some(var_id) = extract_var_from_full_cell_path(cell_path)
             && cell_path.tail.iter().any(|path_member| {
                 matches!(
                     path_member,
@@ -223,7 +231,7 @@ impl ExpressionExt for Expression {
                 )
             })
         {
-            Some((*var_id, self.span))
+            Some((var_id, self.span))
         } else {
             None
         }
@@ -312,9 +320,7 @@ impl ExpressionExt for Expression {
     fn matches_var(&self, var_id: VarId) -> bool {
         match &self.expr {
             Expr::Var(id) => *id == var_id,
-            Expr::FullCellPath(cell_path) => {
-                matches!(&cell_path.head.expr, Expr::Var(id) if *id == var_id)
-            }
+            Expr::FullCellPath(cell_path) => extract_var_from_full_cell_path(cell_path) == Some(var_id),
             _ => false,
         }
     }
@@ -401,9 +407,7 @@ impl ExpressionExt for Expression {
         match &self.expr {
             Expr::Var(var_id) => {
                 let var = context.working_set.get_variable(*var_id);
-                let span_start = var.declaration_span.start;
-                let span_end = var.declaration_span.end;
-                var.const_val.is_none() && span_start == 0 && span_end == 0
+                is_pipeline_input_var(*var_id, context) && var.const_val.is_none()
             }
             Expr::BinaryOp(left, _, right) => {
                 left.uses_pipeline_input(context) || right.uses_pipeline_input(context)
@@ -424,8 +428,6 @@ impl ExpressionExt for Expression {
                 .working_set
                 .get_block(*block_id)
                 .uses_pipeline_input(context),
-            // Closures have their own scope, so $in inside them doesn't count as function-level
-            // usage
             _ => false,
         }
     }
@@ -434,17 +436,7 @@ impl ExpressionExt for Expression {
         use super::block::BlockExt;
 
         match &self.expr {
-            Expr::Var(var_id) => {
-                let var = context.working_set.get_variable(*var_id);
-                // $in has declaration_span (0,0) or start==end
-                if (var.declaration_span.start == 0 && var.declaration_span.end == 0)
-                    || (var.declaration_span.start == var.declaration_span.end
-                        && var.declaration_span.start > 0)
-                {
-                    return Some(*var_id);
-                }
-                None
-            }
+            Expr::Var(var_id) => is_pipeline_input_var(*var_id, context).then_some(*var_id),
             Expr::FullCellPath(cell_path) => cell_path.head.find_pipeline_input_variable(context),
             Expr::Call(call) => call.arguments.iter().find_map(|arg| match arg {
                 Argument::Positional(e)

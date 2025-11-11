@@ -342,23 +342,16 @@ impl CallExt for Call {
     }
 
     fn get_for_loop_iterator(&self) -> Option<&Expression> {
-        let iter_arg = self.arguments.get(1)?;
-        match iter_arg {
-            Argument::Positional(expr) | Argument::Unknown(expr) => Some(expr),
-            _ => None,
-        }
+        self.get_positional_arg(1)
     }
 
     fn get_for_loop_body(&self) -> Option<nu_protocol::BlockId> {
-        let block_arg = self.arguments.last()?;
-        let (Argument::Positional(block_expr) | Argument::Unknown(block_expr)) = block_arg else {
-            return None;
-        };
-
-        match &block_expr.expr {
-            Expr::Block(block_id) => Some(*block_id),
-            _ => None,
-        }
+        self.arguments
+            .last()
+            .and_then(|arg| match arg {
+                Argument::Positional(expr) | Argument::Unknown(expr) => expr.extract_block_id(),
+                _ => None,
+            })
     }
 
     fn get_named_arg_expr(&self, flag_name: &str) -> Option<&Expression> {
@@ -394,14 +387,13 @@ impl CallExt for Call {
         log::debug!("Inferring type from call with blocks");
         let block_types: Vec<nu_protocol::Type> = self
             .positional_iter()
-            .filter_map(|arg| match &arg.expr {
-                Expr::Block(block_id) | Expr::Closure(block_id) => Some(
+            .filter_map(|arg| {
+                arg.extract_block_id().map(|block_id| {
                     context
                         .working_set
-                        .get_block(*block_id)
-                        .infer_output_type(context),
-                ),
-                _ => None,
+                        .get_block(block_id)
+                        .infer_output_type(context)
+                })
             })
             .collect();
 
@@ -415,10 +407,7 @@ impl CallExt for Call {
             return Some(block_types[0].clone());
         }
 
-        if block_types
-            .iter()
-            .all(|t| t == &nu_protocol::Type::Nothing)
-        {
+        if block_types.iter().all(|t| t == &nu_protocol::Type::Nothing) {
             log::debug!("All block types are Nothing");
             return Some(nu_protocol::Type::Nothing);
         }

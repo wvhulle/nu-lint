@@ -33,7 +33,8 @@ fn infer_param_type(
         return ty.clone();
     }
 
-    // Fall back to expression-based inference (handles arguments, closures, binary ops, etc.)
+    // Fall back to expression-based inference (handles arguments, closures, binary
+    // ops, etc.)
     log::debug!("  Trying expression-based inference...");
     let expr_type = block
         .pipelines

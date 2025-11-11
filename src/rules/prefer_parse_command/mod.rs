@@ -82,14 +82,16 @@ fn extract_split_row_assignment(
         Expr::Call(value_call) => is_split_row_call(value_call, context),
         Expr::FullCellPath(cell_path) => match &cell_path.head.expr {
             Expr::Call(head_call) => is_split_row_call(head_call, context),
-            Expr::Subexpression(block_id) => {
-                block_id.contains_call_in_single_pipeline("split row", context)
-            }
+            Expr::Subexpression(block_id) => context
+                .working_set
+                .get_block(*block_id)
+                .contains_call_in_single_pipeline("split row", context),
             _ => false,
         },
-        Expr::Subexpression(block_id) | Expr::Block(block_id) => {
-            block_id.contains_call_in_single_pipeline("split row", context)
-        }
+        Expr::Subexpression(block_id) | Expr::Block(block_id) => context
+            .working_set
+            .get_block(*block_id)
+            .contains_call_in_single_pipeline("split row", context),
         _ => false,
     };
 

@@ -108,14 +108,16 @@ fn generate_typed_signature(
         extract_parameters_text(signature)
     };
 
+    let block = ctx.working_set.get_block(block_id);
+
     let input_type = if uses_in || needs_input_type {
-        block_id.infer_input_type(ctx)
+        block.infer_input_type(ctx)
     } else {
         Type::Nothing
     };
 
     let output_type = if needs_output_type {
-        block_id.infer_output_type(ctx)
+        block.infer_output_type(ctx)
     } else {
         Type::Any
     };
@@ -203,8 +205,8 @@ fn check_def_call(call: &Call, ctx: &LintContext) -> Vec<RuleViolation> {
     let signature = &block.signature;
     let sig_span = find_signature_span(call, ctx);
 
-    let uses_in = block_id.uses_pipeline_input(ctx);
-    let produces_out = block_id.produces_output(ctx);
+    let uses_in = block.uses_pipeline_input(ctx);
+    let produces_out = block.produces_output();
     let needs_input_type = uses_in && is_untyped(signature, sig_span, ctx, |(input, _)| input);
     let needs_output_type =
         produces_out && is_untyped(signature, sig_span, ctx, |(_, output)| output);

@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use nu_protocol::{
     BlockId, Span, Type, VarId,
-    ast::{Call, Expr, FindMapResult, Operator, PipelineElement, Traverse},
+    ast::{Block, Call, Expr, FindMapResult, Operator, PipelineElement, Traverse},
 };
 
 use super::{call::CallExt, pipeline::PipelineExt};
@@ -11,24 +11,24 @@ use crate::{ast::expression::ExpressionExt, context::LintContext};
 pub trait BlockExt {
     /// Checks if block has side effects. Example: `{ print "hello"; ls }` has
     /// side effects
-    fn has_side_effects(&self, context: &LintContext) -> bool;
+    fn has_side_effects(&self) -> bool;
     /// Checks if block is an empty list. Example: `{ [] }`
-    fn is_empty_list_block(&self, context: &LintContext) -> bool;
+    fn is_empty_list_block(&self) -> bool;
     #[must_use]
     /// Checks if block contains a specific span. Example: function body
     /// contains statement span
-    fn contains_span(&self, span: Span, context: &LintContext) -> bool;
+    fn contains_span(&self, span: Span) -> bool;
     /// All pipeline elements: `{ ls | where size > 1kb }`
-    fn all_elements<'a>(&self, context: &'a LintContext) -> Vec<&'a PipelineElement>;
+    fn all_elements(&self) -> Vec<&PipelineElement>;
     /// Tests if any pipeline element matches predicate. Example: finds `print`
     /// call
-    fn any_element<F>(&self, context: &LintContext, predicate: F) -> bool
+    fn any_element<F>(&self, predicate: F) -> bool
     where
         F: Fn(&PipelineElement) -> bool;
     /// Checks if block contains variable references. Example: `{ $x + 1 }`
     fn contains_variables(&self, context: &LintContext) -> bool;
     /// Extracts single `if` call from block. Example: `{ if $x { ... } }`
-    fn get_single_if_call<'a>(&self, context: &'a LintContext<'a>) -> Option<&'a Call>;
+    fn get_single_if_call(&self, context: &LintContext) -> Option<&Call>;
     /// Checks if block contains specific command in single pipeline. Example:
     /// `{ complete }`
     fn contains_call_in_single_pipeline(&self, command_name: &str, context: &LintContext) -> bool;
@@ -50,7 +50,7 @@ pub trait BlockExt {
     fn uses_pipeline_input(&self, context: &LintContext) -> bool;
     /// Checks if block produces output. Example: `{ ls }` produces output, `{
     /// print "x" }` doesn't
-    fn produces_output(&self, context: &LintContext) -> bool;
+    fn produces_output(&self) -> bool;
     /// Finds the `$in` variable used in this block. Example: `def foo [] { $in
     /// | each { ... } }`
     fn find_pipeline_input_variable(&self, context: &LintContext) -> Option<VarId>;
@@ -61,63 +61,55 @@ pub trait BlockExt {
     fn infer_input_type(&self, context: &LintContext) -> Type;
     /// Extracts variable IDs that are assigned to within a block. Example: `{
     /// $x = 5; $y += 1 }` returns [x, y]
-    fn extract_assigned_vars(&self, context: &LintContext) -> Vec<VarId>;
+    fn extract_assigned_vars(&self) -> Vec<VarId>;
 }
 
-impl BlockExt for BlockId {
-    fn has_side_effects(&self, context: &LintContext) -> bool {
-        self.all_elements(context)
+impl BlockExt for Block {
+    fn has_side_effects(&self) -> bool {
+        self.all_elements()
             .iter()
             .any(|elem| !elem.expr.is_likely_pure())
     }
 
-    fn is_empty_list_block(&self, context: &LintContext) -> bool {
-        let block = context.working_set.get_block(*self);
-
-        block
-            .pipelines
+    fn is_empty_list_block(&self) -> bool {
+        self.pipelines
             .first()
             .and_then(|pipeline| pipeline.elements.first())
             .is_some_and(|elem| elem.expr.is_empty_list())
     }
 
-    fn contains_span(&self, span: Span, context: &LintContext) -> bool {
-        let block = context.working_set.get_block(*self);
-        if let Some(block_span) = block.span {
+    fn contains_span(&self, span: Span) -> bool {
+        if let Some(block_span) = self.span {
             return span.start >= block_span.start && span.end <= block_span.end;
         }
         false
     }
 
-    fn all_elements<'a>(&self, context: &'a LintContext) -> Vec<&'a PipelineElement> {
-        let block = context.working_set.get_block(*self);
-        block.pipelines.iter().flat_map(|p| &p.elements).collect()
+    fn all_elements(&self) -> Vec<&PipelineElement> {
+        self.pipelines.iter().flat_map(|p| &p.elements).collect()
     }
 
-    fn any_element<F>(&self, context: &LintContext, predicate: F) -> bool
+    fn any_element<F>(&self, predicate: F) -> bool
     where
         F: Fn(&PipelineElement) -> bool,
     {
-        self.all_elements(context).iter().any(|e| predicate(e))
+        self.all_elements().iter().any(|e| predicate(e))
     }
 
     fn contains_variables(&self, context: &LintContext) -> bool {
-        self.any_element(context, |elem| elem.expr.contains_variables(context))
+        self.any_element(|elem| elem.expr.contains_variables(context))
     }
 
     fn contains_call_in_single_pipeline(&self, command_name: &str, context: &LintContext) -> bool {
-        let block = context.working_set.get_block(*self);
-        block.pipelines.len() == 1
-            && block
+        self.pipelines.len() == 1
+            && self
                 .pipelines
                 .first()
                 .is_some_and(|p| p.contains_call_to(command_name, context))
     }
 
-    fn get_single_if_call<'a>(&self, context: &'a LintContext<'a>) -> Option<&'a Call> {
-        let block = context.working_set.get_block(*self);
-
-        let pipeline = (block.pipelines.len() == 1).then(|| block.pipelines.first())??;
+    fn get_single_if_call(&self, context: &LintContext) -> Option<&Call> {
+        let pipeline = (self.pipelines.len() == 1).then(|| self.pipelines.first())??;
 
         let element = (pipeline.elements.len() == 1).then(|| pipeline.elements.first())??;
 
@@ -128,24 +120,20 @@ impl BlockExt for BlockId {
     }
 
     fn contains_external_call_with_variable(&self, var_id: VarId, context: &LintContext) -> bool {
-        let block = context.working_set.get_block(*self);
-
-        block
-            .find_map(context.working_set, &|expr| {
-                if expr.is_external_call_with_variable(var_id) {
-                    FindMapResult::Found(())
-                } else {
-                    FindMapResult::Continue
-                }
-            })
-            .is_some()
+        self.find_map(context.working_set, &|expr| {
+            if expr.is_external_call_with_variable(var_id) {
+                FindMapResult::Found(())
+            } else {
+                FindMapResult::Continue
+            }
+        })
+        .is_some()
     }
 
     fn collect_user_function_calls(&self, context: &LintContext) -> Vec<String> {
-        let block = context.working_set.get_block(*self);
         let mut function_calls = Vec::new();
 
-        block.flat_map(
+        self.flat_map(
             context.working_set,
             &|expr| {
                 if let Expr::Call(call) = &expr.expr {
@@ -169,7 +157,8 @@ impl BlockExt for BlockId {
             .into_iter()
             .filter_map(|func_name| {
                 available_functions.get(&func_name).map(|&callee_block_id| {
-                    let mut transitive = callee_block_id
+                    let callee_block = context.working_set.get_block(callee_block_id);
+                    let mut transitive = callee_block
                         .find_transitively_called_functions(context, available_functions);
                     transitive.insert(func_name);
                     transitive
@@ -180,8 +169,7 @@ impl BlockExt for BlockId {
     }
 
     fn uses_pipeline_input(&self, context: &LintContext) -> bool {
-        let block = context.working_set.get_block(*self);
-        block.pipelines.iter().any(|pipeline| {
+        self.pipelines.iter().any(|pipeline| {
             pipeline
                 .elements
                 .iter()
@@ -189,9 +177,8 @@ impl BlockExt for BlockId {
         })
     }
 
-    fn produces_output(&self, context: &LintContext) -> bool {
-        let block = context.working_set.get_block(*self);
-        block.pipelines.last().is_some_and(|pipeline| {
+    fn produces_output(&self) -> bool {
+        self.pipelines.last().is_some_and(|pipeline| {
             pipeline
                 .elements
                 .last()
@@ -200,26 +187,23 @@ impl BlockExt for BlockId {
     }
 
     fn find_pipeline_input_variable(&self, context: &LintContext) -> Option<VarId> {
-        let block = context.working_set.get_block(*self);
-        block
-            .pipelines
+        self.pipelines
             .iter()
             .flat_map(|pipeline| &pipeline.elements)
             .find_map(|element| element.expr.find_pipeline_input_variable(context))
     }
 
     fn infer_output_type(&self, context: &LintContext) -> Type {
-        let block = context.working_set.get_block(*self);
-        log::debug!("Inferring output type for block {self:?}");
+        log::debug!("Inferring output type for block");
 
         // Get the last pipeline
-        let Some(pipeline) = block.pipelines.last() else {
-            return block.output_type();
+        let Some(pipeline) = self.pipelines.last() else {
+            return self.output_type();
         };
 
         // Start with the block's input type as the initial pipeline input
         let block_input_type = self.infer_input_type(context);
-        log::debug!("Block {self:?} inferred input type: {block_input_type:?}");
+        log::debug!("Block inferred input type: {block_input_type:?}");
         let mut current_type = Some(block_input_type);
 
         for (idx, element) in pipeline.elements.iter().enumerate() {
@@ -243,29 +227,25 @@ impl BlockExt for BlockId {
             // else: keep current_type unchanged (e.g., for $in variable)
         }
 
-        let final_type = current_type.unwrap_or_else(|| block.output_type());
-        log::debug!("Block {self:?} final output type: {final_type:?}");
+        let final_type = current_type.unwrap_or_else(|| self.output_type());
+        log::debug!("Block final output type: {final_type:?}");
         final_type
     }
 
     fn infer_input_type(&self, context: &LintContext) -> Type {
-        let block = context.working_set.get_block(*self);
         let Some(in_var) = self.find_pipeline_input_variable(context) else {
             return Type::Any;
         };
 
-        block
-            .pipelines
+        self.pipelines
             .iter()
             .flat_map(|pipeline| &pipeline.elements)
             .find_map(|element| element.expr.infer_input_type(Some(in_var), context))
             .unwrap_or(Type::Any)
     }
 
-    fn extract_assigned_vars(&self, context: &LintContext) -> Vec<VarId> {
-        let block = context.working_set.get_block(*self);
-        block
-            .pipelines
+    fn extract_assigned_vars(&self) -> Vec<VarId> {
+        self.pipelines
             .iter()
             .flat_map(|pipeline| &pipeline.elements)
             .filter_map(|elem| {

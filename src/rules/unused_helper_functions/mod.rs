@@ -19,7 +19,8 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
         return vec![];
     };
 
-    let called_functions = main_block_id.find_transitively_called_functions(context, &function_map);
+    let main_block = context.working_set.get_block(main_block_id);
+    let called_functions = main_block.find_transitively_called_functions(context, &function_map);
 
     function_map
         .keys()

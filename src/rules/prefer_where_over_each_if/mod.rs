@@ -65,7 +65,8 @@ fn is_filtering_pattern(
     };
 
     // Then-block must have no side effects and return only the loop variable
-    !then_block_id.has_side_effects(context)
+    let then_block = context.working_set.get_block(*then_block_id);
+    !then_block.has_side_effects()
         && then_block_returns_loop_var(*then_block_id, context, loop_var_name)
 }
 

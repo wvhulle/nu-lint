@@ -44,13 +44,14 @@ fn has_append_without_transformation(
     context: &LintContext,
     loop_var_name: &str,
 ) -> bool {
+    let block = context.working_set.get_block(block_id);
     log::debug!(
         "Checking append pattern: block has {} elements",
-        block_id.all_elements(context).len()
+        block.all_elements().len()
     );
 
-    block_id
-        .all_elements(context)
+    block
+        .all_elements()
         .iter()
         .any(|elem| matches_append_assignment(&elem.expr, context, loop_var_name))
 }
@@ -177,7 +178,10 @@ fn extract_empty_list_vars(
     let is_empty_list = if init_expr.is_empty_list() {
         true
     } else if let Some(block_id) = init_expr.extract_block_id() {
-        block_id.is_empty_list_block(context)
+        context
+            .working_set
+            .get_block(block_id)
+            .is_empty_list_block()
     } else {
         false
     };

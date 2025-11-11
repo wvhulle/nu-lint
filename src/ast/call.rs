@@ -6,7 +6,8 @@ use nu_protocol::{
 use super::{block::BlockExt, expression::ExpressionExt};
 use crate::{ast::span::SpanExt, context::LintContext};
 
-/// Checks if `actual_type` is compatible with `expected_type` for command signature matching
+/// Checks if `actual_type` is compatible with `expected_type` for command
+/// signature matching
 fn is_type_compatible(expected: &nu_protocol::Type, actual: &nu_protocol::Type) -> bool {
     use nu_protocol::Type;
 
@@ -160,7 +161,8 @@ impl CallExt for Call {
                 return out_ty.clone();
             }
             log::debug!(
-                "The signature with input type {:?} is not compatible with actual input type {:?} for command '{}'",
+                "The signature with input type {:?} is not compatible with actual input type {:?} \
+                 for command '{}'",
                 in_ty,
                 input_type,
                 self.get_call_name(context)
@@ -276,7 +278,10 @@ impl CallExt for Call {
     fn get_nested_single_if<'a>(&self, context: &'a LintContext<'a>) -> Option<&'a Call> {
         let then_block = self.get_positional_arg(1)?;
         let then_block_id = then_block.extract_block_id()?;
-        then_block_id.get_single_if_call(context)
+        context
+            .working_set
+            .get_block(then_block_id)
+            .get_single_if_call(context)
     }
 
     fn generate_collapsed_if(&self, context: &LintContext) -> Option<String> {

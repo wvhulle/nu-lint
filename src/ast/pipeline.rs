@@ -25,8 +25,8 @@ pub trait PipelineExt {
     /// Gets element before ignore. Example: `mkdir tmp | ignore` returns `mkdir
     /// tmp`
     fn element_before_ignore(&self, context: &LintContext) -> Option<&Expression>;
-    /// Infers parameter type from pipeline. Example: `$text | str length` infers
-    /// `string`
+    /// Infers parameter type from pipeline. Example: `$text | str length`
+    /// infers `string`
     fn infer_param_type(&self, param_var_id: VarId, context: &LintContext) -> Option<Type>;
 }
 
@@ -106,9 +106,10 @@ impl PipelineExt for Pipeline {
             self.elements.len()
         );
 
-        let result = self.elements.windows(2).find_map(|window| {
-            infer_from_pipeline_window(param_var_id, window, context)
-        });
+        let result = self
+            .elements
+            .windows(2)
+            .find_map(|window| infer_from_pipeline_window(param_var_id, window, context));
 
         log::debug!("infer_param_type from pipeline result: {result:?}");
         result

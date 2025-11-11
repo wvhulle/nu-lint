@@ -1,10 +1,7 @@
 use nu_protocol::ast::{Expr, Expression, Pipeline};
 
 use crate::{
-    ast::{
-        builtin_command::CommandExt, call::CallExt, ext_command::ExternalCommandExt,
-        pipeline::PipelineExt, span::SpanExt,
-    },
+    ast::{call::CallExt, ext_command::ExternalCommandExt, pipeline::PipelineExt, span::SpanExt},
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
@@ -29,21 +26,13 @@ fn command_produces_output(expr: &Expression, context: &LintContext) -> bool {
             // Check the output type from the signature
             let output_type = signature.get_output_type();
 
-            match output_type {
-                nu_protocol::Type::Nothing => {
-                    // Definitely produces no output
-                    false
-                }
-                nu_protocol::Type::Any => {
-                    // Type system doesn't know - fall back to whitelist
-                    log::debug!("Command '{cmd_name}' has output type Any, checking whitelist");
-                    cmd_name.as_str().is_known_builtin_output_command()
-                }
-                _ => {
-                    // Has a specific output type (String, List, etc.) - produces output
-                    log::debug!("Command '{cmd_name}' has output type: {output_type:?}");
-                    true
-                }
+            if output_type == nu_protocol::Type::Nothing {
+                // Definitely produces no output
+                false
+            } else {
+                // Has a specific output type (String, List, etc.) - produces output
+                log::debug!("Command '{cmd_name}' has output type: {output_type:?}");
+                true
             }
         }
         _ => false,

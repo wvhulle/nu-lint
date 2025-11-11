@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use nu_protocol::{
-    BlockId, Span, VarId,
+    BlockId, Span, Type, VarId,
     ast::{Call, Expr, FindMapResult, Operator, PipelineElement, Traverse},
 };
 
@@ -55,10 +55,10 @@ pub trait BlockExt {
     /// | each { ... } }`
     fn find_pipeline_input_variable(&self, context: &LintContext) -> Option<VarId>;
     /// Infers the output type of a block. Example: `{ ls }` returns "table"
-    fn infer_output_type(&self, context: &LintContext) -> String;
+    fn infer_output_type(&self, context: &LintContext) -> Type;
     /// Infers the input type expected by a block. Example: `{ $in | length }`
     /// expects "list"
-    fn infer_input_type(&self, context: &LintContext) -> String;
+    fn infer_input_type(&self, context: &LintContext) -> Type;
     /// Extracts variable IDs that are assigned to within a block. Example: `{
     /// $x = 5; $y += 1 }` returns [x, y]
     fn extract_assigned_vars(&self, context: &LintContext) -> Vec<VarId>;
@@ -208,24 +208,52 @@ impl BlockExt for BlockId {
             .find_map(|element| element.expr.find_pipeline_input_variable(context))
     }
 
-    fn infer_output_type(&self, context: &LintContext) -> String {
+    fn infer_output_type(&self, context: &LintContext) -> Type {
         let block = context.working_set.get_block(*self);
         log::debug!("Inferring output type for block {self:?}");
 
-        block
-            .pipelines
-            .last()
-            .and_then(|pipeline| pipeline.elements.last())
-            .and_then(|elem| elem.expr.infer_output_type(context))
-            .unwrap_or_else(|| block.output_type().to_string())
+        // Get the last pipeline
+        let Some(pipeline) = block.pipelines.last() else {
+            return block.output_type();
+        };
+
+        // Start with the block's input type as the initial pipeline input
+        let block_input_type = self.infer_input_type(context);
+        log::debug!("Block {self:?} inferred input type: {block_input_type:?}");
+        let mut current_type = Some(block_input_type);
+        
+        for (idx, element) in pipeline.elements.iter().enumerate() {
+            log::debug!("Pipeline element {idx}: current_type before = {current_type:?}");
+            
+            // If this is a call, pass the current pipeline type as input
+            if let Expr::Call(call) = &element.expr.expr {
+                let output = call.get_output_type(context, current_type);
+                log::debug!("Pipeline element {idx} (Call): output type = {output:?}");
+                current_type = Some(output);
+                continue;
+            }
+            
+            // For other expressions, try to infer their type
+            let inferred = element.expr.infer_output_type(context);
+            log::debug!("Pipeline element {idx} (Expression): inferred type = {inferred:?}");
+            // If we can't infer a type, keep the current pipeline type flowing
+            if inferred.is_some() {
+                current_type = inferred;
+            }
+            // else: keep current_type unchanged (e.g., for $in variable)
+        }
+
+        let final_type = current_type.unwrap_or_else(|| block.output_type());
+        log::debug!("Block {self:?} final output type: {final_type:?}");
+        final_type
     }
 
-    fn infer_input_type(&self, context: &LintContext) -> String {
+    fn infer_input_type(&self, context: &LintContext) -> Type {
         use super::expression::ExpressionExt;
 
         let block = context.working_set.get_block(*self);
         let Some(in_var) = self.find_pipeline_input_variable(context) else {
-            return "any".to_string();
+            return Type::Any;
         };
 
         block
@@ -233,7 +261,7 @@ impl BlockExt for BlockId {
             .iter()
             .flat_map(|pipeline| &pipeline.elements)
             .find_map(|element| element.expr.infer_input_type(Some(in_var), context))
-            .map_or_else(|| "any".to_string(), String::from)
+            .unwrap_or(Type::Any)
     }
 
     fn extract_assigned_vars(&self, context: &LintContext) -> Vec<VarId> {

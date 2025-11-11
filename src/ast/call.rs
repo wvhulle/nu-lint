@@ -78,9 +78,76 @@ pub trait CallExt {
     /// Gets all argument expressions from a call. Example: positional, named,
     /// spread arguments
     fn all_arg_expressions(&self) -> Vec<&Expression>;
+
+    fn get_output_type(
+        &self,
+        context: &LintContext,
+        pipeline_input: Option<nu_protocol::Type>,
+    ) -> nu_protocol::Type;
 }
 
 impl CallExt for Call {
+    fn get_output_type(
+        &self,
+        context: &LintContext,
+        pipeline_input: Option<nu_protocol::Type>,
+    ) -> nu_protocol::Type {
+        let decl = context.working_set.get_decl(self.decl_id);
+        let sig = decl.signature();
+
+        log::debug!(
+            "get_output_type called for '{}': pipeline_input={pipeline_input:?}",
+            self.get_call_name(context)
+        );
+
+        log::debug!(
+            "Nu parser parsed output type for call '{}': {:?}",
+            self.get_call_name(context),
+            sig.get_output_type()
+        );
+
+        // Use the pipeline input type if provided, otherwise get it from signature
+        let has_pipeline_input = pipeline_input.is_some();
+        let input_type = pipeline_input.unwrap_or_else(|| sig.get_input_type());
+        log::debug!(
+            "Final input_type used for call '{}': {:?} (from pipeline_input: {})",
+            self.get_call_name(context),
+            input_type,
+            has_pipeline_input
+        );
+
+        // Look through input_output_types for the best match
+        log::debug!(
+            "Command '{}' input_output_types: {:?}",
+            self.get_call_name(context),
+            sig.input_output_types
+        );
+
+        for (in_ty, out_ty) in &sig.input_output_types {
+            // If we have a specific match for the input type, use it
+            if in_ty == &input_type && !matches!(out_ty, nu_protocol::Type::Any) {
+                log::debug!(
+                    "Found specific type mapping for '{}': {:?} -> {:?}",
+                    self.get_call_name(context),
+                    in_ty,
+                    out_ty
+                );
+                return out_ty.clone();
+            }
+            log::debug!(
+                "The signature with input type {:?} does not match actual input type {:?} for command '{}'",
+                in_ty,
+                input_type,
+                self.get_call_name(context)
+            );
+        }
+        log::debug!(
+            "Could not find specific type mapping for '{}'",
+            self.get_call_name(context)
+        );
+        // Fallback to the default output type
+        sig.get_output_type()
+    }
     fn get_call_name(&self, context: &LintContext) -> String {
         context
             .working_set

@@ -1,10 +1,10 @@
-use nu_protocol::ast::{Argument, Call, Expr, Expression, Operator, Pipeline};
+use nu_protocol::{
+    Type,
+    ast::{Argument, Call, Expr, Expression, Operator, Pipeline},
+};
 
 use crate::{
-    ast::{
-        builtin_command::CommandExt, call::CallExt, expression::ExpressionExt, span::SpanExt,
-        syntax_shape::SyntaxShapeExt,
-    },
+    ast::{call::CallExt, expression::ExpressionExt, span::SpanExt, syntax_shape::SyntaxShapeExt},
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{Fix, Replacement, RuleViolation, Severity},
@@ -21,13 +21,14 @@ fn infer_type_from_pipeline(
     param_name: &str,
     pipeline: &Pipeline,
     ctx: &LintContext,
-) -> Option<&'static str> {
+) -> Option<Type> {
     pipeline
         .elements
         .windows(2)
         .find_map(|window| match &window[1].expr.expr {
             Expr::Call(call) if is_reference_to_param(&window[0].expr, param_name, ctx) => {
-                call.get_call_name(ctx).as_str().output_type()
+                let decl = ctx.working_set.get_decl(call.decl_id);
+                Some(decl.signature().get_output_type())
             }
             _ => None,
         })
@@ -37,7 +38,7 @@ fn infer_type_from_block(
     param_name: &str,
     block_id: nu_protocol::BlockId,
     ctx: &LintContext,
-) -> Option<&'static str> {
+) -> Option<Type> {
     let block = ctx.working_set.get_block(block_id);
 
     block.pipelines.iter().find_map(|pipeline| {
@@ -50,14 +51,13 @@ fn infer_type_from_block(
     })
 }
 
-fn infer_type_from_expr(
-    expr: &Expression,
-    param_name: &str,
-    ctx: &LintContext,
-) -> Option<&'static str> {
+fn infer_type_from_expr(expr: &Expression, param_name: &str, ctx: &LintContext) -> Option<Type> {
     match &expr.expr {
         Expr::Call(call) if is_reference_to_param(expr, param_name, ctx) => {
-            call.get_call_name(ctx).as_str().output_type()
+            // call.get_call_name(ctx).as_str().output_type()
+            // call.get_call_name(ct)
+            let decl = ctx.working_set.get_decl(call.decl_id);
+            Some(decl.signature().get_output_type())
         }
         Expr::Call(call) => call.arguments.iter().find_map(|arg| match arg {
             Argument::Positional(arg_expr) | Argument::Unknown(arg_expr) => {
@@ -69,7 +69,7 @@ fn infer_type_from_expr(
             if is_reference_to_param(&cell_path.head, param_name, ctx)
                 && !cell_path.tail.is_empty() =>
         {
-            Some("record")
+            Some(Type::Record(Box::new([])))
         }
         Expr::FullCellPath(cell_path) => infer_type_from_expr(&cell_path.head, param_name, ctx),
         Expr::BinaryOp(left, op_expr, right)
@@ -77,7 +77,7 @@ fn infer_type_from_expr(
                 && (is_reference_to_param(left, param_name, ctx)
                     || is_reference_to_param(right, param_name, ctx)) =>
         {
-            Some("int")
+            Some(Type::Int)
         }
         Expr::BinaryOp(left, _, right) => infer_type_from_expr(left, param_name, ctx)
             .or_else(|| infer_type_from_expr(right, param_name, ctx)),
@@ -98,8 +98,8 @@ fn infer_param_type(
     param_name: &str,
     body_block_id: nu_protocol::BlockId,
     ctx: &LintContext,
-) -> &'static str {
-    infer_type_from_block(param_name, body_block_id, ctx).unwrap_or("any")
+) -> Type {
+    infer_type_from_block(param_name, body_block_id, ctx).unwrap_or(Type::Any)
 }
 
 fn get_param_type_str(

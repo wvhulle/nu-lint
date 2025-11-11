@@ -1,5 +1,5 @@
 use nu_protocol::{
-    BlockId, Span,
+    BlockId, Span, Type,
     ast::{Call, Expr},
 };
 
@@ -50,13 +50,16 @@ fn create_violations_for_untyped_io(
     let (message, suggestion) = match (needs_input_type, needs_output_type) {
         (true, true) => (
             format!(
-                "Custom command '{func_name}' uses pipeline input ($in) and produces output but lacks type annotations"
+                "Custom command '{func_name}' uses pipeline input ($in) and produces output but \
+                 lacks type annotations"
             ),
-            "Add pipeline input and output type annotations (e.g., `: string -> list<int>` or `: any -> table`)",
+            "Add pipeline input and output type annotations (e.g., `: string -> list<int>` or `: \
+             any -> table`)",
         ),
         (true, false) => (
             format!(
-                "Custom command '{func_name}' uses pipeline input ($in) but lacks input type annotation"
+                "Custom command '{func_name}' uses pipeline input ($in) but lacks input type \
+                 annotation"
             ),
             "Add pipeline input type annotation (e.g., `: string -> any` or `: list<int> -> any`)",
         ),
@@ -65,9 +68,11 @@ fn create_violations_for_untyped_io(
                 "Custom command '{func_name}' produces output but lacks output type annotation"
             ),
             if uses_in {
-                "Add pipeline output type annotation (e.g., `: any -> string` or `: list<int> -> table`)"
+                "Add pipeline output type annotation (e.g., `: any -> string` or `: list<int> -> \
+                 table`)"
             } else {
-                "Add pipeline output type annotation (e.g., `: nothing -> string` or `: nothing -> list<int>`)"
+                "Add pipeline output type annotation (e.g., `: nothing -> string` or `: nothing -> \
+                 list<int>`)"
             },
         ),
         (false, false) => unreachable!(),
@@ -106,13 +111,13 @@ fn generate_typed_signature(
     let input_type = if uses_in || needs_input_type {
         block_id.infer_input_type(ctx)
     } else {
-        "nothing".to_string()
+        Type::Nothing
     };
 
     let output_type = if needs_output_type {
         block_id.infer_output_type(ctx)
     } else {
-        "any".to_string()
+        Type::Any
     };
 
     match (needs_input_type, needs_output_type) {

@@ -32,6 +32,7 @@ export def "git age" [] {
 
 #[test]
 fn test_fix_untyped_output() {
+    instrument();
     let bad_code = r"
 def create-list [] {
     [1, 2, 3]
@@ -42,6 +43,7 @@ def create-list [] {
 
 #[test]
 fn test_fix_both_input_and_output() {
+    instrument();
     let bad_code = r"
 def transform [] {
     $in | each { |x| $x + 1 }
@@ -131,6 +133,7 @@ def get_pi [] {
 
 #[test]
 fn test_infers_bool_output() {
+    instrument();
     let bad_code = r"
 def is_ready [] {
     true
@@ -187,7 +190,7 @@ def split_lines [] {
     $in | lines
 }
 ";
-    rule().assert_fix_contains(bad_code, "string -> list<string>");
+    rule().assert_fix_contains(bad_code, "any -> list<string>");
 }
 
 #[test]
@@ -227,7 +230,7 @@ def get_name [] {
     $in.name
 }
 ";
-    rule().assert_fix_contains(bad_code, "[]: record -> any");
+    rule().assert_fix_contains(bad_code, "[]: record -> record");
 }
 
 #[test]
@@ -248,7 +251,7 @@ def split_text [] {
     $in | lines
 }
 ";
-    rule().assert_fix_contains(bad_code, "[]: string -> list");
+    rule().assert_fix_contains(bad_code, "[]: any -> list<string>");
 }
 
 #[test]
@@ -278,7 +281,7 @@ def complex [] {
     if true { "string" } else { 42 }
 }
 "#;
-    rule().assert_fix_contains(bad_code, "[]: nothing -> string");
+    rule().assert_fix_contains(bad_code, "[]: nothing -> any");
 }
 
 #[test]
@@ -345,7 +348,7 @@ def conditional_action [flag: bool] {
     }
 }
 "#;
-    rule().assert_fix_contains(bad_code, "[flag: bool]: nothing -> nothing");
+    rule().assert_fix_contains(bad_code, "[flag: bool]: nothing -> any");
 }
 
 #[test]

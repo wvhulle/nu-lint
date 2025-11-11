@@ -460,7 +460,10 @@ impl ExpressionExt for Expression {
         }
     }
 
-    #[allow(clippy::too_many_lines, reason = "Type inference requires many match arms")]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "Type inference requires many match arms"
+    )]
     fn infer_output_type(&self, context: &LintContext) -> Option<Type> {
         log::debug!(
             "Inferring output type for expression: '{}'",
@@ -508,7 +511,7 @@ impl ExpressionExt for Expression {
                     log::debug!("FullCellPath contains List with {} items", items.len());
                     return Some(infer_list_element_type(items));
                 }
-                
+
                 // For other FullCellPath cases, use the head type
                 log::debug!("Using head type for FullCellPath: {:?}", path.head.ty);
                 Some(path.head.ty.clone())
@@ -657,18 +660,18 @@ fn infer_list_element_type(items: &[ListItem]) -> Type {
     if items.is_empty() {
         return Type::List(Box::new(Type::Any));
     }
-    
+
     let element_types: Vec<Type> = items
         .iter()
         .map(|item| match item {
             ListItem::Item(expr) | ListItem::Spread(_, expr) => expr.ty.clone(),
         })
         .collect();
-    
+
     if element_types.is_empty() {
         return Type::List(Box::new(Type::Any));
     }
-    
+
     // If all elements have the same type, use it; otherwise fall back to Any
     if element_types.iter().all(|t| t == &element_types[0]) {
         log::debug!("All list elements have type: {:?}", element_types[0]);

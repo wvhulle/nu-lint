@@ -6,6 +6,30 @@ use nu_protocol::{
 use super::{block::BlockExt, expression::ExpressionExt};
 use crate::{ast::span::SpanExt, context::LintContext};
 
+/// Checks if `actual_type` is compatible with `expected_type` for command signature matching
+fn is_type_compatible(expected: &nu_protocol::Type, actual: &nu_protocol::Type) -> bool {
+    use nu_protocol::Type;
+
+    // Exact match
+    if expected == actual {
+        return true;
+    }
+
+    // Any is compatible with everything (both ways)
+    // - If expected is Any, any actual type can be passed (Any accepts all)
+    // - If actual is Any, it can match any expected type (Any is a supertype)
+    if matches!(expected, Type::Any) || matches!(actual, Type::Any) {
+        return true;
+    }
+
+    // List compatibility: check inner types recursively
+    if let (Type::List(expected_inner), Type::List(actual_inner)) = (expected, actual) {
+        return is_type_compatible(expected_inner, actual_inner);
+    }
+
+    false
+}
+
 pub trait CallExt {
     /// Gets the command name of this call. Example: `ls -la` returns "ls"
     fn get_call_name(&self, context: &LintContext) -> String;
@@ -124,25 +148,26 @@ impl CallExt for Call {
         );
 
         for (in_ty, out_ty) in &sig.input_output_types {
-            // If we have a specific match for the input type, use it
-            if in_ty == &input_type && !matches!(out_ty, nu_protocol::Type::Any) {
+            // If we have a compatible match for the input type, use it
+            if is_type_compatible(in_ty, &input_type) && !matches!(out_ty, nu_protocol::Type::Any) {
                 log::debug!(
-                    "Found specific type mapping for '{}': {:?} -> {:?}",
+                    "Found compatible type mapping for '{}': {:?} -> {:?} (actual input: {:?})",
                     self.get_call_name(context),
                     in_ty,
-                    out_ty
+                    out_ty,
+                    input_type
                 );
                 return out_ty.clone();
             }
             log::debug!(
-                "The signature with input type {:?} does not match actual input type {:?} for command '{}'",
+                "The signature with input type {:?} is not compatible with actual input type {:?} for command '{}'",
                 in_ty,
                 input_type,
                 self.get_call_name(context)
             );
         }
         log::debug!(
-            "Could not find specific type mapping for '{}'",
+            "Could not find compatible type mapping for '{}'",
             self.get_call_name(context)
         );
         // Fallback to the default output type

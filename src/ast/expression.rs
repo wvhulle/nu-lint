@@ -500,6 +500,17 @@ impl ExpressionExt for Expression {
                 log::debug!("Matched literal expression, using AST type: {:?}", self.ty);
                 Some(self.ty.clone())
             }
+            Expr::BinaryOp(left, _op, right) => {
+                if !matches!(self.ty, Type::Any) {
+                    return Some(self.ty.clone());
+                }
+
+                infer_binary_op_type(
+                    left.infer_output_type(context).as_ref(),
+                    right.infer_output_type(context).as_ref(),
+                )
+                .or_else(|| Some(self.ty.clone()))
+            }
             Expr::List(items) => {
                 log::debug!("Matched List literal with {} items", items.len());
                 Some(infer_list_element_type(items))
@@ -515,8 +526,15 @@ impl ExpressionExt for Expression {
                     return Some(infer_list_element_type(items));
                 }
 
-                log::debug!("Using head type for FullCellPath: {:?}", path.head.ty);
-                Some(path.head.ty.clone())
+                if !path.tail.is_empty() {
+                    log::debug!("Using head type for FullCellPath: {:?}", path.head.ty);
+                    return Some(path.head.ty.clone());
+                }
+
+                log::debug!("FullCellPath has empty tail, inferring head type recursively");
+                let inferred = path.head.infer_output_type(context);
+                log::debug!("FullCellPath inferred type from head: {inferred:?}");
+                inferred.or_else(|| Some(path.head.ty.clone()))
             }
             Expr::Subexpression(block_id) | Expr::Block(block_id) => {
                 log::debug!("Encountered Subexpression");
@@ -731,6 +749,15 @@ fn check_filepath_output(expr: &Expr) -> Option<Type> {
         Expr::ExternalCall(head, _) if is_filepath_expr(&head.expr) => Some(ty),
         Expr::Collect(_, inner) if is_filepath_expr(&inner.expr) => Some(ty),
         expr if is_filepath_expr(expr) => Some(ty),
+        _ => None,
+    }
+}
+
+const fn infer_binary_op_type(left: Option<&Type>, right: Option<&Type>) -> Option<Type> {
+    match (left, right) {
+        (Some(Type::Float), _) | (_, Some(Type::Float)) => Some(Type::Float),
+        (Some(Type::Int), Some(Type::Int)) => Some(Type::Int),
+        (Some(Type::Int), Some(Type::Any)) | (Some(Type::Any), Some(Type::Int)) => Some(Type::Int),
         _ => None,
     }
 }

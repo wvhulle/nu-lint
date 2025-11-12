@@ -42,6 +42,20 @@ def create-list [] {
 }
 
 #[test]
+fn test_infer_float() {
+    instrument();
+    let bad_code = r#"
+def time_to_hours [time_str: string] {
+    let parts = ($time_str | split row ":")
+    let hour = ($parts.0 | into float)
+    let minute = ($parts.1 | into float)
+    # Ignore seconds for simplicity
+    $hour + ($minute / 60.0)
+}"#;
+    rule().assert_fix_contains(bad_code, "nothing -> float");
+}
+
+#[test]
 fn test_fix_both_input_and_output() {
     instrument();
     let bad_code = r"

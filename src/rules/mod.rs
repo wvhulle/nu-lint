@@ -9,6 +9,7 @@ mod exit_only_in_main;
 mod external_script_as_argument;
 mod forbid_excessive_nesting;
 mod inline_single_use_function;
+mod isolate_side_effects;
 mod unnecessary_ignore;
 
 mod max_function_body_length;
@@ -93,6 +94,7 @@ impl RuleRegistry {
         registry.register(forbid_excessive_nesting::rule());
         registry.register(external_script_as_argument::rule());
         registry.register(inline_single_use_function::rule());
+        registry.register(isolate_side_effects::rule());
         registry.register(kebab_case_commands::rule());
         registry.register(max_function_body_length::rule());
         registry.register(max_positional_params::rule());

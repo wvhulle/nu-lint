@@ -7,7 +7,7 @@ fn test_ignore_function_with_exactly_80_lines() {
         r"def acceptable_function [] {{
 {}
 }}",
-        (0..78)
+        (0..30)
             .map(|i| format!("    let x{i} = {i}"))
             .collect::<Vec<_>>()
             .join("\n")
@@ -76,7 +76,7 @@ fn test_ignore_main_function_within_limit() {
         r"def main [] {{
 {}
 }}",
-        (0..50)
+        (0..30)
             .map(|i| format!("    print {i}"))
             .collect::<Vec<_>>()
             .join("\n")
@@ -91,7 +91,7 @@ fn test_ignore_exported_function_within_limit() {
         r"export def helper_function [] {{
 {}
 }}",
-        (0..40)
+        (0..30)
             .map(|i| format!("    let x{i} = {i}"))
             .collect::<Vec<_>>()
             .join("\n")

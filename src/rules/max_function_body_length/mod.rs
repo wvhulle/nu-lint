@@ -6,7 +6,7 @@ use crate::{
     violation::{RuleViolation, Severity},
 };
 
-const MAX_LINES: usize = 80;
+const MAX_LINES: usize = 40;
 
 fn count_lines_in_span(source: &str, span: nu_protocol::Span) -> usize {
     let start = span.start;

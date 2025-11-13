@@ -21,6 +21,10 @@ pub trait SpanExt {
     /// Finds the span of a substring within this span. Example: finding
     /// parameter name within signature span
     fn find_substring_span(&self, substring: &str, context: &LintContext) -> Span;
+    #[must_use]
+    /// Check if there's a documentation comment on the same line as this span
+    /// This is used for inline parameter documentation: `param # Description`
+    fn has_inline_doc_comment(&self, context: &LintContext) -> bool;
 }
 
 impl SpanExt for Span {
@@ -56,5 +60,19 @@ impl SpanExt for Span {
             .map_or(*self, |offset| {
                 Self::new(self.start + offset, self.start + offset + substring.len())
             })
+    }
+
+    fn has_inline_doc_comment(&self, context: &LintContext) -> bool {
+        let line_start = context.source[..self.start]
+            .rfind('\n')
+            .map_or(0, |pos| pos + 1);
+
+        let line_end = context.source[self.end..]
+            .find('\n')
+            .map_or(context.source.len(), |pos| self.end + pos);
+
+        let line_text = &context.source[line_start..line_end];
+
+        line_text.contains(" # ")
     }
 }

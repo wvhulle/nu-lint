@@ -756,8 +756,9 @@ fn check_filepath_output(expr: &Expr) -> Option<Type> {
 const fn infer_binary_op_type(left: Option<&Type>, right: Option<&Type>) -> Option<Type> {
     match (left, right) {
         (Some(Type::Float), _) | (_, Some(Type::Float)) => Some(Type::Float),
-        (Some(Type::Int), Some(Type::Int)) => Some(Type::Int),
-        (Some(Type::Int), Some(Type::Any)) | (Some(Type::Any), Some(Type::Int)) => Some(Type::Int),
+        (Some(Type::Int | Type::Any), Some(Type::Int)) | (Some(Type::Int), Some(Type::Any)) => {
+            Some(Type::Int)
+        }
         _ => None,
     }
 }

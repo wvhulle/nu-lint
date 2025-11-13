@@ -1,6 +1,5 @@
-use crate::log::instrument;
-
 use super::rule;
+use crate::log::instrument;
 
 #[test]
 fn detects_function_with_print_and_return() {

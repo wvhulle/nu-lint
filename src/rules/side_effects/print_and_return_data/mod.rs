@@ -85,7 +85,9 @@ fn check_function_definition(call: &Call, context: &LintContext) -> Option<RuleV
         "Function `{func_name}` both prints to stdout and returns data, which pollutes pipelines"
     );
 
-    let suggestion = "Use `print -e` for stderr, separate into data/logging functions, or document the intentional mixing".to_string();
+    let suggestion = "Use `print -e` for stderr, separate into data/logging functions, or \
+                      document the intentional mixing"
+        .to_string();
 
     Some(
         RuleViolation::new_dynamic("print_and_return_data", message, name_span)

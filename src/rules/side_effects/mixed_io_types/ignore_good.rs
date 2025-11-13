@@ -1,6 +1,5 @@
-use crate::log::instrument;
-
 use super::rule;
+use crate::log::instrument;
 
 #[test]
 fn ignores_only_file_operations() {

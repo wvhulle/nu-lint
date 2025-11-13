@@ -19,7 +19,8 @@ pub enum StatementType {
     Control,
 }
 
-// Commands that have external side effects (file system, network, system state changes)
+// Commands that have external side effects (file system, network, system state
+// changes)
 const EXTERNAL_SIDE_EFFECT_COMMANDS: &[&str] = &[
     "print",
     "save",
@@ -40,7 +41,8 @@ const EXTERNAL_SIDE_EFFECT_COMMANDS: &[&str] = &[
     "source-env",
 ];
 
-// Commands that don't return useful data for pipelines (includes variable declarations)
+// Commands that don't return useful data for pipelines (includes variable
+// declarations)
 const NO_DATA_RETURN_COMMANDS: &[&str] = &[
     "mkdir",
     "rm",
@@ -61,12 +63,14 @@ const NO_DATA_RETURN_COMMANDS: &[&str] = &[
 const FILE_COMMANDS: &[&str] = &["save", "rm", "mv", "cp", "mkdir", "touch", "open"];
 const PRINT_COMMANDS: &[&str] = &["print"];
 
-/// Check if a command has external side effects (used by `pure_before_side_effects` rule)
+/// Check if a command has external side effects (used by
+/// `pure_before_side_effects` rule)
 pub fn has_side_effects(command_name: &str) -> bool {
     EXTERNAL_SIDE_EFFECT_COMMANDS.contains(&command_name)
 }
 
-/// Check if a command doesn't return useful data (used by `print_and_return_data` rule)
+/// Check if a command doesn't return useful data (used by
+/// `print_and_return_data` rule)
 pub fn is_side_effect_only(command_name: &str) -> bool {
     NO_DATA_RETURN_COMMANDS.contains(&command_name)
 }

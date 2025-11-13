@@ -1,6 +1,5 @@
-use crate::log::instrument;
-
 use super::rule;
+use crate::log::instrument;
 
 #[test]
 fn ignores_function_with_only_print() {

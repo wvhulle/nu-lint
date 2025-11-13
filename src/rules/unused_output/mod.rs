@@ -1,72 +1,88 @@
 use nu_protocol::ast::{Expr, Expression, Pipeline};
 
 use crate::{
+    Fix, Replacement,
     ast::{call::CallExt, ext_command::ExternalCommandExt, pipeline::PipelineExt, span::SpanExt},
     context::LintContext,
     rule::{Rule, RuleCategory},
     violation::{RuleViolation, Severity},
 };
 
-/// Check if a command produces output based on its signature's output type
-/// Falls back to a whitelist for commands with `Type::Any`
 fn command_produces_output(expr: &Expression, context: &LintContext) -> bool {
     match &expr.expr {
         Expr::ExternalCall(call, _) => {
             let cmd_name = call.span.text(context);
-
             cmd_name.is_known_external_output_command()
                 || !cmd_name.is_known_external_no_output_command()
         }
         Expr::Call(call) => {
-            let cmd_name = call.get_call_name(context);
+            let output_type = context
+                .working_set
+                .get_decl(call.decl_id)
+                .signature()
+                .get_output_type();
 
-            let decl = context.working_set.get_decl(call.decl_id);
-            let signature = decl.signature();
-
-            // Check the output type from the signature
-            let output_type = signature.get_output_type();
-
-            if output_type == nu_protocol::Type::Nothing {
-                // Definitely produces no output
-                false
-            } else {
-                // Has a specific output type (String, List, etc.) - produces output
-                log::debug!("Command '{cmd_name}' has output type: {output_type:?}");
-                true
+            if output_type != nu_protocol::Type::Nothing {
+                log::debug!(
+                    "Command '{}' has output type: {:?}",
+                    call.get_call_name(context),
+                    output_type
+                );
             }
+            output_type != nu_protocol::Type::Nothing
         }
         _ => false,
     }
 }
 
 fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<RuleViolation> {
-    let prev_expr = pipeline.element_before_ignore(context)?;
+    let expr_before_ignore = pipeline.element_before_ignore(context)?;
 
-    if !command_produces_output(prev_expr, context) {
+    if !command_produces_output(expr_before_ignore, context) {
         return None;
     }
 
-    let prev_call = match &prev_expr.expr {
+    let command_name = match &expr_before_ignore.expr {
         Expr::Call(call) => call.get_call_name(context),
+        Expr::ExternalCall(head, _) => head.span.text(context).to_string(),
         _ => "pipeline".to_string(),
     };
 
     let ignore_span = pipeline.elements.last()?.expr.span;
 
-    Some(
-        RuleViolation::new_static(
-            "unused_output",
-            "Discarding command output with '| ignore'",
-            ignore_span,
-        )
-        .with_suggestion_dynamic(format!(
-            "Command '{prev_call}' produces output that is being discarded with '| ignore'.\n\nIf \
-             you don't need the output, consider:\n1. Removing the command if it has no side \
-             effects\n2. Using error handling if you only care about success/failure:\n   try {{ \
-             {prev_call} }}\n3. If the output is intentionally discarded, add a comment \
-             explaining why"
-        )),
+    let elements_without_ignore = &pipeline.elements[..pipeline.elements.len() - 1];
+    let start_span = elements_without_ignore.first()?.expr.span;
+    let end_span = elements_without_ignore.last()?.expr.span;
+    let combined_span = nu_protocol::Span::new(start_span.start, end_span.end);
+    let pipeline_text = &context.source[combined_span.start..combined_span.end];
+
+    let violation = RuleViolation::new_static(
+        "unused_output",
+        "Discarding command output with '| ignore'",
+        ignore_span,
     )
+    .with_suggestion_dynamic(format!(
+        "Command '{command_name}' produces output that is being discarded with '| ignore'.\n\nIf \
+         you don't need the output, consider:\n1. Removing the command if it has no side \
+         effects\n2. Using error handling if you only care about success/failure:\n   try {{ \
+         {command_name} }}\n3. If the output is intentionally discarded, add a comment explaining \
+         why"
+    ));
+
+    let pipeline_span = nu_protocol::Span::new(
+        pipeline.elements.first()?.expr.span.start,
+        pipeline.elements.last()?.expr.span.end,
+    );
+
+    let fix = Fix::new_static(
+        "Remove unnecessary '| ignore'",
+        vec![Replacement::new_dynamic(
+            pipeline_span,
+            pipeline_text.to_string(),
+        )],
+    );
+
+    Some(violation.with_fix(fix))
 }
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {
@@ -103,5 +119,7 @@ pub fn rule() -> Rule {
 
 #[cfg(test)]
 mod detect_bad;
+#[cfg(test)]
+mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

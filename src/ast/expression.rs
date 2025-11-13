@@ -86,6 +86,9 @@ pub trait ExpressionExt: Traverse {
     fn infer_input_type(&self, in_var: Option<VarId>, context: &LintContext) -> Option<Type>;
     /// Checks if expression is a literal list. Example: `[1 2 3]` or `[]`
     fn is_literal_list(&self) -> bool;
+    /// Extracts external command name from expression. Example: `^ls` returns
+    /// "ls"
+    fn extract_external_command_name(&self, context: &LintContext) -> Option<String>;
 }
 
 fn is_pipeline_input_var(var_id: VarId, context: &LintContext) -> bool {
@@ -689,6 +692,22 @@ impl ExpressionExt for Expression {
             _ => false,
         }
     }
+
+    fn extract_external_command_name(&self, context: &LintContext) -> Option<String> {
+        use nu_protocol::ast::Traverse;
+
+        self.find_map(context.working_set, &|inner_expr| {
+            if let Expr::ExternalCall(cmd_expr, _) = &inner_expr.expr {
+                match &cmd_expr.expr {
+                    Expr::String(s) => FindMapResult::Found(s.clone()),
+                    Expr::GlobPattern(pattern, _) => FindMapResult::Found(pattern.clone()),
+                    _ => FindMapResult::Continue,
+                }
+            } else {
+                FindMapResult::Continue
+            }
+        })
+    }
 }
 
 fn infer_from_call(
@@ -756,8 +775,9 @@ fn check_filepath_output(expr: &Expr) -> Option<Type> {
 const fn infer_binary_op_type(left: Option<&Type>, right: Option<&Type>) -> Option<Type> {
     match (left, right) {
         (Some(Type::Float), _) | (_, Some(Type::Float)) => Some(Type::Float),
-        (Some(Type::Int), Some(Type::Int)) => Some(Type::Int),
-        (Some(Type::Int), Some(Type::Any)) | (Some(Type::Any), Some(Type::Int)) => Some(Type::Int),
+        (Some(Type::Int | Type::Any), Some(Type::Int)) | (Some(Type::Int), Some(Type::Any)) => {
+            Some(Type::Int)
+        }
         _ => None,
     }
 }

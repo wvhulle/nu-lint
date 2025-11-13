@@ -24,6 +24,8 @@ pub enum RuleCategory {
     TypeSafety,
     /// Performance optimizations and efficient patterns
     Performance,
+    /// Side effect management and separation patterns
+    SideEffects,
 }
 
 impl RuleCategory {
@@ -39,6 +41,7 @@ impl RuleCategory {
             Self::Documentation => "documentation",
             Self::TypeSafety => "type-safety",
             Self::Performance => "performance",
+            Self::SideEffects => "side-effects",
         }
     }
 }

@@ -98,6 +98,12 @@ impl LintContext<'_> {
         );
         functions.into_iter().collect()
     }
+
+    /// Check if a function is exported
+    #[must_use]
+    pub fn is_exported_function(&self, function_name: &str) -> bool {
+        self.source.contains(&format!("export def {function_name}"))
+    }
 }
 
 #[cfg(test)]

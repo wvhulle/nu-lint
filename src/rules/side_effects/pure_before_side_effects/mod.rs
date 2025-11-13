@@ -1,5 +1,5 @@
 use nu_protocol::{
-    BlockId,
+    BlockId, Category,
     ast::{Block, Call, Expr, Expression, Pipeline},
 };
 
@@ -65,9 +65,7 @@ fn classify_call(call: &Call, context: &LintContext) -> StatementType {
         .signature()
         .category;
     match category {
-        nu_protocol::Category::FileSystem
-        | nu_protocol::Category::Network
-        | nu_protocol::Category::System => StatementType::SideEffect,
+        Category::FileSystem | Category::Network | Category::System => StatementType::SideEffect,
         _ => StatementType::Pure,
     }
 }
@@ -96,51 +94,39 @@ fn has_side_effects_in_block(block: &Block, context: &LintContext) -> bool {
     })
 }
 
-fn is_pure_or_control(expr: &Expression, context: &LintContext) -> bool {
-    matches!(
-        classify_expression(expr, context),
-        StatementType::Pure | StatementType::Control
-    )
-}
-
-fn is_non_empty_pipeline(pipeline: &Pipeline) -> bool {
-    pipeline
-        .elements
-        .iter()
-        .any(|elem| !matches!(&elem.expr.expr, Expr::Nothing))
-}
-
 fn count_consecutive_pure_statements(pipelines: &[Pipeline], context: &LintContext) -> usize {
     pipelines
         .iter()
         .take_while(|pipeline| {
-            pipeline
-                .elements
-                .iter()
-                .all(|elem| is_pure_or_control(&elem.expr, context))
-        })
-        .filter(|pipeline| is_non_empty_pipeline(pipeline))
-        .count()
-}
-
-fn has_side_effects_after_pure(pipelines: &[Pipeline], context: &LintContext) -> bool {
-    let pure_count = count_consecutive_pure_statements(pipelines, context);
-
-    pure_count > 0
-        && pipelines.iter().skip(pure_count).any(|pipeline| {
-            pipeline.elements.iter().any(|elem| {
+            pipeline.elements.iter().all(|elem| {
                 matches!(
                     classify_expression(&elem.expr, context),
-                    StatementType::SideEffect
+                    StatementType::Pure | StatementType::Control
                 )
             })
         })
+        .filter(|pipeline| {
+            pipeline
+                .elements
+                .iter()
+                .any(|elem| !matches!(&elem.expr.expr, Expr::Nothing))
+        })
+        .count()
 }
 
-fn is_exported_function(function_name: &str, context: &LintContext) -> bool {
-    context
-        .source
-        .contains(&format!("export def {function_name}"))
+fn has_side_effects_after(
+    pipelines: &[Pipeline],
+    pure_count: usize,
+    context: &LintContext,
+) -> bool {
+    pipelines.iter().skip(pure_count).any(|pipeline| {
+        pipeline.elements.iter().any(|elem| {
+            matches!(
+                classify_expression(&elem.expr, context),
+                StatementType::SideEffect
+            )
+        })
+    })
 }
 
 fn analyze_function_body(
@@ -160,15 +146,15 @@ fn analyze_function_body(
         return None;
     }
 
-    if !has_side_effects_after_pure(&block.pipelines, context) {
+    if !has_side_effects_after(&block.pipelines, pure_count, context) {
         return None;
     }
 
     Some(
         RuleViolation::new_dynamic(
-            "isolate_side_effects",
+            "pure_before_side_effects",
             format!(
-                "Function `{function_name}` mixes {pure_count} pure computation statement(s) with \
+                "Function `{function_name}` has {pure_count} pure computation statement(s) before \
                  side effects"
             ),
             context.find_declaration_span(function_name),
@@ -191,17 +177,17 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     function_definitions
         .iter()
         .filter(|(_, name)| *name != "main")
-        .filter(|(_, name)| !is_exported_function(name, context))
+        .filter(|(_, name)| !context.is_exported_function(name))
         .filter_map(|(block_id, name)| analyze_function_body(*block_id, name, context))
         .collect()
 }
 
 pub fn rule() -> Rule {
     Rule::new(
-        "isolate_side_effects",
-        RuleCategory::CodeQuality,
-        Severity::Info,
-        "Detect functions that mix pure computation with side effects",
+        "pure_before_side_effects",
+        RuleCategory::SideEffects,
+        Severity::Warning,
+        "Detect functions that have pure computation before side effects",
         check,
     )
 }

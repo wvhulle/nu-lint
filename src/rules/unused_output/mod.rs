@@ -1,6 +1,7 @@
 use nu_protocol::ast::{Expr, Expression, Pipeline};
 
 use crate::{
+    Fix, Replacement,
     ast::{call::CallExt, ext_command::ExternalCommandExt, pipeline::PipelineExt, span::SpanExt},
     context::LintContext,
     rule::{Rule, RuleCategory},
@@ -53,20 +54,49 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<RuleViol
 
     let ignore_span = pipeline.elements.last()?.expr.span;
 
-    Some(
-        RuleViolation::new_static(
-            "unused_output",
-            "Discarding command output with '| ignore'",
-            ignore_span,
-        )
-        .with_suggestion_dynamic(format!(
-            "Command '{prev_call}' produces output that is being discarded with '| ignore'.\n\nIf \
-             you don't need the output, consider:\n1. Removing the command if it has no side \
-             effects\n2. Using error handling if you only care about success/failure:\n   try {{ \
-             {prev_call} }}\n3. If the output is intentionally discarded, add a comment \
-             explaining why"
-        )),
+    // Generate fix: remove "| ignore" by replacing the entire pipeline with just the part before ignore
+    let pipeline_without_ignore = if pipeline.elements.len() >= 2 {
+        let elements_before_ignore = &pipeline.elements[..pipeline.elements.len() - 1];
+        let start_span = elements_before_ignore.first()?.expr.span;
+        let end_span = elements_before_ignore.last()?.expr.span;
+        let combined_span = nu_protocol::Span::new(start_span.start, end_span.end);
+        Some(&context.source[combined_span.start..combined_span.end])
+    } else {
+        None
+    };
+
+    let violation = RuleViolation::new_static(
+        "unused_output",
+        "Discarding command output with '| ignore'",
+        ignore_span,
     )
+    .with_suggestion_dynamic(format!(
+        "Command '{prev_call}' produces output that is being discarded with '| ignore'.\n\nIf \
+         you don't need the output, consider:\n1. Removing the command if it has no side \
+         effects\n2. Using error handling if you only care about success/failure:\n   try {{ \
+         {prev_call} }}\n3. If the output is intentionally discarded, add a comment \
+         explaining why"
+    ));
+
+    // Add fix if we can extract the pipeline text
+    if let Some(pipeline_text) = pipeline_without_ignore {
+        let pipeline_span = nu_protocol::Span::new(
+            pipeline.elements.first()?.expr.span.start,
+            pipeline.elements.last()?.expr.span.end,
+        );
+
+        let fix = Fix::new_static(
+            "Remove unnecessary '| ignore'",
+            vec![Replacement::new_dynamic(
+                pipeline_span,
+                pipeline_text.to_string(),
+            )],
+        );
+
+        Some(violation.with_fix(fix))
+    } else {
+        Some(violation)
+    }
 }
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {
@@ -103,5 +133,7 @@ pub fn rule() -> Rule {
 
 #[cfg(test)]
 mod detect_bad;
+#[cfg(test)]
+mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

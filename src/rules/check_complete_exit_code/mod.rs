@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use nu_protocol::{
     Span, VarId,
-    ast::{Expr, Expression, FindMapResult},
+    ast::{Expr, Expression, FindMapResult, PathMember},
 };
 
 use crate::{
@@ -12,10 +12,61 @@ use crate::{
     violation::{RuleViolation, Severity},
 };
 
+/// Check if an expression accesses the `exit_code` field (either via `.exit_code` or `get exit_code`)
+fn contains_exit_code_access(expr: &Expression, context: &LintContext) -> bool {
+    use nu_protocol::ast::Traverse;
+
+    expr.find_map(context.working_set, &|inner_expr| {
+        // Check for field access like $var.exit_code
+        if let Expr::FullCellPath(cell_path) = &inner_expr.expr
+            && cell_path.tail.iter().any(|path_member| {
+                matches!(
+                    path_member,
+                    PathMember::String { val, .. } if val == "exit_code"
+                )
+            })
+        {
+            log::debug!("Found .exit_code field access in assignment expression");
+            return FindMapResult::Found(());
+        }
+
+        // Check for `get exit_code` command
+        if let Expr::Call(call) = &inner_expr.expr {
+            let decl_name = call.get_call_name(context);
+            if decl_name == "get" {
+                if let Some(arg) = call.get_positional_arg(0) {
+                    // Check if the argument is a cell path with "exit_code"
+                    if let Expr::CellPath(cell_path) = &arg.expr {
+                        if cell_path.members.iter().any(|member| {
+                            matches!(
+                                member,
+                                PathMember::String { val, .. } if val == "exit_code"
+                            )
+                        }) {
+                            log::debug!("Found 'get exit_code' command in assignment expression");
+                            return FindMapResult::Found(());
+                        }
+                    }
+                    // Also check for string argument
+                    else if let Expr::String(s) = &arg.expr {
+                        if s == "exit_code" {
+                            log::debug!("Found 'get exit_code' command in assignment expression");
+                            return FindMapResult::Found(());
+                        }
+                    }
+                }
+            }
+        }
+
+        FindMapResult::Continue
+    })
+    .is_some()
+}
+
 fn extract_complete_assignment(
     expr: &Expression,
     context: &LintContext,
-) -> Option<(VarId, String, Span)> {
+) -> Option<(VarId, String, Span, bool)> {
     let Expr::Call(call) = &expr.expr else {
         return None;
     };
@@ -33,11 +84,14 @@ fn extract_complete_assignment(
         return None;
     }
 
-    Some((var_id, var_name, expr.span))
+    // Check if the assignment value itself accesses exit_code
+    let exit_code_checked_in_assignment = contains_exit_code_access(value_arg, context);
+
+    Some((var_id, var_name, expr.span, exit_code_checked_in_assignment))
 }
 
 /// Find variable assignments that store complete results
-fn find_complete_assignments(context: &LintContext) -> HashMap<VarId, (String, Span)> {
+fn find_complete_assignments(context: &LintContext) -> HashMap<VarId, (String, Span, bool)> {
     use nu_protocol::ast::Traverse;
 
     let mut complete_assignments = Vec::new();
@@ -53,7 +107,7 @@ fn find_complete_assignments(context: &LintContext) -> HashMap<VarId, (String, S
 
     complete_assignments
         .into_iter()
-        .map(|(id, name, span)| (id, (name, span)))
+        .map(|(id, name, span, exit_code_checked)| (id, (name, span, exit_code_checked)))
         .collect()
 }
 
@@ -81,7 +135,9 @@ fn find_exit_code_checks(context: &LintContext) -> HashMap<VarId, Span> {
     let mut exit_code_accesses = Vec::new();
     context.ast.flat_map(
         context.working_set,
-        &|expr| expr.extract_field_access("exit_code").into_iter().collect(),
+        &|expr| {
+            expr.extract_field_access("exit_code").into_iter().collect()
+        },
         &mut exit_code_accesses,
     );
 
@@ -92,10 +148,33 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     let variable_assignments = find_complete_assignments(context);
     let exit_code_checks = find_exit_code_checks(context);
 
+    log::debug!("Found {} complete assignments", variable_assignments.len());
+    for (var_id, (var_name, span, checked_in_assignment)) in &variable_assignments {
+        log::debug!("  Complete assignment: var_id={var_id:?}, name={var_name}, span={span:?}, checked_in_assignment={checked_in_assignment}");
+    }
+
+    log::debug!("Found {} exit_code checks", exit_code_checks.len());
+    for (var_id, span) in &exit_code_checks {
+        log::debug!("  Exit code check: var_id={var_id:?}, span={span:?}");
+    }
+
     variable_assignments
         .iter()
-        .filter(|(var_id, _)| !exit_code_checks.contains_key(var_id))
-        .map(|(_, (var_name, assignment_span))| {
+        .filter(|(var_id, (_, _, checked_in_assignment))| {
+            // Skip if exit_code was checked in the assignment itself
+            if *checked_in_assignment {
+                log::debug!("Skipping var_id={var_id:?} - exit_code checked in assignment");
+                return false;
+            }
+            // Skip if exit_code is checked via the variable later
+            if exit_code_checks.contains_key(var_id) {
+                log::debug!("Skipping var_id={var_id:?} - exit_code checked via variable");
+                return false;
+            }
+            true
+        })
+        .map(|(_, (var_name, assignment_span, _))| {
+            log::debug!("Creating violation for unchecked variable: {var_name}");
             RuleViolation::new_dynamic(
                 "check_complete_exit_code",
                 format!("External command result '{var_name}' stored but exit code not checked"),

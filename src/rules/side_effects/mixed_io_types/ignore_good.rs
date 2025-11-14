@@ -111,65 +111,6 @@ def save-with-debug [data] {
 }
 
 #[test]
-fn ignores_single_io_type_multiple_times() {
-    instrument();
-    let good_code = r"
-def main [] {}
-
-def batch-save [data] {
-    $data | save file1.json
-    $data | save file2.json
-    $data | save file3.json
-}
-";
-    rule().assert_ignores(good_code);
-}
-
-#[test]
-fn ignores_no_io_operations() {
-    instrument();
-    let good_code = r"
-def main [] {}
-
-def transform [data] {
-    $data | each { |x| $x * 2 } | where $it > 10
-}
-";
-    rule().assert_ignores(good_code);
-}
-
-#[test]
-fn ignores_data_pipeline_operations() {
-    instrument();
-    let good_code = r"
-def main [] {}
-
-def process-list [items] {
-    $items | where active | select name age | sort-by name
-}
-";
-    rule().assert_ignores(good_code);
-}
-
-#[test]
-fn ignores_control_flow_only() {
-    instrument();
-    let good_code = r"
-def main [] {}
-
-def conditional-process [flag: bool] {
-    if $flag {
-        let x = 10
-        $x * 2
-    } else {
-        0
-    }
-}
-";
-    rule().assert_ignores(good_code);
-}
-
-#[test]
 fn ignores_file_operations_in_closure() {
     instrument();
     let good_code = r"

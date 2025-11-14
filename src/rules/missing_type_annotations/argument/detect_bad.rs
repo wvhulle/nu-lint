@@ -1,7 +1,7 @@
 use super::rule;
 
 #[test]
-fn test_detect_missing_type_annotation_single_param() {
+fn detect_missing_type_annotation_single_param() {
     let bad_code = r#"
 def greet [name] {
     print $"Hello ($name)"
@@ -12,7 +12,7 @@ def greet [name] {
 }
 
 #[test]
-fn test_detect_missing_type_annotation_multiple_params() {
+fn detect_missing_type_annotation_multiple_params() {
     let bad_code = r"
 def add [x, y] {
     $x + $y
@@ -23,7 +23,7 @@ def add [x, y] {
 }
 
 #[test]
-fn test_detect_mixed_annotations() {
+fn detect_mixed_param_annotations() {
     let bad_code = r"
 def process [data, format: string] {
     print $data
@@ -34,7 +34,7 @@ def process [data, format: string] {
 }
 
 #[test]
-fn test_detect_nested_function() {
+fn detect_missing_annotation_in_nested_function() {
     let bad_code = r"
 def outer [] {
     def inner [param] {

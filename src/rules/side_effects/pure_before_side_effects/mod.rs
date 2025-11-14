@@ -102,7 +102,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "pure_before_side_effects",
         RuleCategory::SideEffects,
-        Severity::Warning,
+        Severity::Info,
         "Detect functions that have pure computation before side effects",
         check,
     )

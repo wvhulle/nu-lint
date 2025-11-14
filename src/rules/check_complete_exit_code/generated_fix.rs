@@ -5,7 +5,7 @@ use super::rule;
 // name and command.
 
 #[test]
-fn test_suggestion_mentions_variable_name() {
+fn test_suggestion_includes_actual_variable_name() {
     let bad_code = r"
 let my_result = (^git status | complete)
 ";
@@ -16,7 +16,7 @@ let my_result = (^git status | complete)
 }
 
 #[test]
-fn test_suggestion_mentions_command_name() {
+fn test_suggestion_includes_external_command_name() {
     let bad_code = r"
 let result = (^make build | complete)
 ";
@@ -27,7 +27,7 @@ let result = (^make build | complete)
 }
 
 #[test]
-fn test_suggestion_for_different_variable() {
+fn test_suggestion_adapts_to_different_variable_names() {
     let bad_code = r"
 mut fetch_output = (^curl https://example.com | complete)
 ";
@@ -39,7 +39,7 @@ mut fetch_output = (^curl https://example.com | complete)
 }
 
 #[test]
-fn test_suggestion_shows_both_checking_styles() {
+fn test_suggestion_provides_inline_and_separate_check_examples() {
     let bad_code = r"
 let result = (^make build | complete)
 ";
@@ -49,7 +49,7 @@ let result = (^make build | complete)
 }
 
 #[test]
-fn test_violation_message_includes_command() {
+fn test_violation_message_mentions_specific_external_command() {
     let bad_code = r"
 let status = (^systemctl is-active bluetooth.service | complete)
 ";

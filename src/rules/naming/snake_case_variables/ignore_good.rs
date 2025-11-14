@@ -1,7 +1,7 @@
 use super::rule;
 
 #[test]
-fn test_good_let_variables() {
+fn ignore_snake_case_let_variables() {
     let good_code = r#"
 def good-func [] {
     let my_variable = 5
@@ -14,7 +14,7 @@ def good-func [] {
 }
 
 #[test]
-fn test_good_mut_variables() {
+fn ignore_snake_case_mut_variables() {
     let good_code = "
 def good-func [] {
     mut counter = 0
@@ -27,7 +27,7 @@ def good-func [] {
 }
 
 #[test]
-fn test_good_single_letter_variables() {
+fn ignore_single_letter_variables() {
     // Single lowercase letters are valid snake_case
     let good_code = "
 def good-func [] {
@@ -41,7 +41,7 @@ def good-func [] {
 }
 
 #[test]
-fn test_good_variables_with_numbers() {
+fn ignore_snake_case_with_numbers() {
     let good_code = r#"
 def good-func [] {
     let var_1 = "first"

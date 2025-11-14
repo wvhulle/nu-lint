@@ -2,7 +2,7 @@ use super::rule;
 use crate::log::instrument;
 
 #[test]
-fn test_untyped_pipeline_input() {
+fn detect_missing_input_type_annotation() {
     let bad_code = r"
 def double [] {
     $in * 2
@@ -12,7 +12,7 @@ def double [] {
 }
 
 #[test]
-fn test_untyped_pipeline_output() {
+fn detect_missing_output_type_annotation() {
     let bad_code = r"
 def create-list [] {
     [1, 2, 3]
@@ -22,7 +22,7 @@ def create-list [] {
 }
 
 #[test]
-fn test_missing_pipeline_annot_parse() {
+fn detect_complex_function_missing_pipeline_types() {
     instrument();
 
     let bad_code = r"
@@ -79,7 +79,7 @@ export def parse [] {
 }
 
 #[test]
-fn test_untyped_both_input_output() {
+fn detect_missing_input_and_output_types() {
     let bad_code = r"
 def transform [] {
     $in | each { |x| $x + 1 }
@@ -89,7 +89,7 @@ def transform [] {
 }
 
 #[test]
-fn test_exported_untyped_pipeline_input() {
+fn detect_exported_function_missing_input_type() {
     let bad_code = r"
 export def process [] {
     $in | str trim
@@ -99,7 +99,7 @@ export def process [] {
 }
 
 #[test]
-fn test_untyped_with_parameters() {
+fn detect_missing_pipeline_type_with_params() {
     let bad_code = r"
 def multiply [factor: int] {
     $in * $factor
@@ -109,7 +109,7 @@ def multiply [factor: int] {
 }
 
 #[test]
-fn test_multiple_untyped_commands() {
+fn detect_multiple_functions_missing_pipeline_types() {
     let bad_code = r"
 def first [] { $in | first }
 def last [] { $in | last }

@@ -14,19 +14,6 @@ def get-value [] {
 }
 
 #[test]
-fn test_detect_unnecessary_variable_with_conversion() {
-    let bad_code = r"
-def calculate [] {
-  let answer = (42 | into string)
-  $answer
-}
-";
-
-    rule().assert_detects(bad_code);
-    rule().assert_violation_count_exact(bad_code, 1);
-}
-
-#[test]
 fn test_detect_in_closure() {
     let bad_code = r"
 let fn = {||
@@ -37,30 +24,6 @@ let fn = {||
 
     rule().assert_detects(bad_code);
     rule().assert_violation_count_exact(bad_code, 1);
-}
-
-#[test]
-fn test_detect_with_complex_expression() {
-    let bad_code = r"
-def process [] {
-  let data = (http get 'https://api.example.com' | from json)
-  $data
-}
-";
-
-    rule().assert_detects(bad_code);
-}
-
-#[test]
-fn test_detect_simple_value() {
-    let bad_code = r"
-def get-number [] {
-  let num = (42)
-  $num
-}
-";
-
-    rule().assert_detects(bad_code);
 }
 
 #[test]

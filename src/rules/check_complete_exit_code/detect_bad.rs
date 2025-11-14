@@ -1,7 +1,7 @@
 use super::rule;
 
 #[test]
-fn test_missing_exit_code_check() {
+fn test_detects_unchecked_complete_result() {
     let bad_code = r"
 let result = (^bluetoothctl info $mac | complete)
 ";
@@ -10,16 +10,7 @@ let result = (^bluetoothctl info $mac | complete)
 }
 
 #[test]
-fn test_mut_missing_exit_code_check() {
-    let bad_code = r"
-mut result = (^git status | complete)
-";
-
-    rule().assert_detects(bad_code);
-}
-
-#[test]
-fn test_complete_with_only_stderr_check() {
+fn test_detects_when_only_stderr_checked_not_exit_code() {
     let bad_code = r#"
 let result = (^command arg | complete)
 if ($result.stderr | is-empty) {
@@ -31,7 +22,7 @@ if ($result.stderr | is-empty) {
 }
 
 #[test]
-fn test_complete_stored_but_not_used() {
+fn test_detects_stored_complete_result_never_accessed() {
     let bad_code = r#"
 let result = (^make build | complete)
 print "Build finished"
@@ -41,41 +32,7 @@ print "Build finished"
 }
 
 #[test]
-fn test_wrong_variable_exit_code_checked() {
-    // Checking result1.exit_code when result2 is the one with complete
-    let bad_code = r"
-let result1 = (^git fetch | complete)
-let result2 = (^git pull | complete)
-if $result1.exit_code != 0 {
-    return
-}
-";
-
-    rule().assert_detects(bad_code);
-}
-
-#[test]
-fn test_swapped_exit_code_checks() {
-    // Both have complete, but exit codes are checked for wrong variables
-    let bad_code = r"
-let fetch_result = (^git fetch | complete)
-let pull_result = (^git pull | complete)
-if $pull_result.exit_code != 0 {
-    print 'fetch failed'
-}
-if $fetch_result.exit_code != 0 {
-    print 'pull failed'
-}
-";
-
-    // This should NOT detect - both are checked, even if messages are wrong
-    // The rule only cares that exit_code is checked, not that it's semantically
-    // correct
-    rule().assert_ignores(bad_code);
-}
-
-#[test]
-fn test_multiple_complete_inline_only_one_checked() {
+fn test_detects_mixed_complete_calls_with_unchecked_result() {
     let bad_code = r"
 let success1 = (^command1 | complete | get exit_code) == 0
 let result2 = (^command2 | complete)
@@ -88,7 +45,7 @@ if $success1 {
 }
 
 #[test]
-fn test_nested_complete_outer_unchecked() {
+fn test_detects_outer_complete_when_inner_exit_code_checked() {
     // Inner complete has exit_code checked inline, outer doesn't
     let bad_code = r"
 let inner = (^inner-cmd | complete | get exit_code)

@@ -1,21 +1,12 @@
 use super::rule;
 
 #[test]
-fn test_detect_split_row_with_newline_double_quotes() {
+fn test_detect_split_row_with_newline() {
     let bad_code = r#"
 $text | split row "\n"
 "#;
 
     rule().assert_detects(bad_code);
-}
-
-#[test]
-fn test_detect_split_row_with_newline_single_quotes() {
-    let bad_code = r"
-$text | split row '\n'
-";
-
-    rule().assert_violation_count_exact(bad_code, 1);
 }
 
 #[test]

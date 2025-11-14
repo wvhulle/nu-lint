@@ -44,7 +44,7 @@ impl Default for GeneralConfig {
 
 impl GeneralConfig {
     const fn default_min_severity() -> RuleSeverity {
-        RuleSeverity::Warning // Show warnings and errors by default
+        RuleSeverity::Info
     }
 }
 

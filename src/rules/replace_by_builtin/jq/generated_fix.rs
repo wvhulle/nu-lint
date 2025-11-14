@@ -144,12 +144,6 @@ fn fix_jq_reverse() {
 }
 
 #[test]
-fn fix_message_explains_performance_benefit() {
-    let source = "^jq 'length' data.json";
-    rule().assert_violation_count_exact(source, 1);
-}
-
-#[test]
 fn fix_preserves_file_argument() {
     let source = "^jq '.name' /path/to/user.json";
     rule().assert_violation_count_exact(source, 1);

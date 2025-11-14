@@ -1,7 +1,7 @@
 use super::rule;
 
 #[test]
-fn test_ignore_simple_kebab_case() {
+fn ignore_simple_kebab_case() {
     let good_code = r#"
 def my-command [] {
     print "correctly named"
@@ -12,7 +12,7 @@ def my-command [] {
 }
 
 #[test]
-fn test_ignore_single_word_command() {
+fn ignore_single_word_command() {
     let good_code = r#"
 def test [] {
     print "single word is fine"
@@ -23,7 +23,7 @@ def test [] {
 }
 
 #[test]
-fn test_ignore_multi_word_kebab_case() {
+fn ignore_multi_word_kebab_case() {
     let good_code = r#"
 def my-long-command-name [] {
     print "multiple hyphens are fine"
@@ -34,7 +34,7 @@ def my-long-command-name [] {
 }
 
 #[test]
-fn test_ignore_export_def_kebab_case() {
+fn ignore_exported_kebab_case_command() {
     let good_code = r#"
 export def my-exported-command [] {
     print "exported commands should also use kebab-case"
@@ -45,7 +45,7 @@ export def my-exported-command [] {
 }
 
 #[test]
-fn test_ignore_command_with_numbers() {
+fn ignore_kebab_case_with_numbers() {
     let good_code = r#"
 def command-v2 [] {
     print "numbers are allowed"
@@ -56,7 +56,7 @@ def command-v2 [] {
 }
 
 #[test]
-fn test_ignore_multiple_commands() {
+fn ignore_multiple_kebab_case_commands() {
     let good_code = r#"
 def first-command [] {
     print "first"

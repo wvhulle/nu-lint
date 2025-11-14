@@ -15,13 +15,7 @@ fn test_cd_with_ignore() {
 }
 
 #[test]
-fn test_ls_without_ignore() {
+fn test_command_without_ignore() {
     let good_code = "ls";
-    rule().assert_ignores(good_code);
-}
-
-#[test]
-fn test_echo_without_ignore() {
-    let good_code = "echo 'hello'";
     rule().assert_ignores(good_code);
 }

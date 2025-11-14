@@ -1,7 +1,7 @@
 use super::rule;
 
 #[test]
-fn test_bad_let_variables() {
+fn detect_camel_case_let_variables() {
     let bad_code = r#"
 def bad-func [] {
     let myVariable = 5
@@ -15,7 +15,7 @@ def bad-func [] {
 }
 
 #[test]
-fn test_bad_mut_variables() {
+fn detect_camel_case_mut_variables() {
     let bad_code = "
 def bad-func [] {
     mut MyCounter = 0
@@ -28,7 +28,7 @@ def bad-func [] {
 }
 
 #[test]
-fn test_bad_shadowed_variables() {
+fn detect_camel_case_in_shadowed_variables() {
     // Nushell allows variable shadowing - all shadowed variables should still use
     // snake_case
     let bad_code = "
@@ -43,7 +43,7 @@ def shadow-test [] {
 }
 
 #[test]
-fn test_bad_variables_with_various_naming_patterns() {
+fn detect_mixed_naming_convention_violations() {
     let bad_code = r#"
 def test-func [] {
     let HTTPRequest = "bad"

@@ -118,7 +118,7 @@ pub fn rule() -> Rule {
     Rule::new(
         "mixed_io_types",
         RuleCategory::SideEffects,
-        Severity::Warning,
+        Severity::Info,
         "Functions should not mix different types of I/O operations",
         check,
     )

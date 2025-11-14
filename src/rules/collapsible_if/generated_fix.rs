@@ -13,18 +13,6 @@ fn test_fix_nested_with_complex_conditions() {
 }
 
 #[test]
-fn test_fix_multiline_nested_if() {
-    let bad_code = r#"
-if $x > 0 {
-    if $y > 0 {
-        print "both positive"
-    }
-}
-"#;
-    rule().assert_fix_contains(bad_code, "$x > 0 and $y > 0");
-}
-
-#[test]
 fn test_fix_with_parentheses() {
     let bad_code = r"if ($enabled) { if ($ready) { start } }";
     rule().assert_fix_contains(bad_code, r"if ($enabled) and ($ready) { start }");

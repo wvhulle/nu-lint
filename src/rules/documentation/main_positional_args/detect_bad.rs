@@ -1,7 +1,7 @@
 use super::rule;
 
 #[test]
-fn test_main_required_positional_without_docs() {
+fn main_required_positional_missing_documentation() {
     let source = r"
 def main [input] {
     echo $input
@@ -11,7 +11,7 @@ def main [input] {
 }
 
 #[test]
-fn test_main_multiple_positional_without_docs() {
+fn main_multiple_positional_missing_documentation() {
     let source = r"
 def main [input output] {
     echo $input | save $output
@@ -21,7 +21,7 @@ def main [input output] {
 }
 
 #[test]
-fn test_main_optional_positional_without_docs() {
+fn main_optional_positional_missing_documentation() {
     let source = r#"
 def main [input? = "default"] {
     echo $input
@@ -31,7 +31,7 @@ def main [input? = "default"] {
 }
 
 #[test]
-fn test_main_rest_positional_without_docs() {
+fn main_rest_positional_missing_documentation() {
     let source = r"
 def main [...files] {
     $files | each { |f| open $f }
@@ -41,7 +41,7 @@ def main [...files] {
 }
 
 #[test]
-fn test_main_typed_positional_without_docs() {
+fn main_typed_positional_missing_documentation() {
     let source = r"
 def main [count: int] {
     1..$count

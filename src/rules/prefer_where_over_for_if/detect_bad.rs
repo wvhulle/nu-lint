@@ -2,7 +2,7 @@ use super::rule;
 use crate::log::instrument;
 
 #[test]
-fn test_detect_simple_filtering() {
+fn test_detect_for_loop_simple_numeric_filtering() {
     instrument();
 
     let bad_code = r"
@@ -18,23 +18,7 @@ for x in $input {
 }
 
 #[test]
-fn test_detect_filtering_with_condition() {
-    instrument();
-
-    let bad_code = r"
-mut selected = []
-for item in $items {
-    if $item > 10 {
-        $selected = ($selected | append $item)
-    }
-}
-";
-
-    rule().assert_detects(bad_code);
-}
-
-#[test]
-fn test_detect_filtering_with_field_access() {
+fn test_detect_for_loop_field_access_filtering() {
     instrument();
 
     let bad_code = r"

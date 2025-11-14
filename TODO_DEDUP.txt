@@ -1,0 +1,66 @@
+# TODO: Duplicate Test Case Removal and Naming Improvements
+
+## Status Legend:
+- [ ] Not started
+- [P] Partially completed (some duplicates removed)
+- [X] Completed (all duplicates removed, names improved)
+
+## Rules Status:
+
+### Completed Rules:
+[X] replace_by_builtin - All duplicates removed, names improved
+[X] check_complete_exit_code - 2 duplicates removed, 1 misplaced test moved, names improved
+[P] descriptive_error_messages - 2 duplicates removed, names improved
+[P] pipeline_handle_errors - 1 duplicate removed
+[P] collapsible_if - 1 duplicate removed, names improved
+[P] external_script_as_argument - 2 duplicates removed, names improved
+[P] dangerous_file_operations - 1 redundant test case removed
+[P] prefer_is_not_empty - 1 duplicate removed, names improved
+[P] inline_single_use_function - Names improved
+[P] spacing (pipe_spacing) - Names improved
+
+### Pending Rules (Need Comprehensive Check):
+[X] documentation - No duplicates found, test names improved for clarity and consistency
+[X] error_make_metadata - No duplicates found, test names already descriptive
+[X] escape_string_interpolation_operators - No duplicates found, test names improved for better description
+[X] exit_only_in_main - No duplicates found, names already descriptive
+[X] forbid_excessive_nesting - No duplicates found, names already descriptive
+[X] max_function_body_length - Removed test name prefixes, consolidated similar tests
+[X] max_positional_params - Removed test name prefixes, improved descriptive names
+[X] missing_type_annotations - No duplicates found, test names improved for better clarity
+[X] naming - No duplicates found, test names improved and made more descriptive
+[X] nu_parse_error - No duplicates found, test names improved for consistency
+[X] prefer_compound_assignment - No duplicates found, test names already descriptive
+[X] prefer_direct_use - 1 duplicate removed, improved test naming consistency
+[X] prefer_error_make_for_stderr - No duplicates found, test names already descriptive
+[X] prefer_lines_over_split - 1 duplicate removed, improved test naming consistency
+[X] prefer_match_over_if_chain - 3 duplicate/similar tests removed, improved test naming consistency
+[X] prefer_parse_command - 3 duplicate/similar tests removed, improved test naming consistency
+[X] prefer_parse_over_each_split - No duplicates found, test names already descriptive
+[X] prefer_pipeline_input - No duplicates found, test names already descriptive
+[X] prefer_range_iteration - No duplicates found, test names already descriptive
+[X] prefer_where_over_each_if - No duplicates found, test names already descriptive
+[X] prefer_where_over_for_if - Removed 1 duplicate test, improved test naming consistency
+[ ] print_exit_use_error_make
+[ ] reduce_complexity
+[ ] remove_redundant_in
+[ ] runtime_safety
+[ ] side_effects
+[ ] suggest_better_builtin
+[ ] systemd_journal_prefix
+[ ] unnecessary_ignore
+[ ] unnecessary_mut
+[ ] unnecessary_variable_before_return
+[ ] unused_helper_functions
+[ ] unused_output
+
+## Priority Order:
+1. Rules with multiple test files (likely to have cross-file duplicates)
+2. Rules with many test functions (likely to have within-file duplicates)
+3. Rules with generic test names (need naming improvements)
+
+## Notes:
+- Focus on within-file duplicates and naming improvements
+- Check for functionally identical test cases with different variable names
+- Improve generic test names like "test_*" to be more descriptive
+- Consolidate tests that test the same pattern with minimal variations

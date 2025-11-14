@@ -1,7 +1,7 @@
 use super::rule;
 
 #[test]
-fn test_main_positional_with_docs() {
+fn main_positional_with_documentation() {
     let source = r"
 def main [
     input # The input file path
@@ -13,7 +13,7 @@ def main [
 }
 
 #[test]
-fn test_main_multiple_positional_with_docs() {
+fn main_multiple_positional_with_documentation() {
     let source = r"
 def main [
     input # Input file
@@ -26,7 +26,7 @@ def main [
 }
 
 #[test]
-fn test_main_typed_positional_with_docs() {
+fn main_typed_positional_with_documentation() {
     let source = r"
 def main [
     count: int # Number of iterations
@@ -38,7 +38,7 @@ def main [
 }
 
 #[test]
-fn test_main_rest_positional_with_docs() {
+fn main_rest_positional_with_documentation() {
     let source = r"
 def main [
     ...files # Files to process
@@ -50,7 +50,7 @@ def main [
 }
 
 #[test]
-fn test_non_main_function_not_checked() {
+fn non_main_function_ignores_documentation_requirement() {
     let source = r"
 def helper [input] {
     echo $input
@@ -60,7 +60,7 @@ def helper [input] {
 }
 
 #[test]
-fn test_main_no_params() {
+fn main_without_parameters_passes() {
     let source = r#"
 def main [] {
     echo "Hello"

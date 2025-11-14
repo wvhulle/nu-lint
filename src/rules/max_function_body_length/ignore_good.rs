@@ -1,13 +1,13 @@
 use super::rule;
 
 #[test]
-fn test_ignore_function_with_exactly_80_lines() {
+fn function_at_line_limit() {
     let rule = rule();
     let function = format!(
         r"def acceptable_function [] {{
 {}
 }}",
-        (0..30)
+        (0..38)
             .map(|i| format!("    let x{i} = {i}"))
             .collect::<Vec<_>>()
             .join("\n")
@@ -16,13 +16,13 @@ fn test_ignore_function_with_exactly_80_lines() {
 }
 
 #[test]
-fn test_ignore_short_function() {
+fn short_function() {
     let rule = rule();
     rule.assert_ignores(r"def short_function [] { print 'hello' }");
 }
 
 #[test]
-fn test_ignore_function_with_few_lines() {
+fn function_with_few_lines() {
     let rule = rule();
     rule.assert_ignores(
         r"def simple_function [x y] {
@@ -34,13 +34,13 @@ fn test_ignore_function_with_few_lines() {
 }
 
 #[test]
-fn test_ignore_empty_function() {
+fn empty_function() {
     let rule = rule();
     rule.assert_ignores(r"def empty_function [] {}");
 }
 
 #[test]
-fn test_ignore_function_with_comments() {
+fn function_with_comments() {
     let rule = rule();
     let function = format!(
         r"def documented_function [] {{
@@ -57,7 +57,7 @@ fn test_ignore_function_with_comments() {
 }
 
 #[test]
-fn test_ignore_function_with_moderate_complexity() {
+fn function_with_moderate_complexity() {
     let rule = rule();
     rule.assert_ignores(
         r"def process_items [items] {
@@ -70,7 +70,7 @@ fn test_ignore_function_with_moderate_complexity() {
 }
 
 #[test]
-fn test_ignore_main_function_within_limit() {
+fn main_function_within_limit() {
     let rule = rule();
     let function = format!(
         r"def main [] {{
@@ -85,7 +85,7 @@ fn test_ignore_main_function_within_limit() {
 }
 
 #[test]
-fn test_ignore_exported_function_within_limit() {
+fn exported_function_within_limit() {
     let rule = rule();
     let function = format!(
         r"export def helper_function [] {{
@@ -100,7 +100,7 @@ fn test_ignore_exported_function_within_limit() {
 }
 
 #[test]
-fn test_ignore_multiple_short_functions() {
+fn multiple_short_functions() {
     let rule = rule();
     rule.assert_ignores(
         r"def func1 [] { print 'one' }
@@ -110,7 +110,7 @@ def func3 [] { print 'three' }",
 }
 
 #[test]
-fn test_ignore_function_with_nested_blocks() {
+fn function_with_nested_blocks() {
     let rule = rule();
     rule.assert_ignores(
         r"def process_data [data] {
@@ -133,7 +133,7 @@ fn test_ignore_function_with_nested_blocks() {
 }
 
 #[test]
-fn test_ignore_closure_definitions() {
+fn closure_definitions() {
     let rule = rule();
     rule.assert_ignores(
         r"def create_processor [] {

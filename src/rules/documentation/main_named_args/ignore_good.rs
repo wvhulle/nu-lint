@@ -1,7 +1,7 @@
 use super::rule;
 
 #[test]
-fn test_main_named_flag_with_docs() {
+fn main_named_flag_with_documentation() {
     let source = r#"
 def main [
     --verbose # Enable verbose output
@@ -13,7 +13,7 @@ def main [
 }
 
 #[test]
-fn test_main_named_flag_with_short_with_docs() {
+fn main_short_named_flag_with_documentation() {
     let source = r#"
 def main [
     --verbose (-v) # Enable verbose output
@@ -25,7 +25,7 @@ def main [
 }
 
 #[test]
-fn test_main_multiple_named_flags_with_docs() {
+fn main_multiple_named_flags_with_documentation() {
     let source = r#"
 def main [
     --verbose # Enable verbose output
@@ -41,7 +41,7 @@ def main [
 }
 
 #[test]
-fn test_main_typed_named_flag_with_docs() {
+fn main_typed_named_flag_with_documentation() {
     let source = r"
 def main [
     --count: int # Number of iterations
@@ -53,7 +53,7 @@ def main [
 }
 
 #[test]
-fn test_non_main_function_not_checked() {
+fn non_main_function_ignores_documentation_requirement() {
     let source = r#"
 def helper [--verbose] {
     if $verbose { print "Verbose" }
@@ -63,7 +63,7 @@ def helper [--verbose] {
 }
 
 #[test]
-fn test_main_no_named_params() {
+fn main_without_named_parameters_passes() {
     let source = r#"
 def main [] {
     echo "Hello"
@@ -73,7 +73,7 @@ def main [] {
 }
 
 #[test]
-fn test_main_mixed_params_all_documented() {
+fn main_mixed_parameters_all_documented_passes() {
     let source = r#"
 def main [
     input # Input file

@@ -1,14 +1,14 @@
 use crate::rules::replace_by_builtin::cat::rule;
 
 #[test]
-fn replaces_simple_cat_with_open_raw() {
+fn converts_cat_single_file_to_open_raw() {
     let source = "^cat file.txt";
     rule().assert_fix_contains(source, "open --raw file.txt");
     rule().assert_fix_description_contains(source, "structured");
 }
 
 #[test]
-fn handles_multiple_files() {
+fn converts_cat_multiple_files_to_each_open() {
     let source = "^cat file1.txt file2.txt";
     rule().assert_fix_contains(
         source,
@@ -18,27 +18,22 @@ fn handles_multiple_files() {
     rule().assert_fix_description_contains(source, "multiple");
 }
 
-#[test]
-fn handles_structured_files() {
-    let source = "^cat config.json";
-    rule().assert_fix_contains(source, "open --raw config.json");
-}
 
 #[test]
-fn detects_tac_command() {
+fn converts_tac_to_open_raw() {
     let source = "^tac file.log";
     rule().assert_detects(source);
     rule().assert_fix_contains(source, "open --raw file.log");
 }
 
 #[test]
-fn detects_more_command() {
+fn converts_more_to_open_raw() {
     let source = "^more documentation.txt";
     rule().assert_fix_contains(source, "open --raw documentation.txt");
 }
 
 #[test]
-fn detects_less_command() {
+fn converts_less_to_open_raw() {
     let source = "^less output.log";
     rule().assert_fix_contains(source, "open --raw output.log");
 }

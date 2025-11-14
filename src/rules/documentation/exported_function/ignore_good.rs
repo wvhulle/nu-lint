@@ -1,7 +1,7 @@
 use super::rule;
 
 #[test]
-fn test_exported_function_with_docs() {
+fn exported_function_with_documentation() {
     let source = r#"
 # This is a documented command
 export def my-command [] {
@@ -12,7 +12,7 @@ export def my-command [] {
 }
 
 #[test]
-fn test_non_exported_function_without_docs() {
+fn non_exported_function_ignores_documentation_requirement() {
     let source = r#"
 def my-command [] {
     echo "hello"
@@ -22,7 +22,7 @@ def my-command [] {
 }
 
 #[test]
-fn test_exported_function_with_multi_line_docs() {
+fn exported_function_with_multiline_documentation() {
     let source = r"
 # Process input data
 # Returns the processed result

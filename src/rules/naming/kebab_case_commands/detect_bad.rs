@@ -1,7 +1,7 @@
 use super::rule;
 
 #[test]
-fn test_detect_camel_case_command() {
+fn detect_camel_case_command() {
     let bad_code = r#"
 def myCommand [] {
     print "bad naming"
@@ -13,7 +13,7 @@ def myCommand [] {
 }
 
 #[test]
-fn test_detect_underscore_command() {
+fn detect_underscore_command() {
     let bad_code = r#"
 def my_command [] {
     print "underscore instead of hyphen"
@@ -25,7 +25,7 @@ def my_command [] {
 }
 
 #[test]
-fn test_detect_pascal_case_command() {
+fn detect_pascal_case_command() {
     let bad_code = r#"
 def AnotherCommand [] {
     print "CamelCase"

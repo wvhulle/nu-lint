@@ -1,7 +1,7 @@
 use super::rule;
 
 #[test]
-fn test_detect_too_many_positional_params_complex() {
+fn function_with_four_typed_params() {
     let bad_code = r"
 def complex-command [
     param1: string
@@ -17,7 +17,7 @@ def complex-command [
 }
 
 #[test]
-fn test_detect_too_many_positional_params_simple() {
+fn function_with_five_inline_params() {
     let bad_code = r"
 def too-many [a: int, b: int, c: int, d: int, e: int] {
     print $a

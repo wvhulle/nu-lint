@@ -1,7 +1,7 @@
 use super::rule;
 
 #[test]
-fn test_nested_if_without_else() {
+fn test_detect_multiline_nested_if() {
     let bad_code = r#"
 if $x > 0 {
     if $y > 0 {
@@ -14,14 +14,14 @@ if $x > 0 {
 }
 
 #[test]
-fn test_nested_if_inline() {
+fn test_detect_inline_nested_if() {
     let bad_code = r#"if $a { if $b { print "nested" } }"#;
 
     rule().assert_detects(bad_code);
 }
 
 #[test]
-fn test_nested_if_in_function() {
+fn test_detect_nested_if_inside_function() {
     let bad_code = r#"
 def check-conditions [] {
     if $x == 1 {
@@ -36,7 +36,7 @@ def check-conditions [] {
 }
 
 #[test]
-fn test_multiple_conditions() {
+fn test_nested_if_with_boolean_conditions() {
     let bad_code = r#"
 if ($status == "active") {
     if ($enabled == true) {
@@ -49,7 +49,7 @@ if ($status == "active") {
 }
 
 #[test]
-fn test_string_comparison_nested() {
+fn test_nested_if_with_string_conditions() {
     let bad_code = r#"
 if $env == "prod" {
     if $region == "us-west" {
@@ -62,7 +62,7 @@ if $env == "prod" {
 }
 
 #[test]
-fn test_nested_if_with_complex_condition() {
+fn test_detect_nested_if_with_complex_expressions() {
     let bad_code = r"
 if ($x > 10 and $x < 100) {
     if $y != null {

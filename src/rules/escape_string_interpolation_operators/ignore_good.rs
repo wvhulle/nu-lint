@@ -1,5 +1,5 @@
 #[test]
-fn ignores_escaped_parentheses() {
+fn ignores_properly_escaped_parentheses() {
     let rule = super::rule();
 
     let code = r#"
@@ -13,7 +13,7 @@ def good_example [] {
 }
 
 #[test]
-fn ignores_plain_strings() {
+fn ignores_plain_strings_without_interpolation() {
     let rule = super::rule();
 
     let code = r#"
@@ -26,7 +26,7 @@ def ok_example [] {
 }
 
 #[test]
-fn ignores_non_operator_keywords() {
+fn ignores_escaped_non_operator_text() {
     let rule = super::rule();
 
     let code = r#"
@@ -40,7 +40,7 @@ def ok_example [] {
 }
 
 #[test]
-fn ignores_escaped_all_keywords() {
+fn ignores_all_properly_escaped_operators() {
     let rule = super::rule();
 
     let code = r#"
@@ -56,7 +56,7 @@ def good_operators [] {
 }
 
 #[test]
-fn ignores_simple_interpolation() {
+fn ignores_simple_variable_interpolation() {
     let rule = super::rule();
 
     let code = r#"
@@ -70,7 +70,7 @@ def test [] {
 }
 
 #[test]
-fn ignores_escaped_in_error_messages() {
+fn ignores_escaped_operators_in_error_messages() {
     let rule = super::rule();
 
     let code = r#"
@@ -85,7 +85,7 @@ def good_error_msg [path: string] {
 }
 
 #[test]
-fn ignores_valid_complex_expressions() {
+fn ignores_valid_complex_boolean_expressions() {
     let rule = super::rule();
 
     let code = r#"
@@ -101,7 +101,7 @@ def test_valid_complex [] {
 }
 
 #[test]
-fn ignores_properly_escaped_patterns() {
+fn ignores_multiple_properly_escaped_patterns() {
     let rule = super::rule();
 
     let code = r#"
@@ -118,7 +118,7 @@ def test_escaped [] {
 }
 
 #[test]
-fn ignores_valid_subexpressions() {
+fn ignores_valid_arithmetic_subexpressions() {
     let rule = super::rule();
 
     let code = r#"
@@ -134,7 +134,7 @@ def test_valid [] {
 }
 
 #[test]
-fn ignores_non_problematic_text() {
+fn ignores_non_operator_parenthetical_text() {
     let rule = super::rule();
 
     let code = r#"

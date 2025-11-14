@@ -1,13 +1,7 @@
 use crate::rules::replace_by_builtin::ls::rule;
 
 #[test]
-fn detects_external_ls() {
-    let source = "^ls";
-    rule().assert_detects(source);
-}
-
-#[test]
-fn replaces_simple_ls() {
+fn converts_external_ls_to_builtin() {
     let source = "^ls";
     rule().assert_fix_contains(source, "ls");
     rule().assert_fix_description_contains(source, "structured");
@@ -15,20 +9,20 @@ fn replaces_simple_ls() {
 }
 
 #[test]
-fn preserves_directory_argument() {
+fn converts_ls_with_directory_path() {
     let source = "^ls /tmp";
     rule().assert_fix_contains(source, "ls /tmp");
     rule().assert_fix_description_contains(source, "structured");
 }
 
 #[test]
-fn preserves_multiple_paths() {
+fn converts_ls_with_multiple_paths() {
     let source = "^ls src tests";
     rule().assert_fix_contains(source, "ls src tests");
 }
 
 #[test]
-fn preserves_glob_pattern() {
+fn converts_ls_with_glob_pattern() {
     let source = "^ls *.rs";
     rule().assert_fix_contains(source, "ls *.rs");
     rule().assert_fix_description_contains(source, "structured");

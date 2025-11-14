@@ -1,7 +1,7 @@
 use super::rule;
 
 #[test]
-fn test_typed_pipeline_input() {
+fn ignore_properly_typed_input() {
     let good_code = r"
 def double []: int -> int {
     $in * 2
@@ -11,7 +11,7 @@ def double []: int -> int {
 }
 
 #[test]
-fn test_typed_pipeline_output() {
+fn ignore_properly_typed_output() {
     let good_code = r"
 def create-list []: nothing -> list<int> {
     [1, 2, 3]
@@ -21,7 +21,7 @@ def create-list []: nothing -> list<int> {
 }
 
 #[test]
-fn test_typed_both_input_output() {
+fn ignore_fully_typed_pipeline() {
     let good_code = r"
 def transform []: list<int> -> list<int> {
     $in | each { |x| $x + 1 }
@@ -31,7 +31,7 @@ def transform []: list<int> -> list<int> {
 }
 
 #[test]
-fn test_multiple_input_output_types() {
+fn ignore_union_type_signatures() {
     let good_code = r"
 def stringify []: [
     int -> string
@@ -44,7 +44,7 @@ def stringify []: [
 }
 
 #[test]
-fn test_no_pipeline_usage() {
+fn ignore_function_without_pipeline_usage() {
     let good_code = r"
 def add [a: int, b: int]: nothing -> int {
     $a + $b
@@ -54,7 +54,7 @@ def add [a: int, b: int]: nothing -> int {
 }
 
 #[test]
-fn test_typed_exported_command() {
+fn ignore_exported_function_with_types() {
     let good_code = r"
 export def process []: string -> string {
     $in | str trim
@@ -64,7 +64,7 @@ export def process []: string -> string {
 }
 
 #[test]
-fn test_typed_with_parameters() {
+fn ignore_typed_pipeline_with_params() {
     let good_code = r"
 def multiply [factor: int]: int -> int {
     $in * $factor
@@ -74,7 +74,7 @@ def multiply [factor: int]: int -> int {
 }
 
 #[test]
-fn test_command_with_nothing_output() {
+fn ignore_function_returning_nothing() {
     let good_code = r"
 def save-data [path: string]: any -> nothing {
     $in | save $path
@@ -84,7 +84,7 @@ def save-data [path: string]: any -> nothing {
 }
 
 #[test]
-fn test_string_to_record_signature() {
+fn ignore_string_to_record_conversion() {
     let good_code = r"
 def parse-json []: string -> record {
     $in | from json
@@ -94,7 +94,7 @@ def parse-json []: string -> record {
 }
 
 #[test]
-fn test_table_processing() {
+fn ignore_table_to_table_processing() {
     let good_code = r"
 def filter-rows []: table -> table {
     $in | where size > 100

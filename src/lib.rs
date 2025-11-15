@@ -16,7 +16,11 @@ pub use config::Config;
 pub use config::LintLevel;
 pub use engine::LintEngine;
 use miette::Diagnostic;
-pub use output::{JsonFix, JsonOutput, JsonReplacement, JsonViolation, Summary, format_json};
+pub use output::{
+    JsonFix, JsonOutput, JsonReplacement, JsonViolation, Summary, VsCodeCodeAction,
+    VsCodeDiagnostic, VsCodeJsonOutput, VsCodeLocation, VsCodePosition, VsCodeRange,
+    VsCodeRelatedInformation, VsCodeTextEdit, format_json, format_text, format_vscode_json,
+};
 use thiserror::Error;
 use toml::de;
 pub use violation::Violation;

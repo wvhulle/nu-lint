@@ -67,6 +67,8 @@ pub enum Commands {
 pub enum Format {
     Text,
     Json,
+    /// VS Code LSP-compatible JSON format
+    VscodeJson,
     Github,
 }
 
@@ -224,6 +226,7 @@ pub fn output_results(violations: &[Violation], _files: &[PathBuf], format: Opti
     let output = match format.unwrap_or(Format::Text) {
         Format::Text | Format::Github => output::format_text(violations),
         Format::Json => output::format_json(violations),
+        Format::VscodeJson => output::format_vscode_json(violations),
     };
     println!("{output}");
 }

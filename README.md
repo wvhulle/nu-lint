@@ -96,6 +96,16 @@ nu-lint script.nu                          # Lint a file
 nu-lint directory/                         # Lint directory
 ```
 
+Output formats:
+
+```bash
+nu-lint script.nu --format text            # Human-readable (default)
+nu-lint script.nu --format json            # JSON format
+nu-lint script.nu --format vscode-json     # VS Code LSP-compatible JSON
+```
+
+For VS Code extension developers, see [VSCODE_JSON_FORMAT.md](./VSCODE_JSON_FORMAT.md) for detailed documentation on the `vscode-json` output format.
+
 ## Configuration
 
 Show all rules:

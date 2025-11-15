@@ -4,10 +4,7 @@ use nu_protocol::{
 };
 
 use crate::{
-    ast::call::CallExt,
-    context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::RuleViolation,
 };
 
 /// Extract variable declaration from a `let` statement  
@@ -126,8 +123,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "unnecessary_variable_before_return",
-        RuleCategory::CodeQuality,
-        Severity::Warning,
+        LintLevel::Warn,
         "Variable assigned and immediately returned adds unnecessary verbosity",
         check,
     )

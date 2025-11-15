@@ -4,10 +4,11 @@ use nu_protocol::{
 };
 
 use crate::{
+    LintLevel,
     ast::{block::BlockExt, call::CallExt, effect::is_side_effect_only},
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    rule::Rule,
+    violation::RuleViolation,
 };
 
 fn has_print_call(block: &Block, context: &LintContext) -> bool {
@@ -109,8 +110,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "print_and_return_data",
-        RuleCategory::SideEffects,
-        Severity::Warning,
+        LintLevel::Warn,
         "Functions should not both print to stdout and return data",
         check,
     )

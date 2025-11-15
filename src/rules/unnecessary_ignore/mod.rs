@@ -1,10 +1,11 @@
 use nu_protocol::ast::{Expr, Expression, Pipeline};
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, pipeline::PipelineExt},
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    rule::Rule,
+    violation::RuleViolation,
 };
 
 /// Commands that are known to produce no output (even if type system says
@@ -123,8 +124,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "unnecessary_ignore",
-        RuleCategory::Idioms,
-        Severity::Warning,
+        LintLevel::Warn,
         "Commands that produce no output don't need '| ignore'",
         check,
     )

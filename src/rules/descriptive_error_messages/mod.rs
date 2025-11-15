@@ -1,10 +1,11 @@
 use nu_protocol::ast::{Call, Expr, Expression, RecordItem};
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    rule::Rule,
+    violation::RuleViolation,
 };
 
 const GENERIC_ERROR_MESSAGES: &[&str] = &["error", "failed", "err", "something went wrong"];
@@ -117,8 +118,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "descriptive_error_messages",
-        RuleCategory::ErrorHandling,
-        Severity::Info,
+        LintLevel::Allow,
         "Error messages should be descriptive and actionable",
         check,
     )

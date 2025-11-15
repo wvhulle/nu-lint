@@ -4,10 +4,11 @@ use nu_protocol::{
 };
 
 use crate::{
+    LintLevel,
     ast::{block::BlockExt, call::CallExt, pipeline::PipelineExt, span::SpanExt},
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    rule::Rule,
+    violation::RuleViolation,
 };
 
 fn is_split_row_call(call: &Call, context: &LintContext) -> bool {
@@ -281,8 +282,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "prefer_parse_command",
-        RuleCategory::Idioms,
-        Severity::Warning,
+        LintLevel::Warn,
         "Prefer 'parse' command over manual string splitting with indexed access",
         check,
     )

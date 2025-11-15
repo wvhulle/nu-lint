@@ -1,25 +1,9 @@
-use core::fmt::{self, Display, Formatter};
 use std::borrow::Cow;
 
 use miette::SourceSpan;
 use nu_protocol::Span;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Severity {
-    Info,
-    Warning,
-    Error,
-}
-
-impl Display for Severity {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Error => write!(f, "error"),
-            Self::Warning => write!(f, "warning"),
-            Self::Info => write!(f, "info"),
-        }
-    }
-}
+use crate::config::LintLevel;
 
 /// A rule violation without severity (created by rules)
 #[derive(Debug, Clone)]
@@ -83,10 +67,10 @@ impl RuleViolation {
 
     /// Convert to a full Violation with severity
     #[must_use]
-    pub fn into_violation(self, severity: Severity) -> Violation {
+    pub fn into_violation(self, severity: LintLevel) -> Violation {
         Violation {
             rule_id: self.rule_id,
-            severity,
+            lint_level: severity,
             message: self.message,
             span: self.span,
             suggestion: self.suggestion,
@@ -100,7 +84,7 @@ impl RuleViolation {
 #[derive(Debug, Clone)]
 pub struct Violation {
     pub rule_id: Cow<'static, str>,
-    pub severity: Severity,
+    pub lint_level: LintLevel,
     pub message: Cow<'static, str>,
     pub span: Span,
     pub suggestion: Option<Cow<'static, str>>,
@@ -113,13 +97,13 @@ impl Violation {
     #[must_use]
     pub const fn new_static(
         rule_id: &'static str,
-        severity: Severity,
+        lint_level: LintLevel,
         message: &'static str,
         span: Span,
     ) -> Self {
         Self {
             rule_id: Cow::Borrowed(rule_id),
-            severity,
+            lint_level,
             message: Cow::Borrowed(message),
             span,
             suggestion: None,
@@ -132,13 +116,13 @@ impl Violation {
     #[must_use]
     pub const fn new_dynamic(
         rule_id: &'static str,
-        severity: Severity,
+        lint_level: LintLevel,
         message: String,
         span: Span,
     ) -> Self {
         Self {
             rule_id: Cow::Borrowed(rule_id),
-            severity,
+            lint_level,
             message: Cow::Owned(message),
             span,
             suggestion: None,

@@ -3,11 +3,11 @@ use std::collections::HashMap;
 use nu_protocol::ast::ExternalArgument;
 
 use crate::{
-    RuleViolation,
+    LintLevel, RuleViolation,
     ast::ext_command::{BuiltinAlternative, ExternalArgumentExt, detect_external_commands},
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{Fix, Replacement, Severity},
+    rule::Rule,
+    violation::{Fix, Replacement},
 };
 
 /// Map of less common system and text processing commands to their Nushell
@@ -373,8 +373,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "prefer_builtin_other",
-        RuleCategory::Idioms,
-        Severity::Info,
+        LintLevel::Allow,
         "Avoid external commands when Nushell built-ins are available (env, date, whoami, man, \
          sed, awk, cut, wc, tr, tee, etc.)",
         check,

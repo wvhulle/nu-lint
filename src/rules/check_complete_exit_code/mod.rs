@@ -6,10 +6,11 @@ use nu_protocol::{
 };
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    rule::Rule,
+    violation::RuleViolation,
 };
 
 fn cell_path_has_member(members: &[PathMember], member_name: &str) -> bool {
@@ -169,8 +170,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "check_complete_exit_code",
-        RuleCategory::ErrorHandling,
-        Severity::Warning,
+        LintLevel::Warn,
         "Check exit codes when using 'complete' to capture external command results",
         check,
     )

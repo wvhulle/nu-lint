@@ -1,10 +1,11 @@
 use nu_protocol::ast::{Argument, Call, Expr, Expression};
 
 use crate::{
+    LintLevel,
     ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    rule::Rule,
+    violation::RuleViolation,
 };
 
 /// Extract the then-block expression from an if call
@@ -128,8 +129,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "prefer_where_over_each_if",
-        RuleCategory::Idioms,
-        Severity::Warning,
+        LintLevel::Warn,
         "Use 'where' for filtering instead of 'each' with 'if'",
         check,
     )

@@ -1,10 +1,6 @@
 use nu_protocol::ast::{Expr, Pipeline, Traverse};
 
-use crate::{
-    context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
-};
+use crate::{LintLevel, context::LintContext, rule::Rule, violation::RuleViolation};
 
 fn is_non_comment_statement(pipeline: &Pipeline) -> bool {
     pipeline
@@ -99,8 +95,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "inline_single_use_function",
-        RuleCategory::CodeQuality,
-        Severity::Info,
+        LintLevel::Allow,
         "Detect single-line custom commands used only once that could be inlined",
         check,
     )

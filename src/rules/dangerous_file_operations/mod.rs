@@ -4,10 +4,7 @@ use nu_protocol::{
 };
 
 use crate::{
-    ast::call::CallExt,
-    context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::RuleViolation,
 };
 
 const DANGEROUS_COMMANDS: &[&str] = &["rm", "mv", "cp"];
@@ -264,8 +261,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "dangerous_file_operations",
-        RuleCategory::ErrorHandling,
-        Severity::Warning,
+        LintLevel::Warn,
         "Detect dangerous file operations that could cause data loss",
         check,
     )

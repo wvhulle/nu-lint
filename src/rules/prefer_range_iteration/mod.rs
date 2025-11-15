@@ -1,10 +1,11 @@
 use nu_protocol::ast::{Assignment, Call, Comparison, Expr, Expression, Math, Operator};
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    rule::Rule,
+    violation::RuleViolation,
 };
 
 /// Extract an integer value from an expression, unwrapping blocks if needed
@@ -186,8 +187,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "prefer_range_iteration",
-        RuleCategory::Idioms,
-        Severity::Warning,
+        LintLevel::Warn,
         "Prefer range iteration over while loops with counters",
         check,
     )

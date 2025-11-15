@@ -1,4 +1,7 @@
-use crate::{config::Config, engine::LintEngine};
+use crate::{
+    config::{Config, LintLevel},
+    engine::LintEngine,
+};
 
 // These tests verify that parse error messages from Nushell's parser
 // are properly propagated as violation messages and suggestions.
@@ -193,10 +196,9 @@ fn test_parse_error_has_error_severity() {
 
     // All parse errors should have Error severity
     for error in parse_errors {
-        use crate::violation::Severity;
         assert_eq!(
-            error.severity,
-            Severity::Error,
+            error.lint_level,
+            LintLevel::Deny,
             "Parse errors should have Error severity"
         );
     }

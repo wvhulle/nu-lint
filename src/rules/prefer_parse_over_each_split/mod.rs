@@ -1,10 +1,7 @@
 use nu_protocol::ast::{Argument, Expr, Expression};
 
 use crate::{
-    ast::call::CallExt,
-    context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::RuleViolation,
 };
 
 fn contains_split_row(expr: &Expression, ctx: &LintContext) -> bool {
@@ -70,8 +67,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "prefer_parse_over_each_split",
-        RuleCategory::Idioms,
-        Severity::Warning,
+        LintLevel::Warn,
         "Prefer 'parse' over 'each' with 'split row' for structured text processing",
         check,
     )

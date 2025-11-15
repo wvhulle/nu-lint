@@ -4,13 +4,14 @@ use nu_protocol::{
 };
 
 use crate::{
+    LintLevel,
     ast::{
         call::CallExt, expression::ExpressionExt, pipeline::PipelineExt, span::SpanExt,
         syntax_shape::SyntaxShapeExt,
     },
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{Fix, Replacement, RuleViolation, Severity},
+    rule::Rule,
+    violation::{Fix, Replacement, RuleViolation},
 };
 
 fn infer_param_type(
@@ -181,8 +182,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "missing_type_annotation",
-        RuleCategory::TypeSafety,
-        Severity::Warning,
+        LintLevel::Warn,
         "Parameters should have type annotations",
         check,
     )

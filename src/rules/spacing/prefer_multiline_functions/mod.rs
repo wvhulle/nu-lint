@@ -1,10 +1,11 @@
 use nu_protocol::ast::{Call, Expr, Expression, Traverse};
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    rule::Rule,
+    violation::RuleViolation,
 };
 
 const MAX_FUNCTION_LINE_LENGTH: usize = 80;
@@ -67,8 +68,7 @@ fn create_violation(function_name: &str, span: nu_protocol::Span) -> RuleViolati
 pub fn rule() -> Rule {
     Rule::new(
         "prefer_multiline_functions",
-        RuleCategory::Formatting,
-        Severity::Info,
+        LintLevel::Allow,
         "Prefer multiline format for long function definitions",
         check,
     )

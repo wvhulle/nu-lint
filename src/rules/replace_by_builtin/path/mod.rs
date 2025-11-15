@@ -4,10 +4,11 @@ use nu_protocol::{
 };
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    rule::Rule,
+    violation::RuleViolation,
 };
 
 const PATH_KEYWORDS: &[&str] = &["path", "file", "dir", "directory", "folder", "location"];
@@ -169,8 +170,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "prefer_path_type",
-        RuleCategory::TypeSafety,
-        Severity::Warning,
+        LintLevel::Warn,
         "Use Nushell's path type instead of string for parameters with 'path' in the name",
         check,
     )

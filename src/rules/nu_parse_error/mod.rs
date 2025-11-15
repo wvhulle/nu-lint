@@ -1,8 +1,4 @@
-use crate::{
-    context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
-};
+use crate::{LintLevel, context::LintContext, rule::Rule, violation::RuleViolation};
 
 const fn check(_context: &LintContext) -> Vec<RuleViolation> {
     // This rule doesn't perform traditional checking.
@@ -14,8 +10,7 @@ const fn check(_context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "nu_parse_error",
-        RuleCategory::CodeQuality,
-        Severity::Error,
+        LintLevel::Deny,
         "Nushell parser encountered a syntax error",
         check,
     )

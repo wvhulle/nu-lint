@@ -4,11 +4,11 @@ use std::collections::HashMap;
 use nu_protocol::ast::ExternalArgument;
 
 use crate::{
-    RuleViolation,
+    LintLevel, RuleViolation,
     ast::ext_command::{BuiltinAlternative, ExternalArgumentExt, detect_external_commands},
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{Fix, Replacement, Severity},
+    rule::Rule,
+    violation::{Fix, Replacement},
 };
 
 fn get_builtin_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
@@ -193,8 +193,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "prefer_builtin_sort",
-        RuleCategory::Idioms,
-        Severity::Warning,
+        LintLevel::Warn,
         "Use Nu's 'sort' command for better data type support",
         check,
     )

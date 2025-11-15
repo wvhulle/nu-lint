@@ -1,10 +1,11 @@
 use nu_protocol::ast::{Call, Expr};
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, span::SpanExt},
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    rule::Rule,
+    violation::RuleViolation,
 };
 
 /// Check if a call is to the 'exit' command
@@ -54,8 +55,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "exit_only_in_main",
-        RuleCategory::CodeQuality,
-        Severity::Error,
+        LintLevel::Deny,
         "Avoid using 'exit' in functions other than 'main'",
         check,
     )

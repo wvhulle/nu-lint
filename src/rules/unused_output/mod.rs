@@ -1,11 +1,11 @@
 use nu_protocol::ast::{Expr, Expression, Pipeline};
 
 use crate::{
-    Fix, Replacement,
+    Fix, LintLevel, Replacement,
     ast::{call::CallExt, ext_command::ExternalCommandExt, pipeline::PipelineExt, span::SpanExt},
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    rule::Rule,
+    violation::RuleViolation,
 };
 
 fn command_produces_output(expr: &Expression, context: &LintContext) -> bool {
@@ -110,8 +110,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "unused_output",
-        RuleCategory::Idioms,
-        Severity::Warning,
+        LintLevel::Warn,
         "Commands producing output that is discarded with '| ignore'",
         check,
     )

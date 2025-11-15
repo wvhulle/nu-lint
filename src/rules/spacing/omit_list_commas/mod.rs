@@ -3,11 +3,7 @@ use nu_protocol::{
     ast::{Expr, ListItem},
 };
 
-use crate::{
-    context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
-};
+use crate::{LintLevel, context::LintContext, rule::Rule, violation::RuleViolation};
 
 fn check_list_commas(source: &str, span: Span, items: &[ListItem]) -> Vec<RuleViolation> {
     let mut violations = Vec::new();
@@ -76,8 +72,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "omit_list_commas",
-        RuleCategory::Formatting,
-        Severity::Info,
+        LintLevel::Allow,
         "Omit commas between list items as per Nushell style guide",
         check,
     )

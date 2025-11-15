@@ -1,8 +1,4 @@
-use crate::{
-    context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
-};
+use crate::{LintLevel, context::LintContext, rule::Rule, violation::RuleViolation};
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {
     let mut violations = Vec::new();
@@ -45,8 +41,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "prefer_lines_over_split",
-        RuleCategory::Idioms,
-        Severity::Warning,
+        LintLevel::Warn,
         "Use 'lines' instead of 'split row \"\\n\"' for better performance and clarity",
         check,
     )

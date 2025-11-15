@@ -3,11 +3,7 @@ use std::sync::OnceLock;
 use heck::ToShoutySnakeCase;
 use regex::Regex;
 
-use crate::{
-    context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
-};
+use crate::{LintLevel, context::LintContext, rule::Rule, violation::RuleViolation};
 
 fn screaming_snake_pattern() -> &'static Regex {
     static PATTERN: OnceLock<Regex> = OnceLock::new();
@@ -55,8 +51,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "screaming_snake_constants",
-        RuleCategory::Naming,
-        Severity::Info,
+        LintLevel::Allow,
         "Constants should use SCREAMING_SNAKE_CASE naming convention",
         check,
     )

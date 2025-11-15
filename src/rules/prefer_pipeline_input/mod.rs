@@ -4,10 +4,11 @@ use nu_protocol::{
 };
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{self, RuleViolation, Severity},
+    rule::Rule,
+    violation::{self, RuleViolation},
 };
 
 /// Check if a parameter is a data type that would benefit from pipeline input
@@ -456,8 +457,7 @@ fn analyze_parameter_usage_in_block(
 pub fn rule() -> Rule {
     Rule::new(
         "prefer_pipeline_input",
-        RuleCategory::Idioms,
-        Severity::Warning,
+        LintLevel::Warn,
         "Custom commands with single data parameters should use pipeline input for better \
          composability",
         check,

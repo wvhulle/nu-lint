@@ -4,9 +4,10 @@ use nu_protocol::{
 };
 
 use crate::{
+    LintLevel,
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{Fix, Replacement, RuleViolation, Severity},
+    rule::Rule,
+    violation::{Fix, Replacement, RuleViolation},
 };
 
 /// AST visitor that checks for pipe spacing issues
@@ -203,8 +204,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "pipe_spacing",
-        RuleCategory::Formatting,
-        Severity::Warning,
+        LintLevel::Warn,
         "Pipes should have exactly one space before and after when on the same line",
         check,
     )

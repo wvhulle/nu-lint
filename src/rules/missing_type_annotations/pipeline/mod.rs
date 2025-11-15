@@ -4,10 +4,11 @@ use nu_protocol::{
 };
 
 use crate::{
+    LintLevel,
     ast::{block::BlockExt, call::CallExt, span::SpanExt, syntax_shape::SyntaxShapeExt},
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{Fix, Replacement, RuleViolation, Severity},
+    rule::Rule,
+    violation::{Fix, Replacement, RuleViolation},
 };
 
 fn has_explicit_type_annotation(signature_span: Option<Span>, ctx: &LintContext) -> bool {
@@ -253,8 +254,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "typed_pipeline_io",
-        RuleCategory::TypeSafety,
-        Severity::Warning,
+        LintLevel::Warn,
         "Custom commands that use pipeline input or produce output should have type annotations",
         check,
     )

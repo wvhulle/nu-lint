@@ -3,10 +3,7 @@ use nu_protocol::ast::Expr;
 
 use super::NuNaming;
 use crate::{
-    ast::call::CallExt,
-    context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::RuleViolation,
 };
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {
@@ -40,8 +37,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "kebab_case_commands",
-        RuleCategory::Naming,
-        Severity::Info,
+        LintLevel::Allow,
         "Custom commands should use kebab-case naming convention",
         check,
     )

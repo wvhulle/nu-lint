@@ -1,10 +1,6 @@
 use nu_protocol::{Id, marker::Block};
 
-use crate::{
-    context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
-};
+use crate::{LintLevel, context::LintContext, rule::Rule, violation::RuleViolation};
 
 const MAX_LINES: usize = 40;
 
@@ -59,8 +55,7 @@ fn function_violation(
 pub fn rule() -> Rule {
     Rule::new(
         "max_function_body_length",
-        RuleCategory::CodeQuality,
-        Severity::Warning,
+        LintLevel::Warn,
         "Function bodies should not exceed 80 lines to maintain readability",
         check,
     )

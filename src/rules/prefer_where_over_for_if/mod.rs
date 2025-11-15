@@ -1,10 +1,11 @@
 use nu_protocol::ast::{Argument, Block, Call, Expr, Expression, Operator};
 
 use crate::{
+    LintLevel,
     ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    rule::Rule,
+    violation::RuleViolation,
 };
 
 /// Check if an expression contains append of just the loop variable
@@ -361,8 +362,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "prefer_where_over_for_if",
-        RuleCategory::Idioms,
-        Severity::Warning,
+        LintLevel::Warn,
         "Prefer 'where' filter over for loop with if statement",
         check,
     )

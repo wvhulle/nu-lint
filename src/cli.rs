@@ -233,10 +233,8 @@ fn list_rules(config: &Config) {
     println!("Available rules:\n");
 
     for rule in engine.registry.all_rules() {
-        println!(
-            "{:<8} [{:<12}] {} - {}",
-            rule.id, rule.category, rule.severity, rule.description
-        );
+        let lint_level = config.get_lint_level(rule.id, rule.default_lint_level);
+        println!("{:<40} [{:?}] {}", rule.id, lint_level, rule.description);
     }
 }
 
@@ -244,9 +242,10 @@ fn explain_rule(config: &Config, rule_id: &str) {
     let engine = LintEngine::new(config.clone());
 
     if let Some(rule) = engine.registry.get_rule(rule_id) {
+        let lint_level = config.get_lint_level(rule.id, rule.default_lint_level);
         println!("Rule: {}", rule.id);
-        println!("Category: {}", rule.category);
-        println!("Severity: {}", rule.severity);
+        println!("Lint Level: {lint_level:?}");
+        println!("Default Lint Level: {}", rule.default_lint_level);
         println!("Description: {}", rule.description);
     } else {
         eprintln!("Error: Rule '{rule_id}' not found");

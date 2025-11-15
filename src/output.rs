@@ -4,10 +4,7 @@ use std::{fmt, fs};
 use miette::{Diagnostic, LabeledSpan, Report, SourceCode};
 use serde::Serialize;
 
-use crate::{
-    Fix,
-    violation::{Severity, Violation},
-};
+use crate::{Fix, config::LintLevel, violation::Violation};
 
 /// Format violations as human-readable text
 pub fn format_text(violations: &[Violation]) -> String {
@@ -137,7 +134,7 @@ fn violation_to_json(violation: &Violation) -> JsonViolation {
 
     JsonViolation {
         rule_id: violation.rule_id.to_string(),
-        severity: violation.severity.to_string(),
+        lint_level: violation.lint_level.to_string(),
         message: violation.message.to_string(),
         file: violation.file.as_ref().map(ToString::to_string),
         line_start,
@@ -189,15 +186,15 @@ impl Diagnostic for ViolationDiagnostic {
     fn code<'a>(&'a self) -> Option<Box<dyn fmt::Display + 'a>> {
         Some(Box::new(format!(
             "{}({})",
-            self.violation.severity, self.violation.rule_id
+            self.violation.lint_level, self.violation.rule_id
         )))
     }
 
     fn severity(&self) -> Option<miette::Severity> {
-        Some(match self.violation.severity {
-            Severity::Error => miette::Severity::Error,
-            Severity::Warning => miette::Severity::Warning,
-            Severity::Info => miette::Severity::Advice,
+        Some(match self.violation.lint_level {
+            LintLevel::Deny => miette::Severity::Error,
+            LintLevel::Warn => miette::Severity::Warning,
+            LintLevel::Allow => miette::Severity::Advice,
         })
     }
 
@@ -240,7 +237,7 @@ pub struct JsonOutput {
 #[derive(Serialize)]
 pub struct JsonViolation {
     pub rule_id: String,
-    pub severity: String,
+    pub lint_level: String,
     pub message: String,
     pub file: Option<String>,
     pub line_start: usize,
@@ -279,10 +276,10 @@ impl Summary {
     pub fn from_violations(violations: &[Violation]) -> Self {
         let (errors, warnings, info) = violations.iter().fold(
             (0, 0, 0),
-            |(errors, warnings, info), violation| match violation.severity {
-                Severity::Error => (errors + 1, warnings, info),
-                Severity::Warning => (errors, warnings + 1, info),
-                Severity::Info => (errors, warnings, info + 1),
+            |(errors, warnings, info), violation| match violation.lint_level {
+                LintLevel::Deny => (errors + 1, warnings, info),
+                LintLevel::Warn => (errors, warnings + 1, info),
+                LintLevel::Allow => (errors, warnings, info + 1),
             },
         );
 

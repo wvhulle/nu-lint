@@ -2,11 +2,7 @@ use std::sync::OnceLock;
 
 use regex::Regex;
 
-use crate::{
-    context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
-};
+use crate::{LintLevel, context::LintContext, rule::Rule, violation::RuleViolation};
 
 fn trailing_space_pattern() -> &'static Regex {
     static PATTERN: OnceLock<Regex> = OnceLock::new();
@@ -44,8 +40,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "no_trailing_spaces",
-        RuleCategory::Formatting,
-        Severity::Info,
+        LintLevel::Allow,
         "Eliminate trailing spaces at the end of lines",
         check,
     )

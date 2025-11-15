@@ -1,10 +1,7 @@
 use nu_protocol::ast::{Argument, Block, Expr, PipelineElement};
 
 use crate::{
-    ast::call::CallExt,
-    context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::RuleViolation,
 };
 
 fn check_sequential_stderr_exit(
@@ -81,8 +78,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "prefer_error_make_for_stderr",
-        RuleCategory::ErrorHandling,
-        Severity::Warning,
+        LintLevel::Warn,
         "Use 'error make' instead of 'print stderr' + 'exit' for structured error handling",
         check,
     )

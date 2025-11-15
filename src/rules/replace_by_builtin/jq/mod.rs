@@ -11,11 +11,11 @@ use jaq_core::{
 use nu_protocol::ast::ExternalArgument;
 
 use crate::{
-    RuleViolation,
+    LintLevel, RuleViolation,
     ast::ext_command::{BuiltinAlternative, ExternalArgumentExt, detect_external_commands},
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{Fix, Replacement, Severity},
+    rule::Rule,
+    violation::{Fix, Replacement},
 };
 
 /// Extract field name from a path like .field
@@ -391,8 +391,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "prefer_nushell_over_jq",
-        RuleCategory::Performance,
-        Severity::Warning,
+        LintLevel::Warn,
         "Prefer Nushell built-ins over jq for data operations that have direct equivalents",
         check,
     )

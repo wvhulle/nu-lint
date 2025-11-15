@@ -1,10 +1,6 @@
 use nu_protocol::{Span, ast::Expr};
 
-use crate::{
-    context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
-};
+use crate::{LintLevel, context::LintContext, rule::Rule, violation::RuleViolation};
 
 enum BraceType {
     ClosureWithParams,
@@ -113,8 +109,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "brace_spacing",
-        RuleCategory::Formatting,
-        Severity::Info,
+        LintLevel::Allow,
         "Enforces Nushell style guide: records use {key: value}, blocks/closures without params \
          use { body }, and closures with params use {|x| body}",
         check,

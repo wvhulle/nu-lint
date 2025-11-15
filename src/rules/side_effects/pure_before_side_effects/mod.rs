@@ -4,10 +4,11 @@ use nu_protocol::{
 };
 
 use crate::{
+    LintLevel,
     ast::effect::{StatementType, classify_expression},
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    rule::Rule,
+    violation::RuleViolation,
 };
 
 fn count_consecutive_pure_statements(pipelines: &[Pipeline], context: &LintContext) -> usize {
@@ -101,8 +102,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "pure_before_side_effects",
-        RuleCategory::SideEffects,
-        Severity::Info,
+        LintLevel::Allow,
         "Detect functions that have pure computation before side effects",
         check,
     )

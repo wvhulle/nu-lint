@@ -8,7 +8,7 @@ use std::{
 use nu_lint::{
     LintEngine,
     cli::{collect_files_to_lint, lint_files},
-    config::{Config, RuleSeverity},
+    config::{Config, LintLevel},
 };
 use tempfile::TempDir;
 
@@ -20,11 +20,18 @@ fn test_custom_config_file() {
     let config_path = temp_dir.path().join("custom.toml");
     let nu_file_path = temp_dir.path().join("test.nu");
 
-    fs::write(&config_path, "[general]\nmin_severity = \"info\"\n").unwrap();
+    fs::write(
+        &config_path,
+        "[lints]\n\n[lints.rules]\nsnake_case_variables = \"deny\"\n",
+    )
+    .unwrap();
     fs::write(&nu_file_path, "let myVariable = 5\n").unwrap();
 
     let config = Config::load(Some(&config_path));
-    assert_eq!(config.general.min_severity, RuleSeverity::Info);
+    assert_eq!(
+        config.lints.rules.get("snake_case_variables"),
+        Some(&LintLevel::Deny)
+    );
 
     let engine = LintEngine::new(config);
     let files = collect_files_to_lint(&[nu_file_path]);
@@ -43,7 +50,7 @@ fn test_auto_discover_config_file() {
 
     fs::write(
         &config_path,
-        "[general]\nmin_severity = \"info\"\n\n[rules]\nsnake_case_variables = \"off\"\n",
+        "[lints.rules]\nsnake_case_variables = \"allow\"\n",
     )
     .unwrap();
     fs::write(&nu_file_path, "let myVariable = 5\n").unwrap();
@@ -59,7 +66,7 @@ fn test_auto_discover_config_file() {
 
     set_current_dir(original_dir).unwrap();
 
-    // Should have no violations because snake_case_variables is off
+    // Should have no violations because snake_case_variables is allowed
     assert!(
         violations
             .iter()
@@ -79,7 +86,7 @@ fn test_auto_discover_config_in_parent_dir() {
 
     fs::write(
         &config_path,
-        "[general]\nmin_severity = \"info\"\n\n[rules]\nsnake_case_variables = \"off\"\n",
+        "[lints.rules]\nsnake_case_variables = \"allow\"\n",
     )
     .unwrap();
     fs::write(&nu_file_path, "let myVariable = 5\n").unwrap();
@@ -95,7 +102,7 @@ fn test_auto_discover_config_in_parent_dir() {
 
     set_current_dir(original_dir).unwrap();
 
-    // Should have no violations because snake_case_variables is off
+    // Should have no violations because snake_case_variables is allowed
     assert!(
         violations
             .iter()
@@ -114,14 +121,10 @@ fn test_explicit_config_overrides_auto_discovery() {
 
     fs::write(
         &auto_config,
-        "[general]\nmin_severity = \"info\"\n\n[rules]\nsnake_case_variables = \"off\"\n",
+        "[lints.rules]\nsnake_case_variables = \"allow\"\n",
     )
     .unwrap();
-    fs::write(
-        &explicit_config,
-        "[general]\nmin_severity = \"info\"\n\n[rules]\n",
-    )
-    .unwrap();
+    fs::write(&explicit_config, "[lints.rules]\n").unwrap();
     fs::write(&nu_file_path, "let myVariable = 5\n").unwrap();
 
     let original_dir = current_dir().unwrap();
@@ -136,7 +139,7 @@ fn test_explicit_config_overrides_auto_discovery() {
 
     set_current_dir(original_dir).unwrap();
 
-    // Should have violations because explicit config doesn't disable the rule
+    // Should have violations because explicit config doesn't allow the rule
     assert!(
         violations
             .iter()

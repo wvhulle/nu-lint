@@ -1,10 +1,11 @@
 use nu_protocol::ast::{Block, Call, Expr, Pipeline, PipelineElement};
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    rule::Rule,
+    violation::RuleViolation,
 };
 
 struct PrintExitPattern {
@@ -196,8 +197,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "print_exit_use_error_make",
-        RuleCategory::ErrorHandling,
-        Severity::Warning,
+        LintLevel::Warn,
         "Replace 'print' + 'exit' patterns with 'error make' for proper error handling",
         check,
     )

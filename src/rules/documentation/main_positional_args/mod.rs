@@ -1,10 +1,11 @@
 use nu_protocol::ast::{Call, Expr};
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, span::SpanExt},
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    rule::Rule,
+    violation::RuleViolation,
 };
 
 fn check_main_function(call: &Call, context: &LintContext) -> Vec<RuleViolation> {
@@ -115,8 +116,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "main_positional_args_docs",
-        RuleCategory::Documentation,
-        Severity::Info,
+        LintLevel::Allow,
         "Positional parameters in main functions should have documentation comments",
         check,
     )

@@ -3,10 +3,7 @@ use nu_protocol::ast::{
 };
 
 use crate::{
-    ast::call::CallExt,
-    context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::RuleViolation,
 };
 
 const MAX_NESTING_DEPTH: usize = 4;
@@ -269,8 +266,7 @@ fn create_violation(span: nu_protocol::Span, depth: usize) -> RuleViolation {
 pub fn rule() -> Rule {
     Rule::new(
         "forbid_excessive_nesting",
-        RuleCategory::CodeQuality,
-        Severity::Warning,
+        LintLevel::Warn,
         "Avoid excessive nesting (more than 4 levels deep)",
         check,
     )

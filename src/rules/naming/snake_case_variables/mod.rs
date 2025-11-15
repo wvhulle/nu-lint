@@ -2,10 +2,11 @@ use heck::ToSnakeCase;
 use nu_protocol::ast::{Argument, Call, Expr};
 
 use crate::{
+    LintLevel,
     context::LintContext,
-    rule::{Rule, RuleCategory},
+    rule::Rule,
     rules::naming::NuNaming,
-    violation::{Fix, Replacement, RuleViolation, Severity},
+    violation::{Fix, Replacement, RuleViolation},
 };
 
 /// Check if this is a let or mut declaration
@@ -75,8 +76,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "snake_case_variables",
-        RuleCategory::Naming,
-        Severity::Info,
+        LintLevel::Allow,
         "Variables should use snake_case naming convention",
         check,
     )

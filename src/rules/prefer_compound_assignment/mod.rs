@@ -1,10 +1,11 @@
 use nu_protocol::ast::{Assignment, Expr, Expression, Math, Operator, PipelineElement};
 
 use crate::{
+    LintLevel,
     ast::expression::ExpressionExt,
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{Fix, Replacement, RuleViolation, Severity},
+    rule::Rule,
+    violation::{Fix, Replacement, RuleViolation},
 };
 
 fn build_fix(
@@ -120,8 +121,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "prefer_compound_assignment",
-        RuleCategory::Idioms,
-        Severity::Warning,
+        LintLevel::Warn,
         "Use compound assignment operators (+=, -=, etc.) for clarity",
         check,
     )

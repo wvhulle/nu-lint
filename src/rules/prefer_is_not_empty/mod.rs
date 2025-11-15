@@ -1,10 +1,7 @@
 use nu_protocol::ast::{Expr, Expression, Pipeline};
 
 use crate::{
-    Fix, Replacement,
-    context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    Fix, LintLevel, Replacement, context::LintContext, rule::Rule, violation::RuleViolation,
 };
 
 fn check_subexpression_for_is_empty(block_id: nu_protocol::BlockId, context: &LintContext) -> bool {
@@ -122,8 +119,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "prefer_is_not_empty",
-        RuleCategory::Idioms,
-        Severity::Warning,
+        LintLevel::Warn,
         "Use 'is-not-empty' instead of 'not ... is-empty' for better readability",
         check,
     )

@@ -2,11 +2,7 @@ use std::sync::OnceLock;
 
 use regex::Regex;
 
-use crate::{
-    context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
-};
+use crate::{LintLevel, context::LintContext, rule::Rule, violation::RuleViolation};
 
 fn print_pattern() -> &'static Regex {
     static PATTERN: OnceLock<Regex> = OnceLock::new();
@@ -100,8 +96,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "systemd_journal_prefix",
-        RuleCategory::Idioms,
-        Severity::Info,
+        LintLevel::Allow,
         "Detect output without systemd journal log level prefix when using SyslogLevelPrefix",
         check,
     )

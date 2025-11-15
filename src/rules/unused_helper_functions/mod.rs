@@ -1,10 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    ast::block::BlockExt,
-    context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    LintLevel, ast::block::BlockExt, context::LintContext, rule::Rule, violation::RuleViolation,
 };
 
 fn check(context: &LintContext) -> Vec<RuleViolation> {
@@ -42,8 +39,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "unused_helper_functions",
-        RuleCategory::CodeQuality,
-        Severity::Warning,
+        LintLevel::Warn,
         "Detect helper functions that are never called in files with a 'main' function",
         check,
     )

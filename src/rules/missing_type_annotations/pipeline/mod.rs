@@ -250,7 +250,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "typed_pipeline_io",
         "Custom commands that use pipeline input or produce output should have type annotations",

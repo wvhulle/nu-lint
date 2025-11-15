@@ -106,7 +106,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "print_and_return_data",
         "Functions should not both print to stdout and return data",

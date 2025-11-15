@@ -256,7 +256,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     violations
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "dangerous_file_operations",
         "Detect dangerous file operations that could cause data loss",

@@ -107,7 +107,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .collect()
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "unused_output",
         "Commands producing output that is discarded with '| ignore'",

@@ -249,7 +249,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "prefer_match_over_if_chain",
         "Use 'match' for value-based branching instead of if-else-if chains",

@@ -73,7 +73,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .collect()
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "external_script_as_argument",
         "Avoid passing external scripts as arguments to custom commands; define them as functions \

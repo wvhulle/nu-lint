@@ -41,7 +41,7 @@ fn function_violation(
             .with_suggestion_dynamic(suggestion)
     })
 }
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "max_function_body_length",
         "Function bodies should not exceed 80 lines to maintain readability",

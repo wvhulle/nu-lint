@@ -101,7 +101,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
         }
     })
 }
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "prefer_is_not_empty",
         "Use 'is-not-empty' instead of 'not ... is-empty' for better readability",

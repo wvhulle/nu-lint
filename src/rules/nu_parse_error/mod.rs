@@ -28,7 +28,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
         })
         .collect()
 }
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "nu_parse_error",
         "Nushell parser encountered a syntax error",

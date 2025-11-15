@@ -249,7 +249,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     )
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "prefer_builtin_find",
         "Use Nu's 'ls' with glob patterns instead of 'find' command",

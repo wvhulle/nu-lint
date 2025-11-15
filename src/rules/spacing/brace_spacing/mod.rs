@@ -94,7 +94,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
         _ => vec![],
     })
 }
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "brace_spacing",
         "Enforces Nushell style guide: records use {key: value}, blocks/closures without params \

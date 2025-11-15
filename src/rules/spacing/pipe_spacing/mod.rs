@@ -200,7 +200,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     violations
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "pipe_spacing",
         "Pipes should have exactly one space before and after when on the same line",

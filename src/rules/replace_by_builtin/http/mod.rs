@@ -334,7 +334,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     )
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "prefer_builtin_http",
         "Use Nushell's http commands instead of curl/wget/fetch for better data handling",

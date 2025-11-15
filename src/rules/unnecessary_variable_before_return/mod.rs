@@ -118,7 +118,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     violations
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "unnecessary_variable_before_return",
         "Variable assigned and immediately returned adds unnecessary verbosity",

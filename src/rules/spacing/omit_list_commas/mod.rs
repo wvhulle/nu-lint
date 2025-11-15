@@ -55,7 +55,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
         _ => vec![],
     })
 }
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "omit_list_commas",
         "Omit commas between list items as per Nushell style guide",

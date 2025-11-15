@@ -114,7 +114,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .collect()
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "mixed_io_types",
         "Functions should not mix different types of I/O operations",

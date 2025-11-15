@@ -117,7 +117,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "prefer_compound_assignment",
         "Use compound assignment operators (+=, -=, etc.) for clarity",

@@ -81,7 +81,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     }
     violations
 }
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "systemd_journal_prefix",
         "Detect output without systemd journal log level prefix when using SyslogLevelPrefix",

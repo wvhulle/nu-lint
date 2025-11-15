@@ -358,7 +358,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     violations
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "prefer_where_over_for_if",
         "Prefer 'where' filter over for loop with if statement",

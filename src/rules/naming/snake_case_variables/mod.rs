@@ -72,7 +72,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "snake_case_variables",
         "Variables should use snake_case naming convention",

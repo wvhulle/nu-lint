@@ -120,7 +120,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .collect()
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "unnecessary_ignore",
         "Commands that produce no output don't need '| ignore'",

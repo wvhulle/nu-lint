@@ -269,7 +269,7 @@ mod tests {
 
         let config = Config::load_from_str(toml_str).unwrap();
         let found_set_level = config.rule_lint_level_in_conf("snake_case_variables");
-        assert!(matches!(found_set_level, Some(LintLevel::Allow)));
+        assert!(matches!(found_set_level, Some(LintLevel::Warn)));
     }
 
     #[test]

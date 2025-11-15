@@ -275,7 +275,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     violations
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "prefer_parse_command",
         "Prefer 'parse' command over manual string splitting with indexed access",

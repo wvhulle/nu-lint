@@ -195,7 +195,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
         })
         .collect()
 }
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "remove_redundant_in",
         "Remove redundant $in at the start of pipelines - it's implicit in Nushell",

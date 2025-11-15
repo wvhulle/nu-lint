@@ -112,7 +112,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "main_positional_args_docs",
         "Positional parameters in main functions should have documentation comments",

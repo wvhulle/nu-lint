@@ -73,7 +73,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "exported_function_docs",
         "Exported functions should have documentation comments",

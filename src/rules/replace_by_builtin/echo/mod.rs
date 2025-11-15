@@ -156,7 +156,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     check_block(context.ast, context)
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "never_use_echo",
         "Discourage use of builtin 'echo' command as it's just an identity function",

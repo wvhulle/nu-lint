@@ -100,7 +100,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     violations
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "unnecessary_mut",
         "Variables should only be marked 'mut' when they are actually reassigned",

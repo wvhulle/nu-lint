@@ -183,7 +183,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .collect()
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "prefer_range_iteration",
         "Prefer range iteration over while loops with counters",

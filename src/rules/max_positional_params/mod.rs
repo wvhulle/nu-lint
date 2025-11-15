@@ -26,7 +26,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
         })
         .collect()
 }
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "max_positional_params",
         "Custom commands should have ≤ 2 positional parameters",

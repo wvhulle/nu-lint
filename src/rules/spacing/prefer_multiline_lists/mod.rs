@@ -69,7 +69,7 @@ fn create_violation(span: nu_protocol::Span) -> Violation {
 /// This rule uses AST-based detection and is compatible with topiary-nushell
 /// tree-sitter formatting. It analyzes actual list structures rather than regex
 /// patterns.
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "prefer_multiline_lists",
         "Prefer multiline format for long or complex lists",

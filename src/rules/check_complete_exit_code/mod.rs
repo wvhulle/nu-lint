@@ -166,7 +166,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .collect()
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "check_complete_exit_code",
         "Check exit codes when using 'complete' to capture external command results",

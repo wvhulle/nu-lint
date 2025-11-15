@@ -173,7 +173,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     )
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "prefer_builtin_uniq",
         "Use Nu's 'uniq' command for structured data support",

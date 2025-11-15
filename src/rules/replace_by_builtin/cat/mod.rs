@@ -218,7 +218,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     )
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "prefer_builtin_cat",
         "Use Nu's 'open' command instead of 'cat' for better file handling",

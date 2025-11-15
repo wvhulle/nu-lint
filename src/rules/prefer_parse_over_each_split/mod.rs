@@ -62,7 +62,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "prefer_parse_over_each_split",
         "Prefer 'parse' over 'each' with 'split row' for structured text processing",

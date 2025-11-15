@@ -31,7 +31,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "collapsible_if",
         "Collapse nested if statements without else clauses into a single if with combined \

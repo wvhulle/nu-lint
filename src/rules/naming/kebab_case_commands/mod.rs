@@ -32,7 +32,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "kebab_case_commands",
         "Custom commands should use kebab-case naming convention",

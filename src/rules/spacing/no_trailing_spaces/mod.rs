@@ -30,7 +30,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     }
     violations
 }
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "no_trailing_spaces",
         "Eliminate trailing spaces at the end of lines",

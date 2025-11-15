@@ -370,7 +370,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     )
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "prefer_builtin_other",
         "Avoid external commands when Nushell built-ins are available (env, date, whoami, man, \

@@ -32,7 +32,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     }
     violations
 }
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "prefer_lines_over_split",
         "Use 'lines' instead of 'split row \"\\n\"' for better performance and clarity",

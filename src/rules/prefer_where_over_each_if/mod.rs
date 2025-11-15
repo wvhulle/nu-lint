@@ -125,7 +125,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     violations
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "prefer_where_over_each_if",
         "Use 'where' for filtering instead of 'each' with 'if'",

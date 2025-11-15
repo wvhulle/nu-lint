@@ -261,7 +261,7 @@ fn create_violation(span: nu_protocol::Span, depth: usize) -> Violation {
     )
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "forbid_excessive_nesting",
         "Avoid excessive nesting (more than 4 levels deep)",

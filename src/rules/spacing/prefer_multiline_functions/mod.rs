@@ -64,7 +64,7 @@ fn create_violation(function_name: &str, span: nu_protocol::Span) -> Violation {
 /// This rule uses AST-based detection and is compatible with topiary-nushell
 /// tree-sitter formatting. It provides more precise detection than regex-based
 /// approaches and won't conflict with automatic formatters.
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "prefer_multiline_functions",
         "Prefer multiline format for long function definitions",

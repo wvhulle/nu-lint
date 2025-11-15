@@ -78,7 +78,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
         })
         .collect()
 }
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "inline_single_use_function",
         "Detect single-line custom commands used only once that could be inlined",

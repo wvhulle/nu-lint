@@ -248,7 +248,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     violations
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "pipeline_handle_errors",
         "Ensure external commands in pipelines have proper error handling",

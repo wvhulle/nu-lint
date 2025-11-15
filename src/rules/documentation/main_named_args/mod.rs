@@ -69,7 +69,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "main_named_args_docs",
         "Named parameters (flags) in main functions should have documentation comments",

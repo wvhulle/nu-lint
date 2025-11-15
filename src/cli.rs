@@ -243,7 +243,7 @@ fn list_rules(config: &Config) {
     let default_rule_map = default_rule_map();
     println!("Available rules:\n");
 
-    for rule in &*ALL_RULES {
+    for rule in ALL_RULES {
         let default_level = default_rule_map
             .rules
             .get(rule.id)
@@ -298,7 +298,7 @@ mod tests {
         let config = Config::default();
         assert_eq!(
             config.lints.rules.get("snake_case_variables"),
-            Some(&LintLevel::Allow)
+            Some(&LintLevel::Warn)
         );
 
         let engine = LintEngine::new(config);
@@ -308,7 +308,7 @@ mod tests {
         assert!(
             violations
                 .iter()
-                .all(|v| v.rule_id != "snake_case_variables")
+                .any(|v| v.rule_id == "snake_case_variables" && v.lint_level == LintLevel::Warn)
         );
     }
 

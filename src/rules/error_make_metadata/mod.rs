@@ -206,7 +206,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "error_make_metadata",
         "error make calls should include metadata fields like label and help for better error \

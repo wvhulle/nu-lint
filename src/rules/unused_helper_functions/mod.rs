@@ -34,7 +34,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .collect()
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "unused_helper_functions",
         "Detect helper functions that are never called in files with a 'main' function",

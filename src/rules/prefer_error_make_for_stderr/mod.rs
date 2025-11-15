@@ -73,7 +73,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     main_violations.chain(nested_violations).collect()
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "prefer_error_make_for_stderr",
         "Use 'error make' instead of 'print stderr' + 'exit' for structured error handling",

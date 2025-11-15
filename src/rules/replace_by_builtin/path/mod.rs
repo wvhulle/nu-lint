@@ -166,7 +166,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .collect()
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "prefer_path_type",
         "Use Nushell's path type instead of string for parameters with 'path' in the name",

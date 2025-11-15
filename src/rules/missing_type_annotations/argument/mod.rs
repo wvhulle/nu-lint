@@ -178,7 +178,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "missing_type_annotation",
         "Parameters should have type annotations",

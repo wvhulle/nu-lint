@@ -42,7 +42,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
         })
         .collect()
 }
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "screaming_snake_constants",
         "Constants should use SCREAMING_SNAKE_CASE naming convention",

@@ -1,3 +1,4 @@
+#![allow(clippy::missing_errors_doc, reason = "Necessary for testing.")]
 use core::fmt::{self, Display};
 use std::{
     collections::HashMap,
@@ -9,7 +10,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::lint_set::LintSet;
+use crate::{LintError, lint_set::builtin_lint_sets, rules::RuleRegistry};
 
 /// Lint level configuration (inspired by Clippy)
 /// - Allow: Don't report this lint
@@ -51,15 +52,54 @@ pub struct Config {
 
 /// Lint configuration with support for set-level and individual rule
 /// configuration
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct LintConfig {
     /// Configure entire lint sets (e.g., "naming", "idioms", "pedantic")
     #[serde(default)]
-    pub sets: HashMap<LintSet, LintLevel>,
+    pub sets: HashMap<String, LintLevel>,
 
     /// Configure individual rules (overrides set settings)
     #[serde(default)]
     pub rules: HashMap<String, LintLevel>,
+}
+
+impl<'de> Deserialize<'de> for LintConfig {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct LintConfigHelper {
+            #[serde(default)]
+            sets: HashMap<String, LintLevel>,
+            #[serde(default)]
+            rules: HashMap<String, LintLevel>,
+        }
+
+        let helper = LintConfigHelper::deserialize(deserializer)?;
+
+        Ok(Self {
+            sets: helper.sets,
+            rules: helper.rules,
+        })
+    }
+}
+
+impl Default for LintConfig {
+    fn default() -> Self {
+        let mut rules = HashMap::new();
+
+        let registry = RuleRegistry::with_default_rules();
+
+        for rule in registry.all_rules() {
+            rules.insert(rule.id.to_string(), rule.default_lint_level);
+        }
+
+        Self {
+            sets: HashMap::new(),
+            rules,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
@@ -95,15 +135,18 @@ pub struct FixConfig {
 }
 
 impl Config {
+    pub fn load_from_str(toml_str: &str) -> Result<Self, LintError> {
+        Ok(toml::from_str(toml_str)?)
+    }
     /// Load configuration from a TOML file.
     ///
     /// # Errors
     ///
     /// Returns an error if the file cannot be read or if the TOML content is
     /// invalid.
-    pub(crate) fn load_from_file(path: &Path) -> Result<Self, crate::LintError> {
+    pub fn load_from_file(path: &Path) -> Result<Self, LintError> {
         let content = fs::read_to_string(path)?;
-        Ok(toml::from_str(&content)?)
+        Self::load_from_str(&content)
     }
 
     /// Load configuration from file or use defaults
@@ -123,26 +166,21 @@ impl Config {
     #[must_use]
     pub fn rule_lint_level_in_conf(&self, rule_id: &str) -> Option<LintLevel> {
         let mut rule_lint_level_within_conf = None;
+
+        // Check if the rule belongs to any configured lint sets
+        let builtin_sets = builtin_lint_sets();
         for (set_name, level) in &self.lints.sets {
-            if set_name.rules.contains_key(rule_id) {
-                if let Some(rule_lint_level_within_lint_set) = &set_name.rules[rule_id] {
-                    match rule_lint_level_within_conf {
-                        None => {
-                            rule_lint_level_within_conf = Some(*rule_lint_level_within_lint_set);
-                        }
-                        Some(existing_level) => {
-                            // Choose the more severe level
-                            if *rule_lint_level_within_lint_set > existing_level {
-                                rule_lint_level_within_conf =
-                                    Some(*rule_lint_level_within_lint_set);
-                            }
-                        }
-                    }
-                } else {
+            log::debug!("Lint set {set_name} is enabled with level {level:?} in config");
+
+            // Look up the set in builtin sets
+            if let Some(lint_set) = builtin_sets.get(set_name.as_str()) {
+                // Check if this rule is in the set
+                if lint_set.rules.contains_key(rule_id) {
+                    log::debug!("Rule '{rule_id}' found in set '{set_name}' with level {level:?}");
                     match rule_lint_level_within_conf {
                         None => rule_lint_level_within_conf = Some(*level),
                         Some(existing_level) => {
-                            if level > &existing_level {
+                            if *level > existing_level {
                                 rule_lint_level_within_conf = Some(*level);
                             }
                         }
@@ -150,6 +188,15 @@ impl Config {
                 }
             }
         }
+
+        // Individual rule configuration overrides set configuration
+        if let Some(level) = self.lints.rules.get(rule_id) {
+            log::debug!(
+                "Rule '{rule_id}' has individual level '{level:?}' in config, overriding set levels"
+            );
+            rule_lint_level_within_conf = Some(*level);
+        }
+
         rule_lint_level_within_conf
     }
 

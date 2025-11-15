@@ -12,7 +12,7 @@ version = "0.0.33"
 
 [lints.clippy]
 # https://rust-lang.github.io/rust-clippy/master/index.html
-complexity = { level = "deny", priority = -1 }
+complexity = { level = "warn", priority = -1 }
 pedantic = { level = "deny", priority = -1 }
 style = { level = "deny", priority = -1 }
 

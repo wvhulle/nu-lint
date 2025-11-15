@@ -23,7 +23,7 @@ pub use violation::Violation;
 pub(crate) use violation::{Fix, Replacement, RuleViolation};
 
 #[derive(Error, Debug, Diagnostic)]
-pub(crate) enum LintError {
+pub enum LintError {
     #[error("Failed to read file: {0}")]
     #[diagnostic(code(nu_lint::io_error))]
     IoError(#[from] io::Error),

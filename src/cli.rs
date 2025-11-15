@@ -134,11 +134,7 @@ pub fn collect_files_to_lint(paths: &[PathBuf]) -> Vec<PathBuf> {
         }
     }
 
-    let files_to_lint: Vec<PathBuf> = files
-        .into_iter()
-        .filter_map(Result::ok)
-        .flatten()
-        .collect();
+    let files_to_lint: Vec<PathBuf> = files.into_iter().filter_map(Result::ok).flatten().collect();
 
     if files_to_lint.is_empty() {
         eprintln!("Error: No files to lint");
@@ -197,9 +193,7 @@ fn lint_files_parallel(engine: &LintEngine, files: &[PathBuf]) -> (Vec<Violation
             }
             Err(e) => {
                 eprintln!("Error linting {}: {}", path.display(), e);
-                *errors_mutex
-                    .lock()
-                    .expect("Failed to lock errors mutex") = true;
+                *errors_mutex.lock().expect("Failed to lock errors mutex") = true;
             }
         });
 
@@ -269,13 +263,15 @@ fn explain_rule(config: &Config, rule_id: &str) {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::config::LintLevel;
     use std::{
         env::{current_dir, set_current_dir},
         sync::Mutex,
     };
+
     use tempfile::TempDir;
+
+    use super::*;
+    use crate::config::LintLevel;
 
     static CHDIR_MUTEX: Mutex<()> = Mutex::new(());
 
@@ -296,9 +292,11 @@ mod tests {
         let files = collect_files_to_lint(&[nu_file_path]);
         let (violations, _) = lint_files(&engine, &files, false);
 
-        assert!(violations
-            .iter()
-            .any(|v| v.rule_id == "snake_case_variables" && v.lint_level == LintLevel::Allow));
+        assert!(
+            violations
+                .iter()
+                .any(|v| v.rule_id == "snake_case_variables" && v.lint_level == LintLevel::Allow)
+        );
     }
 
     #[test]
@@ -354,9 +352,11 @@ mod tests {
 
         set_current_dir(original_dir).unwrap();
 
-        assert!(violations
-            .iter()
-            .any(|v| v.rule_id == "snake_case_variables" && v.lint_level == LintLevel::Deny));
+        assert!(
+            violations
+                .iter()
+                .any(|v| v.rule_id == "snake_case_variables" && v.lint_level == LintLevel::Deny)
+        );
     }
 
     #[test]
@@ -387,9 +387,11 @@ mod tests {
         let (violations, _) = lint_files(&engine, &files, false);
 
         set_current_dir(original_dir).unwrap();
-        assert!(violations
-            .iter()
-            .any(|v| v.rule_id == "snake_case_variables" && v.lint_level == LintLevel::Deny));
+        assert!(
+            violations
+                .iter()
+                .any(|v| v.rule_id == "snake_case_variables" && v.lint_level == LintLevel::Deny)
+        );
     }
 
     #[test]
@@ -424,8 +426,10 @@ mod tests {
         let (violations, _) = lint_files(&engine, &files, false);
 
         set_current_dir(original_dir).unwrap();
-        assert!(violations
-            .iter()
-            .any(|v| v.rule_id == "snake_case_variables" && v.lint_level == LintLevel::Deny));
+        assert!(
+            violations
+                .iter()
+                .any(|v| v.rule_id == "snake_case_variables" && v.lint_level == LintLevel::Deny)
+        );
     }
 }

@@ -1,10 +1,10 @@
+use std::{borrow::Cow, fs, path::Path, sync::OnceLock};
+
 use nu_parser::parse;
 use nu_protocol::{
     ast::Block,
     engine::{EngineState, StateWorkingSet},
 };
-use std::borrow::Cow;
-use std::{fs, path::Path, sync::OnceLock};
 
 use crate::{
     LintError, config::Config, context::LintContext, rules::RuleRegistry, violation::Violation,

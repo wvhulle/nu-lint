@@ -66,26 +66,6 @@ in
 }
 ```
 
-Or in a `shell.nix`:
-
-```nix
-{ pkgs ? import <nixpkgs> {} }:
-
-let
-  nu-lint = pkgs.callPackage (pkgs.fetchFromGitHub {
-    owner = "wvhulle";
-    repo = "nu-lint";
-    rev = "COMMIT_HASH";
-    sha256 = ""; # nix will tell you the correct hash
-  }) {};
-in
-pkgs.mkShell {
-  buildInputs = [
-    nu-lint
-  ];
-}
-```
-
 ## Usage
 
 Basic:
@@ -117,12 +97,18 @@ nu-lint list-rules
 Create `.nu-lint.toml` in your project root (or any parent directory):
 
 ```toml
-[general]
-min_severity = "info"
+# Configure entire lint sets (e.g., "naming", "idioms", "pedantic")
+[lints.sets]
+naming = "deny"
+idioms = "warn"
 
-[rules]
-snake_case_variables = "warning"
+# Configure individual rules (overrides set settings)
+[lints.rules]
+snake_case_variables = "allow"
+prefer_pipeline_input = "deny"
 ```
+
+Available lint levels: `allow`, `warn`, `deny`
 
 The linter will automatically find and use this config file when you run it. Otherwise:
 
@@ -131,16 +117,6 @@ nu-lint --config custom.toml script.nu
 ```
 
 ## Rules
-
-The rules are categorised roughly in the following categories (but don't rely on the category being completely correct):
-
-- naming
-- formatting
-- idioms
-- error handling
-- code quality
-- documentation
-- type safety
 
 You can add, remove or change rules by forking this repo and opening a PR (see [./CONTRIBUTING.md](./CONTRIBUTING.md)).
 

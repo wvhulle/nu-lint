@@ -41,12 +41,6 @@ pub struct Config {
     pub lints: LintConfig,
 
     #[serde(default)]
-    pub style: StyleConfig,
-
-    #[serde(default)]
-    pub exclude: ExcludeConfig,
-
-    #[serde(default)]
     pub fix: FixConfig,
 }
 
@@ -103,25 +97,6 @@ impl Default for LintConfig {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
-pub struct StyleConfig {
-    #[serde(default = "StyleConfig::default_line_length")]
-    pub line_length: usize,
-
-    #[serde(default = "StyleConfig::default_indent_spaces")]
-    pub indent_spaces: usize,
-}
-
-impl StyleConfig {
-    const fn default_line_length() -> usize {
-        100
-    }
-
-    const fn default_indent_spaces() -> usize {
-        4
-    }
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
 pub struct ExcludeConfig {
     #[serde(default)]
     pub patterns: Vec<String>,
@@ -167,7 +142,8 @@ impl Config {
         // Individual rule configuration overrides set configuration
         if let Some(level) = self.lints.rules.get(rule_id) {
             log::debug!(
-                "Rule '{rule_id}' has individual level '{level:?}' in config, overriding set levels"
+                "Rule '{rule_id}' has individual level '{level:?}' in config, overriding set \
+                 levels"
             );
             return Some(*level);
         }
@@ -199,7 +175,8 @@ impl Config {
     }
 
     /// Get the effective lint level for a specific rule
-    /// Priority: individual rule config > any applicable set config > rule default
+    /// Priority: individual rule config > any applicable set config > rule
+    /// default
     #[must_use]
     pub fn get_lint_level(&self, rule_id: &str, default_level: LintLevel) -> LintLevel {
         // Check individual rule configuration first

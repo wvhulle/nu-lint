@@ -1,6 +1,6 @@
+use std::{collections::HashMap, fmt::Write, fs, path::PathBuf};
+
 use crate::{LintError, violation::Violation};
-use std::fmt::Write;
-use std::{collections::HashMap, fs, path::PathBuf};
 
 /// Result of applying fixes to a file
 #[derive(Debug)]
@@ -134,13 +134,15 @@ pub fn format_fix_results(results: &[FixResult], dry_run: bool) -> String {
 
 #[cfg(test)]
 mod tests {
+    use std::borrow::Cow;
+
+    use nu_protocol::Span;
+
     use super::*;
     use crate::{
         config::LintLevel,
         violation::{Fix, Replacement, Violation},
     };
-    use nu_protocol::Span;
-    use std::borrow::Cow;
 
     #[test]
     fn test_apply_single_replacement() {
@@ -187,7 +189,8 @@ mod tests {
 
     #[test]
     fn test_multiple_fixes_same_file() {
-        // Test that multiple separate fixes to different parts of the same file work correctly
+        // Test that multiple separate fixes to different parts of the same file work
+        // correctly
         let content = "let x = 5; let y = 10; let z = 15";
 
         let fix1 = Fix::new_static(

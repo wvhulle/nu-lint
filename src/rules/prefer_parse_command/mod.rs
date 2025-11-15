@@ -27,10 +27,7 @@ fn has_index_argument(call: &Call, context: &LintContext) -> bool {
     })
 }
 
-fn check_pipeline_for_split_get(
-    pipeline: &Pipeline,
-    context: &LintContext,
-) -> Option<Violation> {
+fn check_pipeline_for_split_get(pipeline: &Pipeline, context: &LintContext) -> Option<Violation> {
     if pipeline.elements.len() < 2 {
         return None;
     }

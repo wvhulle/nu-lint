@@ -1,8 +1,6 @@
 use nu_protocol::ast::{Expr, Pipeline};
 
-use crate::{
-    Fix, LintLevel, Replacement, context::LintContext, rule::Rule, violation::Violation,
-};
+use crate::{Fix, LintLevel, Replacement, context::LintContext, rule::Rule, violation::Violation};
 
 /// Check if a pipeline starts with redundant $in
 fn pipeline_starts_with_redundant_in(pipeline: &Pipeline, context: &LintContext) -> bool {

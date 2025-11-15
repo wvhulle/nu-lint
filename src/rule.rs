@@ -1,7 +1,7 @@
 use core::hash::Hasher;
+use std::hash::Hash;
 
 use crate::{config::LintLevel, context::LintContext, violation::Violation};
-use std::hash::Hash;
 
 /// Lint sets (collections of rules, similar to Clippy's lint groups)
 #[derive(Debug, Clone, Copy)]

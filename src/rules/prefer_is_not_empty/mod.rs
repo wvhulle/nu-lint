@@ -1,8 +1,6 @@
 use nu_protocol::ast::{Expr, Expression, Pipeline};
 
-use crate::{
-    Fix, LintLevel, Replacement, context::LintContext, rule::Rule, violation::Violation,
-};
+use crate::{Fix, LintLevel, Replacement, context::LintContext, rule::Rule, violation::Violation};
 
 fn check_subexpression_for_is_empty(block_id: nu_protocol::BlockId, context: &LintContext) -> bool {
     let block = context.working_set.get_block(block_id);

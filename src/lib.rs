@@ -13,8 +13,7 @@ mod violation;
 
 use std::io;
 
-pub use config::Config;
-pub use config::LintLevel;
+pub use config::{Config, LintLevel};
 pub use engine::LintEngine;
 use miette::Diagnostic;
 pub use output::{

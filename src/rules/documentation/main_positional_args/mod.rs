@@ -1,13 +1,14 @@
 use nu_protocol::ast::{Call, Expr};
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, span::SpanExt},
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    rule::Rule,
+    violation::Violation,
 };
 
-fn check_main_function(call: &Call, context: &LintContext) -> Vec<RuleViolation> {
+fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
     let (_func_name, _name_span) = match call.extract_declaration_name(context) {
         Some((name, span)) if name == "main" => (name, span),
         _ => return vec![],
@@ -29,7 +30,7 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<RuleViolation>
 
             if !param_span.has_inline_doc_comment(context) {
                 violations.push(
-                    RuleViolation::new_dynamic(
+                    Violation::new_dynamic(
                         "main_positional_args_docs",
                         format!(
                             "Positional parameter '{}' in main function is missing documentation \
@@ -54,7 +55,7 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<RuleViolation>
 
             if !param_span.has_inline_doc_comment(context) {
                 violations.push(
-                    RuleViolation::new_dynamic(
+                    Violation::new_dynamic(
                         "main_positional_args_docs",
                         format!(
                             "Optional positional parameter '{}' in main function is missing \
@@ -80,7 +81,7 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<RuleViolation>
 
         if !param_span.has_inline_doc_comment(context) {
             violations.push(
-                RuleViolation::new_dynamic(
+                Violation::new_dynamic(
                     "main_positional_args_docs",
                     format!(
                         "Rest positional parameter '{}' in main function is missing documentation \
@@ -100,7 +101,7 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<RuleViolation>
     violations
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     context.collect_rule_violations(|expr, ctx| {
         if let Expr::Call(call) = &expr.expr {
             let decl_name = call.get_call_name(ctx);
@@ -115,8 +116,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "main_positional_args_docs",
-        RuleCategory::Documentation,
-        Severity::Info,
+        LintLevel::Allow,
         "Positional parameters in main functions should have documentation comments",
         check,
     )

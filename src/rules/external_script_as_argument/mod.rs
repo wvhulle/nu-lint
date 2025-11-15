@@ -1,10 +1,7 @@
 use nu_protocol::SyntaxShape;
 
 use crate::{
-    ast::block::BlockExt,
-    context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    LintLevel, ast::block::BlockExt, context::LintContext, rule::Rule, violation::Violation,
 };
 
 /// Check if a parameter is a string-like type that could be used as a script
@@ -35,8 +32,8 @@ fn create_suggestion_message(param_name: &str, function_name: &str) -> String {
 }
 
 /// Create a violation for a parameter that's used as an external command
-fn create_violation(param_name: &str, function_name: &str, context: &LintContext) -> RuleViolation {
-    RuleViolation::new_dynamic(
+fn create_violation(param_name: &str, function_name: &str, context: &LintContext) -> Violation {
+    Violation::new_dynamic(
         "external_script_as_argument",
         format!(
             "Function '{function_name}' parameter '{param_name}' is used as an external command. \
@@ -47,7 +44,7 @@ fn create_violation(param_name: &str, function_name: &str, context: &LintContext
     .with_suggestion_dynamic(create_suggestion_message(param_name, function_name))
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     let function_bodies = context.collect_function_definitions();
 
     context
@@ -81,8 +78,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "external_script_as_argument",
-        RuleCategory::CodeQuality,
-        Severity::Warning,
+        LintLevel::Warn,
         "Avoid passing external scripts as arguments to custom commands; define them as functions \
          instead",
         check,

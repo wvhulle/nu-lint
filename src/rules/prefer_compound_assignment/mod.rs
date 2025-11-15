@@ -1,10 +1,11 @@
 use nu_protocol::ast::{Assignment, Expr, Expression, Math, Operator, PipelineElement};
 
 use crate::{
+    LintLevel,
     ast::expression::ExpressionExt,
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{Fix, Replacement, RuleViolation, Severity},
+    rule::Rule,
+    violation::{Fix, Replacement, Violation},
 };
 
 fn build_fix(
@@ -54,7 +55,7 @@ const fn get_operator_symbol(operator: Operator) -> &'static str {
     }
 }
 
-fn check_for_compound_assignment(expr: &Expression, ctx: &LintContext) -> Option<RuleViolation> {
+fn check_for_compound_assignment(expr: &Expression, ctx: &LintContext) -> Option<Violation> {
     let Expr::BinaryOp(left, op_expr, right) = &expr.expr else {
         return None;
     };
@@ -91,7 +92,7 @@ fn check_for_compound_assignment(expr: &Expression, ctx: &LintContext) -> Option
 
     let fix = build_fix(var_text, compound_op, element, expr.span, ctx);
 
-    let violation = RuleViolation::new_dynamic(
+    let violation = Violation::new_dynamic(
         "prefer_compound_assignment",
         format!(
             "Use compound assignment: {var_text} {compound_op} instead of {var_text} = {var_text} \
@@ -109,7 +110,7 @@ fn check_for_compound_assignment(expr: &Expression, ctx: &LintContext) -> Option
     Some(violation)
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     context.collect_rule_violations(|expr, ctx| {
         check_for_compound_assignment(expr, ctx)
             .into_iter()
@@ -120,8 +121,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "prefer_compound_assignment",
-        RuleCategory::Idioms,
-        Severity::Warning,
+        LintLevel::Warn,
         "Use compound assignment operators (+=, -=, etc.) for clarity",
         check,
     )

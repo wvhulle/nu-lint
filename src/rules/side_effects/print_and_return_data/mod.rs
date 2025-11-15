@@ -4,10 +4,11 @@ use nu_protocol::{
 };
 
 use crate::{
+    LintLevel,
     ast::{block::BlockExt, call::CallExt, effect::is_side_effect_only},
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    rule::Rule,
+    violation::Violation,
 };
 
 fn has_print_call(block: &Block, context: &LintContext) -> bool {
@@ -62,7 +63,7 @@ fn is_side_effect_only_command(expr: &Expression, context: &LintContext) -> bool
     }
 }
 
-fn check_function_definition(call: &Call, context: &LintContext) -> Option<RuleViolation> {
+fn check_function_definition(call: &Call, context: &LintContext) -> Option<Violation> {
     let (block_id, func_name) = call.extract_function_definition(context)?;
 
     // Skip main function as it often combines output and side effects
@@ -90,12 +91,12 @@ fn check_function_definition(call: &Call, context: &LintContext) -> Option<RuleV
         .to_string();
 
     Some(
-        RuleViolation::new_dynamic("print_and_return_data", message, name_span)
+        Violation::new_dynamic("print_and_return_data", message, name_span)
             .with_suggestion_dynamic(suggestion),
     )
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     context.collect_rule_violations(|expr, ctx| {
         if let Expr::Call(call) = &expr.expr
             && call.extract_function_definition(ctx).is_some()
@@ -109,8 +110,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "print_and_return_data",
-        RuleCategory::SideEffects,
-        Severity::Warning,
+        LintLevel::Warn,
         "Functions should not both print to stdout and return data",
         check,
     )

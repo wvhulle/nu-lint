@@ -6,7 +6,7 @@ use nu_protocol::{
     engine::{Command, EngineState, StateWorkingSet},
 };
 
-use crate::{ast::call::CallExt, violation::RuleViolation};
+use crate::{ast::call::CallExt, violation::Violation};
 
 /// Context containing all lint information (source, AST, and engine state)
 /// Rules can use whatever they need from this context
@@ -19,9 +19,9 @@ pub struct LintContext<'a> {
 
 impl LintContext<'_> {
     /// Collect all rule violations using a closure over expressions
-    pub(crate) fn collect_rule_violations<F>(&self, collector: F) -> Vec<RuleViolation>
+    pub(crate) fn collect_rule_violations<F>(&self, collector: F) -> Vec<Violation>
     where
-        F: Fn(&Expression, &Self) -> Vec<RuleViolation>,
+        F: Fn(&Expression, &Self) -> Vec<Violation>,
     {
         let mut violations = Vec::new();
 

@@ -4,13 +4,14 @@ use nu_protocol::{
 };
 
 use crate::{
+    LintLevel,
     ast::{
         call::CallExt, expression::ExpressionExt, pipeline::PipelineExt, span::SpanExt,
         syntax_shape::SyntaxShapeExt,
     },
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{Fix, Replacement, RuleViolation, Severity},
+    rule::Rule,
+    violation::{Fix, Replacement, Violation},
 };
 
 fn infer_param_type(
@@ -113,7 +114,7 @@ fn check_signature(
     signature_span: nu_protocol::Span,
     body_block_id: nu_protocol::BlockId,
     ctx: &LintContext,
-) -> Vec<RuleViolation> {
+) -> Vec<Violation> {
     log::debug!("Checking signature for missing type annotations: {sig:?}");
     let params_needing_types: Vec<_> = sig
         .required_positional
@@ -138,7 +139,7 @@ fn check_signature(
         .into_iter()
         .map(|param| {
             let param_span = signature_span.find_substring_span(&param.name, ctx);
-            RuleViolation::new_dynamic(
+            Violation::new_dynamic(
                 "missing_type_annotation",
                 format!("Parameter '{}' is missing type annotation", param.name),
                 param_span,
@@ -149,7 +150,7 @@ fn check_signature(
         .collect()
 }
 
-fn check_def_call(call: &Call, ctx: &LintContext) -> Vec<RuleViolation> {
+fn check_def_call(call: &Call, ctx: &LintContext) -> Vec<Violation> {
     let decl = ctx.working_set.get_decl(call.decl_id);
 
     (decl.name() == "def" || decl.name() == "export def")
@@ -171,7 +172,7 @@ fn check_def_call(call: &Call, ctx: &LintContext) -> Vec<RuleViolation> {
         .unwrap_or_default()
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     context.collect_rule_violations(|expr, ctx| match &expr.expr {
         Expr::Call(call) => check_def_call(call, ctx),
         _ => vec![],
@@ -181,8 +182,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "missing_type_annotation",
-        RuleCategory::TypeSafety,
-        Severity::Warning,
+        LintLevel::Warn,
         "Parameters should have type annotations",
         check,
     )

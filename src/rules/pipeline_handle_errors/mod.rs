@@ -4,10 +4,7 @@ use nu_protocol::{
 };
 
 use crate::{
-    ast::call::CallExt,
-    context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation,
 };
 
 /// Whitelist of external commands that are generally safe and unlikely to fail
@@ -85,7 +82,7 @@ fn is_safe_command(cmd: &str) -> bool {
 fn check_pipeline_for_external_commands(
     pipeline: &Pipeline,
     context: &LintContext,
-) -> Option<RuleViolation> {
+) -> Option<Violation> {
     // Single element pipelines don't have the issue - the exit code is checked
     if pipeline.elements.len() <= 1 {
         return None;
@@ -111,7 +108,7 @@ fn check_pipeline_for_external_commands(
         })
 }
 
-fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<RuleViolation>) {
+fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<Violation>) {
     for pipeline in &block.pipelines {
         // Check the pipeline itself unless it's a definition
         if !is_alias_or_export_definition(pipeline, context) {
@@ -126,7 +123,7 @@ fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<RuleVi
 fn check_pipeline_for_nested_blocks(
     pipeline: &Pipeline,
     context: &LintContext,
-    violations: &mut Vec<RuleViolation>,
+    violations: &mut Vec<Violation>,
 ) {
     use nu_protocol::ast::Traverse;
 
@@ -222,7 +219,7 @@ fn is_pipeline_wrapped_in_error_handling(pipeline: &Pipeline, context: &LintCont
         || pipeline_has_do_ignore(pipeline, context)
 }
 
-fn create_violation(span: Span, _pipeline: &Pipeline, _context: &LintContext) -> RuleViolation {
+fn create_violation(span: Span, _pipeline: &Pipeline, _context: &LintContext) -> Violation {
     let message = "External command in pipeline without error handling: Nushell only checks the \
                    last command's exit code. If this command fails, the error will be silently \
                    ignored.";
@@ -243,11 +240,11 @@ fn create_violation(span: Span, _pipeline: &Pipeline, _context: &LintContext) ->
                ^curl https://api.example.com | from json\n\
            }";
 
-    RuleViolation::new_static("pipeline_handle_errors", message, span)
+    Violation::new_static("pipeline_handle_errors", message, span)
         .with_suggestion_static(suggestion)
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     let mut violations = Vec::new();
     check_block(context.ast, context, &mut violations);
     violations
@@ -256,8 +253,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "pipeline_handle_errors",
-        RuleCategory::ErrorHandling,
-        Severity::Warning,
+        LintLevel::Warn,
         "Ensure external commands in pipelines have proper error handling",
         check,
     )

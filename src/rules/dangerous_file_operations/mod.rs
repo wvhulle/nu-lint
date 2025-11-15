@@ -4,10 +4,7 @@ use nu_protocol::{
 };
 
 use crate::{
-    ast::call::CallExt,
-    context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation,
 };
 
 const DANGEROUS_COMMANDS: &[&str] = &["rm", "mv", "cp"];
@@ -168,9 +165,9 @@ fn create_dangerous_path_violation(
     path_str: &str,
     command_span: Span,
     is_recursive: bool,
-) -> RuleViolation {
+) -> Violation {
     let severity = if is_recursive { "CRITICAL" } else { "WARNING" };
-    RuleViolation::new_dynamic(
+    Violation::new_dynamic(
         "dangerous_file_operations",
         format!(
             "{severity}: Dangerous file operation '{cmd_name} {path_str}' - could cause data loss"
@@ -186,8 +183,8 @@ fn create_variable_validation_violation(
     cmd_name: &str,
     path_str: &str,
     command_span: Span,
-) -> RuleViolation {
-    RuleViolation::new_dynamic(
+) -> Violation {
+    Violation::new_dynamic(
         "dangerous_file_operations",
         format!("Variable '{path_str}' used in '{cmd_name}' command without visible validation"),
         command_span,
@@ -212,7 +209,7 @@ fn check_command_arguments(
     args: &[ExternalArgument],
     command_span: Span,
     context: &LintContext,
-    violations: &mut Vec<RuleViolation>,
+    violations: &mut Vec<Violation>,
 ) {
     let is_recursive = cmd_name == "rm" && has_recursive_flag(args, context);
 
@@ -238,7 +235,7 @@ fn check_command_arguments(
     }
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     use nu_protocol::ast::Traverse;
 
     let mut violations = Vec::new();
@@ -264,8 +261,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "dangerous_file_operations",
-        RuleCategory::ErrorHandling,
-        Severity::Warning,
+        LintLevel::Warn,
         "Detect dangerous file operations that could cause data loss",
         check,
     )

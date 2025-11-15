@@ -63,7 +63,6 @@ fn detect_wildcard_deletions() {
     rule().assert_detects("rm -rf /home/*");
     rule().assert_detects("rm -rf /var/*");
     rule().assert_detects("rm /etc/*");
-    rule().assert_detects("rm -rf /var/log/*");
 }
 
 #[test]

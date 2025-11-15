@@ -1,10 +1,6 @@
 use nu_protocol::ast::{Expr, Pipeline, Traverse};
 
-use crate::{
-    context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
-};
+use crate::{LintLevel, context::LintContext, rule::Rule, violation::Violation};
 
 fn is_non_comment_statement(pipeline: &Pipeline) -> bool {
     pipeline
@@ -68,7 +64,7 @@ fn is_exported_function(function_name: &str, context: &LintContext) -> bool {
         .contains(&format!("export def {function_name}"))
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     let function_definitions = context.collect_function_definitions();
 
     let has_main = function_definitions.values().any(|name| name == "main");
@@ -83,7 +79,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
         .filter(|(block_id, _)| has_single_statement_body(**block_id, context))
         .filter(|(_, name)| count_function_calls(name, context) == 1)
         .map(|(_, function_name)| {
-            RuleViolation::new_dynamic(
+            Violation::new_dynamic(
                 "inline_single_use_function",
                 format!("Function `{function_name}` has a single-line body and is only used once"),
                 context.find_declaration_span(function_name),
@@ -99,8 +95,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "inline_single_use_function",
-        RuleCategory::CodeQuality,
-        Severity::Info,
+        LintLevel::Allow,
         "Detect single-line custom commands used only once that could be inlined",
         check,
     )

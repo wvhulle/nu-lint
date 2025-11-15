@@ -1,15 +1,16 @@
 use nu_protocol::ast::{Call, Expr, Expression, Traverse};
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    rule::Rule,
+    violation::Violation,
 };
 
 const MAX_FUNCTION_LINE_LENGTH: usize = 80;
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     let mut violations = Vec::new();
 
     context.ast.flat_map(
@@ -32,7 +33,7 @@ fn function_too_long(
     context: &LintContext<'_>,
     expr: &Expression,
     call: &Call,
-) -> Option<RuleViolation> {
+) -> Option<Violation> {
     let call_name = call.get_call_name(context);
     if matches!(call_name.as_str(), "def" | "export def")
         && let Some((function_name, _)) = call.extract_declaration_name(context)
@@ -47,8 +48,8 @@ fn function_too_long(
     None
 }
 
-fn create_violation(function_name: &str, span: nu_protocol::Span) -> RuleViolation {
-    RuleViolation::new_dynamic(
+fn create_violation(function_name: &str, span: nu_protocol::Span) -> Violation {
+    Violation::new_dynamic(
         "prefer_multiline_functions",
         format!(
             "Function '{function_name}' is too long for a single line ({} characters)",
@@ -67,8 +68,7 @@ fn create_violation(function_name: &str, span: nu_protocol::Span) -> RuleViolati
 pub fn rule() -> Rule {
     Rule::new(
         "prefer_multiline_functions",
-        RuleCategory::Formatting,
-        Severity::Info,
+        LintLevel::Allow,
         "Prefer multiline format for long function definitions",
         check,
     )

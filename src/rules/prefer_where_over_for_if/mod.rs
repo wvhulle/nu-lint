@@ -1,10 +1,11 @@
 use nu_protocol::ast::{Argument, Block, Call, Expr, Expression, Operator};
 
 use crate::{
+    LintLevel,
     ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    rule::Rule,
+    violation::Violation,
 };
 
 /// Check if an expression contains append of just the loop variable
@@ -304,7 +305,7 @@ fn extract_var_ids_from_if_statements(
     var_ids
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     use std::collections::{HashMap, HashSet};
 
     use nu_protocol::ast::Traverse;
@@ -342,7 +343,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
     for (var_id, (var_name, span)) in &empty_list_vars_map {
         if filtering_set.contains(var_id) {
             log::debug!("Creating violation for var '{var_name}'");
-            let violation = RuleViolation::new_dynamic(
+            let violation = Violation::new_dynamic(
                 "prefer_where_over_for_if",
                 format!("Variable '{var_name}' accumulates filtered items - use 'where' instead"),
                 *span,
@@ -361,8 +362,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "prefer_where_over_for_if",
-        RuleCategory::Idioms,
-        Severity::Warning,
+        LintLevel::Warn,
         "Prefer 'where' filter over for loop with if statement",
         check,
     )

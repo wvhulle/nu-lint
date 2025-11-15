@@ -1,14 +1,14 @@
 use crate::rules::replace_by_builtin::ls::rule;
 
 #[test]
-fn converts_all_flag() {
+fn converts_ls_all_flag_to_builtin_all() {
     let source = "^ls -a";
     rule().assert_fix_contains(source, "ls --all");
     rule().assert_fix_description_contains(source, "--all");
 }
 
 #[test]
-fn converts_combined_flags() {
+fn converts_ls_combined_flags_strips_unnecessary() {
     let source = "^ls -la";
     rule().assert_fix_contains(source, "ls --all");
     rule().assert_fix_description_contains(source, "-l");
@@ -16,7 +16,7 @@ fn converts_combined_flags() {
 }
 
 #[test]
-fn converts_human_readable_flag() {
+fn converts_ls_human_readable_flag_not_needed() {
     let source = "^ls -h";
     rule().assert_fix_contains(source, "ls");
     rule().assert_fix_description_contains(source, "-h");
@@ -24,7 +24,7 @@ fn converts_human_readable_flag() {
 }
 
 #[test]
-fn converts_long_flag() {
+fn converts_ls_long_flag_not_needed() {
     let source = "^ls -l";
     rule().assert_fix_contains(source, "ls");
     rule().assert_fix_description_contains(source, "-l");

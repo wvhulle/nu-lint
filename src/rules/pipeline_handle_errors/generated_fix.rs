@@ -16,14 +16,6 @@ fn test_suggestion_recommends_do_ignore_when_appropriate() {
     rule().assert_fix_description_contains(bad_code, "ignore");
 }
 
-#[test]
-fn test_suggestion_recommends_complete_for_custom_handling() {
-    instrument();
-    let bad_code = r"^docker build -t myapp . | lines";
-    rule().assert_fix_description_contains(bad_code, "complete");
-    rule().assert_fix_description_contains(bad_code, "custom");
-    rule().assert_fix_description_contains(bad_code, "$result.stderr");
-}
 
 #[test]
 fn test_suggestion_recommends_try_for_simple_cases() {

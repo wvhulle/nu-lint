@@ -1,7 +1,7 @@
 use super::rule;
 
 #[test]
-fn test_exported_function_without_docs() {
+fn exported_function_missing_documentation() {
     let source = r#"
 export def my-command [] {
     echo "hello"
@@ -11,7 +11,7 @@ export def my-command [] {
 }
 
 #[test]
-fn test_exported_function_with_params_without_docs() {
+fn exported_function_with_params_missing_documentation() {
     let source = r"
 export def process-data [input: string, output: string] {
     echo $input | save $output

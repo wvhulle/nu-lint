@@ -1,11 +1,6 @@
 use nu_protocol::ast::{Expr, Expression, Pipeline};
 
-use crate::{
-    Fix, Replacement,
-    context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
-};
+use crate::{Fix, LintLevel, Replacement, context::LintContext, rule::Rule, violation::Violation};
 
 fn check_subexpression_for_is_empty(block_id: nu_protocol::BlockId, context: &LintContext) -> bool {
     let block = context.working_set.get_block(block_id);
@@ -93,7 +88,7 @@ fn generate_fix_text(expr: &Expression, context: &LintContext) -> Option<String>
     }
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     context.collect_rule_violations(|expr, ctx| {
         // Check for "not ... is-empty" pattern
         if is_not_is_empty_pattern(expr, ctx)
@@ -105,7 +100,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
             );
 
             vec![
-                RuleViolation::new_static(
+                Violation::new_static(
                     "prefer_is_not_empty",
                     "Use 'is-not-empty' instead of 'not ... is-empty' for better readability",
                     expr.span,
@@ -122,8 +117,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "prefer_is_not_empty",
-        RuleCategory::Idioms,
-        Severity::Warning,
+        LintLevel::Warn,
         "Use 'is-not-empty' instead of 'not ... is-empty' for better readability",
         check,
     )

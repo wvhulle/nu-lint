@@ -1,79 +1,44 @@
-use core::fmt::{self, Display, Formatter};
+use core::hash::Hasher;
+use std::hash::Hash;
 
-use crate::{
-    context::LintContext,
-    violation::{RuleViolation, Severity},
-};
+use crate::{config::LintLevel, context::LintContext, violation::Violation};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RuleCategory {
-    /// Rules about identifier naming conventions (`snake_case`, kebab-case,
-    /// etc.)
-    Naming,
-    /// Code layout and whitespace formatting rules
-    Formatting,
-    /// Nushell-specific best practices and preferred patterns
-    Idioms,
-    /// Error management and safety patterns
-    ErrorHandling,
-    /// General code cleanliness and maintainability
-    CodeQuality,
-    /// Documentation requirements and standards
-    Documentation,
-    /// Type annotations and type safety
-    TypeSafety,
-    /// Performance optimizations and efficient patterns
-    Performance,
-    /// Side effect management and separation patterns
-    SideEffects,
-}
-
-impl RuleCategory {
-    /// Get the string representation of this category
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Naming => "naming",
-            Self::Formatting => "formatting",
-            Self::Idioms => "idioms",
-            Self::ErrorHandling => "error-handling",
-            Self::CodeQuality => "code-quality",
-            Self::Documentation => "documentation",
-            Self::TypeSafety => "type-safety",
-            Self::Performance => "performance",
-            Self::SideEffects => "side-effects",
-        }
-    }
-}
-
-impl Display for RuleCategory {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
-}
+/// Lint sets (collections of rules, similar to Clippy's lint groups)
+#[derive(Debug, Clone, Copy)]
 
 /// A concrete rule struct that wraps the check function
 pub struct Rule {
     pub id: &'static str,
-    pub category: RuleCategory,
-    pub severity: Severity,
+    pub default_lint_level: LintLevel,
     pub description: &'static str,
-    pub(crate) check: fn(&LintContext) -> Vec<RuleViolation>,
+    pub(crate) check: fn(&LintContext) -> Vec<Violation>,
 }
+
+impl Hash for Rule {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
+}
+
+impl PartialEq for Rule {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Eq for Rule {}
 
 impl Rule {
     /// Create a new rule
     pub(crate) const fn new(
         id: &'static str,
-        category: RuleCategory,
-        severity: Severity,
+        default_lint_level: LintLevel,
         description: &'static str,
-        check: fn(&LintContext) -> Vec<RuleViolation>,
+        check: fn(&LintContext) -> Vec<Violation>,
     ) -> Self {
         Self {
             id,
-            category,
-            severity,
+            default_lint_level,
             description,
             check,
         }

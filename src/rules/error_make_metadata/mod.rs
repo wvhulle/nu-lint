@@ -1,10 +1,11 @@
 use nu_protocol::ast::{Call, Expr, Expression, RecordItem};
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    rule::Rule,
+    violation::Violation,
 };
 
 struct MetadataFields {
@@ -149,7 +150,7 @@ fn check_error_make_metadata(
     record: &[RecordItem],
     context: &LintContext,
     call_span: nu_protocol::Span,
-) -> Option<RuleViolation> {
+) -> Option<Violation> {
     let fields = analyze_record_fields(record, context);
 
     if !fields.has_msg || fields.is_valid() {
@@ -171,7 +172,7 @@ fn check_error_make_metadata(
     let suggestion = build_suggestion(&missing_fields, &current_msg, &example_span);
 
     Some(
-        RuleViolation::new_dynamic(
+        Violation::new_dynamic(
             "error_make_metadata",
             format!("error make call is missing metadata fields: {missing_list}"),
             call_span,
@@ -191,7 +192,7 @@ fn extract_record_from_expr(expr: &Expression) -> Option<&Vec<RecordItem>> {
     }
 }
 
-fn check_error_make_call(call: &Call, context: &LintContext) -> Option<RuleViolation> {
+fn check_error_make_call(call: &Call, context: &LintContext) -> Option<Violation> {
     call.is_call_to_command("error make", context)
         .then_some(())
         .and_then(|()| call.get_first_positional_arg())
@@ -199,7 +200,7 @@ fn check_error_make_call(call: &Call, context: &LintContext) -> Option<RuleViola
         .and_then(|record| check_error_make_metadata(record, context, call.span()))
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     context.collect_rule_violations(|expr, ctx| match &expr.expr {
         Expr::Call(call) => check_error_make_call(call, ctx).into_iter().collect(),
         _ => vec![],
@@ -209,8 +210,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "error_make_metadata",
-        RuleCategory::ErrorHandling,
-        Severity::Info,
+        LintLevel::Allow,
         "error make calls should include metadata fields like label and help for better error \
          context",
         check,

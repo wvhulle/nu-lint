@@ -6,14 +6,15 @@ use nu_protocol::{
 };
 
 use crate::{
+    LintLevel,
     ast::{
         call::CallExt,
         effect::{IoType, get_io_type},
         expression::ExpressionExt,
     },
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    rule::Rule,
+    violation::Violation,
 };
 
 fn collect_io_types_from_expression(
@@ -60,7 +61,7 @@ fn analyze_function_body(
     block_id: BlockId,
     function_name: &str,
     context: &LintContext,
-) -> Option<RuleViolation> {
+) -> Option<Violation> {
     let block = context.working_set.get_block(block_id);
 
     let mut io_types = HashSet::new();
@@ -85,7 +86,7 @@ fn analyze_function_body(
     );
 
     Some(
-        RuleViolation::new_dynamic(
+        Violation::new_dynamic(
             "mixed_io_types",
             message,
             context.find_declaration_span(function_name),
@@ -98,7 +99,7 @@ fn analyze_function_body(
     )
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     let function_definitions = context.collect_function_definitions();
 
     let has_main = function_definitions.values().any(|name| name == "main");
@@ -117,8 +118,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "mixed_io_types",
-        RuleCategory::SideEffects,
-        Severity::Warning,
+        LintLevel::Allow,
         "Functions should not mix different types of I/O operations",
         check,
     )

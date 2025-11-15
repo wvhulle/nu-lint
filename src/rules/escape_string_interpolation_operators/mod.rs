@@ -4,10 +4,8 @@ use nu_protocol::ast::{
 };
 
 use crate::{
-    ast::expression::ExpressionExt,
-    context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    LintLevel, ast::expression::ExpressionExt, context::LintContext, rule::Rule,
+    violation::Violation,
 };
 
 /// Detection categories for problematic AST patterns in string interpolations
@@ -193,7 +191,7 @@ fn is_valid_interpolation(expr: &Expression, context: &LintContext) -> bool {
     }
 }
 
-fn create_violation(span: nu_protocol::Span, pattern: ProblematicPattern) -> RuleViolation {
+fn create_violation(span: nu_protocol::Span, pattern: ProblematicPattern) -> Violation {
     let (message, suggestion) = match pattern {
         ProblematicPattern::StandaloneOperator(op) => (
             format!(
@@ -221,7 +219,7 @@ fn create_violation(span: nu_protocol::Span, pattern: ProblematicPattern) -> Rul
         ),
     };
 
-    RuleViolation::new_dynamic("escape_string_interpolation_operators", message, span)
+    Violation::new_dynamic("escape_string_interpolation_operators", message, span)
         .with_suggestion_dynamic(suggestion)
 }
 
@@ -229,7 +227,7 @@ fn check_string_interpolation(
     exprs: &[Expression],
     span: nu_protocol::Span,
     context: &LintContext,
-) -> Option<RuleViolation> {
+) -> Option<Violation> {
     // Only check non-string expressions (i.e., interpolated expressions)
     exprs
         .iter()
@@ -244,7 +242,7 @@ fn check_string_interpolation(
         })
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     context.collect_rule_violations(|expr, ctx| {
         if let Expr::StringInterpolation(exprs) = &expr.expr
             && let Some(violation) = check_string_interpolation(exprs, expr.span, ctx)
@@ -259,8 +257,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "escape_string_interpolation_operators",
-        RuleCategory::ErrorHandling,
-        Severity::Error,
+        LintLevel::Deny,
         "Detect reliably identifiable AST patterns in string interpolations that will cause \
          runtime errors (standalone operators, external boolean operator calls, literal boolean \
          operations)",

@@ -15,7 +15,7 @@ fn bench_lint_small_file(c: &mut Criterion) {
         let config = Config::default();
         let lint_engine = LintEngine::new(config);
         b.iter(|| {
-            black_box(lint_engine.lint_source(&source, None));
+            black_box(lint_engine.lint_str(&source));
         });
     });
 
@@ -34,7 +34,7 @@ fn bench_lint_medium_file(c: &mut Criterion) {
         let config = Config::default();
         let lint_engine = LintEngine::new(config);
         b.iter(|| {
-            black_box(lint_engine.lint_source(&source, None));
+            black_box(lint_engine.lint_str(&source));
         });
     });
 
@@ -53,7 +53,7 @@ fn bench_lint_with_violations(c: &mut Criterion) {
         let config = Config::default();
         let lint_engine = LintEngine::new(config);
         b.iter(|| {
-            black_box(lint_engine.lint_source(&source, None));
+            black_box(lint_engine.lint_str(&source));
         });
     });
 

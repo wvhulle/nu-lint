@@ -1,10 +1,11 @@
 use nu_protocol::ast::{Expr, Expression, Pipeline};
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, pipeline::PipelineExt},
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    rule::Rule,
+    violation::Violation,
 };
 
 /// Commands that are known to produce no output (even if type system says
@@ -60,7 +61,7 @@ fn command_produces_no_output(expr: &Expression, context: &LintContext) -> bool 
     }
 }
 
-fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<RuleViolation> {
+fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violation> {
     let prev_expr = pipeline.element_before_ignore(context)?;
 
     if !command_produces_no_output(prev_expr, context) {
@@ -84,7 +85,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<RuleViol
     let ignore_span = pipeline.elements.last()?.expr.span;
 
     Some(
-        RuleViolation::new_static(
+        Violation::new_static(
             "unnecessary_ignore",
             "Using '| ignore' with commands that produce no output",
             ignore_span,
@@ -98,7 +99,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<RuleViol
     )
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     context
         .ast
         .pipelines
@@ -123,8 +124,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "unnecessary_ignore",
-        RuleCategory::Idioms,
-        Severity::Warning,
+        LintLevel::Warn,
         "Commands that produce no output don't need '| ignore'",
         check,
     )

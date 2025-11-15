@@ -3,11 +3,11 @@ use std::collections::HashMap;
 use nu_protocol::ast::ExternalArgument;
 
 use crate::{
-    RuleViolation,
+    LintLevel, Violation,
     ast::ext_command::{BuiltinAlternative, ExternalArgumentExt, detect_external_commands},
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{Fix, Replacement, Severity},
+    rule::Rule,
+    violation::{Fix, Replacement},
 };
 
 fn get_builtin_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
@@ -164,7 +164,7 @@ fn build_fix(
     }
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     detect_external_commands(
         context,
         "prefer_builtin_uniq",
@@ -176,8 +176,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "prefer_builtin_uniq",
-        RuleCategory::Idioms,
-        Severity::Info,
+        LintLevel::Allow,
         "Use Nu's 'uniq' command for structured data support",
         check,
     )

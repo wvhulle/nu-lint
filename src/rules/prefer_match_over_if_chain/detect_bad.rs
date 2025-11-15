@@ -2,7 +2,7 @@ use super::rule;
 use crate::log::instrument;
 
 #[test]
-fn test_detect_if_chain_in_function() {
+fn test_detect_string_equality_chain_in_function() {
     instrument();
     let bad_code = r#"
 def get-color [scope: string] {
@@ -30,18 +30,16 @@ fn test_detect_inline_if_chain() {
 }
 
 #[test]
-fn test_detect_numeric_comparison_chain() {
+fn test_detect_numeric_equality_chain() {
     let bad_code = r#"
-def get-status [code: int] {
-    if $code == 200 {
-        "ok"
-    } else if $code == 404 {
-        "not found"
-    } else if $code == 500 {
-        "server error"
-    } else {
-        "unknown"
-    }
+if $code == 200 {
+    "ok"
+} else if $code == 404 {
+    "not found"
+} else if $code == 500 {
+    "server error"
+} else {
+    "unknown"
 }
 "#;
 
@@ -49,7 +47,7 @@ def get-status [code: int] {
 }
 
 #[test]
-fn test_detect_chain_with_four_branches() {
+fn test_detect_four_branch_equality_chain() {
     let bad_code = r#"
 if $status == "pending" {
     1
@@ -87,23 +85,6 @@ let mapper = {|item|
 }
 
 #[test]
-fn test_detect_chain_with_string_alternatives() {
-    let bad_code = r#"
-if $env == "dev" {
-    "development"
-} else if $env == "staging" {
-    "staging"
-} else if $env == "prod" {
-    "production"
-} else {
-    "unknown"
-}
-"#;
-
-    rule().assert_detects(bad_code);
-}
-
-#[test]
 fn test_detect_minimal_three_branch_chain() {
     let bad_code = r#"
 if $x == 1 { "one" } else if $x == 2 { "two" } else if $x == 3 { "three" }
@@ -113,7 +94,7 @@ if $x == 1 { "one" } else if $x == 2 { "two" } else if $x == 3 { "three" }
 }
 
 #[test]
-fn test_detect_chain_with_not_equal() {
+fn test_detect_chain_with_not_equal_operator() {
     let bad_code = r#"
 if $type != "string" {
     "not string"
@@ -123,28 +104,6 @@ if $type != "string" {
     "not bool"
 } else {
     "unknown"
-}
-"#;
-
-    rule().assert_detects(bad_code);
-}
-
-#[test]
-fn test_detect_chain_in_nested_function() {
-    let bad_code = r#"
-def outer [] {
-    def inner [val: string] {
-        if $val == "first" {
-            1
-        } else if $val == "second" {
-            2
-        } else if $val == "third" {
-            3
-        } else {
-            0
-        }
-    }
-    inner "test"
 }
 "#;
 

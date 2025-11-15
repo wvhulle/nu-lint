@@ -1,7 +1,7 @@
 use super::rule;
 
 #[test]
-fn test_pipe_spacing() {
+fn test_detect_missing_pipe_spacing() {
     let bad = "ls|get name";
 
     rule().assert_detects(bad);

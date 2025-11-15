@@ -1,17 +1,14 @@
 use nu_protocol::ast::{Argument, Block, Expr, PipelineElement};
 
 use crate::{
-    ast::call::CallExt,
-    context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation,
 };
 
 fn check_sequential_stderr_exit(
     first: &PipelineElement,
     second: &PipelineElement,
     context: &LintContext,
-) -> Option<RuleViolation> {
+) -> Option<Violation> {
     let print_call = match &first.expr.expr {
         Expr::Call(call) if call.is_call_to_command("print", context) => call,
         _ => return None,
@@ -32,7 +29,7 @@ fn check_sequential_stderr_exit(
     };
 
     Some(
-        RuleViolation::new_static(
+        Violation::new_static(
             "prefer_error_make_for_stderr",
             "Use 'error make' instead of 'print stderr' + 'exit' for error conditions",
             print_call.span().merge(exit_call.span()),
@@ -47,7 +44,7 @@ fn check_sequential_stderr_exit(
 fn check_block_pipelines<'a>(
     block: &'a Block,
     context: &'a LintContext<'a>,
-) -> impl Iterator<Item = RuleViolation> + 'a {
+) -> impl Iterator<Item = Violation> + 'a {
     block.pipelines.windows(2).filter_map(move |pipelines| {
         let [first_pipeline, second_pipeline] = pipelines else {
             return None;
@@ -64,7 +61,7 @@ fn check_block_pipelines<'a>(
     })
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     let main_violations = check_block_pipelines(context.ast, context);
 
     let nested_violations = context.collect_rule_violations(|expr, ctx| match &expr.expr {
@@ -81,8 +78,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "prefer_error_make_for_stderr",
-        RuleCategory::ErrorHandling,
-        Severity::Warning,
+        LintLevel::Warn,
         "Use 'error make' instead of 'print stderr' + 'exit' for structured error handling",
         check,
     )

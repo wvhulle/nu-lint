@@ -1,7 +1,7 @@
 use super::rule;
 
 #[test]
-fn test_pipe_spacing() {
+fn test_proper_pipe_spacing() {
     let good = "ls | get name | str upcase";
     rule().assert_ignores(good);
 }

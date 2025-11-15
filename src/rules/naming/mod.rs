@@ -1,7 +1,7 @@
 use heck::{ToKebabCase, ToSnakeCase};
 use nu_protocol::Span;
 
-use crate::violation::{Fix, Replacement, RuleViolation};
+use crate::violation::{Fix, Replacement, Violation};
 
 pub mod kebab_case_commands;
 
@@ -23,7 +23,7 @@ pub trait NuNaming {
         item_type: &str,
         suggested_name: &str,
         name_span: Span,
-    ) -> RuleViolation;
+    ) -> Violation;
 }
 
 impl NuNaming for str {
@@ -41,7 +41,7 @@ impl NuNaming for str {
         item_type: &str,
         suggested_name: &str,
         name_span: Span,
-    ) -> RuleViolation {
+    ) -> Violation {
         let fix = Fix {
             description: format!("Rename {item_type} '{self}' to '{suggested_name}'").into(),
             replacements: vec![Replacement {
@@ -50,7 +50,7 @@ impl NuNaming for str {
             }],
         };
 
-        RuleViolation::new_dynamic(
+        Violation::new_dynamic(
             rule_id,
             format!("{item_type} '{self}' should follow naming convention"),
             name_span,

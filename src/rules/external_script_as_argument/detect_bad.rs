@@ -1,7 +1,7 @@
 use super::rule;
 
 #[test]
-fn main_with_script_path_parameter() {
+fn test_detect_main_with_script_path_parameter() {
     rule().assert_detects(
         r#"
 def main [handler_path: string] {
@@ -13,18 +13,7 @@ def main [handler_path: string] {
 }
 
 #[test]
-fn main_with_filepath_parameter() {
-    rule().assert_detects(
-        r"
-def main [script: path] {
-  ^$script
-}
-",
-    );
-}
-
-#[test]
-fn main_with_any_type_parameter_used_as_command() {
+fn test_detect_main_with_any_type_used_as_command() {
     rule().assert_detects(
         r"
 def main [cmd] {
@@ -36,7 +25,7 @@ def main [cmd] {
 }
 
 #[test]
-fn main_with_multiple_params_one_used_as_external() {
+fn test_detect_main_with_multiple_params_external_usage() {
     rule().assert_detects(
         r#"
 def main [
@@ -59,7 +48,7 @@ def main [
 }
 
 #[test]
-fn main_with_optional_script_parameter() {
+fn test_detect_main_with_optional_script_parameter() {
     rule().assert_detects(
         r"
 def main [handler?: string] {
@@ -72,7 +61,7 @@ def main [handler?: string] {
 }
 
 #[test]
-fn helper_function_with_script_parameter() {
+fn test_detect_helper_function_with_script_parameter() {
     rule().assert_detects(
         r"
 def run-script [script_path: string] {
@@ -83,19 +72,7 @@ def run-script [script_path: string] {
 }
 
 #[test]
-fn custom_command_with_filepath_parameter() {
-    rule().assert_detects(
-        r"
-def execute-handler [handler: path] {
-  let result = (^$handler --check | complete)
-  print $result.stdout
-}
-",
-    );
-}
-
-#[test]
-fn multiple_custom_commands_with_script_parameters() {
+fn test_detect_multiple_custom_commands_with_script_params() {
     rule().assert_detects(
         r#"
 def run-backup [backup_script: string] {

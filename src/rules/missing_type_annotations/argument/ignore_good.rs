@@ -1,7 +1,7 @@
 use super::rule;
 
 #[test]
-fn test_ignore_fully_annotated_params() {
+fn ignore_fully_annotated_params() {
     let good_code = r#"
 def greet [name: string] {
     print $"Hello ($name)"
@@ -12,7 +12,7 @@ def greet [name: string] {
 }
 
 #[test]
-fn test_ignore_multiple_annotated_params() {
+fn ignore_multiple_annotated_params() {
     let good_code = r"
 def add [x: int, y: int] {
     $x + $y
@@ -23,7 +23,7 @@ def add [x: int, y: int] {
 }
 
 #[test]
-fn test_ignore_flags() {
+fn ignore_function_with_flags() {
     let good_code = r"
 def process [
     input: string
@@ -38,7 +38,7 @@ def process [
 }
 
 #[test]
-fn test_ignore_spread_params() {
+fn ignore_variadic_params() {
     let good_code = r"
 def variadic [...args: list] {
     print $args
@@ -49,7 +49,7 @@ def variadic [...args: list] {
 }
 
 #[test]
-fn test_ignore_no_params() {
+fn ignore_function_without_params() {
     let good_code = r"
 def hello [] {
     print 'Hello world'
@@ -60,7 +60,7 @@ def hello [] {
 }
 
 #[test]
-fn test_ignore_complex_types() {
+fn ignore_complex_type_annotations() {
     let good_code = r"
 def process [
     data: list<string>

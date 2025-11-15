@@ -4,10 +4,11 @@ use nu_protocol::{
 };
 
 use crate::{
+    LintLevel,
     ast::{block::BlockExt, call::CallExt, pipeline::PipelineExt, span::SpanExt},
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    rule::Rule,
+    violation::Violation,
 };
 
 fn is_split_row_call(call: &Call, context: &LintContext) -> bool {
@@ -26,10 +27,7 @@ fn has_index_argument(call: &Call, context: &LintContext) -> bool {
     })
 }
 
-fn check_pipeline_for_split_get(
-    pipeline: &Pipeline,
-    context: &LintContext,
-) -> Option<RuleViolation> {
+fn check_pipeline_for_split_get(pipeline: &Pipeline, context: &LintContext) -> Option<Violation> {
     if pipeline.elements.len() < 2 {
         return None;
     }
@@ -49,7 +47,7 @@ fn check_pipeline_for_split_get(
         .then(|| {
             let span = Span::new(current.expr.span.start, next.expr.span.end);
 
-            RuleViolation::new_static(
+            Violation::new_static(
                 "prefer_parse_command",
                 "Manual string splitting with indexed access - consider using 'parse'",
                 span,
@@ -116,8 +114,8 @@ fn is_var_used_in_indexed_access(var_id: VarId, call: &Call, context: &LintConte
     })
 }
 
-fn create_indexed_access_violation(var_name: &str, decl_span: Span) -> RuleViolation {
-    RuleViolation::new_dynamic(
+fn create_indexed_access_violation(var_name: &str, decl_span: Span) -> Violation {
+    Violation::new_dynamic(
         "prefer_parse_command",
         format!(
             "Variable '{var_name}' from split row with indexed access - consider using 'parse'"
@@ -133,7 +131,7 @@ fn check_call_arguments_for_violation(
     var_name: &str,
     decl_span: Span,
     context: &LintContext,
-) -> Option<RuleViolation> {
+) -> Option<Violation> {
     call.arguments.iter().find_map(|arg| {
         let (Argument::Positional(arg_expr) | Argument::Unknown(arg_expr)) = arg else {
             return None;
@@ -155,7 +153,7 @@ fn check_element_for_indexed_access(
     decl_span: Span,
     pipeline: &Pipeline,
     context: &LintContext,
-) -> Option<RuleViolation> {
+) -> Option<Violation> {
     match &element.expr.expr {
         Expr::FullCellPath(cp) => {
             if let Expr::Subexpression(block_id) = &cp.head.expr {
@@ -195,7 +193,7 @@ fn check_for_indexed_variable_access(
     decl_span: Span,
     block: &Block,
     context: &LintContext,
-) -> Option<RuleViolation> {
+) -> Option<Violation> {
     log::debug!("Checking for indexed access of variable: {var_name}");
 
     block.pipelines.iter().find_map(|pipeline| {
@@ -215,7 +213,7 @@ fn check_for_indexed_variable_access(
     })
 }
 
-fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<RuleViolation>) {
+fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<Violation>) {
     // Check for inline split row | get/skip patterns
     for pipeline in &block.pipelines {
         if let Some(violation) = check_pipeline_for_split_get(pipeline, context) {
@@ -258,7 +256,7 @@ fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<RuleVi
     }
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     let mut violations = Vec::new();
 
     check_block(context.ast, context, &mut violations);
@@ -281,8 +279,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "prefer_parse_command",
-        RuleCategory::Idioms,
-        Severity::Warning,
+        LintLevel::Warn,
         "Prefer 'parse' command over manual string splitting with indexed access",
         check,
     )

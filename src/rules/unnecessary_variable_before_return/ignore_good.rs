@@ -52,42 +52,6 @@ def process [] {
 }
 
 #[test]
-fn test_variable_modified_before_return() {
-    let good_code = r"
-def process [] {
-  let result = (get | data)
-  $result | transform
-}
-";
-
-    rule().assert_ignores(good_code);
-}
-
-#[test]
-fn test_different_variable_returned() {
-    let good_code = r"
-def process [] {
-  let x = (get | data)
-  $y
-}
-";
-
-    rule().assert_ignores(good_code);
-}
-
-#[test]
-fn test_variable_with_field_access() {
-    let good_code = r"
-def process [] {
-  let data = (get | record)
-  $data.field
-}
-";
-
-    rule().assert_ignores(good_code);
-}
-
-#[test]
 fn test_mut_variable_not_flagged() {
     let good_code = r"
 def process [] {

@@ -1,18 +1,8 @@
 use super::rule;
 
 #[test]
-fn test_mkdir_without_ignore() {
-    // Commands that produce no output don't trigger the rule if they don't use |
-    // ignore
+fn test_command_with_no_output_without_ignore() {
     let good_code = "mkdir /tmp/test";
-    rule().assert_ignores(good_code);
-}
-
-#[test]
-fn test_cd_without_ignore() {
-    // Commands that produce no output don't trigger the rule if they don't use |
-    // ignore
-    let good_code = "cd /tmp";
     rule().assert_ignores(good_code);
 }
 

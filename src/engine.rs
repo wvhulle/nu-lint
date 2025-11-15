@@ -1,19 +1,13 @@
-use std::{collections::HashSet, fs, path::Path, sync::OnceLock};
+use std::{borrow::Cow, fs, path::Path, sync::OnceLock};
 
 use nu_parser::parse;
 use nu_protocol::{
-    ParseError,
     ast::Block,
     engine::{EngineState, StateWorkingSet},
 };
 
 use crate::{
-    LintError, RuleViolation, Severity,
-    config::{Config, RuleSeverity},
-    context::LintContext,
-    rule::Rule,
-    rules::RuleRegistry,
-    violation::Violation,
+    LintError, config::Config, context::LintContext, rules::RuleRegistry, violation::Violation,
 };
 
 /// Parse Nushell source code into an AST and return both the Block and
@@ -71,11 +65,25 @@ impl LintEngine {
     /// Returns an error if the file cannot be read.
     pub(crate) fn lint_file(&self, path: &Path) -> Result<Vec<Violation>, LintError> {
         let source = fs::read_to_string(path)?;
-        Ok(self.lint_source(&source, Some(path)))
+        let mut violations = self.lint_str(&source);
+
+        let file_path: &str = path.to_str().unwrap();
+        let file_path: Cow<'static, str> = file_path.to_owned().into();
+        for violation in &mut violations {
+            violation.file = Some(file_path.clone());
+        }
+
+        violations.sort_by(|a, b| {
+            a.span
+                .start
+                .cmp(&b.span.start)
+                .then(a.lint_level.cmp(&b.lint_level))
+        });
+        Ok(violations)
     }
 
     #[must_use]
-    pub fn lint_source(&self, source: &str, path: Option<&Path>) -> Vec<Violation> {
+    pub fn lint_str(&self, source: &str) -> Vec<Violation> {
         let (block, working_set) = parse_source(self.engine_state, source.as_bytes());
 
         let context = LintContext {
@@ -85,148 +93,26 @@ impl LintEngine {
             working_set: &working_set,
         };
 
-        let mut violations = self.collect_violations(&context);
-
-        // Extract parse errors from the working set and convert to violations
-        violations.extend(self.convert_parse_errors_to_violations(&working_set));
-
-        Self::attach_file_path(&mut violations, path);
-        Self::sort_violations(&mut violations);
-        violations
+        self.collect_violations(&context)
     }
 
     /// Collect violations from all enabled rules
     fn collect_violations(&self, context: &LintContext) -> Vec<Violation> {
-        let eligible_rules = self.get_eligible_rules();
+        self.registry
+            .all_rules()
+            .filter_map(|rule| {
+                // Get the effective lint level for this rule
+                let lint_level = self.config.get_lint_level(rule.id, rule.default_lint_level);
 
-        eligible_rules
-            .flat_map(|rule| {
-                let rule_violations = (rule.check)(context);
-                let rule_severity = self.get_effective_rule_severity(rule);
+                // Run the rule and update lint levels
+                let mut violations = (rule.check)(context);
+                for violation in &mut violations {
+                    violation.set_lint_level(lint_level);
+                }
 
-                // Convert RuleViolations to Violations with the rule's effective severity
-                rule_violations
-                    .into_iter()
-                    .map(|rule_violation| rule_violation.into_violation(rule_severity))
-                    .collect::<Vec<_>>()
+                (!violations.is_empty()).then_some(violations)
             })
+            .flatten()
             .collect()
-    }
-
-    /// Convert parse errors from the `StateWorkingSet` into violations
-    fn convert_parse_errors_to_violations(&self, working_set: &StateWorkingSet) -> Vec<Violation> {
-        // Get the nu_parse_error rule to use its metadata
-        let parse_error_rule = self.registry.get_rule("nu_parse_error");
-
-        if parse_error_rule.is_none() {
-            return vec![];
-        }
-
-        let rule = parse_error_rule.unwrap();
-        let rule_severity = self.get_effective_rule_severity(rule);
-
-        // Check if this rule meets the minimum severity threshold
-        if let Some(min_threshold) = self.get_minimum_severity_threshold()
-            && rule_severity < min_threshold
-        {
-            return vec![];
-        }
-
-        let mut seen = HashSet::new();
-
-        // Convert each parse error to a violation, deduplicating by span and message
-        // Filter out module-related errors since the linter works at AST level only
-        working_set
-            .parse_errors
-            .iter()
-            .filter(|parse_error| !matches!(parse_error, ParseError::ModuleNotFound(_, _)))
-            .filter_map(|parse_error| {
-                let key = (
-                    parse_error.span().start,
-                    parse_error.span().end,
-                    parse_error.to_string(),
-                );
-                seen.insert(key).then(|| {
-                    RuleViolation::new_dynamic(
-                        "nu_parse_error",
-                        parse_error.to_string(),
-                        parse_error.span(),
-                    )
-                    .into_violation(rule_severity)
-                })
-            })
-            .collect()
-    }
-
-    /// Get all rules that are enabled according to the configuration
-    fn get_enabled_rules(&self) -> impl Iterator<Item = &Rule> {
-        self.registry.all_rules().filter(|rule| {
-            // If not in config, use default (enabled). If in config, check if it's not
-            // turned off.
-            !matches!(self.config.rules.get(rule.id), Some(&RuleSeverity::Off))
-        })
-    }
-
-    /// Get all rules that are enabled and meet the `min_severity` threshold
-    /// This is more efficient as it avoids running rules that would be filtered
-    /// out anyway
-    fn get_eligible_rules(&self) -> impl Iterator<Item = &Rule> {
-        let min_severity_threshold = self.get_minimum_severity_threshold();
-
-        self.get_enabled_rules().filter(move |rule| {
-            let rule_severity = self.get_effective_rule_severity(rule);
-
-            // Handle special case: min_severity = "off" means no rules are eligible
-            if matches!(self.config.general.min_severity, RuleSeverity::Off) {
-                return false;
-            }
-
-            // Check if rule severity meets minimum threshold
-            min_severity_threshold.is_none_or(|min_threshold| rule_severity >= min_threshold)
-        })
-    }
-
-    /// Get the effective severity for a rule (config override or rule default)
-    fn get_effective_rule_severity(&self, rule: &Rule) -> Severity {
-        self.config
-            .rule_severity(rule.id)
-            .map_or(rule.severity, |config_severity| config_severity)
-    }
-
-    /// Get the minimum severity threshold from `min_severity` config
-    /// `min_severity` sets the minimum threshold for showing violations:
-    /// - "error": Show only errors (minimum threshold = Error)
-    /// - "warning": Show warnings and errors (minimum threshold = Warning)
-    /// - "info": Show info, warnings, and errors (minimum threshold = Info,
-    ///   i.e., all)
-    /// - "off": Show nothing
-    const fn get_minimum_severity_threshold(&self) -> Option<Severity> {
-        match self.config.general.min_severity {
-            RuleSeverity::Error => Some(Severity::Error), // Show only errors
-            RuleSeverity::Warning => Some(Severity::Warning), // Show warnings and
-            // above
-            RuleSeverity::Info | RuleSeverity::Off => None, // Show all (no filtering)
-        }
-    }
-
-    /// Attach file path to all violations
-    fn attach_file_path(violations: &mut [Violation], path: Option<&Path>) {
-        if let Some(file_path_str) = path.and_then(|p| p.to_str()) {
-            use std::borrow::Cow;
-            let file_path: Cow<'static, str> = file_path_str.to_owned().into();
-            for violation in violations {
-                violation.file = Some(file_path.clone());
-            }
-        }
-    }
-
-    /// Sort violations by span start position, then by severity
-    fn sort_violations(violations: &mut [Violation]) {
-        violations.sort_by(|a, b| {
-            a.span
-                .start
-                .cmp(&b.span.start)
-                .then(a.severity.cmp(&b.severity))
-        });
     }
 }

@@ -1,11 +1,11 @@
 use nu_protocol::ast::{Expr, Expression, Pipeline};
 
 use crate::{
-    Fix, Replacement,
+    Fix, LintLevel, Replacement,
     ast::{call::CallExt, ext_command::ExternalCommandExt, pipeline::PipelineExt, span::SpanExt},
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    rule::Rule,
+    violation::Violation,
 };
 
 fn command_produces_output(expr: &Expression, context: &LintContext) -> bool {
@@ -35,7 +35,7 @@ fn command_produces_output(expr: &Expression, context: &LintContext) -> bool {
     }
 }
 
-fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<RuleViolation> {
+fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violation> {
     let expr_before_ignore = pipeline.element_before_ignore(context)?;
 
     if !command_produces_output(expr_before_ignore, context) {
@@ -56,7 +56,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<RuleViol
     let combined_span = nu_protocol::Span::new(start_span.start, end_span.end);
     let pipeline_text = &context.source[combined_span.start..combined_span.end];
 
-    let violation = RuleViolation::new_static(
+    let violation = Violation::new_static(
         "unused_output",
         "Discarding command output with '| ignore'",
         ignore_span,
@@ -85,7 +85,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<RuleViol
     Some(violation.with_fix(fix))
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     context
         .ast
         .pipelines
@@ -110,8 +110,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "unused_output",
-        RuleCategory::Idioms,
-        Severity::Warning,
+        LintLevel::Warn,
         "Commands producing output that is discarded with '| ignore'",
         check,
     )

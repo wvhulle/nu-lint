@@ -1,14 +1,14 @@
 use crate::rules::replace_by_builtin::sed::rule;
 
 #[test]
-fn replaces_simple_sed_substitution() {
+fn converts_sed_substitution_to_str_replace() {
     let source = r"^sed 's/foo/bar/'";
     rule().assert_fix_contains(source, "str replace 'foo' 'bar'");
     rule().assert_fix_description_contains(source, "str replace");
 }
 
 #[test]
-fn handles_global_flag() {
+fn converts_sed_global_flag_to_str_replace_all() {
     let source = r"^sed 's/old/new/g'";
     rule().assert_fix_contains(source, "str replace --all 'old' 'new'");
     rule().assert_fix_description_contains(source, "--all");
@@ -16,7 +16,7 @@ fn handles_global_flag() {
 }
 
 #[test]
-fn handles_file_input() {
+fn converts_sed_with_file_to_open_pipe_str_replace() {
     let source = r"^sed 's/pattern/replacement/' file.txt";
     rule().assert_fix_contains(
         source,
@@ -26,7 +26,7 @@ fn handles_file_input() {
 }
 
 #[test]
-fn handles_in_place_editing() {
+fn converts_sed_inplace_to_open_replace_save() {
     let source = r"^sed -i 's/old/new/' file.txt";
     rule().assert_fix_contains(
         source,
@@ -37,7 +37,7 @@ fn handles_in_place_editing() {
 }
 
 #[test]
-fn handles_in_place_with_global() {
+fn converts_sed_inplace_global_to_open_replace_all_save() {
     let source = r"^sed -i 's/foo/bar/g' config.ini";
     rule().assert_fix_contains(
         source,
@@ -47,14 +47,14 @@ fn handles_in_place_with_global() {
 }
 
 #[test]
-fn handles_delete_operation() {
+fn converts_sed_delete_to_lines_where_not_match() {
     let source = r"^sed '/pattern/d'";
     rule().assert_fix_contains(source, "lines | where $it !~ 'pattern'");
     rule().assert_fix_description_contains(source, "where");
 }
 
 #[test]
-fn handles_combined_flags() {
+fn converts_sed_combined_inplace_flags() {
     let source = r"^sed -ie 's/test/prod/g' app.conf";
     rule().assert_fix_contains(source, "open");
     rule().assert_fix_contains(source, "save");
@@ -73,7 +73,7 @@ fn ignores_builtin_str_replace() {
 }
 
 #[test]
-fn detects_gsed() {
+fn converts_gsed_to_str_replace() {
     let source = r"^gsed 's/foo/bar/'";
     rule().assert_fix_contains(source, "str replace");
 }

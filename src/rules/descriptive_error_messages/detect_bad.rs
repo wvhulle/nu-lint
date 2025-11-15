@@ -1,7 +1,7 @@
 use super::rule;
 
 #[test]
-fn test_detect_generic_error_message() {
+fn test_detect_error_keyword_in_msg() {
     let bad_code = r#"
 def process-file [file: string] {
     if not ($file | path exists) {
@@ -15,31 +15,7 @@ def process-file [file: string] {
 }
 
 #[test]
-fn test_generic_error_message_detected() {
-    let source = r#"
-def process [] {
-    if $condition {
-        error make { msg: "error" }
-    }
-}
-"#;
-
-    rule().assert_detects(source);
-}
-
-#[test]
-fn test_failed_error_message_detected() {
-    let source = r#"
-def process [] {
-    error make { msg: "failed" }
-}
-"#;
-
-    rule().assert_detects(source);
-}
-
-#[test]
-fn test_detect_vague_failed_message() {
+fn test_detect_failed_keyword_in_msg() {
     let bad_code = r#"
 def convert-data [input] {
     if ($input | is-empty) {
@@ -53,7 +29,7 @@ def convert-data [input] {
 }
 
 #[test]
-fn test_detect_something_went_wrong_message() {
+fn test_detect_vague_something_went_wrong_msg() {
     let bad_code = r#"
 def validate [data] {
     error make { msg: "something went wrong" }

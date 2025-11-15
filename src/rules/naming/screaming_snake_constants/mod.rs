@@ -3,11 +3,7 @@ use std::sync::OnceLock;
 use heck::ToShoutySnakeCase;
 use regex::Regex;
 
-use crate::{
-    context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
-};
+use crate::{LintLevel, context::LintContext, rule::Rule, violation::Violation};
 
 fn screaming_snake_pattern() -> &'static Regex {
     static PATTERN: OnceLock<Regex> = OnceLock::new();
@@ -23,7 +19,7 @@ fn is_valid_screaming_snake(name: &str) -> bool {
     screaming_snake_pattern().is_match(name)
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     const_pattern()
         .captures_iter(context.source)
         .filter_map(|cap| {
@@ -34,7 +30,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
                 None
             } else {
                 Some(
-                    RuleViolation::new_dynamic(
+                    Violation::new_dynamic(
                         "screaming_snake_constants",
                         format!(
                             "Constant '{const_name}' should use SCREAMING_SNAKE_CASE naming \
@@ -55,8 +51,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "screaming_snake_constants",
-        RuleCategory::Naming,
-        Severity::Info,
+        LintLevel::Allow,
         "Constants should use SCREAMING_SNAKE_CASE naming convention",
         check,
     )

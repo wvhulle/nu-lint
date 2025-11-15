@@ -4,15 +4,16 @@ use nu_protocol::{
 };
 
 use crate::{
+    LintLevel,
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{Fix, Replacement, RuleViolation, Severity},
+    rule::Rule,
+    violation::{Fix, Replacement, Violation},
 };
 
 /// AST visitor that checks for pipe spacing issues
 struct PipeSpacingVisitor<'a> {
     source: &'a str,
-    violations: Vec<RuleViolation>,
+    violations: Vec<Violation>,
 }
 
 impl<'a> PipeSpacingVisitor<'a> {
@@ -92,7 +93,7 @@ impl<'a> PipeSpacingVisitor<'a> {
             );
 
             self.violations.push(
-                RuleViolation::new_dynamic("pipe_spacing", message.to_string(), violation_span)
+                Violation::new_dynamic("pipe_spacing", message.to_string(), violation_span)
                     .with_suggestion_static("Use ' | ' with single spaces")
                     .with_fix(fix),
             );
@@ -133,7 +134,7 @@ impl<'a> PipeSpacingVisitor<'a> {
     }
 }
 
-fn check_pipeline_spacing(pipeline: &Pipeline, source: &str) -> Vec<RuleViolation> {
+fn check_pipeline_spacing(pipeline: &Pipeline, source: &str) -> Vec<Violation> {
     let mut violations = Vec::new();
     let mut visitor = PipeSpacingVisitor::new(source);
 
@@ -152,7 +153,7 @@ fn walk_block_for_pipelines(
     block: &Block,
     working_set: &nu_protocol::engine::StateWorkingSet,
     source: &str,
-    violations: &mut Vec<RuleViolation>,
+    violations: &mut Vec<Violation>,
 ) {
     for pipeline in &block.pipelines {
         violations.extend(check_pipeline_spacing(pipeline, source));
@@ -168,7 +169,7 @@ fn walk_expr_for_pipelines(
     expr: &Expression,
     working_set: &nu_protocol::engine::StateWorkingSet,
     source: &str,
-    violations: &mut Vec<RuleViolation>,
+    violations: &mut Vec<Violation>,
 ) {
     match &expr.expr {
         Expr::Block(block_id)
@@ -189,7 +190,7 @@ fn walk_expr_for_pipelines(
     }
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     let mut violations = Vec::new();
     walk_block_for_pipelines(
         context.ast,
@@ -203,8 +204,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "pipe_spacing",
-        RuleCategory::Formatting,
-        Severity::Warning,
+        LintLevel::Warn,
         "Pipes should have exactly one space before and after when on the same line",
         check,
     )

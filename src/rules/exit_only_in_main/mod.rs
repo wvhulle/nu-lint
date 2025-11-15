@@ -1,10 +1,11 @@
 use nu_protocol::ast::{Call, Expr};
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, span::SpanExt},
     context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    rule::Rule,
+    violation::Violation,
 };
 
 /// Check if a call is to the 'exit' command
@@ -12,7 +13,7 @@ fn is_exit_call(call: &Call, ctx: &LintContext) -> bool {
     call.get_call_name(ctx) == "exit"
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     // First, collect all function definitions
     let functions = context.collect_function_definitions();
 
@@ -34,7 +35,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
             }
 
             return vec![
-                RuleViolation::new_dynamic(
+                Violation::new_dynamic(
                     "exit_only_in_main",
                     format!(
                         "Function '{function_name}' uses 'exit' which terminates the entire script"
@@ -54,8 +55,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 pub fn rule() -> Rule {
     Rule::new(
         "exit_only_in_main",
-        RuleCategory::CodeQuality,
-        Severity::Error,
+        LintLevel::Deny,
         "Avoid using 'exit' in functions other than 'main'",
         check,
     )

@@ -1,4 +1,7 @@
-use crate::{config::Config, engine::LintEngine};
+use crate::{
+    config::{Config, LintLevel},
+    engine::LintEngine,
+};
 
 // These tests verify that parse error messages from Nushell's parser
 // are properly propagated as violation messages and suggestions.
@@ -7,7 +10,7 @@ use crate::{config::Config, engine::LintEngine};
 fn test_unclosed_parenthesis_message_propagation() {
     let engine = LintEngine::new(Config::default());
     let code = "let x = (";
-    let violations = engine.lint_source(code, None);
+    let violations = engine.lint_str(code);
 
     let parse_errors: Vec<_> = violations
         .iter()
@@ -41,7 +44,7 @@ fn test_unclosed_parenthesis_message_propagation() {
 fn test_unclosed_brace_message_propagation() {
     let engine = LintEngine::new(Config::default());
     let code = "def foo [] {";
-    let violations = engine.lint_source(code, None);
+    let violations = engine.lint_str(code);
 
     let parse_errors: Vec<_> = violations
         .iter()
@@ -74,7 +77,7 @@ fn test_unclosed_brace_message_propagation() {
 fn test_unclosed_bracket_message_propagation() {
     let engine = LintEngine::new(Config::default());
     let code = "let x = [1, 2, 3";
-    let violations = engine.lint_source(code, None);
+    let violations = engine.lint_str(code);
 
     let parse_errors: Vec<_> = violations
         .iter()
@@ -107,7 +110,7 @@ fn test_unclosed_bracket_message_propagation() {
 fn test_unexpected_token_message_propagation() {
     let engine = LintEngine::new(Config::default());
     let code = "let let x = 5";
-    let violations = engine.lint_source(code, None);
+    let violations = engine.lint_str(code);
 
     let parse_errors: Vec<_> = violations
         .iter()
@@ -128,7 +131,7 @@ fn test_unexpected_token_message_propagation() {
 fn test_invalid_function_definition_message_propagation() {
     let engine = LintEngine::new(Config::default());
     let code = "def [] { }";
-    let violations = engine.lint_source(code, None);
+    let violations = engine.lint_str(code);
 
     let parse_errors: Vec<_> = violations
         .iter()
@@ -160,7 +163,7 @@ fn test_invalid_function_definition_message_propagation() {
 fn test_parse_error_message_not_empty() {
     let engine = LintEngine::new(Config::default());
     let code = "let x = (";
-    let violations = engine.lint_source(code, None);
+    let violations = engine.lint_str(code);
 
     let parse_errors: Vec<_> = violations
         .iter()
@@ -182,7 +185,7 @@ fn test_parse_error_message_not_empty() {
 fn test_parse_error_has_error_severity() {
     let engine = LintEngine::new(Config::default());
     let code = "let x = (";
-    let violations = engine.lint_source(code, None);
+    let violations = engine.lint_str(code);
 
     let parse_errors: Vec<_> = violations
         .iter()
@@ -193,10 +196,9 @@ fn test_parse_error_has_error_severity() {
 
     // All parse errors should have Error severity
     for error in parse_errors {
-        use crate::violation::Severity;
         assert_eq!(
-            error.severity,
-            Severity::Error,
+            error.lint_level,
+            LintLevel::Deny,
             "Parse errors should have Error severity"
         );
     }
@@ -206,7 +208,7 @@ fn test_parse_error_has_error_severity() {
 fn test_multiple_parse_errors_each_have_messages() {
     let engine = LintEngine::new(Config::default());
     let code = "let x = (\nlet y = [";
-    let violations = engine.lint_source(code, None);
+    let violations = engine.lint_str(code);
 
     let parse_errors: Vec<_> = violations
         .iter()

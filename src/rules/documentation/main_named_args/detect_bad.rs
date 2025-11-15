@@ -1,7 +1,7 @@
 use super::rule;
 
 #[test]
-fn test_main_named_flag_without_docs() {
+fn main_named_flag_missing_documentation() {
     let source = r#"
 def main [--verbose] {
     if $verbose { print "Verbose mode" }
@@ -11,7 +11,7 @@ def main [--verbose] {
 }
 
 #[test]
-fn test_main_named_flag_with_short_without_docs() {
+fn main_short_named_flag_missing_documentation() {
     let source = r#"
 def main [--verbose (-v)] {
     if $verbose { print "Verbose mode" }
@@ -21,7 +21,7 @@ def main [--verbose (-v)] {
 }
 
 #[test]
-fn test_main_multiple_named_flags_without_docs() {
+fn main_multiple_named_flags_missing_documentation() {
     let source = r#"
 def main [--verbose --debug --output: string] {
     if $verbose { print "Verbose" }
@@ -33,7 +33,7 @@ def main [--verbose --debug --output: string] {
 }
 
 #[test]
-fn test_main_typed_named_flag_without_docs() {
+fn main_typed_named_flag_missing_documentation() {
     let source = r"
 def main [--count: int] {
     1..$count
@@ -43,7 +43,7 @@ def main [--count: int] {
 }
 
 #[test]
-fn test_main_named_flag_with_default_without_docs() {
+fn main_named_flag_with_default_missing_documentation() {
     let source = r#"
 def main [--output: string = "output.txt"] {
     save $output

@@ -1,15 +1,13 @@
 use nu_protocol::ast::{Expr, Expression, ListItem, Traverse};
 
 use crate::{
-    ast::expression::ExpressionExt,
-    context::LintContext,
-    rule::{Rule, RuleCategory},
-    violation::{RuleViolation, Severity},
+    LintLevel, ast::expression::ExpressionExt, context::LintContext, rule::Rule,
+    violation::Violation,
 };
 
 const MAX_LIST_LINE_LENGTH: usize = 80;
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     let mut violations = Vec::new();
 
     context.ast.flat_map(
@@ -60,8 +58,8 @@ fn has_nested_structures(items: &[ListItem]) -> bool {
     })
 }
 
-fn create_violation(span: nu_protocol::Span) -> RuleViolation {
-    RuleViolation::new_static(
+fn create_violation(span: nu_protocol::Span) -> Violation {
+    Violation::new_static(
         "prefer_multiline_lists",
         "Long lists should use multiline format with each item on a separate line",
         span,
@@ -75,8 +73,7 @@ fn create_violation(span: nu_protocol::Span) -> RuleViolation {
 pub fn rule() -> Rule {
     Rule::new(
         "prefer_multiline_lists",
-        RuleCategory::Formatting,
-        Severity::Info,
+        LintLevel::Allow,
         "Prefer multiline format for long or complex lists",
         check,
     )

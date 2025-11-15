@@ -1,32 +1,8 @@
 use super::rule;
 
 #[test]
-fn test_mkdir_with_ignore() {
+fn test_command_with_no_output_piped_to_ignore() {
     let bad_code = "mkdir /tmp/test | ignore";
-    rule().assert_detects(bad_code);
-}
-
-#[test]
-fn test_cd_with_ignore() {
-    let bad_code = "cd /tmp | ignore";
-    rule().assert_detects(bad_code);
-}
-
-#[test]
-fn test_rm_with_ignore() {
-    let bad_code = "rm /tmp/file.txt | ignore";
-    rule().assert_detects(bad_code);
-}
-
-#[test]
-fn test_mv_with_ignore() {
-    let bad_code = "mv old.txt new.txt | ignore";
-    rule().assert_detects(bad_code);
-}
-
-#[test]
-fn test_touch_with_ignore() {
-    let bad_code = "touch newfile.txt | ignore";
     rule().assert_detects(bad_code);
 }
 

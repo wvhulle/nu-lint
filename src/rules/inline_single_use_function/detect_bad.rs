@@ -1,7 +1,7 @@
 use super::rule;
 
 #[test]
-fn simple_single_use_single_line() {
+fn test_detect_simple_single_use_function() {
     rule().assert_detects(
         r"
 def helper [] {
@@ -16,7 +16,7 @@ def main [] {
 }
 
 #[test]
-fn single_use_with_parameter() {
+fn test_detect_single_use_function_with_parameter() {
     rule().assert_detects(
         r"
 def double [x: int] {
@@ -31,7 +31,7 @@ def main [] {
 }
 
 #[test]
-fn single_use_with_pipeline() {
+fn test_detect_single_use_function_with_pipeline() {
     rule().assert_detects(
         r"
 def get_first [] {
@@ -46,7 +46,7 @@ def main [] {
 }
 
 #[test]
-fn multiple_single_use_functions() {
+fn test_detect_multiple_single_use_functions() {
     rule().assert_violation_count(
         r"
 def add_one [x] {
@@ -68,7 +68,7 @@ def main [] {
 }
 
 #[test]
-fn single_use_in_closure() {
+fn test_detect_single_use_function_in_closure() {
     rule().assert_detects(
         r"
 def increment [] {
@@ -83,7 +83,7 @@ def main [] {
 }
 
 #[test]
-fn single_use_string_operation() {
+fn test_detect_single_use_function_with_string_processing() {
     rule().assert_detects(
         r"
 def uppercase_name [name: string] {
@@ -98,7 +98,7 @@ def main [] {
 }
 
 #[test]
-fn single_use_with_return_value() {
+fn test_detect_single_use_function_with_return_value() {
     rule().assert_detects(
         r"
 def calculate [] {

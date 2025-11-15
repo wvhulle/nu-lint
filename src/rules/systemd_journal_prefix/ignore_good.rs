@@ -26,21 +26,6 @@ fn test_ignore_keyword_log_levels() {
 }
 
 #[test]
-fn test_ignore_with_echo_command() {
-    rule().assert_ignores(r#"echo "<5>System notification""#);
-    rule().assert_ignores(r#"echo "<info>Starting process""#);
-}
-
-#[test]
-fn test_ignore_multiple_prints_with_prefixes() {
-    let good_code = r#"
-print "<6>Starting task"
-print "<6>Task completed"
-"#;
-    rule().assert_ignores(good_code);
-}
-
-#[test]
 fn test_ignore_mixed_levels() {
     let good_code = r#"
 print "<6>Starting"

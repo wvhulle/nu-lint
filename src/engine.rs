@@ -7,7 +7,8 @@ use nu_protocol::{
 };
 
 use crate::{
-    LintError, config::Config, context::LintContext, rules::RuleRegistry, violation::Violation,
+    LintError, LintLevel, config::Config, context::LintContext, rules::RuleRegistry,
+    violation::Violation,
 };
 
 /// Parse Nushell source code into an AST and return both the Block and
@@ -103,6 +104,10 @@ impl LintEngine {
             .filter_map(|rule| {
                 // Get the effective lint level for this rule
                 let lint_level = self.config.get_lint_level(rule.id, rule.default_lint_level);
+
+                if lint_level == LintLevel::Allow {
+                    return None; // Rule is disabled
+                }
 
                 // Run the rule and update lint levels
                 let mut violations = (rule.check)(context);

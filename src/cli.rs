@@ -295,7 +295,7 @@ mod tests {
         assert!(
             violations
                 .iter()
-                .any(|v| v.rule_id == "snake_case_variables" && v.lint_level == LintLevel::Allow)
+                .all(|v| v.rule_id != "snake_case_variables")
         );
     }
 

@@ -1,15 +1,14 @@
 use nu_parser::parse;
 use nu_protocol::{
-    ParseError,
     ast::Block,
     engine::{EngineState, StateWorkingSet},
 };
 use std::borrow::Cow;
-use std::{collections::HashSet, fs, path::Path, sync::OnceLock};
+use std::{fs, path::Path, sync::OnceLock};
 
 use crate::{
-    LintError, RuleViolation,
-    config::{Config, LintLevel},
+    LintError,
+    config::Config,
     context::LintContext,
     rules::RuleRegistry,
     violation::Violation,
@@ -98,12 +97,7 @@ impl LintEngine {
             working_set: &working_set,
         };
 
-        let mut violations = self.collect_violations(&context);
-
-        // Extract parse errors from the working set and convert to violations
-        violations.extend(self.convert_parse_errors_to_violations(&working_set));
-
-        violations
+        self.collect_violations(&context)
     }
 
     /// Collect violations from all enabled rules
@@ -124,47 +118,6 @@ impl LintEngine {
                 (!violations.is_empty()).then_some(violations)
             })
             .flatten()
-            .collect()
-    }
-
-    /// Convert parse errors from the `StateWorkingSet` into violations
-    fn convert_parse_errors_to_violations(&self, working_set: &StateWorkingSet) -> Vec<Violation> {
-        // Get the nu_parse_error rule to use its metadata
-        let Some(rule) = self.registry.get_rule("nu_parse_error") else {
-            return vec![];
-        };
-
-        // Get the effective lint level for nu_parse_error
-        let lint_level = self.config.get_lint_level(rule.id, rule.default_lint_level);
-
-        // If the rule is allowed, don't report parse errors
-        if let LintLevel::Allow = lint_level {
-            return vec![];
-        }
-
-        let mut seen = HashSet::new();
-
-        // Convert each parse error to a violation, deduplicating by span and message
-        // Filter out module-related errors since the linter works at AST level only
-        working_set
-            .parse_errors
-            .iter()
-            .filter(|parse_error| !matches!(parse_error, ParseError::ModuleNotFound(_, _)))
-            .filter_map(|parse_error| {
-                let key = (
-                    parse_error.span().start,
-                    parse_error.span().end,
-                    parse_error.to_string(),
-                );
-                seen.insert(key).then(|| {
-                    RuleViolation::new_dynamic(
-                        "nu_parse_error",
-                        parse_error.to_string(),
-                        parse_error.span(),
-                    )
-                    .into_violation(lint_level)
-                })
-            })
             .collect()
     }
 }

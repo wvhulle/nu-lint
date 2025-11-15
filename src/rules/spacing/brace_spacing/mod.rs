@@ -1,30 +1,23 @@
 use nu_protocol::{Span, ast::Expr};
 
-use crate::{LintLevel, context::LintContext, rule::Rule, violation::Violation};
-
+use crate::{context::LintContext, rule::Rule, violation::Violation};
 enum BraceType {
     ClosureWithParams,
     BlockWithoutParams,
     Record,
 }
-
 fn check_brace_spacing(source: &str, span: Span, brace_type: &BraceType) -> Vec<Violation> {
     if span.start >= span.end || span.end > source.len() {
         return vec![];
     }
-
     let text = &source[span.start..span.end];
-
     if !text.starts_with('{') || !text.ends_with('}') {
         return vec![];
     }
-
     let inner = &text[1..text.len() - 1];
-
     if inner.trim().is_empty() {
         return vec![];
     }
-
     match brace_type {
         BraceType::ClosureWithParams => {
             if let Some(pipe_pos) = inner.find('|')
@@ -47,7 +40,6 @@ fn check_brace_spacing(source: &str, span: Span, brace_type: &BraceType) -> Vec<
         BraceType::BlockWithoutParams => {
             let starts_with_space = inner.starts_with(char::is_whitespace);
             let ends_with_space = inner.ends_with(char::is_whitespace);
-
             if !starts_with_space || !ends_with_space {
                 vec![
                     Violation::new_dynamic(
@@ -65,7 +57,6 @@ fn check_brace_spacing(source: &str, span: Span, brace_type: &BraceType) -> Vec<
         BraceType::Record => {
             let starts_with_space = inner.starts_with(char::is_whitespace);
             let ends_with_space = inner.ends_with(char::is_whitespace);
-
             if starts_with_space || ends_with_space {
                 vec![
                     Violation::new_dynamic(
@@ -81,14 +72,12 @@ fn check_brace_spacing(source: &str, span: Span, brace_type: &BraceType) -> Vec<
         }
     }
 }
-
 fn has_block_params(context: &LintContext, block_id: nu_protocol::BlockId) -> bool {
     let block = context.working_set.get_block(block_id);
     !block.signature.required_positional.is_empty()
         || !block.signature.optional_positional.is_empty()
         || block.signature.rest_positional.is_some()
 }
-
 fn check(context: &LintContext) -> Vec<Violation> {
     context.collect_rule_violations(|expr, ctx| match &expr.expr {
         Expr::Closure(block_id) | Expr::Block(block_id) => {
@@ -105,17 +94,14 @@ fn check(context: &LintContext) -> Vec<Violation> {
         _ => vec![],
     })
 }
-
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "brace_spacing",
-        LintLevel::Allow,
         "Enforces Nushell style guide: records use {key: value}, blocks/closures without params \
          use { body }, and closures with params use {|x| body}",
         check,
     )
 }
-
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]

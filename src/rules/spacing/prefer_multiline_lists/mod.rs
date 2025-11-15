@@ -1,8 +1,7 @@
 use nu_protocol::ast::{Expr, Expression, ListItem, Traverse};
 
 use crate::{
-    LintLevel, ast::expression::ExpressionExt, context::LintContext, rule::Rule,
-    violation::Violation,
+    ast::expression::ExpressionExt, context::LintContext, rule::Rule, violation::Violation,
 };
 
 const MAX_LIST_LINE_LENGTH: usize = 80;
@@ -70,10 +69,9 @@ fn create_violation(span: nu_protocol::Span) -> Violation {
 /// This rule uses AST-based detection and is compatible with topiary-nushell
 /// tree-sitter formatting. It analyzes actual list structures rather than regex
 /// patterns.
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "prefer_multiline_lists",
-        LintLevel::Allow,
         "Prefer multiline format for long or complex lists",
         check,
     )

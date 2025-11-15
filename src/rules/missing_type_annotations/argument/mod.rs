@@ -4,7 +4,6 @@ use nu_protocol::{
 };
 
 use crate::{
-    LintLevel,
     ast::{
         call::CallExt, expression::ExpressionExt, pipeline::PipelineExt, span::SpanExt,
         syntax_shape::SyntaxShapeExt,
@@ -179,10 +178,9 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "missing_type_annotation",
-        LintLevel::Warn,
         "Parameters should have type annotations",
         check,
     )

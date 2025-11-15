@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use nu_protocol::ast::ExternalArgument;
 
 use crate::{
-    LintLevel, Violation,
+    Violation,
     ast::ext_command::{BuiltinAlternative, ExternalArgumentExt, detect_external_commands},
     context::LintContext,
     rule::Rule,
@@ -214,10 +214,9 @@ fn check(context: &LintContext) -> Vec<Violation> {
     )
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "prefer_builtin_ls",
-        LintLevel::Warn,
         "Use Nu's built-in 'ls' instead of external ls command for structured data",
         check,
     )

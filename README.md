@@ -76,6 +76,13 @@ nu-lint script.nu                          # Lint a file
 nu-lint directory/                         # Lint directory
 ```
 
+Apply fixes:
+
+```bash
+nu-lint --fix --dry-run   # Test
+nu-lint --fix             # Apply
+```
+
 Output formats:
 
 ```bash
@@ -84,14 +91,18 @@ nu-lint script.nu --format json            # JSON format
 nu-lint script.nu --format vscode-json     # VS Code LSP-compatible JSON
 ```
 
-For VS Code extension developers, see [VSCODE_JSON_FORMAT.md](./VSCODE_JSON_FORMAT.md) for detailed documentation on the `vscode-json` output format.
-
 ## Configuration
 
 Show all rules:
 
 ```bash
 nu-lint list-rules                         
+```
+
+Show all rule sets:
+
+```bash
+nu-lint list-sets
 ```
 
 Create `.nu-lint.toml` in your project root (or any parent directory):
@@ -108,7 +119,7 @@ snake_case_variables = "allow"
 prefer_pipeline_input = "deny"
 ```
 
-Available lint levels: `allow`, `warn`, `deny`
+Available lint levels: `allow`, `warn`, `deny`.
 
 The linter will automatically find and use this config file when you run it. Otherwise:
 

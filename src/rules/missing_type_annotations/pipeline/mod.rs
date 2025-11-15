@@ -4,7 +4,6 @@ use nu_protocol::{
 };
 
 use crate::{
-    LintLevel,
     ast::{block::BlockExt, call::CallExt, span::SpanExt, syntax_shape::SyntaxShapeExt},
     context::LintContext,
     rule::Rule,
@@ -251,10 +250,9 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "typed_pipeline_io",
-        LintLevel::Warn,
         "Custom commands that use pipeline input or produce output should have type annotations",
         check,
     )

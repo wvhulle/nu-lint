@@ -1,48 +1,40 @@
 use nu_protocol::ast::{Expr, Pipeline, Traverse};
 
-use crate::{LintLevel, context::LintContext, rule::Rule, violation::Violation};
-
+use crate::{context::LintContext, rule::Rule, violation::Violation};
 fn is_non_comment_statement(pipeline: &Pipeline) -> bool {
     pipeline
         .elements
         .iter()
         .any(|elem| !matches!(&elem.expr.expr, Expr::Nothing))
 }
-
 fn is_single_line_in_source(block_span: nu_protocol::Span, context: &LintContext) -> bool {
     let source_text = &context.source[block_span.start..block_span.end];
     source_text.lines().count() <= 3
 }
-
 fn has_single_statement_body(block_id: nu_protocol::BlockId, context: &LintContext) -> bool {
     let block = context.working_set.get_block(block_id);
-
     let has_single_pipeline = block
         .pipelines
         .iter()
         .filter(|p| is_non_comment_statement(p))
         .count()
         == 1;
-
     let has_single_element = block
         .pipelines
         .iter()
         .find(|p| is_non_comment_statement(p))
         .is_some_and(|p| p.elements.len() == 1);
-
     has_single_pipeline
         && has_single_element
         && block
             .span
             .is_none_or(|span| is_single_line_in_source(span, context))
 }
-
 fn count_function_calls(function_name: &str, context: &LintContext) -> usize {
     let function_decl_id = context
         .working_set
         .find_decl(function_name.as_bytes())
         .expect("Function should exist");
-
     let mut all_calls = Vec::new();
     context.ast.flat_map(
         context.working_set,
@@ -54,24 +46,19 @@ fn count_function_calls(function_name: &str, context: &LintContext) -> usize {
         },
         &mut all_calls,
     );
-
     all_calls.len()
 }
-
 fn is_exported_function(function_name: &str, context: &LintContext) -> bool {
     context
         .source
         .contains(&format!("export def {function_name}"))
 }
-
 fn check(context: &LintContext) -> Vec<Violation> {
     let function_definitions = context.collect_function_definitions();
-
     let has_main = function_definitions.values().any(|name| name == "main");
     if !has_main {
         return vec![];
     }
-
     function_definitions
         .iter()
         .filter(|(_, name)| *name != "main")
@@ -91,16 +78,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
         })
         .collect()
 }
-
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "inline_single_use_function",
-        LintLevel::Allow,
         "Detect single-line custom commands used only once that could be inlined",
         check,
     )
 }
-
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]

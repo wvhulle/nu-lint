@@ -6,7 +6,6 @@ use nu_protocol::{
 };
 
 use crate::{
-    LintLevel,
     ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::Rule,
@@ -232,10 +231,9 @@ fn check(context: &LintContext) -> Vec<Violation> {
     create_violations(&empty_list_vars, &direct_copy_set)
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "prefer_direct_use",
-        LintLevel::Warn,
         "Prefer direct list use over copying items into a mutable list",
         check,
     )

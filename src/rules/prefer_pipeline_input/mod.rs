@@ -4,7 +4,6 @@ use nu_protocol::{
 };
 
 use crate::{
-    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
     context::LintContext,
     rule::Rule,
@@ -454,10 +453,9 @@ fn analyze_parameter_usage_in_block(
     analyze_pipelines(&block.pipelines, param_var_id, context)
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "prefer_pipeline_input",
-        LintLevel::Warn,
         "Custom commands with single data parameters should use pipeline input for better \
          composability",
         check,

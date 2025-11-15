@@ -1,7 +1,6 @@
 use nu_protocol::ast::{Assignment, Expr, Expression, Math, Operator, PipelineElement};
 
 use crate::{
-    LintLevel,
     ast::expression::ExpressionExt,
     context::LintContext,
     rule::Rule,
@@ -118,10 +117,9 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "prefer_compound_assignment",
-        LintLevel::Warn,
         "Use compound assignment operators (+=, -=, etc.) for clarity",
         check,
     )

@@ -3,9 +3,7 @@ use nu_protocol::{
     ast::{Block, Expr, Expression, Pipeline},
 };
 
-use crate::{
-    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation,
-};
+use crate::{ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation};
 
 /// Extract variable declaration from a `let` statement  
 fn extract_let_declaration(
@@ -120,10 +118,9 @@ fn check(context: &LintContext) -> Vec<Violation> {
     violations
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "unnecessary_variable_before_return",
-        LintLevel::Warn,
         "Variable assigned and immediately returned adds unnecessary verbosity",
         check,
     )

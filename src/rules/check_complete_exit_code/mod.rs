@@ -6,7 +6,6 @@ use nu_protocol::{
 };
 
 use crate::{
-    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::Rule,
@@ -167,10 +166,9 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .collect()
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "check_complete_exit_code",
-        LintLevel::Warn,
         "Check exit codes when using 'complete' to capture external command results",
         check,
     )

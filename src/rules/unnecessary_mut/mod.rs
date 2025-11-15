@@ -6,7 +6,6 @@ use nu_protocol::{
 };
 
 use crate::{
-    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::Rule,
@@ -101,10 +100,9 @@ fn check(context: &LintContext) -> Vec<Violation> {
     violations
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "unnecessary_mut",
-        LintLevel::Warn,
         "Variables should only be marked 'mut' when they are actually reassigned",
         check,
     )

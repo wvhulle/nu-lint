@@ -11,7 +11,7 @@ use jaq_core::{
 use nu_protocol::ast::ExternalArgument;
 
 use crate::{
-    LintLevel, Violation,
+    Violation,
     ast::ext_command::{BuiltinAlternative, ExternalArgumentExt, detect_external_commands},
     context::LintContext,
     rule::Rule,
@@ -388,10 +388,9 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .collect()
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "prefer_nushell_over_jq",
-        LintLevel::Warn,
         "Prefer Nushell built-ins over jq for data operations that have direct equivalents",
         check,
     )

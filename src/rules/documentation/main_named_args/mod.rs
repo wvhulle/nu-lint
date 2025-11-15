@@ -1,7 +1,6 @@
 use nu_protocol::ast::{Call, Expr};
 
 use crate::{
-    LintLevel,
     ast::{call::CallExt, span::SpanExt},
     context::LintContext,
     rule::Rule,
@@ -70,10 +69,9 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "main_named_args_docs",
-        LintLevel::Allow,
         "Named parameters (flags) in main functions should have documentation comments",
         check,
     )

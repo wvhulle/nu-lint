@@ -10,7 +10,12 @@ use clap::{Parser, Subcommand};
 use ignore::WalkBuilder;
 use rayon::prelude::*;
 
-use crate::{Config, LintEngine, output, violation::Violation};
+use crate::{
+    Config, LintEngine, LintLevel, output,
+    rules::ALL_RULES,
+    sets::{BUILTIN_LINT_SETS, DEFAULT_RULE_MAP},
+    violation::Violation,
+};
 
 #[derive(Parser)]
 #[command(name = "nu-lint")]
@@ -56,6 +61,9 @@ pub enum Commands {
     #[command(about = "List all available rules")]
     ListRules,
 
+    #[command(about = "List all available lint sets")]
+    ListSets,
+
     #[command(about = "Explain a specific rule")]
     Explain {
         #[arg(help = "Rule ID to explain")]
@@ -72,10 +80,11 @@ pub enum Format {
     Github,
 }
 
-/// Handle subcommands (list-rules, explain)
+/// Handle subcommands (list-rules, list-sets, explain)
 pub fn handle_command(command: Commands, config: &Config) {
     match command {
         Commands::ListRules => list_rules(config),
+        Commands::ListSets => list_sets(),
         Commands::Explain { rule_id } => explain_rule(config, &rule_id),
     }
 }
@@ -237,23 +246,41 @@ pub fn output_results(violations: &[Violation], format: Option<Format>) {
 }
 
 fn list_rules(config: &Config) {
-    let engine = LintEngine::new(config.clone());
     println!("Available rules:\n");
 
-    for rule in engine.registry.all_rules() {
-        let lint_level = config.get_lint_level(rule.id, rule.default_lint_level);
+    for rule in ALL_RULES {
+        let lint_level = config.get_lint_level(rule.id);
         println!("{:<40} [{:?}] {}", rule.id, lint_level, rule.description);
     }
 }
 
-fn explain_rule(config: &Config, rule_id: &str) {
-    let engine = LintEngine::new(config.clone());
+fn list_sets() {
+    println!("Available lint sets:\n");
 
-    if let Some(rule) = engine.registry.get_rule(rule_id) {
-        let lint_level = config.get_lint_level(rule.id, rule.default_lint_level);
+    let mut sorted_sets: Vec<_> = BUILTIN_LINT_SETS.iter().collect();
+    sorted_sets.sort_by_key(|(name, _)| *name);
+
+    for (name, set) in sorted_sets {
+        println!(
+            "{:<20} {} ({} rules)",
+            name,
+            set.description,
+            set.rules.len()
+        );
+    }
+}
+
+fn explain_rule(config: &Config, rule_id: &str) {
+    if let Some(rule) = ALL_RULES.iter().find(|r| r.id == rule_id) {
+        let lint_level = config.get_lint_level(rule.id);
+        let default_level = DEFAULT_RULE_MAP
+            .rules
+            .get(rule.id)
+            .copied()
+            .unwrap_or(LintLevel::Warn);
         println!("Rule: {}", rule.id);
         println!("Lint Level: {lint_level:?}");
-        println!("Default Lint Level: {}", rule.default_lint_level);
+        println!("Default Lint Level: {default_level}");
         println!("Description: {}", rule.description);
     } else {
         eprintln!("Error: Rule '{rule_id}' not found");
@@ -285,7 +312,7 @@ mod tests {
         let config = Config::default();
         assert_eq!(
             config.lints.rules.get("snake_case_variables"),
-            Some(&LintLevel::Allow)
+            Some(&LintLevel::Warn)
         );
 
         let engine = LintEngine::new(config);
@@ -295,7 +322,7 @@ mod tests {
         assert!(
             violations
                 .iter()
-                .all(|v| v.rule_id != "snake_case_variables")
+                .any(|v| v.rule_id == "snake_case_variables" && v.lint_level == LintLevel::Warn)
         );
     }
 

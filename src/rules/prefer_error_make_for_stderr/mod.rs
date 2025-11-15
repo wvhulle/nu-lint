@@ -1,8 +1,6 @@
 use nu_protocol::ast::{Argument, Block, Expr, PipelineElement};
 
-use crate::{
-    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation,
-};
+use crate::{ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation};
 
 fn check_sequential_stderr_exit(
     first: &PipelineElement,
@@ -75,10 +73,9 @@ fn check(context: &LintContext) -> Vec<Violation> {
     main_violations.chain(nested_violations).collect()
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "prefer_error_make_for_stderr",
-        LintLevel::Warn,
         "Use 'error make' instead of 'print stderr' + 'exit' for structured error handling",
         check,
     )

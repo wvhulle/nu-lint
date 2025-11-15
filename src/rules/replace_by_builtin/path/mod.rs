@@ -4,7 +4,6 @@ use nu_protocol::{
 };
 
 use crate::{
-    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::Rule,
@@ -167,10 +166,9 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .collect()
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "prefer_path_type",
-        LintLevel::Warn,
         "Use Nushell's path type instead of string for parameters with 'path' in the name",
         check,
     )

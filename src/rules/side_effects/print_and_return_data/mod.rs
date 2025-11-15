@@ -4,7 +4,6 @@ use nu_protocol::{
 };
 
 use crate::{
-    LintLevel,
     ast::{block::BlockExt, call::CallExt, effect::is_side_effect_only},
     context::LintContext,
     rule::Rule,
@@ -107,10 +106,9 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "print_and_return_data",
-        LintLevel::Warn,
         "Functions should not both print to stdout and return data",
         check,
     )

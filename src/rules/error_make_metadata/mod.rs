@@ -1,7 +1,6 @@
 use nu_protocol::ast::{Call, Expr, Expression, RecordItem};
 
 use crate::{
-    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
     context::LintContext,
     rule::Rule,
@@ -207,10 +206,9 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "error_make_metadata",
-        LintLevel::Allow,
         "error make calls should include metadata fields like label and help for better error \
          context",
         check,

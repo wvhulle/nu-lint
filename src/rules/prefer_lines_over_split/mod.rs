@@ -1,11 +1,8 @@
-use crate::{LintLevel, context::LintContext, rule::Rule, violation::Violation};
-
+use crate::{context::LintContext, rule::Rule, violation::Violation};
 fn check(context: &LintContext) -> Vec<Violation> {
     let mut violations = Vec::new();
-
     // Search for "split row" patterns with newline in the source code
     let source_lines: Vec<&str> = context.source.lines().collect();
-
     for (line_idx, line) in source_lines.iter().enumerate() {
         // Look for split row with newline patterns
         if line.contains("split row")
@@ -20,7 +17,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 .map(|l| l.len() + 1) // +1 for newline
                 .sum();
             let line_end = line_start + line.len();
-
             violations.push(
                 Violation::new_static(
                     "prefer_lines_over_split",
@@ -34,19 +30,15 @@ fn check(context: &LintContext) -> Vec<Violation> {
             );
         }
     }
-
     violations
 }
-
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "prefer_lines_over_split",
-        LintLevel::Warn,
         "Use 'lines' instead of 'split row \"\\n\"' for better performance and clarity",
         check,
     )
 }
-
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]

@@ -7,7 +7,7 @@ use nu_protocol::{
 };
 
 use crate::{
-    LintError, LintLevel, config::Config, context::LintContext, rules::RuleRegistry,
+    LintError, LintLevel, config::Config, context::LintContext, rules::ALL_RULES,
     violation::Violation,
 };
 
@@ -21,7 +21,6 @@ fn parse_source<'a>(engine_state: &'a EngineState, source: &[u8]) -> (Block, Sta
 }
 
 pub struct LintEngine {
-    pub registry: RuleRegistry,
     config: Config,
     engine_state: &'static EngineState,
 }
@@ -53,7 +52,6 @@ impl LintEngine {
     #[must_use]
     pub fn new(config: Config) -> Self {
         Self {
-            registry: RuleRegistry::with_default_rules(),
             config,
             engine_state: Self::default_engine_state(),
         }
@@ -99,17 +97,15 @@ impl LintEngine {
 
     /// Collect violations from all enabled rules
     fn collect_violations(&self, context: &LintContext) -> Vec<Violation> {
-        self.registry
-            .all_rules()
+        ALL_RULES
+            .iter()
             .filter_map(|rule| {
-                // Get the effective lint level for this rule
-                let lint_level = self.config.get_lint_level(rule.id, rule.default_lint_level);
+                let lint_level = self.config.get_lint_level(rule.id);
 
                 if lint_level == LintLevel::Allow {
-                    return None; // Rule is disabled
+                    return None;
                 }
 
-                // Run the rule and update lint levels
                 let mut violations = (rule.check)(context);
                 for violation in &mut violations {
                     violation.set_lint_level(lint_level);

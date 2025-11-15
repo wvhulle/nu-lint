@@ -4,7 +4,6 @@ use nu_protocol::{
 };
 
 use crate::{
-    LintLevel,
     ast::effect::{StatementType, classify_expression},
     context::LintContext,
     rule::Rule,
@@ -99,10 +98,9 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .collect()
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "pure_before_side_effects",
-        LintLevel::Allow,
         "Detect functions that have pure computation before side effects",
         check,
     )

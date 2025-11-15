@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use nu_protocol::ast::ExternalArgument;
 
 use crate::{
-    LintLevel, Violation,
+    Violation,
     ast::ext_command::{BuiltinAlternative, ExternalArgumentExt, detect_external_commands},
     context::LintContext,
     rule::Rule,
@@ -370,10 +370,9 @@ fn check(context: &LintContext) -> Vec<Violation> {
     )
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "prefer_builtin_other",
-        LintLevel::Allow,
         "Avoid external commands when Nushell built-ins are available (env, date, whoami, man, \
          sed, awk, cut, wc, tr, tee, etc.)",
         check,

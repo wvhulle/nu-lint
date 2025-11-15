@@ -4,11 +4,11 @@ pub mod config;
 mod context;
 mod engine;
 pub mod fix;
-mod lint_set;
 pub mod log;
-mod output;
+pub mod output;
 mod rule;
 mod rules;
+mod sets;
 mod violation;
 
 use std::io;

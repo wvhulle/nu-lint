@@ -1,7 +1,6 @@
 use nu_protocol::ast::{Call, Expr, Expression, RecordItem};
 
 use crate::{
-    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::Rule,
@@ -115,10 +114,9 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub fn rule() -> Rule {
+pub const fn rule() -> Rule {
     Rule::new(
         "descriptive_error_messages",
-        LintLevel::Allow,
         "Error messages should be descriptive and actionable",
         check,
     )

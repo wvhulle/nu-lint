@@ -1,7 +1,7 @@
 use core::hash::Hasher;
 use std::hash::Hash;
 
-use crate::{config::LintLevel, context::LintContext, violation::Violation};
+use crate::{context::LintContext, violation::Violation};
 
 /// Lint sets (collections of rules, similar to Clippy's lint groups)
 #[derive(Debug, Clone, Copy)]
@@ -9,7 +9,6 @@ use crate::{config::LintLevel, context::LintContext, violation::Violation};
 /// A concrete rule struct that wraps the check function
 pub struct Rule {
     pub id: &'static str,
-    pub default_lint_level: LintLevel,
     pub description: &'static str,
     pub(crate) check: fn(&LintContext) -> Vec<Violation>,
 }
@@ -32,13 +31,11 @@ impl Rule {
     /// Create a new rule
     pub(crate) const fn new(
         id: &'static str,
-        default_lint_level: LintLevel,
         description: &'static str,
         check: fn(&LintContext) -> Vec<Violation>,
     ) -> Self {
         Self {
             id,
-            default_lint_level,
             description,
             check,
         }
@@ -132,6 +129,36 @@ impl Rule {
             replacement_text.contains(expected_text),
             "Expected fix replacement text to contain '{expected_text}', but got: \
              {replacement_text}"
+        );
+    }
+
+    #[cfg(test)]
+    #[track_caller]
+    /// Test helper: assert that applying the fix produces the expected code
+    pub fn assert_fix(&self, bad_code: &str, expected_code: &str) {
+        let violations =
+            LintContext::test_with_parsed_source(bad_code, |context| (self.check)(&context));
+        assert!(
+            !violations.is_empty(),
+            "Expected rule '{}' to detect violations, but found none",
+            self.id
+        );
+
+        let fix = violations[0]
+            .fix
+            .as_ref()
+            .expect("Expected violation to have a fix");
+
+        assert!(
+            !fix.replacements.is_empty(),
+            "Expected fix to have replacements"
+        );
+
+        let replacement_text = &fix.replacements[0].new_text;
+        assert_eq!(
+            replacement_text.as_ref(),
+            expected_code,
+            "Expected fix to produce exact code"
         );
     }
 

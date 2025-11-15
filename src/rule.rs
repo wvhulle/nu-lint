@@ -134,6 +134,36 @@ impl Rule {
 
     #[cfg(test)]
     #[track_caller]
+    /// Test helper: assert that applying the fix produces the expected code
+    pub fn assert_fix(&self, bad_code: &str, expected_code: &str) {
+        let violations =
+            LintContext::test_with_parsed_source(bad_code, |context| (self.check)(&context));
+        assert!(
+            !violations.is_empty(),
+            "Expected rule '{}' to detect violations, but found none",
+            self.id
+        );
+
+        let fix = violations[0]
+            .fix
+            .as_ref()
+            .expect("Expected violation to have a fix");
+
+        assert!(
+            !fix.replacements.is_empty(),
+            "Expected fix to have replacements"
+        );
+
+        let replacement_text = &fix.replacements[0].new_text;
+        assert_eq!(
+            replacement_text.as_ref(),
+            expected_code,
+            "Expected fix to produce exact code"
+        );
+    }
+
+    #[cfg(test)]
+    #[track_caller]
     /// Test helper: assert that the rule generates a fix with description
     /// containing the expected string
     pub fn assert_fix_description_contains(&self, code: &str, expected_text: &str) {

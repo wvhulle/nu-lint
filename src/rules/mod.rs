@@ -19,7 +19,7 @@ mod naming;
 
 mod nu_parse_error;
 
-mod pipeline_handle_errors;
+mod prefer_complete_for_external_commands;
 
 mod prefer_compound_assignment;
 mod prefer_direct_use;
@@ -81,7 +81,7 @@ pub const ALL_RULES: [Rule; 66] = [
     no_trailing_spaces::rule(),
     nu_parse_error::rule(),
     omit_list_commas::rule(),
-    pipeline_handle_errors::rule(),
+    prefer_complete_for_external_commands::rule(),
     replace_by_builtin::cat::rule(),
     replace_by_builtin::find::rule(),
     replace_by_builtin::grep::rule(),

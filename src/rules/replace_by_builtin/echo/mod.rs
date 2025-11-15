@@ -1,6 +1,11 @@
 use nu_protocol::ast::{Block, Expr, Pipeline, PipelineElement};
 
-use crate::{ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation};
+use crate::{
+    ast::call::CallExt,
+    context::LintContext,
+    rule::Rule,
+    violation::{Fix, Replacement, Violation},
+};
 
 fn uses_echo(element: &PipelineElement, context: &LintContext) -> bool {
     match &element.expr.expr {
@@ -18,51 +23,17 @@ fn extract_echo_args(code_snippet: &str) -> &str {
         .trim()
 }
 
-fn format_suggestion_body(args: &str, pipeline_continuation: Option<&str>) -> String {
-    use std::fmt::Write as _;
-
-    let mut body = String::new();
-
-    if args.is_empty() {
-        body.push_str("  Good: (no echo needed)\n\n");
-    } else {
-        let _ = writeln!(body, "  Good: {args}\n");
-        if let Some(continuation) = pipeline_continuation {
-            body.push_str("In pipelines, echo is unnecessary - just use the value:\n");
-            let _ = writeln!(body, "  {args} | {continuation}\n");
-        }
-    }
-
-    body
-}
-
-fn format_suggestion_note(args: &str) -> String {
-    use std::fmt::Write as _;
-
-    let mut note = String::from("Note:\n");
-    note.push_str("- 'echo' in Nushell is just an identity function (returns input unchanged)\n");
-    note.push_str("- Use 'print' if you need side-effects for debugging:\n");
-    let _ = write!(note, "  print {args}");
-
-    note
-}
-
-fn generate_suggestion(
-    element: &PipelineElement,
-    pipeline_continuation: Option<&str>,
-    context: &LintContext,
-) -> String {
-    use std::fmt::Write as _;
-
-    let code_snippet = &context.source[element.expr.span.start..element.expr.span.end];
+fn generate_fix(code_snippet: &str, span: nu_protocol::Span) -> Option<Fix> {
     let args = extract_echo_args(code_snippet);
 
-    let mut suggestion = String::from("Instead of 'echo', use the value directly:\n\n");
-    let _ = writeln!(suggestion, "  Bad:  {code_snippet}");
-    suggestion.push_str(&format_suggestion_body(args, pipeline_continuation));
-    suggestion.push_str(&format_suggestion_note(args));
-
-    suggestion
+    if args.is_empty() {
+        None
+    } else {
+        Some(Fix::new_dynamic(
+            format!("Replace '{code_snippet}' with '{args}'"),
+            vec![Replacement::new_dynamic(span, args.to_string())],
+        ))
+    }
 }
 
 fn get_pipeline_continuation<'a>(
@@ -79,15 +50,20 @@ fn get_pipeline_continuation<'a>(
 
 fn create_violation(
     element: &PipelineElement,
-    pipeline_continuation: Option<&str>,
+    _pipeline_continuation: Option<&str>,
     context: &LintContext,
 ) -> Violation {
-    let message = "Avoid using 'echo' command: In Nushell, 'echo' is just an identity function. \
-                   Use the value directly, or use 'print' for side-effects.";
-    let suggestion = generate_suggestion(element, pipeline_continuation, context);
+    let message = "Avoid 'echo' - it's just an identity function. Use the value directly, or \
+                   'print' for debugging";
+    let code_snippet = &context.source[element.expr.span.start..element.expr.span.end];
+    let fix = generate_fix(code_snippet, element.expr.span);
 
-    Violation::new_static("prefer_builtin_echo", message, element.expr.span)
-        .with_suggestion_dynamic(suggestion)
+    let violation = Violation::new_static("prefer_builtin_echo", message, element.expr.span);
+
+    match fix {
+        Some(f) => violation.with_fix(f),
+        None => violation,
+    }
 }
 
 fn extract_nested_block_ids(

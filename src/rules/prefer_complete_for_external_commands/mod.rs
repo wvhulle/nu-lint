@@ -1,0 +1,172 @@
+use nu_protocol::{
+    Span,
+    ast::{Block, Expr, Expression, Pipeline, Traverse},
+};
+
+use crate::{ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation};
+
+const SAFE_EXTERNAL_COMMANDS: &[&str] = &[
+    "echo", "printf", "true", "false", "yes", "seq", "ls", "date", "uptime", "cal", "whoami", "id",
+    "hostname", "uname", "arch", "pwd", "basename", "dirname", "realpath", "readlink", "env",
+    "printenv", "tr", "cut", "paste", "column", "fmt", "fold", "expand", "unexpand", "bc", "dc",
+    "expr", "mktemp", "git",
+];
+
+fn is_safe_command(cmd: &str) -> bool {
+    SAFE_EXTERNAL_COMMANDS.contains(&cmd)
+}
+
+fn get_external_command(expr: &Expression, context: &LintContext) -> Option<String> {
+    if let Expr::ExternalCall(head, _args) = &expr.expr {
+        let head_text = context.source[head.span.start..head.span.end].to_string();
+        if !is_safe_command(&head_text) {
+            return Some(head_text);
+        }
+    }
+    None
+}
+
+// Check if pipeline has any processing after the external command
+// This includes both simple processing (lines, str trim) and data processing
+// (from, parse, where)
+const fn pipeline_has_processing(pipeline: &Pipeline, _context: &LintContext) -> bool {
+    // If there's more than just the external command, it has processing
+    pipeline.elements.len() > 1
+}
+
+fn is_wrapped_in_complete(pipeline: &Pipeline, context: &LintContext) -> bool {
+    pipeline.elements.iter().any(|element| {
+        matches!(&element.expr.expr, Expr::Call(call)
+            if call.is_call_to_command("complete", context))
+    })
+}
+
+fn is_in_try_block(expr_span: Span, context: &LintContext) -> bool {
+    use nu_protocol::ast::Traverse;
+
+    let mut try_spans = Vec::new();
+    context.ast.flat_map(
+        context.working_set,
+        &|expr| {
+            matches!(&expr.expr, Expr::Call(call)
+            if call.is_call_to_command("try", context))
+            .then_some(expr.span)
+            .into_iter()
+            .collect()
+        },
+        &mut try_spans,
+    );
+
+    try_spans
+        .iter()
+        .any(|try_span| try_span.contains_span(expr_span))
+}
+
+fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violation> {
+    // External commands in pipelines need error handling because Nushell doesn't
+    // propagate errors from external commands in pipelines by default (only
+    // checks the last command)
+    if !pipeline_has_processing(pipeline, context) {
+        return None;
+    }
+
+    let first_element = &pipeline.elements[0];
+    let external_cmd = get_external_command(&first_element.expr, context)?;
+
+    if is_wrapped_in_complete(pipeline, context) {
+        return None;
+    }
+
+    // Note: try blocks do NOT catch errors from external commands in pipelines!
+    // We still check for try to avoid duplicate warnings, but we should note this
+    // limitation
+    if is_in_try_block(first_element.expr.span, context) {
+        return None;
+    }
+
+    let pipeline_start = pipeline.elements[0].expr.span.start;
+    let pipeline_end = pipeline.elements.last().unwrap().expr.span.end;
+    let pipeline_span = nu_protocol::Span::new(pipeline_start, pipeline_end);
+    let pipeline_text = &context.source[pipeline_start..pipeline_end];
+
+    let message = format!(
+        "External command '{external_cmd}' in pipeline without error handling: Nushell only \
+         checks the last command's exit code. If this command fails, the error will be silently \
+         ignored."
+    );
+
+    let suggestion = format!(
+        "Wrap in 'complete' and check exit code:\nlet result = ({pipeline_text} | complete)\nif \
+         $result.exit_code != 0 {{ error make {{ msg: $result.stderr }} }}\n$result.stdout\n\nOr \
+         enable experimental pipefail (Nushell 0.108.0+):\n$env.config.pipefail = true"
+    );
+
+    let fix_text = format!(
+        "let result = ({pipeline_text} | complete)\nif $result.exit_code != 0 {{ error make {{ \
+         msg: $result.stderr }} }}\n$result.stdout"
+    );
+
+    let fix = crate::Fix::new_dynamic(
+        "Wrap pipeline in complete with error checking".to_string(),
+        vec![crate::Replacement::new_dynamic(pipeline_span, fix_text)],
+    );
+
+    Some(
+        Violation::new_dynamic(
+            "prefer_complete_for_external_commands",
+            message,
+            first_element.expr.span,
+        )
+        .with_suggestion_dynamic(suggestion)
+        .with_fix(fix),
+    )
+}
+
+fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<Violation>) {
+    for pipeline in &block.pipelines {
+        violations.extend(check_pipeline(pipeline, context));
+
+        for element in &pipeline.elements {
+            let mut blocks = Vec::new();
+            element.expr.flat_map(
+                context.working_set,
+                &|expr| match &expr.expr {
+                    Expr::Block(block_id)
+                    | Expr::Closure(block_id)
+                    | Expr::Subexpression(block_id) => {
+                        vec![*block_id]
+                    }
+                    _ => vec![],
+                },
+                &mut blocks,
+            );
+
+            for &block_id in &blocks {
+                let nested_block = context.working_set.get_block(block_id);
+                check_block(nested_block, context, violations);
+            }
+        }
+    }
+}
+
+fn check(context: &LintContext) -> Vec<Violation> {
+    let mut violations = Vec::new();
+    check_block(context.ast, context, &mut violations);
+    violations
+}
+
+pub const fn rule() -> Rule {
+    Rule::new(
+        "prefer_complete_for_external_commands",
+        "External commands in pipelines should use 'complete' for error handling (Nushell doesn't \
+         propagate pipeline errors by default)",
+        check,
+    )
+}
+
+#[cfg(test)]
+mod detect_bad;
+#[cfg(test)]
+mod generated_fix;
+#[cfg(test)]
+mod ignore_good;

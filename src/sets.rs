@@ -122,7 +122,7 @@ fn error_handling_rule_set() -> RuleSet {
             "descriptive_error_messages".to_string(),
             "print_exit_use_error_make".to_string(),
             "escape_string_interpolation_operators".to_string(),
-            "pipeline_handle_errors".to_string(),
+            "prefer_complete_for_external_commands".to_string(),
             "check_complete_exit_code".to_string(),
             "error_make_metadata".to_string(),
             "dangerous_file_operations".to_string(),
@@ -249,7 +249,7 @@ fn systemd_rule_set() -> RuleSet {
         rules: HashSet::from([
             "systemd_journal_prefix".to_string(),
             "prefer_error_make_for_stderr".to_string(),
-            "pipeline_handle_errors".to_string(),
+            "prefer_complete_for_external_commands".to_string(),
         ]),
     }
 }
@@ -307,7 +307,10 @@ pub static DEFAULT_RULE_MAP: LazyLock<RuleMap> = LazyLock::new(|| RuleMap {
         ("no_trailing_spaces".to_string(), LintLevel::Warn),
         ("nu_parse_error".to_string(), LintLevel::Deny),
         ("omit_list_commas".to_string(), LintLevel::Warn),
-        ("pipeline_handle_errors".to_string(), LintLevel::Warn),
+        (
+            "prefer_complete_for_external_commands".to_string(),
+            LintLevel::Warn,
+        ),
         ("prefer_builtin_cat".to_string(), LintLevel::Warn),
         ("prefer_builtin_find".to_string(), LintLevel::Warn),
         ("prefer_builtin_grep".to_string(), LintLevel::Warn),
@@ -339,7 +342,7 @@ pub static DEFAULT_RULE_MAP: LazyLock<RuleMap> = LazyLock::new(|| RuleMap {
         ("snake_case_variables".to_string(), LintLevel::Warn),
         ("brace_spacing".to_string(), LintLevel::Warn),
         ("pipe_spacing".to_string(), LintLevel::Warn),
-        ("systemd_journal_prefix".to_string(), LintLevel::Warn),
+        ("systemd_journal_prefix".to_string(), LintLevel::Allow),
         ("unnecessary_mut".to_string(), LintLevel::Warn),
         (
             "unnecessary_variable_before_return".to_string(),

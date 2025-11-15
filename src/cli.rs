@@ -11,7 +11,9 @@ use ignore::WalkBuilder;
 use rayon::prelude::*;
 
 use crate::{
-    Config, LintEngine, LintLevel, lint_map::default_rule_map, output, rules::ALL_RULES,
+    Config, LintEngine, LintLevel, output,
+    rules::ALL_RULES,
+    sets::{BUILTIN_LINT_SETS, DEFAULT_RULE_MAP},
     violation::Violation,
 };
 
@@ -59,6 +61,9 @@ pub enum Commands {
     #[command(about = "List all available rules")]
     ListRules,
 
+    #[command(about = "List all available lint sets")]
+    ListSets,
+
     #[command(about = "Explain a specific rule")]
     Explain {
         #[arg(help = "Rule ID to explain")]
@@ -75,10 +80,11 @@ pub enum Format {
     Github,
 }
 
-/// Handle subcommands (list-rules, explain)
+/// Handle subcommands (list-rules, list-sets, explain)
 pub fn handle_command(command: Commands, config: &Config) {
     match command {
         Commands::ListRules => list_rules(config),
+        Commands::ListSets => list_sets(),
         Commands::Explain { rule_id } => explain_rule(config, &rule_id),
     }
 }
@@ -240,30 +246,38 @@ pub fn output_results(violations: &[Violation], format: Option<Format>) {
 }
 
 fn list_rules(config: &Config) {
-    let default_rule_map = default_rule_map();
     println!("Available rules:\n");
 
     for rule in ALL_RULES {
-        let default_level = default_rule_map
-            .rules
-            .get(rule.id)
-            .copied()
-            .unwrap_or(LintLevel::Warn);
-        let lint_level = config.get_lint_level(rule.id, default_level);
+        let lint_level = config.get_lint_level(rule.id);
         println!("{:<40} [{:?}] {}", rule.id, lint_level, rule.description);
     }
 }
 
-fn explain_rule(config: &Config, rule_id: &str) {
-    let default_rule_map = default_rule_map();
+fn list_sets() {
+    println!("Available lint sets:\n");
 
+    let mut sorted_sets: Vec<_> = BUILTIN_LINT_SETS.iter().collect();
+    sorted_sets.sort_by_key(|(name, _)| *name);
+
+    for (name, set) in sorted_sets {
+        println!(
+            "{:<20} {} ({} rules)",
+            name,
+            set.description,
+            set.rules.len()
+        );
+    }
+}
+
+fn explain_rule(config: &Config, rule_id: &str) {
     if let Some(rule) = ALL_RULES.iter().find(|r| r.id == rule_id) {
-        let default_level = default_rule_map
+        let lint_level = config.get_lint_level(rule.id);
+        let default_level = DEFAULT_RULE_MAP
             .rules
             .get(rule.id)
             .copied()
             .unwrap_or(LintLevel::Warn);
-        let lint_level = config.get_lint_level(rule.id, default_level);
         println!("Rule: {}", rule.id);
         println!("Lint Level: {lint_level:?}");
         println!("Default Lint Level: {default_level}");

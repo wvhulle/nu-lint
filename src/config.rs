@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     LintError,
-    lint_map::{builtin_lint_sets, default_rule_map},
+    sets::{BUILTIN_LINT_SETS, DEFAULT_RULE_MAP},
 };
 
 /// Lint level configuration (inspired by Clippy)
@@ -86,7 +86,7 @@ impl Default for LintConfig {
     fn default() -> Self {
         Self {
             sets: HashMap::new(),
-            rules: default_rule_map().rules.clone(),
+            rules: DEFAULT_RULE_MAP.rules.clone(),
         }
     }
 }
@@ -132,33 +132,30 @@ impl Config {
             })
     }
 
+    /// Get the effective lint level for a specific rule
+    /// Priority (high to low):
+    /// 1. Individual rule level in config
+    /// 2. Lint set level in config (highest level if rule appears in multiple
+    ///    sets)
+    /// 3. Default level from default rule map
     #[must_use]
-    pub fn rule_lint_level_in_conf(&self, rule_id: &str) -> Option<LintLevel> {
-        // Individual rule configuration overrides set configuration
+    pub fn get_lint_level(&self, rule_id: &str) -> LintLevel {
         if let Some(level) = self.lints.rules.get(rule_id) {
             log::debug!(
                 "Rule '{rule_id}' has individual level '{level:?}' in config, overriding set \
                  levels"
             );
-            return Some(*level);
+            return *level;
         }
 
-        // Check if the rule belongs to any configured lint sets
-        self.get_rule_level_from_sets(rule_id)
-    }
-
-    fn get_rule_level_from_sets(&self, rule_id: &str) -> Option<LintLevel> {
-        let builtin_sets = builtin_lint_sets();
         let mut max_level: Option<LintLevel> = None;
 
         for (set_name, level) in &self.lints.sets {
-            log::debug!("Lint set {set_name} is enabled with level {level:?} in config");
-
-            let Some(lint_set) = builtin_sets.get(set_name.as_str()) else {
+            let Some(lint_set) = BUILTIN_LINT_SETS.get(set_name.as_str()) else {
                 continue;
             };
 
-            if !lint_set.rules.contains_key(rule_id) {
+            if !lint_set.rules.contains(rule_id) {
                 continue;
             }
 
@@ -166,21 +163,13 @@ impl Config {
             max_level = Some(max_level.map_or(*level, |existing| existing.max(*level)));
         }
 
-        max_level
-    }
-
-    /// Get the effective lint level for a specific rule
-    /// Priority: individual rule config > any applicable set config > rule
-    /// default
-    #[must_use]
-    pub fn get_lint_level(&self, rule_id: &str, default_level: LintLevel) -> LintLevel {
-        // Check individual rule configuration first
-        if let Some(level) = self.rule_lint_level_in_conf(rule_id) {
-            return level;
-        }
-
-        // Fall back to rule's default
-        default_level
+        max_level.unwrap_or_else(|| {
+            DEFAULT_RULE_MAP
+                .rules
+                .get(rule_id)
+                .copied()
+                .unwrap_or(LintLevel::Warn)
+        })
     }
 }
 
@@ -243,8 +232,8 @@ mod tests {
     "#;
 
         let config = Config::load_from_str(toml_str).unwrap();
-        let found_set_level = config.rule_lint_level_in_conf("snake_case_variables");
-        assert!(matches!(found_set_level, Some(LintLevel::Deny)));
+        let found_set_level = config.get_lint_level("snake_case_variables");
+        assert_eq!(found_set_level, LintLevel::Deny);
     }
 
     #[test]
@@ -257,8 +246,8 @@ mod tests {
     "#;
 
         let config = Config::load_from_str(toml_str).unwrap();
-        let found_set_level = config.rule_lint_level_in_conf("snake_case_variables");
-        assert!(matches!(found_set_level, Some(LintLevel::Allow)));
+        let found_set_level = config.get_lint_level("snake_case_variables");
+        assert_eq!(found_set_level, LintLevel::Allow);
     }
 
     #[test]
@@ -268,8 +257,8 @@ mod tests {
     ";
 
         let config = Config::load_from_str(toml_str).unwrap();
-        let found_set_level = config.rule_lint_level_in_conf("snake_case_variables");
-        assert!(matches!(found_set_level, Some(LintLevel::Warn)));
+        let found_set_level = config.get_lint_level("snake_case_variables");
+        assert_eq!(found_set_level, LintLevel::Warn);
     }
 
     #[test]
@@ -283,8 +272,8 @@ mod tests {
     "#;
 
         let config = Config::load_from_str(toml_str).unwrap();
-        let found_set_level = config.rule_lint_level_in_conf("snake_case_variables");
-        assert_eq!(found_set_level, Some(LintLevel::Allow));
+        let found_set_level = config.get_lint_level("snake_case_variables");
+        assert_eq!(found_set_level, LintLevel::Allow);
     }
 
     #[test]

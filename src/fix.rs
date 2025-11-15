@@ -1,8 +1,4 @@
-use std::{
-    collections::HashMap,
-    fs,
-    path::PathBuf,
-};
+use std::{collections::HashMap, fs, path::PathBuf};
 
 use crate::{LintError, violation::Violation};
 
@@ -20,10 +16,7 @@ pub struct FixResult {
 /// # Errors
 ///
 /// Returns an error if a file cannot be read or written
-pub fn apply_fixes(
-    violations: &[Violation],
-    dry_run: bool,
-) -> Result<Vec<FixResult>, LintError> {
+pub fn apply_fixes(violations: &[Violation], dry_run: bool) -> Result<Vec<FixResult>, LintError> {
     let violations_by_file = group_violations_by_file(violations);
     let mut results = Vec::new();
 
@@ -66,7 +59,7 @@ fn group_violations_by_file(violations: &[Violation]) -> HashMap<PathBuf, Vec<&V
 /// Apply fixes to source code content
 fn apply_fixes_to_content(content: &str, violations: &[&Violation]) -> String {
     let content_bytes = content.as_bytes();
-    
+
     // Collect all replacements from all violations
     let mut replacements = Vec::new();
     for violation in violations {
@@ -83,11 +76,11 @@ fn apply_fixes_to_content(content: &str, violations: &[&Violation]) -> String {
     replacements.sort_by(|a, b| b.span.start.cmp(&a.span.start));
 
     let mut result = content.to_string();
-    
+
     for replacement in replacements {
         let start = replacement.span.start;
         let end = replacement.span.end;
-        
+
         // Validate span bounds
         if start > content_bytes.len() || end > content_bytes.len() || start > end {
             log::warn!(
@@ -108,17 +101,14 @@ fn apply_fixes_to_content(content: &str, violations: &[&Violation]) -> String {
 
 /// Count how many violations have applicable fixes
 fn count_applicable_fixes(violations: &[&Violation]) -> usize {
-    violations
-        .iter()
-        .filter(|v| v.fix.is_some())
-        .count()
+    violations.iter().filter(|v| v.fix.is_some()).count()
 }
 
 /// Format fix results for output
 #[must_use]
 pub fn format_fix_results(results: &[FixResult], dry_run: bool) -> String {
     let mut output = String::new();
-    
+
     if dry_run {
         output.push_str("The following files would be fixed:\n\n");
     } else {
@@ -155,7 +145,7 @@ mod tests {
         let content = "let x = 5";
         let replacement = Replacement::new_static(Span::new(4, 5), "y");
         let fix = Fix::new_static("Rename variable", vec![replacement]);
-        
+
         let violation = Violation {
             rule_id: Cow::Borrowed("test_rule"),
             lint_level: LintLevel::Warn,
@@ -178,7 +168,7 @@ mod tests {
             Replacement::new_static(Span::new(15, 16), "b"),
         ];
         let fix = Fix::new_static("Rename variables", replacements);
-        
+
         let violation = Violation {
             rule_id: Cow::Borrowed("test_rule"),
             lint_level: LintLevel::Warn,
@@ -197,17 +187,17 @@ mod tests {
     fn test_multiple_fixes_same_file() {
         // Test that multiple separate fixes to different parts of the same file work correctly
         let content = "let x = 5; let y = 10; let z = 15";
-        
+
         let fix1 = Fix::new_static(
             "Rename x",
             vec![Replacement::new_static(Span::new(4, 5), "a")],
         );
-        
+
         let fix2 = Fix::new_static(
             "Rename y",
             vec![Replacement::new_static(Span::new(15, 16), "b")],
         );
-        
+
         let fix3 = Fix::new_static(
             "Rename z",
             vec![Replacement::new_static(Span::new(27, 28), "c")],
@@ -251,7 +241,7 @@ mod tests {
     fn test_overlapping_fixes_with_different_lengths() {
         // Test replacing text with different length strings
         let content = "let variable_name = 5";
-        
+
         let fix = Fix::new_static(
             "Shorten name",
             vec![Replacement::new_static(Span::new(4, 17), "x")],
@@ -275,12 +265,12 @@ mod tests {
     fn test_multiple_fixes_different_lengths() {
         // Test multiple fixes where replacements have different lengths
         let content = "let abc = 5; let defgh = 10";
-        
+
         let fix1 = Fix::new_static(
             "Shorten abc to a",
             vec![Replacement::new_static(Span::new(4, 7), "a")],
         );
-        
+
         let fix2 = Fix::new_static(
             "Shorten defgh to b",
             vec![Replacement::new_static(Span::new(17, 22), "b")],
@@ -314,18 +304,18 @@ mod tests {
     fn test_fixes_applied_in_reverse_order() {
         // Verify that fixes are applied from end to start to preserve offsets
         let content = "aaaa bbbb cccc dddd";
-        
+
         // Apply fixes in forward order but they should be processed in reverse
         let fix1 = Fix::new_static(
             "Replace aaaa",
             vec![Replacement::new_static(Span::new(0, 4), "A")],
         );
-        
+
         let fix2 = Fix::new_static(
             "Replace bbbb",
             vec![Replacement::new_static(Span::new(5, 9), "B")],
         );
-        
+
         let fix3 = Fix::new_static(
             "Replace cccc",
             vec![Replacement::new_static(Span::new(10, 14), "C")],
@@ -401,7 +391,7 @@ mod tests {
     #[test]
     fn test_count_applicable_fixes() {
         let fix = Fix::new_static("Test fix", vec![]);
-        
+
         let with_fix = Violation {
             rule_id: Cow::Borrowed("test_rule"),
             lint_level: LintLevel::Warn,

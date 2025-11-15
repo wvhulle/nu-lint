@@ -2,9 +2,7 @@ use heck::ToKebabCase;
 use nu_protocol::ast::Expr;
 
 use super::NuNaming;
-use crate::{
-    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation,
-};
+use crate::{ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation};
 
 fn check(context: &LintContext) -> Vec<Violation> {
     context.collect_rule_violations(|expr, ctx| {
@@ -37,7 +35,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
 pub fn rule() -> Rule {
     Rule::new(
         "kebab_case_commands",
-        LintLevel::Allow,
         "Custom commands should use kebab-case naming convention",
         check,
     )

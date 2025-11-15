@@ -6,7 +6,6 @@ use nu_protocol::{
 };
 
 use crate::{
-    LintLevel,
     ast::{
         call::CallExt,
         effect::{IoType, get_io_type},
@@ -118,7 +117,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
 pub fn rule() -> Rule {
     Rule::new(
         "mixed_io_types",
-        LintLevel::Allow,
         "Functions should not mix different types of I/O operations",
         check,
     )

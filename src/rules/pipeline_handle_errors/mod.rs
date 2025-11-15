@@ -3,9 +3,7 @@ use nu_protocol::{
     ast::{Argument, Block, Call, Expr, Expression, Pipeline},
 };
 
-use crate::{
-    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation,
-};
+use crate::{ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation};
 
 /// Whitelist of external commands that are generally safe and unlikely to fail
 /// These commands typically only fail if the system is severely broken
@@ -253,7 +251,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
 pub fn rule() -> Rule {
     Rule::new(
         "pipeline_handle_errors",
-        LintLevel::Warn,
         "Ensure external commands in pipelines have proper error handling",
         check,
     )

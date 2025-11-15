@@ -1,7 +1,7 @@
 use nu_protocol::ast::{Expr, Expression, Pipeline};
 
 use crate::{
-    Fix, LintLevel, Replacement,
+    Fix, Replacement,
     ast::{call::CallExt, ext_command::ExternalCommandExt, pipeline::PipelineExt, span::SpanExt},
     context::LintContext,
     rule::Rule,
@@ -110,7 +110,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
 pub fn rule() -> Rule {
     Rule::new(
         "unused_output",
-        LintLevel::Warn,
         "Commands producing output that is discarded with '| ignore'",
         check,
     )

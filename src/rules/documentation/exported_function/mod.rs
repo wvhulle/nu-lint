@@ -1,8 +1,6 @@
 use nu_protocol::ast::{Call, Expr};
 
-use crate::{
-    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation,
-};
+use crate::{ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation};
 
 /// Check if there's a documentation comment before the given span
 /// Since comments are not preserved in AST, we need to check source text
@@ -78,7 +76,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
 pub fn rule() -> Rule {
     Rule::new(
         "exported_function_docs",
-        LintLevel::Allow,
         "Exported functions should have documentation comments",
         check,
     )

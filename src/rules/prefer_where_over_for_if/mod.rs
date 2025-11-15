@@ -1,7 +1,6 @@
 use nu_protocol::ast::{Argument, Block, Call, Expr, Expression, Operator};
 
 use crate::{
-    LintLevel,
     ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::Rule,
@@ -362,7 +361,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
 pub fn rule() -> Rule {
     Rule::new(
         "prefer_where_over_for_if",
-        LintLevel::Warn,
         "Prefer 'where' filter over for loop with if statement",
         check,
     )

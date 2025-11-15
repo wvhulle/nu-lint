@@ -1,8 +1,6 @@
 use nu_protocol::ast::{Block, Expr, Pipeline, PipelineElement};
 
-use crate::{
-    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation,
-};
+use crate::{ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation};
 
 fn uses_echo(element: &PipelineElement, context: &LintContext) -> bool {
     match &element.expr.expr {
@@ -161,7 +159,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
 pub fn rule() -> Rule {
     Rule::new(
         "never_use_echo",
-        LintLevel::Deny,
         "Discourage use of builtin 'echo' command as it's just an identity function",
         check,
     )

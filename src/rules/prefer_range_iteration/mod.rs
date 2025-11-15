@@ -1,7 +1,6 @@
 use nu_protocol::ast::{Assignment, Call, Comparison, Expr, Expression, Math, Operator};
 
 use crate::{
-    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::Rule,
@@ -187,7 +186,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
 pub fn rule() -> Rule {
     Rule::new(
         "prefer_range_iteration",
-        LintLevel::Warn,
         "Prefer range iteration over while loops with counters",
         check,
     )

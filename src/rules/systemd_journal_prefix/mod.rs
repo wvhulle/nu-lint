@@ -2,22 +2,19 @@ use std::sync::OnceLock;
 
 use regex::Regex;
 
-use crate::{LintLevel, context::LintContext, rule::Rule, violation::Violation};
-
+use crate::{context::LintContext, rule::Rule, violation::Violation};
 fn print_pattern() -> &'static Regex {
     static PATTERN: OnceLock<Regex> = OnceLock::new();
     PATTERN.get_or_init(|| {
         Regex::new(r#"(?:^|[;\n])\s*print\s+(?:"([^"]*)"|'([^']*)'|(\S+))"#).unwrap()
     })
 }
-
 fn echo_pattern() -> &'static Regex {
     static PATTERN: OnceLock<Regex> = OnceLock::new();
     PATTERN.get_or_init(|| {
         Regex::new(r#"(?:^|[;\n])\s*echo\s+(?:"([^"]*)"|'([^']*)'|(\S+))"#).unwrap()
     })
 }
-
 fn has_journal_prefix(text: &str) -> bool {
     static PREFIX_PATTERN: OnceLock<Regex> = OnceLock::new();
     let pattern = PREFIX_PATTERN.get_or_init(|| {
@@ -27,23 +24,19 @@ fn has_journal_prefix(text: &str) -> bool {
     });
     pattern.is_match(text)
 }
-
 fn check(context: &LintContext) -> Vec<Violation> {
     // TODO: Convert from regex to AST
     let mut violations = Vec::new();
     let print_pat = print_pattern();
     let echo_pat = echo_pattern();
-
     for mat in print_pat.find_iter(context.source) {
         let full_match = mat.as_str();
-
         if let Some(caps) = print_pat.captures(full_match) {
             let output_text = caps
                 .get(1)
                 .or_else(|| caps.get(2))
                 .or_else(|| caps.get(3))
                 .map_or("", |m| m.as_str());
-
             if !has_journal_prefix(output_text) {
                 violations.push(
                     Violation::new_static(
@@ -61,17 +54,14 @@ fn check(context: &LintContext) -> Vec<Violation> {
             }
         }
     }
-
     for mat in echo_pat.find_iter(context.source) {
         let full_match = mat.as_str();
-
         if let Some(caps) = echo_pat.captures(full_match) {
             let output_text = caps
                 .get(1)
                 .or_else(|| caps.get(2))
                 .or_else(|| caps.get(3))
                 .map_or("", |m| m.as_str());
-
             if !has_journal_prefix(output_text) {
                 violations.push(
                     Violation::new_static(
@@ -89,19 +79,15 @@ fn check(context: &LintContext) -> Vec<Violation> {
             }
         }
     }
-
     violations
 }
-
 pub fn rule() -> Rule {
     Rule::new(
         "systemd_journal_prefix",
-        LintLevel::Allow,
         "Detect output without systemd journal log level prefix when using SyslogLevelPrefix",
         check,
     )
 }
-
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]

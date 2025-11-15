@@ -1,8 +1,6 @@
 use nu_protocol::SyntaxShape;
 
-use crate::{
-    LintLevel, ast::block::BlockExt, context::LintContext, rule::Rule, violation::Violation,
-};
+use crate::{ast::block::BlockExt, context::LintContext, rule::Rule, violation::Violation};
 
 /// Check if a parameter is a string-like type that could be used as a script
 /// path
@@ -78,7 +76,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
 pub fn rule() -> Rule {
     Rule::new(
         "external_script_as_argument",
-        LintLevel::Warn,
         "Avoid passing external scripts as arguments to custom commands; define them as functions \
          instead",
         check,

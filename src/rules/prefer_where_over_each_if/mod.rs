@@ -1,7 +1,6 @@
 use nu_protocol::ast::{Argument, Call, Expr, Expression};
 
 use crate::{
-    LintLevel,
     ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::Rule,
@@ -129,7 +128,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
 pub fn rule() -> Rule {
     Rule::new(
         "prefer_where_over_each_if",
-        LintLevel::Warn,
         "Use 'where' for filtering instead of 'each' with 'if'",
         check,
     )

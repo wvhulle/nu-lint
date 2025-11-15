@@ -10,7 +10,10 @@ use clap::{Parser, Subcommand};
 use ignore::WalkBuilder;
 use rayon::prelude::*;
 
-use crate::{Config, LintEngine, output, violation::Violation};
+use crate::{
+    Config, LintEngine, LintLevel, lint_map::default_rule_map, output, rules::ALL_RULES,
+    violation::Violation,
+};
 
 #[derive(Parser)]
 #[command(name = "nu-lint")]
@@ -237,23 +240,33 @@ pub fn output_results(violations: &[Violation], format: Option<Format>) {
 }
 
 fn list_rules(config: &Config) {
-    let engine = LintEngine::new(config.clone());
+    let default_rule_map = default_rule_map();
     println!("Available rules:\n");
 
-    for rule in engine.registry.all_rules() {
-        let lint_level = config.get_lint_level(rule.id, rule.default_lint_level);
+    for rule in &*ALL_RULES {
+        let default_level = default_rule_map
+            .rules
+            .get(rule.id)
+            .copied()
+            .unwrap_or(LintLevel::Warn);
+        let lint_level = config.get_lint_level(rule.id, default_level);
         println!("{:<40} [{:?}] {}", rule.id, lint_level, rule.description);
     }
 }
 
 fn explain_rule(config: &Config, rule_id: &str) {
-    let engine = LintEngine::new(config.clone());
+    let default_rule_map = default_rule_map();
 
-    if let Some(rule) = engine.registry.get_rule(rule_id) {
-        let lint_level = config.get_lint_level(rule.id, rule.default_lint_level);
+    if let Some(rule) = ALL_RULES.iter().find(|r| r.id == rule_id) {
+        let default_level = default_rule_map
+            .rules
+            .get(rule.id)
+            .copied()
+            .unwrap_or(LintLevel::Warn);
+        let lint_level = config.get_lint_level(rule.id, default_level);
         println!("Rule: {}", rule.id);
         println!("Lint Level: {lint_level:?}");
-        println!("Default Lint Level: {}", rule.default_lint_level);
+        println!("Default Lint Level: {default_level}");
         println!("Description: {}", rule.description);
     } else {
         eprintln!("Error: Rule '{rule_id}' not found");

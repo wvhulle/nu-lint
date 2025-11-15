@@ -1,7 +1,6 @@
 use nu_protocol::ast::{Call, Expr};
 
 use crate::{
-    LintLevel,
     ast::{call::CallExt, span::SpanExt},
     context::LintContext,
     rule::Rule,
@@ -55,7 +54,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
 pub fn rule() -> Rule {
     Rule::new(
         "exit_only_in_main",
-        LintLevel::Deny,
         "Avoid using 'exit' in functions other than 'main'",
         check,
     )

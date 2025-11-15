@@ -1,8 +1,7 @@
 use nu_protocol::ast::{Expr, Expression, RecordItem, Traverse};
 
 use crate::{
-    LintLevel, ast::expression::ExpressionExt, context::LintContext, rule::Rule,
-    violation::Violation,
+    ast::expression::ExpressionExt, context::LintContext, rule::Rule, violation::Violation,
 };
 
 const MAX_RECORD_LINE_LENGTH: usize = 80;
@@ -74,7 +73,6 @@ fn create_violation(span: nu_protocol::Span) -> Violation {
 pub fn rule() -> Rule {
     Rule::new(
         "prefer_multiline_records",
-        LintLevel::Allow,
         "Prefer multiline format for long or complex records",
         check,
     )

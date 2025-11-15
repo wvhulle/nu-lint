@@ -1,7 +1,6 @@
 use nu_protocol::ast::{Block, Call, Expr, Pipeline, PipelineElement};
 
 use crate::{
-    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
     context::LintContext,
     rule::Rule,
@@ -197,7 +196,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
 pub fn rule() -> Rule {
     Rule::new(
         "print_exit_use_error_make",
-        LintLevel::Warn,
         "Replace 'print' + 'exit' patterns with 'error make' for proper error handling",
         check,
     )

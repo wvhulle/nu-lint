@@ -2,11 +2,9 @@ use std::collections::HashSet;
 
 use nu_protocol::ParseError;
 
-use crate::{LintLevel, context::LintContext, rule::Rule, violation::Violation};
-
+use crate::{context::LintContext, rule::Rule, violation::Violation};
 fn check(context: &LintContext) -> Vec<Violation> {
     let mut seen = HashSet::new();
-
     // Convert each parse error to a violation, deduplicating by span and message
     // Filter out module-related errors since the linter works at AST level only
     context
@@ -30,16 +28,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
         })
         .collect()
 }
-
 pub fn rule() -> Rule {
     Rule::new(
         "nu_parse_error",
-        LintLevel::Deny,
         "Nushell parser encountered a syntax error",
         check,
     )
 }
-
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]

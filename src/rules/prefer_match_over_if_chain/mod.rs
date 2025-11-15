@@ -3,7 +3,6 @@ use core::iter;
 use nu_protocol::ast::{Call, Expr};
 
 use crate::{
-    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::Rule,
@@ -253,7 +252,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
 pub fn rule() -> Rule {
     Rule::new(
         "prefer_match_over_if_chain",
-        LintLevel::Warn,
         "Use 'match' for value-based branching instead of if-else-if chains",
         check,
     )

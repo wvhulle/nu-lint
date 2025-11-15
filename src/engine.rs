@@ -7,8 +7,8 @@ use nu_protocol::{
 };
 
 use crate::{
-    LintError, LintLevel, config::Config, context::LintContext, rules::RuleRegistry,
-    violation::Violation,
+    LintError, LintLevel, config::Config, context::LintContext, lint_map::default_rule_map,
+    rules::ALL_RULES, violation::Violation,
 };
 
 /// Parse Nushell source code into an AST and return both the Block and
@@ -21,7 +21,6 @@ fn parse_source<'a>(engine_state: &'a EngineState, source: &[u8]) -> (Block, Sta
 }
 
 pub struct LintEngine {
-    pub registry: RuleRegistry,
     config: Config,
     engine_state: &'static EngineState,
 }
@@ -53,7 +52,6 @@ impl LintEngine {
     #[must_use]
     pub fn new(config: Config) -> Self {
         Self {
-            registry: RuleRegistry::with_default_rules(),
             config,
             engine_state: Self::default_engine_state(),
         }
@@ -99,11 +97,20 @@ impl LintEngine {
 
     /// Collect violations from all enabled rules
     fn collect_violations(&self, context: &LintContext) -> Vec<Violation> {
-        self.registry
-            .all_rules()
+        let default_rule_map = default_rule_map();
+
+        ALL_RULES
+            .iter()
             .filter_map(|rule| {
+                // Get the default level for this rule from the default rule map
+                let default_level = default_rule_map
+                    .rules
+                    .get(rule.id)
+                    .copied()
+                    .unwrap_or(LintLevel::Warn);
+
                 // Get the effective lint level for this rule
-                let lint_level = self.config.get_lint_level(rule.id, rule.default_lint_level);
+                let lint_level = self.config.get_lint_level(rule.id, default_level);
 
                 if lint_level == LintLevel::Allow {
                     return None; // Rule is disabled

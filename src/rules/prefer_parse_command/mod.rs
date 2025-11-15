@@ -4,7 +4,6 @@ use nu_protocol::{
 };
 
 use crate::{
-    LintLevel,
     ast::{block::BlockExt, call::CallExt, pipeline::PipelineExt, span::SpanExt},
     context::LintContext,
     rule::Rule,
@@ -279,7 +278,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
 pub fn rule() -> Rule {
     Rule::new(
         "prefer_parse_command",
-        LintLevel::Warn,
         "Prefer 'parse' command over manual string splitting with indexed access",
         check,
     )

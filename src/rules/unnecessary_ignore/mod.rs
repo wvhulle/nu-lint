@@ -1,7 +1,6 @@
 use nu_protocol::ast::{Expr, Expression, Pipeline};
 
 use crate::{
-    LintLevel,
     ast::{call::CallExt, pipeline::PipelineExt},
     context::LintContext,
     rule::Rule,
@@ -124,7 +123,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
 pub fn rule() -> Rule {
     Rule::new(
         "unnecessary_ignore",
-        LintLevel::Warn,
         "Commands that produce no output don't need '| ignore'",
         check,
     )

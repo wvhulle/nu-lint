@@ -4,8 +4,7 @@ use nu_protocol::ast::{
 };
 
 use crate::{
-    LintLevel, ast::expression::ExpressionExt, context::LintContext, rule::Rule,
-    violation::Violation,
+    ast::expression::ExpressionExt, context::LintContext, rule::Rule, violation::Violation,
 };
 
 /// Detection categories for problematic AST patterns in string interpolations
@@ -257,7 +256,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
 pub fn rule() -> Rule {
     Rule::new(
         "escape_string_interpolation_operators",
-        LintLevel::Deny,
         "Detect reliably identifiable AST patterns in string interpolations that will cause \
          runtime errors (standalone operators, external boolean operator calls, literal boolean \
          operations)",

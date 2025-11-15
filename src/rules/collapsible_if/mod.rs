@@ -1,8 +1,7 @@
 use nu_protocol::ast::{Call, Expr};
 
 use crate::{
-    Fix, LintLevel, Replacement, ast::call::CallExt, context::LintContext, rule::Rule,
-    violation::Violation,
+    Fix, Replacement, ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation,
 };
 
 /// Creates a violation with fix for a collapsible if statement
@@ -35,7 +34,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
 pub fn rule() -> Rule {
     Rule::new(
         "collapsible_if",
-        LintLevel::Warn,
         "Collapse nested if statements without else clauses into a single if with combined \
          conditions",
         check,

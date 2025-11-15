@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use nu_protocol::ast::ExternalArgument;
 
 use crate::{
-    LintLevel, Violation,
+    Violation,
     ast::ext_command::{BuiltinAlternative, ExternalArgumentExt, detect_external_commands},
     context::LintContext,
     rule::Rule,
@@ -337,7 +337,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
 pub fn rule() -> Rule {
     Rule::new(
         "prefer_builtin_http",
-        LintLevel::Allow,
         "Use Nushell's http commands instead of curl/wget/fetch for better data handling",
         check,
     )

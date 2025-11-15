@@ -10,7 +10,10 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::{LintError, lint_set::builtin_lint_sets, rules::RuleRegistry};
+use crate::{
+    LintError,
+    lint_map::{builtin_lint_sets, default_rule_map},
+};
 
 /// Lint level configuration (inspired by Clippy)
 /// - Allow: Don't report this lint
@@ -81,17 +84,9 @@ impl<'de> Deserialize<'de> for LintConfig {
 
 impl Default for LintConfig {
     fn default() -> Self {
-        let mut rules = HashMap::new();
-
-        let registry = RuleRegistry::with_default_rules();
-
-        for rule in registry.all_rules() {
-            rules.insert(rule.id.to_string(), rule.default_lint_level);
-        }
-
         Self {
             sets: HashMap::new(),
-            rules,
+            rules: default_rule_map().rules.clone(),
         }
     }
 }

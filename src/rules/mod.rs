@@ -42,7 +42,7 @@ mod unnecessary_mut;
 mod unnecessary_variable_before_return;
 mod unused_helper_functions;
 mod unused_output;
-use std::collections::HashMap;
+use std::sync::LazyLock;
 
 use naming::{kebab_case_commands, screaming_snake_constants, snake_case_variables};
 use spacing::{
@@ -52,107 +52,73 @@ use spacing::{
 
 use crate::rule::Rule;
 
-pub struct RuleRegistry {
-    rules: HashMap<&'static str, Rule>,
-}
-
-impl RuleRegistry {
-    #[must_use]
-    pub(crate) fn new() -> Self {
-        Self {
-            rules: HashMap::new(),
-        }
-    }
-
-    pub(crate) fn register(&mut self, rule: Rule) {
-        self.rules.insert(rule.id, rule);
-    }
-
-    #[must_use]
-    pub fn get_rule(&self, id: &str) -> Option<&Rule> {
-        self.rules.get(id)
-    }
-
-    pub fn all_rules(&self) -> impl Iterator<Item = &Rule> {
-        self.rules.values()
-    }
-
-    #[must_use]
-    pub(crate) fn with_default_rules() -> Self {
-        let mut registry = Self::new();
-        registry.register(check_complete_exit_code::rule());
-        registry.register(collapsible_if::rule());
-        registry.register(dangerous_file_operations::rule());
-        registry.register(descriptive_error_messages::rule());
-        registry.register(error_make_metadata::rule());
-        registry.register(escape_string_interpolation_operators::rule());
-        registry.register(exit_only_in_main::rule());
-        registry.register(unnecessary_ignore::rule());
-        registry.register(documentation::exported_function::rule());
-        registry.register(documentation::main_positional_args::rule());
-        registry.register(documentation::main_named_args::rule());
-        registry.register(forbid_excessive_nesting::rule());
-        registry.register(external_script_as_argument::rule());
-        registry.register(inline_single_use_function::rule());
-        registry.register(side_effects::mixed_io_types::rule());
-        registry.register(side_effects::print_and_return_data::rule());
-        registry.register(side_effects::pure_before_side_effects::rule());
-        registry.register(kebab_case_commands::rule());
-        registry.register(max_function_body_length::rule());
-        registry.register(max_positional_params::rule());
-        registry.register(missing_type_annotations::argument::rule());
-        registry.register(missing_type_annotations::pipeline::rule());
-        registry.register(prefer_multiline_functions::rule());
-        registry.register(prefer_multiline_lists::rule());
-        registry.register(prefer_multiline_records::rule());
-        registry.register(replace_by_builtin::echo::rule());
-        registry.register(no_trailing_spaces::rule());
-        registry.register(nu_parse_error::rule());
-        registry.register(omit_list_commas::rule());
-        registry.register(pipeline_handle_errors::rule());
-        registry.register(replace_by_builtin::cat::rule());
-        registry.register(replace_by_builtin::find::rule());
-        registry.register(replace_by_builtin::grep::rule());
-        registry.register(replace_by_builtin::head::rule());
-        registry.register(replace_by_builtin::http::rule());
-        registry.register(replace_by_builtin::jq::rule());
-        registry.register(replace_by_builtin::ls::rule());
-        registry.register(replace_by_builtin::other::rule());
-        registry.register(replace_by_builtin::sed::rule());
-        registry.register(replace_by_builtin::sort::rule());
-        registry.register(replace_by_builtin::tail::rule());
-        registry.register(replace_by_builtin::uniq::rule());
-        registry.register(prefer_compound_assignment::rule());
-        registry.register(prefer_direct_use::rule());
-        registry.register(prefer_error_make_for_stderr::rule());
-        registry.register(print_exit_use_error_make::rule());
-        registry.register(prefer_is_not_empty::rule());
-        registry.register(prefer_lines_over_split::rule());
-        registry.register(prefer_match_over_if_chain::rule());
-        registry.register(prefer_parse_command::rule());
-        registry.register(prefer_parse_over_each_split::rule());
-        registry.register(replace_by_builtin::path::rule());
-        registry.register(prefer_pipeline_input::rule());
-        registry.register(prefer_range_iteration::rule());
-        registry.register(prefer_where_over_each_if::rule());
-        registry.register(prefer_where_over_for_if::rule());
-        registry.register(remove_redundant_in::rule());
-        registry.register(screaming_snake_constants::rule());
-        registry.register(snake_case_variables::rule());
-        registry.register(spacing::brace_spacing::rule());
-        registry.register(spacing::pipe_spacing::rule());
-        registry.register(systemd_journal_prefix::rule());
-        registry.register(unnecessary_mut::rule());
-        registry.register(unnecessary_variable_before_return::rule());
-        registry.register(unused_helper_functions::rule());
-        registry.register(unused_output::rule());
-
-        registry
-    }
-}
-
-impl Default for RuleRegistry {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+pub static ALL_RULES: LazyLock<Vec<Rule>> = LazyLock::new(|| {
+    vec![
+        check_complete_exit_code::rule(),
+        collapsible_if::rule(),
+        dangerous_file_operations::rule(),
+        descriptive_error_messages::rule(),
+        error_make_metadata::rule(),
+        escape_string_interpolation_operators::rule(),
+        exit_only_in_main::rule(),
+        unnecessary_ignore::rule(),
+        documentation::exported_function::rule(),
+        documentation::main_positional_args::rule(),
+        documentation::main_named_args::rule(),
+        forbid_excessive_nesting::rule(),
+        external_script_as_argument::rule(),
+        inline_single_use_function::rule(),
+        side_effects::mixed_io_types::rule(),
+        side_effects::print_and_return_data::rule(),
+        side_effects::pure_before_side_effects::rule(),
+        kebab_case_commands::rule(),
+        max_function_body_length::rule(),
+        max_positional_params::rule(),
+        missing_type_annotations::argument::rule(),
+        missing_type_annotations::pipeline::rule(),
+        prefer_multiline_functions::rule(),
+        prefer_multiline_lists::rule(),
+        prefer_multiline_records::rule(),
+        replace_by_builtin::echo::rule(),
+        no_trailing_spaces::rule(),
+        nu_parse_error::rule(),
+        omit_list_commas::rule(),
+        pipeline_handle_errors::rule(),
+        replace_by_builtin::cat::rule(),
+        replace_by_builtin::find::rule(),
+        replace_by_builtin::grep::rule(),
+        replace_by_builtin::head::rule(),
+        replace_by_builtin::http::rule(),
+        replace_by_builtin::jq::rule(),
+        replace_by_builtin::ls::rule(),
+        replace_by_builtin::other::rule(),
+        replace_by_builtin::sed::rule(),
+        replace_by_builtin::sort::rule(),
+        replace_by_builtin::tail::rule(),
+        replace_by_builtin::uniq::rule(),
+        prefer_compound_assignment::rule(),
+        prefer_direct_use::rule(),
+        prefer_error_make_for_stderr::rule(),
+        print_exit_use_error_make::rule(),
+        prefer_is_not_empty::rule(),
+        prefer_lines_over_split::rule(),
+        prefer_match_over_if_chain::rule(),
+        prefer_parse_command::rule(),
+        prefer_parse_over_each_split::rule(),
+        replace_by_builtin::path::rule(),
+        prefer_pipeline_input::rule(),
+        prefer_range_iteration::rule(),
+        prefer_where_over_each_if::rule(),
+        prefer_where_over_for_if::rule(),
+        remove_redundant_in::rule(),
+        screaming_snake_constants::rule(),
+        snake_case_variables::rule(),
+        spacing::brace_spacing::rule(),
+        spacing::pipe_spacing::rule(),
+        systemd_journal_prefix::rule(),
+        unnecessary_mut::rule(),
+        unnecessary_variable_before_return::rule(),
+        unused_helper_functions::rule(),
+        unused_output::rule(),
+    ]
+});

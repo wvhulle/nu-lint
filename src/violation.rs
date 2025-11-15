@@ -12,7 +12,7 @@ pub struct RuleViolation {
     pub message: Cow<'static, str>,
     pub span: Span,
     pub suggestion: Option<Cow<'static, str>>,
-    pub(crate) fix: Option<Fix>,
+    pub fix: Option<Fix>,
 }
 
 impl RuleViolation {
@@ -88,7 +88,7 @@ pub struct Violation {
     pub message: Cow<'static, str>,
     pub span: Span,
     pub suggestion: Option<Cow<'static, str>>,
-    pub(crate) fix: Option<Fix>,
+    pub fix: Option<Fix>,
     pub file: Option<Cow<'static, str>>,
 }
 
@@ -154,8 +154,8 @@ impl Violation {
 
 #[derive(Debug, Clone)]
 pub struct Fix {
-    pub(crate) description: Cow<'static, str>,
-    pub(crate) replacements: Vec<Replacement>,
+    pub description: Cow<'static, str>,
+    pub replacements: Vec<Replacement>,
 }
 
 impl Fix {
@@ -180,8 +180,8 @@ impl Fix {
 
 #[derive(Debug, Clone)]
 pub struct Replacement {
-    pub(crate) span: Span,
-    pub(crate) new_text: Cow<'static, str>,
+    pub span: Span,
+    pub new_text: Cow<'static, str>,
 }
 
 impl Replacement {

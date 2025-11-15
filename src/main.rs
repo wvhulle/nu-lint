@@ -5,6 +5,7 @@ use nu_lint::{
     LintEngine,
     cli::{Cli, collect_files_to_lint, handle_command, lint_files, output_results},
     config::Config,
+    fix::{apply_fixes, format_fix_results},
 };
 
 fn main() {
@@ -53,6 +54,22 @@ fn main() {
 
     if has_errors && all_violations.is_empty() {
         process::exit(2);
+    }
+
+    // Apply fixes if requested
+    if cli.fix || cli.dry_run {
+        match apply_fixes(&all_violations, cli.dry_run) {
+            Ok(results) => {
+                println!("{}", format_fix_results(&results, cli.dry_run));
+                if !results.is_empty() {
+                    process::exit(0);
+                }
+            }
+            Err(e) => {
+                eprintln!("Error applying fixes: {e}");
+                process::exit(2);
+            }
+        }
     }
 
     output_results(&all_violations, &files_to_lint, cli.format);

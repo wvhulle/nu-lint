@@ -7,11 +7,7 @@ use std::borrow::Cow;
 use std::{fs, path::Path, sync::OnceLock};
 
 use crate::{
-    LintError,
-    config::Config,
-    context::LintContext,
-    rules::RuleRegistry,
-    violation::Violation,
+    LintError, config::Config, context::LintContext, rules::RuleRegistry, violation::Violation,
 };
 
 /// Parse Nushell source code into an AST and return both the Block and

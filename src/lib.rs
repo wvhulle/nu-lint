@@ -3,6 +3,7 @@ pub mod cli;
 pub mod config;
 mod context;
 mod engine;
+pub mod fix;
 mod lint_set;
 pub mod log;
 mod output;

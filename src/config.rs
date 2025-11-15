@@ -129,9 +129,8 @@ pub struct ExcludeConfig {
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
 pub struct FixConfig {
+    #[serde(default)]
     pub enabled: bool,
-
-    pub safe_only: bool,
 }
 
 impl Config {
@@ -314,5 +313,39 @@ mod tests {
         let config = Config::load_from_str(toml_str).unwrap();
         let found_set_level = config.rule_lint_level_in_conf("snake_case_variables");
         assert_eq!(found_set_level, Some(LintLevel::Allow));
+    }
+
+    #[test]
+    fn test_fix_config_default() {
+        let toml_str = "";
+        let config = Config::load_from_str(toml_str).unwrap();
+        assert!(!config.fix.enabled);
+    }
+
+    #[test]
+    fn test_fix_config_enabled() {
+        let toml_str = r"
+        [fix]
+        enabled = true
+    ";
+        let config = Config::load_from_str(toml_str).unwrap();
+        assert!(config.fix.enabled);
+    }
+
+    #[test]
+    fn test_fix_config_mixed() {
+        let toml_str = r#"
+        [lints.rules]
+        snake_case_variables = "deny"
+        
+        [fix]
+        enabled = true
+    "#;
+        let config = Config::load_from_str(toml_str).unwrap();
+        assert!(config.fix.enabled);
+        assert_eq!(
+            config.lints.rules.get("snake_case_variables"),
+            Some(&LintLevel::Deny)
+        );
     }
 }

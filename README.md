@@ -76,6 +76,13 @@ nu-lint script.nu                          # Lint a file
 nu-lint directory/                         # Lint directory
 ```
 
+Apply fixes:
+
+```bash
+nu-lint --fix --dry-run   # Test
+nu-lint --fix             # Apply
+```
+
 Output formats:
 
 ```bash

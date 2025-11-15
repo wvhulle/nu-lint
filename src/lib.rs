@@ -5,7 +5,7 @@ mod context;
 mod engine;
 pub mod fix;
 pub mod log;
-mod output;
+pub mod output;
 mod rule;
 mod rules;
 mod sets;

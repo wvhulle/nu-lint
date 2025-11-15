@@ -1,8 +1,8 @@
-use crate::{LintLevel, context::LintContext, rule::Rule, violation::RuleViolation};
+use crate::{LintLevel, context::LintContext, rule::Rule, violation::Violation};
 
 const MAX_POSITIONAL: usize = 2;
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     context
         .new_user_functions()
         .filter_map(|(_, decl)| {
@@ -15,7 +15,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 
             // Only create violation if count exceeds threshold
             (positional_count > MAX_POSITIONAL).then(|| {
-                RuleViolation::new_dynamic(
+                Violation::new_dynamic(
                     "max_positional_params",
                     format!(
                         "Command has {positional_count} positional parameters, should have ≤ \

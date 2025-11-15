@@ -11,7 +11,7 @@ use jaq_core::{
 use nu_protocol::ast::ExternalArgument;
 
 use crate::{
-    LintLevel, RuleViolation,
+    LintLevel, Violation,
     ast::ext_command::{BuiltinAlternative, ExternalArgumentExt, detect_external_commands},
     context::LintContext,
     rule::Rule,
@@ -369,7 +369,7 @@ fn contains_simple_jq_op(source_text: &str) -> bool {
         || (source_text.contains("'.[") && source_text.contains("]'"))
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     // Detect jq commands that have direct Nushell equivalents
     let violations = detect_external_commands(
         context,

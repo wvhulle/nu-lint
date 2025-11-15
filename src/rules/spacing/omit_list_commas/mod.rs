@@ -3,9 +3,9 @@ use nu_protocol::{
     ast::{Expr, ListItem},
 };
 
-use crate::{LintLevel, context::LintContext, rule::Rule, violation::RuleViolation};
+use crate::{LintLevel, context::LintContext, rule::Rule, violation::Violation};
 
-fn check_list_commas(source: &str, span: Span, items: &[ListItem]) -> Vec<RuleViolation> {
+fn check_list_commas(source: &str, span: Span, items: &[ListItem]) -> Vec<Violation> {
     let mut violations = Vec::new();
 
     if items.len() < 2 || span.end > source.len() {
@@ -48,7 +48,7 @@ fn check_list_commas(source: &str, span: Span, items: &[ListItem]) -> Vec<RuleVi
                     Span::new(between_start + comma_pos, between_start + comma_pos + 1);
 
                 violations.push(
-                    RuleViolation::new_static(
+                    Violation::new_static(
                         "omit_list_commas",
                         "Omit commas between list items",
                         comma_span,
@@ -62,7 +62,7 @@ fn check_list_commas(source: &str, span: Span, items: &[ListItem]) -> Vec<RuleVi
     violations
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     context.collect_rule_violations(|expr, ctx| match &expr.expr {
         Expr::List(items) => check_list_commas(ctx.source, expr.span, items),
         _ => vec![],

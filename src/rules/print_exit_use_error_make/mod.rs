@@ -5,7 +5,7 @@ use crate::{
     ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
     context::LintContext,
     rule::Rule,
-    violation::RuleViolation,
+    violation::Violation,
 };
 
 struct PrintExitPattern {
@@ -129,10 +129,10 @@ fn build_suggestion(pattern: &PrintExitPattern, context: &LintContext) -> String
     )
 }
 
-fn create_violation(pattern: &PrintExitPattern, context: &LintContext) -> RuleViolation {
+fn create_violation(pattern: &PrintExitPattern, context: &LintContext) -> Violation {
     let suggestion = build_suggestion(pattern, context);
 
-    RuleViolation::new_static(
+    Violation::new_static(
         "print_exit_use_error_make",
         "Use 'error make' instead of 'print' + 'exit' for error conditions",
         pattern.span,
@@ -170,14 +170,14 @@ fn check_same_pipeline_patterns<'a>(
         .filter_map(move |pipeline| check_same_pipeline_print_exit(pipeline, context))
 }
 
-fn check_block_patterns(block: &Block, context: &LintContext) -> Vec<RuleViolation> {
+fn check_block_patterns(block: &Block, context: &LintContext) -> Vec<Violation> {
     check_same_pipeline_patterns(block, context)
         .chain(check_sequential_patterns(block, context))
         .map(|pattern| create_violation(&pattern, context))
         .collect()
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     let main_violations = check_block_patterns(context.ast, context);
 
     let nested_violations: Vec<_> = context.collect_rule_violations(|expr, ctx| match &expr.expr {

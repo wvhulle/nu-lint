@@ -8,7 +8,7 @@ use crate::{
     ast::effect::{StatementType, classify_expression},
     context::LintContext,
     rule::Rule,
-    violation::RuleViolation,
+    violation::Violation,
 };
 
 fn count_consecutive_pure_statements(pipelines: &[Pipeline], context: &LintContext) -> usize {
@@ -50,7 +50,7 @@ fn analyze_function_body(
     block_id: BlockId,
     function_name: &str,
     context: &LintContext,
-) -> Option<RuleViolation> {
+) -> Option<Violation> {
     let block = context.working_set.get_block(block_id);
 
     if block.pipelines.len() < 3 {
@@ -68,7 +68,7 @@ fn analyze_function_body(
     }
 
     Some(
-        RuleViolation::new_dynamic(
+        Violation::new_dynamic(
             "pure_before_side_effects",
             format!(
                 "Function `{function_name}` has {pure_count} pure computation statement(s) before \
@@ -83,7 +83,7 @@ fn analyze_function_body(
     )
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     let function_definitions = context.collect_function_definitions();
 
     let has_main = function_definitions.values().any(|name| name == "main");

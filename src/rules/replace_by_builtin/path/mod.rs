@@ -8,7 +8,7 @@ use crate::{
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::Rule,
-    violation::RuleViolation,
+    violation::Violation,
 };
 
 const PATH_KEYWORDS: &[&str] = &["path", "file", "dir", "directory", "folder", "location"];
@@ -69,7 +69,7 @@ fn check_parameter(
     function_span: nu_protocol::Span,
     is_optional: bool,
     context: &LintContext,
-) -> Option<RuleViolation> {
+) -> Option<Violation> {
     use nu_protocol::SyntaxShape::{Any, String as StringShape};
 
     if !matches!(param.shape, StringShape | Any) {
@@ -108,7 +108,7 @@ fn check_parameter(
     );
 
     Some(
-        RuleViolation::new_dynamic("prefer_path_type", message, function_span)
+        Violation::new_dynamic("prefer_path_type", message, function_span)
             .with_suggestion_dynamic(suggestion),
     )
 }
@@ -118,7 +118,7 @@ fn check_function_parameters(
     function_name: &str,
     function_span: nu_protocol::Span,
     context: &LintContext,
-) -> Vec<RuleViolation> {
+) -> Vec<Violation> {
     let check_param = |param: &nu_protocol::PositionalArg, is_optional: bool| {
         param.var_id.and_then(|var_id| {
             check_parameter(
@@ -155,7 +155,7 @@ fn check_function_parameters(
         .collect()
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     context
         .collect_function_definitions()
         .iter()

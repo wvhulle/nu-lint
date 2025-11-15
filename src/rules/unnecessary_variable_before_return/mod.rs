@@ -4,7 +4,7 @@ use nu_protocol::{
 };
 
 use crate::{
-    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::RuleViolation,
+    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation,
 };
 
 /// Extract variable declaration from a `let` statement  
@@ -54,7 +54,7 @@ fn is_simple_var_reference(pipeline: &Pipeline, var_id: VarId) -> Option<Span> {
 }
 
 /// Check a block for the unnecessary variable pattern
-fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<RuleViolation>) {
+fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<Violation>) {
     let pipelines = &block.pipelines;
 
     for i in 0..pipelines.len().saturating_sub(1) {
@@ -82,7 +82,7 @@ fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<RuleVi
             let combined_span = Span::new(decl_span.start, ref_span.end);
 
             violations.push(
-                RuleViolation::new_dynamic(
+                Violation::new_dynamic(
                     "unnecessary_variable_before_return",
                     format!(
                         "Variable '{var_name}' is assigned and immediately returned - consider \
@@ -98,7 +98,7 @@ fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<RuleVi
     }
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     let mut violations = Vec::new();
 
     // Check the main block

@@ -5,7 +5,7 @@ use crate::{
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::Rule,
-    violation::RuleViolation,
+    violation::Violation,
 };
 
 /// Extract an integer value from an expression, unwrapping blocks if needed
@@ -139,7 +139,7 @@ fn check_while_loop_for_counter(
     counter_name: &str,
     counter_span: nu_protocol::Span,
     context: &LintContext,
-) -> Option<RuleViolation> {
+) -> Option<Violation> {
     let condition = call.get_positional_arg(0)?;
     let body_expr = call.get_positional_arg(1)?;
     let block_id = body_expr.extract_block_id()?;
@@ -147,7 +147,7 @@ fn check_while_loop_for_counter(
     (is_counter_comparison(condition, counter_name, context)
         && has_increment_in_block(block_id, counter_name, context))
     .then(|| {
-        RuleViolation::new_dynamic(
+        Violation::new_dynamic(
             "prefer_range_iteration",
             format!("While loop with counter '{counter_name}' - consider using range iteration"),
             counter_span,
@@ -158,7 +158,7 @@ fn check_while_loop_for_counter(
     })
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     // Find all `mut counter = 0` declarations
 
     // Find while loops that use these counters

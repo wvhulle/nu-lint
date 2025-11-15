@@ -1,6 +1,6 @@
-use std::{collections::HashMap, fs, path::PathBuf};
-
 use crate::{LintError, violation::Violation};
+use std::fmt::Write;
+use std::{collections::HashMap, fs, path::PathBuf};
 
 /// Result of applying fixes to a file
 #[derive(Debug)]
@@ -116,11 +116,13 @@ pub fn format_fix_results(results: &[FixResult], dry_run: bool) -> String {
     }
 
     for result in results {
-        output.push_str(&format!(
-            "  {} ({} fixes)\n",
+        writeln!(
+            output,
+            "  {} ({} fixes)",
             result.file_path.display(),
             result.fixes_applied
-        ));
+        )
+        .unwrap();
     }
 
     if results.is_empty() {
@@ -452,7 +454,7 @@ mod tests {
         let grouped = group_violations_by_file(&violations);
 
         assert_eq!(grouped.len(), 2);
-        assert_eq!(grouped.get(&PathBuf::from("file1.nu")).unwrap().len(), 2);
-        assert_eq!(grouped.get(&PathBuf::from("file2.nu")).unwrap().len(), 1);
+        assert_eq!(grouped[&PathBuf::from("file1.nu")].len(), 2);
+        assert_eq!(grouped[&PathBuf::from("file2.nu")].len(), 1);
     }
 }

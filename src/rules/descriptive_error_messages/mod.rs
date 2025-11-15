@@ -5,7 +5,7 @@ use crate::{
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::Rule,
-    violation::RuleViolation,
+    violation::Violation,
 };
 
 const GENERIC_ERROR_MESSAGES: &[&str] = &["error", "failed", "err", "something went wrong"];
@@ -52,7 +52,7 @@ fn extract_field_name(key: &Expression, context: &LintContext) -> String {
 fn check_record_for_generic_msg(
     record: &Vec<RecordItem>,
     context: &LintContext,
-) -> Option<RuleViolation> {
+) -> Option<Violation> {
     for item in record {
         let RecordItem::Pair(key, value) = item else {
             continue;
@@ -70,7 +70,7 @@ fn check_record_for_generic_msg(
 
         if is_generic_error_message(&msg_text) {
             return Some(
-                RuleViolation::new_static(
+                Violation::new_static(
                     "descriptive_error_messages",
                     "Error message is too generic and not descriptive",
                     value.span,
@@ -86,7 +86,7 @@ fn check_record_for_generic_msg(
     None
 }
 
-fn check_error_make_call(call: &Call, context: &LintContext) -> Option<RuleViolation> {
+fn check_error_make_call(call: &Call, context: &LintContext) -> Option<Violation> {
     let decl_name = call.get_call_name(context);
 
     if decl_name != "error make" {
@@ -105,7 +105,7 @@ fn check_error_make_call(call: &Call, context: &LintContext) -> Option<RuleViola
     }
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     context.collect_rule_violations(|expr, ctx| {
         if let Expr::Call(call) = &expr.expr {
             check_error_make_call(call, ctx).into_iter().collect()

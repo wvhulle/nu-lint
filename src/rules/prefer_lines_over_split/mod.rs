@@ -1,6 +1,6 @@
-use crate::{LintLevel, context::LintContext, rule::Rule, violation::RuleViolation};
+use crate::{LintLevel, context::LintContext, rule::Rule, violation::Violation};
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     let mut violations = Vec::new();
 
     // Search for "split row" patterns with newline in the source code
@@ -22,7 +22,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
             let line_end = line_start + line.len();
 
             violations.push(
-                RuleViolation::new_static(
+                Violation::new_static(
                     "prefer_lines_over_split",
                     "Use 'lines' instead of 'split row \"\\n\"' for splitting by newlines",
                     nu_protocol::Span::new(line_start, line_end),

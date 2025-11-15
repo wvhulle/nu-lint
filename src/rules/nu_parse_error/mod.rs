@@ -2,9 +2,9 @@ use std::collections::HashSet;
 
 use nu_protocol::ParseError;
 
-use crate::{LintLevel, context::LintContext, rule::Rule, violation::RuleViolation};
+use crate::{LintLevel, context::LintContext, rule::Rule, violation::Violation};
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     let mut seen = HashSet::new();
 
     // Convert each parse error to a violation, deduplicating by span and message
@@ -21,7 +21,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
                 parse_error.to_string(),
             );
             seen.insert(key).then(|| {
-                RuleViolation::new_dynamic(
+                Violation::new_dynamic(
                     "nu_parse_error",
                     parse_error.to_string(),
                     parse_error.span(),

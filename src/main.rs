@@ -72,7 +72,7 @@ fn main() {
         }
     }
 
-    output_results(&all_violations, &files_to_lint, cli.format);
+    output_results(&all_violations, cli.format);
 
     let exit_code = i32::from(!all_violations.is_empty());
     process::exit(exit_code);

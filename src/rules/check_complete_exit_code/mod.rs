@@ -10,7 +10,7 @@ use crate::{
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::Rule,
-    violation::RuleViolation,
+    violation::Violation,
 };
 
 fn cell_path_has_member(members: &[PathMember], member_name: &str) -> bool {
@@ -125,7 +125,7 @@ fn find_exit_code_checks(context: &LintContext) -> HashMap<VarId, Span> {
     checks.into_iter().collect()
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     let assignments = find_complete_assignments(context);
     let checks = find_exit_code_checks(context);
 
@@ -149,7 +149,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
                 .as_ref()
                 .map_or(String::new(), |c| format!("'{c}' "));
 
-            RuleViolation::new_dynamic(
+            Violation::new_dynamic(
                 "check_complete_exit_code",
                 format!(
                     "External command {cmd_desc}result '{var_name}' stored but exit code not \

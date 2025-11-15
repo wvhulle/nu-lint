@@ -1,7 +1,7 @@
 use nu_protocol::ast::{Block, Expr, Pipeline, PipelineElement};
 
 use crate::{
-    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::RuleViolation,
+    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation,
 };
 
 fn uses_echo(element: &PipelineElement, context: &LintContext) -> bool {
@@ -83,12 +83,12 @@ fn create_violation(
     element: &PipelineElement,
     pipeline_continuation: Option<&str>,
     context: &LintContext,
-) -> RuleViolation {
+) -> Violation {
     let message = "Avoid using 'echo' command: In Nushell, 'echo' is just an identity function. \
                    Use the value directly, or use 'print' for side-effects.";
     let suggestion = generate_suggestion(element, pipeline_continuation, context);
 
-    RuleViolation::new_static("prefer_builtin_echo", message, element.expr.span)
+    Violation::new_static("prefer_builtin_echo", message, element.expr.span)
         .with_suggestion_dynamic(suggestion)
 }
 
@@ -117,7 +117,7 @@ fn check_element(
     idx: usize,
     pipeline: &Pipeline,
     context: &LintContext,
-) -> Vec<RuleViolation> {
+) -> Vec<Violation> {
     let mut violations = Vec::new();
 
     if uses_echo(element, context) {
@@ -137,7 +137,7 @@ fn check_element(
     violations
 }
 
-fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<RuleViolation> {
+fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<Violation> {
     pipeline
         .elements
         .iter()
@@ -146,7 +146,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<RuleViolati
         .collect()
 }
 
-fn check_block(block: &Block, context: &LintContext) -> Vec<RuleViolation> {
+fn check_block(block: &Block, context: &LintContext) -> Vec<Violation> {
     block
         .pipelines
         .iter()
@@ -154,7 +154,7 @@ fn check_block(block: &Block, context: &LintContext) -> Vec<RuleViolation> {
         .collect()
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     check_block(context.ast, context)
 }
 

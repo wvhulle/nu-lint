@@ -6,7 +6,7 @@ use crate::{
     context::LintContext,
     rule::Rule,
     rules::naming::NuNaming,
-    violation::{Fix, Replacement, RuleViolation},
+    violation::{Fix, Replacement, Violation},
 };
 
 /// Check if this is a let or mut declaration
@@ -23,7 +23,7 @@ fn create_snake_case_violation(
     var_name: &str,
     is_mutable: bool,
     name_span: nu_protocol::Span,
-) -> RuleViolation {
+) -> Violation {
     let var_type = if is_mutable {
         "Mutable variable"
     } else {
@@ -39,7 +39,7 @@ fn create_snake_case_violation(
         }],
     };
 
-    RuleViolation::new_dynamic(
+    Violation::new_dynamic(
         "snake_case_variables",
         format!("{var_type} '{var_name}' should use snake_case naming convention"),
         name_span,
@@ -49,7 +49,7 @@ fn create_snake_case_violation(
 }
 
 /// Check a single call expression for variable naming violations
-fn check_call(call: &Call, ctx: &LintContext) -> Option<RuleViolation> {
+fn check_call(call: &Call, ctx: &LintContext) -> Option<Violation> {
     let decl = ctx.working_set.get_decl(call.decl_id);
     let is_mutable = get_var_decl_type(decl.name())?;
 
@@ -63,7 +63,7 @@ fn check_call(call: &Call, ctx: &LintContext) -> Option<RuleViolation> {
         .then(|| create_snake_case_violation(var_name, is_mutable, name_expr.span))
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     context.collect_rule_violations(|expr, ctx| {
         let Expr::Call(call) = &expr.expr else {
             return vec![];

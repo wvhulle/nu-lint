@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use nu_protocol::ast::{Expr, Expression, ExternalArgument};
 
-use crate::{Fix, RuleViolation, context::LintContext};
+use crate::{Fix, Violation, context::LintContext};
 
 /// Constants for known external commands that produce output
 pub const KNOWN_EXTERNAL_OUTPUT_COMMANDS: &[&str] = &[
@@ -108,7 +108,7 @@ pub fn detect_external_commands<S: BuildHasher>(
     rule_id: &'static str,
     alternatives: &HashMap<&'static str, BuiltinAlternative, S>,
     fix_builder: Option<FixBuilder>,
-) -> Vec<RuleViolation> {
+) -> Vec<Violation> {
     context.collect_rule_violations(|expr, ctx| {
         if let Expr::ExternalCall(head, args) = &expr.expr {
             let cmd_text = &ctx.source[head.span.start..head.span.end];
@@ -132,7 +132,7 @@ fn create_violation(
     cmd_text: &str,
     alternative: &BuiltinAlternative,
     args: &[ExternalArgument],
-) -> RuleViolation {
+) -> Violation {
     let message = format!(
         "Consider using Nushell's built-in '{}' instead of external '^{}'",
         alternative.command, cmd_text
@@ -158,7 +158,7 @@ fn create_violation(
     let fix = fix_builder.map(|builder| builder(cmd_text, alternative, args, expr.span, ctx));
 
     let violation =
-        RuleViolation::new_dynamic(rule_id, message, expr.span).with_suggestion_dynamic(suggestion);
+        Violation::new_dynamic(rule_id, message, expr.span).with_suggestion_dynamic(suggestion);
 
     match fix {
         Some(f) => violation.with_fix(f),

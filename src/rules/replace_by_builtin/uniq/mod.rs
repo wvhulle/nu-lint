@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use nu_protocol::ast::ExternalArgument;
 
 use crate::{
-    LintLevel, RuleViolation,
+    LintLevel, Violation,
     ast::ext_command::{BuiltinAlternative, ExternalArgumentExt, detect_external_commands},
     context::LintContext,
     rule::Rule,
@@ -164,7 +164,7 @@ fn build_fix(
     }
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     detect_external_commands(
         context,
         "prefer_builtin_uniq",

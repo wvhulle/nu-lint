@@ -1,7 +1,7 @@
 use nu_protocol::ast::{Call, Expr};
 
 use crate::{
-    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::RuleViolation,
+    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation,
 };
 
 /// Check if there's a documentation comment before the given span
@@ -37,7 +37,7 @@ fn has_doc_comment_before(context: &LintContext, span: nu_protocol::Span) -> boo
     false
 }
 
-fn check_exported_function(call: &Call, context: &LintContext) -> Option<RuleViolation> {
+fn check_exported_function(call: &Call, context: &LintContext) -> Option<Violation> {
     let decl_name = call.get_call_name(context);
 
     if decl_name != "export def" {
@@ -52,7 +52,7 @@ fn check_exported_function(call: &Call, context: &LintContext) -> Option<RuleVio
         None
     } else {
         Some(
-            RuleViolation::new_dynamic(
+            Violation::new_dynamic(
                 "exported_function_docs",
                 format!("Exported function '{func_name}' is missing documentation"),
                 call.head,
@@ -65,7 +65,7 @@ fn check_exported_function(call: &Call, context: &LintContext) -> Option<RuleVio
     }
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     context.collect_rule_violations(|expr, ctx| {
         if let Expr::Call(call) = &expr.expr {
             check_exported_function(call, ctx).into_iter().collect()

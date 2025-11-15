@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
 use crate::{
-    LintLevel, ast::block::BlockExt, context::LintContext, rule::Rule, violation::RuleViolation,
+    LintLevel, ast::block::BlockExt, context::LintContext, rule::Rule, violation::Violation,
 };
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     let function_definitions = context.collect_function_definitions();
 
     let function_map: HashMap<String, _> = function_definitions
@@ -24,7 +24,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
         .filter(|&name| name != "main" && !called_functions.contains(name))
         .map(|name| {
             let span = context.find_declaration_span(name);
-            RuleViolation::new_dynamic(
+            Violation::new_dynamic(
                 "unused_helper_functions",
                 format!("Function '{name}' is defined but never called from 'main'"),
                 span,

@@ -1,6 +1,6 @@
 use core::hash::Hasher;
 
-use crate::{config::LintLevel, context::LintContext, violation::RuleViolation};
+use crate::{config::LintLevel, context::LintContext, violation::Violation};
 use std::hash::Hash;
 
 /// Lint sets (collections of rules, similar to Clippy's lint groups)
@@ -11,7 +11,7 @@ pub struct Rule {
     pub id: &'static str,
     pub default_lint_level: LintLevel,
     pub description: &'static str,
-    pub(crate) check: fn(&LintContext) -> Vec<RuleViolation>,
+    pub(crate) check: fn(&LintContext) -> Vec<Violation>,
 }
 
 impl Hash for Rule {
@@ -34,7 +34,7 @@ impl Rule {
         id: &'static str,
         default_lint_level: LintLevel,
         description: &'static str,
-        check: fn(&LintContext) -> Vec<RuleViolation>,
+        check: fn(&LintContext) -> Vec<Violation>,
     ) -> Self {
         Self {
             id,

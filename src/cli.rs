@@ -81,56 +81,67 @@ pub fn handle_command(command: Commands, config: &Config) {
 }
 
 fn is_nushell_file(path: &PathBuf) -> bool {
-    if path.extension().and_then(|s| s.to_str()) == Some("nu") {
-        return true;
-    }
-
-    if let Ok(file) = fs::File::open(path) {
-        let mut reader = io::BufReader::new(file);
-        let mut first_line = String::new();
-        if reader.read_line(&mut first_line).is_ok() && first_line.starts_with("#!") {
-            return first_line
-                .split_whitespace()
-                .any(|word| word.ends_with("/nu") || word == "nu");
-        }
-    }
-
-    false
+    path.extension()
+        .and_then(|s| s.to_str())
+        .is_some_and(|ext| ext == "nu")
+        || fs::File::open(path)
+            .ok()
+            .and_then(|file| {
+                let mut reader = io::BufReader::new(file);
+                let mut first_line = String::new();
+                reader.read_line(&mut first_line).ok()?;
+                first_line.starts_with("#!").then(|| {
+                    first_line
+                        .split_whitespace()
+                        .any(|word| word.ends_with("/nu") || word == "nu")
+                })
+            })
+            .unwrap_or(false)
 }
 
 /// Collect all files to lint from the provided paths, respecting .gitignore
 /// files
 #[must_use]
 pub fn collect_files_to_lint(paths: &[PathBuf]) -> Vec<PathBuf> {
-    let mut files_to_lint = Vec::new();
-    let mut has_errors = false;
-
-    for path in paths {
-        if !path.exists() {
-            eprintln!("Error: Path not found: {}", path.display());
-            has_errors = true;
-            continue;
-        }
-
-        if path.is_file() {
-            // For individual files, add them directly (don't check gitignore for explicitly
-            // specified files)
-            if is_nushell_file(path) {
-                files_to_lint.push(path.clone());
+    let (files, errors): (Vec<_>, Vec<_>) = paths
+        .iter()
+        .map(|path| {
+            if !path.exists() {
+                return Err(format!("Error: Path not found: {}", path.display()));
             }
-        } else if path.is_dir() {
-            let files = collect_nu_files_with_gitignore(path);
-            if files.is_empty() {
-                eprintln!("Warning: No .nu files found in {}", path.display());
+
+            if path.is_file() {
+                Ok(if is_nushell_file(path) {
+                    vec![path.clone()]
+                } else {
+                    vec![]
+                })
+            } else if path.is_dir() {
+                let files = collect_nu_files_with_gitignore(path);
+                if files.is_empty() {
+                    eprintln!("Warning: No .nu files found in {}", path.display());
+                }
+                Ok(files)
+            } else {
+                Ok(vec![])
             }
-            files_to_lint.extend(files);
+        })
+        .partition(Result::is_ok);
+
+    for err in &errors {
+        if let Err(msg) = err {
+            eprintln!("{msg}");
         }
     }
 
+    let files_to_lint: Vec<PathBuf> = files
+        .into_iter()
+        .filter_map(Result::ok)
+        .flatten()
+        .collect();
+
     if files_to_lint.is_empty() {
-        if !has_errors {
-            eprintln!("Error: No files to lint");
-        }
+        eprintln!("Error: No files to lint");
         process::exit(2);
     }
 
@@ -140,27 +151,20 @@ pub fn collect_files_to_lint(paths: &[PathBuf]) -> Vec<PathBuf> {
 /// Collect .nu files from a directory, respecting .gitignore files
 #[must_use]
 pub fn collect_nu_files_with_gitignore(dir: &PathBuf) -> Vec<PathBuf> {
-    let mut nu_files = Vec::new();
-
-    let walker = WalkBuilder::new(dir)
-        .standard_filters(true) // Enable standard filters including .gitignore
-        .build();
-
-    for result in walker {
-        match result {
+    WalkBuilder::new(dir)
+        .standard_filters(true)
+        .build()
+        .filter_map(|result| match result {
             Ok(entry) => {
-                let path = entry.path();
-                if path.is_file() && is_nushell_file(&path.to_path_buf()) {
-                    nu_files.push(path.to_path_buf());
-                }
+                let path = entry.path().to_path_buf();
+                (path.is_file() && is_nushell_file(&path)).then_some(path)
             }
             Err(err) => {
                 eprintln!("Warning: Error walking directory: {err}");
+                None
             }
-        }
-    }
-
-    nu_files
+        })
+        .collect()
 }
 
 /// Lint files either in parallel or sequentially
@@ -186,18 +190,25 @@ fn lint_files_parallel(engine: &LintEngine, files: &[PathBuf]) -> (Vec<Violation
         .par_iter()
         .for_each(|path| match engine.lint_file(path) {
             Ok(violations) => {
-                let mut all_viols = violations_mutex.lock().unwrap();
-                all_viols.extend(violations);
+                violations_mutex
+                    .lock()
+                    .expect("Failed to lock violations mutex")
+                    .extend(violations);
             }
             Err(e) => {
                 eprintln!("Error linting {}: {}", path.display(), e);
-                let mut has_errs = errors_mutex.lock().unwrap();
-                *has_errs = true;
+                *errors_mutex
+                    .lock()
+                    .expect("Failed to lock errors mutex") = true;
             }
         });
 
-    let violations = violations_mutex.into_inner().unwrap();
-    let has_errors = errors_mutex.into_inner().unwrap();
+    let violations = violations_mutex
+        .into_inner()
+        .expect("Failed to unwrap violations mutex");
+    let has_errors = errors_mutex
+        .into_inner()
+        .expect("Failed to unwrap errors mutex");
     (violations, has_errors)
 }
 
@@ -222,7 +233,7 @@ fn lint_files_sequential(engine: &LintEngine, files: &[PathBuf]) -> (Vec<Violati
 }
 
 /// Format and output linting results
-pub fn output_results(violations: &[Violation], _files: &[PathBuf], format: Option<Format>) {
+pub fn output_results(violations: &[Violation], format: Option<Format>) {
     let output = match format.unwrap_or(Format::Text) {
         Format::Text | Format::Github => output::format_text(violations),
         Format::Json => output::format_json(violations),
@@ -253,5 +264,168 @@ fn explain_rule(config: &Config, rule_id: &str) {
     } else {
         eprintln!("Error: Rule '{rule_id}' not found");
         process::exit(2);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::LintLevel;
+    use std::{
+        env::{current_dir, set_current_dir},
+        sync::Mutex,
+    };
+    use tempfile::TempDir;
+
+    static CHDIR_MUTEX: Mutex<()> = Mutex::new(());
+
+    #[test]
+    fn test_no_config_file() {
+        let temp_dir = TempDir::new().unwrap();
+        let nu_file_path = temp_dir.path().join("test.nu");
+
+        fs::write(&nu_file_path, "let myVariable = 5\n").unwrap();
+
+        let config = Config::default();
+        assert_eq!(
+            config.lints.rules.get("snake_case_variables"),
+            Some(&LintLevel::Allow)
+        );
+
+        let engine = LintEngine::new(config);
+        let files = collect_files_to_lint(&[nu_file_path]);
+        let (violations, _) = lint_files(&engine, &files, false);
+
+        assert!(violations
+            .iter()
+            .any(|v| v.rule_id == "snake_case_variables" && v.lint_level == LintLevel::Allow));
+    }
+
+    #[test]
+    fn test_custom_config_file() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("custom.toml");
+        let nu_file_path = temp_dir.path().join("test.nu");
+
+        fs::write(
+            &config_path,
+            "[lints]\n\n[lints.rules]\nsnake_case_variables = \"deny\"\n",
+        )
+        .unwrap();
+        fs::write(&nu_file_path, "let myVariable = 5\n").unwrap();
+
+        let config = Config::load(Some(&config_path));
+        assert_eq!(
+            config.lints.rules.get("snake_case_variables"),
+            Some(&LintLevel::Deny)
+        );
+
+        let engine = LintEngine::new(config);
+        let files = collect_files_to_lint(&[nu_file_path]);
+        let (violations, _) = lint_files(&engine, &files, false);
+
+        assert!(!violations.is_empty());
+    }
+
+    #[test]
+    fn test_auto_discover_config_file() {
+        let _guard = CHDIR_MUTEX.lock().unwrap();
+
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join(".nu-lint.toml");
+        let nu_file_path = temp_dir.path().join("test.nu");
+
+        fs::write(
+            &config_path,
+            r#"[lints.rules]
+        snake_case_variables = "deny""#,
+        )
+        .unwrap();
+        fs::write(&nu_file_path, "let myVariable = 5\n").unwrap();
+
+        let original_dir = current_dir().unwrap();
+
+        set_current_dir(temp_dir.path()).unwrap();
+
+        let config = Config::load(None);
+        let engine = LintEngine::new(config);
+        let files = collect_files_to_lint(&[PathBuf::from("test.nu")]);
+        let (violations, _) = lint_files(&engine, &files, false);
+
+        set_current_dir(original_dir).unwrap();
+
+        assert!(violations
+            .iter()
+            .any(|v| v.rule_id == "snake_case_variables" && v.lint_level == LintLevel::Deny));
+    }
+
+    #[test]
+    fn test_auto_discover_config_in_parent_dir() {
+        let _guard = CHDIR_MUTEX.lock().unwrap();
+
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join(".nu-lint.toml");
+        let subdir = temp_dir.path().join("subdir");
+        fs::create_dir(&subdir).unwrap();
+        let nu_file_path = subdir.join("test.nu");
+
+        fs::write(
+            &config_path,
+            r#"[lints.rules]
+        snake_case_variables = "deny""#,
+        )
+        .unwrap();
+        fs::write(&nu_file_path, "let myVariable = 5\n").unwrap();
+
+        let original_dir = current_dir().unwrap();
+
+        set_current_dir(&subdir).unwrap();
+
+        let config = Config::load(None);
+        let engine = LintEngine::new(config);
+        let files = collect_files_to_lint(&[PathBuf::from("test.nu")]);
+        let (violations, _) = lint_files(&engine, &files, false);
+
+        set_current_dir(original_dir).unwrap();
+        assert!(violations
+            .iter()
+            .any(|v| v.rule_id == "snake_case_variables" && v.lint_level == LintLevel::Deny));
+    }
+
+    #[test]
+    fn test_explicit_config_overrides_auto_discovery() {
+        let _guard = CHDIR_MUTEX.lock().unwrap();
+
+        let temp_dir = TempDir::new().unwrap();
+        let auto_config = temp_dir.path().join(".nu-lint.toml");
+        let explicit_config = temp_dir.path().join("other.toml");
+        let nu_file_path = temp_dir.path().join("test.nu");
+
+        fs::write(
+            &auto_config,
+            "[lints.rules]\nsnake_case_variables = \"allow\"\n",
+        )
+        .unwrap();
+        fs::write(
+            &explicit_config,
+            r#"[lints.rules]
+        snake_case_variables = "deny""#,
+        )
+        .unwrap();
+        fs::write(&nu_file_path, "let myVariable = 5\n").unwrap();
+
+        let original_dir = current_dir().unwrap();
+
+        set_current_dir(temp_dir.path()).unwrap();
+
+        let config = Config::load(Some(&explicit_config));
+        let engine = LintEngine::new(config);
+        let files = collect_files_to_lint(&[PathBuf::from("test.nu")]);
+        let (violations, _) = lint_files(&engine, &files, false);
+
+        set_current_dir(original_dir).unwrap();
+        assert!(violations
+            .iter()
+            .any(|v| v.rule_id == "snake_case_variables" && v.lint_level == LintLevel::Deny));
     }
 }

@@ -5,7 +5,7 @@ use crate::{
     ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::Rule,
-    violation::RuleViolation,
+    violation::Violation,
 };
 
 /// Extract the then-block expression from an if call
@@ -83,7 +83,7 @@ fn extract_each_block_id(call: &Call) -> Option<nu_protocol::BlockId> {
 }
 
 /// Check expression for the each-if pattern
-fn check_expression(expr: &Expression, context: &LintContext) -> Vec<RuleViolation> {
+fn check_expression(expr: &Expression, context: &LintContext) -> Vec<Violation> {
     let Expr::Call(call) = &expr.expr else {
         return vec![];
     };
@@ -102,7 +102,7 @@ fn check_expression(expr: &Expression, context: &LintContext) -> Vec<RuleViolati
 
     is_filtering_pattern(block_id, context, &loop_var_name)
         .then(|| {
-            RuleViolation::new_static(
+            Violation::new_static(
                 "prefer_where_over_each_if",
                 "Consider using 'where' for filtering instead of 'each' with 'if'",
                 expr.span,
@@ -113,7 +113,7 @@ fn check_expression(expr: &Expression, context: &LintContext) -> Vec<RuleViolati
         .collect()
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     use nu_protocol::ast::Traverse;
 
     let mut violations = Vec::new();

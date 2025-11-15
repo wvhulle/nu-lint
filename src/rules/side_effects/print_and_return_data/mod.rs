@@ -8,7 +8,7 @@ use crate::{
     ast::{block::BlockExt, call::CallExt, effect::is_side_effect_only},
     context::LintContext,
     rule::Rule,
-    violation::RuleViolation,
+    violation::Violation,
 };
 
 fn has_print_call(block: &Block, context: &LintContext) -> bool {
@@ -63,7 +63,7 @@ fn is_side_effect_only_command(expr: &Expression, context: &LintContext) -> bool
     }
 }
 
-fn check_function_definition(call: &Call, context: &LintContext) -> Option<RuleViolation> {
+fn check_function_definition(call: &Call, context: &LintContext) -> Option<Violation> {
     let (block_id, func_name) = call.extract_function_definition(context)?;
 
     // Skip main function as it often combines output and side effects
@@ -91,12 +91,12 @@ fn check_function_definition(call: &Call, context: &LintContext) -> Option<RuleV
         .to_string();
 
     Some(
-        RuleViolation::new_dynamic("print_and_return_data", message, name_span)
+        Violation::new_dynamic("print_and_return_data", message, name_span)
             .with_suggestion_dynamic(suggestion),
     )
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     context.collect_rule_violations(|expr, ctx| {
         if let Expr::Call(call) = &expr.expr
             && call.extract_function_definition(ctx).is_some()

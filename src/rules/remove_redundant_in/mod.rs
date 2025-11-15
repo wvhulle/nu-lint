@@ -1,7 +1,7 @@
 use nu_protocol::ast::{Expr, Pipeline};
 
 use crate::{
-    Fix, LintLevel, Replacement, context::LintContext, rule::Rule, violation::RuleViolation,
+    Fix, LintLevel, Replacement, context::LintContext, rule::Rule, violation::Violation,
 };
 
 /// Check if a pipeline starts with redundant $in
@@ -164,11 +164,11 @@ fn create_violation(
     signature: &nu_protocol::Signature,
     block_span: Option<nu_protocol::Span>,
     context: &LintContext,
-) -> RuleViolation {
+) -> Violation {
     let span = context.find_declaration_span(&signature.name);
     let suggestion = "Remove redundant $in - it's implicit at the start of pipelines";
 
-    let violation = RuleViolation::new_dynamic(
+    let violation = Violation::new_dynamic(
         "remove_redundant_in",
         format!(
             "Redundant $in usage in function '{}' - $in is implicit at the start of pipelines",
@@ -183,7 +183,7 @@ fn create_violation(
     })
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     let user_functions: Vec<_> = context.new_user_functions().collect();
     log::debug!(
         "remove_redundant_in: Found {} user functions",

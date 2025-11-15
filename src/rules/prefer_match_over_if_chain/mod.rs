@@ -7,7 +7,7 @@ use crate::{
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::Rule,
-    violation::{Fix, Replacement, RuleViolation},
+    violation::{Fix, Replacement, Violation},
 };
 
 /// Properties of an if-else-if chain
@@ -178,7 +178,7 @@ fn walk_if_else_chain(
 }
 
 /// Analyze an if-call and its else branch to detect if-else-if chains
-fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<RuleViolation> {
+fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<Violation> {
     // Get the condition expression and check if it compares a variable
     let compared_var = call
         .get_first_positional_arg()?
@@ -212,7 +212,7 @@ fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<RuleViolation>
 
     // Create appropriate violation message
     let violation = if analysis.consistent_variable {
-        RuleViolation::new_dynamic(
+        Violation::new_dynamic(
             "prefer_match_over_if_chain",
             format!(
                 "If-else-if chain comparing '{compared_var}' to different values - consider using \
@@ -226,7 +226,7 @@ fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<RuleViolation>
                 .to_string(),
         )
     } else {
-        RuleViolation::new_static(
+        Violation::new_static(
             "prefer_match_over_if_chain",
             "Long if-else-if chain - consider using 'match' for clearer branching",
             call.span(),
@@ -239,7 +239,7 @@ fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<RuleViolation>
     Some(fix.map_or(violation.clone(), |f| violation.with_fix(f)))
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     context.collect_rule_violations(|expr, ctx| {
         if let Expr::Call(call) = &expr.expr
             && call.is_call_to_command("if", ctx)

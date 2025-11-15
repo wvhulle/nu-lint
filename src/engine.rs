@@ -104,12 +104,11 @@ impl LintEngine {
                 // Get the effective lint level for this rule
                 let lint_level = self.config.get_lint_level(rule.id, rule.default_lint_level);
 
-                // Run the rule and convert violations
-                let rule_violations = (rule.check)(context);
-                let violations: Vec<_> = rule_violations
-                    .into_iter()
-                    .map(|rule_violation| rule_violation.into_violation(lint_level))
-                    .collect();
+                // Run the rule and update lint levels
+                let mut violations = (rule.check)(context);
+                for violation in &mut violations {
+                    violation.set_lint_level(lint_level);
+                }
 
                 (!violations.is_empty()).then_some(violations)
             })

@@ -8,7 +8,7 @@ use crate::{
     ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
     context::LintContext,
     rule::Rule,
-    violation::{self, RuleViolation},
+    violation::{self, Violation},
 };
 
 /// Check if a parameter is a data type that would benefit from pipeline input
@@ -286,7 +286,7 @@ fn extract_function_body(
         })
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     log::debug!("prefer_pipeline_input: Starting rule check");
 
     let user_functions: Vec<_> = context.new_user_functions().collect();
@@ -340,7 +340,7 @@ fn should_analyze_function<'a>(
 fn analyze_function_from_signature(
     signature: &nu_protocol::Signature,
     context: &LintContext,
-) -> Option<RuleViolation> {
+) -> Option<Violation> {
     let param = should_analyze_function(signature, &signature.name)?;
     let param_var_id = param.var_id?;
 
@@ -362,7 +362,7 @@ fn analyze_function_from_ast(
     block_id: nu_protocol::BlockId,
     function_name: &str,
     context: &LintContext,
-) -> Option<RuleViolation> {
+) -> Option<Violation> {
     let block = context.working_set.get_block(block_id);
     let param = should_analyze_function(&block.signature, function_name)?;
     let param_var_id = param.var_id?;
@@ -419,7 +419,7 @@ fn create_violation(
     signature: &nu_protocol::Signature,
     param: &nu_protocol::PositionalArg,
     context: &LintContext,
-) -> violation::RuleViolation {
+) -> violation::Violation {
     let span = context.find_declaration_span(&signature.name);
     let fix_text = generate_fix_text(signature, param, context);
     let fix = create_fix(fix_text, span);
@@ -428,7 +428,7 @@ fn create_violation(
         param.name
     );
 
-    RuleViolation::new_dynamic(
+    Violation::new_dynamic(
         "prefer_pipeline_input",
         format!(
             "Custom command '{}' with single data parameter '{}' should use pipeline input ($in) \

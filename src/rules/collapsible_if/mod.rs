@@ -2,17 +2,17 @@ use nu_protocol::ast::{Call, Expr};
 
 use crate::{
     Fix, LintLevel, Replacement, ast::call::CallExt, context::LintContext, rule::Rule,
-    violation::RuleViolation,
+    violation::Violation,
 };
 
 /// Creates a violation with fix for a collapsible if statement
-fn create_violation(call: &Call, fix_text: String) -> RuleViolation {
+fn create_violation(call: &Call, fix_text: String) -> Violation {
     let fix = Fix::new_static(
         "Collapse nested if statements",
         vec![Replacement::new_dynamic(call.span(), fix_text)],
     );
 
-    RuleViolation::new_static(
+    Violation::new_static(
         "collapsible_if",
         "Nested if statement can be collapsed using 'and'",
         call.span(),
@@ -21,7 +21,7 @@ fn create_violation(call: &Call, fix_text: String) -> RuleViolation {
     .with_fix(fix)
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     context.collect_rule_violations(|expr, ctx| match &expr.expr {
         Expr::Call(call) if call.is_call_to_command("if", ctx) => call
             .generate_collapsed_if(ctx)

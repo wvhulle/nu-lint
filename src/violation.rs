@@ -5,81 +5,6 @@ use nu_protocol::Span;
 
 use crate::config::LintLevel;
 
-/// A rule violation without severity (created by rules)
-#[derive(Debug, Clone)]
-pub struct RuleViolation {
-    pub rule_id: Cow<'static, str>,
-    pub message: Cow<'static, str>,
-    pub span: Span,
-    pub suggestion: Option<Cow<'static, str>>,
-    pub fix: Option<Fix>,
-}
-
-impl RuleViolation {
-    /// Create a new rule violation with static strings
-    #[must_use]
-    pub(crate) const fn new_static(
-        rule_id: &'static str,
-        message: &'static str,
-        span: Span,
-    ) -> Self {
-        Self {
-            rule_id: Cow::Borrowed(rule_id),
-            message: Cow::Borrowed(message),
-            span,
-            suggestion: None,
-            fix: None,
-        }
-    }
-
-    /// Create a new rule violation with a dynamic message
-    #[must_use]
-    pub(crate) const fn new_dynamic(rule_id: &'static str, message: String, span: Span) -> Self {
-        Self {
-            rule_id: Cow::Borrowed(rule_id),
-            message: Cow::Owned(message),
-            span,
-            suggestion: None,
-            fix: None,
-        }
-    }
-
-    /// Add a static suggestion to this violation
-    #[must_use]
-    pub(crate) fn with_suggestion_static(mut self, suggestion: &'static str) -> Self {
-        self.suggestion = Some(Cow::Borrowed(suggestion));
-        self
-    }
-
-    /// Add a dynamic suggestion to this violation
-    #[must_use]
-    pub(crate) fn with_suggestion_dynamic(mut self, suggestion: String) -> Self {
-        self.suggestion = Some(Cow::Owned(suggestion));
-        self
-    }
-
-    /// Add a fix to this violation
-    #[must_use]
-    pub(crate) fn with_fix(mut self, fix: Fix) -> Self {
-        self.fix = Some(fix);
-        self
-    }
-
-    /// Convert to a full Violation with severity
-    #[must_use]
-    pub fn into_violation(self, severity: LintLevel) -> Violation {
-        Violation {
-            rule_id: self.rule_id,
-            lint_level: severity,
-            message: self.message,
-            span: self.span,
-            suggestion: self.suggestion,
-            fix: self.fix,
-            file: None,
-        }
-    }
-}
-
 /// A complete violation with severity
 #[derive(Debug, Clone)]
 pub struct Violation {
@@ -94,16 +19,12 @@ pub struct Violation {
 
 impl Violation {
     /// Create a new violation with static strings (most common case)
+    /// The lint level will be set by the engine based on configuration
     #[must_use]
-    pub const fn new_static(
-        rule_id: &'static str,
-        lint_level: LintLevel,
-        message: &'static str,
-        span: Span,
-    ) -> Self {
+    pub const fn new_static(rule_id: &'static str, message: &'static str, span: Span) -> Self {
         Self {
             rule_id: Cow::Borrowed(rule_id),
-            lint_level,
+            lint_level: LintLevel::Allow, // Placeholder, will be set by engine
             message: Cow::Borrowed(message),
             span,
             suggestion: None,
@@ -113,16 +34,12 @@ impl Violation {
     }
 
     /// Create a new violation with a dynamic message
+    /// The lint level will be set by the engine based on configuration
     #[must_use]
-    pub const fn new_dynamic(
-        rule_id: &'static str,
-        lint_level: LintLevel,
-        message: String,
-        span: Span,
-    ) -> Self {
+    pub const fn new_dynamic(rule_id: &'static str, message: String, span: Span) -> Self {
         Self {
             rule_id: Cow::Borrowed(rule_id),
-            lint_level,
+            lint_level: LintLevel::Allow, // Placeholder, will be set by engine
             message: Cow::Owned(message),
             span,
             suggestion: None,
@@ -146,6 +63,17 @@ impl Violation {
     }
 
     /// Add a fix to this violation
+    #[must_use]
+    pub(crate) fn with_fix(mut self, fix: Fix) -> Self {
+        self.fix = Some(fix);
+        self
+    }
+
+    /// Set the lint level for this violation (used by the engine)
+    pub(crate) const fn set_lint_level(&mut self, level: LintLevel) {
+        self.lint_level = level;
+    }
+
     #[must_use]
     pub(crate) fn to_source_span(&self) -> SourceSpan {
         SourceSpan::from((self.span.start, self.span.end - self.span.start))

@@ -25,7 +25,7 @@ pub use output::{
 use thiserror::Error;
 use toml::de;
 pub use violation::Violation;
-pub(crate) use violation::{Fix, Replacement, RuleViolation};
+pub(crate) use violation::{Fix, Replacement};
 
 #[derive(Error, Debug, Diagnostic)]
 pub enum LintError {

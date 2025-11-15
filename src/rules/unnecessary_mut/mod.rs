@@ -10,7 +10,7 @@ use crate::{
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::Rule,
-    violation::{Fix, Replacement, RuleViolation},
+    violation::{Fix, Replacement, Violation},
 };
 
 /// Find the span of 'mut ' keyword before the variable name
@@ -51,7 +51,7 @@ fn extract_mut_declaration(
     Some((var_id, var_name, var_span, mut_span))
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     use nu_protocol::ast::Traverse;
 
     let mut mut_declarations: Vec<(VarId, String, Span, Span)> = Vec::new();
@@ -87,7 +87,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
             );
 
             violations.push(
-                RuleViolation::new_dynamic(
+                Violation::new_dynamic(
                     "unnecessary_mut",
                     format!("Variable '{var_name}' is declared as 'mut' but never reassigned"),
                     decl_span,

@@ -2,12 +2,12 @@ use nu_protocol::ast::{Expr, Expression, RecordItem, Traverse};
 
 use crate::{
     LintLevel, ast::expression::ExpressionExt, context::LintContext, rule::Rule,
-    violation::RuleViolation,
+    violation::Violation,
 };
 
 const MAX_RECORD_LINE_LENGTH: usize = 80;
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     let mut violations = Vec::new();
 
     context.ast.flat_map(
@@ -59,8 +59,8 @@ fn has_nested_structures(fields: &[RecordItem]) -> bool {
     })
 }
 
-fn create_violation(span: nu_protocol::Span) -> RuleViolation {
-    RuleViolation::new_static(
+fn create_violation(span: nu_protocol::Span) -> Violation {
+    Violation::new_static(
         "prefer_multiline_records",
         "Long records should use multiline format with each field on a separate line",
         span,

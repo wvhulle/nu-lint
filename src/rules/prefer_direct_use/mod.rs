@@ -10,7 +10,7 @@ use crate::{
     ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::Rule,
-    violation::RuleViolation,
+    violation::Violation,
 };
 
 /// Information about an empty list variable declaration
@@ -99,12 +99,12 @@ type EmptyListVarsMap = HashMap<VarId, (String, Span)>;
 fn create_violations(
     empty_list_vars_map: &EmptyListVarsMap,
     direct_copy_set: &HashSet<VarId>,
-) -> Vec<RuleViolation> {
+) -> Vec<Violation> {
     empty_list_vars_map
         .iter()
         .filter(|&(var_id, _)| direct_copy_set.contains(var_id))
         .map(|(_, (var_name, span))| {
-            RuleViolation::new_dynamic(
+            Violation::new_dynamic(
                 "prefer_direct_use",
                 format!(
                     "Variable '{var_name}' is initialized as empty list and filled by copying \
@@ -207,7 +207,7 @@ fn extract_patterns(expr: &Expression, context: &LintContext) -> AnalysisPattern
     )
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     let mut patterns: Vec<AnalysisPattern> = Vec::new();
 
     context.ast.flat_map(

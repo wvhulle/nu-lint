@@ -8,7 +8,7 @@ use crate::{
     ast::{block::BlockExt, call::CallExt, span::SpanExt, syntax_shape::SyntaxShapeExt},
     context::LintContext,
     rule::Rule,
-    violation::{Fix, Replacement, RuleViolation},
+    violation::{Fix, Replacement, Violation},
 };
 
 fn has_explicit_type_annotation(signature_span: Option<Span>, ctx: &LintContext) -> bool {
@@ -43,7 +43,7 @@ fn create_violations_for_untyped_io(
     needs_input_type: bool,
     needs_output_type: bool,
     fix: &Fix,
-) -> Vec<RuleViolation> {
+) -> Vec<Violation> {
     if !needs_input_type && !needs_output_type {
         return vec![];
     }
@@ -80,7 +80,7 @@ fn create_violations_for_untyped_io(
     };
 
     vec![
-        RuleViolation::new_dynamic("typed_pipeline_io", message, name_span)
+        Violation::new_dynamic("typed_pipeline_io", message, name_span)
             .with_suggestion_static(suggestion)
             .with_fix(fix.clone()),
     ]
@@ -192,7 +192,7 @@ fn shape_to_string(shape: &nu_protocol::SyntaxShape) -> String {
     shape.to_type_string()
 }
 
-fn check_def_call(call: &Call, ctx: &LintContext) -> Vec<RuleViolation> {
+fn check_def_call(call: &Call, ctx: &LintContext) -> Vec<Violation> {
     let Some((block_id, func_name)) = call.extract_function_definition(ctx) else {
         return vec![];
     };
@@ -244,7 +244,7 @@ fn check_def_call(call: &Call, ctx: &LintContext) -> Vec<RuleViolation> {
     )
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     context.collect_rule_violations(|expr, ctx| match &expr.expr {
         Expr::Call(call) => check_def_call(call, ctx),
         _ => vec![],

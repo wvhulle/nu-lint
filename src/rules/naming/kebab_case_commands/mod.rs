@@ -3,10 +3,10 @@ use nu_protocol::ast::Expr;
 
 use super::NuNaming;
 use crate::{
-    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::RuleViolation,
+    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation,
 };
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     context.collect_rule_violations(|expr, ctx| {
         let Expr::Call(call) = &expr.expr else {
             return vec![];

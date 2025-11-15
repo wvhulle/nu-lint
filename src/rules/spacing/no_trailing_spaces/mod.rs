@@ -2,14 +2,14 @@ use std::sync::OnceLock;
 
 use regex::Regex;
 
-use crate::{LintLevel, context::LintContext, rule::Rule, violation::RuleViolation};
+use crate::{LintLevel, context::LintContext, rule::Rule, violation::Violation};
 
 fn trailing_space_pattern() -> &'static Regex {
     static PATTERN: OnceLock<Regex> = OnceLock::new();
     PATTERN.get_or_init(|| Regex::new(r"[ \t]+$").unwrap())
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     let mut violations = Vec::new();
     let source = context.source;
     let lines: Vec<&str> = source.lines().collect();
@@ -21,7 +21,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
             let violation_end = byte_offset + m.end();
 
             violations.push(
-                RuleViolation::new_dynamic(
+                Violation::new_dynamic(
                     "no_trailing_spaces",
                     format!("Line {} has trailing whitespace", line_num + 1),
                     nu_protocol::Span::new(violation_start, violation_end),

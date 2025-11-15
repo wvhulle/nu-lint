@@ -2,7 +2,7 @@ use std::sync::OnceLock;
 
 use regex::Regex;
 
-use crate::{LintLevel, context::LintContext, rule::Rule, violation::RuleViolation};
+use crate::{LintLevel, context::LintContext, rule::Rule, violation::Violation};
 
 fn print_pattern() -> &'static Regex {
     static PATTERN: OnceLock<Regex> = OnceLock::new();
@@ -28,7 +28,7 @@ fn has_journal_prefix(text: &str) -> bool {
     pattern.is_match(text)
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     // TODO: Convert from regex to AST
     let mut violations = Vec::new();
     let print_pat = print_pattern();
@@ -46,7 +46,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 
             if !has_journal_prefix(output_text) {
                 violations.push(
-                    RuleViolation::new_static(
+                    Violation::new_static(
                         "systemd_journal_prefix",
                         "Output without systemd journal log level prefix - consider adding prefix \
                          for proper logging",
@@ -74,7 +74,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
 
             if !has_journal_prefix(output_text) {
                 violations.push(
-                    RuleViolation::new_static(
+                    Violation::new_static(
                         "systemd_journal_prefix",
                         "Output without systemd journal log level prefix - consider adding prefix \
                          for proper logging",

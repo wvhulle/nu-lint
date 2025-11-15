@@ -5,7 +5,7 @@ use crate::{
     ast::{call::CallExt, span::SpanExt},
     context::LintContext,
     rule::Rule,
-    violation::RuleViolation,
+    violation::Violation,
 };
 
 /// Check if a call is to the 'exit' command
@@ -13,7 +13,7 @@ fn is_exit_call(call: &Call, ctx: &LintContext) -> bool {
     call.get_call_name(ctx) == "exit"
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     // First, collect all function definitions
     let functions = context.collect_function_definitions();
 
@@ -35,7 +35,7 @@ fn check(context: &LintContext) -> Vec<RuleViolation> {
             }
 
             return vec![
-                RuleViolation::new_dynamic(
+                Violation::new_dynamic(
                     "exit_only_in_main",
                     format!(
                         "Function '{function_name}' uses 'exit' which terminates the entire script"

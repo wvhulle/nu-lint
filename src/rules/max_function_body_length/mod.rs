@@ -1,6 +1,6 @@
 use nu_protocol::{Id, marker::Block};
 
-use crate::{LintLevel, context::LintContext, rule::Rule, violation::RuleViolation};
+use crate::{LintLevel, context::LintContext, rule::Rule, violation::Violation};
 
 const MAX_LINES: usize = 40;
 
@@ -15,7 +15,7 @@ fn count_lines_in_span(source: &str, span: nu_protocol::Span) -> usize {
     source[start..end].lines().count()
 }
 
-fn check(context: &LintContext) -> Vec<RuleViolation> {
+fn check(context: &LintContext) -> Vec<Violation> {
     context
         .collect_function_definitions()
         .iter()
@@ -29,7 +29,7 @@ fn function_violation(
     context: &LintContext<'_>,
     block_id: Id<Block>,
     function_name: &String,
-) -> Option<RuleViolation> {
+) -> Option<Violation> {
     let block = context.working_set.get_block(block_id);
     let function_span = context.find_declaration_span(function_name);
 
@@ -47,7 +47,7 @@ fn function_violation(
              down complex logic into helper functions with clear responsibilities."
         );
 
-        RuleViolation::new_dynamic("max_function_body_length", message, function_span)
+        Violation::new_dynamic("max_function_body_length", message, function_span)
             .with_suggestion_dynamic(suggestion)
     })
 }

@@ -233,3 +233,87 @@ pub fn find_config_file() -> Option<PathBuf> {
 
     None
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::log::instrument;
+
+    #[test]
+    fn test_load_config_simple_str() {
+        let toml_str = r#"
+        [lints.rules]
+        snake_case_variables = "deny"
+    "#;
+
+        let config = Config::load_from_str(toml_str).unwrap();
+        assert_eq!(
+            config.lints.rules.get("snake_case_variables"),
+            Some(&LintLevel::Deny)
+        );
+    }
+
+    #[test]
+    fn test_load_config_simple_str_set() {
+        let toml_str = r#"
+        [lints.sets]
+        naming = "deny"
+    "#;
+
+        let config = Config::load_from_str(toml_str).unwrap();
+        let found_set_level = config.lints.sets.iter().find(|(k, _)| **k == "naming");
+        assert!(matches!(found_set_level, Some((_, LintLevel::Deny))));
+    }
+
+    #[test]
+    fn test_load_config_load_from_set_deny() {
+        let toml_str = r#"
+        [lints.sets]
+        naming = "deny"
+    "#;
+
+        let config = Config::load_from_str(toml_str).unwrap();
+        let found_set_level = config.rule_lint_level_in_conf("snake_case_variables");
+        assert!(matches!(found_set_level, Some(LintLevel::Deny)));
+    }
+
+    #[test]
+    fn test_load_config_load_from_set_allow() {
+        instrument();
+        let toml_str = r#"
+        [lints.sets]
+        naming = "allow"
+
+    "#;
+
+        let config = Config::load_from_str(toml_str).unwrap();
+        let found_set_level = config.rule_lint_level_in_conf("snake_case_variables");
+        assert!(matches!(found_set_level, Some(LintLevel::Allow)));
+    }
+
+    #[test]
+    fn test_load_config_load_from_set_deny_empty() {
+        instrument();
+        let toml_str = r"
+    ";
+
+        let config = Config::load_from_str(toml_str).unwrap();
+        let found_set_level = config.rule_lint_level_in_conf("snake_case_variables");
+        assert!(matches!(found_set_level, Some(LintLevel::Allow)));
+    }
+
+    #[test]
+    fn test_load_config_load_from_set_deny_conflict() {
+        instrument();
+        let toml_str = r#"
+        [lints.sets]
+        naming = "deny"
+        [lints.rules]
+        snake_case_variables = "allow"
+    "#;
+
+        let config = Config::load_from_str(toml_str).unwrap();
+        let found_set_level = config.rule_lint_level_in_conf("snake_case_variables");
+        assert_eq!(found_set_level, Some(LintLevel::Allow));
+    }
+}

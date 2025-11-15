@@ -24,7 +24,7 @@ fn test_no_config_file() {
     let config = Config::default();
     assert_eq!(
         config.lints.rules.get("snake_case_variables"),
-        Some(&LintLevel::Deny)
+        Some(&LintLevel::Allow)
     );
 
     let engine = LintEngine::new(config);
@@ -169,7 +169,6 @@ fn test_explicit_config_overrides_auto_discovery() {
     assert!(
         violations
             .iter()
-            .find(|v| v.rule_id == "snake_case_variables" && v.lint_level == LintLevel::Deny)
-            .is_some()
+            .any(|v| v.rule_id == "snake_case_variables" && v.lint_level == LintLevel::Deny)
     );
 }

@@ -165,39 +165,38 @@ impl Config {
 
     #[must_use]
     pub fn rule_lint_level_in_conf(&self, rule_id: &str) -> Option<LintLevel> {
-        let mut rule_lint_level_within_conf = None;
-
-        // Check if the rule belongs to any configured lint sets
-        let builtin_sets = builtin_lint_sets();
-        for (set_name, level) in &self.lints.sets {
-            log::debug!("Lint set {set_name} is enabled with level {level:?} in config");
-
-            // Look up the set in builtin sets
-            if let Some(lint_set) = builtin_sets.get(set_name.as_str()) {
-                // Check if this rule is in the set
-                if lint_set.rules.contains_key(rule_id) {
-                    log::debug!("Rule '{rule_id}' found in set '{set_name}' with level {level:?}");
-                    match rule_lint_level_within_conf {
-                        None => rule_lint_level_within_conf = Some(*level),
-                        Some(existing_level) => {
-                            if *level > existing_level {
-                                rule_lint_level_within_conf = Some(*level);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
         // Individual rule configuration overrides set configuration
         if let Some(level) = self.lints.rules.get(rule_id) {
             log::debug!(
                 "Rule '{rule_id}' has individual level '{level:?}' in config, overriding set levels"
             );
-            rule_lint_level_within_conf = Some(*level);
+            return Some(*level);
         }
 
-        rule_lint_level_within_conf
+        // Check if the rule belongs to any configured lint sets
+        self.get_rule_level_from_sets(rule_id)
+    }
+
+    fn get_rule_level_from_sets(&self, rule_id: &str) -> Option<LintLevel> {
+        let builtin_sets = builtin_lint_sets();
+        let mut max_level: Option<LintLevel> = None;
+
+        for (set_name, level) in &self.lints.sets {
+            log::debug!("Lint set {set_name} is enabled with level {level:?} in config");
+
+            let Some(lint_set) = builtin_sets.get(set_name.as_str()) else {
+                continue;
+            };
+
+            if !lint_set.rules.contains_key(rule_id) {
+                continue;
+            }
+
+            log::debug!("Rule '{rule_id}' found in set '{set_name}' with level {level:?}");
+            max_level = Some(max_level.map_or(*level, |existing| existing.max(*level)));
+        }
+
+        max_level
     }
 
     /// Get the effective lint level for a specific rule

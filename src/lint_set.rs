@@ -11,6 +11,7 @@ use crate::LintLevel;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LintSet {
     pub name: String,
+    pub description: String,
     pub rules: HashMap<String, LintLevel>,
 }
 
@@ -30,6 +31,7 @@ static BUILTIN_LINT_SETS: LazyLock<HashMap<&str, LintSet>> = LazyLock::new(|| {
             "naming",
             LintSet {
                 name: "naming".to_string(),
+                description: "Linting rules for naming conventions".to_string(),
                 rules: HashMap::from([
                     ("snake_case_variables".to_string(), LintLevel::Deny),
                     ("kebab_case_commands".to_string(), LintLevel::Deny),
@@ -41,6 +43,7 @@ static BUILTIN_LINT_SETS: LazyLock<HashMap<&str, LintSet>> = LazyLock::new(|| {
             "idioms",
             LintSet {
                 name: "idioms".to_string(),
+                description: "Linting rules for idiomatic expressions".to_string(),
                 rules: HashMap::new(),
             },
         ),
@@ -48,6 +51,7 @@ static BUILTIN_LINT_SETS: LazyLock<HashMap<&str, LintSet>> = LazyLock::new(|| {
             "pedantic",
             LintSet {
                 name: "pedantic".to_string(),
+                description: "Linting rules for pedantic code".to_string(),
                 rules: HashMap::new(),
             },
         ),

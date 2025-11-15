@@ -4,7 +4,7 @@ use crate::{config::Config, engine::LintEngine};
 fn detect_unclosed_parenthesis() {
     let engine = LintEngine::new(Config::default());
     let code = "let x = (";
-    let violations = engine.lint_source(code, None);
+    let violations = engine.lint_str(code);
 
     assert!(
         !violations.is_empty(),
@@ -21,7 +21,7 @@ fn detect_unclosed_parenthesis() {
 fn detect_unclosed_brace() {
     let engine = LintEngine::new(Config::default());
     let code = "def foo [] {";
-    let violations = engine.lint_source(code, None);
+    let violations = engine.lint_str(code);
 
     assert!(
         !violations.is_empty(),
@@ -38,7 +38,7 @@ fn detect_unclosed_brace() {
 fn detect_unclosed_bracket() {
     let engine = LintEngine::new(Config::default());
     let code = "let x = [1, 2, 3";
-    let violations = engine.lint_source(code, None);
+    let violations = engine.lint_str(code);
 
     assert!(
         !violations.is_empty(),
@@ -55,7 +55,7 @@ fn detect_unclosed_bracket() {
 fn detect_unexpected_token() {
     let engine = LintEngine::new(Config::default());
     let code = "let let x = 5";
-    let violations = engine.lint_source(code, None);
+    let violations = engine.lint_str(code);
 
     assert!(
         !violations.is_empty(),
@@ -72,7 +72,7 @@ fn detect_unexpected_token() {
 fn detect_invalid_function_syntax() {
     let engine = LintEngine::new(Config::default());
     let code = "def [] { }";
-    let violations = engine.lint_source(code, None);
+    let violations = engine.lint_str(code);
 
     assert!(
         !violations.is_empty(),
@@ -89,7 +89,7 @@ fn detect_invalid_function_syntax() {
 fn detect_unclosed_string() {
     let engine = LintEngine::new(Config::default());
     let code = r#"let x = "unclosed string"#;
-    let violations = engine.lint_source(code, None);
+    let violations = engine.lint_str(code);
 
     assert!(
         !violations.is_empty(),
@@ -106,7 +106,7 @@ fn detect_unclosed_string() {
 fn detect_multiple_parse_errors() {
     let engine = LintEngine::new(Config::default());
     let code = "let x = (\nlet y = [";
-    let violations = engine.lint_source(code, None);
+    let violations = engine.lint_str(code);
 
     assert!(
         violations

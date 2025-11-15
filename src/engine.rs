@@ -1,11 +1,11 @@
-use std::{collections::HashSet, fs, path::Path, sync::OnceLock};
-
 use nu_parser::parse;
 use nu_protocol::{
     ParseError,
     ast::Block,
     engine::{EngineState, StateWorkingSet},
 };
+use std::borrow::Cow;
+use std::{collections::HashSet, fs, path::Path, sync::OnceLock};
 
 use crate::{
     LintError, RuleViolation,
@@ -70,11 +70,25 @@ impl LintEngine {
     /// Returns an error if the file cannot be read.
     pub(crate) fn lint_file(&self, path: &Path) -> Result<Vec<Violation>, LintError> {
         let source = fs::read_to_string(path)?;
-        Ok(self.lint_source(&source, Some(path)))
+        let mut violations = self.lint_str(&source);
+
+        let file_path: &str = path.to_str().unwrap();
+        let file_path: Cow<'static, str> = file_path.to_owned().into();
+        for violation in &mut violations {
+            violation.file = Some(file_path.clone());
+        }
+
+        violations.sort_by(|a, b| {
+            a.span
+                .start
+                .cmp(&b.span.start)
+                .then(a.lint_level.cmp(&b.lint_level))
+        });
+        Ok(violations)
     }
 
     #[must_use]
-    pub fn lint_source(&self, source: &str, path: Option<&Path>) -> Vec<Violation> {
+    pub fn lint_str(&self, source: &str) -> Vec<Violation> {
         let (block, working_set) = parse_source(self.engine_state, source.as_bytes());
 
         let context = LintContext {
@@ -89,8 +103,6 @@ impl LintEngine {
         // Extract parse errors from the working set and convert to violations
         violations.extend(self.convert_parse_errors_to_violations(&working_set));
 
-        Self::attach_file_path(&mut violations, path);
-        Self::sort_violations(&mut violations);
         violations
     }
 
@@ -154,26 +166,5 @@ impl LintEngine {
                 })
             })
             .collect()
-    }
-
-    /// Attach file path to all violations
-    fn attach_file_path(violations: &mut [Violation], path: Option<&Path>) {
-        if let Some(file_path_str) = path.and_then(|p| p.to_str()) {
-            use std::borrow::Cow;
-            let file_path: Cow<'static, str> = file_path_str.to_owned().into();
-            for violation in violations {
-                violation.file = Some(file_path.clone());
-            }
-        }
-    }
-
-    /// Sort violations by span start position, then by severity
-    fn sort_violations(violations: &mut [Violation]) {
-        violations.sort_by(|a, b| {
-            a.span
-                .start
-                .cmp(&b.span.start)
-                .then(a.lint_level.cmp(&b.lint_level))
-        });
     }
 }

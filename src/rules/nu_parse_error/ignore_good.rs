@@ -4,7 +4,7 @@ use crate::{config::Config, engine::LintEngine, log::instrument};
 fn ignore_valid_let_statement() {
     let engine = LintEngine::new(Config::default());
     let code = "let x = 5";
-    let violations = engine.lint_source(code, None);
+    let violations = engine.lint_str(code);
 
     assert!(
         !violations
@@ -22,7 +22,7 @@ def greet [name: string] {
     print $"Hello, ($name)!"
 }
 "#;
-    let violations = engine.lint_source(code, None);
+    let violations = engine.lint_str(code);
 
     assert!(
         !violations
@@ -36,7 +36,7 @@ def greet [name: string] {
 fn ignore_valid_pipeline() {
     let engine = LintEngine::new(Config::default());
     let code = "ls | where size > 100 | sort-by name";
-    let violations = engine.lint_source(code, None);
+    let violations = engine.lint_str(code);
 
     assert!(
         !violations
@@ -50,7 +50,7 @@ fn ignore_valid_pipeline() {
 fn ignore_valid_list() {
     let engine = LintEngine::new(Config::default());
     let code = "let items = [1, 2, 3, 4, 5]";
-    let violations = engine.lint_source(code, None);
+    let violations = engine.lint_str(code);
 
     assert!(
         !violations
@@ -64,7 +64,7 @@ fn ignore_valid_list() {
 fn ignore_valid_record() {
     let engine = LintEngine::new(Config::default());
     let code = "let person = {name: 'John', age: 30}";
-    let violations = engine.lint_source(code, None);
+    let violations = engine.lint_str(code);
 
     assert!(
         !violations
@@ -78,7 +78,7 @@ fn ignore_valid_record() {
 fn ignore_valid_string() {
     let engine = LintEngine::new(Config::default());
     let code = r#"let greeting = "Hello, world!""#;
-    let violations = engine.lint_source(code, None);
+    let violations = engine.lint_str(code);
 
     assert!(
         !violations
@@ -92,7 +92,7 @@ fn ignore_valid_string() {
 fn ignore_valid_closure() {
     let engine = LintEngine::new(Config::default());
     let code = "let adder = {|x, y| $x + $y}";
-    let violations = engine.lint_source(code, None);
+    let violations = engine.lint_str(code);
 
     assert!(
         !violations
@@ -113,7 +113,7 @@ if $x > 5 {
     print "lesser"
 }
 "#;
-    let violations = engine.lint_source(code, None);
+    let violations = engine.lint_str(code);
 
     assert!(
         !violations
@@ -146,7 +146,7 @@ export def refresh-theme [] {
     }
 }
 "#;
-    let violations = engine.lint_source(code, None);
+    let violations = engine.lint_str(code);
 
     assert!(
         !violations

@@ -1,10 +1,10 @@
 use core::{error::Error, iter};
 use std::fmt;
 
-use miette::{Diagnostic, LabeledSpan, Report, SourceCode};
+use miette::{Diagnostic, LabeledSpan, NamedSource, Report, SourceCode};
 
 use super::{Summary, calculate_line_column, read_source_code};
-use crate::{Fix, violation::Violation};
+use crate::violation::Violation;
 
 #[must_use]
 pub fn format_text(violations: &[Violation]) -> String {
@@ -29,25 +29,17 @@ pub fn format_text(violations: &[Violation]) -> String {
 fn format_violation_text(violation: &Violation, add_separator: bool) -> String {
     let source_code = read_source_code(violation.file.as_ref());
 
-    let (line, column) = calculate_line_column(&source_code, violation.span.start);
-
-    let header = violation.file.as_ref().map_or(String::new(), |file_path| {
-        format!("\n\x1b[1;4m{file_path}:{line}:{column}\x1b[0m\n")
-    });
+    let named_source = violation.file.as_ref().map_or_else(
+        || NamedSource::new("<stdin>", source_code.clone()),
+        |file_path| NamedSource::new(file_path.as_ref(), source_code.clone()),
+    );
 
     let diagnostic = ViolationDiagnostic {
         violation: violation.clone(),
-        source_code: source_code.clone(),
-        has_fix: violation.fix.is_some(),
+        source_code: named_source,
     };
 
     let report = format!("{:?}", Report::new(diagnostic));
-
-    let fix_info = violation
-        .fix
-        .as_ref()
-        .map(|fix| format_fix_info(fix, &source_code))
-        .unwrap_or_default();
 
     let separator = if add_separator {
         format!("\n\n{}\n", "─".repeat(80))
@@ -55,29 +47,7 @@ fn format_violation_text(violation: &Violation, add_separator: bool) -> String {
         String::new()
     };
 
-    format!("{header}{report}\n{fix_info}{separator}")
-}
-
-fn format_fix_info(fix: &Fix, source_code: &str) -> String {
-    let header = format!("\n  \x1b[36mℹ Available fix:\x1b[0m {}", fix.explanation);
-
-    if fix.replacements.is_empty() {
-        return header;
-    }
-
-    if fix.replacements.len() == 1 {
-        let replacement = &fix.replacements[0];
-        let (start_line, _start_col) = calculate_line_column(source_code, replacement.span.start);
-        let (end_line, _end_col) = calculate_line_column(source_code, replacement.span.end);
-
-        if start_line == end_line
-            && let Some(diff) = format_single_line_diff(source_code, replacement, start_line)
-        {
-            return format!("{header}\n{diff}");
-        }
-    }
-
-    header
+    format!("\n{report}{separator}")
 }
 
 fn format_single_line_diff(
@@ -104,9 +74,9 @@ fn format_single_line_diff(
         .get(replacement.span.end..line_start_offset + line.len())
         .unwrap_or("");
 
-    let old_line = format!("  \x1b[31m-\x1b[0m {line}");
+    let old_line = format!("  - {line}");
     let new_line = format!(
-        "  \x1b[32m+\x1b[0m {before}{}{after}",
+        "  + {before}{}{after}",
         replacement.replacement_text
     );
 
@@ -120,8 +90,7 @@ fn format_single_line_diff(
 #[derive(Debug, Clone)]
 struct ViolationDiagnostic {
     violation: Violation,
-    source_code: String,
-    has_fix: bool,
+    source_code: NamedSource<String>,
 }
 
 impl fmt::Display for ViolationDiagnostic {
@@ -152,15 +121,37 @@ impl Diagnostic for ViolationDiagnostic {
     fn help<'a>(&'a self) -> Option<Box<dyn fmt::Display + 'a>> {
         const MAX_LABEL_LENGTH: usize = 150;
 
-        if self.has_fix {
-            return None;
+        let mut help_text = String::new();
+
+        if let Some(help) = &self.violation.help {
+            if help.len() > MAX_LABEL_LENGTH {
+                help_text.push_str(help);
+            }
         }
 
-        self.violation
-            .help
-            .as_ref()
-            .filter(|s| s.len() > MAX_LABEL_LENGTH)
-            .map(|s| Box::new(s.as_ref()) as Box<dyn fmt::Display>)
+        if let Some(fix) = &self.violation.fix {
+            if !help_text.is_empty() {
+                help_text.push_str("\n\n");
+            }
+            help_text.push_str("Available fix: ");
+            help_text.push_str(&fix.explanation);
+
+            if fix.replacements.len() == 1 {
+                let replacement = &fix.replacements[0];
+                let source_str = self.source_code.inner();
+                let (start_line, _) = calculate_line_column(source_str, replacement.span.start);
+                let (end_line, _) = calculate_line_column(source_str, replacement.span.end);
+
+                if start_line == end_line {
+                    if let Some(diff) = format_single_line_diff(source_str, replacement, start_line) {
+                        help_text.push('\n');
+                        help_text.push_str(&diff);
+                    }
+                }
+            }
+        }
+
+        (!help_text.is_empty()).then(|| Box::new(help_text) as Box<dyn fmt::Display>)
     }
 
     fn labels(&self) -> Option<Box<dyn Iterator<Item = LabeledSpan> + '_>> {
@@ -171,7 +162,7 @@ impl Diagnostic for ViolationDiagnostic {
         let label_text = self.violation.help.as_ref().map_or_else(
             || self.violation.message.to_string(),
             |help| {
-                if !self.has_fix && help.len() <= MAX_LABEL_LENGTH {
+                if self.violation.fix.is_none() && help.len() <= MAX_LABEL_LENGTH {
                     help.to_string()
                 } else {
                     self.violation.message.to_string()

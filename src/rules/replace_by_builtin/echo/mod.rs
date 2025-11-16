@@ -29,9 +29,9 @@ fn generate_fix(code_snippet: &str, span: nu_protocol::Span) -> Option<Fix> {
     if args.is_empty() {
         None
     } else {
-        Some(Fix::new_dynamic(
+        Some(Fix::with_explanation(
             format!("Replace '{code_snippet}' with '{args}'"),
-            vec![Replacement::new_dynamic(span, args.to_string())],
+            vec![Replacement::new(span, args.to_string())],
         ))
     }
 }
@@ -58,7 +58,7 @@ fn create_violation(
     let code_snippet = &context.source[element.expr.span.start..element.expr.span.end];
     let fix = generate_fix(code_snippet, element.expr.span);
 
-    let violation = Violation::new_static("prefer_builtin_echo", message, element.expr.span);
+    let violation = Violation::new("prefer_builtin_echo", message, element.expr.span);
 
     match fix {
         Some(f) => violation.with_fix(f),

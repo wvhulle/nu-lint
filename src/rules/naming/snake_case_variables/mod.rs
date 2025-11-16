@@ -31,19 +31,19 @@ fn create_snake_case_violation(
     let snake_case_name = var_name.to_snake_case();
 
     let fix = Fix {
-        description: format!("Rename variable '{var_name}' to '{snake_case_name}'").into(),
+        explanation: format!("Rename variable '{var_name}' to '{snake_case_name}'").into(),
         replacements: vec![Replacement {
             span: name_span,
-            new_text: snake_case_name.clone().into(),
+            replacement_text: snake_case_name.clone().into(),
         }],
     };
 
-    Violation::new_dynamic(
+    Violation::new(
         "snake_case_variables",
         format!("{var_type} '{var_name}' should use snake_case naming convention"),
         name_span,
     )
-    .with_suggestion_dynamic(format!("Consider renaming to: {snake_case_name}"))
+    .with_help(format!("Consider renaming to: {snake_case_name}"))
     .with_fix(fix)
 }
 

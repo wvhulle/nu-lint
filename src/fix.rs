@@ -93,7 +93,7 @@ fn apply_fixes_to_content(content: &str, violations: &[&Violation]) -> String {
         }
 
         // Apply the replacement
-        result.replace_range(start..end, &replacement.new_text);
+        result.replace_range(start..end, &replacement.replacement_text);
     }
 
     result
@@ -147,15 +147,15 @@ mod tests {
     #[test]
     fn test_apply_single_replacement() {
         let content = "let x = 5";
-        let replacement = Replacement::new_static(Span::new(4, 5), "y");
-        let fix = Fix::new_static("Rename variable", vec![replacement]);
+        let replacement = Replacement::new(Span::new(4, 5), "y");
+        let fix = Fix::with_explanation("Rename variable", vec![replacement]);
 
         let violation = Violation {
             rule_id: Cow::Borrowed("test_rule"),
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(4, 5),
-            suggestion: None,
+            help: None,
             fix: Some(fix),
             file: Some(Cow::Borrowed("test.nu")),
         };
@@ -168,17 +168,17 @@ mod tests {
     fn test_apply_multiple_replacements() {
         let content = "let x = 5; let y = 10";
         let replacements = vec![
-            Replacement::new_static(Span::new(4, 5), "a"),
-            Replacement::new_static(Span::new(15, 16), "b"),
+            Replacement::new(Span::new(4, 5), "a"),
+            Replacement::new(Span::new(15, 16), "b"),
         ];
-        let fix = Fix::new_static("Rename variables", replacements);
+        let fix = Fix::with_explanation("Rename variables", replacements);
 
         let violation = Violation {
             rule_id: Cow::Borrowed("test_rule"),
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 21),
-            suggestion: None,
+            help: None,
             fix: Some(fix),
             file: Some(Cow::Borrowed("test.nu")),
         };
@@ -193,27 +193,20 @@ mod tests {
         // correctly
         let content = "let x = 5; let y = 10; let z = 15";
 
-        let fix1 = Fix::new_static(
-            "Rename x",
-            vec![Replacement::new_static(Span::new(4, 5), "a")],
-        );
+        let fix1 = Fix::with_explanation("Rename x", vec![Replacement::new(Span::new(4, 5), "a")]);
 
-        let fix2 = Fix::new_static(
-            "Rename y",
-            vec![Replacement::new_static(Span::new(15, 16), "b")],
-        );
+        let fix2 =
+            Fix::with_explanation("Rename y", vec![Replacement::new(Span::new(15, 16), "b")]);
 
-        let fix3 = Fix::new_static(
-            "Rename z",
-            vec![Replacement::new_static(Span::new(27, 28), "c")],
-        );
+        let fix3 =
+            Fix::with_explanation("Rename z", vec![Replacement::new(Span::new(27, 28), "c")]);
 
         let violation1 = Violation {
             rule_id: Cow::Borrowed("test_rule"),
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(4, 5),
-            suggestion: None,
+            help: None,
             fix: Some(fix1),
             file: Some(Cow::Borrowed("test.nu")),
         };
@@ -223,7 +216,7 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(15, 16),
-            suggestion: None,
+            help: None,
             fix: Some(fix2),
             file: Some(Cow::Borrowed("test.nu")),
         };
@@ -233,7 +226,7 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(27, 28),
-            suggestion: None,
+            help: None,
             fix: Some(fix3),
             file: Some(Cow::Borrowed("test.nu")),
         };
@@ -247,9 +240,9 @@ mod tests {
         // Test replacing text with different length strings
         let content = "let variable_name = 5";
 
-        let fix = Fix::new_static(
+        let fix = Fix::with_explanation(
             "Shorten name",
-            vec![Replacement::new_static(Span::new(4, 17), "x")],
+            vec![Replacement::new(Span::new(4, 17), "x")],
         );
 
         let violation = Violation {
@@ -257,7 +250,7 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(4, 17),
-            suggestion: None,
+            help: None,
             fix: Some(fix),
             file: Some(Cow::Borrowed("test.nu")),
         };
@@ -271,14 +264,14 @@ mod tests {
         // Test multiple fixes where replacements have different lengths
         let content = "let abc = 5; let defgh = 10";
 
-        let fix1 = Fix::new_static(
+        let fix1 = Fix::with_explanation(
             "Shorten abc to a",
-            vec![Replacement::new_static(Span::new(4, 7), "a")],
+            vec![Replacement::new(Span::new(4, 7), "a")],
         );
 
-        let fix2 = Fix::new_static(
+        let fix2 = Fix::with_explanation(
             "Shorten defgh to b",
-            vec![Replacement::new_static(Span::new(17, 22), "b")],
+            vec![Replacement::new(Span::new(17, 22), "b")],
         );
 
         let violation1 = Violation {
@@ -286,7 +279,7 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(4, 7),
-            suggestion: None,
+            help: None,
             fix: Some(fix1),
             file: Some(Cow::Borrowed("test.nu")),
         };
@@ -296,7 +289,7 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(17, 22),
-            suggestion: None,
+            help: None,
             fix: Some(fix2),
             file: Some(Cow::Borrowed("test.nu")),
         };
@@ -311,24 +304,20 @@ mod tests {
         let content = "aaaa bbbb cccc dddd";
 
         // Apply fixes in forward order but they should be processed in reverse
-        let fix1 = Fix::new_static(
-            "Replace aaaa",
-            vec![Replacement::new_static(Span::new(0, 4), "A")],
-        );
+        let fix1 =
+            Fix::with_explanation("Replace aaaa", vec![Replacement::new(Span::new(0, 4), "A")]);
 
-        let fix2 = Fix::new_static(
-            "Replace bbbb",
-            vec![Replacement::new_static(Span::new(5, 9), "B")],
-        );
+        let fix2 =
+            Fix::with_explanation("Replace bbbb", vec![Replacement::new(Span::new(5, 9), "B")]);
 
-        let fix3 = Fix::new_static(
+        let fix3 = Fix::with_explanation(
             "Replace cccc",
-            vec![Replacement::new_static(Span::new(10, 14), "C")],
+            vec![Replacement::new(Span::new(10, 14), "C")],
         );
 
-        let fix4 = Fix::new_static(
+        let fix4 = Fix::with_explanation(
             "Replace dddd",
-            vec![Replacement::new_static(Span::new(15, 19), "DDDD")],
+            vec![Replacement::new(Span::new(15, 19), "DDDD")],
         );
 
         let v1 = Violation {
@@ -336,7 +325,7 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 4),
-            suggestion: None,
+            help: None,
             fix: Some(fix1),
             file: Some(Cow::Borrowed("test.nu")),
         };
@@ -346,7 +335,7 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(5, 9),
-            suggestion: None,
+            help: None,
             fix: Some(fix2),
             file: Some(Cow::Borrowed("test.nu")),
         };
@@ -356,7 +345,7 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(10, 14),
-            suggestion: None,
+            help: None,
             fix: Some(fix3),
             file: Some(Cow::Borrowed("test.nu")),
         };
@@ -366,7 +355,7 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(15, 19),
-            suggestion: None,
+            help: None,
             fix: Some(fix4),
             file: Some(Cow::Borrowed("test.nu")),
         };
@@ -384,7 +373,7 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(4, 5),
-            suggestion: None,
+            help: None,
             fix: None,
             file: Some(Cow::Borrowed("test.nu")),
         };
@@ -395,14 +384,14 @@ mod tests {
 
     #[test]
     fn test_count_applicable_fixes() {
-        let fix = Fix::new_static("Test fix", vec![]);
+        let fix = Fix::with_explanation("Test fix", vec![]);
 
         let with_fix = Violation {
             rule_id: Cow::Borrowed("test_rule"),
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 5),
-            suggestion: None,
+            help: None,
             fix: Some(fix),
             file: Some(Cow::Borrowed("test.nu")),
         };
@@ -412,7 +401,7 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 5),
-            suggestion: None,
+            help: None,
             fix: None,
             file: Some(Cow::Borrowed("test.nu")),
         };
@@ -428,7 +417,7 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 5),
-            suggestion: None,
+            help: None,
             fix: None,
             file: Some(Cow::Borrowed("file1.nu")),
         };
@@ -438,7 +427,7 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 5),
-            suggestion: None,
+            help: None,
             fix: None,
             file: Some(Cow::Borrowed("file2.nu")),
         };
@@ -448,7 +437,7 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(5, 10),
-            suggestion: None,
+            help: None,
             fix: None,
             file: Some(Cow::Borrowed("file1.nu")),
         };

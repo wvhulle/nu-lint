@@ -59,7 +59,7 @@ fn format_violation_text(violation: &Violation, add_separator: bool) -> String {
 }
 
 fn format_fix_info(fix: &Fix, source_code: &str) -> String {
-    let header = format!("\n  \x1b[36mℹ Available fix:\x1b[0m {}", fix.description);
+    let header = format!("\n  \x1b[36mℹ Available fix:\x1b[0m {}", fix.explanation);
 
     if fix.replacements.is_empty() {
         return header;
@@ -105,7 +105,10 @@ fn format_single_line_diff(
         .unwrap_or("");
 
     let old_line = format!("  \x1b[31m-\x1b[0m {line}");
-    let new_line = format!("  \x1b[32m+\x1b[0m {before}{}{after}", replacement.new_text);
+    let new_line = format!(
+        "  \x1b[32m+\x1b[0m {before}{}{after}",
+        replacement.replacement_text
+    );
 
     if old_text.is_empty() && before == line {
         return None;
@@ -154,7 +157,7 @@ impl Diagnostic for ViolationDiagnostic {
         }
 
         self.violation
-            .suggestion
+            .help
             .as_ref()
             .filter(|s| s.len() > MAX_LABEL_LENGTH)
             .map(|s| Box::new(s.as_ref()) as Box<dyn fmt::Display>)
@@ -165,11 +168,11 @@ impl Diagnostic for ViolationDiagnostic {
 
         let span = self.violation.to_source_span();
 
-        let label_text = self.violation.suggestion.as_ref().map_or_else(
+        let label_text = self.violation.help.as_ref().map_or_else(
             || self.violation.message.to_string(),
-            |suggestion| {
-                if !self.has_fix && suggestion.len() <= MAX_LABEL_LENGTH {
-                    suggestion.to_string()
+            |help| {
+                if !self.has_fix && help.len() <= MAX_LABEL_LENGTH {
+                    help.to_string()
                 } else {
                     self.violation.message.to_string()
                 }

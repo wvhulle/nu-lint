@@ -4,7 +4,7 @@ use crate::log::instrument;
 #[test]
 fn detects_long_single_line_record() {
     instrument();
-    let code = r#"let config = {name: "very long name here", description: "very long description text", version: "1.0.0"}"#;
+    let code = r#"let config = {name: "very long name here", explanation: "very long description text", version: "1.0.0"}"#;
     rule().assert_violation_count_exact(code, 1);
 }
 

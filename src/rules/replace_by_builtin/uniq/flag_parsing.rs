@@ -4,44 +4,44 @@ use crate::rules::replace_by_builtin::uniq::rule;
 fn converts_count_flag() {
     let source = "^uniq -c";
     rule().assert_fix_contains(source, "uniq --count");
-    rule().assert_fix_description_contains(source, "--count");
+    rule().assert_fix_explanation_contains(source, "--count");
 }
 
 #[test]
 fn converts_repeated_flag() {
     let source = "^uniq -d";
     rule().assert_fix_contains(source, "uniq");
-    rule().assert_fix_description_contains(source, "repeated");
-    rule().assert_fix_description_contains(source, "count > 1");
+    rule().assert_fix_explanation_contains(source, "repeated");
+    rule().assert_fix_explanation_contains(source, "count > 1");
 }
 
 #[test]
 fn converts_unique_flag() {
     let source = "^uniq -u";
     rule().assert_fix_contains(source, "uniq");
-    rule().assert_fix_description_contains(source, "unique");
-    rule().assert_fix_description_contains(source, "count == 1");
+    rule().assert_fix_explanation_contains(source, "unique");
+    rule().assert_fix_explanation_contains(source, "count == 1");
 }
 
 #[test]
 fn converts_ignore_case_flag() {
     let source = "^uniq -i";
     rule().assert_fix_contains(source, "uniq");
-    rule().assert_fix_description_contains(source, "downcase");
+    rule().assert_fix_explanation_contains(source, "downcase");
 }
 
 #[test]
 fn converts_skip_fields_flag() {
     let source = "^uniq -f 2";
     rule().assert_fix_contains(source, "uniq");
-    rule().assert_fix_description_contains(source, "uniq-by");
-    rule().assert_fix_description_contains(source, "column");
+    rule().assert_fix_explanation_contains(source, "uniq-by");
+    rule().assert_fix_explanation_contains(source, "column");
 }
 
 #[test]
 fn combines_count_with_other_flags() {
     let source = "^uniq -ci";
     rule().assert_fix_contains(source, "uniq --count");
-    rule().assert_fix_description_contains(source, "count");
-    rule().assert_fix_description_contains(source, "case-insensitive");
+    rule().assert_fix_explanation_contains(source, "count");
+    rule().assert_fix_explanation_contains(source, "case-insensitive");
 }

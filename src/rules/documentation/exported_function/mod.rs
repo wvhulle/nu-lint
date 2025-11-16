@@ -50,12 +50,12 @@ fn check_exported_function(call: &Call, context: &LintContext) -> Option<Violati
         None
     } else {
         Some(
-            Violation::new_dynamic(
+            Violation::new(
                 "exported_function_docs",
                 format!("Exported function '{func_name}' is missing documentation"),
                 call.head,
             )
-            .with_suggestion_dynamic(format!(
+            .with_help(format!(
                 "Add a documentation comment above the function:\n# Description of \
                  {func_name}\nexport def {func_name} ..."
             )),

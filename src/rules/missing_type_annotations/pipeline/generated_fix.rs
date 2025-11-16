@@ -79,7 +79,7 @@ def multiply [factor: int] {
 #[test]
 fn test_fix_description_mentions_type_annotations() {
     let bad_code = "def double [] { $in * 2 }";
-    rule().assert_fix_description_contains(bad_code, "type annotations");
+    rule().assert_fix_explanation_contains(bad_code, "type annotations");
 }
 
 #[test]

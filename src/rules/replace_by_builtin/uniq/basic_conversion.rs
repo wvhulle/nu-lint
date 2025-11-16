@@ -4,7 +4,7 @@ use crate::rules::replace_by_builtin::uniq::rule;
 fn replaces_simple_uniq() {
     let source = "^uniq";
     rule().assert_fix_contains(source, "uniq");
-    rule().assert_fix_description_contains(source, "structured data");
+    rule().assert_fix_explanation_contains(source, "structured data");
 }
 
 #[test]

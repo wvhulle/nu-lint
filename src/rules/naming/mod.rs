@@ -43,19 +43,19 @@ impl NuNaming for str {
         name_span: Span,
     ) -> Violation {
         let fix = Fix {
-            description: format!("Rename {item_type} '{self}' to '{suggested_name}'").into(),
+            explanation: format!("Rename {item_type} '{self}' to '{suggested_name}'").into(),
             replacements: vec![Replacement {
                 span: name_span,
-                new_text: suggested_name.to_string().into(),
+                replacement_text: suggested_name.to_string().into(),
             }],
         };
 
-        Violation::new_dynamic(
+        Violation::new(
             rule_id,
             format!("{item_type} '{self}' should follow naming convention"),
             name_span,
         )
-        .with_suggestion_dynamic(format!("Consider renaming to: {suggested_name}"))
+        .with_help(format!("Consider renaming to: {suggested_name}"))
         .with_fix(fix)
     }
 }

@@ -20,8 +20,8 @@ fn test_simple_echo_ignore() {
 #[test]
 fn test_fix_description_mentions_removal() {
     let bad_code = "ls | ignore";
-    rule().assert_fix_description_contains(bad_code, "Remove");
-    rule().assert_fix_description_contains(bad_code, "ignore");
+    rule().assert_fix_explanation_contains(bad_code, "Remove");
+    rule().assert_fix_explanation_contains(bad_code, "ignore");
 }
 
 #[test]

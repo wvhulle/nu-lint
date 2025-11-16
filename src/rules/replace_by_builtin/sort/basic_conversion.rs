@@ -4,7 +4,7 @@ use crate::rules::replace_by_builtin::sort::rule;
 fn replaces_simple_sort() {
     let source = "^sort file.txt";
     rule().assert_fix_contains(source, "sort");
-    rule().assert_fix_description_contains(source, "any data type");
+    rule().assert_fix_explanation_contains(source, "any data type");
 }
 
 #[test]

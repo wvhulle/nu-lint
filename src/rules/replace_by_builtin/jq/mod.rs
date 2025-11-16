@@ -335,9 +335,9 @@ fn build_fix(
         _ => alternative.command.to_string(),
     };
 
-    Fix::new_static(
+    Fix::with_explanation(
         "Replace simple jq operation with built-in Nushell command",
-        vec![Replacement::new_dynamic(expr_span, new_text)],
+        vec![Replacement::new(expr_span, new_text)],
     )
 }
 

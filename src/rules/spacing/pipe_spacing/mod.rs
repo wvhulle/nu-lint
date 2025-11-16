@@ -86,14 +86,14 @@ impl<'a> PipeSpacingVisitor<'a> {
             let fix_end = end;
             let fix_span = Span::new(fix_start, fix_end);
 
-            let fix = Fix::new_static(
+            let fix = Fix::with_explanation(
                 "Fix pipe spacing to ' | '",
-                vec![Replacement::new_static(fix_span, " | ")],
+                vec![Replacement::new(fix_span, " | ")],
             );
 
             self.violations.push(
-                Violation::new_dynamic("pipe_spacing", message.to_string(), violation_span)
-                    .with_suggestion_static("Use ' | ' with single spaces")
+                Violation::new("pipe_spacing", message.to_string(), violation_span)
+                    .with_help("Use ' | ' with single spaces")
                     .with_fix(fix),
             );
         }

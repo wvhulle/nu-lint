@@ -129,21 +129,21 @@ fn check_signature(
     }
 
     let new_sig = generate_typed_signature(sig, body_block_id, ctx);
-    let fix = Fix::new_static(
+    let fix = Fix::with_explanation(
         "Add type annotations to parameters",
-        vec![Replacement::new_dynamic(signature_span, new_sig)],
+        vec![Replacement::new(signature_span, new_sig)],
     );
 
     params_needing_types
         .into_iter()
         .map(|param| {
             let param_span = signature_span.find_substring_span(&param.name, ctx);
-            Violation::new_dynamic(
+            Violation::new(
                 "missing_type_annotation",
                 format!("Parameter '{}' is missing type annotation", param.name),
                 param_span,
             )
-            .with_suggestion_static("Add type annotation like 'param: string' or 'param: int'")
+            .with_help("Add type annotation like 'param: string' or 'param: int'")
             .with_fix(fix.clone())
         })
         .collect()

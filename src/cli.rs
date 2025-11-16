@@ -250,7 +250,7 @@ fn list_rules(config: &Config) {
 
     for rule in ALL_RULES {
         let lint_level = config.get_lint_level(rule.id);
-        println!("{:<40} [{:?}] {}", rule.id, lint_level, rule.description);
+        println!("{:<40} [{:?}] {}", rule.id, lint_level, rule.explanation);
     }
 }
 
@@ -264,7 +264,7 @@ fn list_sets() {
         println!(
             "{:<20} {} ({} rules)",
             name,
-            set.description,
+            set.explanation,
             set.rules.len()
         );
     }
@@ -281,7 +281,7 @@ fn explain_rule(config: &Config, rule_id: &str) {
         println!("Rule: {}", rule.id);
         println!("Lint Level: {lint_level:?}");
         println!("Default Lint Level: {default_level}");
-        println!("Description: {}", rule.description);
+        println!("Description: {}", rule.explanation);
     } else {
         eprintln!("Error: Rule '{rule_id}' not found");
         process::exit(2);

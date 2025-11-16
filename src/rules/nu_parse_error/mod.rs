@@ -19,7 +19,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 parse_error.to_string(),
             );
             seen.insert(key).then(|| {
-                Violation::new_dynamic(
+                Violation::new(
                     "nu_parse_error",
                     parse_error.to_string(),
                     parse_error.span(),

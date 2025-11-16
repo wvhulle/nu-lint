@@ -18,12 +18,12 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 .sum();
             let line_end = line_start + line.len();
             violations.push(
-                Violation::new_static(
+                Violation::new(
                     "prefer_lines_over_split",
                     "Use 'lines' instead of 'split row \"\\n\"' for splitting by newlines",
                     nu_protocol::Span::new(line_start, line_end),
                 )
-                .with_suggestion_static(
+                .with_help(
                     "Replace with: | lines\nThe 'lines' command is more efficient and clearer for \
                      splitting text by newlines.",
                 ),

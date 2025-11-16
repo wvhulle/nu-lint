@@ -173,10 +173,10 @@ fn build_fix(
     let (replacement, description) = opts.to_nushell();
 
     Fix {
-        description: description.into(),
+        explanation: description.into(),
         replacements: vec![Replacement {
             span: expr_span,
-            new_text: replacement.into(),
+            replacement_text: replacement.into(),
         }],
     }
 }

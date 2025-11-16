@@ -58,12 +58,12 @@ fn has_nested_structures(items: &[ListItem]) -> bool {
 }
 
 fn create_violation(span: nu_protocol::Span) -> Violation {
-    Violation::new_static(
+    Violation::new(
         "prefer_multiline_lists",
         "Long lists should use multiline format with each item on a separate line",
         span,
     )
-    .with_suggestion_static("Put each list item on a separate line for better readability")
+    .with_help("Put each list item on a separate line for better readability")
 }
 
 /// This rule uses AST-based detection and is compatible with topiary-nushell

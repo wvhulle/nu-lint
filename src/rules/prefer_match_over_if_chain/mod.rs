@@ -129,9 +129,9 @@ fn build_match_fix(call: &Call, var_name: &str, context: &LintContext) -> Fix {
 
     let match_text = format!("match {var_name} {{\n{match_arms}\n}}");
 
-    Fix::new_dynamic(
+    Fix::with_explanation(
         format!("Convert to match expression on {var_name}"),
-        vec![Replacement::new_dynamic(call.span(), match_text)],
+        vec![Replacement::new(call.span(), match_text)],
     )
 }
 
@@ -211,7 +211,7 @@ fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<Violation> {
 
     // Create appropriate violation message
     let violation = if analysis.consistent_variable {
-        Violation::new_dynamic(
+        Violation::new(
             "prefer_match_over_if_chain",
             format!(
                 "If-else-if chain comparing '{compared_var}' to different values - consider using \
@@ -219,20 +219,18 @@ fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<Violation> {
             ),
             call.span(),
         )
-        .with_suggestion_dynamic(
+        .with_help(
             "Use 'match $var { value1 => { ... }, value2 => { ... }, _ => { ... } }' for clearer \
              value-based branching"
                 .to_string(),
         )
     } else {
-        Violation::new_static(
+        Violation::new(
             "prefer_match_over_if_chain",
             "Long if-else-if chain - consider using 'match' for clearer branching",
             call.span(),
         )
-        .with_suggestion_static(
-            "For multiple related conditions, 'match' provides clearer pattern matching",
-        )
+        .with_help("For multiple related conditions, 'match' provides clearer pattern matching")
     };
 
     Some(fix.map_or(violation.clone(), |f| violation.with_fix(f)))

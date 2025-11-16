@@ -89,10 +89,7 @@ fn check_function_definition(call: &Call, context: &LintContext) -> Option<Viola
                       document the intentional mixing"
         .to_string();
 
-    Some(
-        Violation::new_dynamic("print_and_return_data", message, name_span)
-            .with_suggestion_dynamic(suggestion),
-    )
+    Some(Violation::new("print_and_return_data", message, name_span).with_help(suggestion))
 }
 
 fn check(context: &LintContext) -> Vec<Violation> {

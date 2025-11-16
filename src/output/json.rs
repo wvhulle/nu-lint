@@ -32,21 +32,21 @@ fn violation_to_json(violation: &Violation) -> JsonViolation {
         column_end,
         offset_start: violation.span.start,
         offset_end: violation.span.end,
-        suggestion: violation.suggestion.as_ref().map(ToString::to_string),
+        suggestion: violation.help.as_ref().map(ToString::to_string),
         fix: violation.fix.as_ref().map(fix_to_json),
     }
 }
 
 fn fix_to_json(fix: &Fix) -> JsonFix {
     JsonFix {
-        description: fix.description.to_string(),
+        description: fix.explanation.to_string(),
         replacements: fix
             .replacements
             .iter()
             .map(|r| JsonReplacement {
                 offset_start: r.span.start,
                 offset_end: r.span.end,
-                new_text: r.new_text.to_string(),
+                new_text: r.replacement_text.to_string(),
             })
             .collect(),
     }

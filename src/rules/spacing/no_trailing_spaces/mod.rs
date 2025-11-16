@@ -17,12 +17,12 @@ fn check(context: &LintContext) -> Vec<Violation> {
             let violation_start = byte_offset + m.start();
             let violation_end = byte_offset + m.end();
             violations.push(
-                Violation::new_dynamic(
+                Violation::new(
                     "no_trailing_spaces",
                     format!("Line {} has trailing whitespace", line_num + 1),
                     nu_protocol::Span::new(violation_start, violation_end),
                 )
-                .with_suggestion_static("Remove trailing spaces"),
+                .with_help("Remove trailing spaces"),
             );
         }
         // Update byte offset for next line (including newline character)

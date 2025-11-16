@@ -69,12 +69,12 @@ fn check_record_for_generic_msg(
 
         if is_generic_error_message(&msg_text) {
             return Some(
-                Violation::new_static(
+                Violation::new(
                     "descriptive_error_messages",
                     "Error message is too generic and not descriptive",
                     value.span,
                 )
-                .with_suggestion_static(
+                .with_help(
                     "Use a descriptive error message that explains what went wrong and how to fix \
                      it.\nExample: error make { msg: \"Failed to parse input: expected number, \
                      got string\" }",

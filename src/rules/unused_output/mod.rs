@@ -56,12 +56,12 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
     let combined_span = nu_protocol::Span::new(start_span.start, end_span.end);
     let pipeline_text = &context.source[combined_span.start..combined_span.end];
 
-    let violation = Violation::new_static(
+    let violation = Violation::new(
         "unused_output",
         "Discarding command output with '| ignore'",
         ignore_span,
     )
-    .with_suggestion_dynamic(format!(
+    .with_help(format!(
         "Command '{command_name}' produces output that is being discarded with '| ignore'.\n\nIf \
          you don't need the output, consider:\n1. Removing the command if it has no side \
          effects\n2. Using error handling if you only care about success/failure:\n   try {{ \
@@ -74,12 +74,9 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
         pipeline.elements.last()?.expr.span.end,
     );
 
-    let fix = Fix::new_static(
+    let fix = Fix::with_explanation(
         "Remove unnecessary '| ignore'",
-        vec![Replacement::new_dynamic(
-            pipeline_span,
-            pipeline_text.to_string(),
-        )],
+        vec![Replacement::new(pipeline_span, pipeline_text.to_string())],
     );
 
     Some(violation.with_fix(fix))

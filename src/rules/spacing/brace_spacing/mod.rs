@@ -25,13 +25,13 @@ fn check_brace_spacing(source: &str, span: Span, brace_type: &BraceType) -> Vec<
                 && inner[..pipe_pos].chars().all(char::is_whitespace)
             {
                 vec![
-                    Violation::new_dynamic(
+                    Violation::new(
                         "brace_spacing",
                         "No space allowed after opening brace before closure parameters"
                             .to_string(),
                         span,
                     )
-                    .with_suggestion_static("Use {|param| instead of { |param|"),
+                    .with_help("Use {|param| instead of { |param|"),
                 ]
             } else {
                 vec![]
@@ -42,13 +42,13 @@ fn check_brace_spacing(source: &str, span: Span, brace_type: &BraceType) -> Vec<
             let ends_with_space = inner.ends_with(char::is_whitespace);
             if !starts_with_space || !ends_with_space {
                 vec![
-                    Violation::new_dynamic(
+                    Violation::new(
                         "brace_spacing",
                         "Blocks and closures without parameters should have spaces inside braces"
                             .to_string(),
                         span,
                     )
-                    .with_suggestion_static("Use { body } for blocks without parameters"),
+                    .with_help("Use { body } for blocks without parameters"),
                 ]
             } else {
                 vec![]
@@ -59,12 +59,12 @@ fn check_brace_spacing(source: &str, span: Span, brace_type: &BraceType) -> Vec<
             let ends_with_space = inner.ends_with(char::is_whitespace);
             if starts_with_space || ends_with_space {
                 vec![
-                    Violation::new_dynamic(
+                    Violation::new(
                         "brace_spacing",
                         "Records should not have spaces inside braces".to_string(),
                         span,
                     )
-                    .with_suggestion_static("Use {key: value} for records"),
+                    .with_help("Use {key: value} for records"),
                 ]
             } else {
                 vec![]

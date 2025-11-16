@@ -249,16 +249,14 @@ fn check_pattern_nesting(
 }
 
 fn create_violation(span: nu_protocol::Span, depth: usize) -> Violation {
-    Violation::new_dynamic(
+    Violation::new(
         "forbid_excessive_nesting",
         format!(
             "Code has nesting depth of {depth}, which exceeds the maximum of {MAX_NESTING_DEPTH}"
         ),
         span,
     )
-    .with_suggestion_static(
-        "Consider refactoring this code into smaller functions to reduce nesting depth",
-    )
+    .with_help("Consider refactoring this code into smaller functions to reduce nesting depth")
 }
 
 pub const fn rule() -> Rule {

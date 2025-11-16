@@ -13,9 +13,9 @@ fn replaces_find_name_with_ls_glob() {
     let source = r#"^find . -name "*.rs""#;
     rule().assert_violation_count_exact(source, 1);
     rule().assert_fix_contains(source, "ls ./**/*.rs");
-    rule().assert_fix_description_contains(source, "**");
-    rule().assert_fix_description_contains(source, "subdirectories");
-    rule().assert_fix_description_contains(source, "structured data");
+    rule().assert_fix_explanation_contains(source, "**");
+    rule().assert_fix_explanation_contains(source, "subdirectories");
+    rule().assert_fix_explanation_contains(source, "structured data");
 }
 
 #[test]
@@ -23,8 +23,8 @@ fn replaces_find_directory_traversal() {
     let source = "^find src";
     rule().assert_violation_count_exact(source, 1);
     rule().assert_fix_contains(source, "ls src/**/*");
-    rule().assert_fix_description_contains(source, "recursive file search");
-    rule().assert_fix_description_contains(source, "structured data");
+    rule().assert_fix_explanation_contains(source, "recursive file search");
+    rule().assert_fix_explanation_contains(source, "structured data");
 }
 
 #[test]
@@ -42,9 +42,9 @@ fn converts_complex_find_with_type_and_mtime() {
         source,
         "ls ./**/* | where type == file | where modified < ((date now) - 30day)",
     );
-    rule().assert_fix_description_contains(source, "Pipeline filters replace find flags");
-    rule().assert_fix_description_contains(source, "type:");
-    rule().assert_fix_description_contains(source, "time:");
+    rule().assert_fix_explanation_contains(source, "Pipeline filters replace find flags");
+    rule().assert_fix_explanation_contains(source, "type:");
+    rule().assert_fix_explanation_contains(source, "time:");
 }
 
 #[test]
@@ -52,9 +52,9 @@ fn converts_find_with_name_and_type() {
     let source = r#"^find /var/log -name "*.log" -type f"#;
     rule().assert_violation_count_exact(source, 1);
     rule().assert_fix_contains(source, "ls /var/log/**/*.log | where type == file");
-    rule().assert_fix_description_contains(source, "**");
-    rule().assert_fix_description_contains(source, "pattern");
-    rule().assert_fix_description_contains(source, "where type == file");
+    rule().assert_fix_explanation_contains(source, "**");
+    rule().assert_fix_explanation_contains(source, "pattern");
+    rule().assert_fix_explanation_contains(source, "where type == file");
 }
 
 #[test]
@@ -65,7 +65,7 @@ fn converts_find_with_size_filter() {
         source,
         "ls ./**/* | where type == file | where size > 100kb",
     );
-    rule().assert_fix_description_contains(source, "size:");
+    rule().assert_fix_explanation_contains(source, "size:");
 }
 
 #[test]
@@ -73,7 +73,7 @@ fn converts_find_with_empty_flag() {
     let source = r"^find . -empty";
     rule().assert_violation_count_exact(source, 1);
     rule().assert_fix_contains(source, "ls ./**/* | where size == 0b");
-    rule().assert_fix_description_contains(source, "empty:");
+    rule().assert_fix_explanation_contains(source, "empty:");
 }
 
 #[test]

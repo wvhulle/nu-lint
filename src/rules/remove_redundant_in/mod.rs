@@ -129,10 +129,7 @@ fn generate_fix_text(
     ))
 }
 fn create_fix(fix_text: String, span: nu_protocol::Span) -> Fix {
-    Fix::new_dynamic(
-        fix_text.clone(),
-        vec![Replacement::new_dynamic(span, fix_text)],
-    )
+    Fix::with_explanation(fix_text.clone(), vec![Replacement::new(span, fix_text)])
 }
 fn create_violation(
     signature: &nu_protocol::Signature,
@@ -141,7 +138,7 @@ fn create_violation(
 ) -> Violation {
     let span = context.find_declaration_span(&signature.name);
     let suggestion = "Remove redundant $in - it's implicit at the start of pipelines";
-    let violation = Violation::new_dynamic(
+    let violation = Violation::new(
         "remove_redundant_in",
         format!(
             "Redundant $in usage in function '{}' - $in is implicit at the start of pipelines",
@@ -149,7 +146,7 @@ fn create_violation(
         ),
         span,
     )
-    .with_suggestion_dynamic(suggestion.to_string());
+    .with_help(suggestion.to_string());
     generate_fix_text(signature, block_span, context).map_or(violation.clone(), |fix_text| {
         violation.with_fix(create_fix(fix_text, span))
     })

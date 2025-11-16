@@ -59,12 +59,12 @@ fn has_nested_structures(fields: &[RecordItem]) -> bool {
 }
 
 fn create_violation(span: nu_protocol::Span) -> Violation {
-    Violation::new_static(
+    Violation::new(
         "prefer_multiline_records",
         "Long records should use multiline format with each field on a separate line",
         span,
     )
-    .with_suggestion_static("Put each record field on a separate line for better readability")
+    .with_help("Put each record field on a separate line for better readability")
 }
 
 /// This rule uses AST-based detection and is compatible with topiary-nushell

@@ -19,9 +19,9 @@ fn build_fix(
         let right_text = right.span_text(context);
         let new_text = format!("{var_text} {compound_op} {right_text}");
 
-        Some(Fix::new_dynamic(
+        Some(Fix::with_explanation(
             format!("Replace with compound assignment: {new_text}"),
-            vec![Replacement::new_dynamic(full_span, new_text)],
+            vec![Replacement::new(full_span, new_text)],
         ))
     } else {
         None
@@ -91,7 +91,7 @@ fn check_for_compound_assignment(expr: &Expression, ctx: &LintContext) -> Option
 
     let fix = build_fix(var_text, compound_op, element, expr.span, ctx);
 
-    let violation = Violation::new_dynamic(
+    let violation = Violation::new(
         "prefer_compound_assignment",
         format!(
             "Use compound assignment: {var_text} {compound_op} instead of {var_text} = {var_text} \
@@ -99,7 +99,7 @@ fn check_for_compound_assignment(expr: &Expression, ctx: &LintContext) -> Option
         ),
         expr.span,
     )
-    .with_suggestion_dynamic(format!("Replace with: {var_text} {compound_op}"));
+    .with_help(format!("Replace with: {var_text} {compound_op}"));
 
     let violation = match fix {
         Some(f) => violation.with_fix(f),

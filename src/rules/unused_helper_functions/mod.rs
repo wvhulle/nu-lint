@@ -22,12 +22,12 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .filter(|&name| name != "main" && !called_functions.contains(name))
         .map(|name| {
             let span = context.find_declaration_span(name);
-            Violation::new_dynamic(
+            Violation::new(
                 "unused_helper_functions",
                 format!("Function '{name}' is defined but never called from 'main'"),
                 span,
             )
-            .with_suggestion_static(
+            .with_help(
                 "Remove unused helper functions or call them from 'main' or other used functions",
             )
         })

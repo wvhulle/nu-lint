@@ -37,12 +37,12 @@ fn check_list_commas(source: &str, span: Span, items: &[ListItem]) -> Vec<Violat
                 let comma_span =
                     Span::new(between_start + comma_pos, between_start + comma_pos + 1);
                 violations.push(
-                    Violation::new_static(
+                    Violation::new(
                         "omit_list_commas",
                         "Omit commas between list items",
                         comma_span,
                     )
-                    .with_suggestion_static("Remove the comma - Nushell lists don't need commas"),
+                    .with_help("Remove the comma - Nushell lists don't need commas"),
                 );
             }
         }

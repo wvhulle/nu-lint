@@ -76,9 +76,9 @@ fn combines_multiple_filters_in_pipeline() {
         "ls ./**/*.rs | where type == file | where size > 100kb | where modified > ((date now) - \
          7day)",
     );
-    rule().assert_fix_description_contains(source, "type:");
-    rule().assert_fix_description_contains(source, "size:");
-    rule().assert_fix_description_contains(source, "time:");
+    rule().assert_fix_explanation_contains(source, "type:");
+    rule().assert_fix_explanation_contains(source, "size:");
+    rule().assert_fix_explanation_contains(source, "time:");
 }
 
 #[test]

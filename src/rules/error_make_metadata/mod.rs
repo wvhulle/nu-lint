@@ -171,12 +171,12 @@ fn check_error_make_metadata(
     let suggestion = build_suggestion(&missing_fields, &current_msg, &example_span);
 
     Some(
-        Violation::new_dynamic(
+        Violation::new(
             "error_make_metadata",
             format!("error make call is missing metadata fields: {missing_list}"),
             call_span,
         )
-        .with_suggestion_dynamic(suggestion),
+        .with_help(suggestion),
     )
 }
 

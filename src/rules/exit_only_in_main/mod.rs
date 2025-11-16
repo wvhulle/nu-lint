@@ -34,14 +34,14 @@ fn check(context: &LintContext) -> Vec<Violation> {
             }
 
             return vec![
-                Violation::new_dynamic(
+                Violation::new(
                     "exit_only_in_main",
                     format!(
                         "Function '{function_name}' uses 'exit' which terminates the entire script"
                     ),
                     call.head,
                 )
-                .with_suggestion_static(
+                .with_help(
                     "Use 'return' to exit the function, or 'error make' to signal an error. Only \
                      'main' should use 'exit'.",
                 ),

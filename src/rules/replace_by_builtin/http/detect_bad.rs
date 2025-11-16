@@ -30,7 +30,7 @@ fn detects_curl_post() {
 fn detects_wget_download() {
     let source = r"^wget https://example.com/file.tar.gz";
     rule().assert_fix_contains(source, "http get");
-    rule().assert_fix_description_contains(source, "save");
+    rule().assert_fix_explanation_contains(source, "save");
 }
 
 #[test]
@@ -49,11 +49,11 @@ fn detects_fetch() {
 #[test]
 fn fix_description_mentions_structured_data() {
     let source = r"^curl https://api.github.com";
-    rule().assert_fix_description_contains(source, "structured");
+    rule().assert_fix_explanation_contains(source, "structured");
 }
 
 #[test]
 fn fix_description_mentions_pipeline_integration() {
     let source = r"^wget https://example.com/data.json";
-    rule().assert_fix_description_contains(source, "pipeline");
+    rule().assert_fix_explanation_contains(source, "pipeline");
 }

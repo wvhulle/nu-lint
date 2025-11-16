@@ -106,18 +106,18 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
          msg: $result.stderr }} }}\n$result.stdout"
     );
 
-    let fix = crate::Fix::new_dynamic(
+    let fix = crate::Fix::with_explanation(
         "Wrap pipeline in complete with error checking".to_string(),
-        vec![crate::Replacement::new_dynamic(pipeline_span, fix_text)],
+        vec![crate::Replacement::new(pipeline_span, fix_text)],
     );
 
     Some(
-        Violation::new_dynamic(
+        Violation::new(
             "prefer_complete_for_external_commands",
             message,
             first_element.expr.span,
         )
-        .with_suggestion_dynamic(suggestion)
+        .with_help(suggestion)
         .with_fix(fix),
     )
 }

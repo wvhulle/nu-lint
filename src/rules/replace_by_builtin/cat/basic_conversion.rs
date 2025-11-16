@@ -4,7 +4,7 @@ use crate::rules::replace_by_builtin::cat::rule;
 fn converts_cat_single_file_to_open_raw() {
     let source = "^cat file.txt";
     rule().assert_fix_contains(source, "open --raw file.txt");
-    rule().assert_fix_description_contains(source, "structured");
+    rule().assert_fix_explanation_contains(source, "structured");
 }
 
 #[test]
@@ -14,8 +14,8 @@ fn converts_cat_multiple_files_to_each_open() {
         source,
         "[file1.txt file2.txt] | each {|f| open --raw $f} | str join",
     );
-    rule().assert_fix_description_contains(source, "each");
-    rule().assert_fix_description_contains(source, "multiple");
+    rule().assert_fix_explanation_contains(source, "each");
+    rule().assert_fix_explanation_contains(source, "multiple");
 }
 
 #[test]

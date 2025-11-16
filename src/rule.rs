@@ -9,7 +9,7 @@ use crate::{context::LintContext, violation::Violation};
 /// A concrete rule struct that wraps the check function
 pub struct Rule {
     pub id: &'static str,
-    pub description: &'static str,
+    pub explanation: &'static str,
     pub(crate) check: fn(&LintContext) -> Vec<Violation>,
 }
 
@@ -31,12 +31,12 @@ impl Rule {
     /// Create a new rule
     pub(crate) const fn new(
         id: &'static str,
-        description: &'static str,
+        explanation: &'static str,
         check: fn(&LintContext) -> Vec<Violation>,
     ) -> Self {
         Self {
             id,
-            description,
+            explanation,
             check,
         }
     }
@@ -124,7 +124,7 @@ impl Rule {
             "Expected fix to have replacements"
         );
 
-        let replacement_text = &fix.replacements[0].new_text;
+        let replacement_text = &fix.replacements[0].replacement_text;
         assert!(
             replacement_text.contains(expected_text),
             "Expected fix replacement text to contain '{expected_text}', but got: \
@@ -154,7 +154,7 @@ impl Rule {
             "Expected fix to have replacements"
         );
 
-        let replacement_text = &fix.replacements[0].new_text;
+        let replacement_text = &fix.replacements[0].replacement_text;
         assert_eq!(
             replacement_text.as_ref(),
             expected_code,
@@ -164,9 +164,9 @@ impl Rule {
 
     #[cfg(test)]
     #[track_caller]
-    /// Test helper: assert that the rule generates a fix with description
+    /// Test helper: assert that the rule generates a fix with explanation
     /// containing the expected string
-    pub fn assert_fix_description_contains(&self, code: &str, expected_text: &str) {
+    pub fn assert_fix_explanation_contains(&self, code: &str, expected_text: &str) {
         let violations =
             LintContext::test_with_parsed_source(code, |context| (self.check)(&context));
         assert!(
@@ -180,18 +180,18 @@ impl Rule {
             .as_ref()
             .expect("Expected violation to have a fix");
 
-        let description = &fix.description;
+        let explanation = &fix.explanation;
         assert!(
-            description.contains(expected_text),
-            "Expected fix description to contain '{expected_text}', but got: {description}"
+            explanation.contains(expected_text),
+            "Expected fix explanation to contain '{expected_text}', but got: {explanation}"
         );
     }
 
     #[cfg(test)]
     #[track_caller]
-    /// Test helper: assert that the rule generates a suggestion containing the
+    /// Test helper: assert that the rule generates help text containing the
     /// expected string
-    pub fn assert_suggestion_contains(&self, code: &str, expected_text: &str) {
+    pub fn assert_help_contains(&self, code: &str, expected_text: &str) {
         let violations =
             LintContext::test_with_parsed_source(code, |context| (self.check)(&context));
         assert!(
@@ -200,14 +200,14 @@ impl Rule {
             self.id
         );
 
-        let suggestion = violations[0]
-            .suggestion
+        let help = violations[0]
+            .help
             .as_ref()
-            .expect("Expected violation to have a suggestion");
+            .expect("Expected violation to have help text");
 
         assert!(
-            suggestion.contains(expected_text),
-            "Expected suggestion to contain '{expected_text}', but got: {suggestion}"
+            help.contains(expected_text),
+            "Expected help to contain '{expected_text}', but got: {help}"
         );
     }
 }

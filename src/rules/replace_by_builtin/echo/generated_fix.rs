@@ -50,8 +50,8 @@ fn test_fix_description() {
     let bad_code = r#"echo "result""#;
 
     rule().assert_detects(bad_code);
-    rule().assert_fix_description_contains(bad_code, "echo");
-    rule().assert_fix_description_contains(bad_code, "result");
+    rule().assert_fix_explanation_contains(bad_code, "echo");
+    rule().assert_fix_explanation_contains(bad_code, "result");
 }
 
 #[test]

@@ -6,17 +6,17 @@ use crate::{
 
 /// Creates a violation with fix for a collapsible if statement
 fn create_violation(call: &Call, fix_text: String) -> Violation {
-    let fix = Fix::new_static(
+    let fix = Fix::with_explanation(
         "Collapse nested if statements",
-        vec![Replacement::new_dynamic(call.span(), fix_text)],
+        vec![Replacement::new(call.span(), fix_text)],
     );
 
-    Violation::new_static(
+    Violation::new(
         "collapsible_if",
         "Nested if statement can be collapsed using 'and'",
         call.span(),
     )
-    .with_suggestion_static("Combine conditions using 'and' instead of nesting if statements")
+    .with_help("Combine conditions using 'and' instead of nesting if statements")
     .with_fix(fix)
 }
 

@@ -85,12 +85,12 @@ fn analyze_function_body(
     );
 
     Some(
-        Violation::new_dynamic(
+        Violation::new(
             "mixed_io_types",
             message,
             context.find_declaration_span(function_name),
         )
-        .with_suggestion_static(
+        .with_help(
             "Consider separating different I/O operations into focused functions. This makes the \
              code easier to test, mock, and reason about. Group file operations together, network \
              operations together, and printing separately.",

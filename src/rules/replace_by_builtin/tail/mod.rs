@@ -42,10 +42,10 @@ fn build_fix(
     let description = "Use 'last' with cleaner syntax: 'last N' instead of 'tail -N'";
 
     Fix {
-        description: description.into(),
+        explanation: description.into(),
         replacements: vec![Replacement {
             span: expr_span,
-            new_text: replacement.into(),
+            replacement_text: replacement.into(),
         }],
     }
 }

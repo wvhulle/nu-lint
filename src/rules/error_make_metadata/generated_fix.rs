@@ -19,7 +19,7 @@ def validate [input: string] {
             "error make call is missing metadata fields: label, help"
         );
 
-        let suggestion = violation.suggestion.as_ref().unwrap();
+        let suggestion = violation.help.as_ref().unwrap();
         assert!(suggestion.contains("Add 'label' and 'help' fields"));
         assert!(
             suggestion.contains("Input cannot be empty"),
@@ -59,7 +59,7 @@ def process [data: string] {
             "Should only mention missing help field"
         );
 
-        let suggestion = violation.suggestion.as_ref().unwrap();
+        let suggestion = violation.help.as_ref().unwrap();
         assert!(
             suggestion.contains("Add 'help' field"),
             "Should reference help field"
@@ -97,7 +97,7 @@ def check [value: int] {
             "Should only mention missing label field"
         );
 
-        let suggestion = violation.suggestion.as_ref().unwrap();
+        let suggestion = violation.help.as_ref().unwrap();
         assert!(
             suggestion.contains("Add 'label' field"),
             "Should reference label field"
@@ -126,7 +126,7 @@ def test [arg: string] {
         let violations = (rule().check)(&context);
         assert_eq!(violations.len(), 1);
 
-        let suggestion = violations[0].suggestion.as_ref().unwrap();
+        let suggestion = violations[0].help.as_ref().unwrap();
         assert!(
             suggestion.contains("..."),
             "Long messages should be truncated"

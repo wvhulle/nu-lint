@@ -44,12 +44,12 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
             if has_split {
                 vec![
-                    Violation::new_static(
+                    Violation::new(
                         "prefer_parse_over_each_split",
                         "Manual splitting with 'each' and 'split row' - consider using 'parse'",
                         call.span(),
                     )
-                    .with_suggestion_static(
+                    .with_help(
                         "Use 'parse \"{field1} {field2}\"' for structured text extraction instead \
                          of 'each' with 'split row'",
                     ),

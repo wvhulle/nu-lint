@@ -29,7 +29,7 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
 
             if !param_span.has_inline_doc_comment(context) {
                 violations.push(
-                    Violation::new_dynamic(
+                    Violation::new(
                         "main_positional_args_docs",
                         format!(
                             "Positional parameter '{}' in main function is missing documentation \
@@ -38,7 +38,7 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
                         ),
                         param_span,
                     )
-                    .with_suggestion_dynamic(format!(
+                    .with_help(format!(
                         "Add a documentation comment after the parameter: {} # Description of {}",
                         param.name, param.name
                     )),
@@ -54,7 +54,7 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
 
             if !param_span.has_inline_doc_comment(context) {
                 violations.push(
-                    Violation::new_dynamic(
+                    Violation::new(
                         "main_positional_args_docs",
                         format!(
                             "Optional positional parameter '{}' in main function is missing \
@@ -63,7 +63,7 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
                         ),
                         param_span,
                     )
-                    .with_suggestion_dynamic(format!(
+                    .with_help(format!(
                         "Add a documentation comment after the parameter: {} # Description of {}",
                         param.name, param.name
                     )),
@@ -80,7 +80,7 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
 
         if !param_span.has_inline_doc_comment(context) {
             violations.push(
-                Violation::new_dynamic(
+                Violation::new(
                     "main_positional_args_docs",
                     format!(
                         "Rest positional parameter '{}' in main function is missing documentation \
@@ -89,7 +89,7 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
                     ),
                     param_span,
                 )
-                .with_suggestion_dynamic(format!(
+                .with_help(format!(
                     "Add a documentation comment after the parameter: ...{} # Description of {}",
                     rest_param.name, rest_param.name
                 )),

@@ -79,8 +79,8 @@ fn create_violations_for_untyped_io(
     };
 
     vec![
-        Violation::new_dynamic("typed_pipeline_io", message, name_span)
-            .with_suggestion_static(suggestion)
+        Violation::new("typed_pipeline_io", message, name_span)
+            .with_help(suggestion)
             .with_fix(fix.clone()),
     ]
 }
@@ -228,9 +228,9 @@ fn check_def_call(call: &Call, ctx: &LintContext) -> Vec<Violation> {
         needs_output_type,
     );
 
-    let fix = Fix::new_dynamic(
+    let fix = Fix::with_explanation(
         format!("Add type annotations: {new_signature}"),
-        vec![Replacement::new_dynamic(sig_span, new_signature)],
+        vec![Replacement::new(sig_span, new_signature)],
     );
 
     create_violations_for_untyped_io(

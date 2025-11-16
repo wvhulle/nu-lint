@@ -63,7 +63,7 @@ fn violation_to_vscode_diagnostic(violation: &Violation) -> VsCodeDiagnostic {
         code: violation.rule_id.to_string(),
         source: "nu-lint".to_string(),
         message: violation.message.to_string(),
-        related_information: violation.suggestion.as_ref().map(|suggestion| {
+        related_information: violation.help.as_ref().map(|suggestion| {
             vec![VsCodeRelatedInformation {
                 location: VsCodeLocation {
                     uri: violation
@@ -85,7 +85,7 @@ fn violation_to_vscode_diagnostic(violation: &Violation) -> VsCodeDiagnostic {
             }]
         }),
         code_action: violation.fix.as_ref().map(|fix| VsCodeCodeAction {
-            title: fix.description.to_string(),
+            title: fix.explanation.to_string(),
             edits: fix
                 .replacements
                 .iter()
@@ -104,7 +104,7 @@ fn violation_to_vscode_diagnostic(violation: &Violation) -> VsCodeDiagnostic {
                                 character: r_col_end.saturating_sub(1),
                             },
                         },
-                        new_text: r.new_text.to_string(),
+                        replacement_text: r.replacement_text.to_string(),
                     }
                 })
                 .collect(),
@@ -164,5 +164,5 @@ pub struct VsCodeCodeAction {
 #[derive(Serialize)]
 pub struct VsCodeTextEdit {
     pub range: VsCodeRange,
-    pub new_text: String,
+    pub replacement_text: String,
 }

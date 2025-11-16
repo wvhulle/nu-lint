@@ -101,12 +101,12 @@ fn check_expression(expr: &Expression, context: &LintContext) -> Vec<Violation> 
 
     is_filtering_pattern(block_id, context, &loop_var_name)
         .then(|| {
-            Violation::new_static(
+            Violation::new(
                 "prefer_where_over_each_if",
                 "Consider using 'where' for filtering instead of 'each' with 'if'",
                 expr.span,
             )
-            .with_suggestion_static("Use '$list | where <condition>' for better performance")
+            .with_help("Use '$list | where <condition>' for better performance")
         })
         .into_iter()
         .collect()

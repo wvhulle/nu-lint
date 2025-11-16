@@ -1,10 +1,10 @@
 use core::{error::Error, iter};
 use std::fmt;
 
-use miette::{Diagnostic, LabeledSpan, Report, SourceCode};
+use miette::{Diagnostic, LabeledSpan, NamedSource, Report, SourceCode};
 
-use super::{Summary, calculate_line_column, read_source_code};
-use crate::{Fix, violation::Violation};
+use super::{Summary, read_source_code};
+use crate::violation::{Fix, Violation};
 
 #[must_use]
 pub fn format_text(violations: &[Violation]) -> String {
@@ -29,25 +29,17 @@ pub fn format_text(violations: &[Violation]) -> String {
 fn format_violation_text(violation: &Violation, add_separator: bool) -> String {
     let source_code = read_source_code(violation.file.as_ref());
 
-    let (line, column) = calculate_line_column(&source_code, violation.span.start);
-
-    let header = violation.file.as_ref().map_or(String::new(), |file_path| {
-        format!("\n\x1b[1;4m{file_path}:{line}:{column}\x1b[0m\n")
-    });
+    let named_source = violation.file.as_ref().map_or_else(
+        || NamedSource::new("<stdin>", source_code.clone()),
+        |file_path| NamedSource::new(file_path.as_ref(), source_code.clone()),
+    );
 
     let diagnostic = ViolationDiagnostic {
         violation: violation.clone(),
-        source_code: source_code.clone(),
-        has_fix: violation.fix.is_some(),
+        source_code: named_source,
     };
 
     let report = format!("{:?}", Report::new(diagnostic));
-
-    let fix_info = violation
-        .fix
-        .as_ref()
-        .map(|fix| format_fix_info(fix, &source_code))
-        .unwrap_or_default();
 
     let separator = if add_separator {
         format!("\n\n{}\n", "─".repeat(80))
@@ -55,70 +47,57 @@ fn format_violation_text(violation: &Violation, add_separator: bool) -> String {
         String::new()
     };
 
-    format!("{header}{report}\n{fix_info}{separator}")
+    format!("\n{report}{separator}")
 }
 
-fn format_fix_info(fix: &Fix, source_code: &str) -> String {
-    let header = format!("\n  \x1b[36mℹ Available fix:\x1b[0m {}", fix.description);
-
-    if fix.replacements.is_empty() {
-        return header;
-    }
-
-    if fix.replacements.len() == 1 {
-        let replacement = &fix.replacements[0];
-        let (start_line, _start_col) = calculate_line_column(source_code, replacement.span.start);
-        let (end_line, _end_col) = calculate_line_column(source_code, replacement.span.end);
-
-        if start_line == end_line
-            && let Some(diff) = format_single_line_diff(source_code, replacement, start_line)
-        {
-            return format!("{header}\n{diff}");
-        }
-    }
-
-    header
-}
-
-fn format_single_line_diff(
-    source_code: &str,
-    replacement: &crate::Replacement,
-    line_number: usize,
-) -> Option<String> {
-    let line = source_code.lines().nth(line_number - 1)?;
-
-    let line_start_offset = source_code
-        .lines()
-        .take(line_number - 1)
-        .map(|l| l.len() + 1)
-        .sum::<usize>();
-
+fn format_replacement_diff(source_code: &str, replacement: &crate::Replacement) -> String {
     let old_text = source_code
         .get(replacement.span.start..replacement.span.end)
         .unwrap_or("");
 
-    let before = source_code
-        .get(line_start_offset..replacement.span.start)
-        .unwrap_or("");
-    let after = source_code
-        .get(replacement.span.end..line_start_offset + line.len())
-        .unwrap_or("");
+    let old_lines: Vec<&str> = old_text.lines().collect();
+    let new_lines: Vec<&str> = replacement.replacement_text.lines().collect();
 
-    let old_line = format!("  \x1b[31m-\x1b[0m {line}");
-    let new_line = format!("  \x1b[32m+\x1b[0m {before}{}{after}", replacement.new_text);
+    if old_lines.len() > 1 || new_lines.len() > 1 {
+        let before = old_lines
+            .iter()
+            .map(|line| format!("  - {line}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let after = new_lines
+            .iter()
+            .map(|line| format!("  + {line}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        format!("{before}\n{after}")
+    } else {
+        format!(
+            "  - {}\n  + {}",
+            old_text.trim(),
+            replacement.replacement_text.trim()
+        )
+    }
+}
 
-    if old_text.is_empty() && before == line {
-        return None;
+fn format_fix_help(fix: &Fix, source_code: &str) -> String {
+    let mut help_text = String::from("Available fix: ");
+    help_text.push_str(&fix.explanation);
+
+    if let Some(replacement) = fix.replacements.first() {
+        let diff = format_replacement_diff(source_code, replacement);
+        if !diff.is_empty() {
+            help_text.push('\n');
+            help_text.push_str(&diff);
+        }
     }
 
-    Some(format!("{old_line}\n{new_line}"))
+    help_text
 }
 
 #[derive(Debug, Clone)]
 struct ViolationDiagnostic {
     violation: Violation,
-    source_code: String,
-    has_fix: bool,
+    source_code: NamedSource<String>,
 }
 
 impl fmt::Display for ViolationDiagnostic {
@@ -149,15 +128,22 @@ impl Diagnostic for ViolationDiagnostic {
     fn help<'a>(&'a self) -> Option<Box<dyn fmt::Display + 'a>> {
         const MAX_LABEL_LENGTH: usize = 150;
 
-        if self.has_fix {
-            return None;
+        let mut help_text = String::new();
+
+        if let Some(help) = &self.violation.help
+            && help.len() > MAX_LABEL_LENGTH
+        {
+            help_text.push_str(help);
         }
 
-        self.violation
-            .suggestion
-            .as_ref()
-            .filter(|s| s.len() > MAX_LABEL_LENGTH)
-            .map(|s| Box::new(s.as_ref()) as Box<dyn fmt::Display>)
+        if let Some(fix) = &self.violation.fix {
+            if !help_text.is_empty() {
+                help_text.push_str("\n\n");
+            }
+            help_text.push_str(&format_fix_help(fix, self.source_code.inner()));
+        }
+
+        (!help_text.is_empty()).then(|| Box::new(help_text) as Box<dyn fmt::Display>)
     }
 
     fn labels(&self) -> Option<Box<dyn Iterator<Item = LabeledSpan> + '_>> {
@@ -165,11 +151,11 @@ impl Diagnostic for ViolationDiagnostic {
 
         let span = self.violation.to_source_span();
 
-        let label_text = self.violation.suggestion.as_ref().map_or_else(
+        let label_text = self.violation.help.as_ref().map_or_else(
             || self.violation.message.to_string(),
-            |suggestion| {
-                if !self.has_fix && suggestion.len() <= MAX_LABEL_LENGTH {
-                    suggestion.to_string()
+            |help| {
+                if self.violation.fix.is_none() && help.len() <= MAX_LABEL_LENGTH {
+                    help.to_string()
                 } else {
                     self.violation.message.to_string()
                 }

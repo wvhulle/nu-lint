@@ -39,13 +39,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 .map_or("", |m| m.as_str());
             if !has_journal_prefix(output_text) {
                 violations.push(
-                    Violation::new_static(
+                    Violation::new(
                         "systemd_journal_prefix",
                         "Output without systemd journal log level prefix - consider adding prefix \
                          for proper logging",
                         nu_protocol::Span::new(mat.start(), mat.end()),
                     )
-                    .with_suggestion_static(
+                    .with_help(
                         "Add systemd journal prefix using numbers <0-7> or keywords: <emerg>, \
                          <alert>, <crit>, <err>, <warning>, <notice>, <info>, <debug>. Example: \
                          print \"<info>Starting process\"",
@@ -64,13 +64,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 .map_or("", |m| m.as_str());
             if !has_journal_prefix(output_text) {
                 violations.push(
-                    Violation::new_static(
+                    Violation::new(
                         "systemd_journal_prefix",
                         "Output without systemd journal log level prefix - consider adding prefix \
                          for proper logging",
                         nu_protocol::Span::new(mat.start(), mat.end()),
                     )
-                    .with_suggestion_static(
+                    .with_help(
                         "Add systemd journal prefix using numbers <0-7> or keywords: <emerg>, \
                          <alert>, <crit>, <err>, <warning>, <notice>, <info>, <debug>. Example: \
                          echo \"<info>Starting process\"",

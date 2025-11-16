@@ -37,7 +37,7 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
             );
 
             violations.push(
-                Violation::new_dynamic(
+                Violation::new(
                     "main_named_args_docs",
                     format!(
                         "Named parameter '{flag_name}' in main function is missing documentation \
@@ -45,7 +45,7 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
                     ),
                     flag_span,
                 )
-                .with_suggestion_dynamic(format!(
+                .with_help(format!(
                     "Add a documentation comment after the parameter: {flag_name} # Description \
                      of {}",
                     flag.long

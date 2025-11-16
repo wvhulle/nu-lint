@@ -4,8 +4,8 @@ use crate::rules::replace_by_builtin::cat::rule;
 fn converts_number_lines_flag() {
     let source = "^cat -n file.txt";
     rule().assert_fix_contains(source, "open --raw file.txt | lines | enumerate");
-    rule().assert_fix_description_contains(source, "enumerate");
-    rule().assert_fix_description_contains(source, "-n");
+    rule().assert_fix_explanation_contains(source, "enumerate");
+    rule().assert_fix_explanation_contains(source, "-n");
 }
 
 #[test]
@@ -15,31 +15,31 @@ fn converts_number_nonblank_flag() {
         source,
         "open --raw file.txt | lines | enumerate | where $it.item != \"\"",
     );
-    rule().assert_fix_description_contains(source, "non-blank");
-    rule().assert_fix_description_contains(source, "enumerate");
+    rule().assert_fix_explanation_contains(source, "non-blank");
+    rule().assert_fix_explanation_contains(source, "enumerate");
 }
 
 #[test]
 fn converts_show_ends_flag() {
     let source = "^cat -E file.txt";
     rule().assert_fix_contains(source, "open --raw file.txt | lines");
-    rule().assert_fix_description_contains(source, "-E");
-    rule().assert_fix_description_contains(source, "line endings");
+    rule().assert_fix_explanation_contains(source, "-E");
+    rule().assert_fix_explanation_contains(source, "line endings");
 }
 
 #[test]
 fn converts_show_tabs_flag() {
     let source = "^cat -T file.txt";
     rule().assert_fix_contains(source, "open --raw file.txt | lines");
-    rule().assert_fix_description_contains(source, "-T");
-    rule().assert_fix_description_contains(source, "tabs");
+    rule().assert_fix_explanation_contains(source, "-T");
+    rule().assert_fix_explanation_contains(source, "tabs");
 }
 
 #[test]
 fn converts_show_all_flag() {
     let source = "^cat -A file.txt";
     rule().assert_fix_contains(source, "open --raw file.txt | lines");
-    rule().assert_fix_description_contains(source, "-E");
+    rule().assert_fix_explanation_contains(source, "-E");
 }
 
 #[test]

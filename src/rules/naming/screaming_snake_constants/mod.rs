@@ -25,7 +25,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 None
             } else {
                 Some(
-                    Violation::new_dynamic(
+                    Violation::new(
                         "screaming_snake_constants",
                         format!(
                             "Constant '{const_name}' should use SCREAMING_SNAKE_CASE naming \
@@ -33,7 +33,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
                         ),
                         nu_protocol::Span::new(const_match.start(), const_match.end()),
                     )
-                    .with_suggestion_dynamic(format!(
+                    .with_help(format!(
                         "Consider renaming to: {}",
                         const_name.to_shouty_snake_case()
                     )),

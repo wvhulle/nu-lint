@@ -80,18 +80,18 @@ fn check(context: &LintContext) -> Vec<Violation> {
     let mut violations = Vec::new();
     for (var_id, (var_name, decl_span, mut_span)) in mut_variables {
         if !reassigned_vars.contains(&var_id) {
-            let fix = Fix::new_dynamic(
+            let fix = Fix::with_explanation(
                 format!("Remove 'mut' keyword from variable '{var_name}'"),
-                vec![Replacement::new_static(mut_span, "")],
+                vec![Replacement::new(mut_span, "")],
             );
 
             violations.push(
-                Violation::new_dynamic(
+                Violation::new(
                     "unnecessary_mut",
                     format!("Variable '{var_name}' is declared as 'mut' but never reassigned"),
                     decl_span,
                 )
-                .with_suggestion_dynamic(format!("Remove 'mut' keyword:\nlet {var_name} = ..."))
+                .with_help(format!("Remove 'mut' keyword:\nlet {var_name} = ..."))
                 .with_fix(fix),
             );
         }

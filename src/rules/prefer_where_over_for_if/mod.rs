@@ -342,12 +342,12 @@ fn check(context: &LintContext) -> Vec<Violation> {
     for (var_id, (var_name, span)) in &empty_list_vars_map {
         if filtering_set.contains(var_id) {
             log::debug!("Creating violation for var '{var_name}'");
-            let violation = Violation::new_dynamic(
+            let violation = Violation::new(
                 "prefer_where_over_for_if",
                 format!("Variable '{var_name}' accumulates filtered items - use 'where' instead"),
                 *span,
             )
-            .with_suggestion_static(
+            .with_help(
                 "Use '$input | where <condition>' for simple filtering without transformation",
             );
             violations.push(violation);

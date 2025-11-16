@@ -190,10 +190,10 @@ fn build_fix(
     };
 
     Fix {
-        description: description.into(),
+        explanation: description.into(),
         replacements: vec![Replacement {
             span: expr_span,
-            new_text: new_text.into(),
+            replacement_text: new_text.into(),
         }],
     }
 }

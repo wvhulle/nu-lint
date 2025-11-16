@@ -46,14 +46,12 @@ fn check_pipeline_for_split_get(pipeline: &Pipeline, context: &LintContext) -> O
         .then(|| {
             let span = Span::new(current.expr.span.start, next.expr.span.end);
 
-            Violation::new_static(
+            Violation::new(
                 "prefer_parse_command",
                 "Manual string splitting with indexed access - consider using 'parse'",
                 span,
             )
-            .with_suggestion_static(
-                "Use 'parse \"pattern {field1} {field2}\"' for structured text extraction",
-            )
+            .with_help("Use 'parse \"pattern {field1} {field2}\"' for structured text extraction")
         })
     })
 }
@@ -114,14 +112,14 @@ fn is_var_used_in_indexed_access(var_id: VarId, call: &Call, context: &LintConte
 }
 
 fn create_indexed_access_violation(var_name: &str, decl_span: Span) -> Violation {
-    Violation::new_dynamic(
+    Violation::new(
         "prefer_parse_command",
         format!(
             "Variable '{var_name}' from split row with indexed access - consider using 'parse'"
         ),
         decl_span,
     )
-    .with_suggestion_static("Use 'parse' command to extract named fields instead of indexed access")
+    .with_help("Use 'parse' command to extract named fields instead of indexed access")
 }
 
 fn check_call_arguments_for_violation(

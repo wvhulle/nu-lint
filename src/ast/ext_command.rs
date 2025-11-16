@@ -157,8 +157,7 @@ fn create_violation(
 
     let fix = fix_builder.map(|builder| builder(cmd_text, alternative, args, expr.span, ctx));
 
-    let violation =
-        Violation::new_dynamic(rule_id, message, expr.span).with_suggestion_dynamic(suggestion);
+    let violation = Violation::new(rule_id, message, expr.span).with_help(suggestion);
 
     match fix {
         Some(f) => violation.with_fix(f),

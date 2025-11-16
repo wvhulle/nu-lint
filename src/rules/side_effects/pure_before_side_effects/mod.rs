@@ -67,7 +67,7 @@ fn analyze_function_body(
     }
 
     Some(
-        Violation::new_dynamic(
+        Violation::new(
             "pure_before_side_effects",
             format!(
                 "Function `{function_name}` has {pure_count} pure computation statement(s) before \
@@ -75,7 +75,7 @@ fn analyze_function_body(
             ),
             context.find_declaration_span(function_name),
         )
-        .with_suggestion_static(
+        .with_help(
             "Consider extracting the pure computation into a separate helper function. This \
              improves testability, reusability, and makes side effects more explicit.",
         ),

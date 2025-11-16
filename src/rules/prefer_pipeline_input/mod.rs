@@ -378,7 +378,13 @@ fn analyze_function_from_ast(
 
     let mut function_signature = block.signature.clone();
     function_signature.name = function_name.to_string();
-    Some(create_violation(&function_signature, param, context))
+    let def_span = find_function_definition_span(function_name, context)?;
+    Some(create_violation_with_span(
+        &function_signature,
+        param,
+        def_span,
+        context,
+    ))
 }
 
 fn transform_parameter_to_pipeline_input(function_body: &str, param_name: &str) -> String {
@@ -393,7 +399,7 @@ fn transform_parameter_to_pipeline_input(function_body: &str, param_name: &str) 
     }
 }
 
-fn generate_fix_text(
+fn generate_fix_code_full(
     signature: &nu_protocol::Signature,
     param: &nu_protocol::PositionalArg,
     context: &LintContext,
@@ -407,11 +413,35 @@ fn generate_fix_text(
     )
 }
 
-fn create_fix(fix_text: String, span: nu_protocol::Span) -> violation::Fix {
-    violation::Fix::new_dynamic(
-        fix_text.clone(),
-        vec![violation::Replacement::new_dynamic(span, fix_text)],
+fn create_fix(full_code: String, param_name: &str, span: nu_protocol::Span) -> violation::Fix {
+    let explanation =
+        format!("Use pipeline input ($in) instead of parameter (${param_name}):\n  {full_code}");
+    violation::Fix::with_explanation(
+        explanation,
+        vec![violation::Replacement::new(span, full_code)],
     )
+}
+
+fn find_function_definition_span(
+    function_name: &str,
+    context: &LintContext,
+) -> Option<nu_protocol::Span> {
+    context
+        .ast
+        .pipelines
+        .iter()
+        .flat_map(|pipeline| &pipeline.elements)
+        .filter_map(|element| match &element.expr.expr {
+            Expr::Call(call) => Some(call),
+            _ => None,
+        })
+        .find_map(|call| {
+            let (_block_id, name) = call.extract_function_definition(context)?;
+            if name != function_name {
+                return None;
+            }
+            Some(call.span())
+        })
 }
 
 fn create_violation(
@@ -419,25 +449,37 @@ fn create_violation(
     param: &nu_protocol::PositionalArg,
     context: &LintContext,
 ) -> violation::Violation {
-    let span = context.find_declaration_span(&signature.name);
-    let fix_text = generate_fix_text(signature, param, context);
-    let fix = create_fix(fix_text, span);
-    let suggestion = format!(
-        "Remove the '{}' parameter and use pipeline input",
-        param.name
-    );
+    let name_span = context.find_declaration_span(&signature.name);
+    let full_code = generate_fix_code_full(signature, param, context);
+    let def_span = find_function_definition_span(&signature.name, context).unwrap_or(name_span);
+    let fix = create_fix(full_code, &param.name, def_span);
 
-    Violation::new_dynamic(
+    Violation::new(
         "prefer_pipeline_input",
-        format!(
-            "Custom command '{}' with single data parameter '{}' should use pipeline input ($in) \
-             instead",
-            signature.name, param.name
-        ),
-        span,
+        "Use pipeline input instead of parameter",
+        name_span,
     )
+    .with_help("Pipeline input enables better composability and streaming performance")
     .with_fix(fix)
-    .with_suggestion_dynamic(suggestion)
+}
+
+fn create_violation_with_span(
+    signature: &nu_protocol::Signature,
+    param: &nu_protocol::PositionalArg,
+    def_span: nu_protocol::Span,
+    context: &LintContext,
+) -> violation::Violation {
+    let name_span = context.find_declaration_span(&signature.name);
+    let full_code = generate_fix_code_full(signature, param, context);
+    let fix = create_fix(full_code, &param.name, def_span);
+
+    Violation::new(
+        "prefer_pipeline_input",
+        "Use pipeline input instead of parameter",
+        name_span,
+    )
+    .with_help("Pipeline input enables better composability and streaming performance")
+    .with_fix(fix)
 }
 
 /// Analyze parameter usage in a specific block

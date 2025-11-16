@@ -22,8 +22,8 @@ fn test_prefer_is_not_empty_fix_complex_expr() {
 #[test]
 fn test_prefer_is_not_empty_fix_description() {
     let bad_code = "not ($list | is-empty)";
-    rule().assert_fix_description_contains(bad_code, "Replace");
-    rule().assert_fix_description_contains(bad_code, "is-not-empty");
+    rule().assert_fix_explanation_contains(bad_code, "Replace");
+    rule().assert_fix_explanation_contains(bad_code, "is-not-empty");
 }
 
 #[test]

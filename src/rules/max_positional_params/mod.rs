@@ -11,7 +11,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 + usize::from(signature.rest_positional.is_some());
             // Only create violation if count exceeds threshold
             (positional_count > MAX_POSITIONAL).then(|| {
-                Violation::new_dynamic(
+                Violation::new(
                     "max_positional_params",
                     format!(
                         "Command has {positional_count} positional parameters, should have ≤ \
@@ -19,9 +19,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
                     ),
                     context.find_declaration_span(&signature.name),
                 )
-                .with_suggestion_static(
-                    "Consider using named flags (--flag) for parameters beyond the first 2",
-                )
+                .with_help("Consider using named flags (--flag) for parameters beyond the first 2")
             })
         })
         .collect()

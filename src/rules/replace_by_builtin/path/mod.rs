@@ -106,10 +106,7 @@ fn check_parameter(
         if is_optional { "?" } else { "" }
     );
 
-    Some(
-        Violation::new_dynamic("prefer_path_type", message, function_span)
-            .with_suggestion_dynamic(suggestion),
-    )
+    Some(Violation::new("prefer_path_type", message, function_span).with_help(suggestion))
 }
 
 fn check_function_parameters(

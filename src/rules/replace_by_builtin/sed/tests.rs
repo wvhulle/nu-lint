@@ -4,15 +4,15 @@ use crate::rules::replace_by_builtin::sed::rule;
 fn converts_sed_substitution_to_str_replace() {
     let source = r"^sed 's/foo/bar/'";
     rule().assert_fix_contains(source, "str replace 'foo' 'bar'");
-    rule().assert_fix_description_contains(source, "str replace");
+    rule().assert_fix_explanation_contains(source, "str replace");
 }
 
 #[test]
 fn converts_sed_global_flag_to_str_replace_all() {
     let source = r"^sed 's/old/new/g'";
     rule().assert_fix_contains(source, "str replace --all 'old' 'new'");
-    rule().assert_fix_description_contains(source, "--all");
-    rule().assert_fix_description_contains(source, "/g");
+    rule().assert_fix_explanation_contains(source, "--all");
+    rule().assert_fix_explanation_contains(source, "/g");
 }
 
 #[test]
@@ -22,7 +22,7 @@ fn converts_sed_with_file_to_open_pipe_str_replace() {
         source,
         "open file.txt | str replace 'pattern' 'replacement'",
     );
-    rule().assert_fix_description_contains(source, "open");
+    rule().assert_fix_explanation_contains(source, "open");
 }
 
 #[test]
@@ -32,8 +32,8 @@ fn converts_sed_inplace_to_open_replace_save() {
         source,
         "open file.txt | str replace 'old' 'new' | save -f file.txt",
     );
-    rule().assert_fix_description_contains(source, "in-place");
-    rule().assert_fix_description_contains(source, "save");
+    rule().assert_fix_explanation_contains(source, "in-place");
+    rule().assert_fix_explanation_contains(source, "save");
 }
 
 #[test]
@@ -43,14 +43,14 @@ fn converts_sed_inplace_global_to_open_replace_all_save() {
         source,
         "open config.ini | str replace --all 'foo' 'bar' | save -f config.ini",
     );
-    rule().assert_fix_description_contains(source, "--all");
+    rule().assert_fix_explanation_contains(source, "--all");
 }
 
 #[test]
 fn converts_sed_delete_to_lines_where_not_match() {
     let source = r"^sed '/pattern/d'";
     rule().assert_fix_contains(source, "lines | where $it !~ 'pattern'");
-    rule().assert_fix_description_contains(source, "where");
+    rule().assert_fix_explanation_contains(source, "where");
 }
 
 #[test]
@@ -63,7 +63,7 @@ fn converts_sed_combined_inplace_flags() {
 #[test]
 fn provides_default_suggestion_for_complex_sed() {
     let source = r"^sed";
-    rule().assert_fix_description_contains(source, "str replace");
+    rule().assert_fix_explanation_contains(source, "str replace");
 }
 
 #[test]

@@ -94,12 +94,12 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
     let suggestion = "Wrap in 'try {{ ... }}' to prevent script termination on error";
 
     Some(
-        Violation::new_dynamic(
+        Violation::new(
             "prefer_try_for_simple_external_commands",
             message,
             first_element.expr.span,
         )
-        .with_suggestion_static(suggestion),
+        .with_help(suggestion),
     )
 }
 

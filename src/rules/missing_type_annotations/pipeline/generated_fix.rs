@@ -10,7 +10,7 @@ def double [] {
 }
 ";
     rule().assert_fix_contains(bad_code, "[]: int -> int");
-    rule().assert_suggestion_contains(bad_code, "pipeline input and output type annotations");
+    rule().assert_help_contains(bad_code, "pipeline input and output type annotations");
 }
 
 #[test]
@@ -79,7 +79,7 @@ def multiply [factor: int] {
 #[test]
 fn test_fix_description_mentions_type_annotations() {
     let bad_code = "def double [] { $in * 2 }";
-    rule().assert_fix_description_contains(bad_code, "type annotations");
+    rule().assert_fix_explanation_contains(bad_code, "type annotations");
 }
 
 #[test]

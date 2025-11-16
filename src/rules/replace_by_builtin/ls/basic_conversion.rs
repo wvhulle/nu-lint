@@ -4,15 +4,15 @@ use crate::rules::replace_by_builtin::ls::rule;
 fn converts_external_ls_to_builtin() {
     let source = "^ls";
     rule().assert_fix_contains(source, "ls");
-    rule().assert_fix_description_contains(source, "structured");
-    rule().assert_fix_description_contains(source, "data");
+    rule().assert_fix_explanation_contains(source, "structured");
+    rule().assert_fix_explanation_contains(source, "data");
 }
 
 #[test]
 fn converts_ls_with_directory_path() {
     let source = "^ls /tmp";
     rule().assert_fix_contains(source, "ls /tmp");
-    rule().assert_fix_description_contains(source, "structured");
+    rule().assert_fix_explanation_contains(source, "structured");
 }
 
 #[test]
@@ -25,14 +25,14 @@ fn converts_ls_with_multiple_paths() {
 fn converts_ls_with_glob_pattern() {
     let source = "^ls *.rs";
     rule().assert_fix_contains(source, "ls *.rs");
-    rule().assert_fix_description_contains(source, "structured");
+    rule().assert_fix_explanation_contains(source, "structured");
 }
 
 #[test]
 fn detects_exa_command() {
     let source = "^exa";
     rule().assert_fix_contains(source, "ls");
-    rule().assert_fix_description_contains(source, "structured");
+    rule().assert_fix_explanation_contains(source, "structured");
 }
 
 #[test]

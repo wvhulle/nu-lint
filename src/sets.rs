@@ -14,14 +14,14 @@ use crate::LintLevel;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RuleSet {
     pub name: String,
-    pub description: String,
+    pub explanation: String,
     pub rules: HashSet<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RuleMap {
     pub name: String,
-    pub description: String,
+    pub explanation: String,
     pub rules: HashMap<String, LintLevel>,
 }
 
@@ -37,7 +37,7 @@ impl Serialize for RuleMap {
 fn naming_rule_set() -> RuleSet {
     RuleSet {
         name: "naming".to_string(),
-        description: "Linting rules for naming conventions".to_string(),
+        explanation: "Linting rules for naming conventions".to_string(),
         rules: HashSet::from([
             "snake_case_variables".to_string(),
             "kebab_case_commands".to_string(),
@@ -49,7 +49,7 @@ fn naming_rule_set() -> RuleSet {
 fn idioms_rule_set() -> RuleSet {
     RuleSet {
         name: "idioms".to_string(),
-        description: "Linting rules for idiomatic Nushell expressions".to_string(),
+        explanation: "Linting rules for idiomatic Nushell expressions".to_string(),
         rules: HashSet::from([
             "prefer_builtin_ls".to_string(),
             "prefer_parse_command".to_string(),
@@ -82,7 +82,7 @@ fn idioms_rule_set() -> RuleSet {
 fn pedantic_rule_set() -> RuleSet {
     RuleSet {
         name: "pedantic".to_string(),
-        description: "Strict linting for high code quality standards".to_string(),
+        explanation: "Strict linting for high code quality standards".to_string(),
         rules: HashSet::from([
             "forbid_excessive_nesting".to_string(),
             "max_function_body_length".to_string(),
@@ -100,7 +100,7 @@ fn pedantic_rule_set() -> RuleSet {
 fn formatting_rule_set() -> RuleSet {
     RuleSet {
         name: "formatting".to_string(),
-        description: "Code formatting and style rules".to_string(),
+        explanation: "Code formatting and style rules".to_string(),
         rules: HashSet::from([
             "no_trailing_spaces".to_string(),
             "prefer_multiline_lists".to_string(),
@@ -116,7 +116,7 @@ fn formatting_rule_set() -> RuleSet {
 fn error_handling_rule_set() -> RuleSet {
     RuleSet {
         name: "error-handling".to_string(),
-        description: "Error handling best practices".to_string(),
+        explanation: "Error handling best practices".to_string(),
         rules: HashSet::from([
             "prefer_error_make_for_stderr".to_string(),
             "descriptive_error_messages".to_string(),
@@ -133,7 +133,7 @@ fn error_handling_rule_set() -> RuleSet {
 fn type_safety_rule_set() -> RuleSet {
     RuleSet {
         name: "type-safety".to_string(),
-        description: "Type annotation and safety rules".to_string(),
+        explanation: "Type annotation and safety rules".to_string(),
         rules: HashSet::from([
             "missing_type_annotation".to_string(),
             "prefer_path_type".to_string(),
@@ -145,7 +145,7 @@ fn type_safety_rule_set() -> RuleSet {
 fn code_quality_rule_set() -> RuleSet {
     RuleSet {
         name: "code-quality".to_string(),
-        description: "General code quality and maintainability rules".to_string(),
+        explanation: "General code quality and maintainability rules".to_string(),
         rules: HashSet::from([
             "forbid_excessive_nesting".to_string(),
             "prefer_direct_use".to_string(),
@@ -165,7 +165,7 @@ fn code_quality_rule_set() -> RuleSet {
 fn documentation_rule_set() -> RuleSet {
     RuleSet {
         name: "documentation".to_string(),
-        description: "Documentation quality rules".to_string(),
+        explanation: "Documentation quality rules".to_string(),
         rules: HashSet::from(["exported_function_docs".to_string()]),
     }
 }
@@ -173,7 +173,7 @@ fn documentation_rule_set() -> RuleSet {
 fn performance_rule_set() -> RuleSet {
     RuleSet {
         name: "performance".to_string(),
-        description: "Performance optimization hints".to_string(),
+        explanation: "Performance optimization hints".to_string(),
         rules: HashSet::from([
             "prefer_nushell_over_jq".to_string(),
             "unused_output".to_string(),
@@ -184,7 +184,7 @@ fn performance_rule_set() -> RuleSet {
 fn recommended_rule_set() -> RuleSet {
     RuleSet {
         name: "recommended".to_string(),
-        description: "Recommended set of rules for most Nushell projects".to_string(),
+        explanation: "Recommended set of rules for most Nushell projects".to_string(),
         rules: HashSet::from([
             "snake_case_variables".to_string(),
             "kebab_case_commands".to_string(),
@@ -213,7 +213,7 @@ fn recommended_rule_set() -> RuleSet {
 fn strict_rule_set() -> RuleSet {
     RuleSet {
         name: "strict".to_string(),
-        description: "Strict ruleset with all recommended rules at deny level".to_string(),
+        explanation: "Strict ruleset with all recommended rules at deny level".to_string(),
         rules: HashSet::from([
             "snake_case_variables".to_string(),
             "kebab_case_commands".to_string(),
@@ -245,7 +245,7 @@ fn strict_rule_set() -> RuleSet {
 fn systemd_rule_set() -> RuleSet {
     RuleSet {
         name: "systemd".to_string(),
-        description: "Rules for systemd service scripts".to_string(),
+        explanation: "Rules for systemd service scripts".to_string(),
         rules: HashSet::from([
             "systemd_journal_prefix".to_string(),
             "prefer_error_make_for_stderr".to_string(),
@@ -273,7 +273,7 @@ pub static BUILTIN_LINT_SETS: LazyLock<HashMap<&str, RuleSet>> = LazyLock::new(|
 
 pub static DEFAULT_RULE_MAP: LazyLock<RuleMap> = LazyLock::new(|| RuleMap {
     name: "default".to_string(),
-    description: "Default lint levels for all rules".to_string(),
+    explanation: "Default lint levels for all rules".to_string(),
     rules: HashMap::from([
         ("check_complete_exit_code".to_string(), LintLevel::Warn),
         ("collapsible_if".to_string(), LintLevel::Warn),
@@ -312,6 +312,7 @@ pub static DEFAULT_RULE_MAP: LazyLock<RuleMap> = LazyLock::new(|| RuleMap {
             LintLevel::Warn,
         ),
         ("prefer_builtin_cat".to_string(), LintLevel::Warn),
+        ("prefer_builtin_echo".to_string(), LintLevel::Warn),
         ("prefer_builtin_find".to_string(), LintLevel::Warn),
         ("prefer_builtin_grep".to_string(), LintLevel::Warn),
         ("prefer_builtin_head".to_string(), LintLevel::Warn),

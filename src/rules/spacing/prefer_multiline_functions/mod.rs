@@ -48,7 +48,7 @@ fn function_too_long(
 }
 
 fn create_violation(function_name: &str, span: nu_protocol::Span) -> Violation {
-    Violation::new_dynamic(
+    Violation::new(
         "prefer_multiline_functions",
         format!(
             "Function '{function_name}' is too long for a single line ({} characters)",
@@ -56,9 +56,7 @@ fn create_violation(function_name: &str, span: nu_protocol::Span) -> Violation {
         ),
         span,
     )
-    .with_suggestion_static(
-        "Break this function definition across multiple lines for better readability",
-    )
+    .with_help("Break this function definition across multiple lines for better readability")
 }
 
 /// This rule uses AST-based detection and is compatible with topiary-nushell

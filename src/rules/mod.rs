@@ -51,7 +51,7 @@ use spacing::{
 
 use crate::rule::Rule;
 
-pub const ALL_RULES: [Rule; 66] = [
+pub const ALL_RULES: [Rule; 67] = [
     check_complete_exit_code::rule(),
     collapsible_if::rule(),
     dangerous_file_operations::rule(),
@@ -82,6 +82,7 @@ pub const ALL_RULES: [Rule; 66] = [
     nu_parse_error::rule(),
     omit_list_commas::rule(),
     prefer_complete_for_external_commands::rule(),
+    replace_by_builtin::echo::rule(),
     replace_by_builtin::cat::rule(),
     replace_by_builtin::find::rule(),
     replace_by_builtin::grep::rule(),

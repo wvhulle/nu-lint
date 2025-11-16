@@ -148,7 +148,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 .as_ref()
                 .map_or(String::new(), |c| format!("'{c}' "));
 
-            Violation::new_dynamic(
+            Violation::new(
                 "check_complete_exit_code",
                 format!(
                     "External command {cmd_desc}result '{var_name}' stored but exit code not \
@@ -156,7 +156,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 ),
                 *span,
             )
-            .with_suggestion_dynamic(format!(
+            .with_help(format!(
                 "Check the exit code to handle command failures. For example:\nif \
                  ${var_name}.exit_code != 0 {{\n\x20   error make {{msg: \
                  '{cmd_desc}failed'}}\n}}\nOr use inline checking:\nlet success = ({cmd_desc}| \

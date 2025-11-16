@@ -27,12 +27,12 @@ fn check_sequential_stderr_exit(
     };
 
     Some(
-        Violation::new_static(
+        Violation::new(
             "prefer_error_make_for_stderr",
             "Use 'error make' instead of 'print stderr' + 'exit' for error conditions",
             print_call.span().merge(exit_call.span()),
         )
-        .with_suggestion_static(
+        .with_help(
             "Use 'error make { msg: \"error message\" }' instead. Consider adding 'label' with \
              span for precise error location, and 'help' field for user guidance.",
         ),

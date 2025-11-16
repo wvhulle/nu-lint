@@ -9,7 +9,7 @@ def process [] {
 }
 ";
     rule().assert_detects(bad_code);
-    rule().assert_fix_description_contains(bad_code, "Remove 'mut'");
+    rule().assert_fix_explanation_contains(bad_code, "Remove 'mut'");
 }
 
 #[test]
@@ -19,6 +19,6 @@ def test [] {
     mut unused = 123
 }
 ";
-    rule().assert_fix_description_contains(bad_code, "Remove 'mut' keyword");
-    rule().assert_fix_description_contains(bad_code, "unused");
+    rule().assert_fix_explanation_contains(bad_code, "Remove 'mut' keyword");
+    rule().assert_fix_explanation_contains(bad_code, "unused");
 }

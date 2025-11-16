@@ -83,17 +83,17 @@ fn check(context: &LintContext) -> Vec<Violation> {
         if is_not_is_empty_pattern(expr, ctx)
             && let Some(fix_text) = generate_fix_text(expr, ctx)
         {
-            let fix = Fix::new_static(
+            let fix = Fix::with_explanation(
                 "Replace 'not ... is-empty' with 'is-not-empty'",
-                vec![Replacement::new_dynamic(expr.span, fix_text)],
+                vec![Replacement::new(expr.span, fix_text)],
             );
             vec![
-                Violation::new_static(
+                Violation::new(
                     "prefer_is_not_empty",
                     "Use 'is-not-empty' instead of 'not ... is-empty' for better readability",
                     expr.span,
                 )
-                .with_suggestion_static("Replace with 'is-not-empty'")
+                .with_help("Replace with 'is-not-empty'")
                 .with_fix(fix),
             ]
         } else {

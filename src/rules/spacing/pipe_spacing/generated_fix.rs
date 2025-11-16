@@ -27,5 +27,5 @@ fn test_pipe_spacing_fix_multiple_spaces() {
 #[test]
 fn test_pipe_spacing_fix_description() {
     let bad_code = "echo 'hello'|str upcase";
-    rule().assert_fix_description_contains(bad_code, "Fix pipe spacing");
+    rule().assert_fix_explanation_contains(bad_code, "Fix pipe spacing");
 }

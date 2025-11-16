@@ -84,12 +84,12 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
     let ignore_span = pipeline.elements.last()?.expr.span;
 
     Some(
-        Violation::new_static(
+        Violation::new(
             "unnecessary_ignore",
             "Using '| ignore' with commands that produce no output",
             ignore_span,
         )
-        .with_suggestion_dynamic(format!(
+        .with_help(format!(
             "The command '{cmd_name}' produces no output, so '| ignore' is \
              unnecessary.\n\nCurrent:  {cmd_name} | ignore\nBetter:   {cmd_name}\n\nNote: \
              'ignore' only suppresses stdout. If you want to suppress errors, use 'do -i {{ ... \

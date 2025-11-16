@@ -80,7 +80,7 @@ fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<Violat
             let combined_span = Span::new(decl_span.start, ref_span.end);
 
             violations.push(
-                Violation::new_dynamic(
+                Violation::new(
                     "unnecessary_variable_before_return",
                     format!(
                         "Variable '{var_name}' is assigned and immediately returned - consider \
@@ -88,7 +88,7 @@ fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<Violat
                     ),
                     combined_span,
                 )
-                .with_suggestion_static(
+                .with_help(
                     "Return the expression directly instead of assigning to a variable first",
                 ),
             );

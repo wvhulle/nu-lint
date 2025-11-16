@@ -69,7 +69,7 @@ impl Violation {
     ///
     /// # Arguments
     ///
-    /// * `rule_id` - The lint rule identifier (e.g., "prefer_pipeline_input")
+    /// * `rule_id` - The lint rule identifier (e.g., "`prefer_pipeline_input`")
     /// * `message` - Short diagnostic message shown in the warning header
     /// * `span` - Location in source code where the violation occurs
     #[must_use]
@@ -146,7 +146,7 @@ impl Violation {
 /// - `replacements[].replacement_text`: Actual code written to the file
 ///
 /// These should be different! The explanation describes the change,
-/// the replacement_text is the actual code.
+/// the `replacement_text` is the actual code.
 ///
 /// # Example
 ///

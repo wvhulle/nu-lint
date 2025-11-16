@@ -210,12 +210,4 @@ impl Rule {
             "Expected help to contain '{expected_text}', but got: {help}"
         );
     }
-
-    #[cfg(test)]
-    #[track_caller]
-    /// Test helper: assert that the rule generates a suggestion containing the
-    /// expected string (deprecated: use assert_help_contains instead)
-    pub fn assert_suggestion_contains(&self, code: &str, expected_text: &str) {
-        self.assert_help_contains(code, expected_text)
-    }
 }

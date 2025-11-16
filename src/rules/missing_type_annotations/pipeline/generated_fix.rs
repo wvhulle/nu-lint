@@ -10,7 +10,7 @@ def double [] {
 }
 ";
     rule().assert_fix_contains(bad_code, "[]: int -> int");
-    rule().assert_suggestion_contains(bad_code, "pipeline input and output type annotations");
+    rule().assert_help_contains(bad_code, "pipeline input and output type annotations");
 }
 
 #[test]

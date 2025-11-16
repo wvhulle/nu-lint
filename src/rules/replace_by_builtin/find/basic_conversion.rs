@@ -4,8 +4,8 @@ use crate::rules::replace_by_builtin::find::rule;
 fn detects_external_find_with_name_pattern() {
     let source = r#"^find . -name "*.rs""#;
     rule().assert_violation_count_exact(source, 1);
-    rule().assert_suggestion_contains(source, "glob");
-    rule().assert_suggestion_contains(source, "ls");
+    rule().assert_help_contains(source, "glob");
+    rule().assert_help_contains(source, "ls");
 }
 
 #[test]

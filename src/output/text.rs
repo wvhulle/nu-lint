@@ -2,9 +2,10 @@ use core::{error::Error, iter};
 use std::fmt;
 
 use miette::{Diagnostic, LabeledSpan, NamedSource, Report, SourceCode};
+use similar::{ChangeTag, TextDiff};
 
-use super::{Summary, calculate_line_column, read_source_code};
-use crate::violation::Violation;
+use super::{Summary, read_source_code};
+use crate::violation::{Fix, Violation};
 
 #[must_use]
 pub fn format_text(violations: &[Violation]) -> String {
@@ -50,41 +51,48 @@ fn format_violation_text(violation: &Violation, add_separator: bool) -> String {
     format!("\n{report}{separator}")
 }
 
-fn format_single_line_diff(
-    source_code: &str,
-    replacement: &crate::Replacement,
-    line_number: usize,
-) -> Option<String> {
-    let line = source_code.lines().nth(line_number - 1)?;
-
-    let line_start_offset = source_code
-        .lines()
-        .take(line_number - 1)
-        .map(|l| l.len() + 1)
-        .sum::<usize>();
-
+fn format_replacement_diff(source_code: &str, replacement: &crate::Replacement) -> String {
     let old_text = source_code
         .get(replacement.span.start..replacement.span.end)
         .unwrap_or("");
 
-    let before = source_code
-        .get(line_start_offset..replacement.span.start)
-        .unwrap_or("");
-    let after = source_code
-        .get(replacement.span.end..line_start_offset + line.len())
-        .unwrap_or("");
+    let diff = TextDiff::from_lines(old_text, &replacement.replacement_text);
 
-    let old_line = format!("  - {line}");
-    let new_line = format!(
-        "  + {before}{}{after}",
-        replacement.replacement_text
-    );
-
-    if old_text.is_empty() && before == line {
-        return None;
+    let mut output = String::new();
+    for change in diff.iter_all_changes() {
+        let sign = match change.tag() {
+            ChangeTag::Delete => "  - ",
+            ChangeTag::Insert => "  + ",
+            ChangeTag::Equal => "    ",
+        };
+        output.push_str(sign);
+        output.push_str(change.value());
+        if !change.value().ends_with('\n') {
+            output.push('\n');
+        }
     }
 
-    Some(format!("{old_line}\n{new_line}"))
+    // Remove trailing newline
+    if output.ends_with('\n') {
+        output.pop();
+    }
+
+    output
+}
+
+fn format_fix_help(fix: &Fix, source_code: &str) -> String {
+    let mut help_text = String::from("Available fix: ");
+    help_text.push_str(&fix.explanation);
+
+    if let Some(replacement) = fix.replacements.first() {
+        let diff = format_replacement_diff(source_code, replacement);
+        if !diff.is_empty() {
+            help_text.push('\n');
+            help_text.push_str(&diff);
+        }
+    }
+
+    help_text
 }
 
 #[derive(Debug, Clone)]
@@ -123,32 +131,17 @@ impl Diagnostic for ViolationDiagnostic {
 
         let mut help_text = String::new();
 
-        if let Some(help) = &self.violation.help {
-            if help.len() > MAX_LABEL_LENGTH {
-                help_text.push_str(help);
-            }
+        if let Some(help) = &self.violation.help
+            && help.len() > MAX_LABEL_LENGTH
+        {
+            help_text.push_str(help);
         }
 
         if let Some(fix) = &self.violation.fix {
             if !help_text.is_empty() {
                 help_text.push_str("\n\n");
             }
-            help_text.push_str("Available fix: ");
-            help_text.push_str(&fix.explanation);
-
-            if fix.replacements.len() == 1 {
-                let replacement = &fix.replacements[0];
-                let source_str = self.source_code.inner();
-                let (start_line, _) = calculate_line_column(source_str, replacement.span.start);
-                let (end_line, _) = calculate_line_column(source_str, replacement.span.end);
-
-                if start_line == end_line {
-                    if let Some(diff) = format_single_line_diff(source_str, replacement, start_line) {
-                        help_text.push('\n');
-                        help_text.push_str(&diff);
-                    }
-                }
-            }
+            help_text.push_str(&format_fix_help(fix, self.source_code.inner()));
         }
 
         (!help_text.is_empty()).then(|| Box::new(help_text) as Box<dyn fmt::Display>)

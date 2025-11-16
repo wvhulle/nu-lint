@@ -11,8 +11,8 @@ let my_result = (^git status | complete)
 ";
 
     rule().assert_detects(bad_code);
-    rule().assert_suggestion_contains(bad_code, "my_result");
-    rule().assert_suggestion_contains(bad_code, "exit_code");
+    rule().assert_help_contains(bad_code, "my_result");
+    rule().assert_help_contains(bad_code, "exit_code");
 }
 
 #[test]
@@ -22,8 +22,8 @@ let result = (^make build | complete)
 ";
 
     rule().assert_detects(bad_code);
-    rule().assert_suggestion_contains(bad_code, "make");
-    rule().assert_suggestion_contains(bad_code, "result");
+    rule().assert_help_contains(bad_code, "make");
+    rule().assert_help_contains(bad_code, "result");
 }
 
 #[test]
@@ -33,9 +33,9 @@ mut fetch_output = (^curl https://example.com | complete)
 ";
 
     rule().assert_detects(bad_code);
-    rule().assert_suggestion_contains(bad_code, "fetch_output");
-    rule().assert_suggestion_contains(bad_code, "curl");
-    rule().assert_suggestion_contains(bad_code, "exit_code");
+    rule().assert_help_contains(bad_code, "fetch_output");
+    rule().assert_help_contains(bad_code, "curl");
+    rule().assert_help_contains(bad_code, "exit_code");
 }
 
 #[test]
@@ -44,8 +44,8 @@ fn test_suggestion_provides_inline_and_separate_check_examples() {
 let result = (^make build | complete)
 ";
 
-    rule().assert_suggestion_contains(bad_code, "if $result.exit_code");
-    rule().assert_suggestion_contains(bad_code, "inline");
+    rule().assert_help_contains(bad_code, "if $result.exit_code");
+    rule().assert_help_contains(bad_code, "inline");
 }
 
 #[test]
@@ -56,5 +56,5 @@ let status = (^systemctl is-active bluetooth.service | complete)
 
     rule().assert_detects(bad_code);
     // The violation message should mention the command
-    rule().assert_suggestion_contains(bad_code, "systemctl");
+    rule().assert_help_contains(bad_code, "systemctl");
 }

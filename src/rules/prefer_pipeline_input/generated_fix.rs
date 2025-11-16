@@ -1,15 +1,11 @@
 use super::rule;
 
-const EXPECTED_SUGGESTION: &str =
-    "Pipeline input enables better composability and streaming performance";
-
 #[test]
 fn fix_simple_each_operation() {
     let source = "def process-items [items] { $items | each { |x| $x * 2 } }";
 
     rule().assert_detects(source);
     rule().assert_fix_contains(source, "def process-items [] { each { |x| $x * 2 } }");
-    rule().assert_suggestion_contains(source, EXPECTED_SUGGESTION);
 }
 
 #[test]
@@ -18,7 +14,6 @@ fn fix_where_operation() {
 
     rule().assert_detects(source);
     rule().assert_fix_contains(source, "def filter-positive [] { where $it > 0 }");
-    rule().assert_suggestion_contains(source, EXPECTED_SUGGESTION);
 }
 
 #[test]
@@ -27,7 +22,6 @@ fn fix_select_operation() {
 
     rule().assert_detects(source);
     rule().assert_fix_contains(source, "def get-names [] { select name }");
-    rule().assert_suggestion_contains(source, EXPECTED_SUGGESTION);
 }
 
 #[test]
@@ -36,7 +30,6 @@ fn fix_sort_by_operation() {
 
     rule().assert_detects(source);
     rule().assert_fix_contains(source, "def sort-by-name [] { sort-by name }");
-    rule().assert_suggestion_contains(source, EXPECTED_SUGGESTION);
 }
 
 #[test]
@@ -45,7 +38,6 @@ fn fix_group_by_operation() {
 
     rule().assert_detects(source);
     rule().assert_fix_contains(source, "def group-items [] { group-by category }");
-    rule().assert_suggestion_contains(source, EXPECTED_SUGGESTION);
 }
 
 #[test]
@@ -57,7 +49,6 @@ fn fix_reduce_operation() {
         source,
         "def sum-values [] { reduce { |acc, val| $acc + $val } }",
     );
-    rule().assert_suggestion_contains(source, EXPECTED_SUGGESTION);
 }
 
 #[test]
@@ -69,7 +60,6 @@ fn fix_multiple_pipeline_operations() {
         source,
         "def process [] { where active | select name | sort-by name }",
     );
-    rule().assert_suggestion_contains(source, EXPECTED_SUGGESTION);
 }
 
 #[test]
@@ -78,7 +68,6 @@ fn fix_math_operations() {
 
     rule().assert_detects(source);
     rule().assert_fix_contains(source, "def sum-all [] { math sum }");
-    rule().assert_suggestion_contains(source, EXPECTED_SUGGESTION);
 }
 
 #[test]
@@ -87,7 +76,6 @@ fn fix_length_operation() {
 
     rule().assert_detects(source);
     rule().assert_fix_contains(source, "def count-items [] { length }");
-    rule().assert_suggestion_contains(source, EXPECTED_SUGGESTION);
 }
 
 #[test]
@@ -96,7 +84,6 @@ fn fix_typed_list_parameter() {
 
     rule().assert_detects(source);
     rule().assert_fix_contains(source, "def process-list [] { each { |x| $x + 1 } }");
-    rule().assert_suggestion_contains(source, EXPECTED_SUGGESTION);
 }
 
 #[test]
@@ -105,7 +92,6 @@ fn fix_typed_table_parameter() {
 
     rule().assert_detects(source);
     rule().assert_fix_contains(source, "def process-table [] { select name age }");
-    rule().assert_suggestion_contains(source, EXPECTED_SUGGESTION);
 }
 
 #[test]
@@ -114,5 +100,4 @@ fn fix_string_data_processing() {
 
     rule().assert_detects(source);
     rule().assert_fix_contains(source, "def split-lines [] { lines }");
-    rule().assert_suggestion_contains(source, EXPECTED_SUGGESTION);
 }

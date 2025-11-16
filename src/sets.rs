@@ -312,6 +312,7 @@ pub static DEFAULT_RULE_MAP: LazyLock<RuleMap> = LazyLock::new(|| RuleMap {
             LintLevel::Warn,
         ),
         ("prefer_builtin_cat".to_string(), LintLevel::Warn),
+        ("prefer_builtin_echo".to_string(), LintLevel::Warn),
         ("prefer_builtin_find".to_string(), LintLevel::Warn),
         ("prefer_builtin_grep".to_string(), LintLevel::Warn),
         ("prefer_builtin_head".to_string(), LintLevel::Warn),

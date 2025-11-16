@@ -414,10 +414,8 @@ fn generate_fix_code_full(
 }
 
 fn create_fix(full_code: String, param_name: &str, span: nu_protocol::Span) -> violation::Fix {
-    let explanation = format!(
-        "Use pipeline input ($in) instead of parameter (${}):\n  {}",
-        param_name, full_code
-    );
+    let explanation =
+        format!("Use pipeline input ($in) instead of parameter (${param_name}):\n  {full_code}");
     violation::Fix::with_explanation(
         explanation,
         vec![violation::Replacement::new(span, full_code)],

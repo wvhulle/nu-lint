@@ -6,7 +6,7 @@ fn fix_get_field_operation() {
 
     rule().assert_detects(source);
     rule().assert_fix_contains(source, "def get-field [field] { get $field }");
-    rule().assert_suggestion_contains(source, "Remove redundant $in");
+    rule().assert_help_contains(source, "Remove redundant $in");
 }
 
 #[test]
@@ -15,7 +15,7 @@ fn fix_select_operation() {
 
     rule().assert_detects(source);
     rule().assert_fix_contains(source, "def select-column [column] { select $column }");
-    rule().assert_suggestion_contains(source, "Remove redundant $in");
+    rule().assert_help_contains(source, "Remove redundant $in");
 }
 
 #[test]
@@ -27,7 +27,7 @@ fn fix_each_operation() {
         source,
         "def multiply [factor] { each { |x| $x * $factor } }",
     );
-    rule().assert_suggestion_contains(source, "Remove redundant $in");
+    rule().assert_help_contains(source, "Remove redundant $in");
 }
 
 #[test]
@@ -36,7 +36,7 @@ fn fix_no_parameters() {
 
     rule().assert_detects(source);
     rule().assert_fix_contains(source, "def process [] { where active }");
-    rule().assert_suggestion_contains(source, "Remove redundant $in");
+    rule().assert_help_contains(source, "Remove redundant $in");
 }
 
 #[test]
@@ -48,7 +48,7 @@ fn fix_complex_pipeline() {
         source,
         "def process [] { where active | select name | sort-by name }",
     );
-    rule().assert_suggestion_contains(source, "Remove redundant $in");
+    rule().assert_help_contains(source, "Remove redundant $in");
 }
 
 #[test]
@@ -57,7 +57,7 @@ fn fix_no_space_after_in() {
 
     rule().assert_detects(source);
     rule().assert_fix_contains(source, "def filter [] { where $it > 0 }");
-    rule().assert_suggestion_contains(source, "Remove redundant $in");
+    rule().assert_help_contains(source, "Remove redundant $in");
 }
 
 #[test]
@@ -66,7 +66,7 @@ fn fix_sort_by_operation() {
 
     rule().assert_detects(source);
     rule().assert_fix_contains(source, "def sort-by-field [field] { sort-by $field }");
-    rule().assert_suggestion_contains(source, "Remove redundant $in");
+    rule().assert_help_contains(source, "Remove redundant $in");
 }
 
 #[test]
@@ -75,5 +75,5 @@ fn fix_first_operation() {
 
     rule().assert_detects(source);
     rule().assert_fix_contains(source, "def take-first [n] { first $n }");
-    rule().assert_suggestion_contains(source, "Remove redundant $in");
+    rule().assert_help_contains(source, "Remove redundant $in");
 }

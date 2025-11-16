@@ -95,12 +95,6 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
          ignored."
     );
 
-    let suggestion = format!(
-        "Wrap in 'complete' and check exit code:\nlet result = ({pipeline_text} | complete)\nif \
-         $result.exit_code != 0 {{ error make {{ msg: $result.stderr }} }}\n$result.stdout\n\nOr \
-         enable experimental pipefail (Nushell 0.108.0+):\n$env.config.pipefail = true"
-    );
-
     let fix_text = format!(
         "let result = ({pipeline_text} | complete)\nif $result.exit_code != 0 {{ error make {{ \
          msg: $result.stderr }} }}\n$result.stdout"
@@ -117,7 +111,6 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
             message,
             first_element.expr.span,
         )
-        .with_help(suggestion)
         .with_fix(fix),
     )
 }

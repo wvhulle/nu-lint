@@ -17,9 +17,17 @@ Maybe useful for people who want to create editor integration:
 nu-lint --format json                      # Lint and output JSON
 ```
 
-## Slow build times
+## Cache invalidation between builds
 
-See what causes rebuild:
+If you notice rebuilds happening when switching between `cargo clippy`, `cargo test`, and `cargo run`, it's likely due to environment variable changes (especially `CC`, `CXX`, etc.).
+
+The `.envrc` file unsets compiler-related variables that can invalidate cargo's fingerprint cache. Make sure to reload your direnv environment:
+
+```bash
+direnv allow
+```
+
+If that does not work, have a look using this environment variable:
 
 ```bash
 CARGO_LOG=cargo::core::compiler::fingerprint=info cargo build

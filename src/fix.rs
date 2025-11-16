@@ -25,7 +25,7 @@ pub fn apply_fixes(violations: &[Violation], dry_run: bool) -> Result<Vec<FixRes
             apply_fix_to_file(&file_path, &file_violations, dry_run).ok()
         })
         .collect();
-    
+
     Ok(results)
 }
 

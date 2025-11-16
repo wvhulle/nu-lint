@@ -17,6 +17,7 @@ mod max_positional_params;
 mod missing_type_annotations;
 mod naming;
 
+mod nu_deprecated;
 mod nu_parse_error;
 
 mod prefer_complete_for_external_commands;
@@ -51,7 +52,7 @@ use spacing::{
 
 use crate::rule::Rule;
 
-pub const ALL_RULES: [Rule; 67] = [
+pub const ALL_RULES: [Rule; 68] = [
     check_complete_exit_code::rule(),
     collapsible_if::rule(),
     dangerous_file_operations::rule(),
@@ -79,6 +80,7 @@ pub const ALL_RULES: [Rule; 67] = [
     prefer_multiline_records::rule(),
     replace_by_builtin::echo::rule(),
     no_trailing_spaces::rule(),
+    nu_deprecated::rule(),
     nu_parse_error::rule(),
     omit_list_commas::rule(),
     prefer_complete_for_external_commands::rule(),

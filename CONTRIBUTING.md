@@ -17,6 +17,14 @@ Maybe useful for people who want to create editor integration:
 nu-lint --format json                      # Lint and output JSON
 ```
 
+## Slow build times
+
+See what causes rebuild:
+
+```bash
+CARGO_LOG=cargo::core::compiler::fingerprint=info cargo build
+```
+
 ## Adding new lints
 
 Use Nu shells AST command.

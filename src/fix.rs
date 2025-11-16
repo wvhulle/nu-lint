@@ -1,4 +1,6 @@
-use std::{collections::HashMap, fmt::Write, fs, path::PathBuf};
+use std::{collections::HashMap, fmt::Write, fs, io::Error as IoError, path::PathBuf};
+
+use similar::{ChangeTag, TextDiff};
 
 use crate::{LintError, violation::Violation};
 
@@ -17,29 +19,48 @@ pub struct FixResult {
 ///
 /// Returns an error if a file cannot be read or written
 pub fn apply_fixes(violations: &[Violation], dry_run: bool) -> Result<Vec<FixResult>, LintError> {
-    let violations_by_file = group_violations_by_file(violations);
-    let mut results = Vec::new();
+    let results = group_violations_by_file(violations)
+        .into_iter()
+        .filter_map(|(file_path, file_violations)| {
+            apply_fix_to_file(&file_path, &file_violations, dry_run).ok()
+        })
+        .collect();
+    
+    Ok(results)
+}
 
-    for (file_path, file_violations) in violations_by_file {
-        let original_content = fs::read_to_string(&file_path)?;
-        let fixed_content = apply_fixes_to_content(&original_content, &file_violations);
-        let fixes_applied = count_applicable_fixes(&file_violations);
+/// Apply fixes to a single file
+fn apply_fix_to_file(
+    file_path: &PathBuf,
+    file_violations: &[&Violation],
+    dry_run: bool,
+) -> Result<FixResult, IoError> {
+    let original_content = fs::read_to_string(file_path)?;
+    let fixed_content = apply_fixes_to_content(&original_content, file_violations);
+    let fixes_applied = count_applicable_fixes(file_violations);
 
-        if fixes_applied > 0 {
-            if !dry_run {
-                fs::write(&file_path, &fixed_content)?;
-            }
+    log::debug!(
+        "File: {}, Fixes: {}, Original len: {}, Fixed len: {}",
+        file_path.display(),
+        fixes_applied,
+        original_content.len(),
+        fixed_content.len()
+    );
 
-            results.push(FixResult {
-                file_path,
-                original_content,
-                fixed_content,
-                fixes_applied,
-            });
-        }
+    if fixes_applied == 0 {
+        return Err(IoError::other("No fixes to apply"));
     }
 
-    Ok(results)
+    if !dry_run {
+        fs::write(file_path, &fixed_content)?;
+    }
+
+    Ok(FixResult {
+        file_path: file_path.clone(),
+        original_content,
+        fixed_content,
+        fixes_applied,
+    })
 }
 
 /// Group violations by their file path
@@ -58,8 +79,6 @@ fn group_violations_by_file(violations: &[Violation]) -> HashMap<PathBuf, Vec<&V
 
 /// Apply fixes to source code content
 fn apply_fixes_to_content(content: &str, violations: &[&Violation]) -> String {
-    let content_bytes = content.as_bytes();
-
     // Collect all replacements from all violations
     let mut replacements = Vec::new();
     for violation in violations {
@@ -73,15 +92,21 @@ fn apply_fixes_to_content(content: &str, violations: &[&Violation]) -> String {
     }
 
     // Sort replacements by span start in reverse order to apply from end to start
+    // This ensures that earlier positions remain valid as we modify the string
     replacements.sort_by(|a, b| b.span.start.cmp(&a.span.start));
 
+    // Deduplicate replacements with identical spans
+    // This prevents applying the same fix multiple times
+    replacements.dedup_by(|a, b| a.span.start == b.span.start && a.span.end == b.span.end);
+
     let mut result = content.to_string();
+    let content_bytes = content.as_bytes();
 
     for replacement in replacements {
         let start = replacement.span.start;
         let end = replacement.span.end;
 
-        // Validate span bounds
+        // Validate span bounds against original content
         if start > content_bytes.len() || end > content_bytes.len() || start > end {
             log::warn!(
                 "Invalid replacement span: start={}, end={}, content_len={}",
@@ -92,7 +117,7 @@ fn apply_fixes_to_content(content: &str, violations: &[&Violation]) -> String {
             continue;
         }
 
-        // Apply the replacement
+        // Apply the replacement to the result string
         result.replace_range(start..end, &replacement.replacement_text);
     }
 
@@ -109,27 +134,98 @@ fn count_applicable_fixes(violations: &[&Violation]) -> usize {
 pub fn format_fix_results(results: &[FixResult], dry_run: bool) -> String {
     let mut output = String::new();
 
-    if dry_run {
-        output.push_str("The following files would be fixed:\n\n");
-    } else {
-        output.push_str("Fixed the following files:\n\n");
+    if results.is_empty() {
+        output.push_str("No fixable violations found.\n");
+        return output;
     }
 
-    for result in results {
+    if dry_run {
         writeln!(
             output,
-            "  {} ({} fixes)",
-            result.file_path.display(),
-            result.fixes_applied
+            "The following changes would be applied ({} file{}):\n",
+            results.len(),
+            if results.len() == 1 { "" } else { "s" }
         )
         .unwrap();
-    }
 
-    if results.is_empty() {
-        output.push_str("  No fixable violations found.\n");
+        for result in results {
+            writeln!(output, "File: {}", result.file_path.display()).unwrap();
+            writeln!(output, "Fixes to apply: {}\n", result.fixes_applied).unwrap();
+
+            // Generate and display unified diff
+            let diff = generate_diff(
+                &result.original_content,
+                &result.fixed_content,
+                &result.file_path,
+            );
+            output.push_str(&diff);
+            output.push('\n');
+        }
+    } else {
+        writeln!(
+            output,
+            "Fixed {} file{}:\n",
+            results.len(),
+            if results.len() == 1 { "" } else { "s" }
+        )
+        .unwrap();
+
+        for result in results {
+            writeln!(
+                output,
+                "  {} ({} fix{})",
+                result.file_path.display(),
+                result.fixes_applied,
+                if result.fixes_applied == 1 { "" } else { "es" }
+            )
+            .unwrap();
+        }
     }
 
     output
+}
+
+/// Generate a unified diff between original and fixed content
+fn generate_diff(original: &str, fixed: &str, _file_path: &PathBuf) -> String {
+    let diff = TextDiff::from_lines(original, fixed);
+    let mut output = String::new();
+
+    for (idx, group) in diff.grouped_ops(3).iter().enumerate() {
+        if idx > 0 {
+            writeln!(output, "{:-^1$}", "-", 80).unwrap();
+        }
+
+        for op in group {
+            write_diff_changes(&diff, op, &mut output);
+        }
+    }
+
+    if output.is_empty() {
+        "No changes\n".to_string()
+    } else {
+        output
+    }
+}
+
+/// Write diff changes for a single operation
+fn write_diff_changes(diff: &TextDiff<'_, '_, '_, str>, op: &similar::DiffOp, output: &mut String) {
+    for change in diff.iter_changes(op) {
+        let (sign, style) = match change.tag() {
+            ChangeTag::Delete => ("-", "\x1b[31m"), // Red
+            ChangeTag::Insert => ("+", "\x1b[32m"), // Green
+            ChangeTag::Equal => (" ", ""),
+        };
+
+        let line_number = change
+            .old_index()
+            .map_or("    ".to_string(), |idx| (idx + 1).to_string());
+
+        write!(output, "{style}{sign}{line_number:>4} {}", change.value()).unwrap();
+
+        if !style.is_empty() {
+            output.push_str("\x1b[0m"); // Reset color
+        }
+    }
 }
 
 #[cfg(test)]

@@ -7,7 +7,7 @@ keywords = ["nushell", "linter", "static-analysis", "code-quality", "shell"]
 license = "MIT"
 name = "nu-lint"
 repository = "https://github.com/wvhulle/nu-lint"
-version = "0.0.36"
+version = "0.0.37"
 
 
 [lints.clippy]
@@ -93,6 +93,7 @@ rayon = "1.10"
 regex = "1.10"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+similar = "2.6"
 thiserror = "1.0"
 toml = "0.8"
 

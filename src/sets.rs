@@ -305,6 +305,7 @@ pub static DEFAULT_RULE_MAP: LazyLock<RuleMap> = LazyLock::new(|| RuleMap {
         ("prefer_multiline_records".to_string(), LintLevel::Warn),
         ("never_use_echo".to_string(), LintLevel::Warn),
         ("no_trailing_spaces".to_string(), LintLevel::Warn),
+        ("nu_deprecated".to_string(), LintLevel::Warn),
         ("nu_parse_error".to_string(), LintLevel::Deny),
         ("omit_list_commas".to_string(), LintLevel::Warn),
         (

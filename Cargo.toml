@@ -93,7 +93,6 @@ rayon = "1.10"
 regex = "1.10"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-similar = { version = "2.6", features = ["inline"] }
 thiserror = "1.0"
 toml = "0.8"
 

@@ -2,7 +2,6 @@ use core::{error::Error, iter};
 use std::fmt;
 
 use miette::{Diagnostic, LabeledSpan, NamedSource, Report, SourceCode};
-use similar::{ChangeTag, TextDiff};
 
 use super::{Summary, read_source_code};
 use crate::violation::{Fix, Violation};
@@ -56,28 +55,28 @@ fn format_replacement_diff(source_code: &str, replacement: &crate::Replacement) 
         .get(replacement.span.start..replacement.span.end)
         .unwrap_or("");
 
-    let diff = TextDiff::from_lines(old_text, &replacement.replacement_text);
+    let old_lines: Vec<&str> = old_text.lines().collect();
+    let new_lines: Vec<&str> = replacement.replacement_text.lines().collect();
 
-    let mut output = String::new();
-    for change in diff.iter_all_changes() {
-        let sign = match change.tag() {
-            ChangeTag::Delete => "  - ",
-            ChangeTag::Insert => "  + ",
-            ChangeTag::Equal => "    ",
-        };
-        output.push_str(sign);
-        output.push_str(change.value());
-        if !change.value().ends_with('\n') {
-            output.push('\n');
-        }
+    if old_lines.len() > 1 || new_lines.len() > 1 {
+        let before = old_lines
+            .iter()
+            .map(|line| format!("  - {line}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let after = new_lines
+            .iter()
+            .map(|line| format!("  + {line}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        format!("{before}\n{after}")
+    } else {
+        format!(
+            "  - {}\n  + {}",
+            old_text.trim(),
+            replacement.replacement_text.trim()
+        )
     }
-
-    // Remove trailing newline
-    if output.ends_with('\n') {
-        output.pop();
-    }
-
-    output
 }
 
 fn format_fix_help(fix: &Fix, source_code: &str) -> String {

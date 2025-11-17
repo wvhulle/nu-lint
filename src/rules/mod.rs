@@ -37,6 +37,7 @@ mod prefer_where_over_for_if;
 mod print_exit_use_error_make;
 mod remove_redundant_in;
 mod replace_by_builtin;
+mod row_condition_above_closure;
 mod spacing;
 mod systemd_journal_prefix;
 mod unnecessary_mut;
@@ -52,7 +53,7 @@ use spacing::{
 
 use crate::rule::Rule;
 
-pub const ALL_RULES: [Rule; 68] = [
+pub const ALL_RULES: [Rule; 69] = [
     check_complete_exit_code::rule(),
     collapsible_if::rule(),
     dangerous_file_operations::rule(),
@@ -112,6 +113,7 @@ pub const ALL_RULES: [Rule; 68] = [
     prefer_where_over_each_if::rule(),
     prefer_where_over_for_if::rule(),
     remove_redundant_in::rule(),
+    row_condition_above_closure::rule(),
     screaming_snake_constants::rule(),
     snake_case_variables::rule(),
     spacing::brace_spacing::rule(),

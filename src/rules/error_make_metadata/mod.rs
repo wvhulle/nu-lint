@@ -172,7 +172,7 @@ fn check_error_make_metadata(
 
     Some(
         Violation::new(
-            "error_make_metadata",
+            "add_metadata_to_error",
             format!("error make call is missing metadata fields: {missing_list}"),
             call_span,
         )
@@ -208,7 +208,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
 pub const fn rule() -> Rule {
     Rule::new(
-        "error_make_metadata",
+        "add_metadata_to_error",
         "error make calls should include metadata fields like label and help for better error \
          context",
         check,

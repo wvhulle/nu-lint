@@ -35,10 +35,16 @@ CARGO_LOG=cargo::core::compiler::fingerprint=info cargo build
 
 ## Adding new lints
 
-Use Nu shells AST command.
+The first thing you might want to do for a new rule is investigate how Nu parses the fragment. Nu has a built-in command that allows you to interactively explore
 
 ```bash
-ast --json update-vscode-settings.nu | get block | from json | explore
+ast --json benches/fixtures/small_file.nu | get block | from json | explore
+```
+
+If you are using Bash (or Claude is calling Bash), call the Nu interpreter from a Bash shell to show a JSON representation. This JSON representation is easier to read:
+
+```bash
+nu -c 'ast --json benches/fixtures/small_file.nu | get block'
 ```
 
 ## Debugging

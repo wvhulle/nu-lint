@@ -39,60 +39,9 @@ fn naming_rule_set() -> RuleSet {
         name: "naming".to_string(),
         explanation: "Linting rules for naming conventions".to_string(),
         rules: HashSet::from([
-            "snake_case_variables".to_string(),
             "kebab_case_commands".to_string(),
             "screaming_snake_constants".to_string(),
-        ]),
-    }
-}
-
-fn idioms_rule_set() -> RuleSet {
-    RuleSet {
-        name: "idioms".to_string(),
-        explanation: "Linting rules for idiomatic Nushell expressions".to_string(),
-        rules: HashSet::from([
-            "prefer_builtin_ls".to_string(),
-            "prefer_parse_command".to_string(),
-            "prefer_where_over_each_if".to_string(),
-            "prefer_builtin_uniq".to_string(),
-            "prefer_builtin_http".to_string(),
-            "prefer_builtin_grep".to_string(),
-            "remove_redundant_in".to_string(),
-            "prefer_builtin_find".to_string(),
-            "prefer_lines_over_split".to_string(),
-            "prefer_builtin_cat".to_string(),
-            "prefer_compound_assignment".to_string(),
-            "unnecessary_ignore".to_string(),
-            "prefer_parse_over_each_split".to_string(),
-            "prefer_builtin_sed".to_string(),
-            "prefer_match_over_if_chain".to_string(),
-            "prefer_where_over_for_if".to_string(),
-            "prefer_builtin_head".to_string(),
-            "prefer_pipeline_input".to_string(),
-            "prefer_builtin_sort".to_string(),
-            "prefer_builtin_tail".to_string(),
-            "prefer_builtin_other".to_string(),
-            "never_use_echo".to_string(),
-            "prefer_is_not_empty".to_string(),
-            "prefer_range_iteration".to_string(),
-        ]),
-    }
-}
-
-fn pedantic_rule_set() -> RuleSet {
-    RuleSet {
-        name: "pedantic".to_string(),
-        explanation: "Strict linting for high code quality standards".to_string(),
-        rules: HashSet::from([
-            "forbid_excessive_nesting".to_string(),
-            "max_function_body_length".to_string(),
-            "max_positional_params".to_string(),
-            "inline_single_use_function".to_string(),
-            "unnecessary_variable_before_return".to_string(),
-            "collapsible_if".to_string(),
-            "unnecessary_mut".to_string(),
-            "unused_helper_functions".to_string(),
-            "prefer_direct_use".to_string(),
+            "snake_case_variables".to_string(),
         ]),
     }
 }
@@ -100,15 +49,16 @@ fn pedantic_rule_set() -> RuleSet {
 fn formatting_rule_set() -> RuleSet {
     RuleSet {
         name: "formatting".to_string(),
-        explanation: "Code formatting and style rules".to_string(),
+        explanation: "Check that code is formatted according to the official Nushell guidelines."
+            .to_string(),
         rules: HashSet::from([
-            "no_trailing_spaces".to_string(),
-            "prefer_multiline_lists".to_string(),
-            "pipe_spacing".to_string(),
-            "prefer_multiline_records".to_string(),
-            "omit_list_commas".to_string(),
-            "prefer_multiline_functions".to_string(),
             "brace_spacing".to_string(),
+            "no_trailing_spaces".to_string(),
+            "omit_list_commas".to_string(),
+            "pipe_spacing".to_string(),
+            "prefer_multiline_functions".to_string(),
+            "prefer_multiline_lists".to_string(),
+            "prefer_multiline_records".to_string(),
         ]),
     }
 }
@@ -118,14 +68,13 @@ fn error_handling_rule_set() -> RuleSet {
         name: "error-handling".to_string(),
         explanation: "Error handling best practices".to_string(),
         rules: HashSet::from([
-            "prefer_error_make_for_stderr".to_string(),
+            "add_metadata_to_error".to_string(),
+            "check_complete_exit_code".to_string(),
             "descriptive_error_messages".to_string(),
-            "print_exit_use_error_make".to_string(),
             "escape_string_interpolation_operators".to_string(),
             "prefer_complete_for_external_commands".to_string(),
-            "check_complete_exit_code".to_string(),
-            "error_make_metadata".to_string(),
-            "dangerous_file_operations".to_string(),
+            "prefer_error_make_for_stderr".to_string(),
+            "print_exit_use_error_make".to_string(),
         ]),
     }
 }
@@ -133,8 +82,9 @@ fn error_handling_rule_set() -> RuleSet {
 fn type_safety_rule_set() -> RuleSet {
     RuleSet {
         name: "type-safety".to_string(),
-        explanation: "Type annotation and safety rules".to_string(),
+        explanation: "Enforce explicit typing of variables and pipelines.".to_string(),
         rules: HashSet::from([
+            "external_script_as_argument".to_string(),
             "missing_type_annotation".to_string(),
             "prefer_path_type".to_string(),
             "typed_pipeline_io".to_string(),
@@ -142,22 +92,16 @@ fn type_safety_rule_set() -> RuleSet {
     }
 }
 
-fn code_quality_rule_set() -> RuleSet {
+fn side_effects_rule_set() -> RuleSet {
     RuleSet {
-        name: "code-quality".to_string(),
-        explanation: "General code quality and maintainability rules".to_string(),
+        name: "side-effects".to_string(),
+        explanation: "Side effects (or effects) are things commands do that escape the type \
+                      system, but happen often and may cause unexpected behavior."
+            .to_string(),
         rules: HashSet::from([
-            "forbid_excessive_nesting".to_string(),
-            "prefer_direct_use".to_string(),
-            "inline_single_use_function".to_string(),
-            "unnecessary_variable_before_return".to_string(),
-            "external_script_as_argument".to_string(),
-            "max_function_body_length".to_string(),
-            "exit_only_in_main".to_string(),
-            "max_positional_params".to_string(),
-            "collapsible_if".to_string(),
-            "unnecessary_mut".to_string(),
-            "unused_helper_functions".to_string(),
+            "mixed_io_types".to_string(),
+            "print_and_return_data".to_string(),
+            "pure_before_side_effects".to_string(),
         ]),
     }
 }
@@ -166,7 +110,12 @@ fn documentation_rule_set() -> RuleSet {
     RuleSet {
         name: "documentation".to_string(),
         explanation: "Documentation quality rules".to_string(),
-        rules: HashSet::from(["exported_function_docs".to_string()]),
+        rules: HashSet::from([
+            "exported_function_docs".to_string(),
+            "descriptive_error_messages".into(),
+            "main_positional_args_docs".to_string(),
+            "main_named_args_docs".to_string(),
+        ]),
     }
 }
 
@@ -175,69 +124,31 @@ fn performance_rule_set() -> RuleSet {
         name: "performance".to_string(),
         explanation: "Performance optimization hints".to_string(),
         rules: HashSet::from([
+            "prefer_builtin_cat".to_string(),
+            "prefer_builtin_echo".to_string(),
+            "prefer_builtin_find".to_string(),
+            "prefer_builtin_grep".to_string(),
+            "prefer_builtin_head".to_string(),
+            "prefer_builtin_http".to_string(),
+            "prefer_builtin_ls".to_string(),
+            "prefer_builtin_sed".to_string(),
+            "prefer_builtin_sort".to_string(),
+            "prefer_builtin_tail".to_string(),
+            "prefer_builtin_uniq".to_string(),
+            "prefer_compound_assignment".to_string(),
+            "prefer_direct_use".to_string(),
+            "prefer_is_not_empty".to_string(),
+            "prefer_lines_over_split".to_string(),
             "prefer_nushell_over_jq".to_string(),
-            "unused_output".to_string(),
-        ]),
-    }
-}
-
-fn recommended_rule_set() -> RuleSet {
-    RuleSet {
-        name: "recommended".to_string(),
-        explanation: "Recommended set of rules for most Nushell projects".to_string(),
-        rules: HashSet::from([
-            "snake_case_variables".to_string(),
-            "kebab_case_commands".to_string(),
-            "screaming_snake_constants".to_string(),
-            "prefer_builtin_ls".to_string(),
-            "prefer_builtin_grep".to_string(),
-            "prefer_builtin_find".to_string(),
-            "prefer_builtin_cat".to_string(),
-            "prefer_error_make_for_stderr".to_string(),
-            "print_exit_use_error_make".to_string(),
-            "escape_string_interpolation_operators".to_string(),
-            "exit_only_in_main".to_string(),
-            "never_use_echo".to_string(),
-            "remove_redundant_in".to_string(),
+            "prefer_parse_over_each_split".to_string(),
+            "prefer_parse_over_split_get".to_string(),
+            "prefer_pipeline_input".to_string(),
+            "prefer_range_iteration".to_string(),
             "prefer_where_over_each_if".to_string(),
-            "unnecessary_ignore".to_string(),
-            "pipe_spacing".to_string(),
-            "brace_spacing".to_string(),
-            "no_trailing_spaces".to_string(),
-            "missing_type_annotation".to_string(),
-            "typed_pipeline_io".to_string(),
-        ]),
-    }
-}
-
-fn strict_rule_set() -> RuleSet {
-    RuleSet {
-        name: "strict".to_string(),
-        explanation: "Strict ruleset with all recommended rules at deny level".to_string(),
-        rules: HashSet::from([
-            "snake_case_variables".to_string(),
-            "kebab_case_commands".to_string(),
-            "screaming_snake_constants".to_string(),
-            "prefer_builtin_ls".to_string(),
-            "prefer_builtin_grep".to_string(),
-            "prefer_builtin_find".to_string(),
-            "prefer_builtin_cat".to_string(),
-            "prefer_error_make_for_stderr".to_string(),
-            "print_exit_use_error_make".to_string(),
-            "escape_string_interpolation_operators".to_string(),
-            "exit_only_in_main".to_string(),
-            "never_use_echo".to_string(),
+            "prefer_where_over_for_if".to_string(),
+            "redundant_ignore".to_string(),
             "remove_redundant_in".to_string(),
-            "prefer_where_over_each_if".to_string(),
-            "unnecessary_ignore".to_string(),
-            "pipe_spacing".to_string(),
-            "brace_spacing".to_string(),
-            "no_trailing_spaces".to_string(),
-            "missing_type_annotation".to_string(),
-            "typed_pipeline_io".to_string(),
-            "forbid_excessive_nesting".to_string(),
-            "max_function_body_length".to_string(),
-            "max_positional_params".to_string(),
+            "unnecessary_variable_before_return".to_string(),
         ]),
     }
 }
@@ -246,28 +157,20 @@ fn systemd_rule_set() -> RuleSet {
     RuleSet {
         name: "systemd".to_string(),
         explanation: "Rules for systemd service scripts".to_string(),
-        rules: HashSet::from([
-            "systemd_journal_prefix".to_string(),
-            "prefer_error_make_for_stderr".to_string(),
-            "prefer_complete_for_external_commands".to_string(),
-        ]),
+        rules: HashSet::from(["systemd_journal_prefix".to_string()]),
     }
 }
 
 pub static BUILTIN_LINT_SETS: LazyLock<HashMap<&str, RuleSet>> = LazyLock::new(|| {
     HashMap::from([
-        ("naming", naming_rule_set()),
-        ("idioms", idioms_rule_set()),
-        ("pedantic", pedantic_rule_set()),
-        ("formatting", formatting_rule_set()),
-        ("error-handling", error_handling_rule_set()),
-        ("type-safety", type_safety_rule_set()),
-        ("code-quality", code_quality_rule_set()),
         ("documentation", documentation_rule_set()),
+        ("error-handling", error_handling_rule_set()),
+        ("formatting", formatting_rule_set()),
+        ("naming", naming_rule_set()),
         ("performance", performance_rule_set()),
-        ("recommended", recommended_rule_set()),
-        ("strict", strict_rule_set()),
+        ("side-effects", side_effects_rule_set()),
         ("systemd", systemd_rule_set()),
+        ("type-safety", type_safety_rule_set()),
     ])
 });
 
@@ -279,12 +182,12 @@ pub static DEFAULT_RULE_MAP: LazyLock<RuleMap> = LazyLock::new(|| RuleMap {
         ("collapsible_if".to_string(), LintLevel::Warn),
         ("dangerous_file_operations".to_string(), LintLevel::Warn),
         ("descriptive_error_messages".to_string(), LintLevel::Warn),
-        ("error_make_metadata".to_string(), LintLevel::Warn),
+        ("add_metadata_to_error".to_string(), LintLevel::Warn),
         (
             "escape_string_interpolation_operators".to_string(),
-            LintLevel::Warn,
+            LintLevel::Deny,
         ),
-        ("exit_only_in_main".to_string(), LintLevel::Warn),
+        ("exit_only_in_main".to_string(), LintLevel::Deny),
         ("unnecessary_ignore".to_string(), LintLevel::Warn),
         ("exported_function_docs".to_string(), LintLevel::Warn),
         ("main_positional_args_docs".to_string(), LintLevel::Warn),
@@ -303,9 +206,8 @@ pub static DEFAULT_RULE_MAP: LazyLock<RuleMap> = LazyLock::new(|| RuleMap {
         ("prefer_multiline_functions".to_string(), LintLevel::Warn),
         ("prefer_multiline_lists".to_string(), LintLevel::Warn),
         ("prefer_multiline_records".to_string(), LintLevel::Warn),
-        ("never_use_echo".to_string(), LintLevel::Warn),
         ("no_trailing_spaces".to_string(), LintLevel::Warn),
-        ("nu_deprecated".to_string(), LintLevel::Warn),
+        ("nu_deprecated".to_string(), LintLevel::Deny),
         ("nu_parse_error".to_string(), LintLevel::Deny),
         ("omit_list_commas".to_string(), LintLevel::Warn),
         (
@@ -326,13 +228,13 @@ pub static DEFAULT_RULE_MAP: LazyLock<RuleMap> = LazyLock::new(|| RuleMap {
         ("prefer_builtin_tail".to_string(), LintLevel::Warn),
         ("prefer_builtin_uniq".to_string(), LintLevel::Warn),
         ("prefer_compound_assignment".to_string(), LintLevel::Warn),
-        ("prefer_direct_use".to_string(), LintLevel::Warn),
+        ("prefer_direct_use".to_string(), LintLevel::Deny),
         ("prefer_error_make_for_stderr".to_string(), LintLevel::Warn),
         ("print_exit_use_error_make".to_string(), LintLevel::Warn),
         ("prefer_is_not_empty".to_string(), LintLevel::Warn),
         ("prefer_lines_over_split".to_string(), LintLevel::Warn),
         ("prefer_match_over_if_chain".to_string(), LintLevel::Warn),
-        ("prefer_parse_command".to_string(), LintLevel::Warn),
+        ("prefer_parse_over_split_get".to_string(), LintLevel::Warn),
         ("prefer_parse_over_each_split".to_string(), LintLevel::Warn),
         ("prefer_path_type".to_string(), LintLevel::Warn),
         ("prefer_pipeline_input".to_string(), LintLevel::Warn),
@@ -351,7 +253,7 @@ pub static DEFAULT_RULE_MAP: LazyLock<RuleMap> = LazyLock::new(|| RuleMap {
             LintLevel::Warn,
         ),
         ("unused_helper_functions".to_string(), LintLevel::Warn),
-        ("unused_output".to_string(), LintLevel::Warn),
+        ("redundant_ignore".to_string(), LintLevel::Warn),
     ]),
 });
 

@@ -1,5 +1,4 @@
 use super::rule;
-use crate::context::LintContext;
 
 #[test]
 fn test_error_make_missing_label_and_help() {
@@ -75,12 +74,5 @@ def process-items [items: list] {
 }
 "#;
 
-    LintContext::test_with_parsed_source(bad_code, |context| {
-        let violations = (rule().check)(&context);
-        assert!(
-            !violations.is_empty(),
-            "Should detect error make missing metadata in closure"
-        );
-        assert_eq!(violations[0].rule_id, "error_make_metadata");
-    });
+    rule().assert_detects(bad_code);
 }

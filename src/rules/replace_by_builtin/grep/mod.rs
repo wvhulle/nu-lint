@@ -33,9 +33,7 @@ fn get_builtin_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
     map
 }
 
-/// Grep option flags
 #[derive(Default)]
-
 struct GrepFlags {
     case_insensitive: bool,
     invert_match: bool,
@@ -70,17 +68,33 @@ impl GrepOptions {
                 "-E" | "--extended-regexp" => opts.extended_regex = true,
                 "-F" | "--fixed-strings" => opts.fixed_strings = true,
                 "-r" | "-R" | "--recursive" => opts.recursive = true,
-                // Skip unsupported options with values
                 "-A" | "--after-context" | "-B" | "--before-context" | "-C" | "--context"
                 | "-m" | "--max-count" => {
                     iter.next();
                 }
                 s if !s.starts_with('-') => Self::add_non_flag_arg(&mut opts, s),
+                s if s.starts_with('-') && s.len() > 2 && !s.starts_with("--") => {
+                    Self::parse_combined_flags(&mut opts, s);
+                }
                 _ => {}
             }
         }
 
         opts
+    }
+
+    fn parse_combined_flags(opts: &mut Self, flags: &str) {
+        flags.chars().skip(1).for_each(|c| match c {
+            'i' => opts.flags.case_insensitive = true,
+            'v' => opts.flags.invert_match = true,
+            'n' => opts.flags.line_number = true,
+            'c' => opts.flags.count = true,
+            'l' => opts.flags.files_with_matches = true,
+            'E' => opts.extended_regex = true,
+            'F' => opts.fixed_strings = true,
+            'r' | 'R' => opts.recursive = true,
+            _ => {}
+        });
     }
 
     fn add_non_flag_arg(opts: &mut Self, arg: &str) {
@@ -95,9 +109,15 @@ impl GrepOptions {
         let pattern = self.pattern.as_deref().unwrap_or("pattern");
         let clean_pattern = pattern.trim_matches('"').trim_matches('\'');
 
-        // For simple text search without special flags, use 'find'
-        // But if recursive or has files, use where with lines
-        if !self.flags.invert_match
+        if self.should_use_find() {
+            self.build_find_replacement(clean_pattern)
+        } else {
+            self.build_where_replacement(clean_pattern)
+        }
+    }
+
+    const fn should_use_find(&self) -> bool {
+        !self.flags.invert_match
             && !self.flags.line_number
             && !self.flags.count
             && !self.flags.files_with_matches
@@ -105,24 +125,24 @@ impl GrepOptions {
             && !self.fixed_strings
             && !self.recursive
             && self.files.is_empty()
-        {
-            let replacement = format!("find \"{clean_pattern}\"");
-            let description = self.build_find_description(clean_pattern);
-            return (replacement, description);
-        }
+    }
 
-        // For complex filtering, use 'where' with appropriate filters
-        let (filter_expr, examples) = self.build_where_filter(clean_pattern);
+    fn build_find_replacement(&self, pattern: &str) -> (String, String) {
+        let replacement = format!("find \"{pattern}\"");
+        let description = self.build_find_description(pattern);
+        (replacement, description)
+    }
+
+    fn build_where_replacement(&self, pattern: &str) -> (String, String) {
+        let (filter_expr, examples) = self.build_where_filter(pattern);
 
         let replacement = if self.files.is_empty() {
             format!("lines | {filter_expr}")
         } else {
-            // When files are involved, suggest using open with pipes
             format!("open {} | lines | {filter_expr}", self.files.join(" "))
         };
 
-        let description = self.build_where_description(clean_pattern, &examples);
-
+        let description = self.build_where_description(pattern, &examples);
         (replacement, description)
     }
 
@@ -247,4 +267,8 @@ pub const fn rule() -> Rule {
 }
 
 #[cfg(test)]
-mod tests;
+mod detect_bad;
+#[cfg(test)]
+mod generated_fix;
+#[cfg(test)]
+mod ignore_good;

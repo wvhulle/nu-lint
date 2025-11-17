@@ -1,27 +1,45 @@
 use nu_protocol::{
     Span, VarId,
-    ast::{Block, Expr, Expression, Pipeline},
+    ast::{Block, Call, Expr, Expression, Pipeline},
 };
 
-use crate::{ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation};
+use crate::{
+    ast::{call::CallExt, expression::ExpressionExt},
+    context::LintContext,
+    rule::Rule,
+    violation::{Fix, Replacement, Violation},
+};
 
-/// Extract variable declaration from a `let` statement  
-fn extract_let_declaration(
-    expr: &Expression,
+struct LetDeclaration<'a> {
+    var_id: VarId,
+    var_name: String,
+    span: Span,
+    call: &'a Call,
+}
+
+fn extract_let_declaration<'a>(
+    expr: &'a Expression,
     context: &LintContext,
-) -> Option<(VarId, String, Span)> {
+) -> Option<LetDeclaration<'a>> {
     let Expr::Call(call) = &expr.expr else {
         return None;
     };
 
-    // Only check for 'let', not 'mut' - mut variables may be modified before return
     if !call.is_call_to_command("let", context) {
         return None;
     }
 
-    // Use the helper but return the full expression span (the let statement)
     let (var_id, var_name, _var_span) = call.extract_variable_declaration(context)?;
-    Some((var_id, var_name, expr.span))
+    Some(LetDeclaration {
+        var_id,
+        var_name,
+        span: expr.span,
+        call,
+    })
+}
+
+fn extract_value_from_let(call: &Call) -> Option<&Expression> {
+    call.get_positional_arg(1)
 }
 
 /// Check if an expression is just a variable reference
@@ -66,31 +84,42 @@ fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<Violat
 
         let element = &current_pipeline.elements[0];
 
-        // Try to extract a let declaration
-        let Some((var_id, var_name, decl_span)) = extract_let_declaration(&element.expr, context)
-        else {
+        let Some(let_decl) = extract_let_declaration(&element.expr, context) else {
             continue;
         };
 
-        // Check if the next pipeline is just a reference to the same variable
-        if let Some(ref_span) = is_simple_var_reference(next_pipeline, var_id) {
+        if let Some(ref_span) = is_simple_var_reference(next_pipeline, let_decl.var_id) {
             log::debug!(
-                "Found unnecessary variable pattern: let {var_name} = ... followed by ${var_name}"
+                "Found unnecessary variable pattern: let {} = ... followed by ${}",
+                let_decl.var_name,
+                let_decl.var_name
             );
-            let combined_span = Span::new(decl_span.start, ref_span.end);
+            let combined_span = Span::new(let_decl.span.start, ref_span.end);
+
+            let value_expr = extract_value_from_let(let_decl.call);
+            let replacement_text = value_expr
+                .map(|expr| expr.span_text(context).to_string())
+                .unwrap_or_default();
+
+            let fix = Fix::with_explanation(
+                format!("Return expression directly: {replacement_text}"),
+                vec![Replacement::new(combined_span, replacement_text)],
+            );
 
             violations.push(
                 Violation::new(
                     "unnecessary_variable_before_return",
                     format!(
-                        "Variable '{var_name}' is assigned and immediately returned - consider \
-                         returning the expression directly"
+                        "Variable '{}' is assigned and immediately returned - consider returning \
+                         the expression directly",
+                        let_decl.var_name
                     ),
                     combined_span,
                 )
                 .with_help(
                     "Return the expression directly instead of assigning to a variable first",
-                ),
+                )
+                .with_fix(fix),
             );
         }
     }

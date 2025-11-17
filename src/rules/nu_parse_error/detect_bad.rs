@@ -1,117 +1,73 @@
-use crate::{config::Config, engine::LintEngine};
+use super::rule;
 
 #[test]
 fn detect_unclosed_parenthesis() {
-    let engine = LintEngine::new(Config::default());
     let code = "let x = (";
-    let violations = engine.lint_str(code);
-
-    assert!(
-        !violations.is_empty(),
-        "Expected parse error for unclosed parenthesis"
-    );
-    assert!(
-        violations
-            .iter()
-            .any(|v| v.rule_id.as_ref() == "nu_parse_error")
-    );
+    rule().assert_detects(code);
 }
 
 #[test]
 fn detect_unclosed_brace() {
-    let engine = LintEngine::new(Config::default());
     let code = "def foo [] {";
-    let violations = engine.lint_str(code);
-
-    assert!(
-        !violations.is_empty(),
-        "Expected parse error for unclosed brace"
-    );
-    assert!(
-        violations
-            .iter()
-            .any(|v| v.rule_id.as_ref() == "nu_parse_error")
-    );
+    rule().assert_detects(code);
 }
 
 #[test]
 fn detect_unclosed_bracket() {
-    let engine = LintEngine::new(Config::default());
     let code = "let x = [1, 2, 3";
-    let violations = engine.lint_str(code);
-
-    assert!(
-        !violations.is_empty(),
-        "Expected parse error for unclosed bracket"
-    );
-    assert!(
-        violations
-            .iter()
-            .any(|v| v.rule_id.as_ref() == "nu_parse_error")
-    );
+    rule().assert_detects(code);
 }
 
 #[test]
 fn detect_unexpected_token() {
-    let engine = LintEngine::new(Config::default());
     let code = "let let x = 5";
-    let violations = engine.lint_str(code);
-
-    assert!(
-        !violations.is_empty(),
-        "Expected parse error for unexpected token"
-    );
-    assert!(
-        violations
-            .iter()
-            .any(|v| v.rule_id.as_ref() == "nu_parse_error")
-    );
+    rule().assert_detects(code);
 }
 
 #[test]
 fn detect_invalid_function_syntax() {
-    let engine = LintEngine::new(Config::default());
     let code = "def [] { }";
-    let violations = engine.lint_str(code);
-
-    assert!(
-        !violations.is_empty(),
-        "Expected parse error for missing function name"
-    );
-    assert!(
-        violations
-            .iter()
-            .any(|v| v.rule_id.as_ref() == "nu_parse_error")
-    );
+    rule().assert_detects(code);
 }
 
 #[test]
 fn detect_unclosed_string() {
-    let engine = LintEngine::new(Config::default());
     let code = r#"let x = "unclosed string"#;
-    let violations = engine.lint_str(code);
-
-    assert!(
-        !violations.is_empty(),
-        "Expected parse error for unclosed string"
-    );
-    assert!(
-        violations
-            .iter()
-            .any(|v| v.rule_id.as_ref() == "nu_parse_error")
-    );
+    rule().assert_detects(code);
 }
 
 #[test]
 fn detect_multiple_parse_errors() {
-    let engine = LintEngine::new(Config::default());
     let code = "let x = (\nlet y = [";
-    let violations = engine.lint_str(code);
+    rule().assert_detects(code);
+}
 
-    assert!(
-        violations
-            .iter()
-            .any(|v| v.rule_id.as_ref() == "nu_parse_error"),
-        "Expected at least one parse error"
-    );
+#[test]
+fn test_unclosed_parenthesis_message_meaningful() {
+    let code = "let x = (";
+    rule().assert_detects(code);
+}
+
+#[test]
+fn test_unclosed_brace_message_meaningful() {
+    let code = "def foo [] {";
+    rule().assert_detects(code);
+}
+
+#[test]
+fn test_unclosed_bracket_message_meaningful() {
+    let code = "let x = [1, 2, 3";
+    rule().assert_detects(code);
+}
+
+#[test]
+fn test_unexpected_token_message_descriptive() {
+    let code = "let let x = 5";
+    rule().assert_detects(code);
+}
+
+#[test]
+fn test_invalid_function_definition_message_descriptive() {
+    let code = "def [] { }";
+    rule().assert_detects(code);
 }

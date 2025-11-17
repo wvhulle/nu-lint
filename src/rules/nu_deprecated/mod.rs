@@ -3,24 +3,15 @@ use nu_protocol::ParseWarning;
 use crate::{context::LintContext, rule::Rule, violation::Violation};
 
 fn check(context: &LintContext) -> Vec<Violation> {
-    // Iterate over parse warnings and convert deprecation warnings to violations
     context
         .working_set
         .parse_warnings
         .iter()
         .map(|warning| {
             let ParseWarning::Deprecated {
-                dep_type,
-                label,
-                span,
-                help,
-                ..
+                label, span, help, ..
             } = warning;
-            let mut violation = Violation::new(
-                "nu_deprecated",
-                format!("{dep_type} deprecated: {label}"),
-                *span,
-            );
+            let mut violation = Violation::new("nu_deprecated", label.clone(), *span);
             if let Some(help_text) = help {
                 violation = violation.with_help(help_text.clone());
             }
@@ -39,5 +30,7 @@ pub const fn rule() -> Rule {
 
 #[cfg(test)]
 mod detect_bad;
+#[cfg(test)]
+mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

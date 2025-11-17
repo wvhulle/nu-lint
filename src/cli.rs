@@ -1,4 +1,5 @@
 use std::{
+    borrow::Cow,
     fs,
     io::{self, BufRead},
     path::PathBuf,
@@ -21,6 +22,10 @@ use crate::{
 #[command(name = "nu-lint")]
 #[command(about = "A linter for Nushell scripts", long_about = None)]
 #[command(version)]
+#[command(
+    after_help = "STDIN:\n  If no paths are provided and stdin is not a terminal, nu-lint will \
+                  read and lint code from stdin.\n  Example: echo 'let x = 5' | nu-lint"
+)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Option<Commands>,
@@ -233,6 +238,23 @@ fn lint_files_sequential(engine: &LintEngine, files: &[PathBuf]) -> (Vec<Violati
     }
 
     (all_violations, has_errors)
+}
+
+/// Lint content from stdin
+#[must_use]
+pub fn lint_stdin(engine: &LintEngine, source: &str) -> (Vec<Violation>, bool) {
+    let mut violations = engine.lint_str(source);
+
+    // Mark all violations as coming from stdin and store the source
+    let stdin_marker: Cow<'static, str> = "<stdin>".to_owned().into();
+    let source_content: Cow<'static, str> = source.to_owned().into();
+
+    for violation in &mut violations {
+        violation.file = Some(stdin_marker.clone());
+        violation.source = Some(source_content.clone());
+    }
+
+    (violations, false)
 }
 
 /// Format and output linting results

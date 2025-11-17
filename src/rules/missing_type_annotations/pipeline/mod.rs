@@ -92,6 +92,7 @@ fn generate_typed_signature(
     uses_in: bool,
     needs_input_type: bool,
     needs_output_type: bool,
+    original_sig_span: Span,
 ) -> String {
     let has_no_params = signature.required_positional.is_empty()
         && signature.optional_positional.is_empty()
@@ -102,8 +103,15 @@ fn generate_typed_signature(
          uses_in={uses_in}, needs_input_type={needs_input_type}, \
          needs_output_type={needs_output_type}"
     );
+
+    let original_sig_text = original_sig_span.text(ctx);
+    let is_multiline = has_multiline_parameters(original_sig_text);
+
     let params_text = if has_no_params {
         String::new()
+    } else if is_multiline {
+        // Preserve multiline formatting - extract parameters from original text
+        extract_parameters_from_original(original_sig_text)
     } else {
         extract_parameters_text(signature)
     };
@@ -122,9 +130,32 @@ fn generate_typed_signature(
         Type::Any
     };
 
-    match (needs_input_type, needs_output_type) {
-        (false, false) => format!("[{params_text}]"),
-        _ => format!("[{params_text}]: {input_type} -> {output_type}"),
+    if needs_input_type || needs_output_type {
+        format!("[{params_text}]: {input_type} -> {output_type}")
+    } else {
+        format!("[{params_text}]")
+    }
+}
+
+fn extract_parameters_from_original(sig_text: &str) -> String {
+    if let Some(start) = sig_text.find('[')
+        && let Some(end) = sig_text.rfind(']')
+        && start < end
+    {
+        sig_text[start + 1..end].to_string()
+    } else {
+        sig_text.to_string()
+    }
+}
+
+fn has_multiline_parameters(sig_text: &str) -> bool {
+    if let Some(start) = sig_text.find('[')
+        && let Some(end) = sig_text.rfind(']')
+        && start < end
+    {
+        sig_text[start + 1..end].contains('\n')
+    } else {
+        false
     }
 }
 
@@ -226,6 +257,7 @@ fn check_def_call(call: &Call, ctx: &LintContext) -> Vec<Violation> {
         uses_in,
         needs_input_type,
         needs_output_type,
+        sig_span,
     );
 
     let fix = Fix::with_explanation(

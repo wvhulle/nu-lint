@@ -396,3 +396,61 @@ def complex_script [] {
 ";
     rule().assert_replacement_contains(bad_code, "[]: nothing -> nothing");
 }
+
+#[test]
+fn test_preserves_multiline_function_signature() {
+    instrument();
+    let bad_code = r"
+def calculate-brightness [
+  current: float
+  times: record
+  --min: float
+  --max: float
+  --offset: int
+] {
+  let offset_hours = $offset / 60.0
+  let dawn = ($times.dawn | time-to-hours) + $offset_hours
+  $dawn
+}
+";
+    // Should preserve the multiline formatting with newlines and indentation
+    rule().assert_replacement_contains(bad_code, "\n  current: float\n");
+    rule().assert_replacement_contains(bad_code, "\n  times: record\n");
+    rule().assert_replacement_contains(bad_code, "\n  --min: float\n");
+    rule().assert_replacement_contains(bad_code, "\n  --max: float\n");
+    rule().assert_replacement_contains(bad_code, "\n  --offset: int\n");
+}
+
+#[test]
+fn test_preserves_multiline_with_optional_params() {
+    instrument();
+    let bad_code = r"
+export def process-data [
+  input: string
+  output: string
+  --verbose: bool
+  --format: string
+] {
+  $input | parse
+}
+";
+    // Should preserve the multiline formatting
+    rule().assert_replacement_contains(bad_code, "\n  input: string\n");
+    rule().assert_replacement_contains(bad_code, "\n  output: string\n");
+    rule().assert_replacement_contains(bad_code, "\n  --verbose: bool\n");
+    rule().assert_replacement_contains(bad_code, "\n  --format: string\n");
+    rule().assert_replacement_contains(bad_code, "nothing -> table");
+}
+
+#[test]
+fn test_single_line_signature_stays_single_line() {
+    instrument();
+    let bad_code = r"
+def transform [data: string, options: record] {
+    $data | str trim
+}
+";
+    // Should keep single-line format
+    rule().assert_replacement_contains(bad_code, "[data: string, options: record]:");
+    rule().assert_replacement_contains(bad_code, "nothing -> string");
+}

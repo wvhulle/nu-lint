@@ -254,6 +254,7 @@ mod tests {
             help: None,
             fix: Some(fix),
             file: Some(Cow::Borrowed("test.nu")),
+            source: None,
         };
 
         let fixed = apply_fixes_to_content(content, &[&violation]);
@@ -277,6 +278,7 @@ mod tests {
             help: None,
             fix: Some(fix),
             file: Some(Cow::Borrowed("test.nu")),
+            source: None,
         };
 
         let fixed = apply_fixes_to_content(content, &[&violation]);
@@ -305,6 +307,7 @@ mod tests {
             help: None,
             fix: Some(fix1),
             file: Some(Cow::Borrowed("test.nu")),
+            source: None,
         };
 
         let violation2 = Violation {
@@ -315,6 +318,7 @@ mod tests {
             help: None,
             fix: Some(fix2),
             file: Some(Cow::Borrowed("test.nu")),
+            source: None,
         };
 
         let violation3 = Violation {
@@ -325,6 +329,7 @@ mod tests {
             help: None,
             fix: Some(fix3),
             file: Some(Cow::Borrowed("test.nu")),
+            source: None,
         };
 
         let fixed = apply_fixes_to_content(content, &[&violation1, &violation2, &violation3]);
@@ -349,6 +354,7 @@ mod tests {
             help: None,
             fix: Some(fix),
             file: Some(Cow::Borrowed("test.nu")),
+            source: None,
         };
 
         let fixed = apply_fixes_to_content(content, &[&violation]);
@@ -378,6 +384,7 @@ mod tests {
             help: None,
             fix: Some(fix1),
             file: Some(Cow::Borrowed("test.nu")),
+            source: None,
         };
 
         let violation2 = Violation {
@@ -388,6 +395,7 @@ mod tests {
             help: None,
             fix: Some(fix2),
             file: Some(Cow::Borrowed("test.nu")),
+            source: None,
         };
 
         let fixed = apply_fixes_to_content(content, &[&violation1, &violation2]);
@@ -424,6 +432,7 @@ mod tests {
             help: None,
             fix: Some(fix1),
             file: Some(Cow::Borrowed("test.nu")),
+            source: None,
         };
 
         let v2 = Violation {
@@ -434,6 +443,7 @@ mod tests {
             help: None,
             fix: Some(fix2),
             file: Some(Cow::Borrowed("test.nu")),
+            source: None,
         };
 
         let v3 = Violation {
@@ -444,6 +454,7 @@ mod tests {
             help: None,
             fix: Some(fix3),
             file: Some(Cow::Borrowed("test.nu")),
+            source: None,
         };
 
         let v4 = Violation {
@@ -454,6 +465,7 @@ mod tests {
             help: None,
             fix: Some(fix4),
             file: Some(Cow::Borrowed("test.nu")),
+            source: None,
         };
 
         // Pass violations in order, but they should be applied in reverse
@@ -472,6 +484,7 @@ mod tests {
             help: None,
             fix: None,
             file: Some(Cow::Borrowed("test.nu")),
+            source: None,
         };
 
         let fixed = apply_fixes_to_content(content, &[&violation]);
@@ -490,6 +503,7 @@ mod tests {
             help: None,
             fix: Some(fix),
             file: Some(Cow::Borrowed("test.nu")),
+            source: None,
         };
 
         let without_fix = Violation {
@@ -500,6 +514,7 @@ mod tests {
             help: None,
             fix: None,
             file: Some(Cow::Borrowed("test.nu")),
+            source: None,
         };
 
         let violations = vec![&with_fix, &without_fix, &with_fix];
@@ -516,6 +531,7 @@ mod tests {
             help: None,
             fix: None,
             file: Some(Cow::Borrowed("file1.nu")),
+            source: None,
         };
 
         let v2 = Violation {
@@ -526,6 +542,7 @@ mod tests {
             help: None,
             fix: None,
             file: Some(Cow::Borrowed("file2.nu")),
+            source: None,
         };
 
         let v3 = Violation {
@@ -536,6 +553,7 @@ mod tests {
             help: None,
             fix: None,
             file: Some(Cow::Borrowed("file1.nu")),
+            source: None,
         };
 
         let violations = vec![v1, v2, v3];

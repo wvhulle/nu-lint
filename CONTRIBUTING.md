@@ -2,21 +2,6 @@
 
 Contributions are welcome.
 
-## Ideas
-
-Ideas for future improvements:
-
-- Editor plugins such a VS Code extension
-- Use external parsers for DSLs such as `jq`
-- A lint plugin for Nu shell command line itself
-- Better fix suggestions
-
-Maybe useful for people who want to create editor integration:
-
-```bash
-nu-lint --format json                      # Lint and output JSON
-```
-
 ## Cache invalidation between builds
 
 If you notice rebuilds happening when switching between `cargo clippy`, `cargo test`, and `cargo run`, it's likely due to environment variable changes (especially `CC`, `CXX`, etc.).
@@ -46,6 +31,12 @@ If you are using Bash (or Claude is calling Bash), call the Nu interpreter from 
 ```bash
 nu -c 'ast --json benches/fixtures/small_file.nu | get block'
 ```
+
+Please follow a somewhat predictable test file structure. Currently the convention is to have three different test files for each new rule:
+
+- `detect_bad.rs`: for the `assert_detects` assertions
+- `ignore_good.rs`: for the `assert_ignores` assertions
+- `generated_fix.rs`: for assertions about the contents of the replacement text or help text (optional if it is too hard to provide fixes, but recommended)
 
 ## Debugging
 

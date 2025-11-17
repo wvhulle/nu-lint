@@ -74,6 +74,7 @@ Basic:
 nu-lint                                    # Lint working directory
 nu-lint script.nu                          # Lint a file
 nu-lint directory/                         # Lint directory
+'let x =' | nu-lint                   # Pipe in over stdin
 ```
 
 Apply fixes:

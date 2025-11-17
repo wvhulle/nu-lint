@@ -27,7 +27,11 @@ pub fn format_text(violations: &[Violation]) -> String {
 }
 
 fn format_violation_text(violation: &Violation, add_separator: bool) -> String {
-    let source_code = read_source_code(violation.file.as_ref());
+    // Use source from violation if available (stdin), otherwise read from file
+    let source_code = violation.source.as_ref().map_or_else(
+        || read_source_code(violation.file.as_ref()),
+        ToString::to_string,
+    );
 
     let named_source = violation.file.as_ref().map_or_else(
         || NamedSource::new("<stdin>", source_code.clone()),
@@ -126,13 +130,9 @@ impl Diagnostic for ViolationDiagnostic {
     }
 
     fn help<'a>(&'a self) -> Option<Box<dyn fmt::Display + 'a>> {
-        const MAX_LABEL_LENGTH: usize = 150;
-
         let mut help_text = String::new();
 
-        if let Some(help) = &self.violation.help
-            && help.len() > MAX_LABEL_LENGTH
-        {
+        if let Some(help) = &self.violation.help {
             help_text.push_str(help);
         }
 
@@ -147,20 +147,8 @@ impl Diagnostic for ViolationDiagnostic {
     }
 
     fn labels(&self) -> Option<Box<dyn Iterator<Item = LabeledSpan> + '_>> {
-        const MAX_LABEL_LENGTH: usize = 150;
-
         let span = self.violation.to_source_span();
-
-        let label_text = self.violation.help.as_ref().map_or_else(
-            || self.violation.message.to_string(),
-            |help| {
-                if self.violation.fix.is_none() && help.len() <= MAX_LABEL_LENGTH {
-                    help.to_string()
-                } else {
-                    self.violation.message.to_string()
-                }
-            },
-        );
+        let label_text = self.violation.message.to_string();
 
         Some(Box::new(iter::once(LabeledSpan::new(
             Some(label_text),

@@ -62,6 +62,10 @@ pub struct Violation {
     pub fix: Option<Fix>,
 
     pub(crate) file: Option<Cow<'static, str>>,
+
+    /// Optional source code content (used for stdin or when file is not
+    /// accessible)
+    pub(crate) source: Option<Cow<'static, str>>,
 }
 
 impl Violation {
@@ -82,6 +86,7 @@ impl Violation {
             help: None,
             fix: None,
             file: None,
+            source: None,
         }
     }
 

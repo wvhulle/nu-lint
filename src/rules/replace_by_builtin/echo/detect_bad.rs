@@ -56,5 +56,5 @@ fn test_detect_multiple_echo_uses() {
 echo "first"
 echo "second"
 "#;
-    rule().assert_violation_count_exact(bad_code, 2);
+    rule().assert_count(bad_code, 2);
 }

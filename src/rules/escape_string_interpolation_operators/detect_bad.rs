@@ -27,7 +27,7 @@ def write_sysfs [path: string, value: string] {
 }
 "#;
 
-    rule.assert_violation_count_exact(code, 1);
+    rule.assert_count(code, 1);
 }
 
 #[test]
@@ -59,7 +59,7 @@ def test [] {
 "#;
 
     rule.assert_detects(code);
-    rule.assert_violation_count_exact(code, 1); // One string with multiple violations is still one violation
+    rule.assert_count(code, 1); // One string with multiple violations is still one violation
 }
 
 #[test]
@@ -106,7 +106,7 @@ def test_errors [] {
 "#;
 
     rule.assert_detects(code);
-    rule.assert_violation_count_exact(code, 3);
+    rule.assert_count(code, 3);
 }
 
 #[test]
@@ -172,5 +172,5 @@ def fix_file [file: string] {
 "#;
 
     rule.assert_detects(code);
-    rule.assert_violation_count_exact(code, 1);
+    rule.assert_count(code, 1);
 }

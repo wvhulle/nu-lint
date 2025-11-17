@@ -11,7 +11,7 @@ def process-file [file: string] {
 "#;
 
     rule().assert_detects(bad_code);
-    rule().assert_violation_count_exact(bad_code, 1);
+    rule().assert_count(bad_code, 1);
 }
 
 #[test]
@@ -25,7 +25,7 @@ def convert-data [input] {
 "#;
 
     rule().assert_detects(bad_code);
-    rule().assert_violation_count_exact(bad_code, 1);
+    rule().assert_count(bad_code, 1);
 }
 
 #[test]
@@ -37,5 +37,5 @@ def validate [data] {
 "#;
 
     rule().assert_detects(bad_code);
-    rule().assert_violation_count_exact(bad_code, 1);
+    rule().assert_count(bad_code, 1);
 }

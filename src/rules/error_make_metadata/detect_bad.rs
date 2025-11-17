@@ -10,7 +10,7 @@ def validate [input: string] {
 }
 "#;
 
-    rule().assert_violation_count_exact(bad_code, 1);
+    rule().assert_count(bad_code, 1);
 }
 
 #[test]
@@ -25,7 +25,7 @@ def process [data] {
 "#;
 
     rule().assert_detects(bad_code);
-    rule().assert_violation_count_exact(bad_code, 1);
+    rule().assert_count(bad_code, 1);
 }
 
 #[test]
@@ -42,7 +42,7 @@ def check [value: int] {
 "#;
 
     rule().assert_detects(bad_code);
-    rule().assert_violation_count_exact(bad_code, 1);
+    rule().assert_count(bad_code, 1);
 }
 
 #[test]
@@ -59,7 +59,7 @@ def validate-all [a: int, b: int] {
 "#;
 
     rule().assert_detects(bad_code);
-    rule().assert_violation_count_exact(bad_code, 2);
+    rule().assert_count(bad_code, 2);
 }
 
 #[test]

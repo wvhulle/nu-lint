@@ -10,8 +10,7 @@ def bad-func [] {
 }
 "#;
 
-    rule().assert_violation_count(bad_code, 3);
-    rule().assert_violation_count_exact(bad_code, 3);
+    rule().assert_count(bad_code, 3);
 }
 
 #[test]
@@ -24,7 +23,7 @@ def bad-func [] {
 }
 ";
 
-    rule().assert_violation_count_exact(bad_code, 2);
+    rule().assert_count(bad_code, 2);
 }
 
 #[test]
@@ -39,7 +38,7 @@ def shadow-test [] {
 }
 ";
 
-    rule().assert_violation_count(bad_code, 3);
+    rule().assert_count(bad_code, 3);
 }
 
 #[test]
@@ -53,5 +52,5 @@ def test-func [] {
 }
 "#;
 
-    rule().assert_violation_count_exact(bad_code, 4);
+    rule().assert_count(bad_code, 4);
 }

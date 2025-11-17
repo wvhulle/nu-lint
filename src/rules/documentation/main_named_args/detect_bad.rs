@@ -7,7 +7,7 @@ def main [--verbose] {
     if $verbose { print "Verbose mode" }
 }
 "#;
-    rule().assert_violation_count_exact(source, 1);
+    rule().assert_count(source, 1);
 }
 
 #[test]
@@ -17,7 +17,7 @@ def main [--verbose (-v)] {
     if $verbose { print "Verbose mode" }
 }
 "#;
-    rule().assert_violation_count_exact(source, 1);
+    rule().assert_count(source, 1);
 }
 
 #[test]
@@ -29,7 +29,7 @@ def main [--verbose --debug --output: string] {
     print $output
 }
 "#;
-    rule().assert_violation_count_exact(source, 3);
+    rule().assert_count(source, 3);
 }
 
 #[test]
@@ -39,7 +39,7 @@ def main [--count: int] {
     1..$count
 }
 ";
-    rule().assert_violation_count_exact(source, 1);
+    rule().assert_count(source, 1);
 }
 
 #[test]
@@ -49,5 +49,5 @@ def main [--output: string = "output.txt"] {
     save $output
 }
 "#;
-    rule().assert_violation_count_exact(source, 1);
+    rule().assert_count(source, 1);
 }

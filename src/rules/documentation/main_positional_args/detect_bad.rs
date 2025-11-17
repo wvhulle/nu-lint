@@ -7,7 +7,7 @@ def main [input] {
     echo $input
 }
 ";
-    rule().assert_violation_count_exact(source, 1);
+    rule().assert_count(source, 1);
 }
 
 #[test]
@@ -17,7 +17,7 @@ def main [input output] {
     echo $input | save $output
 }
 ";
-    rule().assert_violation_count_exact(source, 2);
+    rule().assert_count(source, 2);
 }
 
 #[test]
@@ -27,7 +27,7 @@ def main [input? = "default"] {
     echo $input
 }
 "#;
-    rule().assert_violation_count_exact(source, 1);
+    rule().assert_count(source, 1);
 }
 
 #[test]
@@ -37,7 +37,7 @@ def main [...files] {
     $files | each { |f| open $f }
 }
 ";
-    rule().assert_violation_count_exact(source, 1);
+    rule().assert_count(source, 1);
 }
 
 #[test]
@@ -47,5 +47,5 @@ def main [count: int] {
     1..$count
 }
 ";
-    rule().assert_violation_count_exact(source, 1);
+    rule().assert_count(source, 1);
 }

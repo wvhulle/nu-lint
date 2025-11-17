@@ -6,7 +6,7 @@ fn test_fix_for_string_literal() {
     let expected = r#""hello world""#;
 
     rule().assert_detects(bad_code);
-    rule().assert_fix(bad_code, expected);
+    rule().assert_replacement_is(bad_code, expected);
 }
 
 #[test]
@@ -15,7 +15,7 @@ fn test_fix_for_variable() {
     let expected = r"$value";
 
     rule().assert_detects(bad_code);
-    rule().assert_fix(bad_code, expected);
+    rule().assert_replacement_is(bad_code, expected);
 }
 
 #[test]
@@ -24,7 +24,7 @@ fn test_fix_for_pipeline() {
     let expected = r"$var";
 
     rule().assert_detects(bad_code);
-    rule().assert_fix(bad_code, expected);
+    rule().assert_replacement_is(bad_code, expected);
 }
 
 #[test]
@@ -33,7 +33,7 @@ fn test_fix_for_external_echo() {
     let expected = r#""test""#;
 
     rule().assert_detects(bad_code);
-    rule().assert_fix(bad_code, expected);
+    rule().assert_replacement_is(bad_code, expected);
 }
 
 #[test]
@@ -42,7 +42,7 @@ fn test_fix_for_multiple_arguments() {
     let expected = r"hello world test";
 
     rule().assert_detects(bad_code);
-    rule().assert_fix(bad_code, expected);
+    rule().assert_replacement_is(bad_code, expected);
 }
 
 #[test]
@@ -62,5 +62,5 @@ echo $var
 ^echo "third"
 "#;
 
-    rule().assert_violation_count_exact(bad_code, 3);
+    rule().assert_count(bad_code, 3);
 }

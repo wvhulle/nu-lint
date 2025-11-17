@@ -9,7 +9,7 @@ def process [text] {
     $text | str trim
 }
 ";
-    rule().assert_fix_contains(bad_code, "text: string");
+    rule().assert_replacement_contains(bad_code, "text: string");
 }
 
 #[test]
@@ -19,7 +19,7 @@ def add_ten [num] {
     $num + 10
 }
 ";
-    rule().assert_fix_contains(bad_code, "num: int");
+    rule().assert_replacement_contains(bad_code, "num: int");
 }
 
 #[test]
@@ -29,7 +29,7 @@ def process [items] {
     $items | each { |x| $x + 1 }
 }
 ";
-    rule().assert_fix_contains(bad_code, "items: list");
+    rule().assert_replacement_contains(bad_code, "items: list");
 }
 
 #[test]
@@ -39,7 +39,7 @@ def get_name [person] {
     $person.name
 }
 ";
-    rule().assert_fix_contains(bad_code, "person: record");
+    rule().assert_replacement_contains(bad_code, "person: record");
 }
 
 #[test]
@@ -49,7 +49,7 @@ def identity [value] {
     $value
 }
 ";
-    rule().assert_fix_contains(bad_code, "value: any");
+    rule().assert_replacement_contains(bad_code, "value: any");
 }
 
 #[test]
@@ -60,8 +60,8 @@ def combine [text, num] {
     $num + 5
 }
 ";
-    rule().assert_fix_contains(bad_code, "text: string");
-    rule().assert_fix_contains(bad_code, "num: int");
+    rule().assert_replacement_contains(bad_code, "text: string");
+    rule().assert_replacement_contains(bad_code, "num: int");
 }
 
 #[test]
@@ -71,8 +71,8 @@ def process [text: string, num] {
     $num + 1
 }
 ";
-    rule().assert_fix_contains(bad_code, "num: int");
-    rule().assert_fix_contains(bad_code, "text: string");
+    rule().assert_replacement_contains(bad_code, "num: int");
+    rule().assert_replacement_contains(bad_code, "text: string");
 }
 
 #[test]
@@ -83,7 +83,7 @@ def greet [name?] {
     $name | str trim
 }
 ";
-    rule().assert_fix_contains(bad_code, "name?: string");
+    rule().assert_replacement_contains(bad_code, "name?: string");
 }
 
 #[test]
@@ -93,7 +93,7 @@ def sum [...nums] {
     $nums | each { |n| $n + 1 }
 }
 ";
-    rule().assert_fix_contains(bad_code, "...nums: list");
+    rule().assert_replacement_contains(bad_code, "...nums: list");
 }
 
 #[test]
@@ -108,7 +108,7 @@ def process [value] {
     }
 }
 ";
-    rule().assert_fix_contains(bad_code, "value: int");
+    rule().assert_replacement_contains(bad_code, "value: int");
 }
 
 #[test]
@@ -118,7 +118,7 @@ def transform [data] {
     $data | str trim | str upcase
 }
 ";
-    rule().assert_fix_contains(bad_code, "data: string");
+    rule().assert_replacement_contains(bad_code, "data: string");
 }
 
 #[test]
@@ -130,7 +130,7 @@ def calculate [x] {
     $result
 }
 ";
-    rule().assert_fix_contains(bad_code, "x: int");
+    rule().assert_replacement_contains(bad_code, "x: int");
 }
 
 #[test]
@@ -140,7 +140,7 @@ def apply [items] {
     $items | where {|x| $x > 5}
 }
 ";
-    rule().assert_fix_contains(bad_code, "items: list");
+    rule().assert_replacement_contains(bad_code, "items: list");
 }
 
 #[test]
@@ -150,7 +150,7 @@ def get_names [people] {
     $people | each {|p| $p.name}
 }
 ";
-    rule().assert_fix_contains(bad_code, "people: list");
+    rule().assert_replacement_contains(bad_code, "people: list");
 }
 
 #[test]
@@ -164,7 +164,7 @@ def outer [] {
     inner "test"
 }
 "#;
-    rule().assert_fix_contains(bad_code, "param: string");
+    rule().assert_replacement_contains(bad_code, "param: string");
 }
 
 #[test]
@@ -176,9 +176,9 @@ def process [text, items, count] {
     $count + 10
 }
 ";
-    rule().assert_fix_contains(bad_code, "text: string");
-    rule().assert_fix_contains(bad_code, "items: list");
-    rule().assert_fix_contains(bad_code, "count: int");
+    rule().assert_replacement_contains(bad_code, "text: string");
+    rule().assert_replacement_contains(bad_code, "items: list");
+    rule().assert_replacement_contains(bad_code, "count: int");
 }
 
 #[test]
@@ -188,7 +188,7 @@ def is_greater [value] {
     $value > 100
 }
 ";
-    rule().assert_fix_contains(bad_code, "value: int");
+    rule().assert_replacement_contains(bad_code, "value: int");
 }
 
 #[test]
@@ -198,8 +198,8 @@ def multiply [a, b] {
     $a * $b
 }
 ";
-    rule().assert_fix_contains(bad_code, "a: int");
-    rule().assert_fix_contains(bad_code, "b: int");
+    rule().assert_replacement_contains(bad_code, "a: int");
+    rule().assert_replacement_contains(bad_code, "b: int");
 }
 
 #[test]
@@ -211,9 +211,9 @@ def process [data: string, count, items] {
     $items | each { |x| $x }
 }
 ";
-    rule().assert_fix_contains(bad_code, "data: string");
-    rule().assert_fix_contains(bad_code, "count: int");
-    rule().assert_fix_contains(bad_code, "items: list");
+    rule().assert_replacement_contains(bad_code, "data: string");
+    rule().assert_replacement_contains(bad_code, "count: int");
+    rule().assert_replacement_contains(bad_code, "items: list");
 }
 
 #[test]
@@ -223,7 +223,7 @@ def clean [text] {
     $text | str replace "old" "new"
 }
 "#;
-    rule().assert_fix_contains(bad_code, "text: string");
+    rule().assert_replacement_contains(bad_code, "text: string");
 }
 
 #[test]
@@ -233,7 +233,7 @@ def lowercase [input] {
     $input | str downcase
 }
 ";
-    rule().assert_fix_contains(bad_code, "input: string");
+    rule().assert_replacement_contains(bad_code, "input: string");
 }
 
 #[test]
@@ -243,7 +243,7 @@ def uppercase [input] {
     $input | str upcase
 }
 ";
-    rule().assert_fix_contains(bad_code, "input: string");
+    rule().assert_replacement_contains(bad_code, "input: string");
 }
 
 #[test]
@@ -253,7 +253,7 @@ def filter_items [data] {
     $data | filter {|x| $x > 5}
 }
 ";
-    rule().assert_fix_contains(bad_code, "data: list");
+    rule().assert_replacement_contains(bad_code, "data: list");
 }
 
 #[test]
@@ -263,7 +263,7 @@ def sum_all [numbers] {
     $numbers | reduce {|it, acc| $acc + $it}
 }
 ";
-    rule().assert_fix_contains(bad_code, "numbers: list");
+    rule().assert_replacement_contains(bad_code, "numbers: list");
 }
 
 #[test]
@@ -274,7 +274,7 @@ def add_item [items] {
 }
 ";
     // append accepts 'any' as input, so inference will yield 'any'
-    rule().assert_fix_contains(bad_code, "items: any");
+    rule().assert_replacement_contains(bad_code, "items: any");
 }
 
 #[test]
@@ -285,7 +285,7 @@ def add_first [collection] {
 }
 ";
     // prepend accepts 'any' as input, so inference will yield 'any'
-    rule().assert_fix_contains(bad_code, "collection: any");
+    rule().assert_replacement_contains(bad_code, "collection: any");
 }
 
 #[test]
@@ -298,7 +298,7 @@ def compute [x] {
     $doubled + $tripled
 }
 ";
-    rule().assert_fix_contains(bad_code, "x: int");
+    rule().assert_replacement_contains(bad_code, "x: int");
 }
 
 #[test]
@@ -311,7 +311,7 @@ def process_data [data] {
     $upper
 }
 ";
-    rule().assert_fix_contains(bad_code, "data: string");
+    rule().assert_replacement_contains(bad_code, "data: string");
 }
 
 #[test]
@@ -321,7 +321,7 @@ export def process [text] {
     $text | str trim
 }
 ";
-    rule().assert_fix_contains(bad_code, "text: string");
+    rule().assert_replacement_contains(bad_code, "text: string");
 }
 
 #[test]
@@ -334,7 +334,7 @@ def outer [value] {
     }
 }
 ";
-    rule().assert_fix_contains(bad_code, "value: int");
+    rule().assert_replacement_contains(bad_code, "value: int");
 }
 
 #[test]
@@ -347,9 +347,9 @@ def complex [required, optional?, ...rest] {
     $rest | where {|x| $x > 0}
 }
 ";
-    rule().assert_fix_contains(bad_code, "required: string");
-    rule().assert_fix_contains(bad_code, "optional?: list");
-    rule().assert_fix_contains(bad_code, "...rest: list");
+    rule().assert_replacement_contains(bad_code, "required: string");
+    rule().assert_replacement_contains(bad_code, "optional?: list");
+    rule().assert_replacement_contains(bad_code, "...rest: list");
 }
 
 #[test]
@@ -368,7 +368,7 @@ def nested_logic [val] {
     }
 }
 ";
-    rule().assert_fix_contains(bad_code, "val: int");
+    rule().assert_replacement_contains(bad_code, "val: int");
 }
 
 #[test]
@@ -378,5 +378,5 @@ def has_word [text] {
     $text | str contains "word"
 }
 "#;
-    rule().assert_fix_contains(bad_code, "text: string");
+    rule().assert_replacement_contains(bad_code, "text: string");
 }

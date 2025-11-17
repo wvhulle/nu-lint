@@ -14,7 +14,7 @@ fn test_detect_multiple_prints_without_prefix() {
 print "Starting task"
 print "Task completed"
 "#;
-    rule().assert_violation_count(bad_code, 2);
+    rule().assert_count(bad_code, 2);
 }
 
 #[test]

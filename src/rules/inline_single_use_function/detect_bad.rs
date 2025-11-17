@@ -47,7 +47,7 @@ def main [] {
 
 #[test]
 fn test_detect_multiple_single_use_functions() {
-    rule().assert_violation_count(
+    rule().assert_count(
         r"
 def add_one [x] {
     $x + 1

@@ -45,7 +45,7 @@ def sync-files [source_path: string, target_path: string, backup_path: string] {
     cp $target_path $backup_path
 }
 ";
-    rule().assert_violation_count_exact(code, 3);
+    rule().assert_count(code, 3);
 }
 
 #[test]
@@ -118,6 +118,6 @@ fn test_detect_multipath_external_commands() {
 
     for (param1, param2, body, expected_count) in test_cases {
         let code = format!(r"def test-fn [{param1}: string, {param2}: string] {{ {body} }}");
-        rule().assert_violation_count_exact(&code, expected_count);
+        rule().assert_count(&code, expected_count);
     }
 }

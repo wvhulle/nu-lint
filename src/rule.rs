@@ -70,25 +70,9 @@ impl Rule {
 
     #[cfg(test)]
     #[track_caller]
-    /// Test helper: assert that the rule finds at least the expected number of
-    /// violations
-    pub fn assert_violation_count(&self, code: &str, expected_min: usize) {
-        let violations =
-            LintContext::test_with_parsed_source(code, |context| (self.check)(&context));
-        assert!(
-            violations.len() >= expected_min,
-            "Expected rule '{}' to find at least {} violations, but found {}",
-            self.id,
-            expected_min,
-            violations.len()
-        );
-    }
-
-    #[cfg(test)]
-    #[track_caller]
     /// Test helper: assert that the rule finds exactly the expected number of
     /// violations
-    pub fn assert_violation_count_exact(&self, code: &str, expected: usize) {
+    pub fn assert_count(&self, code: &str, expected: usize) {
         let violations =
             LintContext::test_with_parsed_source(code, |context| (self.check)(&context));
         assert_eq!(
@@ -105,7 +89,7 @@ impl Rule {
     #[track_caller]
     /// Test helper: assert that the rule generates a fix with replacement text
     /// containing the expected string
-    pub fn assert_fix_contains(&self, code: &str, expected_text: &str) {
+    pub fn assert_replacement_contains(&self, code: &str, expected_text: &str) {
         let violations =
             LintContext::test_with_parsed_source(code, |context| (self.check)(&context));
         assert!(
@@ -135,7 +119,7 @@ impl Rule {
     #[cfg(test)]
     #[track_caller]
     /// Test helper: assert that applying the fix produces the expected code
-    pub fn assert_fix(&self, bad_code: &str, expected_code: &str) {
+    pub fn assert_replacement_is(&self, bad_code: &str, expected_code: &str) {
         let violations =
             LintContext::test_with_parsed_source(bad_code, |context| (self.check)(&context));
         assert!(

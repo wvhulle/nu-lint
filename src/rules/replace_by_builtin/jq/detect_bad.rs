@@ -105,8 +105,8 @@ def count_items [file] {
 
 #[test]
 fn detect_multiple_simple_jq_operations() {
-    rule().assert_violation_count("^jq 'keys' data.json; ^jq 'length' data.json", 2);
-    rule().assert_violation_count("^jq 'add' nums.json | ^jq 'type'", 2);
+    rule().assert_count("^jq 'keys' data.json; ^jq 'length' data.json", 2);
+    rule().assert_count("^jq 'add' nums.json | ^jq 'type'", 2);
 }
 
 #[test]

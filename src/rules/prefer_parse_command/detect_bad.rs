@@ -10,7 +10,7 @@ let mac = ($parts | get 1)
 let name = ($parts | skip 2 | str join " ")
 "#;
 
-    rule().assert_violation_count_exact(bad_code, 1);
+    rule().assert_count(bad_code, 1);
 }
 
 #[test]

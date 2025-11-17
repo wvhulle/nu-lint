@@ -14,6 +14,7 @@ mod unnecessary_ignore;
 
 mod max_function_body_length;
 mod max_positional_params;
+mod missing_stdin_in_shebang;
 mod missing_type_annotations;
 mod naming;
 
@@ -53,7 +54,7 @@ use spacing::{
 
 use crate::rule::Rule;
 
-pub const ALL_RULES: [Rule; 69] = [
+pub const ALL_RULES: [Rule; 70] = [
     check_complete_exit_code::rule(),
     collapsible_if::rule(),
     dangerous_file_operations::rule(),
@@ -74,6 +75,7 @@ pub const ALL_RULES: [Rule; 69] = [
     kebab_case_commands::rule(),
     max_function_body_length::rule(),
     max_positional_params::rule(),
+    missing_stdin_in_shebang::rule(),
     missing_type_annotations::argument::rule(),
     missing_type_annotations::pipeline::rule(),
     prefer_multiline_functions::rule(),

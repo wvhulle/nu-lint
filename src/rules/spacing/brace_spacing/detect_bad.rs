@@ -10,7 +10,7 @@ fn test_space_before_closure_params() {
 fn test_record_with_spaces() {
     // Records should not have spaces inside braces
     let bad_code = r#"let record = { name: "test" }"#;
-    rule().assert_violation_count(bad_code, 1);
+    rule().assert_count(bad_code, 1);
 }
 
 #[test]

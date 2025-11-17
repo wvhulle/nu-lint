@@ -2494,7 +2494,7 @@ dependencies = [
 
 [[package]]
 name = "nu-lint"
-version = "0.0.37"
+version = "0.0.38"
 dependencies = [
  "clap",
  "criterion",

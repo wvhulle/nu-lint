@@ -47,7 +47,7 @@ fn check_pipeline_for_split_get(pipeline: &Pipeline, context: &LintContext) -> O
             let span = Span::new(current.expr.span.start, next.expr.span.end);
 
             Violation::new(
-                "prefer_parse_command",
+                "prefer_parse_over_split_get",
                 "Manual string splitting with indexed access - consider using 'parse'",
                 span,
             )
@@ -113,7 +113,7 @@ fn is_var_used_in_indexed_access(var_id: VarId, call: &Call, context: &LintConte
 
 fn create_indexed_access_violation(var_name: &str, decl_span: Span) -> Violation {
     Violation::new(
-        "prefer_parse_command",
+        "prefer_parse_over_split_get",
         format!(
             "Variable '{var_name}' from split row with indexed access - consider using 'parse'"
         ),
@@ -275,7 +275,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
 pub const fn rule() -> Rule {
     Rule::new(
-        "prefer_parse_command",
+        "prefer_parse_over_split_get",
         "Prefer 'parse' command over manual string splitting with indexed access",
         check,
     )

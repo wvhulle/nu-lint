@@ -57,7 +57,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
     let pipeline_text = &context.source[combined_span.start..combined_span.end];
 
     let violation = Violation::new(
-        "unused_output",
+        "redundant_ignore",
         "Discarding command output with '| ignore'",
         ignore_span,
     )
@@ -106,7 +106,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
 pub const fn rule() -> Rule {
     Rule::new(
-        "unused_output",
+        "redundant_ignore",
         "Commands producing output that is discarded with '| ignore'",
         check,
     )

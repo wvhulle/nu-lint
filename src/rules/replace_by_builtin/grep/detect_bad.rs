@@ -94,7 +94,7 @@ fn detect_multiple_grep_uses() {
 ^grep "error" file1.txt
 ^grep "warning" file2.txt
 "#;
-    rule().assert_violation_count_exact(bad_code, 2);
+    rule().assert_count(bad_code, 2);
 }
 
 #[test]

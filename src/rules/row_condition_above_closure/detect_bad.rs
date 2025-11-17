@@ -59,7 +59,7 @@ fn detect_multiple_where_closures() {
     let code = r"
 [1, 2, 3] | where {|x| $x > 1} | where {|y| $y < 3}
 ";
-    rule().assert_violation_count_exact(code, 2);
+    rule().assert_count(code, 2);
 }
 
 #[test]

@@ -9,7 +9,7 @@ def double [] {
     $in * 2
 }
 ";
-    rule().assert_fix_contains(bad_code, "[]: int -> int");
+    rule().assert_replacement_contains(bad_code, "[]: int -> int");
     rule().assert_help_contains(bad_code, "pipeline input and output type annotations");
 }
 
@@ -26,8 +26,8 @@ export def "git age" [] {
   } | sort-by last_commit
 }
 "#;
-    rule().assert_violation_count_exact(bad_code, 1);
-    rule().assert_fix_contains(bad_code, "nothing -> table");
+    rule().assert_count(bad_code, 1);
+    rule().assert_replacement_contains(bad_code, "nothing -> table");
 }
 
 #[test]
@@ -38,7 +38,7 @@ def create-list [] {
     [1, 2, 3]
 }
 ";
-    rule().assert_fix_contains(bad_code, "[]: nothing -> list<int>");
+    rule().assert_replacement_contains(bad_code, "[]: nothing -> list<int>");
 }
 
 #[test]
@@ -52,7 +52,7 @@ def time_to_hours [time_str: string] {
     # Ignore seconds for simplicity
     $hour + ($minute / 60.0)
 }"#;
-    rule().assert_fix_contains(bad_code, "nothing -> float");
+    rule().assert_replacement_contains(bad_code, "nothing -> float");
 }
 
 #[test]
@@ -63,7 +63,7 @@ def transform [] {
     $in | each { |x| $x + 1 }
 }
 ";
-    rule().assert_fix_contains(bad_code, "list<any> -> list<any>");
+    rule().assert_replacement_contains(bad_code, "list<any> -> list<any>");
 }
 
 #[test]
@@ -73,7 +73,7 @@ def multiply [factor: int] {
     $in * $factor
 }
 ";
-    rule().assert_fix_contains(bad_code, "[factor: int]: int -> int");
+    rule().assert_replacement_contains(bad_code, "[factor: int]: int -> int");
 }
 
 #[test]
@@ -89,9 +89,9 @@ def process [data?, --verbose] {
     $in | str trim
 }
 ";
-    rule().assert_fix_contains(bad_code, "data?");
-    rule().assert_fix_contains(bad_code, "--verbose");
-    rule().assert_fix_contains(bad_code, "string -> string");
+    rule().assert_replacement_contains(bad_code, "data?");
+    rule().assert_replacement_contains(bad_code, "--verbose");
+    rule().assert_replacement_contains(bad_code, "string -> string");
 }
 
 #[test]
@@ -101,7 +101,7 @@ export def process [] {
     $in | str trim
 }
 ";
-    rule().assert_fix_contains(bad_code, "string -> string");
+    rule().assert_replacement_contains(bad_code, "string -> string");
 }
 
 #[test]
@@ -112,7 +112,7 @@ def get-value [] {
     42
 }
 ";
-    rule().assert_fix_contains(bad_code, "[]: nothing -> int");
+    rule().assert_replacement_contains(bad_code, "[]: nothing -> int");
 }
 
 #[test]
@@ -122,7 +122,7 @@ def greet [] {
     "hello"
 }
 "#;
-    rule().assert_fix_contains(bad_code, "[]: nothing -> string");
+    rule().assert_replacement_contains(bad_code, "[]: nothing -> string");
 }
 
 #[test]
@@ -132,7 +132,7 @@ def get_count [] {
     42
 }
 ";
-    rule().assert_fix_contains(bad_code, "[]: nothing -> int");
+    rule().assert_replacement_contains(bad_code, "[]: nothing -> int");
 }
 
 #[test]
@@ -142,7 +142,7 @@ def get_pi [] {
     3.14
 }
 ";
-    rule().assert_fix_contains(bad_code, "[]: nothing -> float");
+    rule().assert_replacement_contains(bad_code, "[]: nothing -> float");
 }
 
 #[test]
@@ -153,7 +153,7 @@ def is_ready [] {
     true
 }
 ";
-    rule().assert_fix_contains(bad_code, "[]: nothing -> bool");
+    rule().assert_replacement_contains(bad_code, "[]: nothing -> bool");
 }
 
 #[test]
@@ -164,7 +164,7 @@ def get_items [] {
     [1, 2, 3]
 }
 ";
-    rule().assert_fix_contains(bad_code, "[]: nothing -> list");
+    rule().assert_replacement_contains(bad_code, "[]: nothing -> list");
 }
 
 #[test]
@@ -174,7 +174,7 @@ def get_config [] {
     {name: "test", value: 42}
 }
 "#;
-    rule().assert_fix_contains(bad_code, "[]: nothing -> record");
+    rule().assert_replacement_contains(bad_code, "[]: nothing -> record");
 }
 
 #[test]
@@ -184,7 +184,7 @@ def get_data [] {
     [[name, age]; [Alice, 30], [Bob, 25]]
 }
 ";
-    rule().assert_fix_contains(bad_code, "[]: nothing -> table");
+    rule().assert_replacement_contains(bad_code, "[]: nothing -> table");
 }
 
 #[test]
@@ -194,7 +194,7 @@ def serialize [] {
     $in | to json
 }
 ";
-    rule().assert_fix_contains(bad_code, "[]: any -> string");
+    rule().assert_replacement_contains(bad_code, "[]: any -> string");
 }
 
 #[test]
@@ -204,7 +204,7 @@ def split_lines [] {
     $in | lines
 }
 ";
-    rule().assert_fix_contains(bad_code, "any -> list<string>");
+    rule().assert_replacement_contains(bad_code, "any -> list<string>");
 }
 
 #[test]
@@ -214,7 +214,7 @@ def filter_items [] {
     $in | where {|x| $x > 5}
 }
 ";
-    rule().assert_fix_contains(bad_code, "list<any> -> list<any>");
+    rule().assert_replacement_contains(bad_code, "list<any> -> list<any>");
 }
 
 #[test]
@@ -224,7 +224,7 @@ def count_items [] {
     $in | length
 }
 ";
-    rule().assert_fix_contains(bad_code, "list<any> -> int");
+    rule().assert_replacement_contains(bad_code, "list<any> -> int");
 }
 
 #[test]
@@ -234,7 +234,7 @@ def check_empty [] {
     $in | is-empty
 }
 ";
-    rule().assert_fix_contains(bad_code, "[]: any -> bool");
+    rule().assert_replacement_contains(bad_code, "[]: any -> bool");
 }
 
 #[test]
@@ -244,7 +244,7 @@ def get_name [] {
     $in.name
 }
 ";
-    rule().assert_fix_contains(bad_code, "[]: record -> any");
+    rule().assert_replacement_contains(bad_code, "[]: record -> any");
 }
 
 #[test]
@@ -255,7 +255,7 @@ def process_items [] {
     $in | each {|x| $x + 1}
 }
 ";
-    rule().assert_fix_contains(bad_code, "list<any> -> list<any>");
+    rule().assert_replacement_contains(bad_code, "list<any> -> list<any>");
 }
 
 #[test]
@@ -265,7 +265,7 @@ def split_text [] {
     $in | lines
 }
 ";
-    rule().assert_fix_contains(bad_code, "[]: any -> list<string>");
+    rule().assert_replacement_contains(bad_code, "[]: any -> list<string>");
 }
 
 #[test]
@@ -275,7 +275,7 @@ def process [] {
     $in | each {|x| $x * 2}
 }
 ";
-    rule().assert_fix_contains(bad_code, "[]: list<any> -> list<any>");
+    rule().assert_replacement_contains(bad_code, "[]: list<any> -> list<any>");
 }
 
 #[test]
@@ -285,7 +285,7 @@ def multiply [factor: int] {
     $in | each {|x| $x * $factor}
 }
 ";
-    rule().assert_fix_contains(bad_code, "list<any> -> list<any>");
+    rule().assert_replacement_contains(bad_code, "list<any> -> list<any>");
 }
 
 #[test]
@@ -295,7 +295,7 @@ def complex [] {
     if true { "string" } else { 42 }
 }
 "#;
-    rule().assert_fix_contains(bad_code, "[]: nothing -> any");
+    rule().assert_replacement_contains(bad_code, "[]: nothing -> any");
 }
 
 #[test]
@@ -306,7 +306,7 @@ def get_path [] {
     /tmp/file.txt
 }
 ";
-    rule().assert_fix_contains(bad_code, "nothing -> path");
+    rule().assert_replacement_contains(bad_code, "nothing -> path");
 }
 
 #[test]
@@ -334,7 +334,7 @@ def main [source_file: path] {
   }
 }
 "#;
-    rule().assert_fix_contains(bad_code, "nothing -> any");
+    rule().assert_replacement_contains(bad_code, "nothing -> any");
 }
 
 #[test]
@@ -349,7 +349,7 @@ def conditional_print [] {
     }
 }
 "#;
-    rule().assert_fix_contains(bad_code, "[]: nothing -> any");
+    rule().assert_replacement_contains(bad_code, "[]: nothing -> any");
 }
 
 #[test]
@@ -362,7 +362,7 @@ def conditional_action [flag: bool] {
     }
 }
 "#;
-    rule().assert_fix_contains(bad_code, "[flag: bool]: nothing -> any");
+    rule().assert_replacement_contains(bad_code, "[flag: bool]: nothing -> any");
 }
 
 #[test]
@@ -381,7 +381,7 @@ def nested_conditional [] {
     }
 }
 "#;
-    rule().assert_fix_contains(bad_code, "[]: nothing -> any");
+    rule().assert_replacement_contains(bad_code, "[]: nothing -> any");
 }
 
 #[test]
@@ -394,5 +394,5 @@ def complex_script [] {
     mkdir /tmp/dir
 }
 ";
-    rule().assert_fix_contains(bad_code, "[]: nothing -> nothing");
+    rule().assert_replacement_contains(bad_code, "[]: nothing -> nothing");
 }

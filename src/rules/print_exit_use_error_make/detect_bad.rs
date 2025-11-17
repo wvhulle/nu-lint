@@ -9,7 +9,7 @@ def bad-error [] {
     exit 1
 }
 "#;
-    rule().assert_violation_count_exact(bad_code, 1);
+    rule().assert_count(bad_code, 1);
 }
 
 #[test]
@@ -37,7 +37,7 @@ if ($args | is-empty) {
     exit 1
 }
 "#;
-    rule().assert_violation_count_exact(bad_code, 1);
+    rule().assert_count(bad_code, 1);
 }
 
 #[test]

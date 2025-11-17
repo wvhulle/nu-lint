@@ -38,7 +38,7 @@ export def my-command [] {
 
 #[test]
 fn multiple_functions_with_exit() {
-    rule().assert_violation_count(
+    rule().assert_count(
         "
 def helper1 [] {
   exit 0

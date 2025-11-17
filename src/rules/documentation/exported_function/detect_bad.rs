@@ -7,7 +7,7 @@ export def my-command [] {
     echo "hello"
 }
 "#;
-    rule().assert_violation_count_exact(source, 1);
+    rule().assert_count(source, 1);
 }
 
 #[test]
@@ -17,5 +17,5 @@ export def process-data [input: string, output: string] {
     echo $input | save $output
 }
 ";
-    rule().assert_violation_count_exact(source, 1);
+    rule().assert_count(source, 1);
 }

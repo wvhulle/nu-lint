@@ -75,7 +75,7 @@ export def parse [] {
 
 ";
 
-    rule().assert_violation_count_exact(bad_code, 1);
+    rule().assert_count(bad_code, 1);
 }
 
 #[test]
@@ -114,5 +114,5 @@ fn detect_multiple_functions_missing_pipeline_types() {
 def first [] { $in | first }
 def last [] { $in | last }
 ";
-    rule().assert_violation_count_exact(bad_code, 2);
+    rule().assert_count(bad_code, 2);
 }

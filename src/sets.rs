@@ -254,6 +254,7 @@ pub static DEFAULT_RULE_MAP: LazyLock<RuleMap> = LazyLock::new(|| RuleMap {
         ),
         ("unused_helper_functions".to_string(), LintLevel::Warn),
         ("redundant_ignore".to_string(), LintLevel::Warn),
+        ("missing_stdin_in_shebang".to_string(), LintLevel::Deny),
     ]),
 });
 

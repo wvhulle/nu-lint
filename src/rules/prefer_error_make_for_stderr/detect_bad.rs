@@ -6,7 +6,7 @@ fn test_detect_print_stderr_exit_pattern() {
         print --stderr "File not found"
         exit 1
     "#;
-    rule().assert_violation_count_exact(code, 1);
+    rule().assert_count(code, 1);
 }
 
 #[test]
@@ -63,7 +63,7 @@ fn test_detect_multiple_occurrences() {
             exit 2
         }
     "#;
-    rule().assert_violation_count_exact(code, 2);
+    rule().assert_count(code, 2);
 }
 
 #[test]

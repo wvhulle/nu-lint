@@ -17,7 +17,7 @@ def helper [] {
 
 #[test]
 fn multiple_unused_helpers() {
-    rule().assert_violation_count(
+    rule().assert_count(
         r#"
 def main [] {
   print "hello"
@@ -56,7 +56,7 @@ def helper2 [] {
 
 #[test]
 fn unused_chain() {
-    rule().assert_violation_count(
+    rule().assert_count(
         r#"
 def main [] {
   print "main"

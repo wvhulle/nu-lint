@@ -67,5 +67,5 @@ def second_long_function [] {{
             .collect::<Vec<_>>()
             .join("\n")
     );
-    rule.assert_violation_count_exact(&code, 2);
+    rule.assert_count(&code, 2);
 }

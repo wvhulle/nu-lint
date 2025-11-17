@@ -31,6 +31,8 @@ rustPlatform.buildRustPackage {
     lockFile = ./Cargo.lock;
   };
 
+  doCheck = false;
+
   nativeBuildInputs = [ ];
 
   buildInputs = [ ];

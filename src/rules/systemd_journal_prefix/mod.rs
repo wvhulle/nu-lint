@@ -45,13 +45,44 @@ fn detect_keyword_in_full_text(lower_text: &str) -> &'static str {
     }
 }
 
-fn has_journal_prefix(text: &str) -> bool {
+enum PrefixType {
+    None,
+    Numeric(String),
+    Keyword,
+}
+
+fn check_journal_prefix(text: &str) -> PrefixType {
     text.trim_start()
         .strip_prefix('<')
         .and_then(|s| s.split_once('>'))
-        .is_some_and(|(prefix, _)| {
-            VALID_NUMERIC_PREFIXES.contains(&prefix) || VALID_KEYWORD_PREFIXES.contains(&prefix)
+        .map_or(PrefixType::None, |(prefix, _)| {
+            if VALID_NUMERIC_PREFIXES.contains(&prefix) {
+                PrefixType::Numeric(prefix.to_string())
+            } else if VALID_KEYWORD_PREFIXES.contains(&prefix) {
+                PrefixType::Keyword
+            } else {
+                PrefixType::None
+            }
         })
+}
+
+fn numeric_to_keyword_level(numeric: &str) -> &'static str {
+    match numeric {
+        "0" => "emerg",
+        "1" => "alert",
+        "2" => "crit",
+        "3" => "err",
+        "4" => "warning",
+        "5" => "notice",
+        "6" | "7" => {
+            if numeric == "6" {
+                "info"
+            } else {
+                "debug"
+            }
+        }
+        _ => "info",
+    }
 }
 
 fn extract_first_string_part(expr: &Expression, ctx: &LintContext) -> Option<String> {
@@ -169,6 +200,45 @@ fn create_violation(
     ))
 }
 
+fn create_numeric_prefix_violation(
+    command_name: &str,
+    span: nu_protocol::Span,
+    numeric_level: &str,
+    arg_expr: &Expression,
+    ctx: &LintContext,
+) -> Violation {
+    let keyword_level = numeric_to_keyword_level(numeric_level);
+    let span_text = arg_expr.span_text(ctx);
+
+    // Replace numeric prefix with keyword prefix
+    let fixed_string = span_text.replacen(
+        &format!("<{numeric_level}>"),
+        &format!("<{keyword_level}>"),
+        1,
+    );
+
+    let help_message = format!(
+        "Use keyword prefix '<{keyword_level}>' instead of numeric '<{numeric_level}>' for better \
+         readability. Numeric levels: 0=emerg, 1=alert, 2=crit, 3=err, 4=warning, 5=notice, \
+         6=info, 7=debug"
+    );
+
+    let fix_explanation = format!(
+        "Replace numeric prefix '<{numeric_level}>' with keyword '<{keyword_level}>':\n  \
+         {command_name} {fixed_string}"
+    );
+
+    Violation::new(
+        "systemd_journal_prefix",
+        "Numeric systemd journal prefix found - keyword prefixes are more readable",
+        span,
+    )
+    .with_help(help_message)
+    .with_fix(Fix::with_explanation(
+        fix_explanation,
+        vec![Replacement::new(arg_expr.span, fixed_string)],
+    ))
+}
 fn check_print_or_echo_call(expr: &Expression, ctx: &LintContext) -> Vec<Violation> {
     let Expr::Call(call) = &expr.expr else {
         return vec![];
@@ -179,16 +249,31 @@ fn check_print_or_echo_call(expr: &Expression, ctx: &LintContext) -> Vec<Violati
         return vec![];
     }
 
-    call.get_first_positional_arg()
-        .and_then(|arg_expr| {
-            extract_first_string_part(arg_expr, ctx).and_then(|message_content| {
-                (!has_journal_prefix(&message_content)).then(|| {
-                    create_violation(&command_name, expr.span, &message_content, arg_expr, ctx)
-                })
-            })
-        })
-        .into_iter()
-        .collect()
+    let Some(arg_expr) = call.get_first_positional_arg() else {
+        return vec![];
+    };
+
+    let Some(message_content) = extract_first_string_part(arg_expr, ctx) else {
+        return vec![];
+    };
+
+    match check_journal_prefix(&message_content) {
+        PrefixType::None => vec![create_violation(
+            &command_name,
+            expr.span,
+            &message_content,
+            arg_expr,
+            ctx,
+        )],
+        PrefixType::Numeric(level) => vec![create_numeric_prefix_violation(
+            &command_name,
+            expr.span,
+            &level,
+            arg_expr,
+            ctx,
+        )],
+        PrefixType::Keyword => vec![],
+    }
 }
 
 fn check(context: &LintContext) -> Vec<Violation> {

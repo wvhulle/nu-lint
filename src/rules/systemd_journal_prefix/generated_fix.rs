@@ -203,3 +203,83 @@ fn test_fix_strips_interpolated_error() {
     let bad_code = r#"print $"Error: ($details)""#;
     rule().assert_replacement_contains(bad_code, "$\"<err>($details)\"");
 }
+
+#[test]
+fn test_fix_numeric_to_keyword_level_0() {
+    let bad_code = r#"print "<0>System is unusable""#;
+    rule().assert_detects(bad_code);
+    rule().assert_replacement_contains(bad_code, "<emerg>");
+    rule().assert_replacement_contains(bad_code, "System is unusable");
+}
+
+#[test]
+fn test_fix_numeric_to_keyword_level_1() {
+    let bad_code = r#"print "<1>Action must be taken immediately""#;
+    rule().assert_detects(bad_code);
+    rule().assert_replacement_contains(bad_code, "<alert>");
+}
+
+#[test]
+fn test_fix_numeric_to_keyword_level_2() {
+    let bad_code = r#"print "<2>Critical conditions""#;
+    rule().assert_detects(bad_code);
+    rule().assert_replacement_contains(bad_code, "<crit>");
+}
+
+#[test]
+fn test_fix_numeric_to_keyword_level_3() {
+    let bad_code = r#"print "<3>Error conditions""#;
+    rule().assert_detects(bad_code);
+    rule().assert_replacement_contains(bad_code, "<err>");
+}
+
+#[test]
+fn test_fix_numeric_to_keyword_level_4() {
+    let bad_code = r#"print "<4>Warning conditions""#;
+    rule().assert_detects(bad_code);
+    rule().assert_replacement_contains(bad_code, "<warning>");
+}
+
+#[test]
+fn test_fix_numeric_to_keyword_level_5() {
+    let bad_code = r#"print "<5>Normal but significant""#;
+    rule().assert_detects(bad_code);
+    rule().assert_replacement_contains(bad_code, "<notice>");
+}
+
+#[test]
+fn test_fix_numeric_to_keyword_level_6() {
+    let bad_code = r#"print "<6>Informational messages""#;
+    rule().assert_detects(bad_code);
+    rule().assert_replacement_contains(bad_code, "<info>");
+}
+
+#[test]
+fn test_fix_numeric_to_keyword_level_7() {
+    let bad_code = r#"print "<7>Debug-level messages""#;
+    rule().assert_detects(bad_code);
+    rule().assert_replacement_contains(bad_code, "<debug>");
+}
+
+#[test]
+fn test_fix_numeric_prefix_with_echo() {
+    let bad_code = r#"echo "<4>Low disk space""#;
+    rule().assert_detects(bad_code);
+    rule().assert_replacement_contains(bad_code, "<warning>");
+    rule().assert_fix_explanation_contains(bad_code, "echo");
+}
+
+#[test]
+fn test_fix_numeric_prefix_single_quoted() {
+    let bad_code = r"print '<3>Connection failed'";
+    rule().assert_detects(bad_code);
+    rule().assert_replacement_contains(bad_code, "<err>");
+}
+
+#[test]
+fn test_fix_numeric_prefix_interpolated() {
+    let bad_code = r#"print $"<6>Processing ($file)""#;
+    rule().assert_detects(bad_code);
+    rule().assert_replacement_contains(bad_code, "<info>");
+    rule().assert_replacement_contains(bad_code, "($file)");
+}

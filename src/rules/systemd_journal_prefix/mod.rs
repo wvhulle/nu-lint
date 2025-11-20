@@ -29,17 +29,19 @@ fn detect_keyword_in_message(text: &str) -> &'static str {
         "notice" => "notice",
         "info" | "information" => "info",
         "debug" | "trace" => "debug",
-        _ => {
-            if lower.contains("error") || lower.contains("fail") {
-                "err"
-            } else if lower.contains("warn") {
-                "warning"
-            } else if lower.contains("debug") {
-                "debug"
-            } else {
-                "info"
-            }
-        }
+        _ => detect_keyword_in_full_text(&lower),
+    }
+}
+
+fn detect_keyword_in_full_text(lower_text: &str) -> &'static str {
+    if lower_text.contains("error") || lower_text.contains("fail") {
+        "err"
+    } else if lower_text.contains("warn") {
+        "warning"
+    } else if lower_text.contains("debug") {
+        "debug"
+    } else {
+        "info"
     }
 }
 
@@ -63,21 +65,75 @@ fn extract_first_string_part(expr: &Expression, ctx: &LintContext) -> Option<Str
     }
 }
 
+fn strip_keyword_prefix(text: &str) -> &str {
+    const KEYWORD_PREFIXES: &[&str] = &[
+        "emergency:",
+        "emerg:",
+        "panic:",
+        "alert:",
+        "critical:",
+        "crit:",
+        "fatal:",
+        "error:",
+        "err:",
+        "fail:",
+        "failed:",
+        "warning:",
+        "warn:",
+        "caution:",
+        "notice:",
+        "info:",
+        "information:",
+        "debug:",
+        "trace:",
+    ];
+
+    let trimmed = text.trim_start();
+    let lower = trimmed.to_lowercase();
+
+    KEYWORD_PREFIXES
+        .iter()
+        .find(|&&keyword| lower.starts_with(keyword))
+        .map_or(text, |&keyword| trimmed[keyword.len()..].trim_start())
+}
+
 fn generate_fixed_string(
     original: &str,
     suggested_level: &str,
     arg_expr: &Expression,
     ctx: &LintContext,
 ) -> String {
+    let cleaned_message = strip_keyword_prefix(original);
+    let span_text = arg_expr.span_text(ctx);
+
     match &arg_expr.expr {
-        Expr::String(_) => format!("\"<{suggested_level}>{original}\""),
-        Expr::RawString(_) => format!("'<{suggested_level}>{original}'"),
-        Expr::StringInterpolation(_) => format!("$\"<{suggested_level}>{original}\""),
-        _ => {
-            let original_text = arg_expr.span_text(ctx);
-            format!("\"<{suggested_level}>{original_text}\"")
-        }
+        Expr::String(_) => format_string_with_quotes(cleaned_message, suggested_level, span_text),
+        Expr::RawString(_) => format!("'<{suggested_level}>{cleaned_message}'"),
+        Expr::StringInterpolation(_) => format_interpolated_string(suggested_level, span_text),
+        _ => format!("\"<{suggested_level}>{span_text}\""),
     }
+}
+
+fn format_string_with_quotes(message: &str, level: &str, span_text: &str) -> String {
+    let quote_char = if span_text.starts_with('\'') {
+        '\''
+    } else {
+        '"'
+    };
+    format!("{quote_char}<{level}>{message}{quote_char}")
+}
+
+fn format_interpolated_string(level: &str, span_text: &str) -> String {
+    span_text
+        .strip_prefix("$\"")
+        .and_then(|s| s.strip_suffix('"'))
+        .map_or_else(
+            || format!("$\"<{level}>{{original content}}\""),
+            |content| {
+                let cleaned = strip_keyword_prefix(content);
+                format!("$\"<{level}>{cleaned}\"")
+            },
+        )
 }
 
 fn create_violation(
@@ -88,14 +144,16 @@ fn create_violation(
     ctx: &LintContext,
 ) -> Violation {
     let suggested_level = detect_keyword_in_message(message_text);
-    let example = format!("{command_name} \"<{suggested_level}>{message_text}\"");
-
     let fixed_string = generate_fixed_string(message_text, suggested_level, arg_expr, ctx);
-    let fix = Fix::with_explanation(
-        format!(
-            "Add '<{suggested_level}>' prefix to the message:\n  {command_name} {fixed_string}"
-        ),
-        vec![Replacement::new(arg_expr.span, fixed_string)],
+
+    let help_message = format!(
+        "Add systemd journal prefix using keywords: <emerg>, <alert>, <crit>, <err>, <warning>, \
+         <notice>, <info>, <debug>. Suggested level for this message: <{suggested_level}>. \
+         Example: {command_name} \"<{suggested_level}>{message_text}\""
+    );
+
+    let fix_explanation = format!(
+        "Add '<{suggested_level}>' prefix to the message:\n  {command_name} {fixed_string}"
     );
 
     Violation::new(
@@ -104,12 +162,11 @@ fn create_violation(
          logging",
         span,
     )
-    .with_help(format!(
-        "Add systemd journal prefix using keywords: <emerg>, <alert>, <crit>, <err>, <warning>, \
-         <notice>, <info>, <debug>. Suggested level for this message: <{suggested_level}>. \
-         Example: {example}"
+    .with_help(help_message)
+    .with_fix(Fix::with_explanation(
+        fix_explanation,
+        vec![Replacement::new(arg_expr.span, fixed_string)],
     ))
-    .with_fix(fix)
 }
 
 fn check_print_or_echo_call(expr: &Expression, ctx: &LintContext) -> Vec<Violation> {
@@ -122,25 +179,16 @@ fn check_print_or_echo_call(expr: &Expression, ctx: &LintContext) -> Vec<Violati
         return vec![];
     }
 
-    let Some(arg_expr) = call.get_first_positional_arg() else {
-        return vec![];
-    };
-
-    let Some(message_content) = extract_first_string_part(arg_expr, ctx) else {
-        return vec![];
-    };
-
-    if has_journal_prefix(&message_content) {
-        return vec![];
-    }
-
-    vec![create_violation(
-        &command_name,
-        expr.span,
-        &message_content,
-        arg_expr,
-        ctx,
-    )]
+    call.get_first_positional_arg()
+        .and_then(|arg_expr| {
+            extract_first_string_part(arg_expr, ctx).and_then(|message_content| {
+                (!has_journal_prefix(&message_content)).then(|| {
+                    create_violation(&command_name, expr.span, &message_content, arg_expr, ctx)
+                })
+            })
+        })
+        .into_iter()
+        .collect()
 }
 
 fn check(context: &LintContext) -> Vec<Violation> {
@@ -149,7 +197,9 @@ fn check(context: &LintContext) -> Vec<Violation> {
 pub const fn rule() -> Rule {
     Rule::new(
         "systemd_journal_prefix",
-        "Detect output without systemd journal log level prefix when using SyslogLevelPrefix",
+        "Assign log levels to output that is compatible with the SystemD service option \
+         SyslogLevelPrefix. This will allow proper categorization of log messages in the systemd \
+         journal.",
         check,
     )
 }

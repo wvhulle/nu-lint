@@ -82,7 +82,7 @@ fn test_fix_single_quoted_string() {
     let bad_code = r"print 'Warning: low memory'";
     rule().assert_detects(bad_code);
     rule().assert_replacement_contains(bad_code, "<warning>");
-    rule().assert_replacement_contains(bad_code, "Warning: low memory");
+    rule().assert_replacement_contains(bad_code, "low memory");
 }
 
 #[test]
@@ -136,4 +136,70 @@ fn test_fix_preserves_message_content() {
 fn test_fix_explanation_shows_command() {
     let bad_code = r#"print "Error: timeout""#;
     rule().assert_fix_explanation_contains(bad_code, "print");
+}
+
+#[test]
+fn test_fix_strips_error_prefix() {
+    let bad_code = r#"print "Error: connection failed""#;
+    rule().assert_replacement_contains(bad_code, "\"<err>connection failed\"");
+}
+
+#[test]
+fn test_fix_strips_uppercase_error_prefix() {
+    let bad_code = r#"print "ERROR: connection failed""#;
+    rule().assert_replacement_contains(bad_code, "\"<err>connection failed\"");
+}
+
+#[test]
+fn test_fix_strips_warning_prefix() {
+    let bad_code = r#"print "Warning: disk space low""#;
+    rule().assert_replacement_contains(bad_code, "\"<warning>disk space low\"");
+}
+
+#[test]
+fn test_fix_strips_uppercase_warning_prefix() {
+    let bad_code = r#"print "WARNING: disk space low""#;
+    rule().assert_replacement_contains(bad_code, "\"<warning>disk space low\"");
+}
+
+#[test]
+fn test_fix_strips_critical_prefix() {
+    let bad_code = r#"print "Critical: system failure""#;
+    rule().assert_replacement_contains(bad_code, "\"<crit>system failure\"");
+}
+
+#[test]
+fn test_fix_strips_debug_prefix() {
+    let bad_code = r#"print "Debug: entering function""#;
+    rule().assert_replacement_contains(bad_code, "\"<debug>entering function\"");
+}
+
+#[test]
+fn test_fix_strips_info_prefix() {
+    let bad_code = r#"print "Info: process started""#;
+    rule().assert_replacement_contains(bad_code, "\"<info>process started\"");
+}
+
+#[test]
+fn test_fix_strips_err_prefix() {
+    let bad_code = r#"print "err: something went wrong""#;
+    rule().assert_replacement_contains(bad_code, "\"<err>something went wrong\"");
+}
+
+#[test]
+fn test_fix_strips_warn_prefix() {
+    let bad_code = r#"print "warn: be careful""#;
+    rule().assert_replacement_contains(bad_code, "\"<warning>be careful\"");
+}
+
+#[test]
+fn test_fix_strips_single_quoted_error() {
+    let bad_code = r"print 'Error: failed operation'";
+    rule().assert_replacement_contains(bad_code, "'<err>failed operation'");
+}
+
+#[test]
+fn test_fix_strips_interpolated_error() {
+    let bad_code = r#"print $"Error: ($details)""#;
+    rule().assert_replacement_contains(bad_code, "$\"<err>($details)\"");
 }

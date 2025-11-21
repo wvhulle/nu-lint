@@ -55,7 +55,7 @@ use spacing::{
 
 use crate::rule::Rule;
 
-pub const ALL_RULES: [Rule; 71] = [
+pub const ALL_RULES: &[Rule] = &[
     check_complete_exit_code::rule(),
     collapsible_if::rule(),
     dangerous_file_operations::rule(),

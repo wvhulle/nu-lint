@@ -3,11 +3,7 @@ use std::collections::HashMap;
 
 use nu_protocol::ast::{Expr, Expression, ExternalArgument};
 
-use crate::{
-    Fix, Violation,
-    ast::effect::{external_command_has_no_output, external_command_has_output},
-    context::LintContext,
-};
+use crate::{Fix, Violation, ast::effect::external_command_has_no_output, context::LintContext};
 
 /// Extension trait for checking external command categories using the side
 /// effect registry
@@ -18,7 +14,7 @@ pub trait ExternalCommandExt {
 
 impl ExternalCommandExt for str {
     fn is_known_external_output_command(&self) -> bool {
-        external_command_has_output(self)
+        !external_command_has_no_output(self)
     }
 
     fn is_known_external_no_output_command(&self) -> bool {

@@ -21,7 +21,7 @@ fn parse_source<'a>(engine_state: &'a EngineState, source: &[u8]) -> (Block, Sta
 }
 
 pub struct LintEngine {
-    config: Config,
+    pub(crate) config: Config,
     engine_state: &'static EngineState,
 }
 
@@ -63,6 +63,7 @@ impl LintEngine {
     ///
     /// Returns an error if the file cannot be read.
     pub(crate) fn lint_file(&self, path: &Path) -> Result<Vec<Violation>, LintError> {
+        log::debug!("Linting file: {}", path.display());
         let source = fs::read_to_string(path)?;
         let mut violations = self.lint_str(&source);
 

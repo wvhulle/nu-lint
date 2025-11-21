@@ -16,7 +16,7 @@ fn pipeline_starts_with_redundant_in(pipeline: &Pipeline, context: &LintContext)
         return false;
     }
     let element = &pipeline.elements[0];
-    log::debug!("Single element: {:?}", element.expr.expr);
+    log::debug!("Single element with expression type");
     // Check if this element is a Collect expression (which represents $in | ...)
     if let Expr::Collect(_, inner_expr) = &element.expr.expr {
         log::debug!("Found Collect expression (representing $in | ...)");
@@ -47,7 +47,7 @@ fn pipeline_starts_with_redundant_in(pipeline: &Pipeline, context: &LintContext)
                 log::debug!("No first element in pipeline");
                 return false;
             };
-            log::debug!("First inner element: {:?}", first_element.expr.expr);
+            log::debug!("First inner element checked");
             // If the first element is a Var (referring to $in) followed by commands,
             // this is the pattern we want to detect
             if matches!(

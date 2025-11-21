@@ -86,7 +86,11 @@ impl Default for LintConfig {
     fn default() -> Self {
         Self {
             sets: HashMap::new(),
-            rules: DEFAULT_RULE_MAP.rules.clone(),
+            rules: DEFAULT_RULE_MAP
+                .rules
+                .iter()
+                .map(|(k, v)| (k.to_string(), *v))
+                .collect(),
         }
     }
 }
@@ -139,7 +143,7 @@ impl Config {
     ///    sets)
     /// 3. Default level from default rule map
     #[must_use]
-    pub fn get_lint_level(&self, rule_id: &str) -> LintLevel {
+    pub fn get_lint_level(&self, rule_id: &'static str) -> LintLevel {
         if let Some(level) = self.lints.rules.get(rule_id) {
             log::debug!(
                 "Rule '{rule_id}' has individual level '{level:?}' in config, overriding set \
@@ -151,11 +155,14 @@ impl Config {
         let mut max_level: Option<LintLevel> = None;
 
         for (set_name, level) in &self.lints.sets {
-            let Some(lint_set) = BUILTIN_LINT_SETS.get(set_name.as_str()) else {
+            let Some((_, lint_set)) = BUILTIN_LINT_SETS
+                .iter()
+                .find(|(name, _)| *name == set_name.as_str())
+            else {
                 continue;
             };
 
-            if !lint_set.rules.contains(rule_id) {
+            if !lint_set.rules.contains(&rule_id) {
                 continue;
             }
 
@@ -166,7 +173,9 @@ impl Config {
         max_level.unwrap_or_else(|| {
             DEFAULT_RULE_MAP
                 .rules
-                .get(rule_id)
+                .iter()
+                .find(|(id, _)| *id == rule_id)
+                .map(|(_, level)| level)
                 .copied()
                 .unwrap_or(LintLevel::Warn)
         })

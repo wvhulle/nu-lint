@@ -70,7 +70,7 @@ pub trait ExpressionExt: Traverse {
 
     /// Tests if any nested expression matches predicate. Example: finds `$in`
     /// in `$in.field + 1`
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "It is actually used")]
     fn any(&self, context: &LintContext, predicate: impl Fn(&Expression) -> bool) -> bool;
     /// Checks if expression uses pipeline input variable. Example: `$in` or
     /// `$in | length`

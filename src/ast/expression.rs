@@ -68,9 +68,9 @@ pub trait ExpressionExt: Traverse {
     /// contains `$x`
     fn contains_variable(&self, var_id: VarId) -> bool;
 
-    #[allow(dead_code, reason = "Will be used later.")]
     /// Tests if any nested expression matches predicate. Example: finds `$in`
     /// in `$in.field + 1`
+    #[allow(dead_code, reason = "It is actually used")]
     fn any(&self, context: &LintContext, predicate: impl Fn(&Expression) -> bool) -> bool;
     /// Checks if expression uses pipeline input variable. Example: `$in` or
     /// `$in | length`
@@ -463,10 +463,6 @@ impl ExpressionExt for Expression {
         }
     }
 
-    #[allow(
-        clippy::too_many_lines,
-        reason = "Type inference requires many match arms"
-    )]
     fn infer_output_type(&self, context: &LintContext) -> Option<Type> {
         log::debug!(
             "Inferring output type for expression: '{}'",

@@ -31,10 +31,10 @@ fn has_single_statement_body(block_id: nu_protocol::BlockId, context: &LintConte
             .is_none_or(|span| is_single_line_in_source(span, context))
 }
 fn count_function_calls(function_name: &str, context: &LintContext) -> usize {
-    let function_decl_id = context
-        .working_set
-        .find_decl(function_name.as_bytes())
-        .expect("Function should exist");
+    let Some(function_decl_id) = context.working_set.find_decl(function_name.as_bytes()) else {
+        log::debug!("Function '{function_name}' not found in working set, skipping");
+        return 0;
+    };
     let mut all_calls = Vec::new();
     context.ast.flat_map(
         context.working_set,

@@ -10,6 +10,7 @@ use nu_lint::{
     cli::{Cli, collect_files_to_lint, handle_command, lint_files, lint_stdin, output_results},
     config::Config,
     fix::{apply_fixes, apply_fixes_to_stdin, format_fix_results},
+    log::instrument,
 };
 
 fn handle_fixes(violations: &[Violation], is_stdin: bool, dry_run: bool) {
@@ -70,7 +71,7 @@ fn main() {
 
     // Initialize logging based on verbose flag
     if cli.verbose {
-        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("debug")).init();
+        instrument();
     }
 
     let config = Config::load(cli.config.as_ref());

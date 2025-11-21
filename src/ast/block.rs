@@ -8,6 +8,110 @@ use nu_protocol::{
 use super::{call::CallExt, pipeline::PipelineExt};
 use crate::{ast::expression::ExpressionExt, context::LintContext};
 
+const MAX_TYPE_INFERENCE_DEPTH: usize = 100;
+
+fn find_transitively_called_functions_impl(
+    block: &Block,
+    context: &LintContext,
+    available_functions: &HashMap<String, BlockId>,
+    visited: &mut HashSet<usize>,
+) -> HashSet<String> {
+    // Prevent infinite recursion on recursive/mutually recursive functions
+    // We track visited blocks by comparing their memory addresses
+    #[allow(
+        clippy::ref_as_ptr,
+        reason = "Need pointer address as unique identifier for cycle detection"
+    )]
+    let block_ptr = block as *const Block as usize;
+
+    if !visited.insert(block_ptr) {
+        log::debug!("Cycle detected in function calls");
+        return HashSet::new();
+    }
+
+    block
+        .collect_user_function_calls(context)
+        .into_iter()
+        .filter_map(|func_name| {
+            available_functions.get(&func_name).map(|&callee_block_id| {
+                let callee_block = context.working_set.get_block(callee_block_id);
+                let mut transitive = find_transitively_called_functions_impl(
+                    callee_block,
+                    context,
+                    available_functions,
+                    visited,
+                );
+                transitive.insert(func_name);
+                transitive
+            })
+        })
+        .flatten()
+        .collect()
+}
+
+fn infer_output_type_with_depth(block: &Block, context: &LintContext, depth: usize) -> Type {
+    if depth >= MAX_TYPE_INFERENCE_DEPTH {
+        log::warn!(
+            "Type inference depth limit ({MAX_TYPE_INFERENCE_DEPTH}) reached, returning Any"
+        );
+        return Type::Any;
+    }
+
+    log::debug!("Inferring output type for block (depth={depth})");
+
+    let Some(pipeline) = block.pipelines.last() else {
+        return block.output_type();
+    };
+
+    let block_input_type = infer_input_type_with_depth(block, context, depth + 1);
+    log::debug!("Block inferred input type: {block_input_type:?}");
+    let mut current_type = Some(block_input_type);
+
+    for (idx, element) in pipeline.elements.iter().enumerate() {
+        log::debug!("Pipeline element {idx}: current_type before = {current_type:?}");
+
+        if let Expr::Call(call) = &element.expr.expr {
+            let output = call.get_output_type(context, current_type);
+            log::debug!("Pipeline element {idx} (Call): output type = {output:?}");
+            current_type = Some(output);
+            continue;
+        }
+
+        let inferred = element.expr.infer_output_type(context);
+        log::debug!("Pipeline element {idx} (Expression): inferred type = {inferred:?}");
+        if inferred.is_some() {
+            current_type = inferred;
+        }
+    }
+
+    let final_type = current_type.unwrap_or_else(|| block.output_type());
+    log::debug!("Block final output type: {final_type:?}");
+    final_type
+}
+
+fn infer_input_type_with_depth(block: &Block, context: &LintContext, depth: usize) -> Type {
+    if depth >= MAX_TYPE_INFERENCE_DEPTH {
+        log::warn!(
+            "Type inference depth limit ({MAX_TYPE_INFERENCE_DEPTH}) reached, returning Any"
+        );
+        return Type::Any;
+    }
+
+    let Some(in_var) = block
+        .all_elements()
+        .iter()
+        .find_map(|element| element.expr.find_pipeline_input_variable(context))
+    else {
+        return Type::Any;
+    };
+
+    block
+        .all_elements()
+        .iter()
+        .find_map(|element| element.expr.infer_input_type(Some(in_var), context))
+        .unwrap_or(Type::Any)
+}
+
 pub trait BlockExt {
     /// Checks if block has side effects. Example: `{ print "hello"; ls }` has
     /// side effects
@@ -153,19 +257,8 @@ impl BlockExt for Block {
         context: &LintContext,
         available_functions: &HashMap<String, BlockId>,
     ) -> HashSet<String> {
-        self.collect_user_function_calls(context)
-            .into_iter()
-            .filter_map(|func_name| {
-                available_functions.get(&func_name).map(|&callee_block_id| {
-                    let callee_block = context.working_set.get_block(callee_block_id);
-                    let mut transitive = callee_block
-                        .find_transitively_called_functions(context, available_functions);
-                    transitive.insert(func_name);
-                    transitive
-                })
-            })
-            .flatten()
-            .collect()
+        let mut visited: HashSet<usize> = HashSet::new();
+        find_transitively_called_functions_impl(self, context, available_functions, &mut visited)
     }
 
     fn uses_pipeline_input(&self, context: &LintContext) -> bool {
@@ -188,36 +281,7 @@ impl BlockExt for Block {
     }
 
     fn infer_output_type(&self, context: &LintContext) -> Type {
-        log::debug!("Inferring output type for block");
-
-        let Some(pipeline) = self.pipelines.last() else {
-            return self.output_type();
-        };
-
-        let block_input_type = self.infer_input_type(context);
-        log::debug!("Block inferred input type: {block_input_type:?}");
-        let mut current_type = Some(block_input_type);
-
-        for (idx, element) in pipeline.elements.iter().enumerate() {
-            log::debug!("Pipeline element {idx}: current_type before = {current_type:?}");
-
-            if let Expr::Call(call) = &element.expr.expr {
-                let output = call.get_output_type(context, current_type);
-                log::debug!("Pipeline element {idx} (Call): output type = {output:?}");
-                current_type = Some(output);
-                continue;
-            }
-
-            let inferred = element.expr.infer_output_type(context);
-            log::debug!("Pipeline element {idx} (Expression): inferred type = {inferred:?}");
-            if inferred.is_some() {
-                current_type = inferred;
-            }
-        }
-
-        let final_type = current_type.unwrap_or_else(|| self.output_type());
-        log::debug!("Block final output type: {final_type:?}");
-        final_type
+        infer_output_type_with_depth(self, context, 0)
     }
 
     fn infer_input_type(&self, context: &LintContext) -> Type {

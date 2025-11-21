@@ -1,4 +1,3 @@
-#![allow(clippy::missing_errors_doc, reason = "Necessary for testing.")]
 use core::fmt::{self, Display};
 use std::{
     collections::HashMap,
@@ -38,56 +37,53 @@ impl Display for LintLevel {
     }
 }
 
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum ConfigField {
+    Lints(LintConfig),
+    Sequential(bool),
+    Level(LintLevel),
+}
+
 #[derive(Debug, Clone, Serialize, Default, PartialEq)]
 pub struct Config {
     #[serde(default)]
     pub lints: LintConfig,
+
+    /// Process files sequentially instead of in parallel (useful for debugging)
+    #[serde(default)]
+    pub sequential: bool,
 }
 
-#[allow(
-    clippy::excessive_nesting,
-    reason = "Serde visitor pattern requires nesting"
-)]
 impl<'de> Deserialize<'de> for Config {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
-        use serde::de::{MapAccess, Visitor};
+        let map = HashMap::<String, ConfigField>::deserialize(deserializer)?;
 
-        struct ConfigVisitor;
+        let mut lints = None;
+        let mut sequential = None;
+        let mut bare_items = HashMap::new();
 
-        impl<'de> Visitor<'de> for ConfigVisitor {
-            type Value = Config;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("a config map")
-            }
-
-            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
-            where
-                A: MapAccess<'de>,
-            {
-                let mut lints = None;
-                let mut bare_items = HashMap::new();
-
-                while let Some(key) = map.next_key::<String>()? {
-                    match key.as_str() {
-                        "lints" => lints = Some(map.next_value()?),
-                        _ => {
-                            bare_items.insert(key, map.next_value()?);
-                        }
-                    }
+        for (key, value) in map {
+            match (key.as_str(), value) {
+                ("lints", ConfigField::Lints(l)) => lints = Some(l),
+                ("sequential", ConfigField::Sequential(s)) => sequential = Some(s),
+                (_, ConfigField::Level(level)) => {
+                    bare_items.insert(key, level);
                 }
-
-                let mut lints = lints.unwrap_or_default();
-                merge_bare_items_into_lints(&mut lints, bare_items);
-
-                Ok(Config { lints })
+                _ => {}
             }
         }
 
-        deserializer.deserialize_map(ConfigVisitor)
+        let mut lints = lints.unwrap_or_default();
+        merge_bare_items_into_lints(&mut lints, bare_items);
+
+        Ok(Self {
+            lints,
+            sequential: sequential.unwrap_or(false),
+        })
     }
 }
 
@@ -147,6 +143,11 @@ pub struct ExcludeConfig {
 }
 
 impl Config {
+    /// Load configuration from a TOML string.
+    ///
+    /// # Errors
+    ///
+    /// Errors when TOML string is not a valid TOML string.
     pub fn load_from_str(toml_str: &str) -> Result<Self, LintError> {
         Ok(toml::from_str(toml_str)?)
     }

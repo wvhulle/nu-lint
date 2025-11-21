@@ -4,7 +4,10 @@ use std::{
     io::{self, BufRead},
     path::PathBuf,
     process,
-    sync::Mutex,
+    sync::{
+        Mutex,
+        atomic::{AtomicBool, Ordering},
+    },
 };
 
 use clap::{Parser, Subcommand};
@@ -57,6 +60,12 @@ pub struct Cli {
 
     #[arg(short = 'v', long, help = "Enable verbose debug output")]
     pub verbose: bool,
+
+    #[arg(
+        long,
+        help = "Process files sequentially instead of in parallel (useful for debugging)"
+    )]
+    pub sequential: bool,
 }
 
 #[derive(Subcommand)]
@@ -175,34 +184,51 @@ pub fn collect_nu_files_with_gitignore(dir: &PathBuf) -> Vec<PathBuf> {
         .collect()
 }
 
-/// Lint files in parallel
+/// Lint files in parallel or sequentially based on config
 #[must_use]
 pub fn lint_files(engine: &LintEngine, files: &[PathBuf]) -> (Vec<Violation>, bool) {
     let violations_mutex = Mutex::new(Vec::new());
-    let errors_mutex = Mutex::new(false);
+    let has_errors = AtomicBool::new(false);
 
-    files
-        .par_iter()
-        .for_each(|path| match engine.lint_file(path) {
-            Ok(violations) => {
-                violations_mutex
-                    .lock()
-                    .expect("Failed to lock violations mutex")
-                    .extend(violations);
+    let use_parallel = !engine.config.sequential;
+
+    if use_parallel {
+        files
+            .par_iter()
+            .for_each(|path| match engine.lint_file(path) {
+                Ok(violations) => {
+                    violations_mutex
+                        .lock()
+                        .expect("Failed to lock violations mutex")
+                        .extend(violations);
+                }
+                Err(e) => {
+                    eprintln!("Error linting {}: {}", path.display(), e);
+                    has_errors.store(true, Ordering::Relaxed);
+                }
+            });
+    } else {
+        for path in files {
+            log::debug!("Processing file: {}", path.display());
+            match engine.lint_file(path) {
+                Ok(violations) => {
+                    violations_mutex
+                        .lock()
+                        .expect("Failed to lock violations mutex")
+                        .extend(violations);
+                }
+                Err(e) => {
+                    eprintln!("Error linting {}: {}", path.display(), e);
+                    has_errors.store(true, Ordering::Relaxed);
+                }
             }
-            Err(e) => {
-                eprintln!("Error linting {}: {}", path.display(), e);
-                *errors_mutex.lock().expect("Failed to lock errors mutex") = true;
-            }
-        });
+        }
+    }
 
     let violations = violations_mutex
         .into_inner()
         .expect("Failed to unwrap violations mutex");
-    let has_errors = errors_mutex
-        .into_inner()
-        .expect("Failed to unwrap errors mutex");
-    (violations, has_errors)
+    (violations, has_errors.load(Ordering::Relaxed))
 }
 
 /// Lint content from stdin
@@ -447,6 +473,120 @@ mod tests {
             violations
                 .iter()
                 .any(|v| v.rule_id == "snake_case_variables" && v.lint_level == LintLevel::Deny)
+        );
+    }
+
+    #[test]
+    fn test_many_files_in_directory() {
+        let temp_dir = TempDir::new().unwrap();
+
+        for i in 0..100 {
+            let file_path = temp_dir.path().join(format!("test_{i}.nu"));
+            let content = format!(
+                r#"
+def main [] {{
+    helper_{i}
+}}
+
+def helper_{i} [] {{
+    print "test {i}"
+}}
+"#
+            );
+            fs::write(&file_path, content).unwrap();
+        }
+
+        let config = Config::default();
+        let engine = LintEngine::new(config);
+        let files = collect_files_to_lint(&[temp_dir.path().to_path_buf()]);
+
+        assert_eq!(files.len(), 100, "Should find all 100 .nu files");
+
+        let (violations, has_errors) = lint_files(&engine, &files);
+
+        assert!(!has_errors, "Should not have errors");
+        assert!(!violations.is_empty(), "Should find some violations");
+    }
+
+    #[test]
+    fn test_recursive_functions_no_stack_overflow() {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("recursive.nu");
+
+        let content = r"
+def main [] {
+    factorial 5
+    is_even 10
+}
+
+def factorial [n: int] {
+    if $n <= 1 {
+        1
+    } else {
+        $n * (factorial ($n - 1))
+    }
+}
+
+def is_even [n: int] {
+    if $n == 0 {
+        true
+    } else {
+        is_odd ($n - 1)
+    }
+}
+
+def is_odd [n: int] {
+    if $n == 0 {
+        false
+    } else {
+        is_even ($n - 1)
+    }
+}
+";
+        fs::write(&file_path, content).unwrap();
+
+        let config = Config::default();
+        let engine = LintEngine::new(config);
+        let files = collect_files_to_lint(&[file_path]);
+
+        let (violations, has_errors) = lint_files(&engine, &files);
+
+        assert!(
+            !has_errors,
+            "Should not have errors with recursive functions"
+        );
+        assert!(!violations.is_empty(), "Should find some violations");
+    }
+
+    #[test]
+    fn test_deeply_nested_function_calls() {
+        use std::fmt::Write;
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("deep.nu");
+
+        let mut content = String::from("def main [] {\n    func_0\n}\n\n");
+
+        for i in 0..50 {
+            write!(
+                &mut content,
+                "def func_{i} [] {{\n    func_{}\n}}\n\n",
+                i + 1
+            )
+            .unwrap();
+        }
+        content.push_str("def func_50 [] {\n    print \"deep\"\n}\n");
+
+        fs::write(&file_path, content).unwrap();
+
+        let config = Config::default();
+        let engine = LintEngine::new(config);
+        let files = collect_files_to_lint(&[file_path]);
+
+        let (_violations, has_errors) = lint_files(&engine, &files);
+
+        assert!(
+            !has_errors,
+            "Should not have errors with deeply nested calls"
         );
     }
 }

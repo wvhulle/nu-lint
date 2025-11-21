@@ -78,25 +78,16 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
         return None;
     }
 
-    let pipeline_start = pipeline.elements[0].expr.span.start;
-    let pipeline_end = pipeline.elements.last().unwrap().expr.span.end;
-    let pipeline_span = nu_protocol::Span::new(pipeline_start, pipeline_end);
-    let pipeline_text = &context.source[pipeline_start..pipeline_end];
-
     let message = format!(
         "External command '{external_cmd}' in pipeline without error handling: Nushell only \
          checks the last command's exit code. If this command fails, the error will be silently \
          ignored."
     );
 
-    let fix_text = format!(
-        "let result = ({pipeline_text} | complete)\nif $result.exit_code != 0 {{ error make {{ \
-         msg: $result.stderr }} }}\n$result.stdout"
-    );
-
-    let fix = crate::Fix::with_explanation(
-        "Wrap pipeline in complete with error checking".to_string(),
-        vec![crate::Replacement::new(pipeline_span, fix_text)],
+    let help = format!(
+        "Wrap the external command in 'complete' to capture its exit code:\nlet result = \
+         (^{external_cmd} ... | complete)\nif $result.exit_code != 0 {{\n\x20   error make {{msg: \
+         $result.stderr}}\n}}\n$result.stdout"
     );
 
     Some(
@@ -105,7 +96,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
             message,
             first_element.expr.span,
         )
-        .with_fix(fix),
+        .with_help(help),
     )
 }
 
@@ -153,7 +144,5 @@ pub const fn rule() -> Rule {
 
 #[cfg(test)]
 mod detect_bad;
-#[cfg(test)]
-mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

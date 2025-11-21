@@ -53,26 +53,23 @@ fn create_violations_for_untyped_io(
                 "Custom command '{func_name}' uses pipeline input ($in) and produces output but \
                  lacks type annotations"
             ),
-            "Add pipeline input and output type annotations (e.g., `: string -> list<int>` or `: \
-             any -> table`)",
+            "Add pipeline input and output type annotations",
         ),
         (true, false) => (
             format!(
                 "Custom command '{func_name}' uses pipeline input ($in) but lacks input type \
                  annotation"
             ),
-            "Add pipeline input type annotation (e.g., `: string -> any` or `: list<int> -> any`)",
+            "Add pipeline input type annotation",
         ),
         (false, true) => (
             format!(
                 "Custom command '{func_name}' produces output but lacks output type annotation"
             ),
             if uses_in {
-                "Add pipeline output type annotation (e.g., `: any -> string` or `: list<int> -> \
-                 table`)"
+                "Add pipeline output type annotation"
             } else {
-                "Add pipeline output type annotation (e.g., `: nothing -> string` or `: nothing -> \
-                 list<int>`)"
+                "Add output type annotation"
             },
         ),
         (false, false) => unreachable!(),

@@ -1,65 +1,90 @@
 use heck::ToSnakeCase;
-use nu_protocol::ast::{Argument, Call, Expr};
+use nu_protocol::{
+    Span, VarId,
+    ast::{Argument, Call, Expr},
+};
 
 use crate::{
+    ast::span::SpanExt,
     context::LintContext,
     rule::Rule,
-    rules::naming::NuNaming,
     violation::{Fix, Replacement, Violation},
 };
 
-/// Check if this is a let or mut declaration
-fn get_var_decl_type(decl_name: &str) -> Option<bool> {
-    match decl_name {
-        "let" => Some(false),
-        "mut" => Some(true),
-        _ => None,
-    }
+/// Find all usages of a variable in the AST
+fn find_variable_usages(var_id: VarId, context: &LintContext) -> Vec<Span> {
+    use nu_protocol::ast::Traverse;
+
+    let mut usages = Vec::new();
+    context.ast.flat_map(
+        context.working_set,
+        &|expr| match &expr.expr {
+            Expr::Var(id) if *id == var_id => vec![expr.span],
+            Expr::FullCellPath(cell_path) if matches!(&cell_path.head.expr, Expr::Var(id) if *id == var_id) => {
+                vec![cell_path.head.span]
+            }
+            _ => vec![],
+        },
+        &mut usages,
+    );
+    usages
 }
 
-/// Create a violation for invalid variable name
-fn create_snake_case_violation(
-    var_name: &str,
-    is_mutable: bool,
-    name_span: nu_protocol::Span,
-) -> Violation {
-    let var_type = if is_mutable {
-        "Mutable variable"
-    } else {
-        "Variable"
-    };
-    let snake_case_name = var_name.to_snake_case();
-
-    let fix = Fix {
-        explanation: format!("Rename variable '{var_name}' to '{snake_case_name}'").into(),
-        replacements: vec![Replacement {
-            span: name_span,
-            replacement_text: snake_case_name.clone().into(),
-        }],
-    };
-
-    Violation::new(
-        "snake_case_variables",
-        format!("{var_type} '{var_name}' should use snake_case naming convention"),
-        name_span,
-    )
-    .with_help(format!("Consider renaming to: {snake_case_name}"))
-    .with_fix(fix)
-}
-
-/// Check a single call expression for variable naming violations
 fn check_call(call: &Call, ctx: &LintContext) -> Option<Violation> {
-    let decl = ctx.working_set.get_decl(call.decl_id);
-    let is_mutable = get_var_decl_type(decl.name())?;
+    let decl_name = ctx.working_set.get_decl(call.decl_id).name();
+    let is_mutable = matches!(decl_name, "mut");
+    if !matches!(decl_name, "let" | "mut") {
+        return None;
+    }
 
     let Argument::Positional(name_expr) = call.arguments.first()? else {
         return None;
     };
 
-    let var_name = ctx.source.get(name_expr.span.start..name_expr.span.end)?;
+    let Expr::VarDecl(var_id) = &name_expr.expr else {
+        return None;
+    };
 
-    (!var_name.is_valid_snake_case())
-        .then(|| create_snake_case_violation(var_name, is_mutable, name_expr.span))
+    let var_name = ctx.source.get(name_expr.span.start..name_expr.span.end)?;
+    let snake_case_name = var_name.to_snake_case();
+
+    if var_name == snake_case_name {
+        return None;
+    }
+
+    // Create replacements for declaration and all usages
+    let mut replacements = vec![Replacement {
+        span: name_expr.span,
+        replacement_text: snake_case_name.clone().into(),
+    }];
+
+    for usage_span in find_variable_usages(*var_id, ctx) {
+        if usage_span.text(ctx).starts_with('$') {
+            replacements.push(Replacement {
+                span: usage_span,
+                replacement_text: format!("${snake_case_name}").into(),
+            });
+        }
+    }
+
+    let var_type = if is_mutable {
+        "Mutable variable"
+    } else {
+        "Variable"
+    };
+
+    Some(
+        Violation::new(
+            "snake_case_variables",
+            format!("{var_type} '{var_name}' should use snake_case naming convention"),
+            name_expr.span,
+        )
+        .with_help(format!("Consider renaming to: {snake_case_name}"))
+        .with_fix(Fix::with_explanation(
+            format!("Rename variable '{var_name}' to '{snake_case_name}'"),
+            replacements,
+        )),
+    )
 }
 
 fn check(context: &LintContext) -> Vec<Violation> {

@@ -1,7 +1,6 @@
 use heck::ToKebabCase;
 use nu_protocol::ast::Expr;
 
-use super::NuNaming;
 use crate::{ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation};
 
 fn check(context: &LintContext) -> Vec<Violation> {
@@ -19,16 +18,19 @@ fn check(context: &LintContext) -> Vec<Violation> {
             return vec![];
         };
 
-        if cmd_name.is_valid_kebab_case() {
+        let kebab_case_name = cmd_name.to_kebab_case();
+        if cmd_name == kebab_case_name {
             return vec![];
         }
 
-        vec![cmd_name.create_naming_violation(
-            "kebab_case_commands",
-            "Command",
-            &cmd_name.to_kebab_case(),
-            name_span,
-        )]
+        vec![
+            Violation::new(
+                "kebab_case_commands",
+                format!("Command '{cmd_name}' should follow naming convention"),
+                name_span,
+            )
+            .with_help(format!("Consider renaming to: {kebab_case_name}")),
+        ]
     })
 }
 
@@ -42,7 +44,5 @@ pub const fn rule() -> Rule {
 
 #[cfg(test)]
 mod detect_bad;
-#[cfg(test)]
-mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

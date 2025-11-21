@@ -24,7 +24,9 @@ use crate::{
 #[command(version)]
 #[command(
     after_help = "STDIN:\n  If no paths are provided and stdin is not a terminal, nu-lint will \
-                  read and lint code from stdin.\n  Example: echo 'let x = 5' | nu-lint"
+                  read and lint code from stdin.\n  Example: echo 'let x = 5' | nu-lint\n\n  When \
+                  using --fix with stdin, the fixed content will be written to stdout.\n  \
+                  Example: echo 'let myVar = 5' | nu-lint --fix"
 )]
 pub struct Cli {
     #[command(subcommand)]
@@ -52,13 +54,6 @@ pub struct Cli {
 
     #[arg(long, help = "Show what would be fixed without applying")]
     pub dry_run: bool,
-
-    #[arg(
-        long,
-        help = "Process files in parallel (experimental)",
-        default_value = "false"
-    )]
-    pub parallel: bool,
 
     #[arg(short = 'v', long, help = "Enable verbose debug output")]
     pub verbose: bool,
@@ -180,22 +175,9 @@ pub fn collect_nu_files_with_gitignore(dir: &PathBuf) -> Vec<PathBuf> {
         .collect()
 }
 
-/// Lint files either in parallel or sequentially
-#[must_use]
-pub fn lint_files(
-    engine: &LintEngine,
-    files: &[PathBuf],
-    parallel: bool,
-) -> (Vec<Violation>, bool) {
-    if parallel && files.len() > 1 {
-        lint_files_parallel(engine, files)
-    } else {
-        lint_files_sequential(engine, files)
-    }
-}
-
 /// Lint files in parallel
-fn lint_files_parallel(engine: &LintEngine, files: &[PathBuf]) -> (Vec<Violation>, bool) {
+#[must_use]
+pub fn lint_files(engine: &LintEngine, files: &[PathBuf]) -> (Vec<Violation>, bool) {
     let violations_mutex = Mutex::new(Vec::new());
     let errors_mutex = Mutex::new(false);
 
@@ -221,26 +203,6 @@ fn lint_files_parallel(engine: &LintEngine, files: &[PathBuf]) -> (Vec<Violation
         .into_inner()
         .expect("Failed to unwrap errors mutex");
     (violations, has_errors)
-}
-
-/// Lint files sequentially
-fn lint_files_sequential(engine: &LintEngine, files: &[PathBuf]) -> (Vec<Violation>, bool) {
-    let mut all_violations = Vec::new();
-    let mut has_errors = false;
-
-    for path in files {
-        match engine.lint_file(path) {
-            Ok(violations) => {
-                all_violations.extend(violations);
-            }
-            Err(e) => {
-                eprintln!("Error linting {}: {}", path.display(), e);
-                has_errors = true;
-            }
-        }
-    }
-
-    (all_violations, has_errors)
 }
 
 /// Lint content from stdin
@@ -345,7 +307,7 @@ mod tests {
 
         let engine = LintEngine::new(config);
         let files = collect_files_to_lint(&[nu_file_path]);
-        let (violations, _) = lint_files(&engine, &files, false);
+        let (violations, _) = lint_files(&engine, &files);
 
         assert!(
             violations
@@ -375,7 +337,7 @@ mod tests {
 
         let engine = LintEngine::new(config);
         let files = collect_files_to_lint(&[nu_file_path]);
-        let (violations, _) = lint_files(&engine, &files, false);
+        let (violations, _) = lint_files(&engine, &files);
 
         assert!(!violations.is_empty());
     }
@@ -403,7 +365,7 @@ mod tests {
         let config = Config::load(None);
         let engine = LintEngine::new(config);
         let files = collect_files_to_lint(&[PathBuf::from("test.nu")]);
-        let (violations, _) = lint_files(&engine, &files, false);
+        let (violations, _) = lint_files(&engine, &files);
 
         set_current_dir(original_dir).unwrap();
 
@@ -439,7 +401,7 @@ mod tests {
         let config = Config::load(None);
         let engine = LintEngine::new(config);
         let files = collect_files_to_lint(&[PathBuf::from("test.nu")]);
-        let (violations, _) = lint_files(&engine, &files, false);
+        let (violations, _) = lint_files(&engine, &files);
 
         set_current_dir(original_dir).unwrap();
         assert!(
@@ -478,7 +440,7 @@ mod tests {
         let config = Config::load(Some(&explicit_config));
         let engine = LintEngine::new(config);
         let files = collect_files_to_lint(&[PathBuf::from("test.nu")]);
-        let (violations, _) = lint_files(&engine, &files, false);
+        let (violations, _) = lint_files(&engine, &files);
 
         set_current_dir(original_dir).unwrap();
         assert!(

@@ -13,6 +13,32 @@ pub struct FixResult {
     pub fixes_applied: usize,
 }
 
+/// Apply fixes to stdin content
+///
+/// Returns the fixed content as a string
+#[must_use]
+pub fn apply_fixes_to_stdin(violations: &[Violation]) -> Option<String> {
+    // Filter violations that come from stdin and have fixes
+    let stdin_violations: Vec<&Violation> = violations
+        .iter()
+        .filter(|v| v.file.as_ref().is_some_and(|f| f.as_ref() == "<stdin>") && v.fix.is_some())
+        .collect();
+
+    if stdin_violations.is_empty() {
+        return None;
+    }
+
+    // Get the original source from the first violation
+    let original_content = stdin_violations
+        .first()
+        .and_then(|v| v.source.as_ref())
+        .map(std::borrow::Cow::as_ref)?;
+
+    let fixed_content = apply_fixes_to_content(original_content, &stdin_violations);
+
+    Some(fixed_content)
+}
+
 /// Apply fixes to violations grouped by file
 ///
 /// # Errors

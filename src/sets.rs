@@ -74,6 +74,7 @@ fn error_handling_rule_set() -> RuleSet {
             "escape_string_interpolation_operators".to_string(),
             "prefer_complete_for_external_commands".to_string(),
             "prefer_error_make_for_stderr".to_string(),
+            "prefer_try_for_error_handling".to_string(),
             "print_exit_use_error_make".to_string(),
         ]),
     }
@@ -230,6 +231,7 @@ pub static DEFAULT_RULE_MAP: LazyLock<RuleMap> = LazyLock::new(|| RuleMap {
         ("prefer_compound_assignment".to_string(), LintLevel::Warn),
         ("prefer_direct_use".to_string(), LintLevel::Deny),
         ("prefer_error_make_for_stderr".to_string(), LintLevel::Warn),
+        ("prefer_try_for_error_handling".to_string(), LintLevel::Warn),
         ("print_exit_use_error_make".to_string(), LintLevel::Warn),
         ("prefer_is_not_empty".to_string(), LintLevel::Warn),
         ("prefer_lines_over_split".to_string(), LintLevel::Warn),

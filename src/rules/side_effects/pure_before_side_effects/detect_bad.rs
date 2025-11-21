@@ -1,7 +1,9 @@
 use super::rule;
+use crate::log::instrument;
 
 #[test]
 fn mixed_computation_with_print() {
+    instrument();
     rule().assert_detects(
         r"
 def process_data [] {
@@ -74,6 +76,7 @@ def main [] {
 
 #[test]
 fn mathematical_computation_with_exit() {
+    instrument();
     rule().assert_detects(
         r"
 def calculate_and_exit [] {
@@ -256,6 +259,7 @@ def main [] {
 
 #[test]
 fn string_manipulation_then_input() {
+    instrument();
     rule().assert_detects(
         r"
 def get_user_response [] {

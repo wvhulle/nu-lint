@@ -3,93 +3,17 @@ use nu_protocol::{
     ast::{Argument, Expr, Expression, ExternalArgument},
 };
 
-use crate::{ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation};
-
-const DANGEROUS_COMMANDS: &[&str] = &["rm", "mv", "cp"];
-
-const SYSTEM_DIRECTORIES: &[&str] = &[
-    "/home", "/usr", "/etc", "/var", "/sys", "/proc", "/dev", "/boot", "/lib", "/bin", "/sbin",
-];
-
-const EXACT_DANGEROUS_PATHS: &[&str] = &["/", "~", "../", ".."];
-
-fn is_exact_dangerous_path(path: &str) -> bool {
-    EXACT_DANGEROUS_PATHS.contains(&path)
-}
-
-fn is_root_wildcard_pattern(path: &str) -> bool {
-    matches!(
-        path,
-        "/*" | "~/*"
-            | "/home/*"
-            | "/usr/*"
-            | "/etc/*"
-            | "/var/*"
-            | "/sys/*"
-            | "/proc/*"
-            | "/dev/*"
-            | "/boot/*"
-            | "/lib/*"
-            | "/bin/*"
-            | "/sbin/*"
-    )
-}
-
-fn is_system_directory(path: &str) -> bool {
-    SYSTEM_DIRECTORIES.contains(&path) || path == "/dev/null"
-}
-
-fn is_system_subdirectory(path: &str) -> bool {
-    if path.contains("/tmp/") {
-        return false;
-    }
-
-    SYSTEM_DIRECTORIES
-        .iter()
-        .any(|dir| path.starts_with(&format!("{dir}/")))
-}
-
-fn is_shallow_home_path(path: &str) -> bool {
-    if !path.starts_with("~.") && !path.starts_with("~/") {
-        return false;
-    }
-
-    let after_tilde = &path[1..];
-    let slash_count = after_tilde.matches('/').count();
-
-    slash_count <= 1
-}
-
-fn is_dangerous_path(path_str: &str) -> bool {
-    is_exact_dangerous_path(path_str)
-        || is_root_wildcard_pattern(path_str)
-        || is_system_directory(path_str)
-        || is_system_subdirectory(path_str)
-        || is_shallow_home_path(path_str)
-        || path_str.starts_with("/..")
-}
-
-fn extract_arg_text<'a>(arg: &ExternalArgument, context: &'a LintContext) -> &'a str {
-    match arg {
-        ExternalArgument::Regular(expr) | ExternalArgument::Spread(expr) => {
-            &context.source[expr.span.start..expr.span.end]
-        }
-    }
-}
-
-fn has_recursive_flag(args: &[ExternalArgument], context: &LintContext) -> bool {
-    args.iter().any(|arg| {
-        let arg_text = extract_arg_text(arg, context);
-        matches!(
-            arg_text,
-            text if text.contains("-r")
-                || text.contains("--recursive")
-                || text.contains("-rf")
-                || text.contains("-fr")
-                || text.contains("--force")
-        )
-    })
-}
+use crate::{
+    ast::{
+        call::CallExt,
+        effect::{
+            SideEffect, extract_arg_text, has_recursive_flag, has_side_effect, is_dangerous_path,
+        },
+    },
+    context::LintContext,
+    rule::Rule,
+    violation::Violation,
+};
 
 fn extract_path_from_arg(arg: &ExternalArgument, context: &LintContext) -> String {
     extract_arg_text(arg, context).to_string()
@@ -125,10 +49,6 @@ fn is_inside_if_block(context: &LintContext, command_span: Span) -> bool {
     !found_in_if.is_empty()
 }
 
-fn is_dangerous_command(cmd_name: &str) -> bool {
-    DANGEROUS_COMMANDS.contains(&cmd_name)
-}
-
 fn extract_dangerous_command(
     expr: &Expression,
     context: &LintContext,
@@ -136,13 +56,16 @@ fn extract_dangerous_command(
     match &expr.expr {
         Expr::ExternalCall(head, args) => {
             let cmd_name = &context.source[head.span.start..head.span.end];
-            is_dangerous_command(cmd_name).then(|| (expr.span, cmd_name.to_string(), args.to_vec()))
+
+            // For external commands, we only check known dangerous commands
+            if !matches!(cmd_name, "rm" | "mv" | "cp") {
+                return None;
+            }
+
+            Some((expr.span, cmd_name.to_string(), args.to_vec()))
         }
         Expr::Call(call) => {
             let decl_name = call.get_call_name(context);
-            if !is_dangerous_command(&decl_name) {
-                return None;
-            }
 
             let external_args: Vec<ExternalArgument> = call
                 .arguments
@@ -152,6 +75,11 @@ fn extract_dangerous_command(
                     _ => None,
                 })
                 .collect();
+
+            if !has_side_effect(&decl_name, SideEffect::Dangerous, context, call) {
+                return None;
+            }
+
             Some((expr.span, decl_name, external_args))
         }
         _ => None,

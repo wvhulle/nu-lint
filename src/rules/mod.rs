@@ -33,6 +33,7 @@ mod prefer_parse_command;
 mod prefer_parse_over_each_split;
 mod prefer_pipeline_input;
 mod prefer_range_iteration;
+mod prefer_try_for_error_handling;
 mod prefer_where_over_each_if;
 mod prefer_where_over_for_if;
 mod print_exit_use_error_make;
@@ -54,7 +55,7 @@ use spacing::{
 
 use crate::rule::Rule;
 
-pub const ALL_RULES: [Rule; 70] = [
+pub const ALL_RULES: &[Rule] = &[
     check_complete_exit_code::rule(),
     collapsible_if::rule(),
     dangerous_file_operations::rule(),
@@ -103,6 +104,7 @@ pub const ALL_RULES: [Rule; 70] = [
     prefer_compound_assignment::rule(),
     prefer_direct_use::rule(),
     prefer_error_make_for_stderr::rule(),
+    prefer_try_for_error_handling::rule(),
     print_exit_use_error_make::rule(),
     prefer_is_not_empty::rule(),
     prefer_lines_over_split::rule(),

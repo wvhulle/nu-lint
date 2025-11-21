@@ -297,9 +297,10 @@ fn explain_rule(config: &Config, rule_id: &str) {
         let lint_level = config.get_lint_level(rule.id);
         let default_level = DEFAULT_RULE_MAP
             .rules
-            .get(rule.id)
+            .iter()
+            .find(|(id, _)| *id == rule.id)
             .copied()
-            .unwrap_or(LintLevel::Warn);
+            .map_or(LintLevel::Warn, |(_, level)| level);
         println!("Rule: {}", rule.id);
         println!("Lint Level: {lint_level:?}");
         println!("Default Lint Level: {default_level}");

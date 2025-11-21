@@ -3,23 +3,17 @@ use nu_protocol::{
     ast::{Block, Expr, Expression, Pipeline, Traverse},
 };
 
-use crate::{ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation};
-
-const SAFE_EXTERNAL_COMMANDS: &[&str] = &[
-    "echo", "printf", "true", "false", "yes", "seq", "ls", "date", "uptime", "cal", "whoami", "id",
-    "hostname", "uname", "arch", "pwd", "basename", "dirname", "realpath", "readlink", "env",
-    "printenv", "tr", "cut", "paste", "column", "fmt", "fold", "expand", "unexpand", "bc", "dc",
-    "expr", "mktemp", "git",
-];
-
-fn is_safe_command(cmd: &str) -> bool {
-    SAFE_EXTERNAL_COMMANDS.contains(&cmd)
-}
+use crate::{
+    ast::{call::CallExt, effect::is_external_command_safe},
+    context::LintContext,
+    rule::Rule,
+    violation::Violation,
+};
 
 fn get_external_command(expr: &Expression, context: &LintContext) -> Option<String> {
     if let Expr::ExternalCall(head, _args) = &expr.expr {
         let head_text = context.source[head.span.start..head.span.end].to_string();
-        if !is_safe_command(&head_text) {
+        if !is_external_command_safe(&head_text) {
             return Some(head_text);
         }
     }

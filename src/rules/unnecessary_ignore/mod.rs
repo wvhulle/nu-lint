@@ -1,60 +1,29 @@
 use nu_protocol::ast::{Expr, Expression, Pipeline};
 
 use crate::{
-    ast::{call::CallExt, pipeline::PipelineExt},
+    ast::{
+        call::CallExt,
+        effect::{SideEffect, has_side_effect},
+        pipeline::PipelineExt,
+    },
     context::LintContext,
     rule::Rule,
     violation::Violation,
 };
 
-/// Commands that are known to produce no output (even if type system says
-/// `Type::Any`) This is a fallback for when type information is not precise
-const KNOWN_NO_OUTPUT_COMMANDS: &[&str] = &[
-    "cd",
-    "mkdir",
-    "rm",
-    "mv",
-    "cp",
-    "touch",
-    "let",
-    "mut",
-    "const",
-    "break",
-    "continue",
-    "return",
-    "sleep",
-    "hide",
-    "use",
-    "source",
-    "source-env",
-];
-
 /// Check if a command produces no output based on its signature's output type
-/// Falls back to a whitelist for commands with `Type::Any`
+/// or the side effect registry
 fn command_produces_no_output(expr: &Expression, context: &LintContext) -> bool {
     match &expr.expr {
         Expr::Call(call) => {
             let cmd_name = call.get_call_name(context);
             let decl = context.working_set.get_decl(call.decl_id);
             let signature = decl.signature();
-
-            // Check the output type from the signature
             let output_type = signature.get_output_type();
 
-            match output_type {
-                nu_protocol::Type::Nothing => {
-                    // Definitely produces no output
-                    true
-                }
-                nu_protocol::Type::Any => {
-                    // Type system doesn't know - fall back to whitelist
-                    KNOWN_NO_OUTPUT_COMMANDS.contains(&cmd_name.as_str())
-                }
-                _ => {
-                    // Has a specific output type - produces output
-                    false
-                }
-            }
+            matches!(output_type, nu_protocol::Type::Nothing)
+                || (matches!(output_type, nu_protocol::Type::Any)
+                    && has_side_effect(&cmd_name, SideEffect::NoOutput, context, call))
         }
         _ => false,
     }

@@ -1,25 +1,67 @@
 use nu_protocol::{
     BlockId,
-    ast::{Expr, Pipeline},
+    ast::{Block, Call, Expr, Expression, Pipeline},
 };
 
 use crate::{
-    ast::effect::{StatementType, classify_expression},
+    ast::{
+        call::CallExt,
+        effect::{SideEffect, has_side_effect},
+        expression::ExpressionExt,
+    },
     context::LintContext,
     rule::Rule,
     violation::Violation,
 };
 
-fn count_consecutive_pure_statements(pipelines: &[Pipeline], context: &LintContext) -> usize {
+fn is_side_effect(expr: &Expression, context: &LintContext) -> bool {
+    matches!(&expr.expr, Expr::ExternalCall(_, _))
+        || matches!(&expr.expr, Expr::Call(call) if is_side_effect_call(call, context))
+}
+
+fn is_side_effect_call(call: &Call, context: &LintContext) -> bool {
+    if call.is_control_flow_command(context) {
+        return call.all_arg_expressions().iter().any(|arg| {
+            arg.extract_block_id().is_some_and(|id| {
+                has_side_effect_in_block(context.working_set.get_block(id), context)
+            }) || is_side_effect(arg, context)
+        });
+    }
+
+    let cmd_name = call.get_call_name(context);
+
+    has_side_effect(&cmd_name, SideEffect::Print, context, call)
+        || has_side_effect(&cmd_name, SideEffect::NoOutput, context, call)
+        || has_side_effect(&cmd_name, SideEffect::Error, context, call)
+        || matches!(
+            context
+                .working_set
+                .get_decl(call.decl_id)
+                .signature()
+                .category,
+            nu_protocol::Category::FileSystem
+                | nu_protocol::Category::Network
+                | nu_protocol::Category::System
+        )
+}
+
+fn has_side_effect_in_block(block: &Block, context: &LintContext) -> bool {
+    block.pipelines.iter().any(|pipeline| {
+        pipeline
+            .elements
+            .iter()
+            .any(|elem| is_side_effect(&elem.expr, context))
+    })
+}
+
+fn count_leading_pure_pipelines(pipelines: &[Pipeline], context: &LintContext) -> usize {
     pipelines
         .iter()
         .take_while(|pipeline| {
-            pipeline.elements.iter().all(|elem| {
-                matches!(
-                    classify_expression(&elem.expr, context),
-                    StatementType::Pure | StatementType::Control
-                )
-            })
+            pipeline
+                .elements
+                .iter()
+                .all(|elem| !is_side_effect(&elem.expr, context))
         })
         .filter(|pipeline| {
             pipeline
@@ -36,12 +78,10 @@ fn has_side_effects_after(
     context: &LintContext,
 ) -> bool {
     pipelines.iter().skip(pure_count).any(|pipeline| {
-        pipeline.elements.iter().any(|elem| {
-            matches!(
-                classify_expression(&elem.expr, context),
-                StatementType::SideEffect
-            )
-        })
+        pipeline
+            .elements
+            .iter()
+            .any(|elem| is_side_effect(&elem.expr, context))
     })
 }
 
@@ -50,21 +90,42 @@ fn analyze_function_body(
     function_name: &str,
     context: &LintContext,
 ) -> Option<Violation> {
+    log::debug!("Analyzing function '{function_name}' for pure statements before side effects");
+
     let block = context.working_set.get_block(block_id);
+    log::debug!(
+        "Function '{}' has {} pipelines",
+        function_name,
+        block.pipelines.len()
+    );
 
     if block.pipelines.len() < 3 {
+        log::debug!(
+            "Function '{}' has too few pipelines ({} < 3), skipping",
+            function_name,
+            block.pipelines.len()
+        );
         return None;
     }
 
-    let pure_count = count_consecutive_pure_statements(&block.pipelines, context);
+    let pure_count = count_leading_pure_pipelines(&block.pipelines, context);
+    log::debug!("Function '{function_name}' has {pure_count} consecutive pure statements");
 
     if pure_count < 2 {
+        log::debug!(
+            "Function '{function_name}' has too few pure statements ({pure_count} < 2), skipping"
+        );
         return None;
     }
 
     if !has_side_effects_after(&block.pipelines, pure_count, context) {
+        log::debug!(
+            "Function '{function_name}' has no side effects after pure statements, skipping"
+        );
         return None;
     }
+
+    log::debug!("Function '{function_name}' violates pure_before_side_effects rule!");
 
     Some(
         Violation::new(

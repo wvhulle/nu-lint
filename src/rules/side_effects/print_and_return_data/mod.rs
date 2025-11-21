@@ -1,16 +1,20 @@
 use nu_protocol::{
     Type,
-    ast::{Block, Call, Expr, Expression},
+    ast::{Block, Call, Expr},
 };
 
 use crate::{
-    ast::{block::BlockExt, call::CallExt, effect::is_side_effect_only},
+    ast::{
+        block::BlockExt,
+        call::CallExt,
+        effect::{SideEffect, has_side_effect},
+    },
     context::LintContext,
     rule::Rule,
     violation::Violation,
 };
 
-fn has_print_call(block: &Block, context: &LintContext) -> bool {
+fn has_stdout_print(block: &Block, context: &LintContext) -> bool {
     use nu_protocol::ast::Traverse;
 
     let mut print_calls = Vec::new();
@@ -30,52 +34,45 @@ fn has_print_call(block: &Block, context: &LintContext) -> bool {
     !print_calls.is_empty()
 }
 
-fn function_returns_data(block: &Block, context: &LintContext) -> bool {
-    let output_type = block.infer_output_type(context);
+fn last_command_produces_output(block: &Block, context: &LintContext) -> bool {
+    let Some(last_pipeline) = block.pipelines.last() else {
+        return false;
+    };
+    let Some(last_element) = last_pipeline.elements.last() else {
+        return false;
+    };
+    let Expr::Call(call) = &last_element.expr.expr else {
+        return false;
+    };
 
-    // A function returns data if:
-    // 1. It has a specific output type (not Nothing or Any)
-    // 2. OR it has Any output type but doesn't end with a side-effect-only command
-    match output_type {
-        Type::Nothing => false,
-        Type::Any => {
-            // Check if the last expression is likely to return data
-            // by looking at the last pipeline
-            block.pipelines.last().is_some_and(|pipeline| {
-                pipeline
-                    .elements
-                    .last()
-                    .is_some_and(|element| !is_side_effect_only_command(&element.expr, context))
-            })
-        }
-        _ => true,
-    }
+    !has_side_effect(
+        &call.get_call_name(context),
+        SideEffect::NoOutput,
+        context,
+        call,
+    )
 }
 
-fn is_side_effect_only_command(expr: &Expression, context: &LintContext) -> bool {
-    match &expr.expr {
-        Expr::Call(call) => {
-            let cmd_name = call.get_call_name(context);
-            is_side_effect_only(&cmd_name)
-        }
-        _ => false,
+fn returns_data(block: &Block, context: &LintContext) -> bool {
+    let output_type = block.infer_output_type(context);
+
+    match output_type {
+        Type::Nothing => false,
+        Type::Any => last_command_produces_output(block, context),
+        _ => true,
     }
 }
 
 fn check_function_definition(call: &Call, context: &LintContext) -> Option<Violation> {
     let (block_id, func_name) = call.extract_function_definition(context)?;
 
-    // Skip main function as it often combines output and side effects
     if func_name == "main" {
         return None;
     }
 
     let block = context.working_set.get_block(block_id);
 
-    let has_print = has_print_call(block, context);
-    let returns_data = function_returns_data(block, context);
-
-    if !has_print || !returns_data {
+    if !has_stdout_print(block, context) || !returns_data(block, context) {
         return None;
     }
 

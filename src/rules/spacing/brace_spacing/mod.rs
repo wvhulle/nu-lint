@@ -55,6 +55,9 @@ fn check_brace_spacing(source: &str, span: Span, brace_type: &BraceType) -> Vec<
             }
         }
         BraceType::Record => {
+            if inner.contains('\n') {
+                return vec![];
+            }
             let starts_with_space = inner.starts_with(char::is_whitespace);
             let ends_with_space = inner.ends_with(char::is_whitespace);
             if starts_with_space || ends_with_space {

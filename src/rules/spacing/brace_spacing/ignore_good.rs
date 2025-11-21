@@ -19,3 +19,21 @@ fn test_good_closure_without_space() {
     let good = "[[status]; [UP]] | all {|el| $el.status == UP }";
     rule().assert_ignores(good);
 }
+
+#[test]
+fn test_multiline_record_ignored() {
+    let good = r"{
+    key1: value1
+    key2: value2
+}";
+    rule().assert_ignores(good);
+}
+
+#[test]
+fn test_multiline_record_with_spacing_ignored() {
+    let good = r"{ 
+    key1: value1
+    key2: value2
+ }";
+    rule().assert_ignores(good);
+}

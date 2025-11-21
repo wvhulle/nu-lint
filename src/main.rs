@@ -32,6 +32,12 @@ fn main() {
             }
         },
     };
+
+    // Initialize logging based on verbose flag
+    if cli.verbose {
+        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("debug")).init();
+    }
+
     let config = Config::load(cli.config.as_ref());
 
     if let Some(command) = cli.command {

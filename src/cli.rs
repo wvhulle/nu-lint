@@ -59,6 +59,9 @@ pub struct Cli {
         default_value = "false"
     )]
     pub parallel: bool,
+
+    #[arg(short = 'v', long, help = "Enable verbose debug output")]
+    pub verbose: bool,
 }
 
 #[derive(Subcommand)]
@@ -333,9 +336,11 @@ mod tests {
         fs::write(&nu_file_path, "let myVariable = 5\n").unwrap();
 
         let config = Config::default();
+        // Default config should be empty but get_lint_level should return defaults
+        assert_eq!(config.lints.rules.get("snake_case_variables"), None);
         assert_eq!(
-            config.lints.rules.get("snake_case_variables"),
-            Some(&LintLevel::Warn)
+            config.get_lint_level("snake_case_variables"),
+            LintLevel::Warn
         );
 
         let engine = LintEngine::new(config);

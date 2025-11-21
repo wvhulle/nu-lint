@@ -38,18 +38,76 @@ impl Display for LintLevel {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq)]
+#[derive(Debug, Clone, Serialize, Default, PartialEq)]
 pub struct Config {
     #[serde(default)]
     pub lints: LintConfig,
+}
 
-    #[serde(default)]
-    pub fix: FixConfig,
+#[allow(
+    clippy::excessive_nesting,
+    reason = "Serde visitor pattern requires nesting"
+)]
+impl<'de> Deserialize<'de> for Config {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de::{MapAccess, Visitor};
+
+        struct ConfigVisitor;
+
+        impl<'de> Visitor<'de> for ConfigVisitor {
+            type Value = Config;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a config map")
+            }
+
+            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+            where
+                A: MapAccess<'de>,
+            {
+                let mut lints = None;
+                let mut bare_items = HashMap::new();
+
+                while let Some(key) = map.next_key::<String>()? {
+                    match key.as_str() {
+                        "lints" => lints = Some(map.next_value()?),
+                        _ => {
+                            bare_items.insert(key, map.next_value()?);
+                        }
+                    }
+                }
+
+                let mut lints = lints.unwrap_or_default();
+                merge_bare_items_into_lints(&mut lints, bare_items);
+
+                Ok(Config { lints })
+            }
+        }
+
+        deserializer.deserialize_map(ConfigVisitor)
+    }
+}
+
+fn merge_bare_items_into_lints(lints: &mut LintConfig, bare_items: HashMap<String, LintLevel>) {
+    for (name, level) in bare_items {
+        let is_set = BUILTIN_LINT_SETS
+            .iter()
+            .any(|(set_name, _)| *set_name == name);
+
+        if is_set {
+            lints.sets.insert(name, level);
+        } else {
+            lints.rules.insert(name, level);
+        }
+    }
 }
 
 /// Lint configuration with support for set-level and individual rule
 /// configuration
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq, Default)]
 pub struct LintConfig {
     /// Configure entire lint sets (e.g., "naming", "idioms", "pedantic")
     #[serde(default)]
@@ -82,29 +140,10 @@ impl<'de> Deserialize<'de> for LintConfig {
     }
 }
 
-impl Default for LintConfig {
-    fn default() -> Self {
-        Self {
-            sets: HashMap::new(),
-            rules: DEFAULT_RULE_MAP
-                .rules
-                .iter()
-                .map(|(k, v)| (k.to_string(), *v))
-                .collect(),
-        }
-    }
-}
-
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
 pub struct ExcludeConfig {
     #[serde(default)]
     pub patterns: Vec<String>,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
-pub struct FixConfig {
-    #[serde(default)]
-    pub enabled: bool,
 }
 
 impl Config {
@@ -286,36 +325,66 @@ mod tests {
     }
 
     #[test]
-    fn test_fix_config_default() {
-        let toml_str = "";
-        let config = Config::load_from_str(toml_str).unwrap();
-        assert!(!config.fix.enabled);
-    }
-
-    #[test]
-    fn test_fix_config_enabled() {
-        let toml_str = r"
-        [fix]
-        enabled = true
-    ";
-        let config = Config::load_from_str(toml_str).unwrap();
-        assert!(config.fix.enabled);
-    }
-
-    #[test]
-    fn test_fix_config_mixed() {
+    fn test_bare_rule_format() {
         let toml_str = r#"
-        [lints.rules]
         snake_case_variables = "deny"
-        
-        [fix]
-        enabled = true
+        systemd_journal_prefix = "warn"
     "#;
         let config = Config::load_from_str(toml_str).unwrap();
-        assert!(config.fix.enabled);
         assert_eq!(
             config.lints.rules.get("snake_case_variables"),
             Some(&LintLevel::Deny)
+        );
+        assert_eq!(
+            config.lints.rules.get("systemd_journal_prefix"),
+            Some(&LintLevel::Warn)
+        );
+    }
+
+    #[test]
+    fn test_bare_set_format() {
+        let toml_str = r#"
+        naming = "deny"
+        performance = "warn"
+    "#;
+        let config = Config::load_from_str(toml_str).unwrap();
+        assert_eq!(config.lints.sets.get("naming"), Some(&LintLevel::Deny));
+        assert_eq!(config.lints.sets.get("performance"), Some(&LintLevel::Warn));
+    }
+
+    #[test]
+    fn test_mixed_bare_and_structured() {
+        let toml_str = r#"
+        naming = "deny"
+        systemd_journal_prefix = "warn"
+        
+        [lints.rules]
+        snake_case_variables = "allow"
+    "#;
+        let config = Config::load_from_str(toml_str).unwrap();
+        assert_eq!(config.lints.sets.get("naming"), Some(&LintLevel::Deny));
+        // Bare rules get added to rules
+        assert_eq!(
+            config.lints.rules.get("systemd_journal_prefix"),
+            Some(&LintLevel::Warn)
+        );
+        // Structured format values are merged with bare format
+        assert_eq!(
+            config.lints.rules.get("snake_case_variables"),
+            Some(&LintLevel::Allow)
+        );
+    }
+
+    #[test]
+    fn test_bare_format_resolves_level() {
+        let toml_str = r#"
+        naming = "deny"
+    "#;
+        let config = Config::load_from_str(toml_str).unwrap();
+        // snake_case_variables is in the naming set
+        assert_eq!(
+            config.get_lint_level("snake_case_variables"),
+            LintLevel::Deny
         );
     }
 }

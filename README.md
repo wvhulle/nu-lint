@@ -109,18 +109,26 @@ nu-lint list-sets
 Create `.nu-lint.toml` in your project root (or any parent directory):
 
 ```toml
-# Configure entire lint sets (e.g., "naming", "idioms", "pedantic")
-[lints.sets]
-naming = "deny"
-idioms = "warn"
+# Simple format - just list rules and sets with their levels
+systemd_journal_prefix = "warn"
+snake_case_variables = "deny"
+naming = "deny"  # Apply deny level to all rules in the "naming" set
 
-# Configure individual rules (overrides set settings)
+# Or use the structured format for more complex configs
+[lints.sets]
+performance = "warn"
+type-safety = "deny"
+
 [lints.rules]
-snake_case_variables = "allow"
 prefer_pipeline_input = "deny"
+max_function_body_length = "allow"
 ```
 
 Available lint levels: `allow`, `warn`, `deny`.
+
+**Available sets:** `naming`, `performance`, `type-safety`, `documentation`, `error-handling`, `formatting`, `side-effects`, `systemd`
+
+**Example rules:** `snake_case_variables`, `prefer_pipeline_input`, `systemd_journal_prefix`, `prefer_where_over_each_if`, `missing_type_annotation`, `prefer_is_not_empty`
 
 The linter will automatically find and use this config file when you run it. Otherwise:
 

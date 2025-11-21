@@ -4,7 +4,10 @@ use nu_protocol::{
 };
 
 use crate::{
-    ast::{call::CallExt, effect::can_error},
+    ast::{
+        call::CallExt,
+        effect::{SideEffect, can_error, has_external_side_effect},
+    },
     context::LintContext,
     rule::Rule,
     violation::Violation,
@@ -12,11 +15,18 @@ use crate::{
 
 fn has_external_command(expr: &Expression, context: &LintContext) -> bool {
     expr.find_map(context.working_set, &|inner_expr| {
-        if matches!(&inner_expr.expr, Expr::ExternalCall(_, _)) {
-            FindMapResult::Found(())
-        } else {
-            FindMapResult::Continue
+        if let Expr::ExternalCall(head, args) = &inner_expr.expr {
+            let cmd_name = &context.source[head.span.start..head.span.end];
+            // External commands can error unless explicitly marked otherwise
+            // Check if we have explicit info, otherwise assume it can error
+            if has_external_side_effect(cmd_name, SideEffect::Error, context, args) {
+                return FindMapResult::Found(());
+            }
+            // If not in registry, assume external commands can error (conservative
+            // approach)
+            return FindMapResult::Found(());
         }
+        FindMapResult::Continue
     })
     .is_some()
 }

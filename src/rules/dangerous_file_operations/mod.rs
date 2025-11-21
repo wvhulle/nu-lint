@@ -1,23 +1,20 @@
 use nu_protocol::{
     Span,
-    ast::{Argument, Expr, Expression, ExternalArgument},
+    ast::{Call, Expr, Expression, ExternalArgument},
 };
 
 use crate::{
     ast::{
         call::CallExt,
         effect::{
-            SideEffect, extract_arg_text, has_recursive_flag, has_side_effect, is_dangerous_path,
+            SideEffect, extract_arg_text, extract_external_arg_text, has_external_recursive_flag,
+            has_external_side_effect, has_recursive_flag, has_side_effect, is_dangerous_path,
         },
     },
     context::LintContext,
     rule::Rule,
     violation::Violation,
 };
-
-fn extract_path_from_arg(arg: &ExternalArgument, context: &LintContext) -> String {
-    extract_arg_text(arg, context).to_string()
-}
 
 fn is_if_block_containing(expr: &Expression, command_span: Span, context: &LintContext) -> bool {
     let Expr::Call(call) = &expr.expr else {
@@ -49,38 +46,49 @@ fn is_inside_if_block(context: &LintContext, command_span: Span) -> bool {
     !found_in_if.is_empty()
 }
 
-fn extract_dangerous_command(
-    expr: &Expression,
-    context: &LintContext,
-) -> Option<(Span, String, Vec<ExternalArgument>)> {
+enum DangerousCommand<'a> {
+    External {
+        span: Span,
+        name: &'a str,
+        args: &'a [ExternalArgument],
+    },
+    Builtin {
+        span: Span,
+        name: String,
+        call: &'a Call,
+    },
+}
+
+fn extract_dangerous_command<'a>(
+    expr: &'a Expression,
+    context: &'a LintContext,
+) -> Option<DangerousCommand<'a>> {
     match &expr.expr {
         Expr::ExternalCall(head, args) => {
             let cmd_name = &context.source[head.span.start..head.span.end];
 
-            // For external commands, we only check known dangerous commands
-            if !matches!(cmd_name, "rm" | "mv" | "cp") {
+            if !has_external_side_effect(cmd_name, SideEffect::Dangerous, context, args) {
                 return None;
             }
 
-            Some((expr.span, cmd_name.to_string(), args.to_vec()))
+            Some(DangerousCommand::External {
+                span: expr.span,
+                name: cmd_name,
+                args,
+            })
         }
         Expr::Call(call) => {
             let decl_name = call.get_call_name(context);
-
-            let external_args: Vec<ExternalArgument> = call
-                .arguments
-                .iter()
-                .filter_map(|arg| match arg {
-                    Argument::Positional(expr) => Some(ExternalArgument::Regular(expr.clone())),
-                    _ => None,
-                })
-                .collect();
 
             if !has_side_effect(&decl_name, SideEffect::Dangerous, context, call) {
                 return None;
             }
 
-            Some((expr.span, decl_name, external_args))
+            Some(DangerousCommand::Builtin {
+                span: expr.span,
+                name: decl_name,
+                call,
+            })
         }
         _ => None,
     }
@@ -130,31 +138,62 @@ fn is_unvalidated_variable(path: &str, command_span: Span, context: &LintContext
         && !is_inside_if_block(context, command_span)
 }
 
-fn check_command_arguments(
+fn check_external_command(
     cmd_name: &str,
     args: &[ExternalArgument],
     command_span: Span,
     context: &LintContext,
     violations: &mut Vec<Violation>,
 ) {
-    let is_recursive = cmd_name == "rm" && has_recursive_flag(args, context);
+    let is_recursive = cmd_name == "rm" && has_external_recursive_flag(args, context);
 
     for arg in args {
-        let path_str = extract_path_from_arg(arg, context);
+        let path_str = extract_external_arg_text(arg, context);
 
-        if is_dangerous_path(&path_str) {
+        if is_dangerous_path(path_str) {
             violations.push(create_dangerous_path_violation(
                 cmd_name,
-                &path_str,
+                path_str,
                 command_span,
                 is_recursive,
             ));
         }
 
-        if is_unvalidated_variable(&path_str, command_span, context) {
+        if is_unvalidated_variable(path_str, command_span, context) {
             violations.push(create_variable_validation_violation(
                 cmd_name,
-                &path_str,
+                path_str,
+                command_span,
+            ));
+        }
+    }
+}
+
+fn check_builtin_command(
+    cmd_name: &str,
+    call: &Call,
+    command_span: Span,
+    context: &LintContext,
+    violations: &mut Vec<Violation>,
+) {
+    let is_recursive = cmd_name == "rm" && has_recursive_flag(call, context);
+
+    for arg in &call.arguments {
+        let path_str = extract_arg_text(arg, context);
+
+        if is_dangerous_path(path_str) {
+            violations.push(create_dangerous_path_violation(
+                cmd_name,
+                path_str,
+                command_span,
+                is_recursive,
+            ));
+        }
+
+        if is_unvalidated_variable(path_str, command_span, context) {
+            violations.push(create_variable_validation_violation(
+                cmd_name,
+                path_str,
                 command_span,
             ));
         }
@@ -177,8 +216,15 @@ fn check(context: &LintContext) -> Vec<Violation> {
         &mut dangerous_commands,
     );
 
-    for (command_span, cmd_name, args) in dangerous_commands {
-        check_command_arguments(&cmd_name, &args, command_span, context, &mut violations);
+    for cmd in dangerous_commands {
+        match cmd {
+            DangerousCommand::External { span, name, args } => {
+                check_external_command(name, args, span, context, &mut violations);
+            }
+            DangerousCommand::Builtin { span, name, call } => {
+                check_builtin_command(&name, call, span, context, &mut violations);
+            }
+        }
     }
 
     violations

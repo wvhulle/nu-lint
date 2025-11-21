@@ -344,15 +344,11 @@ impl ExpressionExt for Expression {
     }
 
     fn is_external_filesystem_command(&self, context: &LintContext) -> bool {
-        const EXTERNAL_FILESYSTEM_COMMANDS: &[&str] =
-            &["tar", "zip", "unzip", "rsync", "scp", "wget", "curl"];
+        use crate::ast::effect::{IoType, get_external_io_type};
 
         if let Expr::ExternalCall(head, _) = &self.expr {
             let cmd_name = &context.source[head.span.start..head.span.end];
-            let lower_cmd = cmd_name.to_lowercase();
-            EXTERNAL_FILESYSTEM_COMMANDS
-                .iter()
-                .any(|&cmd| lower_cmd == cmd)
+            matches!(get_external_io_type(cmd_name), Some(IoType::FileSystem))
         } else {
             false
         }

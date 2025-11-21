@@ -9,6 +9,8 @@ pub enum SideEffect {
     NoOutput,
     PipelineUnsafe,
     Print,
+    IoFileSystem,
+    IoNetwork,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -25,16 +27,6 @@ pub fn has_side_effect(
     call: &Call,
 ) -> bool {
     log::debug!("Checking side effect '{side_effect:?}' for command '{command_name}'");
-
-    let external_args: Vec<ExternalArgument> = call
-        .arguments
-        .iter()
-        .filter_map(|arg| match arg {
-            Argument::Positional(expr) => Some(ExternalArgument::Regular(expr.clone())),
-            _ => None,
-        })
-        .collect();
-
     log::debug!(
         "Looking in registry for command '{command_name}' and side effect '{side_effect:?}'"
     );
@@ -48,7 +40,7 @@ pub fn has_side_effect(
                 .find(|(effect, _)| *effect == side_effect)
                 .map(|(_, predicate)| {
                     log::debug!("Checking predicate for side effect '{side_effect:?}'");
-                    predicate(context, call, &external_args)
+                    predicate(context, call)
                 })
         })
         .unwrap_or(false);
@@ -57,6 +49,39 @@ pub fn has_side_effect(
         log::debug!("Predicate matched for side effect '{side_effect:?}'");
     } else {
         log::debug!("No matching side effect '{side_effect:?}' found for command '{command_name}'");
+    }
+
+    result
+}
+
+pub fn has_external_side_effect(
+    command_name: &str,
+    side_effect: SideEffect,
+    context: &LintContext,
+    args: &[ExternalArgument],
+) -> bool {
+    log::debug!("Checking external side effect '{side_effect:?}' for command '{command_name}'");
+
+    let result = EXTERNAL_COMMAND_SIDE_EFFECTS
+        .iter()
+        .find(|(name, _)| *name == command_name)
+        .and_then(|(_, effects)| {
+            effects
+                .iter()
+                .find(|(effect, _)| *effect == side_effect)
+                .map(|(_, predicate)| {
+                    log::debug!("Checking external predicate for side effect '{side_effect:?}'");
+                    predicate(context, args)
+                })
+        })
+        .unwrap_or(false);
+
+    if result {
+        log::debug!("External predicate matched for side effect '{side_effect:?}'");
+    } else {
+        log::debug!(
+            "No matching external side effect '{side_effect:?}' found for command '{command_name}'"
+        );
     }
 
     result
@@ -86,6 +111,19 @@ pub fn get_io_type(command_name: &str, context: &LintContext, call: &Call) -> Op
         nu_protocol::Category::Network => Some(IoType::Network),
         _ => None,
     }
+}
+
+pub fn get_external_io_type(command_name: &str) -> Option<IoType> {
+    EXTERNAL_COMMAND_SIDE_EFFECTS
+        .iter()
+        .find(|(name, _)| *name == command_name)
+        .and_then(|(_, effects)| {
+            effects.iter().find_map(|(effect, _)| match effect {
+                SideEffect::IoFileSystem => Some(IoType::FileSystem),
+                SideEffect::IoNetwork => Some(IoType::Network),
+                _ => None,
+            })
+        })
 }
 
 pub fn is_external_command_safe(command_name: &str) -> bool {
@@ -138,8 +176,8 @@ pub fn is_dangerous_path(path_str: &str) -> bool {
             && path_str[1..].matches('/').count() <= 1)
 }
 
-pub fn has_recursive_flag(args: &[ExternalArgument], context: &LintContext) -> bool {
-    args.iter().any(|arg| {
+pub fn has_recursive_flag(call: &Call, context: &LintContext) -> bool {
+    call.arguments.iter().any(|arg| {
         let arg_text = extract_arg_text(arg, context);
         matches!(
             arg_text,
@@ -152,7 +190,30 @@ pub fn has_recursive_flag(args: &[ExternalArgument], context: &LintContext) -> b
     })
 }
 
-pub fn extract_arg_text<'a>(arg: &ExternalArgument, context: &'a LintContext) -> &'a str {
+pub fn has_external_recursive_flag(args: &[ExternalArgument], context: &LintContext) -> bool {
+    args.iter().any(|arg| {
+        let arg_text = extract_external_arg_text(arg, context);
+        matches!(
+            arg_text,
+            text if text.contains("-r")
+                || text.contains("--recursive")
+                || text.contains("-rf")
+                || text.contains("-fr")
+                || text.contains("--force")
+        )
+    })
+}
+
+pub fn extract_arg_text<'a>(arg: &Argument, context: &'a LintContext) -> &'a str {
+    match arg {
+        Argument::Positional(expr) | Argument::Spread(expr) => {
+            &context.source[expr.span.start..expr.span.end]
+        }
+        _ => "",
+    }
+}
+
+pub fn extract_external_arg_text<'a>(arg: &ExternalArgument, context: &'a LintContext) -> &'a str {
     match arg {
         ExternalArgument::Regular(expr) | ExternalArgument::Spread(expr) => {
             &context.source[expr.span.start..expr.span.end]
@@ -160,17 +221,22 @@ pub fn extract_arg_text<'a>(arg: &ExternalArgument, context: &'a LintContext) ->
     }
 }
 
-pub type SideEffectPredicate = fn(&LintContext, &Call, &[ExternalArgument]) -> bool;
+pub type SideEffectPredicate = fn(&LintContext, &Call) -> bool;
+pub type ExternalSideEffectPredicate = fn(&LintContext, &[ExternalArgument]) -> bool;
 
-const fn always(_context: &LintContext, _call: &Call, _args: &[ExternalArgument]) -> bool {
+const fn always(_context: &LintContext, _call: &Call) -> bool {
     true
 }
 
-fn prints_to_stdout(_context: &LintContext, call: &Call, _args: &[ExternalArgument]) -> bool {
+const fn external_always(_context: &LintContext, _args: &[ExternalArgument]) -> bool {
+    true
+}
+
+fn prints_to_stdout(_context: &LintContext, call: &Call) -> bool {
     !call.has_named_flag("stderr")
 }
 
-fn io_category_can_error(context: &LintContext, call: &Call, _args: &[ExternalArgument]) -> bool {
+fn io_category_can_error(context: &LintContext, call: &Call) -> bool {
     matches!(
         context
             .working_set
@@ -181,16 +247,31 @@ fn io_category_can_error(context: &LintContext, call: &Call, _args: &[ExternalAr
     )
 }
 
-fn rm_is_dangerous(context: &LintContext, _call: &Call, args: &[ExternalArgument]) -> bool {
-    args.iter()
+fn rm_is_dangerous(context: &LintContext, call: &Call) -> bool {
+    call.arguments
+        .iter()
         .map(|arg| extract_arg_text(arg, context))
         .any(|path| is_dangerous_path(path) || is_unvalidated_variable(path))
-        || has_recursive_flag(args, context)
+        || has_recursive_flag(call, context)
 }
 
-fn mv_cp_is_dangerous(context: &LintContext, _call: &Call, args: &[ExternalArgument]) -> bool {
+fn external_rm_is_dangerous(context: &LintContext, args: &[ExternalArgument]) -> bool {
     args.iter()
+        .map(|arg| extract_external_arg_text(arg, context))
+        .any(|path| is_dangerous_path(path) || is_unvalidated_variable(path))
+        || has_external_recursive_flag(args, context)
+}
+
+fn mv_cp_is_dangerous(context: &LintContext, call: &Call) -> bool {
+    call.arguments
+        .iter()
         .map(|arg| extract_arg_text(arg, context))
+        .any(|path| is_dangerous_path(path) || is_unvalidated_variable(path))
+}
+
+fn external_mv_cp_is_dangerous(context: &LintContext, args: &[ExternalArgument]) -> bool {
+    args.iter()
+        .map(|arg| extract_external_arg_text(arg, context))
         .any(|path| is_dangerous_path(path) || is_unvalidated_variable(path))
 }
 
@@ -311,4 +392,58 @@ const COMMAND_SIDE_EFFECTS: &[(&str, &[(SideEffect, SideEffectPredicate)])] = &[
     ("dc", &[]),
     ("expr", &[]),
     ("mktemp", &[]),
+];
+
+const EXTERNAL_COMMAND_SIDE_EFFECTS: &[(&str, &[(SideEffect, ExternalSideEffectPredicate)])] = &[
+    (
+        "rm",
+        &[
+            (SideEffect::Error, external_always),
+            (SideEffect::NoOutput, external_always),
+            (SideEffect::Dangerous, external_rm_is_dangerous),
+            (SideEffect::IoFileSystem, external_always),
+        ],
+    ),
+    (
+        "mv",
+        &[
+            (SideEffect::Error, external_always),
+            (SideEffect::NoOutput, external_always),
+            (SideEffect::Dangerous, external_mv_cp_is_dangerous),
+            (SideEffect::IoFileSystem, external_always),
+        ],
+    ),
+    (
+        "cp",
+        &[
+            (SideEffect::Error, external_always),
+            (SideEffect::Dangerous, external_mv_cp_is_dangerous),
+            (SideEffect::IoFileSystem, external_always),
+        ],
+    ),
+    ("tar", &[(SideEffect::IoFileSystem, external_always)]),
+    ("zip", &[(SideEffect::IoFileSystem, external_always)]),
+    ("unzip", &[(SideEffect::IoFileSystem, external_always)]),
+    ("rsync", &[(SideEffect::IoFileSystem, external_always)]),
+    ("scp", &[(SideEffect::IoFileSystem, external_always)]),
+    (
+        "curl",
+        &[
+            (SideEffect::PipelineUnsafe, external_always),
+            (SideEffect::IoFileSystem, external_always),
+            (SideEffect::IoNetwork, external_always),
+        ],
+    ),
+    (
+        "wget",
+        &[
+            (SideEffect::PipelineUnsafe, external_always),
+            (SideEffect::IoFileSystem, external_always),
+            (SideEffect::IoNetwork, external_always),
+        ],
+    ),
+    ("find", &[(SideEffect::PipelineUnsafe, external_always)]),
+    ("grep", &[(SideEffect::PipelineUnsafe, external_always)]),
+    ("awk", &[(SideEffect::PipelineUnsafe, external_always)]),
+    ("sed", &[(SideEffect::PipelineUnsafe, external_always)]),
 ];

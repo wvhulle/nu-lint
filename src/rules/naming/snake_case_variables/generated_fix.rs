@@ -1,6 +1,5 @@
-use crate::{context::LintContext, fix::apply_fixes_to_stdin};
-
 use super::rule;
+use crate::{context::LintContext, fix::apply_fixes_to_stdin};
 
 /// Helper function to apply fixes and get the fixed code
 fn apply_fix(code: &str) -> String {
@@ -62,10 +61,7 @@ fn test_snake_case_fix_in_pipeline() {
 fn test_snake_case_fix_in_if_condition() {
     let bad_code = "let myFlag = true; if $myFlag { print 'yes' }";
     let fixed = apply_fix(bad_code);
-    assert_eq!(
-        fixed,
-        "let my_flag = true; if $my_flag { print 'yes' }"
-    );
+    assert_eq!(fixed, "let my_flag = true; if $my_flag { print 'yes' }");
 }
 
 #[test]
@@ -82,10 +78,7 @@ fn test_snake_case_fix_multiple_variables() {
 fn test_snake_case_fix_nested_scope() {
     let bad_code = r"let outerVar = 5; if true { print $outerVar }";
     let fixed = apply_fix(bad_code);
-    assert_eq!(
-        fixed,
-        "let outer_var = 5; if true { print $outer_var }"
-    );
+    assert_eq!(fixed, "let outer_var = 5; if true { print $outer_var }");
 }
 
 #[test]

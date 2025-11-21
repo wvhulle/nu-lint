@@ -1,5 +1,8 @@
 use heck::ToSnakeCase;
-use nu_protocol::{Span, VarId, ast::{Argument, Call, Expr}};
+use nu_protocol::{
+    Span, VarId,
+    ast::{Argument, Call, Expr},
+};
 
 use crate::{
     ast::span::SpanExt,
@@ -11,7 +14,7 @@ use crate::{
 /// Find all usages of a variable in the AST
 fn find_variable_usages(var_id: VarId, context: &LintContext) -> Vec<Span> {
     use nu_protocol::ast::Traverse;
-    
+
     let mut usages = Vec::new();
     context.ast.flat_map(
         context.working_set,
@@ -44,7 +47,7 @@ fn check_call(call: &Call, ctx: &LintContext) -> Option<Violation> {
 
     let var_name = ctx.source.get(name_expr.span.start..name_expr.span.end)?;
     let snake_case_name = var_name.to_snake_case();
-    
+
     if var_name == snake_case_name {
         return None;
     }
@@ -54,7 +57,7 @@ fn check_call(call: &Call, ctx: &LintContext) -> Option<Violation> {
         span: name_expr.span,
         replacement_text: snake_case_name.clone().into(),
     }];
-    
+
     for usage_span in find_variable_usages(*var_id, ctx) {
         if usage_span.text(ctx).starts_with('$') {
             replacements.push(Replacement {
@@ -64,8 +67,12 @@ fn check_call(call: &Call, ctx: &LintContext) -> Option<Violation> {
         }
     }
 
-    let var_type = if is_mutable { "Mutable variable" } else { "Variable" };
-    
+    let var_type = if is_mutable {
+        "Mutable variable"
+    } else {
+        "Variable"
+    };
+
     Some(
         Violation::new(
             "snake_case_variables",
@@ -76,7 +83,7 @@ fn check_call(call: &Call, ctx: &LintContext) -> Option<Violation> {
         .with_fix(Fix::with_explanation(
             format!("Rename variable '{var_name}' to '{snake_case_name}'"),
             replacements,
-        ))
+        )),
     )
 }
 

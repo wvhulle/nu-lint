@@ -24,8 +24,8 @@ use crate::{
 #[command(version)]
 #[command(
     after_help = "STDIN:\n  If no paths are provided and stdin is not a terminal, nu-lint will \
-                  read and lint code from stdin.\n  Example: echo 'let x = 5' | nu-lint\n\n  \
-                  When using --fix with stdin, the fixed content will be written to stdout.\n  \
+                  read and lint code from stdin.\n  Example: echo 'let x = 5' | nu-lint\n\n  When \
+                  using --fix with stdin, the fixed content will be written to stdout.\n  \
                   Example: echo 'let myVar = 5' | nu-lint --fix"
 )]
 pub struct Cli {

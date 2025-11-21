@@ -77,7 +77,7 @@ nu-lint directory/                         # Lint directory
 'let x =' | nu-lint                   # Pipe in over stdin
 ```
 
-Apply fixes:
+Apply fixes (also works with STDIN):
 
 ```bash
 nu-lint --fix --dry-run   # Test
@@ -88,7 +88,6 @@ Output formats:
 
 ```bash
 nu-lint script.nu --format text            # Human-readable (default)
-nu-lint script.nu --format json            # JSON format
 nu-lint script.nu --format vscode-json     # VS Code LSP-compatible JSON
 ```
 
@@ -125,10 +124,6 @@ max_function_body_length = "allow"
 ```
 
 Available lint levels: `allow`, `warn`, `deny`.
-
-**Available sets:** `naming`, `performance`, `type-safety`, `documentation`, `error-handling`, `formatting`, `side-effects`, `systemd`
-
-**Example rules:** `snake_case_variables`, `prefer_pipeline_input`, `systemd_journal_prefix`, `prefer_where_over_each_if`, `missing_type_annotation`, `prefer_is_not_empty`
 
 The linter will automatically find and use this config file when you run it. Otherwise:
 

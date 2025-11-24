@@ -3,7 +3,9 @@ use std::collections::HashMap;
 
 use nu_protocol::ast::{Expr, Expression, ExternalArgument};
 
-use crate::{Fix, Violation, ast::effect::external_command_has_no_output, context::LintContext};
+use crate::{
+    Fix, Violation, context::LintContext, effect::external::external_command_has_no_output,
+};
 
 /// Extension trait for checking external command categories using the side
 /// effect registry

@@ -2,6 +2,7 @@ mod ast;
 pub mod cli;
 pub mod config;
 mod context;
+mod effect;
 mod engine;
 pub mod fix;
 pub mod log;
@@ -10,7 +11,6 @@ mod rule;
 mod rules;
 mod sets;
 mod violation;
-
 use std::io;
 
 pub use config::{Config, LintLevel};

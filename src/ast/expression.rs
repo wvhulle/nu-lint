@@ -10,7 +10,10 @@ use super::{
     block::BlockExt, call::CallExt, ext_command::ExternalCommandExt, pipeline::PipelineExt,
     span::SpanExt,
 };
-use crate::context::LintContext;
+use crate::{
+    context::LintContext,
+    effect::external::{ExternEffect, has_external_side_effect},
+};
 
 pub trait ExpressionExt: Traverse {
     /// Checks if two expressions refer to the same variable. Example: `$x` and
@@ -344,11 +347,9 @@ impl ExpressionExt for Expression {
     }
 
     fn is_external_filesystem_command(&self, context: &LintContext) -> bool {
-        use crate::ast::effect::{IoType, get_external_io_type};
-
         if let Expr::ExternalCall(head, _) = &self.expr {
             let cmd_name = &context.source[head.span.start..head.span.end];
-            matches!(get_external_io_type(cmd_name), Some(IoType::FileSystem))
+            has_external_side_effect(cmd_name, ExternEffect::ModifiesFileSystem, context, &[])
         } else {
             false
         }

@@ -4,12 +4,12 @@ use nu_protocol::{
 };
 
 use crate::{
-    ast::{
-        block::BlockExt,
-        call::CallExt,
-        effect::{SideEffect, has_side_effect},
-    },
+    ast::{block::BlockExt, call::CallExt},
     context::LintContext,
+    effect::{
+        builtin::{BuiltinEffect, has_builtin_side_effect},
+        external::{ExternEffect, has_external_side_effect},
+    },
     rule::Rule,
     violation::Violation,
 };
@@ -41,16 +41,34 @@ fn last_command_produces_output(block: &Block, context: &LintContext) -> bool {
     let Some(last_element) = last_pipeline.elements.last() else {
         return false;
     };
-    let Expr::Call(call) = &last_element.expr.expr else {
-        return false;
-    };
 
-    !has_side_effect(
-        &call.get_call_name(context),
-        SideEffect::NoUsefulOutput,
-        context,
-        call,
-    )
+    match &last_element.expr.expr {
+        Expr::Call(call) => {
+            // If it explicitly prints to stdout, we treat that as output for pollution
+            // purposes
+            let cmd_name = call.get_call_name(context);
+            if has_builtin_side_effect(&cmd_name, BuiltinEffect::PrintToStdout, context, call) {
+                return true;
+            }
+
+            // Use the signature to decide if it produces data. Any -> assume output unless
+            // signature maps only to Nothing.
+            let decl = context.working_set.get_decl(call.decl_id);
+            let sig = decl.signature();
+            // If every mapping returns Nothing, then no output.
+            sig.input_output_types
+                .iter()
+                .any(|(_in, out)| !matches!(out, nu_protocol::Type::Nothing))
+        }
+        Expr::ExternalCall(head, args) => {
+            // Extract external command name span text
+            let cmd_name = &context.source[head.span.start..head.span.end];
+            // If external side effect registry marks command as NoDataInStdout, treat as no
+            // output
+            !has_external_side_effect(cmd_name, ExternEffect::NoDataInStdout, context, args)
+        }
+        _ => false,
+    }
 }
 
 fn returns_data(block: &Block, context: &LintContext) -> bool {

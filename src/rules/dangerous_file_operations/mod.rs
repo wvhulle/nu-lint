@@ -4,14 +4,17 @@ use nu_protocol::{
 };
 
 use crate::{
-    ast::{
-        call::CallExt,
-        effect::{
-            SideEffect, extract_arg_text, extract_external_arg_text, has_external_recursive_flag,
-            has_external_side_effect, has_recursive_flag, has_side_effect, is_dangerous_path,
-        },
-    },
+    ast::call::CallExt,
     context::LintContext,
+    effect::{
+        CommonEffect,
+        builtin::{BuiltinEffect, extract_arg_text, has_builtin_side_effect, has_recursive_flag},
+        external::{
+            ExternEffect, extract_external_arg_text, has_external_recursive_flag,
+            has_external_side_effect,
+        },
+        is_dangerous_path,
+    },
     rule::Rule,
     violation::Violation,
 };
@@ -67,7 +70,12 @@ fn extract_dangerous_command<'a>(
         Expr::ExternalCall(head, args) => {
             let cmd_name = &context.source[head.span.start..head.span.end];
 
-            if !has_external_side_effect(cmd_name, SideEffect::Dangerous, context, args) {
+            if !has_external_side_effect(
+                cmd_name,
+                ExternEffect::CommonEffect(CommonEffect::Dangerous),
+                context,
+                args,
+            ) {
                 return None;
             }
 
@@ -80,7 +88,12 @@ fn extract_dangerous_command<'a>(
         Expr::Call(call) => {
             let decl_name = call.get_call_name(context);
 
-            if !has_side_effect(&decl_name, SideEffect::Dangerous, context, call) {
+            if !has_builtin_side_effect(
+                &decl_name,
+                BuiltinEffect::CommonEffect(CommonEffect::Dangerous),
+                context,
+                call,
+            ) {
                 return None;
             }
 

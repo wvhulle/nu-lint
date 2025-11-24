@@ -4,10 +4,8 @@ use nu_protocol::{
 };
 
 use crate::{
-    ast::{call::CallExt, effect::is_external_command_safe},
-    context::LintContext,
-    rule::Rule,
-    violation::Violation,
+    ast::call::CallExt, context::LintContext, effect::external::is_external_command_safe,
+    rule::Rule, violation::Violation,
 };
 
 fn get_external_command(expr: &Expression, context: &LintContext) -> Option<String> {

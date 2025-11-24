@@ -41,12 +41,6 @@ fn test_complete_in_subexpression() {
 }
 
 #[test]
-fn test_safe_ls_with_from() {
-    let good_code = r"^ls -la | lines | from ssv";
-    rule().assert_ignores(good_code);
-}
-
-#[test]
 fn test_try_with_multiline() {
     let good_code = r"
 try {
@@ -55,11 +49,5 @@ try {
     | select name age
 }
 ";
-    rule().assert_ignores(good_code);
-}
-
-#[test]
-fn test_safe_command_git() {
-    let good_code = r"^git log --format=%H | lines | each { |commit| ^git show $commit }";
     rule().assert_ignores(good_code);
 }

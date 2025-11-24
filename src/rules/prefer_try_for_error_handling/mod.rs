@@ -4,11 +4,13 @@ use nu_protocol::{
 };
 
 use crate::{
-    ast::{
-        call::CallExt,
-        effect::{SideEffect, can_error, has_external_side_effect},
-    },
+    ast::call::CallExt,
     context::LintContext,
+    effect::{
+        CommonEffect,
+        builtin::can_error,
+        external::{ExternEffect, has_external_side_effect},
+    },
     rule::Rule,
     violation::Violation,
 };
@@ -19,7 +21,12 @@ fn has_external_command(expr: &Expression, context: &LintContext) -> bool {
             let cmd_name = &context.source[head.span.start..head.span.end];
             // External commands can error unless explicitly marked otherwise
             // Check if we have explicit info, otherwise assume it can error
-            if has_external_side_effect(cmd_name, SideEffect::MayErrorFrequently, context, args) {
+            if has_external_side_effect(
+                cmd_name,
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                context,
+                args,
+            ) {
                 return FindMapResult::Found(());
             }
             // If not in registry, assume external commands can error (conservative

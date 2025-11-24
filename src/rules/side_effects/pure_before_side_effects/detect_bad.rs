@@ -131,6 +131,7 @@ def main [] {
 
 #[test]
 fn multiple_computations_with_error_make() {
+    instrument();
     rule().assert_detects(
         r"
 def validate_and_error [] {

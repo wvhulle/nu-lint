@@ -1,7 +1,9 @@
+mod alternatives;
 mod ast;
 pub mod cli;
 pub mod config;
 mod context;
+mod effect;
 mod engine;
 pub mod fix;
 pub mod log;

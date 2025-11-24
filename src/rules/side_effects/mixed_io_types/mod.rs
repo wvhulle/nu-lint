@@ -6,15 +6,19 @@ use nu_protocol::{
 };
 
 use crate::{
-    ast::{
-        call::CallExt,
-        effect::{IoType, get_io_type},
-        expression::ExpressionExt,
-    },
+    ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
+    effect::builtin::{BuiltinEffect, has_builtin_side_effect},
     rule::Rule,
     violation::Violation,
 };
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+enum IoType {
+    FileSystem,
+    Network,
+    Print,
+}
 
 fn collect_io_types_from_expression(
     expr: &Expression,
@@ -24,8 +28,24 @@ fn collect_io_types_from_expression(
     match &expr.expr {
         Expr::Call(call) => {
             let command_name = call.get_call_name(context);
-            if let Some(io_type) = get_io_type(&command_name, context, call) {
-                io_types.insert(io_type);
+            if has_builtin_side_effect(&command_name, BuiltinEffect::PrintToStdout, context, call) {
+                io_types.insert(IoType::Print);
+            } else {
+                let category = context
+                    .working_set
+                    .get_decl(call.decl_id)
+                    .signature()
+                    .category;
+
+                match category {
+                    nu_protocol::Category::FileSystem => {
+                        io_types.insert(IoType::FileSystem);
+                    }
+                    nu_protocol::Category::Network => {
+                        io_types.insert(IoType::Network);
+                    }
+                    _ => {}
+                }
             }
 
             for arg_expr in call.all_arg_expressions() {

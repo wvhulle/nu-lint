@@ -1,12 +1,9 @@
 use nu_protocol::ast::{Expr, Expression, Pipeline};
 
 use crate::{
-    ast::{
-        call::CallExt,
-        effect::{SideEffect, has_side_effect},
-        pipeline::PipelineExt,
-    },
+    ast::{call::CallExt, pipeline::PipelineExt},
     context::LintContext,
+    effect::builtin::{BuiltinEffect, has_builtin_side_effect},
     rule::Rule,
     violation::Violation,
 };
@@ -23,7 +20,12 @@ fn command_produces_no_output(expr: &Expression, context: &LintContext) -> bool 
 
             matches!(output_type, nu_protocol::Type::Nothing)
                 || (matches!(output_type, nu_protocol::Type::Any)
-                    && has_side_effect(&cmd_name, SideEffect::NoUsefulOutput, context, call))
+                    && !has_builtin_side_effect(
+                        &cmd_name,
+                        BuiltinEffect::PrintToStdout,
+                        context,
+                        call,
+                    ))
         }
         _ => false,
     }

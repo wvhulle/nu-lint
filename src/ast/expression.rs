@@ -6,11 +6,11 @@ use nu_protocol::{
     },
 };
 
-use super::{
-    block::BlockExt, call::CallExt, ext_command::ExternalCommandExt, pipeline::PipelineExt,
-    span::SpanExt,
+use super::{block::BlockExt, call::CallExt, pipeline::PipelineExt, span::SpanExt};
+use crate::{
+    context::LintContext,
+    effect::external::{ExternEffect, external_command_has_no_output, has_external_side_effect},
 };
-use crate::context::LintContext;
 
 pub trait ExpressionExt: Traverse {
     /// Checks if two expressions refer to the same variable. Example: `$x` and
@@ -344,11 +344,9 @@ impl ExpressionExt for Expression {
     }
 
     fn is_external_filesystem_command(&self, context: &LintContext) -> bool {
-        use crate::ast::effect::{IoType, get_external_io_type};
-
         if let Expr::ExternalCall(head, _) = &self.expr {
             let cmd_name = &context.source[head.span.start..head.span.end];
-            matches!(get_external_io_type(cmd_name), Some(IoType::FileSystem))
+            has_external_side_effect(cmd_name, ExternEffect::ModifiesFileSystem, context, &[])
         } else {
             false
         }
@@ -543,9 +541,9 @@ impl ExpressionExt for Expression {
             Expr::ExternalCall(call, _) => {
                 let cmd_name = call.span.text(context);
                 log::debug!("Encountered ExternalCall: '{cmd_name}'");
-                if cmd_name.is_known_external_no_output_command() {
+                if external_command_has_no_output(cmd_name) {
                     Some(Type::Nothing)
-                } else if cmd_name.is_known_external_output_command() {
+                } else if !external_command_has_no_output(cmd_name) {
                     Some(Type::String)
                 } else {
                     None

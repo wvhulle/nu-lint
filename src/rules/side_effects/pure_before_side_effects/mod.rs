@@ -4,12 +4,12 @@ use nu_protocol::{
 };
 
 use crate::{
-    ast::{
-        call::CallExt,
-        effect::{SideEffect, has_side_effect},
-        expression::ExpressionExt,
-    },
+    ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
+    effect::{
+        CommonEffect,
+        builtin::{BuiltinEffect, has_builtin_side_effect},
+    },
     rule::Rule,
     violation::Violation,
 };
@@ -30,9 +30,13 @@ fn is_side_effect_call(call: &Call, context: &LintContext) -> bool {
 
     let cmd_name = call.get_call_name(context);
 
-    has_side_effect(&cmd_name, SideEffect::Print, context, call)
-        || has_side_effect(&cmd_name, SideEffect::NoUsefulOutput, context, call)
-        || has_side_effect(&cmd_name, SideEffect::MayErrorFrequently, context, call)
+    has_builtin_side_effect(&cmd_name, BuiltinEffect::PrintToStdout, context, call)
+        || has_builtin_side_effect(
+            &cmd_name,
+            BuiltinEffect::CommonEffect(CommonEffect::LikelyErrors),
+            context,
+            call,
+        )
         || matches!(
             context
                 .working_set

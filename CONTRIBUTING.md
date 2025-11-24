@@ -20,6 +20,10 @@ CARGO_LOG=cargo::core::compiler::fingerprint=info cargo build
 
 ## Adding new lints
 
+Always start from valid Nu shell code. Experiment with different versions of the same Nu fragment to find out the limitations and possibilities that Nu has compared to other shells.
+
+You can compare by running: `nu -c 'TEST'`  and `bash -c 'TEST'`.
+
 The first thing you might want to do for a new rule is investigate how Nu parses the fragment. Nu has a built-in command that allows you to interactively explore
 
 ```bash

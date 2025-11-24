@@ -10,6 +10,7 @@ mod external_script_as_argument;
 mod forbid_excessive_nesting;
 mod inline_single_use_function;
 mod side_effects;
+mod strong_typed_paths;
 mod unnecessary_ignore;
 
 mod max_function_body_length;
@@ -38,7 +39,7 @@ mod prefer_where_over_each_if;
 mod prefer_where_over_for_if;
 mod print_exit_use_error_make;
 mod remove_redundant_in;
-mod replace_by_builtin;
+mod replace;
 mod row_condition_above_closure;
 mod spacing;
 mod systemd_journal_prefix;
@@ -82,25 +83,35 @@ pub const ALL_RULES: &[Rule] = &[
     prefer_multiline_functions::rule(),
     prefer_multiline_lists::rule(),
     prefer_multiline_records::rule(),
-    replace_by_builtin::echo::rule(),
+    replace::echo::rule(),
     no_trailing_spaces::rule(),
     nu_deprecated::rule(),
     nu_parse_error::rule(),
     omit_list_commas::rule(),
     prefer_complete_for_external_commands::rule(),
-    replace_by_builtin::echo::rule(),
-    replace_by_builtin::cat::rule(),
-    replace_by_builtin::find::rule(),
-    replace_by_builtin::grep::rule(),
-    replace_by_builtin::head::rule(),
-    replace_by_builtin::http::rule(),
-    replace_by_builtin::jq::rule(),
-    replace_by_builtin::ls::rule(),
-    replace_by_builtin::other::rule(),
-    replace_by_builtin::sed::rule(),
-    replace_by_builtin::sort::rule(),
-    replace_by_builtin::tail::rule(),
-    replace_by_builtin::uniq::rule(),
+    replace::echo::rule(),
+    replace::cat::rule(),
+    replace::find::rule(),
+    replace::grep::rule(),
+    replace::head::rule(),
+    replace::curl::rule(),
+    replace::wget::rule(),
+    replace::fetch::rule(),
+    replace::awk::rule(),
+    replace::cut::rule(),
+    replace::date::rule(),
+    replace::hostname::rule(),
+    replace::man::rule(),
+    replace::printenv::rule(),
+    replace::read::rule(),
+    replace::wc::rule(),
+    replace::which::rule(),
+    replace::jq::rule(),
+    replace::ls::rule(),
+    replace::sed::rule(),
+    replace::sort::rule(),
+    replace::tail::rule(),
+    replace::uniq::rule(),
     prefer_compound_assignment::rule(),
     prefer_direct_use::rule(),
     prefer_error_make_for_stderr::rule(),
@@ -111,7 +122,7 @@ pub const ALL_RULES: &[Rule] = &[
     prefer_match_over_if_chain::rule(),
     prefer_parse_command::rule(),
     prefer_parse_over_each_split::rule(),
-    replace_by_builtin::path::rule(),
+    strong_typed_paths::rule(),
     prefer_pipeline_input::rule(),
     prefer_range_iteration::rule(),
     prefer_where_over_each_if::rule(),

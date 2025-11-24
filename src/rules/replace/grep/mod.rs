@@ -8,7 +8,9 @@ use crate::{
     violation::{Fix, Replacement},
 };
 
-const NOTE: &str = "Use 'find' for simple text search (case-insensitive by default), 'where $it =~ pattern' for regex filtering, or 'lines | where' for line-based filtering with structured data operations.";
+const NOTE: &str = "Use 'find' for simple text search (case-insensitive by default), 'where $it \
+                    =~ pattern' for regex filtering, or 'lines | where' for line-based filtering \
+                    with structured data operations.";
 
 #[derive(Default)]
 struct GrepFlags {
@@ -208,7 +210,6 @@ impl GrepOptions {
 
 fn build_fix(
     _cmd_text: &str,
-    _builtin_cmd: &str,
     args: &[ExternalArgument],
     expr_span: nu_protocol::Span,
     context: &LintContext,
@@ -233,7 +234,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
         context,
         "prefer_builtin_grep",
         "grep",
-        "find or where",
         NOTE,
         Some(build_fix),
     ));
@@ -243,7 +243,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
         context,
         "prefer_builtin_grep",
         "rg",
-        "find or where",
         NOTE,
         Some(build_fix),
     ));

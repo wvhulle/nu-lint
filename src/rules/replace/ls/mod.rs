@@ -8,10 +8,9 @@ use crate::{
     violation::{Fix, Replacement},
 };
 
-const NOTE: &str =
-    "Use Nu's built-in 'ls' which returns structured table data (name, type, size, \
-             modified) enabling data manipulation through pipes. Unlike Unix ls, Nu's ls always \
-             provides consistent structured output without parsing.";
+const NOTE: &str = "Use Nu's built-in 'ls' which returns structured table data (name, type, size, \
+                    modified) enabling data manipulation through pipes. Unlike Unix ls, Nu's ls \
+                    always provides consistent structured output without parsing.";
 
 /// Parse ls command arguments to extract key options
 #[derive(Default)]
@@ -158,7 +157,6 @@ impl LsOptions {
 
 fn build_fix(
     _cmd_text: &str,
-    _builtin_cmd: &str,
     args: &[ExternalArgument],
     expr_span: nu_protocol::Span,
     context: &LintContext,
@@ -183,7 +181,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
         context,
         "prefer_builtin_ls",
         "ls",
-        "ls",
         NOTE,
         Some(build_fix),
     ));
@@ -194,7 +191,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
             context,
             "prefer_builtin_ls",
             cmd,
-            "ls",
             NOTE,
             Some(build_fix),
         ));

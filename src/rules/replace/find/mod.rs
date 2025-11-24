@@ -8,8 +8,17 @@ use crate::{
     violation::{Fix, Replacement},
 };
 
-const NOTE_FIND: &str = "Use 'ls **/*.ext' for recursive file matching or 'glob **/*.ext' for pattern matching. Nushell's ls returns structured table data (name, type, size, modified) instead of plain text, enabling powerful data manipulation through pipes. Note: Nushell's built-in 'find' command (without ^) is for searching/filtering data in structures, not for finding files.";
-const NOTE_FD: &str = "Use 'ls **/*.ext' for recursive file matching or 'glob **/*.ext' for pattern matching. While fd is a modern alternative to bash find with better performance and UX, Nushell's ls provides structured table data that integrates seamlessly with Nushell's data manipulation commands. This enables operations like sorting, filtering, and transforming file lists without parsing text output.";
+const NOTE_FIND: &str =
+    "Use 'ls **/*.ext' for recursive file matching or 'glob **/*.ext' for pattern matching. \
+     Nushell's ls returns structured table data (name, type, size, modified) instead of plain \
+     text, enabling powerful data manipulation through pipes. Note: Nushell's built-in 'find' \
+     command (without ^) is for searching/filtering data in structures, not for finding files.";
+const NOTE_FD: &str = "Use 'ls **/*.ext' for recursive file matching or 'glob **/*.ext' for \
+                       pattern matching. While fd is a modern alternative to bash find with \
+                       better performance and UX, Nushell's ls provides structured table data \
+                       that integrates seamlessly with Nushell's data manipulation commands. This \
+                       enables operations like sorting, filtering, and transforming file lists \
+                       without parsing text output.";
 
 /// Parse find command arguments to extract key options
 #[derive(Default)]
@@ -196,7 +205,6 @@ fn parse_time_filter(mtime: &str) -> String {
 
 fn build_fix(
     _cmd_text: &str,
-    _builtin_cmd: &str,
     args: &[ExternalArgument],
     expr_span: nu_protocol::Span,
     context: &LintContext,
@@ -219,7 +227,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
         context,
         "prefer_builtin_find",
         "find",
-        "ls or glob",
         NOTE_FIND,
         Some(build_fix),
     ));
@@ -227,7 +234,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
         context,
         "prefer_builtin_find",
         "fd",
-        "ls or glob",
         NOTE_FD,
         Some(build_fix),
     ));

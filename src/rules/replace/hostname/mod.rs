@@ -12,14 +12,16 @@ const NOTE: &str = "Use '(sys host).hostname' to get hostname, or 'sys host' for
 
 fn build_fix(
     _cmd_text: &str,
-    builtin_cmd: &str,
     _args: &[ExternalArgument],
     expr_span: nu_protocol::Span,
     _context: &LintContext,
 ) -> Fix {
     Fix::with_explanation(
         "Use system info from 'sys host'",
-        vec![Replacement::new(expr_span, builtin_cmd.to_string())],
+        vec![Replacement::new(
+            expr_span,
+            "(sys host).hostname".to_string(),
+        )],
     )
 }
 
@@ -28,7 +30,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
         context,
         "prefer_builtin_hostname",
         "hostname",
-        "(sys host).hostname",
         NOTE,
         Some(build_fix),
     )

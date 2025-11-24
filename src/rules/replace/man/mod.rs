@@ -12,7 +12,6 @@ const NOTE: &str = "Use 'help <command>' or 'help commands' to list all commands
 
 fn build_fix(
     _cmd_text: &str,
-    _builtin_cmd: &str,
     args: &[ExternalArgument],
     expr_span: nu_protocol::Span,
     context: &LintContext,
@@ -28,14 +27,7 @@ fn build_fix(
 }
 
 fn check(context: &LintContext) -> Vec<Violation> {
-    detect_external_commands(
-        context,
-        "prefer_builtin_man",
-        "man",
-        "help",
-        NOTE,
-        Some(build_fix),
-    )
+    detect_external_commands(context, "prefer_builtin_man", "man", NOTE, Some(build_fix))
 }
 
 pub const fn rule() -> Rule {

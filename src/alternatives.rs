@@ -18,7 +18,6 @@ pub fn external_args_slices<'a>(
 /// Type alias for a function that builds a fix for a specific external command
 pub type FixBuilder = fn(
     cmd_text: &str,
-    builtin_cmd: &str,
     args: &[ExternalArgument],
     expr_span: nu_protocol::Span,
     context: &LintContext,
@@ -30,7 +29,6 @@ pub fn detect_external_commands(
     context: &LintContext,
     rule_id: &'static str,
     external_cmd: &'static str,
-    builtin_cmd: &'static str,
     note: &'static str,
     fix_builder: Option<FixBuilder>,
 ) -> Vec<Violation> {
@@ -39,16 +37,8 @@ pub fn detect_external_commands(
             let cmd_text = &ctx.source[head.span.start..head.span.end];
 
             if cmd_text == external_cmd {
-                let violation = create_violation(
-                    rule_id,
-                    fix_builder,
-                    expr,
-                    ctx,
-                    cmd_text,
-                    builtin_cmd,
-                    note,
-                    args,
-                );
+                let violation =
+                    create_violation(rule_id, fix_builder, expr, ctx, cmd_text, note, args);
 
                 return vec![violation];
             }
@@ -63,20 +53,17 @@ fn create_violation(
     expr: &Expression,
     ctx: &LintContext<'_>,
     cmd_text: &str,
-    builtin_cmd: &str,
     note: &'static str,
     args: &[ExternalArgument],
 ) -> Violation {
-    let message = format!(
-        "Consider using Nushell's built-in '{builtin_cmd}' instead of external '^{cmd_text}'"
-    );
+    let message = format!("Consider using Nushell's built-ins instead of external '^{cmd_text}'");
 
     let suggestion = format!(
-        "Replace '^{cmd_text}' with built-in command: {builtin_cmd}\nBuilt-in commands are more \
-         portable, faster, and provide better error handling.\n\nNote: {note}"
+        "Replace external '^{cmd_text}' with equivalent Nushell pipeline.\nBuilt-in commands are \
+         more portable, faster, and provide better error handling.\n\nNote: {note}"
     );
 
-    let fix = fix_builder.map(|builder| builder(cmd_text, builtin_cmd, args, expr.span, ctx));
+    let fix = fix_builder.map(|builder| builder(cmd_text, args, expr.span, ctx));
 
     let violation = Violation::new(rule_id, message, expr.span).with_help(suggestion);
 

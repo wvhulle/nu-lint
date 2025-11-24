@@ -12,26 +12,18 @@ const NOTE: &str = "Use 'select' to choose specific columns.";
 
 fn build_fix(
     _cmd_text: &str,
-    builtin_cmd: &str,
     _args: &[ExternalArgument],
     expr_span: nu_protocol::Span,
     _context: &LintContext,
 ) -> Fix {
     Fix::with_explanation(
         "Use 'select' for columns",
-        vec![Replacement::new(expr_span, builtin_cmd.to_string())],
+        vec![Replacement::new(expr_span, "select".to_string())],
     )
 }
 
 fn check(context: &LintContext) -> Vec<Violation> {
-    detect_external_commands(
-        context,
-        "prefer_builtin_cut",
-        "cut",
-        "select",
-        NOTE,
-        Some(build_fix),
-    )
+    detect_external_commands(context, "prefer_builtin_cut", "cut", NOTE, Some(build_fix))
 }
 
 pub const fn rule() -> Rule {

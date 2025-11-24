@@ -12,7 +12,6 @@ const NOTE: &str = "Use 'which' to find command locations.";
 
 fn build_fix(
     _cmd_text: &str,
-    _builtin_cmd: &str,
     args: &[ExternalArgument],
     expr_span: nu_protocol::Span,
     context: &LintContext,
@@ -31,7 +30,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
     detect_external_commands(
         context,
         "prefer_builtin_which",
-        "which",
         "which",
         NOTE,
         Some(build_fix),

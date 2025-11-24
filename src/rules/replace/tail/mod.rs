@@ -12,7 +12,6 @@ const NOTE: &str = "Use 'last N' to get the last N items";
 
 fn build_fix(
     _cmd_text: &str,
-    _builtin_cmd: &str,
     args: &[ExternalArgument],
     expr_span: nu_protocol::Span,
     context: &LintContext,
@@ -43,7 +42,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
         context,
         "prefer_builtin_tail",
         "tail",
-        "last",
         NOTE,
         Some(build_fix),
     )

@@ -12,7 +12,6 @@ const NOTE: &str = "Use 'length' for item count or 'str length' for character co
 
 fn build_fix(
     _cmd_text: &str,
-    _builtin_cmd: &str,
     args: &[ExternalArgument],
     expr_span: nu_protocol::Span,
     context: &LintContext,
@@ -32,14 +31,7 @@ fn build_fix(
 }
 
 fn check(context: &LintContext) -> Vec<Violation> {
-    detect_external_commands(
-        context,
-        "prefer_builtin_wc",
-        "wc",
-        "length or str length",
-        NOTE,
-        Some(build_fix),
-    )
+    detect_external_commands(context, "prefer_builtin_wc", "wc", NOTE, Some(build_fix))
 }
 
 pub const fn rule() -> Rule {

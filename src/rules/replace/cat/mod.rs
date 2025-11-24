@@ -154,7 +154,6 @@ impl CatOptions {
 
 fn build_fix(
     _cmd_text: &str,
-    _builtin_cmd: &str,
     args: &[ExternalArgument],
     expr_span: nu_protocol::Span,
     context: &LintContext,
@@ -178,7 +177,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
         context,
         "prefer_builtin_cat",
         "cat",
-        "open --raw",
         NOTE,
         Some(build_fix),
     ));
@@ -189,7 +187,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
             context,
             "prefer_builtin_cat",
             cmd,
-            "open --raw",
             NOTE,
             Some(build_fix),
         ));

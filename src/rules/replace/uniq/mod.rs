@@ -8,7 +8,9 @@ use crate::{
     violation::{Fix, Replacement},
 };
 
-const NOTE: &str = "Use Nu's 'uniq' for removing duplicates, 'uniq-by' for column-based deduplication. Nu's uniq works on structured data and provides --count flag for counting occurrences.";
+const NOTE: &str = "Use Nu's 'uniq' for removing duplicates, 'uniq-by' for column-based \
+                    deduplication. Nu's uniq works on structured data and provides --count flag \
+                    for counting occurrences.";
 
 /// Parse uniq command arguments to extract key options
 #[derive(Default)]
@@ -132,7 +134,6 @@ impl UniqOptions {
 
 fn build_fix(
     _cmd_text: &str,
-    _builtin_cmd: &str,
     args: &[ExternalArgument],
     expr_span: nu_protocol::Span,
     context: &LintContext,
@@ -154,7 +155,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
         context,
         "prefer_builtin_uniq",
         "uniq",
-        "uniq or uniq-by",
         NOTE,
         Some(build_fix),
     )

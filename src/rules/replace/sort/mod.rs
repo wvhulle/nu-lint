@@ -8,7 +8,8 @@ use crate::{
     violation::{Fix, Replacement},
 };
 
-const NOTE: &str = "Use Nu's 'sort' for simple sorting or 'sort-by <column>' for structured data. Nu's sort works on any data type and provides natural sorting with -n flag.";
+const NOTE: &str = "Use Nu's 'sort' for simple sorting or 'sort-by <column>' for structured data. \
+                    Nu's sort works on any data type and provides natural sorting with -n flag.";
 
 /// Parse sort command arguments to extract key options
 #[derive(Default)]
@@ -149,7 +150,6 @@ impl SortOptions {
 
 fn build_fix(
     _cmd_text: &str,
-    _builtin_cmd: &str,
     args: &[ExternalArgument],
     expr_span: nu_protocol::Span,
     context: &LintContext,
@@ -171,7 +171,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
         context,
         "prefer_builtin_sort",
         "sort",
-        "sort or sort-by",
         NOTE,
         Some(build_fix),
     )

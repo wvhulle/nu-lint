@@ -12,7 +12,6 @@ const NOTE: &str = "Use '$env' to access environment variables or 'env' to view 
 
 fn build_fix(
     _cmd_text: &str,
-    _builtin_cmd: &str,
     args: &[ExternalArgument],
     expr_span: nu_protocol::Span,
     context: &LintContext,
@@ -34,10 +33,7 @@ fn build_fix(
         )
     };
 
-    Fix::with_explanation(
-        description,
-        vec![Replacement::new(expr_span, replacement)],
-    )
+    Fix::with_explanation(description, vec![Replacement::new(expr_span, replacement)])
 }
 
 fn check(context: &LintContext) -> Vec<Violation> {
@@ -45,7 +41,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
         context,
         "prefer_builtin_printenv",
         "printenv",
-        "$env",
         NOTE,
         Some(build_fix),
     )

@@ -200,7 +200,6 @@ fn parse_header(header: &str) -> Option<(String, String)> {
 
 fn build_fix(
     _cmd_text: &str,
-    _builtin_cmd: &str,
     args: &[ExternalArgument],
     expr_span: nu_protocol::Span,
     context: &LintContext,
@@ -222,7 +221,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
         context,
         "prefer_builtin_curl",
         "curl",
-        "http",
         NOTE,
         Some(build_fix),
     )
@@ -237,44 +235,8 @@ pub const fn rule() -> Rule {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::rule;
-
-    #[test]
-    fn detects_curl_get() {
-        rule().assert_detects(r"^curl https://api.github.com/zen");
-    }
-
-    #[test]
-    fn detects_curl_with_headers() {
-        let source = r"^curl -H 'Accept: application/json' https://api.github.com";
-        rule().assert_replacement_contains(source, "--headers");
-        rule().assert_replacement_contains(source, "Accept");
-        rule().assert_replacement_contains(source, "application/json");
-    }
-
-    #[test]
-    fn detects_curl_with_auth() {
-        let source = r"^curl -u user:pass https://api.example.com";
-        rule().assert_replacement_contains(source, "--user user");
-        rule().assert_replacement_contains(source, "--password pass");
-    }
-
-    #[test]
-    fn detects_curl_post() {
-        let source = r#"^curl -X POST -d '{"key":"value"}' https://api.example.com"#;
-        rule().assert_replacement_contains(source, "http post");
-    }
-
-    #[test]
-    fn fix_description_mentions_structured_data() {
-        let source = r"^curl https://api.github.com";
-        rule().assert_fix_explanation_contains(source, "structured");
-    }
-
-    #[test]
-    fn ignores_http_commands() {
-        rule().assert_ignores(r"http get https://api.github.com/zen");
-        rule().assert_ignores(r"http post https://api.example.com {key: 'value'}");
-    }
-}
+mod detect_bad;
+#[cfg(test)]
+mod generated_fix;
+#[cfg(test)]
+mod ignore_good;

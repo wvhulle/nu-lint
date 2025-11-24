@@ -8,7 +8,9 @@ use crate::{
     violation::{Fix, Replacement},
 };
 
-const NOTE_SED: &str = "Use 'str replace' for text substitution. Supports --all for global replacement (sed's /g flag), --regex for pattern matching, and works seamlessly with structured data in pipelines.";
+const NOTE_SED: &str = "Use 'str replace' for text substitution. Supports --all for global \
+                        replacement (sed's /g flag), --regex for pattern matching, and works \
+                        seamlessly with structured data in pipelines.";
 const NOTE_GSED: &str = "Use 'str replace' instead of GNU sed for text substitution.";
 
 fn check(context: &LintContext) -> Vec<Violation> {
@@ -17,7 +19,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
         context,
         "prefer_builtin_sed",
         "sed",
-        "str replace",
         NOTE_SED,
         Some(build_fix),
     ));
@@ -26,7 +27,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
         context,
         "prefer_builtin_sed",
         "gsed",
-        "str replace",
         NOTE_GSED,
         Some(build_fix),
     ));
@@ -250,7 +250,6 @@ impl SedOptions {
 
 fn build_fix(
     _cmd_text: &str,
-    _builtin_cmd: &str,
     args: &[ExternalArgument],
     expr_span: nu_protocol::Span,
     context: &LintContext,

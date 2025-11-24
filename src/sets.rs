@@ -176,6 +176,8 @@ pub const BUILTIN_LINT_SETS: &[(&str, RuleSet)] = &[
     ("type-safety", type_safety_rule_set()),
 ];
 
+/// Rules can receive an optional default lint level (overriding the default of
+/// Warn)
 pub const DEFAULT_RULE_MAP: RuleMap = RuleMap {
     name: "default",
     explanation: "Default lint levels for all rules",
@@ -210,6 +212,7 @@ pub const DEFAULT_RULE_MAP: RuleMap = RuleMap {
         ("nu_parse_error", LintLevel::Deny),
         ("omit_list_commas", LintLevel::Warn),
         ("prefer_complete_for_external_commands", LintLevel::Warn),
+        ("prefer_builtin_awk", LintLevel::Warn),
         ("prefer_builtin_cat", LintLevel::Warn),
         ("prefer_builtin_echo", LintLevel::Warn),
         ("prefer_builtin_printenv", LintLevel::Warn),

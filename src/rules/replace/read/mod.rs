@@ -12,7 +12,6 @@ const NOTE: &str = "Use 'input' or 'input -s' for password input.";
 
 fn build_fix(
     _cmd_text: &str,
-    _builtin_cmd: &str,
     args: &[ExternalArgument],
     expr_span: nu_protocol::Span,
     context: &LintContext,
@@ -24,7 +23,10 @@ fn build_fix(
             "Use 'input -s' for secure password input (hidden)".to_string(),
         )
     } else {
-        ("input".to_string(), "Use 'input' to read user input".to_string())
+        (
+            "input".to_string(),
+            "Use 'input' to read user input".to_string(),
+        )
     };
     Fix::with_explanation(desc, vec![Replacement::new(expr_span, repl)])
 }
@@ -34,7 +36,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
         context,
         "prefer_builtin_read",
         "read",
-        "input",
         NOTE,
         Some(build_fix),
     )

@@ -260,7 +260,8 @@ const SIMPLE_JQ_OPS: &[&str] = &[
     "'unique'",
 ];
 
-const NOTE: &str = "Use built-in Nushell commands for simple operations - they're faster and more idiomatic";
+const NOTE: &str =
+    "Use built-in Nushell commands for simple operations - they're faster and more idiomatic";
 
 fn format_jq_replacement(filter: &str, file_arg: Option<&str>) -> String {
     // Try to parse the jq filter using jaq-syn
@@ -294,30 +295,28 @@ fn format_jq_replacement(filter: &str, file_arg: Option<&str>) -> String {
             let index = &filter[3..filter.len() - 2];
             format!("get {index}")
         }
-        _ => "# Use structured data operations".to_string(),
+        _ => file_arg.map_or_else(
+            || "from json".to_string(),
+            |file| format!("open {file} | from json"),
+        ),
     }
 }
 
 fn build_fix(
-    cmd_text: &str,
-    builtin_cmd: &str,
+    _cmd_text: &str,
     args: &[ExternalArgument],
     expr_span: nu_protocol::Span,
     context: &LintContext,
 ) -> Fix {
     let args_text: Vec<&str> = external_args_slices(args, context).collect();
 
-    let new_text = match cmd_text {
-        "jq" => {
-            if args_text.is_empty() {
-                builtin_cmd.to_string()
-            } else {
-                let filter = args_text[0];
-                let file_arg = args_text.get(1).copied();
-                format_jq_replacement(filter, file_arg)
-            }
-        }
-        _ => builtin_cmd.to_string(),
+    let new_text = if args_text.is_empty() {
+        // Without explicit filter or file, suggest decoding JSON from input
+        "from json".to_string()
+    } else {
+        let filter = args_text[0];
+        let file_arg = args_text.get(1).copied();
+        format_jq_replacement(filter, file_arg)
     };
 
     Fix::with_explanation(
@@ -360,7 +359,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
         context,
         "prefer_nushell_over_jq",
         "jq",
-        "built-in commands",
         NOTE,
         Some(build_fix),
     );

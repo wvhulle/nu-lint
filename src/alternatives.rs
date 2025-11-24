@@ -3,45 +3,24 @@ use std::collections::HashMap;
 
 use nu_protocol::ast::{Expr, Expression, ExternalArgument};
 
-use crate::{
-    Fix, Violation, context::LintContext, effect::external::external_command_has_no_output,
-};
+use crate::{Fix, Violation, context::LintContext};
 
-/// Extension trait for checking external command categories using the side
-/// effect registry
-pub trait ExternalCommandExt {
-    fn is_known_external_output_command(&self) -> bool;
-    fn is_known_external_no_output_command(&self) -> bool;
-}
-
-impl ExternalCommandExt for str {
-    fn is_known_external_output_command(&self) -> bool {
-        !external_command_has_no_output(self)
-    }
-
-    fn is_known_external_no_output_command(&self) -> bool {
-        external_command_has_no_output(self)
-    }
-}
-
-/// Extension trait for external arguments
-pub trait ExternalArgumentExt {
-    fn extract_as_strings(&self, context: &LintContext) -> Vec<String>;
-}
-
-impl ExternalArgumentExt for [ExternalArgument] {
-    fn extract_as_strings(&self, context: &LintContext) -> Vec<String> {
-        self.iter()
-            .map(|arg| match arg {
-                ExternalArgument::Regular(expr) => {
-                    context.source[expr.span.start..expr.span.end].to_string()
-                }
-                ExternalArgument::Spread(expr) => {
-                    format!("...{}", &context.source[expr.span.start..expr.span.end])
-                }
-            })
-            .collect()
-    }
+/// Convert a slice of external arguments to their source string representations
+#[must_use]
+pub fn extract_external_args_as_strings(
+    args: &[ExternalArgument],
+    context: &LintContext,
+) -> Vec<String> {
+    args.iter()
+        .map(|arg| match arg {
+            ExternalArgument::Regular(expr) => {
+                context.source[expr.span.start..expr.span.end].to_string()
+            }
+            ExternalArgument::Spread(expr) => {
+                format!("...{}", &context.source[expr.span.start..expr.span.end])
+            }
+        })
+        .collect()
 }
 
 /// Metadata about a builtin alternative to an external command

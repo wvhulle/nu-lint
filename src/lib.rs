@@ -1,3 +1,4 @@
+mod alternatives;
 mod ast;
 pub mod cli;
 pub mod config;
@@ -11,6 +12,7 @@ mod rule;
 mod rules;
 mod sets;
 mod violation;
+
 use std::io;
 
 pub use config::{Config, LintLevel};

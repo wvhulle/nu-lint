@@ -12,7 +12,9 @@ use nu_protocol::ast::ExternalArgument;
 
 use crate::{
     Violation,
-    ast::ext_command::{BuiltinAlternative, ExternalArgumentExt, detect_external_commands},
+    alternatives::{
+        BuiltinAlternative, detect_external_commands, extract_external_args_as_strings,
+    },
     context::LintContext,
     rule::Rule,
     violation::{Fix, Replacement},
@@ -320,7 +322,7 @@ fn build_fix(
     expr_span: nu_protocol::Span,
     context: &LintContext,
 ) -> Fix {
-    let args_text = args.extract_as_strings(context);
+    let args_text = extract_external_args_as_strings(args, context);
 
     let new_text = match cmd_text {
         "jq" => {

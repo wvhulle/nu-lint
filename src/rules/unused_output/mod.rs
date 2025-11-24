@@ -2,8 +2,9 @@ use nu_protocol::ast::{Expr, Expression, Pipeline};
 
 use crate::{
     Fix, Replacement,
-    ast::{call::CallExt, ext_command::ExternalCommandExt, pipeline::PipelineExt, span::SpanExt},
+    ast::{call::CallExt, pipeline::PipelineExt, span::SpanExt},
     context::LintContext,
+    effect::external::external_command_has_no_output,
     rule::Rule,
     violation::Violation,
 };
@@ -12,8 +13,7 @@ fn command_produces_output(expr: &Expression, context: &LintContext) -> bool {
     match &expr.expr {
         Expr::ExternalCall(call, _) => {
             let cmd_name = call.span.text(context);
-            cmd_name.is_known_external_output_command()
-                || !cmd_name.is_known_external_no_output_command()
+            !external_command_has_no_output(cmd_name)
         }
         Expr::Call(call) => {
             let output_type = context

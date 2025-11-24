@@ -6,13 +6,10 @@ use nu_protocol::{
     },
 };
 
-use super::{
-    block::BlockExt, call::CallExt, ext_command::ExternalCommandExt, pipeline::PipelineExt,
-    span::SpanExt,
-};
+use super::{block::BlockExt, call::CallExt, pipeline::PipelineExt, span::SpanExt};
 use crate::{
     context::LintContext,
-    effect::external::{ExternEffect, has_external_side_effect},
+    effect::external::{ExternEffect, external_command_has_no_output, has_external_side_effect},
 };
 
 pub trait ExpressionExt: Traverse {
@@ -544,9 +541,9 @@ impl ExpressionExt for Expression {
             Expr::ExternalCall(call, _) => {
                 let cmd_name = call.span.text(context);
                 log::debug!("Encountered ExternalCall: '{cmd_name}'");
-                if cmd_name.is_known_external_no_output_command() {
+                if external_command_has_no_output(cmd_name) {
                     Some(Type::Nothing)
-                } else if cmd_name.is_known_external_output_command() {
+                } else if !external_command_has_no_output(cmd_name) {
                     Some(Type::String)
                 } else {
                     None

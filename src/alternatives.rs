@@ -5,23 +5,23 @@ use nu_protocol::ast::{Expr, Expression, ExternalArgument};
 
 use crate::{Fix, Violation, context::LintContext};
 
-/// Convert a slice of external arguments to their source string representations
-#[must_use]
-pub fn extract_external_args_as_strings(
-    args: &[ExternalArgument],
-    context: &LintContext,
-) -> Vec<String> {
-    args.iter()
-        .map(|arg| match arg {
-            ExternalArgument::Regular(expr) => {
-                context.source[expr.span.start..expr.span.end].to_string()
-            }
-            ExternalArgument::Spread(expr) => {
-                format!("...{}", &context.source[expr.span.start..expr.span.end])
-            }
-        })
-        .collect()
+/// Return an iterator of borrowed slices for each external arg's inner text.
+/// This avoids any allocation and does not prepend the spread prefix.
+pub fn external_args_slices<'a>(
+    args: &'a [ExternalArgument],
+    context: &'a LintContext,
+) -> impl Iterator<Item = &'a str> + 'a {
+    args.iter().map(move |arg| match arg {
+        ExternalArgument::Regular(expr) | ExternalArgument::Spread(expr) => {
+            &context.source[expr.span.start..expr.span.end]
+        }
+    })
 }
+
+// NOTE: Previously provided `extract_external_args_as_strings` has been
+// removed. Use `external_args_text(...).map(Cow::into_owned).collect()` when
+// owned Strings are needed, or prefer `external_args_slices` for zero-alloc
+// scans.
 
 /// Metadata about a builtin alternative to an external command
 pub struct BuiltinAlternative {

@@ -4,9 +4,7 @@ use nu_protocol::ast::ExternalArgument;
 
 use crate::{
     Violation,
-    alternatives::{
-        BuiltinAlternative, detect_external_commands, extract_external_args_as_strings,
-    },
+    alternatives::{BuiltinAlternative, detect_external_commands, external_args_slices},
     context::LintContext,
     rule::Rule,
     violation::{Fix, Replacement},
@@ -28,10 +26,7 @@ fn build_fix(
     expr_span: nu_protocol::Span,
     context: &LintContext,
 ) -> Fix {
-    let args_text = extract_external_args_as_strings(args, context);
-
-    let replacement = args_text
-        .iter()
+    let replacement = external_args_slices(args, context)
         .find(|a| a.starts_with('-') && a.len() > 1)
         .map_or_else(
             || "first 10".to_string(),

@@ -4,9 +4,7 @@ use nu_protocol::ast::ExternalArgument;
 
 use crate::{
     Violation,
-    alternatives::{
-        BuiltinAlternative, detect_external_commands, extract_external_args_as_strings,
-    },
+    alternatives::{BuiltinAlternative, detect_external_commands, external_args_slices},
     context::LintContext,
     rule::Rule,
     violation::{Fix, Replacement},
@@ -54,46 +52,12 @@ struct HttpOptions {
     quiet: bool,
 }
 
-#[derive(Default, PartialEq)]
-enum HttpMethod {
-    #[default]
-    Get,
-    Post,
-    Put,
-    Patch,
-    Delete,
-}
-
-fn parse_method(method_str: &str) -> HttpMethod {
-    match method_str.to_uppercase().as_str() {
-        "POST" => HttpMethod::Post,
-        "PUT" => HttpMethod::Put,
-        "PATCH" => HttpMethod::Patch,
-        "DELETE" => HttpMethod::Delete,
-        _ => HttpMethod::Get,
-    }
-}
-
-fn parse_credentials(credentials: &str) -> (Option<String>, Option<String>) {
-    credentials
-        .split_once(':')
-        .map_or((Some(credentials.to_string()), None), |(user, pass)| {
-            (Some(user.to_string()), Some(pass.to_string()))
-        })
-}
-
-fn parse_header(header: &str) -> Option<(String, String)> {
-    header
-        .split_once(':')
-        .map(|(key, value)| (key.trim().to_string(), value.trim().to_string()))
-}
-
 impl HttpOptions {
-    fn parse_curl(args: &[String]) -> Self {
-        args.iter()
+    fn parse_curl<'a>(args: impl IntoIterator<Item = &'a str>) -> Self {
+        args.into_iter()
             .fold(
                 (Self::default(), None::<&str>),
-                |(mut opts, expecting), arg| match (expecting, arg.as_str()) {
+                |(mut opts, expecting), arg| match (expecting, arg) {
                     (Some("-X" | "--request"), method) => {
                         opts.method = parse_method(method);
                         (opts, None)
@@ -126,7 +90,7 @@ impl HttpOptions {
                         None,
                         "-X" | "--request" | "-H" | "--header" | "-u" | "--user" | "-d" | "--data"
                         | "--data-raw" | "-o" | "--output",
-                    ) => (opts, Some(arg.as_str())),
+                    ) => (opts, Some(arg)),
                     (None, s) if !s.starts_with('-') && opts.url.is_none() => {
                         opts.url = Some(s.to_string());
                         (opts, None)
@@ -137,11 +101,11 @@ impl HttpOptions {
             .0
     }
 
-    fn parse_wget(args: &[String]) -> Self {
-        args.iter()
+    fn parse_wget<'a>(args: impl IntoIterator<Item = &'a str>) -> Self {
+        args.into_iter()
             .fold(
                 (Self::default(), None::<&str>),
-                |(mut opts, expecting), arg| match (expecting, arg.as_str()) {
+                |(mut opts, expecting), arg| match (expecting, arg) {
                     (Some("-O" | "--output-document"), file) => {
                         opts.output_file = Some(file.to_string());
                         (opts, None)
@@ -155,7 +119,7 @@ impl HttpOptions {
                         (opts, None)
                     }
                     (None, "-O" | "--output-document" | "--user" | "--password") => {
-                        (opts, Some(arg.as_str()))
+                        (opts, Some(arg))
                     }
                     (None, "-q" | "--quiet") => {
                         opts.quiet = true;
@@ -294,6 +258,40 @@ impl HttpOptions {
     }
 }
 
+#[derive(Default, PartialEq)]
+enum HttpMethod {
+    #[default]
+    Get,
+    Post,
+    Put,
+    Patch,
+    Delete,
+}
+
+fn parse_method(method_str: &str) -> HttpMethod {
+    match method_str.to_uppercase().as_str() {
+        "POST" => HttpMethod::Post,
+        "PUT" => HttpMethod::Put,
+        "PATCH" => HttpMethod::Patch,
+        "DELETE" => HttpMethod::Delete,
+        _ => HttpMethod::Get,
+    }
+}
+
+fn parse_credentials(credentials: &str) -> (Option<String>, Option<String>) {
+    credentials
+        .split_once(':')
+        .map_or((Some(credentials.to_string()), None), |(user, pass)| {
+            (Some(user.to_string()), Some(pass.to_string()))
+        })
+}
+
+fn parse_header(header: &str) -> Option<(String, String)> {
+    header
+        .split_once(':')
+        .map(|(key, value)| (key.trim().to_string(), value.trim().to_string()))
+}
+
 fn build_fix(
     cmd_text: &str,
     _alternative: &BuiltinAlternative,
@@ -301,15 +299,13 @@ fn build_fix(
     expr_span: nu_protocol::Span,
     context: &LintContext,
 ) -> Fix {
-    let args_text = extract_external_args_as_strings(args, context);
-
     let opts = match cmd_text {
-        "curl" => HttpOptions::parse_curl(&args_text),
-        "wget" => HttpOptions::parse_wget(&args_text),
+        "curl" => HttpOptions::parse_curl(external_args_slices(args, context)),
+        "wget" => HttpOptions::parse_wget(external_args_slices(args, context)),
         "fetch" => {
             let mut opts = HttpOptions::default();
-            if let Some(url) = args_text.first() {
-                opts.url = Some(url.clone());
+            if let Some(url) = external_args_slices(args, context).next() {
+                opts.url = Some(url.to_string());
             }
             opts
         }

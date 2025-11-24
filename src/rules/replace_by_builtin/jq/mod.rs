@@ -12,9 +12,7 @@ use nu_protocol::ast::ExternalArgument;
 
 use crate::{
     Violation,
-    alternatives::{
-        BuiltinAlternative, detect_external_commands, extract_external_args_as_strings,
-    },
+    alternatives::{BuiltinAlternative, detect_external_commands, external_args_slices},
     context::LintContext,
     rule::Rule,
     violation::{Fix, Replacement},
@@ -322,15 +320,15 @@ fn build_fix(
     expr_span: nu_protocol::Span,
     context: &LintContext,
 ) -> Fix {
-    let args_text = extract_external_args_as_strings(args, context);
+    let args_text: Vec<&str> = external_args_slices(args, context).collect();
 
     let new_text = match cmd_text {
         "jq" => {
             if args_text.is_empty() {
                 alternative.command.to_string()
             } else {
-                let filter = &args_text[0];
-                let file_arg = args_text.get(1).map(String::as_str);
+                let filter = args_text[0];
+                let file_arg = args_text.get(1).copied();
                 format_jq_replacement(filter, file_arg)
             }
         }

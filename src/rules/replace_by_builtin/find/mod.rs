@@ -4,9 +4,7 @@ use nu_protocol::ast::ExternalArgument;
 
 use crate::{
     Violation,
-    alternatives::{
-        BuiltinAlternative, detect_external_commands, extract_external_args_as_strings,
-    },
+    alternatives::{BuiltinAlternative, detect_external_commands, external_args_slices},
     context::LintContext,
     rule::Rule,
     violation::{Fix, Replacement},
@@ -41,33 +39,33 @@ fn get_builtin_alternatives() -> HashMap<&'static str, BuiltinAlternative> {
 
 /// Parse find command arguments to extract key options
 #[derive(Default)]
-struct FindOptions {
-    path: Option<String>,
-    name_pattern: Option<String>,
-    file_type: Option<String>,
-    size: Option<String>,
-    mtime: Option<String>,
+struct FindOptions<'a> {
+    path: Option<&'a str>,
+    name_pattern: Option<&'a str>,
+    file_type: Option<&'a str>,
+    size: Option<&'a str>,
+    mtime: Option<&'a str>,
     empty: bool,
 }
 
-impl FindOptions {
-    fn parse(args: &[String]) -> Self {
+impl<'a> FindOptions<'a> {
+    fn parse(args: impl IntoIterator<Item = &'a str>) -> Self {
         let mut opts = Self::default();
-        let mut iter = args.iter();
+        let mut iter = args.into_iter();
 
         while let Some(arg) = iter.next() {
-            match arg.as_str() {
+            match arg {
                 "-name" | "-iname" => {
-                    opts.name_pattern = iter.next().map(String::to_string);
+                    opts.name_pattern = iter.next();
                 }
                 "-type" => {
-                    opts.file_type = iter.next().map(String::to_string);
+                    opts.file_type = iter.next();
                 }
                 "-size" => {
-                    opts.size = iter.next().map(String::to_string);
+                    opts.size = iter.next();
                 }
                 "-mtime" | "-mmin" => {
-                    opts.mtime = iter.next().map(String::to_string);
+                    opts.mtime = iter.next();
                 }
                 "-empty" => {
                     opts.empty = true;
@@ -77,7 +75,7 @@ impl FindOptions {
                     iter.next();
                 }
                 s if !s.starts_with('-') && opts.path.is_none() => {
-                    opts.path = Some(s.to_string());
+                    opts.path = Some(s);
                 }
                 _ => {}
             }
@@ -87,7 +85,7 @@ impl FindOptions {
     }
 
     fn to_nushell(&self) -> (String, String) {
-        let base_path = self.path.as_deref().unwrap_or(".");
+        let base_path = self.path.unwrap_or(".");
 
         let glob_pattern = self.build_glob_pattern(base_path);
         let (filters, examples) = self.build_filters();
@@ -104,7 +102,7 @@ impl FindOptions {
     }
 
     fn build_glob_pattern(&self, base_path: &str) -> String {
-        self.name_pattern.as_ref().map_or_else(
+        self.name_pattern.map_or_else(
             || format!("{base_path}/**/*"),
             |pattern| {
                 let clean = pattern.trim_matches('"').trim_matches('\'');
@@ -122,7 +120,7 @@ impl FindOptions {
         let mut examples = Vec::new();
 
         // Type filter
-        if let Some((filter, example)) = self.file_type.as_deref().and_then(|ftype| match ftype {
+        if let Some((filter, example)) = self.file_type.and_then(|ftype| match ftype {
             "f" => Some(("where type == file", "type: 'where type == file'")),
             "d" => Some(("where type == dir", "type: 'where type == dir'")),
             "l" => Some(("where type == symlink", "type: 'where type == symlink'")),
@@ -133,14 +131,14 @@ impl FindOptions {
         }
 
         // Size filter
-        if let Some(size) = &self.size {
+        if let Some(size) = self.size {
             let filter = parse_size_filter(size);
             examples.push(format!("size: '{filter}'"));
             filters.push(filter);
         }
 
         // Time filter
-        if let Some(mtime) = &self.mtime {
+        if let Some(mtime) = self.mtime {
             let filter = parse_time_filter(mtime);
             examples.push(format!("time: '{filter}'"));
             filters.push(filter);
@@ -229,8 +227,7 @@ fn build_fix(
     expr_span: nu_protocol::Span,
     context: &LintContext,
 ) -> Fix {
-    let args_text = extract_external_args_as_strings(args, context);
-    let opts = FindOptions::parse(&args_text);
+    let opts = FindOptions::parse(external_args_slices(args, context));
     let (replacement, description) = opts.to_nushell();
 
     Fix {

@@ -4,9 +4,7 @@ use nu_protocol::ast::ExternalArgument;
 
 use crate::{
     Violation,
-    alternatives::{
-        BuiltinAlternative, detect_external_commands, extract_external_args_as_strings,
-    },
+    alternatives::{BuiltinAlternative, detect_external_commands, external_args_slices},
     context::LintContext,
     rule::Rule,
     violation::{Fix, Replacement},
@@ -64,7 +62,7 @@ struct CatOptions {
 }
 
 impl CatOptions {
-    fn parse(args: &[String]) -> Self {
+    fn parse<'a>(args: impl IntoIterator<Item = &'a str>) -> Self {
         let mut opts = Self::default();
 
         for arg in args {
@@ -198,8 +196,7 @@ fn build_fix(
     expr_span: nu_protocol::Span,
     context: &LintContext,
 ) -> Fix {
-    let args_text = extract_external_args_as_strings(args, context);
-    let opts = CatOptions::parse(&args_text);
+    let opts = CatOptions::parse(external_args_slices(args, context));
     let (replacement, description) = opts.to_nushell();
 
     Fix {

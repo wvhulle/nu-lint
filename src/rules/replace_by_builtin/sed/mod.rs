@@ -1,13 +1,10 @@
-use core::slice;
 use std::collections::HashMap;
 
 use nu_protocol::ast::ExternalArgument;
 
 use crate::{
     Violation,
-    alternatives::{
-        BuiltinAlternative, detect_external_commands, extract_external_args_as_strings,
-    },
+    alternatives::{BuiltinAlternative, detect_external_commands, external_args_slices},
     context::LintContext,
     rule::Rule,
     violation::{Fix, Replacement},
@@ -64,12 +61,12 @@ struct SedOptions {
 }
 
 impl SedOptions {
-    fn parse(args: &[String]) -> Self {
+    fn parse<'a>(args: impl IntoIterator<Item = &'a str>) -> Self {
         let mut opts = Self::default();
-        let mut iter = args.iter();
+        let mut iter = args.into_iter();
 
         while let Some(arg) = iter.next() {
-            match arg.as_str() {
+            match arg {
                 "-i" | "--in-place" => opts.in_place = true,
                 "-E" | "-r" | "--regexp-extended" => opts.extended_regex = true,
                 "-e" | "--expression" => Self::handle_expression_flag(&mut opts, &mut iter),
@@ -84,13 +81,17 @@ impl SedOptions {
         opts
     }
 
-    fn handle_expression_flag(opts: &mut Self, iter: &mut slice::Iter<String>) {
+    fn handle_expression_flag<'a, I: Iterator<Item = &'a str>>(opts: &mut Self, iter: &mut I) {
         if let Some(expr) = iter.next() {
-            opts.pattern = Some(expr.clone());
+            opts.pattern = Some(expr.to_string());
         }
     }
 
-    fn handle_combined_flags(opts: &mut Self, arg: &str, iter: &mut slice::Iter<String>) {
+    fn handle_combined_flags<'a, I: Iterator<Item = &'a str>>(
+        opts: &mut Self,
+        arg: &str,
+        iter: &mut I,
+    ) {
         for ch in arg.chars().skip(1) {
             match ch {
                 'i' => opts.in_place = true,
@@ -260,8 +261,7 @@ fn build_fix(
     expr_span: nu_protocol::Span,
     context: &LintContext,
 ) -> Fix {
-    let args_text = extract_external_args_as_strings(args, context);
-    let opts = SedOptions::parse(&args_text);
+    let opts = SedOptions::parse(external_args_slices(args, context));
     let (replacement, description) = opts.to_nushell();
 
     Fix {

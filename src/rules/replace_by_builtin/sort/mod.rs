@@ -1,13 +1,10 @@
-use core::slice;
 use std::collections::HashMap;
 
 use nu_protocol::ast::ExternalArgument;
 
 use crate::{
     Violation,
-    alternatives::{
-        BuiltinAlternative, detect_external_commands, extract_external_args_as_strings,
-    },
+    alternatives::{BuiltinAlternative, detect_external_commands, external_args_slices},
     context::LintContext,
     rule::Rule,
     violation::{Fix, Replacement},
@@ -38,9 +35,9 @@ struct SortOptions {
 }
 
 impl SortOptions {
-    fn parse(args: &[String]) -> Self {
+    fn parse<'a>(args: impl IntoIterator<Item = &'a str>) -> Self {
         let mut opts = Self::default();
-        let mut iter = args.iter();
+        let mut iter = args.into_iter();
 
         while let Some(arg) = iter.next() {
             if arg.starts_with('-') && !arg.starts_with("--") && arg.len() > 2 {
@@ -78,14 +75,14 @@ impl SortOptions {
         }
     }
 
-    fn parse_single_arg(opts: &mut Self, arg: &str, iter: &mut slice::Iter<String>) {
+    fn parse_single_arg<'a, I: Iterator<Item = &'a str>>(opts: &mut Self, arg: &str, iter: &mut I) {
         match arg {
             "-r" | "--reverse" => opts.reverse = true,
             "-n" | "--numeric-sort" => opts.numeric = true,
             "-u" | "--unique" => opts.unique = true,
             "-f" | "--ignore-case" => opts.ignore_case = true,
             "-k" | "--key" => {
-                opts.key_field = iter.next().map(String::to_string);
+                opts.key_field = iter.next().map(str::to_string);
             }
             "-t" | "--field-separator" => {
                 // Skip the separator value for now
@@ -170,8 +167,7 @@ fn build_fix(
     expr_span: nu_protocol::Span,
     context: &LintContext,
 ) -> Fix {
-    let args_text = extract_external_args_as_strings(args, context);
-    let opts = SortOptions::parse(&args_text);
+    let opts = SortOptions::parse(external_args_slices(args, context));
     let (replacement, description) = opts.to_nushell();
 
     Fix {

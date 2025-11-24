@@ -4,9 +4,7 @@ use nu_protocol::ast::ExternalArgument;
 
 use crate::{
     Violation,
-    alternatives::{
-        BuiltinAlternative, detect_external_commands, extract_external_args_as_strings,
-    },
+    alternatives::{BuiltinAlternative, detect_external_commands, external_args_slices},
     context::LintContext,
     rule::Rule,
     violation::{Fix, Replacement},
@@ -38,12 +36,12 @@ struct UniqOptions {
 }
 
 impl UniqOptions {
-    fn parse(args: &[String]) -> Self {
+    fn parse<'a>(args: impl IntoIterator<Item = &'a str>) -> Self {
         let mut opts = Self::default();
-        let mut iter = args.iter();
+        let mut iter = args.into_iter();
 
         while let Some(arg) = iter.next() {
-            match arg.as_str() {
+            match arg {
                 "-c" | "--count" => opts.count = true,
                 "-d" | "--repeated" => opts.repeated = true,
                 "-u" | "--unique" => opts.unique = true,
@@ -153,8 +151,7 @@ fn build_fix(
     expr_span: nu_protocol::Span,
     context: &LintContext,
 ) -> Fix {
-    let args_text = extract_external_args_as_strings(args, context);
-    let opts = UniqOptions::parse(&args_text);
+    let opts = UniqOptions::parse(external_args_slices(args, context));
     let (replacement, description) = opts.to_nushell();
 
     Fix {

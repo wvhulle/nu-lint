@@ -4,9 +4,7 @@ use nu_protocol::ast::ExternalArgument;
 
 use crate::{
     Violation,
-    alternatives::{
-        BuiltinAlternative, detect_external_commands, extract_external_args_as_strings,
-    },
+    alternatives::{BuiltinAlternative, detect_external_commands, external_args_slices},
     context::LintContext,
     rule::Rule,
     violation::{Fix, Replacement},
@@ -56,12 +54,12 @@ struct GrepOptions {
 }
 
 impl GrepOptions {
-    fn parse(args: &[String]) -> Self {
+    fn parse<'a>(args: impl IntoIterator<Item = &'a str>) -> Self {
         let mut opts = Self::default();
-        let mut iter = args.iter();
+        let mut iter = args.into_iter();
 
         while let Some(arg) = iter.next() {
-            match arg.as_str() {
+            match arg {
                 "-i" | "--ignore-case" => opts.flags.case_insensitive = true,
                 "-v" | "--invert-match" => opts.flags.invert_match = true,
                 "-n" | "--line-number" => opts.flags.line_number = true,
@@ -238,8 +236,7 @@ fn build_fix(
     expr_span: nu_protocol::Span,
     context: &LintContext,
 ) -> Fix {
-    let args_text = extract_external_args_as_strings(args, context);
-    let opts = GrepOptions::parse(&args_text);
+    let opts = GrepOptions::parse(external_args_slices(args, context));
     let (replacement, description) = opts.to_nushell();
 
     Fix {

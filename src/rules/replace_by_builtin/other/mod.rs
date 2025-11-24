@@ -4,9 +4,7 @@ use nu_protocol::ast::ExternalArgument;
 
 use crate::{
     Violation,
-    alternatives::{
-        BuiltinAlternative, detect_external_commands, extract_external_args_as_strings,
-    },
+    alternatives::{BuiltinAlternative, detect_external_commands, external_args_slices},
     context::LintContext,
     rule::Rule,
     violation::{Fix, Replacement},
@@ -162,7 +160,7 @@ fn build_fix(
     expr_span: nu_protocol::Span,
     context: &LintContext,
 ) -> Fix {
-    let args_text = extract_external_args_as_strings(args, context);
+    let args_text: Vec<&str> = external_args_slices(args, context).collect();
 
     // Build replacement based on command
     let (new_text, description) = match cmd_text {
@@ -202,7 +200,7 @@ fn build_fix(
 
 fn build_simple_replacement(
     cmd_text: &str,
-    args_text: &[String],
+    args_text: &[&str],
     alternative: &BuiltinAlternative,
 ) -> (String, String) {
     let repl = if args_text.is_empty() {
@@ -213,7 +211,7 @@ fn build_simple_replacement(
     (repl, format!("Use Nu's built-in '{}'", alternative.command))
 }
 
-fn build_cd_replacement(args_text: &[String]) -> (String, String) {
+fn build_cd_replacement(args_text: &[&str]) -> (String, String) {
     let repl = if args_text.is_empty() {
         "cd".to_string()
     } else {
@@ -222,7 +220,7 @@ fn build_cd_replacement(args_text: &[String]) -> (String, String) {
     (repl, "Use Nu's built-in 'cd'".to_string())
 }
 
-fn build_env_replacement(args_text: &[String]) -> (String, String) {
+fn build_env_replacement(args_text: &[&str]) -> (String, String) {
     if args_text.is_empty() {
         (
             "$env".to_string(),
@@ -263,7 +261,7 @@ fn build_uname_replacement() -> (String, String) {
     )
 }
 
-fn build_man_replacement(args_text: &[String]) -> (String, String) {
+fn build_man_replacement(args_text: &[&str]) -> (String, String) {
     let repl = args_text
         .first()
         .map_or_else(|| "help commands".to_string(), |cmd| format!("help {cmd}"));
@@ -274,7 +272,7 @@ fn build_man_replacement(args_text: &[String]) -> (String, String) {
     )
 }
 
-fn build_which_replacement(args_text: &[String]) -> (String, String) {
+fn build_which_replacement(args_text: &[&str]) -> (String, String) {
     let repl = args_text
         .first()
         .map_or_else(|| "which".to_string(), |cmd| format!("which {cmd}"));
@@ -284,8 +282,8 @@ fn build_which_replacement(args_text: &[String]) -> (String, String) {
     )
 }
 
-fn build_read_replacement(args_text: &[String]) -> (String, String) {
-    if args_text.contains(&"-s".to_string()) || args_text.contains(&"--silent".to_string()) {
+fn build_read_replacement(args_text: &[&str]) -> (String, String) {
+    if args_text.iter().any(|&s| s == "-s" || s == "--silent") {
         (
             "input -s".to_string(),
             "Use 'input -s' for secure password input (hidden)".to_string(),
@@ -298,7 +296,7 @@ fn build_read_replacement(args_text: &[String]) -> (String, String) {
     }
 }
 
-fn build_print_replacement(args_text: &[String]) -> (String, String) {
+fn build_print_replacement(args_text: &[&str]) -> (String, String) {
     (
         if args_text.is_empty() {
             "print".to_string()
@@ -323,8 +321,8 @@ fn build_cut_replacement() -> (String, String) {
     )
 }
 
-fn build_wc_replacement(args_text: &[String]) -> (String, String) {
-    if args_text.contains(&"-l".to_string()) {
+fn build_wc_replacement(args_text: &[&str]) -> (String, String) {
+    if args_text.contains(&"-l") {
         (
             "lines | length".to_string(),
             "Use 'lines | length' to count lines in a file".to_string(),
@@ -346,7 +344,7 @@ fn build_tr_replacement() -> (String, String) {
     )
 }
 
-fn build_tee_replacement(args_text: &[String]) -> (String, String) {
+fn build_tee_replacement(args_text: &[&str]) -> (String, String) {
     let repl = args_text.first().map_or_else(
         || "tee { save ... }".to_string(),
         |file| format!("tee {{ save {file} }}"),

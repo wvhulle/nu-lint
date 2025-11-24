@@ -104,7 +104,7 @@ def parse-text [text] {
 # prefer_direct_use: Import specific items instead of module
 use std *
 
-# unnecessary_ignore: Don't ignore useful output
+# redundant_ignore: Don't ignore useful output
 def ignore-output [] {
   ls | ignore
   print "done" | ignore

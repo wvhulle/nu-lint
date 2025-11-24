@@ -189,7 +189,6 @@ pub const DEFAULT_RULE_MAP: RuleMap = RuleMap {
         ("add_metadata_to_error", LintLevel::Warn),
         ("escape_string_interpolation_operators", LintLevel::Deny),
         ("exit_only_in_main", LintLevel::Deny),
-        ("unnecessary_ignore", LintLevel::Warn),
         ("exported_function_docs", LintLevel::Warn),
         ("main_positional_args_docs", LintLevel::Warn),
         ("main_named_args_docs", LintLevel::Warn),

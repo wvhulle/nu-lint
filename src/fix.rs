@@ -2,7 +2,11 @@ use std::{collections::HashMap, fmt::Write, fs, io::Error as IoError, path::Path
 
 use similar::{ChangeTag, TextDiff};
 
-use crate::{LintError, violation::Violation};
+use crate::{
+    LintError,
+    engine::LintEngine,
+    violation::{Fix, Violation},
+};
 
 /// Result of applying fixes to a file
 #[derive(Debug)]
@@ -44,26 +48,31 @@ pub fn apply_fixes_to_stdin(violations: &[Violation]) -> Option<String> {
 /// # Errors
 ///
 /// Returns an error if a file cannot be read or written
-pub fn apply_fixes(violations: &[Violation], dry_run: bool) -> Result<Vec<FixResult>, LintError> {
+pub fn apply_fixes(
+    violations: &[Violation],
+    dry_run: bool,
+    lint_engine: &LintEngine,
+) -> Result<Vec<FixResult>, LintError> {
     let results = group_violations_by_file(violations)
         .into_iter()
-        .filter_map(|(file_path, file_violations)| {
-            apply_fix_to_file(&file_path, &file_violations, dry_run).ok()
+        .filter_map(|(file_path, _file_violations)| {
+            apply_fix_to_file(&file_path, dry_run, lint_engine).ok()
         })
         .collect();
 
     Ok(results)
 }
 
-/// Apply fixes to a single file
+/// Apply fixes to a single file iteratively
 fn apply_fix_to_file(
     file_path: &PathBuf,
-    file_violations: &[&Violation],
     dry_run: bool,
+    lint_engine: &LintEngine,
 ) -> Result<FixResult, IoError> {
     let original_content = fs::read_to_string(file_path)?;
-    let fixed_content = apply_fixes_to_content(&original_content, file_violations);
-    let fixes_applied = count_applicable_fixes(file_violations);
+
+    // Apply fixes iteratively, re-linting after each fix
+    let (fixed_content, fixes_applied) = apply_fixes_iteratively(&original_content, lint_engine);
 
     log::debug!(
         "File: {}, Fixes: {}, Original len: {}, Fixed len: {}",
@@ -87,6 +96,98 @@ fn apply_fix_to_file(
         fixed_content,
         fixes_applied,
     })
+}
+
+/// Apply fixes iteratively, re-linting after each fix to get fresh spans
+fn apply_fixes_iteratively(content: &str, lint_engine: &LintEngine) -> (String, usize) {
+    let mut current_content = content.to_string();
+    let mut total_fixes_applied = 0;
+    let max_iterations = 100; // Prevent infinite loops
+
+    for iteration in 0..max_iterations {
+        // Re-lint the current content to get violations with fresh spans
+        let violations = lint_engine.lint_str(&current_content);
+
+        // Find the first violation that has a fix
+        let fixable_violation = violations.iter().find(|v| v.fix.is_some());
+
+        if fixable_violation.is_none() {
+            // No more fixes to apply
+            log::debug!(
+                "Iterative fix complete after {iteration} iterations, {total_fixes_applied} fixes \
+                 applied"
+            );
+            break;
+        }
+
+        // Apply just the first fix
+        let violation = fixable_violation.unwrap();
+        let fix = violation.fix.as_ref().unwrap();
+
+        // Apply all replacements from this one fix
+        let new_content = apply_single_fix_to_content(&current_content, fix);
+
+        if new_content == current_content {
+            log::warn!("Fix did not change content, stopping to avoid infinite loop");
+            break;
+        }
+
+        current_content = new_content;
+        total_fixes_applied += 1;
+
+        log::debug!(
+            "Applied fix {} from rule '{}' at iteration {}",
+            total_fixes_applied,
+            violation.rule_id,
+            iteration
+        );
+    }
+
+    if total_fixes_applied >= max_iterations {
+        log::warn!("Reached maximum iteration limit ({max_iterations})");
+    }
+
+    (current_content, total_fixes_applied)
+}
+
+/// Apply a single fix's replacements to content
+fn apply_single_fix_to_content(content: &str, fix: &Fix) -> String {
+    let mut replacements = fix.replacements.clone();
+
+    if replacements.is_empty() {
+        return content.to_string();
+    }
+
+    // Sort replacements by span start in reverse order
+    replacements.sort_by(|a, b| b.span.start.cmp(&a.span.start));
+
+    let mut result = content.to_string();
+
+    for replacement in replacements {
+        let start = replacement.span.start;
+        let end = replacement.span.end;
+
+        // Validate span bounds
+        if start > result.len() || end > result.len() || start > end {
+            log::warn!(
+                "Invalid replacement span: start={}, end={}, content_len={}",
+                start,
+                end,
+                result.len()
+            );
+            continue;
+        }
+
+        // Check UTF-8 boundaries
+        if !result.is_char_boundary(start) || !result.is_char_boundary(end) {
+            log::warn!("Replacement span not on UTF-8 boundary: start={start}, end={end}");
+            continue;
+        }
+
+        result.replace_range(start..end, &replacement.replacement_text);
+    }
+
+    result
 }
 
 /// Group violations by their file path
@@ -148,11 +249,6 @@ fn apply_fixes_to_content(content: &str, violations: &[&Violation]) -> String {
     }
 
     result
-}
-
-/// Count how many violations have applicable fixes
-fn count_applicable_fixes(violations: &[&Violation]) -> usize {
-    violations.iter().filter(|v| v.fix.is_some()).count()
 }
 
 /// Format fix results for output
@@ -312,191 +408,128 @@ mod tests {
     }
 
     #[test]
-    fn test_multiple_fixes_same_file() {
-        // Test that multiple separate fixes to different parts of the same file work
-        // correctly
-        let content = "let x = 5; let y = 10; let z = 15";
+    fn test_iterative_fixes_with_overlapping_spans() {
+        // Test that the iterative fix system can handle fixes that would have
+        // overlapping spans if applied simultaneously
+        use crate::{config::Config, engine::LintEngine};
 
-        let fix1 = Fix::with_explanation("Rename x", vec![Replacement::new(Span::new(4, 5), "a")]);
+        let content = "^evtest /dev/input/event0 err> /dev/null | lines\n";
 
-        let fix2 =
-            Fix::with_explanation("Rename y", vec![Replacement::new(Span::new(15, 16), "b")]);
+        let config = Config::default();
+        let engine = LintEngine::new(config);
 
-        let fix3 =
-            Fix::with_explanation("Rename z", vec![Replacement::new(Span::new(27, 28), "c")]);
+        let (fixed, count) = apply_fixes_iteratively(content, &engine);
 
-        let violation1 = Violation {
-            rule_id: Cow::Borrowed("test_rule"),
-            lint_level: LintLevel::Warn,
-            message: Cow::Borrowed("Test"),
-            span: Span::new(4, 5),
-            help: None,
-            fix: Some(fix1),
-            file: Some(Cow::Borrowed("test.nu")),
-            source: None,
-        };
+        // Should apply at least one fix without panicking
+        assert!(count > 0, "Expected at least one fix to be applied");
 
-        let violation2 = Violation {
-            rule_id: Cow::Borrowed("test_rule"),
-            lint_level: LintLevel::Warn,
-            message: Cow::Borrowed("Test"),
-            span: Span::new(15, 16),
-            help: None,
-            fix: Some(fix2),
-            file: Some(Cow::Borrowed("test.nu")),
-            source: None,
-        };
+        // Fixed content should not contain the redirect
+        assert!(
+            !fixed.contains("err> /dev/null"),
+            "Fixed content should not contain err> /dev/null"
+        );
 
-        let violation3 = Violation {
-            rule_id: Cow::Borrowed("test_rule"),
-            lint_level: LintLevel::Warn,
-            message: Cow::Borrowed("Test"),
-            span: Span::new(27, 28),
-            help: None,
-            fix: Some(fix3),
-            file: Some(Cow::Borrowed("test.nu")),
-            source: None,
-        };
-
-        let fixed = apply_fixes_to_content(content, &[&violation1, &violation2, &violation3]);
-        assert_eq!(fixed, "let a = 5; let b = 10; let c = 15");
+        // Should be valid Nushell code (no corruption)
+        assert!(
+            fixed.contains("evtest"),
+            "Fixed content should still contain command name"
+        );
+        assert!(
+            fixed.contains("lines"),
+            "Fixed content should still contain pipeline command"
+        );
     }
 
     #[test]
-    fn test_overlapping_fixes_with_different_lengths() {
-        // Test replacing text with different length strings
-        let content = "let variable_name = 5";
+    fn test_iterative_fixes_multiple_rules_same_line() {
+        // Test that multiple rules fixing the same line work correctly when applied
+        // iteratively
+        use crate::{config::Config, engine::LintEngine};
 
-        let fix = Fix::with_explanation(
-            "Shorten name",
-            vec![Replacement::new(Span::new(4, 17), "x")],
+        // This triggers multiple rules: prefer_complete_over_dev_null,
+        // prefer_builtin_grep, etc.
+        let content = "^grep pattern file.txt err> /dev/null | lines\n";
+
+        let config = Config::default();
+        let engine = LintEngine::new(config);
+
+        let (fixed, count) = apply_fixes_iteratively(content, &engine);
+
+        // Should apply multiple fixes without corruption
+        assert!(count > 0, "Expected at least one fix to be applied");
+
+        // Content should not be corrupted - should still be valid Nushell
+        assert!(!fixed.is_empty(), "Fixed content should not be empty");
+        assert!(!fixed.contains("err> /dev/null"), "Should remove redirect");
+
+        // The content should be transformed, not corrupted
+        // We don't assert exact output since multiple rules may apply
+        assert!(
+            fixed.len() < 200,
+            "Fixed content should not be unreasonably long (corruption check)"
         );
-
-        let violation = Violation {
-            rule_id: Cow::Borrowed("test_rule"),
-            lint_level: LintLevel::Warn,
-            message: Cow::Borrowed("Test"),
-            span: Span::new(4, 17),
-            help: None,
-            fix: Some(fix),
-            file: Some(Cow::Borrowed("test.nu")),
-            source: None,
-        };
-
-        let fixed = apply_fixes_to_content(content, &[&violation]);
-        assert_eq!(fixed, "let x = 5");
     }
 
     #[test]
-    fn test_multiple_fixes_different_lengths() {
-        // Test multiple fixes where replacements have different lengths
-        let content = "let abc = 5; let defgh = 10";
+    fn test_iterative_fixes_converge() {
+        // Test that iterative fixes eventually converge (no infinite loop)
+        use crate::{config::Config, engine::LintEngine};
 
-        let fix1 = Fix::with_explanation(
-            "Shorten abc to a",
-            vec![Replacement::new(Span::new(4, 7), "a")],
+        // Multiple violations that could potentially trigger repeatedly
+        let content = "^curl https://example.com err> /dev/null | str trim\n";
+
+        let config = Config::default();
+        let engine = LintEngine::new(config);
+
+        let (fixed, count) = apply_fixes_iteratively(content, &engine);
+
+        // Should converge within reasonable iterations
+        assert!(
+            count < 50,
+            "Should converge within 50 iterations, got {count}"
         );
 
-        let fix2 = Fix::with_explanation(
-            "Shorten defgh to b",
-            vec![Replacement::new(Span::new(17, 22), "b")],
+        // Re-linting the fixed content should produce no fixable violations
+        let violations_after = engine.lint_str(&fixed);
+        let fixable_after = violations_after.iter().filter(|v| v.fix.is_some()).count();
+
+        assert_eq!(
+            fixable_after, 0,
+            "After applying all fixes, there should be no more fixable violations"
         );
-
-        let violation1 = Violation {
-            rule_id: Cow::Borrowed("test_rule"),
-            lint_level: LintLevel::Warn,
-            message: Cow::Borrowed("Test"),
-            span: Span::new(4, 7),
-            help: None,
-            fix: Some(fix1),
-            file: Some(Cow::Borrowed("test.nu")),
-            source: None,
-        };
-
-        let violation2 = Violation {
-            rule_id: Cow::Borrowed("test_rule"),
-            lint_level: LintLevel::Warn,
-            message: Cow::Borrowed("Test"),
-            span: Span::new(17, 22),
-            help: None,
-            fix: Some(fix2),
-            file: Some(Cow::Borrowed("test.nu")),
-            source: None,
-        };
-
-        let fixed = apply_fixes_to_content(content, &[&violation1, &violation2]);
-        assert_eq!(fixed, "let a = 5; let b = 10");
     }
 
     #[test]
-    fn test_fixes_applied_in_reverse_order() {
-        // Verify that fixes are applied from end to start to preserve offsets
-        let content = "aaaa bbbb cccc dddd";
+    fn test_iterative_fixes_preserve_utf8() {
+        // Test that iterative fixes correctly handle UTF-8 boundaries
+        use crate::{config::Config, engine::LintEngine};
 
-        // Apply fixes in forward order but they should be processed in reverse
-        let fix1 =
-            Fix::with_explanation("Replace aaaa", vec![Replacement::new(Span::new(0, 4), "A")]);
+        let content = "^echo 测试 err> /dev/null | lines\n";
 
-        let fix2 =
-            Fix::with_explanation("Replace bbbb", vec![Replacement::new(Span::new(5, 9), "B")]);
+        let config = Config::default();
+        let engine = LintEngine::new(config);
 
-        let fix3 = Fix::with_explanation(
-            "Replace cccc",
-            vec![Replacement::new(Span::new(10, 14), "C")],
+        let (fixed, count) = apply_fixes_iteratively(content, &engine);
+
+        // Should apply fixes without UTF-8 boundary panics
+        assert!(count > 0, "Expected at least one fix to be applied");
+
+        // UTF-8 characters should be preserved
+        assert!(
+            fixed.contains("测试"),
+            "UTF-8 characters should be preserved"
+        );
+        assert!(
+            !fixed.contains("err> /dev/null"),
+            "Redirect should be removed"
         );
 
-        let fix4 = Fix::with_explanation(
-            "Replace dddd",
-            vec![Replacement::new(Span::new(15, 19), "DDDD")],
+        // Verify the result is valid UTF-8 (String is always valid UTF-8, but this
+        // confirms no corruption)
+        assert!(
+            !fixed.is_empty() && fixed.chars().all(|c| !c.is_control() || c.is_whitespace()),
+            "Result should contain valid characters"
         );
-
-        let v1 = Violation {
-            rule_id: Cow::Borrowed("test_rule"),
-            lint_level: LintLevel::Warn,
-            message: Cow::Borrowed("Test"),
-            span: Span::new(0, 4),
-            help: None,
-            fix: Some(fix1),
-            file: Some(Cow::Borrowed("test.nu")),
-            source: None,
-        };
-
-        let v2 = Violation {
-            rule_id: Cow::Borrowed("test_rule"),
-            lint_level: LintLevel::Warn,
-            message: Cow::Borrowed("Test"),
-            span: Span::new(5, 9),
-            help: None,
-            fix: Some(fix2),
-            file: Some(Cow::Borrowed("test.nu")),
-            source: None,
-        };
-
-        let v3 = Violation {
-            rule_id: Cow::Borrowed("test_rule"),
-            lint_level: LintLevel::Warn,
-            message: Cow::Borrowed("Test"),
-            span: Span::new(10, 14),
-            help: None,
-            fix: Some(fix3),
-            file: Some(Cow::Borrowed("test.nu")),
-            source: None,
-        };
-
-        let v4 = Violation {
-            rule_id: Cow::Borrowed("test_rule"),
-            lint_level: LintLevel::Warn,
-            message: Cow::Borrowed("Test"),
-            span: Span::new(15, 19),
-            help: None,
-            fix: Some(fix4),
-            file: Some(Cow::Borrowed("test.nu")),
-            source: None,
-        };
-
-        // Pass violations in order, but they should be applied in reverse
-        let fixed = apply_fixes_to_content(content, &[&v1, &v2, &v3, &v4]);
-        assert_eq!(fixed, "A B C DDDD");
     }
 
     #[test]
@@ -543,8 +576,9 @@ mod tests {
             source: None,
         };
 
-        let violations = vec![&with_fix, &without_fix, &with_fix];
-        assert_eq!(count_applicable_fixes(&violations), 2);
+        let violations = [&with_fix, &without_fix, &with_fix];
+        let count = violations.iter().filter(|v| v.fix.is_some()).count();
+        assert_eq!(count, 2);
     }
 
     #[test]

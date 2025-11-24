@@ -194,4 +194,42 @@ impl Rule {
             "Expected help to contain '{expected_text}', but got: {help}"
         );
     }
+
+    #[cfg(test)]
+    #[track_caller]
+    /// Test helper: assert that the rule generates a fix that removes/erases
+    /// the expected string
+    pub fn assert_replacement_erases(&self, code: &str, erased_text: &str) {
+        let violations =
+            LintContext::test_with_parsed_source(code, |context| (self.check)(&context));
+        assert!(
+            !violations.is_empty(),
+            "Expected rule '{}' to detect violations, but found none",
+            self.id
+        );
+
+        let fix = violations[0]
+            .fix
+            .as_ref()
+            .expect("Expected violation to have a fix");
+
+        assert!(
+            !fix.replacements.is_empty(),
+            "Expected fix to have replacements"
+        );
+
+        let replacement = &fix.replacements[0];
+        let original_text = &code[replacement.span.start..replacement.span.end];
+        let replacement_text = &replacement.replacement_text;
+
+        assert!(
+            original_text.contains(erased_text),
+            "Original text should contain '{erased_text}', but got: {original_text}"
+        );
+        assert!(
+            !replacement_text.contains(erased_text),
+            "Expected replacement text to not contain '{erased_text}', but it still appears in: \
+             {replacement_text}"
+        );
+    }
 }

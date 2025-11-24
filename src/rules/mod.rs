@@ -1,4 +1,3 @@
-mod check_complete_exit_code;
 mod collapsible_if;
 mod dangerous_file_operations;
 mod descriptive_error_messages;
@@ -9,21 +8,18 @@ mod exit_only_in_main;
 mod external_script_as_argument;
 mod forbid_excessive_nesting;
 mod inline_single_use_function;
+mod redirection;
 mod side_effects;
-mod strong_typed_paths;
-mod unnecessary_ignore;
+mod strong_typing;
 
 mod max_function_body_length;
 mod max_positional_params;
 mod missing_stdin_in_shebang;
-mod missing_type_annotations;
 mod naming;
 
-mod nu_deprecated;
-mod nu_parse_error;
+mod upstream;
 
-mod prefer_complete_for_external_commands;
-
+mod bashisms;
 mod prefer_compound_assignment;
 mod prefer_direct_use;
 mod prefer_error_make_for_stderr;
@@ -39,14 +35,12 @@ mod prefer_where_over_each_if;
 mod prefer_where_over_for_if;
 mod print_exit_use_error_make;
 mod remove_redundant_in;
-mod replace;
 mod row_condition_above_closure;
 mod spacing;
 mod systemd_journal_prefix;
 mod unnecessary_mut;
 mod unnecessary_variable_before_return;
 mod unused_helper_functions;
-mod unused_output;
 
 use naming::{kebab_case_commands, screaming_snake_constants, snake_case_variables};
 use spacing::{
@@ -57,8 +51,32 @@ use spacing::{
 use crate::rule::Rule;
 
 pub const ALL_RULES: &[Rule] = &[
-    // echo rule already included above; remove duplicate
-    check_complete_exit_code::rule(),
+    bashisms::awk::rule(),
+    bashisms::cat::rule(),
+    bashisms::curl::rule(),
+    bashisms::cut::rule(),
+    bashisms::date::rule(),
+    bashisms::echo::rule(),
+    bashisms::exa::rule(),
+    bashisms::eza::rule(),
+    bashisms::fetch::rule(),
+    bashisms::find::rule(),
+    bashisms::grep::rule(),
+    bashisms::head::rule(),
+    bashisms::hostname::rule(),
+    bashisms::jq::rule(),
+    bashisms::ls::rule(),
+    bashisms::man::rule(),
+    bashisms::printenv::rule(),
+    bashisms::read::rule(),
+    bashisms::rg::rule(),
+    bashisms::sed::rule(),
+    bashisms::sort::rule(),
+    bashisms::tail::rule(),
+    bashisms::uniq::rule(),
+    bashisms::wc::rule(),
+    bashisms::wget::rule(),
+    bashisms::which::rule(),
     collapsible_if::rule(),
     dangerous_file_operations::rule(),
     descriptive_error_messages::rule(),
@@ -75,13 +93,8 @@ pub const ALL_RULES: &[Rule] = &[
     max_function_body_length::rule(),
     max_positional_params::rule(),
     missing_stdin_in_shebang::rule(),
-    missing_type_annotations::argument::rule(),
-    missing_type_annotations::pipeline::rule(),
     no_trailing_spaces::rule(),
-    nu_deprecated::rule(),
-    nu_parse_error::rule(),
     omit_list_commas::rule(),
-    prefer_complete_for_external_commands::rule(),
     prefer_compound_assignment::rule(),
     prefer_direct_use::rule(),
     prefer_error_make_for_stderr::rule(),
@@ -99,33 +112,11 @@ pub const ALL_RULES: &[Rule] = &[
     prefer_where_over_each_if::rule(),
     prefer_where_over_for_if::rule(),
     print_exit_use_error_make::rule(),
+    redirection::check_complete_exit_code::rule(),
+    redirection::prefer_complete_for_external_commands::rule(),
+    redirection::prefer_complete_over_dev_null::rule(),
+    redirection::redundant_ignore::rule(),
     remove_redundant_in::rule(),
-    replace::awk::rule(),
-    replace::cat::rule(),
-    replace::curl::rule(),
-    replace::cut::rule(),
-    replace::date::rule(),
-    replace::echo::rule(),
-    replace::exa::rule(),
-    replace::eza::rule(),
-    replace::fetch::rule(),
-    replace::find::rule(),
-    replace::grep::rule(),
-    replace::head::rule(),
-    replace::hostname::rule(),
-    replace::jq::rule(),
-    replace::ls::rule(),
-    replace::man::rule(),
-    replace::printenv::rule(),
-    replace::read::rule(),
-    replace::rg::rule(),
-    replace::sed::rule(),
-    replace::sort::rule(),
-    replace::tail::rule(),
-    replace::uniq::rule(),
-    replace::wc::rule(),
-    replace::wget::rule(),
-    replace::which::rule(),
     row_condition_above_closure::rule(),
     screaming_snake_constants::rule(),
     side_effects::mixed_io_types::rule(),
@@ -134,11 +125,13 @@ pub const ALL_RULES: &[Rule] = &[
     snake_case_variables::rule(),
     spacing::brace_spacing::rule(),
     spacing::pipe_spacing::rule(),
-    strong_typed_paths::rule(),
+    strong_typing::argument::rule(),
+    strong_typing::paths::rule(),
+    strong_typing::pipeline::rule(),
     systemd_journal_prefix::rule(),
-    unnecessary_ignore::rule(),
     unnecessary_mut::rule(),
     unnecessary_variable_before_return::rule(),
     unused_helper_functions::rule(),
-    unused_output::rule(),
+    upstream::nu_deprecated::rule(),
+    upstream::nu_parse_error::rule(),
 ];

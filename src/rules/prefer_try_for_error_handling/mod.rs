@@ -19,7 +19,7 @@ fn has_external_command(expr: &Expression, context: &LintContext) -> bool {
             let cmd_name = &context.source[head.span.start..head.span.end];
             // External commands can error unless explicitly marked otherwise
             // Check if we have explicit info, otherwise assume it can error
-            if has_external_side_effect(cmd_name, SideEffect::Error, context, args) {
+            if has_external_side_effect(cmd_name, SideEffect::MayErrorFrequently, context, args) {
                 return FindMapResult::Found(());
             }
             // If not in registry, assume external commands can error (conservative

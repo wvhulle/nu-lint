@@ -23,7 +23,7 @@ fn command_produces_no_output(expr: &Expression, context: &LintContext) -> bool 
 
             matches!(output_type, nu_protocol::Type::Nothing)
                 || (matches!(output_type, nu_protocol::Type::Any)
-                    && has_side_effect(&cmd_name, SideEffect::NoOutput, context, call))
+                    && has_side_effect(&cmd_name, SideEffect::NoUsefulOutput, context, call))
         }
         _ => false,
     }

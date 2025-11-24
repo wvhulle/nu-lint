@@ -1,11 +1,95 @@
-use nu_protocol::ast::{Call, Expr};
+use nu_protocol::ast::{Argument, Block, Call, Expr, Expression, Pipeline};
 
 use crate::{
-    ast::{block::BlockExt, call::CallExt, span::SpanExt},
+    ast::{call::CallExt, expression::is_pipeline_input_var, span::SpanExt},
     context::LintContext,
     rule::Rule,
     violation::Violation,
 };
+
+fn uses_pipeline_input_directly(expr: &Expression, context: &LintContext) -> bool {
+    match &expr.expr {
+        Expr::Var(var_id) => {
+            let var = context.working_set.get_variable(*var_id);
+            is_pipeline_input_var(*var_id, context) && var.const_val.is_none()
+        }
+        Expr::BinaryOp(left, _, right) => {
+            uses_pipeline_input_directly(left, context)
+                || uses_pipeline_input_directly(right, context)
+        }
+        Expr::UnaryNot(inner) => uses_pipeline_input_directly(inner, context),
+        Expr::Collect(_var_id, _inner_expr) => true,
+        Expr::Call(call) => call.arguments.iter().any(|arg| {
+            if let Argument::Positional(arg_expr) | Argument::Named((_, _, Some(arg_expr))) = arg {
+                uses_pipeline_input_directly(arg_expr, context)
+            } else {
+                false
+            }
+        }),
+        Expr::FullCellPath(cell_path) => uses_pipeline_input_directly(&cell_path.head, context),
+        Expr::Subexpression(block_id) => {
+            let block = context.working_set.get_block(*block_id);
+            block_uses_pipeline_input_directly(block, context)
+        }
+        _ => false,
+    }
+}
+
+fn requires_stdin_from_signature(context: &LintContext, call: &Call) -> bool {
+    let decl = context.working_set.get_decl(call.decl_id);
+    let sig = decl.signature();
+
+    if sig.input_output_types.is_empty() {
+        return false;
+    }
+
+    let is_streaming_category = matches!(
+        sig.category,
+        nu_protocol::Category::Filters
+            | nu_protocol::Category::Conversions
+            | nu_protocol::Category::Formats
+    );
+
+    if !is_streaming_category {
+        return false;
+    }
+
+    let requires_stdin = sig
+        .input_output_types
+        .iter()
+        .all(|(input_type, _)| !matches!(input_type, nu_protocol::Type::Nothing));
+
+    log::debug!(
+        "Command '{}' (category: {:?}) requires stdin from signature: {}",
+        decl.name(),
+        sig.category,
+        requires_stdin
+    );
+
+    requires_stdin
+}
+
+fn is_bare_streaming_command(pipeline: &Pipeline, context: &LintContext) -> bool {
+    let Some(first_elem) = pipeline.elements.first() else {
+        return false;
+    };
+
+    let Expr::Call(call) = &first_elem.expr.expr else {
+        return false;
+    };
+
+    requires_stdin_from_signature(context, call)
+}
+
+fn block_uses_pipeline_input_directly(block: &Block, context: &LintContext) -> bool {
+    block.pipelines.iter().any(|pipeline| {
+        is_bare_streaming_command(pipeline, context)
+            || pipeline
+                .elements
+                .iter()
+                .any(|elem| uses_pipeline_input_directly(&elem.expr, context))
+    })
+}
 
 fn has_stdin_flag_in_shebang(source: &str) -> bool {
     source
@@ -64,7 +148,7 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
     let signature = &block.signature;
     let sig_span = find_signature_span(call, context);
 
-    let uses_in = block.uses_pipeline_input(context);
+    let uses_in = block_uses_pipeline_input_directly(block, context);
 
     let has_explicit_annotation = has_explicit_type_annotation(sig_span, context);
 

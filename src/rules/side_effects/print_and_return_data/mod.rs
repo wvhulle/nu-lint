@@ -47,7 +47,7 @@ fn last_command_produces_output(block: &Block, context: &LintContext) -> bool {
 
     !has_side_effect(
         &call.get_call_name(context),
-        SideEffect::NoOutput,
+        SideEffect::NoUsefulOutput,
         context,
         call,
     )

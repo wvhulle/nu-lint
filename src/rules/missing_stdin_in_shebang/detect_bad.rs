@@ -55,3 +55,58 @@ def main []: table -> int {
 ";
     rule().assert_count(source, 1);
 }
+
+#[test]
+fn detect_main_with_bare_each() {
+    let source = r"#!/usr/bin/env nu
+
+def main [] {
+    each { |x| $x * 2 }
+}
+";
+    rule().assert_count(source, 1);
+}
+
+#[test]
+fn detect_main_with_bare_where() {
+    let source = r"#!/usr/bin/env nu
+
+def main [] {
+    where { |x| $x > 2 }
+}
+";
+    rule().assert_count(source, 1);
+}
+
+#[test]
+fn detect_main_with_bare_reduce() {
+    let source = r"#!/usr/bin/env nu
+
+def main [] {
+    reduce { |it, acc| $it + $acc }
+}
+";
+    rule().assert_count(source, 1);
+}
+
+#[test]
+fn detect_main_with_bare_items() {
+    let source = r"#!/usr/bin/env nu
+
+def main [] {
+    items { |k, v| {key: $k, value: $v} }
+}
+";
+    rule().assert_count(source, 1);
+}
+
+#[test]
+fn detect_main_with_bare_select() {
+    let source = r"#!/usr/bin/env nu
+
+def main [] {
+    select name age
+}
+";
+    rule().assert_count(source, 1);
+}

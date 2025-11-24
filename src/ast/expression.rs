@@ -91,7 +91,7 @@ pub trait ExpressionExt: Traverse {
     fn extract_external_command_name(&self, context: &LintContext) -> Option<String>;
 }
 
-fn is_pipeline_input_var(var_id: VarId, context: &LintContext) -> bool {
+pub fn is_pipeline_input_var(var_id: VarId, context: &LintContext) -> bool {
     let var = context.working_set.get_variable(var_id);
     (var.declaration_span.start == 0 && var.declaration_span.end == 0)
         || (var.declaration_span.start == var.declaration_span.end

@@ -4,13 +4,13 @@ use crate::{ast::call::CallExt, context::LintContext};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SideEffect {
-    Error,
+    MayErrorFrequently,
     Dangerous,
-    NoOutput,
+    NoUsefulOutput,
     PipelineUnsafe,
     Print,
-    IoFileSystem,
-    IoNetwork,
+    ModifiesFileSystem,
+    UsesNetwork,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -31,7 +31,7 @@ pub fn has_side_effect(
         "Looking in registry for command '{command_name}' and side effect '{side_effect:?}'"
     );
 
-    let result = COMMAND_SIDE_EFFECTS
+    let result = BUILTIN_COMMAND_SIDE_EFFECTS
         .iter()
         .find(|(name, _)| *name == command_name)
         .and_then(|(_, effects)| {
@@ -88,7 +88,7 @@ pub fn has_external_side_effect(
 }
 
 pub fn can_error(command_name: &str, context: &LintContext, call: &Call) -> bool {
-    has_side_effect(command_name, SideEffect::Error, context, call)
+    has_side_effect(command_name, SideEffect::MayErrorFrequently, context, call)
 }
 
 pub fn get_io_type(command_name: &str, context: &LintContext, call: &Call) -> Option<IoType> {
@@ -119,15 +119,15 @@ pub fn get_external_io_type(command_name: &str) -> Option<IoType> {
         .find(|(name, _)| *name == command_name)
         .and_then(|(_, effects)| {
             effects.iter().find_map(|(effect, _)| match effect {
-                SideEffect::IoFileSystem => Some(IoType::FileSystem),
-                SideEffect::IoNetwork => Some(IoType::Network),
+                SideEffect::ModifiesFileSystem => Some(IoType::FileSystem),
+                SideEffect::UsesNetwork => Some(IoType::Network),
                 _ => None,
             })
         })
 }
 
 pub fn is_external_command_safe(command_name: &str) -> bool {
-    COMMAND_SIDE_EFFECTS
+    BUILTIN_COMMAND_SIDE_EFFECTS
         .iter()
         .find(|(name, _)| *name == command_name)
         .is_some_and(|(_, effects)| {
@@ -138,13 +138,13 @@ pub fn is_external_command_safe(command_name: &str) -> bool {
 }
 
 pub fn external_command_has_no_output(command_name: &str) -> bool {
-    COMMAND_SIDE_EFFECTS
+    BUILTIN_COMMAND_SIDE_EFFECTS
         .iter()
         .find(|(name, _)| *name == command_name)
         .is_some_and(|(_, effects)| {
             effects
                 .iter()
-                .any(|(effect, _)| *effect == SideEffect::NoOutput)
+                .any(|(effect, _)| *effect == SideEffect::NoUsefulOutput)
         })
 }
 
@@ -285,165 +285,362 @@ const SYSTEM_DIRECTORIES: &[&str] = &[
 
 const EXACT_DANGEROUS_PATHS: &[&str] = &["/", "~", "../", ".."];
 
-const COMMAND_SIDE_EFFECTS: &[(&str, &[(SideEffect, SideEffectPredicate)])] = &[
+const BUILTIN_COMMAND_SIDE_EFFECTS: &[(&str, &[(SideEffect, SideEffectPredicate)])] = &[
     (
         "rm",
         &[
-            (SideEffect::Error, always),
-            (SideEffect::NoOutput, always),
+            (SideEffect::MayErrorFrequently, always),
+            (SideEffect::NoUsefulOutput, always),
             (SideEffect::Dangerous, rm_is_dangerous),
+            (SideEffect::ModifiesFileSystem, always),
         ],
     ),
     (
         "mv",
         &[
-            (SideEffect::Error, always),
-            (SideEffect::NoOutput, always),
+            (SideEffect::MayErrorFrequently, always),
+            (SideEffect::NoUsefulOutput, always),
             (SideEffect::Dangerous, mv_cp_is_dangerous),
+            (SideEffect::ModifiesFileSystem, always),
         ],
     ),
     (
         "cp",
         &[
-            (SideEffect::Error, always),
+            (SideEffect::MayErrorFrequently, always),
             (SideEffect::Dangerous, mv_cp_is_dangerous),
+            (SideEffect::ModifiesFileSystem, always),
         ],
     ),
-    ("open", &[(SideEffect::Error, io_category_can_error)]),
-    ("save", &[(SideEffect::Error, io_category_can_error)]),
-    ("from", &[(SideEffect::Error, always)]),
-    ("to", &[(SideEffect::Error, always)]),
-    ("http get", &[(SideEffect::Error, always)]),
-    ("http post", &[(SideEffect::Error, always)]),
+    (
+        "open",
+        &[
+            (SideEffect::MayErrorFrequently, io_category_can_error),
+            (SideEffect::ModifiesFileSystem, always),
+        ],
+    ),
+    (
+        "save",
+        &[
+            (SideEffect::MayErrorFrequently, io_category_can_error),
+            (SideEffect::NoUsefulOutput, always),
+            (SideEffect::ModifiesFileSystem, always),
+        ],
+    ),
+    ("from", &[(SideEffect::MayErrorFrequently, always)]),
+    ("to", &[(SideEffect::MayErrorFrequently, always)]),
+    (
+        "http get",
+        &[
+            (SideEffect::MayErrorFrequently, always),
+            (SideEffect::UsesNetwork, always),
+        ],
+    ),
+    (
+        "http post",
+        &[
+            (SideEffect::MayErrorFrequently, always),
+            (SideEffect::UsesNetwork, always),
+        ],
+    ),
+    (
+        "http put",
+        &[
+            (SideEffect::MayErrorFrequently, always),
+            (SideEffect::UsesNetwork, always),
+        ],
+    ),
+    (
+        "http delete",
+        &[
+            (SideEffect::MayErrorFrequently, always),
+            (SideEffect::UsesNetwork, always),
+        ],
+    ),
+    (
+        "http patch",
+        &[
+            (SideEffect::MayErrorFrequently, always),
+            (SideEffect::UsesNetwork, always),
+        ],
+    ),
+    (
+        "http head",
+        &[
+            (SideEffect::MayErrorFrequently, always),
+            (SideEffect::UsesNetwork, always),
+        ],
+    ),
+    (
+        "http options",
+        &[
+            (SideEffect::MayErrorFrequently, always),
+            (SideEffect::UsesNetwork, always),
+        ],
+    ),
     (
         "mkdir",
-        &[(SideEffect::Error, always), (SideEffect::NoOutput, always)],
+        &[
+            (SideEffect::MayErrorFrequently, always),
+            (SideEffect::NoUsefulOutput, always),
+            (SideEffect::ModifiesFileSystem, always),
+        ],
     ),
     (
         "touch",
-        &[(SideEffect::Error, always), (SideEffect::NoOutput, always)],
+        &[
+            (SideEffect::MayErrorFrequently, always),
+            (SideEffect::NoUsefulOutput, always),
+            (SideEffect::ModifiesFileSystem, always),
+        ],
     ),
     (
         "cd",
-        &[(SideEffect::Error, always), (SideEffect::NoOutput, always)],
+        &[
+            (SideEffect::MayErrorFrequently, always),
+            (SideEffect::NoUsefulOutput, always),
+        ],
     ),
-    ("sleep", &[(SideEffect::NoOutput, always)]),
-    ("use", &[(SideEffect::NoOutput, always)]),
-    ("hide", &[(SideEffect::NoOutput, always)]),
+    (
+        "sleep",
+        &[
+            (SideEffect::MayErrorFrequently, always),
+            (SideEffect::NoUsefulOutput, always),
+        ],
+    ),
+    (
+        "use",
+        &[
+            (SideEffect::MayErrorFrequently, always),
+            (SideEffect::NoUsefulOutput, always),
+        ],
+    ),
+    (
+        "hide",
+        &[
+            (SideEffect::MayErrorFrequently, always),
+            (SideEffect::NoUsefulOutput, always),
+        ],
+    ),
     (
         "source",
-        &[(SideEffect::Error, always), (SideEffect::NoOutput, always)],
+        &[
+            (SideEffect::MayErrorFrequently, always),
+            (SideEffect::NoUsefulOutput, always),
+            (SideEffect::ModifiesFileSystem, always),
+        ],
     ),
     (
         "source-env",
-        &[(SideEffect::Error, always), (SideEffect::NoOutput, always)],
+        &[
+            (SideEffect::MayErrorFrequently, always),
+            (SideEffect::NoUsefulOutput, always),
+            (SideEffect::ModifiesFileSystem, always),
+        ],
     ),
-    ("exit", &[(SideEffect::NoOutput, always)]),
+    (
+        "load",
+        &[
+            (SideEffect::MayErrorFrequently, always),
+            (SideEffect::ModifiesFileSystem, always),
+        ],
+    ),
+    ("exit", &[(SideEffect::NoUsefulOutput, always)]),
     (
         "error make",
-        &[(SideEffect::Error, always), (SideEffect::NoOutput, always)],
+        &[
+            (SideEffect::MayErrorFrequently, always),
+            (SideEffect::NoUsefulOutput, always),
+        ],
     ),
-    ("input", &[(SideEffect::Error, always)]),
-    ("input list", &[(SideEffect::Error, always)]),
+    ("input", &[(SideEffect::MayErrorFrequently, always)]),
+    ("input list", &[(SideEffect::MayErrorFrequently, always)]),
     (
         "print",
         &[
             (SideEffect::Print, prints_to_stdout),
-            (SideEffect::NoOutput, always),
+            (SideEffect::NoUsefulOutput, always),
         ],
     ),
-    ("curl", &[(SideEffect::PipelineUnsafe, always)]),
-    ("wget", &[(SideEffect::PipelineUnsafe, always)]),
-    ("find", &[(SideEffect::PipelineUnsafe, always)]),
-    ("grep", &[(SideEffect::PipelineUnsafe, always)]),
-    ("awk", &[(SideEffect::PipelineUnsafe, always)]),
-    ("sed", &[(SideEffect::PipelineUnsafe, always)]),
-    ("echo", &[]),
-    ("printf", &[]),
-    ("true", &[]),
-    ("false", &[]),
-    ("yes", &[]),
-    ("date", &[]),
-    ("pwd", &[]),
-    ("whoami", &[]),
+    (
+        "echo",
+        &[
+            (SideEffect::Print, always),
+            (SideEffect::NoUsefulOutput, always),
+        ],
+    ),
     ("ls", &[]),
     ("git", &[]),
-    ("uname", &[]),
-    ("arch", &[]),
-    ("hostname", &[]),
-    ("id", &[]),
-    ("uptime", &[]),
-    ("cal", &[]),
-    ("basename", &[]),
-    ("dirname", &[]),
-    ("realpath", &[]),
-    ("readlink", &[]),
-    ("env", &[]),
-    ("printenv", &[]),
-    ("tr", &[]),
-    ("cut", &[]),
-    ("paste", &[]),
-    ("column", &[]),
-    ("fmt", &[]),
-    ("fold", &[]),
-    ("expand", &[]),
-    ("unexpand", &[]),
-    ("bc", &[]),
-    ("dc", &[]),
-    ("expr", &[]),
-    ("mktemp", &[]),
 ];
 
 const EXTERNAL_COMMAND_SIDE_EFFECTS: &[(&str, &[(SideEffect, ExternalSideEffectPredicate)])] = &[
     (
         "rm",
         &[
-            (SideEffect::Error, external_always),
-            (SideEffect::NoOutput, external_always),
+            (SideEffect::MayErrorFrequently, external_always),
+            (SideEffect::NoUsefulOutput, external_always),
             (SideEffect::Dangerous, external_rm_is_dangerous),
-            (SideEffect::IoFileSystem, external_always),
+            (SideEffect::ModifiesFileSystem, external_always),
         ],
     ),
     (
         "mv",
         &[
-            (SideEffect::Error, external_always),
-            (SideEffect::NoOutput, external_always),
+            (SideEffect::MayErrorFrequently, external_always),
+            (SideEffect::NoUsefulOutput, external_always),
             (SideEffect::Dangerous, external_mv_cp_is_dangerous),
-            (SideEffect::IoFileSystem, external_always),
+            (SideEffect::ModifiesFileSystem, external_always),
         ],
     ),
     (
         "cp",
         &[
-            (SideEffect::Error, external_always),
+            (SideEffect::MayErrorFrequently, external_always),
             (SideEffect::Dangerous, external_mv_cp_is_dangerous),
-            (SideEffect::IoFileSystem, external_always),
+            (SideEffect::ModifiesFileSystem, external_always),
         ],
     ),
-    ("tar", &[(SideEffect::IoFileSystem, external_always)]),
-    ("zip", &[(SideEffect::IoFileSystem, external_always)]),
-    ("unzip", &[(SideEffect::IoFileSystem, external_always)]),
-    ("rsync", &[(SideEffect::IoFileSystem, external_always)]),
-    ("scp", &[(SideEffect::IoFileSystem, external_always)]),
+    (
+        "tar",
+        &[
+            (SideEffect::MayErrorFrequently, external_always),
+            (SideEffect::ModifiesFileSystem, external_always),
+        ],
+    ),
+    (
+        "zip",
+        &[
+            (SideEffect::MayErrorFrequently, external_always),
+            (SideEffect::ModifiesFileSystem, external_always),
+        ],
+    ),
+    (
+        "unzip",
+        &[
+            (SideEffect::MayErrorFrequently, external_always),
+            (SideEffect::ModifiesFileSystem, external_always),
+        ],
+    ),
+    (
+        "rsync",
+        &[
+            (SideEffect::MayErrorFrequently, external_always),
+            (SideEffect::ModifiesFileSystem, external_always),
+        ],
+    ),
+    (
+        "scp",
+        &[
+            (SideEffect::MayErrorFrequently, external_always),
+            (SideEffect::ModifiesFileSystem, external_always),
+            (SideEffect::UsesNetwork, external_always),
+        ],
+    ),
+    (
+        "ssh",
+        &[
+            (SideEffect::MayErrorFrequently, external_always),
+            (SideEffect::UsesNetwork, external_always),
+        ],
+    ),
     (
         "curl",
         &[
+            (SideEffect::MayErrorFrequently, external_always),
             (SideEffect::PipelineUnsafe, external_always),
-            (SideEffect::IoFileSystem, external_always),
-            (SideEffect::IoNetwork, external_always),
+            (SideEffect::ModifiesFileSystem, external_always),
+            (SideEffect::UsesNetwork, external_always),
         ],
     ),
     (
         "wget",
         &[
+            (SideEffect::MayErrorFrequently, external_always),
             (SideEffect::PipelineUnsafe, external_always),
-            (SideEffect::IoFileSystem, external_always),
-            (SideEffect::IoNetwork, external_always),
+            (SideEffect::ModifiesFileSystem, external_always),
+            (SideEffect::UsesNetwork, external_always),
         ],
     ),
-    ("find", &[(SideEffect::PipelineUnsafe, external_always)]),
-    ("grep", &[(SideEffect::PipelineUnsafe, external_always)]),
-    ("awk", &[(SideEffect::PipelineUnsafe, external_always)]),
-    ("sed", &[(SideEffect::PipelineUnsafe, external_always)]),
+    (
+        "find",
+        &[
+            (SideEffect::MayErrorFrequently, external_always),
+            (SideEffect::PipelineUnsafe, external_always),
+        ],
+    ),
+    (
+        "grep",
+        &[
+            (SideEffect::MayErrorFrequently, external_always),
+            (SideEffect::PipelineUnsafe, external_always),
+        ],
+    ),
+    (
+        "awk",
+        &[
+            (SideEffect::MayErrorFrequently, external_always),
+            (SideEffect::PipelineUnsafe, external_always),
+        ],
+    ),
+    (
+        "sed",
+        &[
+            (SideEffect::MayErrorFrequently, external_always),
+            (SideEffect::PipelineUnsafe, external_always),
+        ],
+    ),
+    (
+        "cat",
+        &[
+            (SideEffect::MayErrorFrequently, external_always),
+            (SideEffect::ModifiesFileSystem, external_always),
+        ],
+    ),
+    (
+        "head",
+        &[
+            (SideEffect::MayErrorFrequently, external_always),
+            (SideEffect::ModifiesFileSystem, external_always),
+        ],
+    ),
+    (
+        "tail",
+        &[
+            (SideEffect::MayErrorFrequently, external_always),
+            (SideEffect::ModifiesFileSystem, external_always),
+        ],
+    ),
+    (
+        "sort",
+        &[
+            (SideEffect::MayErrorFrequently, external_always),
+            (SideEffect::ModifiesFileSystem, external_always),
+        ],
+    ),
+    (
+        "uniq",
+        &[
+            (SideEffect::MayErrorFrequently, external_always),
+            (SideEffect::ModifiesFileSystem, external_always),
+        ],
+    ),
+    (
+        "wc",
+        &[
+            (SideEffect::MayErrorFrequently, external_always),
+            (SideEffect::ModifiesFileSystem, external_always),
+        ],
+    ),
+    (
+        "cut",
+        &[
+            (SideEffect::MayErrorFrequently, external_always),
+            (SideEffect::ModifiesFileSystem, external_always),
+        ],
+    ),
+    ("tr", &[(SideEffect::MayErrorFrequently, external_always)]),
+    (
+        "xargs",
+        &[(SideEffect::MayErrorFrequently, external_always)],
+    ),
 ];

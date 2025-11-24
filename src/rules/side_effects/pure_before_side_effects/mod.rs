@@ -31,8 +31,8 @@ fn is_side_effect_call(call: &Call, context: &LintContext) -> bool {
     let cmd_name = call.get_call_name(context);
 
     has_side_effect(&cmd_name, SideEffect::Print, context, call)
-        || has_side_effect(&cmd_name, SideEffect::NoOutput, context, call)
-        || has_side_effect(&cmd_name, SideEffect::Error, context, call)
+        || has_side_effect(&cmd_name, SideEffect::NoUsefulOutput, context, call)
+        || has_side_effect(&cmd_name, SideEffect::MayErrorFrequently, context, call)
         || matches!(
             context
                 .working_set

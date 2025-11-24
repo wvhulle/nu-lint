@@ -13,11 +13,11 @@ use nu_lint::{
     log::instrument,
 };
 
-fn handle_fixes(violations: &[Violation], is_stdin: bool, dry_run: bool) {
+fn handle_fixes(violations: &[Violation], is_stdin: bool, dry_run: bool, engine: &LintEngine) {
     if is_stdin {
         handle_stdin_fixes(violations, dry_run);
     } else {
-        handle_file_fixes(violations, dry_run);
+        handle_file_fixes(violations, dry_run, engine);
     }
 }
 
@@ -33,8 +33,8 @@ fn handle_stdin_fixes(violations: &[Violation], dry_run: bool) {
     process::exit(0);
 }
 
-fn handle_file_fixes(violations: &[Violation], dry_run: bool) {
-    match apply_fixes(violations, dry_run) {
+fn handle_file_fixes(violations: &[Violation], dry_run: bool, engine: &LintEngine) {
+    match apply_fixes(violations, dry_run, engine) {
         Ok(results) => {
             println!("{}", format_fix_results(&results, dry_run));
             if !results.is_empty() {
@@ -112,7 +112,7 @@ fn main() {
 
     // Apply fixes if requested
     if cli.fix || cli.dry_run {
-        handle_fixes(&all_violations, is_stdin, cli.dry_run);
+        handle_fixes(&all_violations, is_stdin, cli.dry_run, &engine);
     }
 
     output_results(&all_violations, cli.format);

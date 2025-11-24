@@ -23,6 +23,7 @@ mod nu_deprecated;
 mod nu_parse_error;
 
 mod prefer_complete_for_external_commands;
+mod prefer_complete_over_dev_null;
 
 mod prefer_compound_assignment;
 mod prefer_direct_use;
@@ -82,6 +83,7 @@ pub const ALL_RULES: &[Rule] = &[
     nu_parse_error::rule(),
     omit_list_commas::rule(),
     prefer_complete_for_external_commands::rule(),
+    prefer_complete_over_dev_null::rule(),
     prefer_compound_assignment::rule(),
     prefer_direct_use::rule(),
     prefer_error_make_for_stderr::rule(),

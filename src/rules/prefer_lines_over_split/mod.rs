@@ -38,6 +38,7 @@ pub const fn rule() -> Rule {
         "Use 'lines' instead of 'split row \"\\n\"' for better performance and clarity",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/lines.html")
 }
 #[cfg(test)]
 mod detect_bad;

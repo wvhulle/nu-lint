@@ -253,6 +253,7 @@ pub const fn rule() -> Rule {
         "Use 'match' for value-based branching instead of if-else-if chains",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/match.html")
 }
 
 #[cfg(test)]

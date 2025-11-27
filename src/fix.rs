@@ -377,6 +377,7 @@ mod tests {
             fix: Some(fix),
             file: Some(Cow::Borrowed("test.nu")),
             source: None,
+            doc_url: None,
         };
 
         let fixed = apply_fixes_to_content(content, &[&violation]);
@@ -401,6 +402,7 @@ mod tests {
             fix: Some(fix),
             file: Some(Cow::Borrowed("test.nu")),
             source: None,
+            doc_url: None,
         };
 
         let fixed = apply_fixes_to_content(content, &[&violation]);
@@ -544,6 +546,7 @@ mod tests {
             fix: None,
             file: Some(Cow::Borrowed("test.nu")),
             source: None,
+            doc_url: None,
         };
 
         let fixed = apply_fixes_to_content(content, &[&violation]);
@@ -563,6 +566,7 @@ mod tests {
             fix: Some(fix),
             file: Some(Cow::Borrowed("test.nu")),
             source: None,
+            doc_url: None,
         };
 
         let without_fix = Violation {
@@ -574,6 +578,7 @@ mod tests {
             fix: None,
             file: Some(Cow::Borrowed("test.nu")),
             source: None,
+            doc_url: None,
         };
 
         let violations = [&with_fix, &without_fix, &with_fix];
@@ -592,6 +597,7 @@ mod tests {
             fix: None,
             file: Some(Cow::Borrowed("file1.nu")),
             source: None,
+            doc_url: None,
         };
 
         let v2 = Violation {
@@ -603,6 +609,7 @@ mod tests {
             fix: None,
             file: Some(Cow::Borrowed("file2.nu")),
             source: None,
+            doc_url: None,
         };
 
         let v3 = Violation {
@@ -614,6 +621,7 @@ mod tests {
             fix: None,
             file: Some(Cow::Borrowed("file1.nu")),
             source: None,
+            doc_url: None,
         };
 
         let violations = vec![v1, v2, v3];

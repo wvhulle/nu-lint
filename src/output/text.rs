@@ -104,6 +104,11 @@ struct ViolationDiagnostic {
     source_code: NamedSource<String>,
 }
 
+/// Format a URL as a clickable terminal hyperlink (OSC 8)
+fn format_clickable_url(url: &str) -> String {
+    format!("\x1b]8;;{url}\x1b\\{url}\x1b]8;;\x1b\\")
+}
+
 impl fmt::Display for ViolationDiagnostic {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.violation.message)
@@ -141,6 +146,14 @@ impl Diagnostic for ViolationDiagnostic {
                 help_text.push_str("\n\n");
             }
             help_text.push_str(&format_fix_help(fix, self.source_code.inner()));
+        }
+
+        if let Some(doc_url) = &self.violation.doc_url {
+            if !help_text.is_empty() {
+                help_text.push_str("\n\n");
+            }
+            help_text.push_str("See: ");
+            help_text.push_str(&format_clickable_url(doc_url));
         }
 
         (!help_text.is_empty()).then(|| Box::new(help_text) as Box<dyn fmt::Display>)

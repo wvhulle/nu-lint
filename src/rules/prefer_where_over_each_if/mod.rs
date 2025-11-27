@@ -131,6 +131,7 @@ pub const fn rule() -> Rule {
         "Use 'where' for filtering instead of 'each' with 'if'",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/where.html")
 }
 
 #[cfg(test)]

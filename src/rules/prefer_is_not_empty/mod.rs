@@ -107,6 +107,7 @@ pub const fn rule() -> Rule {
         "Use 'is-not-empty' instead of 'not ... is-empty' for better readability",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/is-not-empty.html")
 }
 #[cfg(test)]
 mod detect_bad;

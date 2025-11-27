@@ -66,6 +66,9 @@ pub struct Violation {
     /// Optional source code content (used for stdin or when file is not
     /// accessible)
     pub(crate) source: Option<Cow<'static, str>>,
+
+    /// Optional URL to official Nushell documentation
+    pub doc_url: Option<&'static str>,
 }
 
 impl Violation {
@@ -87,6 +90,7 @@ impl Violation {
             fix: None,
             file: None,
             source: None,
+            doc_url: None,
         }
     }
 
@@ -124,6 +128,11 @@ impl Violation {
     /// Set the lint level for this violation (used by the engine)
     pub(crate) const fn set_lint_level(&mut self, level: LintLevel) {
         self.lint_level = level;
+    }
+
+    /// Set the documentation URL for this violation (used by the engine)
+    pub(crate) const fn set_doc_url(&mut self, url: Option<&'static str>) {
+        self.doc_url = url;
     }
 
     #[must_use]

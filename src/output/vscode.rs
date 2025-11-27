@@ -109,6 +109,7 @@ fn violation_to_vscode_diagnostic(violation: &Violation) -> VsCodeDiagnostic {
                 })
                 .collect(),
         }),
+        doc_url: violation.doc_url.map(ToString::to_string),
     }
 }
 
@@ -129,6 +130,8 @@ pub struct VsCodeDiagnostic {
     pub related_information: Option<Vec<VsCodeRelatedInformation>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub code_action: Option<VsCodeCodeAction>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub doc_url: Option<String>,
 }
 
 #[derive(Serialize)]

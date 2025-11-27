@@ -30,7 +30,6 @@ mod prefer_is_not_empty;
 mod prefer_lines_over_split;
 mod prefer_match_over_if_chain;
 mod prefer_parse_command;
-mod prefer_parse_over_each_split;
 mod prefer_pipeline_input;
 mod prefer_range_iteration;
 mod prefer_try_for_error_handling;
@@ -98,7 +97,6 @@ pub const ALL_RULES: &[Rule] = &[
     prefer_lines_over_split::rule(),
     prefer_match_over_if_chain::rule(),
     prefer_parse_command::rule(),
-    prefer_parse_over_each_split::rule(),
     prefer_pipeline_input::rule(),
     prefer_range_iteration::rule(),
     prefer_try_for_error_handling::rule(),

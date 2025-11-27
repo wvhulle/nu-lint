@@ -151,9 +151,7 @@ fn build_fix(
 }
 
 fn check(context: &LintContext) -> Vec<Violation> {
-    detect_external_commands(
-        context,
-        "prefer_builtin_uniq",
+    detect_external_commands(context,
         "uniq",
         NOTE,
         Some(build_fix),

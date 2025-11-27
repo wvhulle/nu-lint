@@ -31,7 +31,7 @@ fn build_fix(
 }
 
 fn check(context: &LintContext) -> Vec<Violation> {
-    detect_external_commands(context, "prefer_builtin_wc", "wc", NOTE, Some(build_fix))
+    detect_external_commands(context, "wc", NOTE, Some(build_fix))
 }
 
 pub const fn rule() -> Rule {

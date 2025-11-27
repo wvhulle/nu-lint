@@ -138,9 +138,7 @@ fn create_violation(
 ) -> Violation {
     let span = context.find_declaration_span(&signature.name);
     let suggestion = "Remove redundant $in - it's implicit at the start of pipelines";
-    let violation = Violation::new(
-        "remove_redundant_in",
-        format!(
+    let violation = Violation::new(format!(
             "Redundant $in usage in function '{}' - $in is implicit at the start of pipelines",
             signature.name
         ),

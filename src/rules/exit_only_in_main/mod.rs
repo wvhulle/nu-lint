@@ -34,9 +34,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
             }
 
             return vec![
-                Violation::new(
-                    "exit_only_in_main",
-                    format!(
+                Violation::new(format!(
                         "Function '{function_name}' uses 'exit' which terminates the entire script"
                     ),
                     call.head,

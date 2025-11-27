@@ -37,9 +37,7 @@ fn build_fix(
 }
 
 fn check(context: &LintContext) -> Vec<Violation> {
-    detect_external_commands(
-        context,
-        "prefer_builtin_printenv",
+    detect_external_commands(context,
         "printenv",
         NOTE,
         Some(build_fix),

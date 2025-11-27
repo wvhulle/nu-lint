@@ -106,7 +106,7 @@ fn check_parameter(
         if is_optional { "?" } else { "" }
     );
 
-    Some(Violation::new("prefer_path_type", message, function_span).with_help(suggestion))
+    Some(Violation::new(message, function_span).with_help(suggestion))
 }
 
 fn check_function_parameters(

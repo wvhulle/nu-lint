@@ -105,9 +105,7 @@ fn analyze_function_body(
     );
 
     Some(
-        Violation::new(
-            "mixed_io_types",
-            message,
+        Violation::new(message,
             context.find_declaration_span(function_name),
         )
         .with_help(

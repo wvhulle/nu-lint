@@ -121,7 +121,8 @@ impl Diagnostic for ViolationDiagnostic {
     fn code<'a>(&'a self) -> Option<Box<dyn fmt::Display + 'a>> {
         Some(Box::new(format!(
             "{}({})",
-            self.violation.lint_level, self.violation.rule_id
+            self.violation.lint_level,
+            self.violation.rule_id.as_deref().unwrap_or("unknown")
         )))
     }
 

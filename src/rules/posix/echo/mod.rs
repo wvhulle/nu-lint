@@ -58,7 +58,7 @@ fn create_violation(
     let code_snippet = &context.source[element.expr.span.start..element.expr.span.end];
     let fix = generate_fix(code_snippet, element.expr.span);
 
-    let violation = Violation::new("prefer_builtin_echo", message, element.expr.span);
+    let violation = Violation::new(message, element.expr.span);
 
     match fix {
         Some(f) => violation.with_fix(f),

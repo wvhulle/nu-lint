@@ -146,9 +146,7 @@ fn check_while_loop_for_counter(
     (is_counter_comparison(condition, counter_name, context)
         && has_increment_in_block(block_id, counter_name, context))
     .then(|| {
-        Violation::new(
-            "prefer_range_iteration",
-            format!("While loop with counter '{counter_name}' - consider using range iteration"),
+        Violation::new(format!("While loop with counter '{counter_name}' - consider using range iteration"),
             counter_span,
         )
         .with_help("Use '1..$max | each { |i| ... }' instead of while loop with counter")

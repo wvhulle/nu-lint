@@ -58,9 +58,7 @@ fn has_nested_structures(items: &[ListItem]) -> bool {
 }
 
 fn create_violation(span: nu_protocol::Span) -> Violation {
-    Violation::new(
-        "prefer_multiline_lists",
-        "Long lists should use multiline format with each item on a separate line",
+    Violation::new("Long lists should use multiline format with each item on a separate line",
         span,
     )
     .with_help("Put each list item on a separate line for better readability")

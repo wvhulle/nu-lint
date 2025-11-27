@@ -89,9 +89,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
     );
 
     Some(
-        Violation::new(
-            "prefer_complete_for_external_commands",
-            message,
+        Violation::new(message,
             first_element.expr.span,
         )
         .with_help(help),

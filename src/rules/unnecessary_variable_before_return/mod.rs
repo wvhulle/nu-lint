@@ -107,9 +107,7 @@ fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<Violat
             );
 
             violations.push(
-                Violation::new(
-                    "unnecessary_variable_before_return",
-                    format!(
+                Violation::new(format!(
                         "Variable '{}' is assigned and immediately returned - consider returning \
                          the expression directly",
                         let_decl.var_name

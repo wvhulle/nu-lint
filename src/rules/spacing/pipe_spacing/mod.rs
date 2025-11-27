@@ -92,7 +92,7 @@ impl<'a> PipeSpacingVisitor<'a> {
             );
 
             self.violations.push(
-                Violation::new("pipe_spacing", message.to_string(), violation_span)
+                Violation::new(message.to_string(), violation_span)
                     .with_help("Use ' | ' with single spaces")
                     .with_fix(fix),
             );

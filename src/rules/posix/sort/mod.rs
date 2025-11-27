@@ -167,9 +167,7 @@ fn build_fix(
 }
 
 fn check(context: &LintContext) -> Vec<Violation> {
-    detect_external_commands(
-        context,
-        "prefer_builtin_sort",
+    detect_external_commands(context,
         "sort",
         NOTE,
         Some(build_fix),

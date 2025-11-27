@@ -76,7 +76,7 @@ fn create_violations_for_untyped_io(
     };
 
     vec![
-        Violation::new("typed_pipeline_io", message, name_span)
+        Violation::new(message, name_span)
             .with_help(suggestion)
             .with_fix(fix.clone()),
     ]

@@ -38,9 +38,7 @@ fn build_fix(
 }
 
 fn check(context: &LintContext) -> Vec<Violation> {
-    detect_external_commands(
-        context,
-        "prefer_builtin_head",
+    detect_external_commands(context,
         "head",
         NOTE,
         Some(build_fix),

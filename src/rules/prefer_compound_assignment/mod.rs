@@ -91,9 +91,7 @@ fn check_for_compound_assignment(expr: &Expression, ctx: &LintContext) -> Option
 
     let fix = build_fix(var_text, compound_op, element, expr.span, ctx);
 
-    let violation = Violation::new(
-        "prefer_compound_assignment",
-        format!(
+    let violation = Violation::new(format!(
             "Use compound assignment: {var_text} {compound_op} instead of {var_text} = {var_text} \
              {op_symbol} ..."
         ),

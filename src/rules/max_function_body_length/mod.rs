@@ -37,7 +37,7 @@ fn function_violation(
             "Consider refactoring `{function_name}` into smaller, more focused functions. Break \
              down complex logic into helper functions with clear responsibilities."
         );
-        Violation::new("max_function_body_length", message, function_span).with_help(suggestion)
+        Violation::new(message, function_span).with_help(suggestion)
     })
 }
 pub const fn rule() -> Rule {

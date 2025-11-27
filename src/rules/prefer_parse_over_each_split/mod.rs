@@ -44,9 +44,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
             if has_split {
                 vec![
-                    Violation::new(
-                        "prefer_parse_over_each_split",
-                        "Manual splitting with 'each' and 'split row' - consider using 'parse'",
+                    Violation::new("Manual splitting with 'each' and 'split row' - consider using 'parse'",
                         call.span(),
                     )
                     .with_help(

@@ -86,9 +86,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
             );
 
             violations.push(
-                Violation::new(
-                    "unnecessary_mut",
-                    format!("Variable '{var_name}' is declared as 'mut' but never reassigned"),
+                Violation::new(format!("Variable '{var_name}' is declared as 'mut' but never reassigned"),
                     decl_span,
                 )
                 .with_help(format!("Remove 'mut' keyword:\nlet {var_name} = ..."))

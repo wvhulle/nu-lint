@@ -132,9 +132,7 @@ fn analyze_function_body(
     log::debug!("Function '{function_name}' violates pure_before_side_effects rule!");
 
     Some(
-        Violation::new(
-            "pure_before_side_effects",
-            format!(
+        Violation::new(format!(
                 "Function `{function_name}` has {pure_count} pure computation statement(s) before \
                  side effects"
             ),

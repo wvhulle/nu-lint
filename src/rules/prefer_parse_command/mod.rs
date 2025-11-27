@@ -46,9 +46,7 @@ fn check_pipeline_for_split_get(pipeline: &Pipeline, context: &LintContext) -> O
         .then(|| {
             let span = Span::new(current.expr.span.start, next.expr.span.end);
 
-            Violation::new(
-                "prefer_parse_over_split_get",
-                "Manual string splitting with indexed access - consider using 'parse'",
+            Violation::new("Manual string splitting with indexed access - consider using 'parse'",
                 span,
             )
             .with_help("Use 'parse \"pattern {field1} {field2}\"' for structured text extraction")
@@ -112,9 +110,7 @@ fn is_var_used_in_indexed_access(var_id: VarId, call: &Call, context: &LintConte
 }
 
 fn create_indexed_access_violation(var_name: &str, decl_span: Span) -> Violation {
-    Violation::new(
-        "prefer_parse_over_split_get",
-        format!(
+    Violation::new(format!(
             "Variable '{var_name}' from split row with indexed access - consider using 'parse'"
         ),
         decl_span,

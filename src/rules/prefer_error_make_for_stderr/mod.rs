@@ -27,9 +27,7 @@ fn check_sequential_stderr_exit(
     };
 
     Some(
-        Violation::new(
-            "prefer_error_make_for_stderr",
-            "Use 'error make' instead of 'print stderr' + 'exit' for error conditions",
+        Violation::new("Use 'error make' instead of 'print stderr' + 'exit' for error conditions",
             print_call.span().merge(exit_call.span()),
         )
         .with_help(

@@ -230,18 +230,14 @@ fn check(context: &LintContext) -> Vec<Violation> {
     let mut violations = Vec::new();
 
     // grep
-    violations.extend(detect_external_commands(
-        context,
-        "prefer_builtin_grep",
+    violations.extend(detect_external_commands(context,
         "grep",
         NOTE,
         Some(build_fix),
     ));
 
     // ripgrep
-    violations.extend(detect_external_commands(
-        context,
-        "prefer_builtin_grep",
+    violations.extend(detect_external_commands(context,
         "rg",
         NOTE,
         Some(build_fix),

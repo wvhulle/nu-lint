@@ -148,9 +148,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 .as_ref()
                 .map_or(String::new(), |c| format!("'{c}' "));
 
-            Violation::new(
-                "check_complete_exit_code",
-                format!(
+            Violation::new(format!(
                     "External command {cmd_desc}result '{var_name}' stored but exit code not \
                      checked"
                 ),

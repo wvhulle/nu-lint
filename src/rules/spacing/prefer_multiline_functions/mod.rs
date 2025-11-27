@@ -48,9 +48,7 @@ fn function_too_long(
 }
 
 fn create_violation(function_name: &str, span: nu_protocol::Span) -> Violation {
-    Violation::new(
-        "prefer_multiline_functions",
-        format!(
+    Violation::new(format!(
             "Function '{function_name}' is too long for a single line ({} characters)",
             span.end - span.start
         ),

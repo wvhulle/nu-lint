@@ -355,13 +355,7 @@ fn contains_simple_jq_op(source_text: &str) -> bool {
 
 fn check(context: &LintContext) -> Vec<Violation> {
     // Detect jq commands that have direct Nushell equivalents
-    let violations = detect_external_commands(
-        context,
-        "prefer_nushell_over_jq",
-        "jq",
-        NOTE,
-        Some(build_fix),
-    );
+    let violations = detect_external_commands(context, "jq", NOTE, Some(build_fix));
 
     // Filter to only show violations for jq operations we can convert
     violations

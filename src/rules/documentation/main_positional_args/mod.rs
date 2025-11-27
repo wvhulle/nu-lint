@@ -29,9 +29,7 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
 
             if !param_span.has_inline_doc_comment(context) {
                 violations.push(
-                    Violation::new(
-                        "main_positional_args_docs",
-                        format!(
+                    Violation::new(format!(
                             "Positional parameter '{}' in main function is missing documentation \
                              comment",
                             param.name
@@ -54,9 +52,7 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
 
             if !param_span.has_inline_doc_comment(context) {
                 violations.push(
-                    Violation::new(
-                        "main_positional_args_docs",
-                        format!(
+                    Violation::new(format!(
                             "Optional positional parameter '{}' in main function is missing \
                              documentation comment",
                             param.name
@@ -80,9 +76,7 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
 
         if !param_span.has_inline_doc_comment(context) {
             violations.push(
-                Violation::new(
-                    "main_positional_args_docs",
-                    format!(
+                Violation::new(format!(
                         "Rest positional parameter '{}' in main function is missing documentation \
                          comment",
                         rest_param.name

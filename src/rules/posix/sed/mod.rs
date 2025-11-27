@@ -15,17 +15,13 @@ const NOTE_GSED: &str = "Use 'str replace' instead of GNU sed for text substitut
 
 fn check(context: &LintContext) -> Vec<Violation> {
     let mut out = Vec::new();
-    out.extend(detect_external_commands(
-        context,
-        "prefer_builtin_sed",
+    out.extend(detect_external_commands(context,
         "sed",
         NOTE_SED,
         Some(build_fix),
     ));
 
-    out.extend(detect_external_commands(
-        context,
-        "prefer_builtin_sed",
+    out.extend(detect_external_commands(context,
         "gsed",
         NOTE_GSED,
         Some(build_fix),

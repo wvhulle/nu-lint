@@ -96,9 +96,7 @@ fn build_fix(
 }
 
 fn check(context: &LintContext) -> Vec<Violation> {
-    detect_external_commands(
-        context,
-        "prefer_builtin_date",
+    detect_external_commands(context,
         "date",
         NOTE,
         Some(build_fix),

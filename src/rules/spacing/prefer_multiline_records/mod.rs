@@ -59,9 +59,7 @@ fn has_nested_structures(fields: &[RecordItem]) -> bool {
 }
 
 fn create_violation(span: nu_protocol::Span) -> Violation {
-    Violation::new(
-        "prefer_multiline_records",
-        "Long records should use multiline format with each field on a separate line",
+    Violation::new("Long records should use multiline format with each field on a separate line",
         span,
     )
     .with_help("Put each record field on a separate line for better readability")

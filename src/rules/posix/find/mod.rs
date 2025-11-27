@@ -216,9 +216,7 @@ fn build_fix(
 }
 
 fn check(context: &LintContext) -> Vec<Violation> {
-    detect_external_commands(
-        context,
-        "prefer_builtin_find",
+    detect_external_commands(context,
         "find",
         NOTE,
         Some(build_fix),

@@ -11,9 +11,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 + usize::from(signature.rest_positional.is_some());
             // Only create violation if count exceeds threshold
             (positional_count > MAX_POSITIONAL).then(|| {
-                Violation::new(
-                    "max_positional_params",
-                    format!(
+                Violation::new(format!(
                         "Command has {positional_count} positional parameters, should have ≤ \
                          {MAX_POSITIONAL}"
                     ),

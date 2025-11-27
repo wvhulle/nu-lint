@@ -22,7 +22,7 @@ fn violation_to_json(violation: &Violation) -> JsonViolation {
     let (line_end, column_end) = calculate_line_column(&source_code, violation.span.end);
 
     JsonViolation {
-        rule_id: violation.rule_id.to_string(),
+        rule_id: violation.rule_id.as_deref().unwrap_or("unknown").to_string(),
         lint_level: violation.lint_level.to_string(),
         message: violation.message.to_string(),
         file: violation.file.as_ref().map(ToString::to_string),

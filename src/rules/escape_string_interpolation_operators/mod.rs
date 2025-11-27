@@ -218,7 +218,7 @@ fn create_violation(span: nu_protocol::Span, pattern: ProblematicPattern) -> Vio
         ),
     };
 
-    Violation::new("escape_string_interpolation_operators", message, span).with_help(suggestion)
+    Violation::new(message, span).with_help(suggestion)
 }
 
 fn check_string_interpolation(

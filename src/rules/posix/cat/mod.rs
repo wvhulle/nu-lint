@@ -173,9 +173,7 @@ fn build_fix(
 fn check(context: &LintContext) -> Vec<Violation> {
     let mut violations = Vec::new();
 
-    violations.extend(detect_external_commands(
-        context,
-        "prefer_builtin_cat",
+    violations.extend(detect_external_commands(context,
         "cat",
         NOTE,
         Some(build_fix),
@@ -183,9 +181,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
     // Related commands commonly used like cat
     for cmd in ["tac", "more", "less"] {
-        violations.extend(detect_external_commands(
-            context,
-            "prefer_builtin_cat",
+        violations.extend(detect_external_commands(context,
             cmd,
             NOTE,
             Some(build_fix),

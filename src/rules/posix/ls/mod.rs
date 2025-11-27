@@ -177,9 +177,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     let mut violations = Vec::new();
 
     // External ls
-    violations.extend(detect_external_commands(
-        context,
-        "prefer_builtin_ls",
+    violations.extend(detect_external_commands(context,
         "ls",
         NOTE,
         Some(build_fix),
@@ -187,9 +185,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
     // exa/eza alternatives commonly used
     for cmd in ["exa", "eza"] {
-        violations.extend(detect_external_commands(
-            context,
-            "prefer_builtin_ls",
+        violations.extend(detect_external_commands(context,
             cmd,
             NOTE,
             Some(build_fix),

@@ -27,7 +27,6 @@ pub type FixBuilder = fn(
 #[must_use]
 pub fn detect_external_commands(
     context: &LintContext,
-    rule_id: &'static str,
     external_cmd: &'static str,
     note: &'static str,
     fix_builder: Option<FixBuilder>,
@@ -37,8 +36,7 @@ pub fn detect_external_commands(
             let cmd_text = &ctx.source[head.span.start..head.span.end];
 
             if cmd_text == external_cmd {
-                let violation =
-                    create_violation(rule_id, fix_builder, expr, ctx, cmd_text, note, args);
+                let violation = create_violation(fix_builder, expr, ctx, cmd_text, note, args);
 
                 return vec![violation];
             }
@@ -48,7 +46,6 @@ pub fn detect_external_commands(
 }
 
 fn create_violation(
-    rule_id: &'static str,
     fix_builder: Option<FixBuilder>,
     expr: &Expression,
     ctx: &LintContext<'_>,
@@ -65,7 +62,7 @@ fn create_violation(
 
     let fix = fix_builder.map(|builder| builder(cmd_text, args, expr.span, ctx));
 
-    let violation = Violation::new(rule_id, message, expr.span).with_help(suggestion);
+    let violation = Violation::new(message, expr.span).with_help(suggestion);
 
     match fix {
         Some(f) => violation.with_fix(f),

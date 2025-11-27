@@ -27,9 +27,7 @@ fn build_fix(
 }
 
 fn check(context: &LintContext) -> Vec<Violation> {
-    detect_external_commands(
-        context,
-        "prefer_builtin_which",
+    detect_external_commands(context,
         "which",
         NOTE,
         Some(build_fix),

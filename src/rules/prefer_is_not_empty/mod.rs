@@ -88,9 +88,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 vec![Replacement::new(expr.span, fix_text)],
             );
             vec![
-                Violation::new(
-                    "prefer_is_not_empty",
-                    "Use 'is-not-empty' instead of 'not ... is-empty' for better readability",
+                Violation::new("Use 'is-not-empty' instead of 'not ... is-empty' for better readability",
                     expr.span,
                 )
                 .with_help("Replace with 'is-not-empty'")

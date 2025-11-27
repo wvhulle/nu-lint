@@ -213,25 +213,19 @@ fn build_fix(
 fn check(context: &LintContext) -> Vec<Violation> {
     let mut violations = Vec::new();
 
-    violations.extend(detect_external_commands(
-        context,
-        "prefer_builtin_awk",
+    violations.extend(detect_external_commands(context,
         "awk",
         NOTE,
         Some(build_fix),
     ));
 
-    violations.extend(detect_external_commands(
-        context,
-        "prefer_builtin_awk",
+    violations.extend(detect_external_commands(context,
         "gawk",
         NOTE,
         Some(build_fix),
     ));
 
-    violations.extend(detect_external_commands(
-        context,
-        "prefer_builtin_awk",
+    violations.extend(detect_external_commands(context,
         "mawk",
         NOTE,
         Some(build_fix),

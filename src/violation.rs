@@ -32,7 +32,7 @@ use crate::config::LintLevel;
 /// # Example
 ///
 /// ```rust,ignore
-/// Violation::new("prefer_pipeline_input", "Use pipeline input", span)
+/// Violation::new("Use pipeline input", span)
 ///     .with_help("Pipeline input enables better composability and streaming performance")
 ///     .with_fix(Fix::with_explanation(
 ///         format!("Use $in instead of ${}:\n  {}", param, transformed_code),
@@ -41,7 +41,7 @@ use crate::config::LintLevel;
 /// ```
 #[derive(Debug, Clone)]
 pub struct Violation {
-    pub rule_id: Cow<'static, str>,
+    pub rule_id: Option<Cow<'static, str>>,
     pub lint_level: LintLevel,
 
     /// Short message shown in the warning header
@@ -76,13 +76,12 @@ impl Violation {
     ///
     /// # Arguments
     ///
-    /// * `rule_id` - The lint rule identifier (e.g., "`prefer_pipeline_input`")
     /// * `message` - Short diagnostic message shown in the warning header
     /// * `span` - Location in source code where the violation occurs
     #[must_use]
-    pub fn new(rule_id: &'static str, message: impl Into<Cow<'static, str>>, span: Span) -> Self {
+    pub fn new(message: impl Into<Cow<'static, str>>, span: Span) -> Self {
         Self {
-            rule_id: Cow::Borrowed(rule_id),
+            rule_id: None,
             lint_level: LintLevel::Allow, // Placeholder, will be set by engine
             message: message.into(),
             span,
@@ -92,6 +91,11 @@ impl Violation {
             source: None,
             doc_url: None,
         }
+    }
+
+    /// Set the rule ID for this violation (used by the engine)
+    pub(crate) fn set_rule_id(&mut self, rule_id: &'static str) {
+        self.rule_id = Some(Cow::Borrowed(rule_id));
     }
 
     /// Add detailed help text explaining why this change should be made

@@ -11,7 +11,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
             let ParseWarning::Deprecated {
                 label, span, help, ..
             } = warning;
-            let mut violation = Violation::new("nu_deprecated", label.clone(), *span);
+            let mut violation = Violation::new(label.clone(), *span);
             if let Some(help_text) = help {
                 violation = violation.with_help(help_text.clone());
             }

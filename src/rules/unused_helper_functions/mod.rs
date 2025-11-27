@@ -22,9 +22,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .filter(|&name| name != "main" && !called_functions.contains(name))
         .map(|name| {
             let span = context.find_declaration_span(name);
-            Violation::new(
-                "unused_helper_functions",
-                format!("Function '{name}' is defined but never called from 'main'"),
+            Violation::new(format!("Function '{name}' is defined but never called from 'main'"),
                 span,
             )
             .with_help(

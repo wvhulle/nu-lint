@@ -76,9 +76,7 @@ fn build_fix(
 }
 
 fn check(context: &LintContext) -> Vec<Violation> {
-    detect_external_commands(
-        context,
-        "prefer_builtin_wget",
+    detect_external_commands(context,
         "wget",
         NOTE,
         Some(build_fix),

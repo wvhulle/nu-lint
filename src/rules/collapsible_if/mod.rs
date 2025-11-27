@@ -11,9 +11,7 @@ fn create_violation(call: &Call, fix_text: String) -> Violation {
         vec![Replacement::new(call.span(), fix_text)],
     );
 
-    Violation::new(
-        "collapsible_if",
-        "Nested if statement can be collapsed using 'and'",
+    Violation::new("Nested if statement can be collapsed using 'and'",
         call.span(),
     )
     .with_help("Combine conditions using 'and' instead of nesting if statements")

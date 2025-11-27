@@ -131,9 +131,7 @@ fn build_suggestion(pattern: &PrintExitPattern, context: &LintContext) -> String
 fn create_violation(pattern: &PrintExitPattern, context: &LintContext) -> Violation {
     let suggestion = build_suggestion(pattern, context);
 
-    Violation::new(
-        "print_exit_use_error_make",
-        "Use 'error make' instead of 'print' + 'exit' for error conditions",
+    Violation::new("Use 'error make' instead of 'print' + 'exit' for error conditions",
         pattern.span,
     )
     .with_help(suggestion)

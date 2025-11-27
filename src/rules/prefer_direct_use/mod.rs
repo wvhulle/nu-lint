@@ -103,9 +103,7 @@ fn create_violations(
         .iter()
         .filter(|&(var_id, _)| direct_copy_set.contains(var_id))
         .map(|(_, (var_name, span))| {
-            Violation::new(
-                "prefer_direct_use",
-                format!(
+            Violation::new(format!(
                     "Variable '{var_name}' is initialized as empty list and filled by copying \
                      items unchanged"
                 ),

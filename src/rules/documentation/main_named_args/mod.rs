@@ -37,9 +37,7 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
             );
 
             violations.push(
-                Violation::new(
-                    "main_named_args_docs",
-                    format!(
+                Violation::new(format!(
                         "Named parameter '{flag_name}' in main function is missing documentation \
                          comment"
                     ),

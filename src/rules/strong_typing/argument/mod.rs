@@ -138,9 +138,7 @@ fn check_signature(
         .into_iter()
         .map(|param| {
             let param_span = signature_span.find_substring_span(&param.name, ctx);
-            Violation::new(
-                "missing_type_annotation",
-                format!("Parameter '{}' is missing type annotation", param.name),
+            Violation::new(format!("Parameter '{}' is missing type annotation", param.name),
                 param_span,
             )
             .with_help("Add type annotation like 'param: string' or 'param: int'")

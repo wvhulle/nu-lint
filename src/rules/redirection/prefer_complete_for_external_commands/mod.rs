@@ -88,14 +88,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
          $result.stderr}}\n}}\n$result.stdout"
     );
 
-    Some(
-        Violation::new(
-            "prefer_complete_for_external_commands",
-            message,
-            first_element.expr.span,
-        )
-        .with_help(help),
-    )
+    Some(Violation::new(message, first_element.expr.span).with_help(help))
 }
 
 fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<Violation>) {
@@ -138,6 +131,7 @@ pub const fn rule() -> Rule {
          propagate pipeline errors by default)",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/complete.html")
 }
 
 #[cfg(test)]

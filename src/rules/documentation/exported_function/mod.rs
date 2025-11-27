@@ -51,7 +51,6 @@ fn check_exported_function(call: &Call, context: &LintContext) -> Option<Violati
     } else {
         Some(
             Violation::new(
-                "exported_function_docs",
                 format!("Exported function '{func_name}' is missing documentation"),
                 call.head,
             )
@@ -79,11 +78,10 @@ pub const fn rule() -> Rule {
         "Exported functions should have documentation comments",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/modules.html")
 }
 
 #[cfg(test)]
 mod detect_bad;
-#[cfg(test)]
-mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

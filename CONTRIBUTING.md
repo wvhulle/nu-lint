@@ -83,7 +83,7 @@ cargo clippy --all-targets
 ```
 
 ```bash
-cargo +nightly fmt
+cargo fmt
 ```
 
 ## Benchmarks

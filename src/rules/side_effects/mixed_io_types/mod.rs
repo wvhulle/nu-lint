@@ -105,12 +105,7 @@ fn analyze_function_body(
     );
 
     Some(
-        Violation::new(
-            "mixed_io_types",
-            message,
-            context.find_declaration_span(function_name),
-        )
-        .with_help(
+        Violation::new(message, context.find_declaration_span(function_name)).with_help(
             "Consider separating different I/O operations into focused functions. This makes the \
              code easier to test, mock, and reason about. Group file operations together, network \
              operations together, and printing separately.",
@@ -140,6 +135,7 @@ pub const fn rule() -> Rule {
         "Functions should not mix different types of I/O operations",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/custom_commands.html")
 }
 
 #[cfg(test)]

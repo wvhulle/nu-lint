@@ -12,7 +12,6 @@ fn create_violation(call: &Call, fix_text: String) -> Violation {
     );
 
     Violation::new(
-        "collapsible_if",
         "Nested if statement can be collapsed using 'and'",
         call.span(),
     )
@@ -38,6 +37,7 @@ pub const fn rule() -> Rule {
          conditions",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/control_flow.html")
 }
 
 #[cfg(test)]

@@ -22,7 +22,11 @@ fn violation_to_json(violation: &Violation) -> JsonViolation {
     let (line_end, column_end) = calculate_line_column(&source_code, violation.span.end);
 
     JsonViolation {
-        rule_id: violation.rule_id.to_string(),
+        rule_id: violation
+            .rule_id
+            .as_deref()
+            .unwrap_or("unknown")
+            .to_string(),
         lint_level: violation.lint_level.to_string(),
         message: violation.message.to_string(),
         file: violation.file.as_ref().map(ToString::to_string),
@@ -34,6 +38,7 @@ fn violation_to_json(violation: &Violation) -> JsonViolation {
         offset_end: violation.span.end,
         suggestion: violation.help.as_ref().map(ToString::to_string),
         fix: violation.fix.as_ref().map(fix_to_json),
+        doc_url: violation.doc_url.map(ToString::to_string),
     }
 }
 
@@ -72,6 +77,8 @@ pub struct JsonViolation {
     pub offset_end: usize,
     pub suggestion: Option<String>,
     pub fix: Option<JsonFix>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub doc_url: Option<String>,
 }
 
 #[derive(Serialize)]

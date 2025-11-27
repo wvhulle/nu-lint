@@ -102,7 +102,6 @@ fn check_expression(expr: &Expression, context: &LintContext) -> Vec<Violation> 
     is_filtering_pattern(block_id, context, &loop_var_name)
         .then(|| {
             Violation::new(
-                "prefer_where_over_each_if",
                 "Consider using 'where' for filtering instead of 'each' with 'if'",
                 expr.span,
             )
@@ -131,11 +130,10 @@ pub const fn rule() -> Rule {
         "Use 'where' for filtering instead of 'each' with 'if'",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/where.html")
 }
 
 #[cfg(test)]
 mod detect_bad;
-#[cfg(test)]
-mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

@@ -18,7 +18,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
             let violation_end = byte_offset + m.end();
             violations.push(
                 Violation::new(
-                    "no_trailing_spaces",
                     format!("Line {} has trailing whitespace", line_num + 1),
                     nu_protocol::Span::new(violation_start, violation_end),
                 )
@@ -36,6 +35,7 @@ pub const fn rule() -> Rule {
         "Eliminate trailing spaces at the end of lines",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/style_guide.html#multi-line-format")
 }
 #[cfg(test)]
 mod detect_bad;

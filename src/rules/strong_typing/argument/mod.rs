@@ -139,7 +139,6 @@ fn check_signature(
         .map(|param| {
             let param_span = signature_span.find_substring_span(&param.name, ctx);
             Violation::new(
-                "missing_type_annotation",
                 format!("Parameter '{}' is missing type annotation", param.name),
                 param_span,
             )
@@ -184,6 +183,7 @@ pub const fn rule() -> Rule {
         "Parameters should have type annotations",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/custom_commands.html#parameter-types")
 }
 
 #[cfg(test)]

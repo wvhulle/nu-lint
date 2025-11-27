@@ -147,7 +147,6 @@ fn check_while_loop_for_counter(
         && has_increment_in_block(block_id, counter_name, context))
     .then(|| {
         Violation::new(
-            "prefer_range_iteration",
             format!("While loop with counter '{counter_name}' - consider using range iteration"),
             counter_span,
         )
@@ -187,11 +186,10 @@ pub const fn rule() -> Rule {
         "Prefer range iteration over while loops with counters",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/each.html")
 }
 
 #[cfg(test)]
 mod detect_bad;
-#[cfg(test)]
-mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

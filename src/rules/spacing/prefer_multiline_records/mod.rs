@@ -60,7 +60,6 @@ fn has_nested_structures(fields: &[RecordItem]) -> bool {
 
 fn create_violation(span: nu_protocol::Span) -> Violation {
     Violation::new(
-        "prefer_multiline_records",
         "Long records should use multiline format with each field on a separate line",
         span,
     )
@@ -76,6 +75,7 @@ pub const fn rule() -> Rule {
         "Prefer multiline format for long or complex records",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/style_guide.html#multi-line-format")
 }
 
 #[cfg(test)]

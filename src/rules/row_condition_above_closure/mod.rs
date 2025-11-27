@@ -101,7 +101,6 @@ fn check_where_call(call: &Call, expr: &Expression, context: &LintContext) -> Ve
     let fix = generate_fix(arg_expr, *block_id, &param_name, context);
 
     let violation = Violation::new(
-        "row_condition_above_closure",
         "Use row condition with `$it` instead of closure for more concise code",
         expr.span,
     )
@@ -144,6 +143,7 @@ pub const fn rule() -> Rule {
         "Prefer row conditions over closures in 'where' for conciseness",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/where.html")
 }
 
 #[cfg(test)]

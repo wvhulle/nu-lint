@@ -115,7 +115,6 @@ fn create_dangerous_path_violation(
 ) -> Violation {
     let severity = if is_recursive { "CRITICAL" } else { "WARNING" };
     Violation::new(
-        "dangerous_file_operations",
         format!(
             "{severity}: Dangerous file operation '{cmd_name} {path_str}' - could cause data loss"
         ),
@@ -132,7 +131,6 @@ fn create_variable_validation_violation(
     command_span: Span,
 ) -> Violation {
     Violation::new(
-        "dangerous_file_operations",
         format!("Variable '{path_str}' used in '{cmd_name}' command without visible validation"),
         command_span,
     )
@@ -249,11 +247,10 @@ pub const fn rule() -> Rule {
         "Detect dangerous file operations that could cause data loss",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/running_externals.html")
 }
 
 #[cfg(test)]
 mod detect_bad;
-#[cfg(test)]
-mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

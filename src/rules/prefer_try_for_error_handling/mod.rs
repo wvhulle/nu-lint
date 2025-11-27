@@ -81,7 +81,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
             is_do_block_with_error_prone_ops(expr, context).map_or_else(Vec::new, |span| {
                 vec![
                     Violation::new(
-                        "prefer_try_for_error_handling",
                         "Use 'try' blocks instead of 'do' blocks for error-prone operations"
                             .to_string(),
                         span,
@@ -107,6 +106,7 @@ pub const fn rule() -> Rule {
         "Use 'try' blocks instead of 'do' blocks for error-prone operations",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/try.html")
 }
 
 #[cfg(test)]

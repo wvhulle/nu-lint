@@ -104,7 +104,7 @@ fn check_function_definition(call: &Call, context: &LintContext) -> Option<Viola
                       document the intentional mixing"
         .to_string();
 
-    Some(Violation::new("print_and_return_data", message, name_span).with_help(suggestion))
+    Some(Violation::new(message, name_span).with_help(suggestion))
 }
 
 fn check(context: &LintContext) -> Vec<Violation> {
@@ -124,6 +124,7 @@ pub const fn rule() -> Rule {
         "Functions should not both print to stdout and return data",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/pipelines.html")
 }
 
 #[cfg(test)]

@@ -133,7 +133,6 @@ fn analyze_function_body(
 
     Some(
         Violation::new(
-            "pure_before_side_effects",
             format!(
                 "Function `{function_name}` has {pure_count} pure computation statement(s) before \
                  side effects"
@@ -169,6 +168,7 @@ pub const fn rule() -> Rule {
         "Detect functions that have pure computation before side effects",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/custom_commands.html")
 }
 
 #[cfg(test)]

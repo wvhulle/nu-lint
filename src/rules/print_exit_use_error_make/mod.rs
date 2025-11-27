@@ -132,7 +132,6 @@ fn create_violation(pattern: &PrintExitPattern, context: &LintContext) -> Violat
     let suggestion = build_suggestion(pattern, context);
 
     Violation::new(
-        "print_exit_use_error_make",
         "Use 'error make' instead of 'print' + 'exit' for error conditions",
         pattern.span,
     )
@@ -199,11 +198,10 @@ pub const fn rule() -> Rule {
         "Replace 'print' + 'exit' patterns with 'error make' for proper error handling",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/error_make.html")
 }
 
 #[cfg(test)]
 mod detect_bad;
-#[cfg(test)]
-mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

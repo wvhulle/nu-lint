@@ -104,7 +104,6 @@ fn create_violations(
         .filter(|&(var_id, _)| direct_copy_set.contains(var_id))
         .map(|(_, (var_name, span))| {
             Violation::new(
-                "prefer_direct_use",
                 format!(
                     "Variable '{var_name}' is initialized as empty list and filled by copying \
                      items unchanged"
@@ -234,6 +233,9 @@ pub const fn rule() -> Rule {
         "prefer_direct_use",
         "Prefer direct list use over copying items into a mutable list",
         check,
+    )
+    .with_doc_url(
+        "https://www.nushell.sh/book/thinking_in_nu.html#variables-are-immutable-by-default",
     )
 }
 

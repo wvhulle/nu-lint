@@ -138,7 +138,7 @@ fn apply_fixes_iteratively(content: &str, lint_engine: &LintEngine) -> (String, 
         log::debug!(
             "Applied fix {} from rule '{}' at iteration {}",
             total_fixes_applied,
-            violation.rule_id,
+            violation.rule_id.as_deref().unwrap_or("unknown"),
             iteration
         );
     }
@@ -369,7 +369,7 @@ mod tests {
         let fix = Fix::with_explanation("Rename variable", vec![replacement]);
 
         let violation = Violation {
-            rule_id: Cow::Borrowed("test_rule"),
+            rule_id: Some(Cow::Borrowed("test_rule")),
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(4, 5),
@@ -377,6 +377,7 @@ mod tests {
             fix: Some(fix),
             file: Some(Cow::Borrowed("test.nu")),
             source: None,
+            doc_url: None,
         };
 
         let fixed = apply_fixes_to_content(content, &[&violation]);
@@ -393,7 +394,7 @@ mod tests {
         let fix = Fix::with_explanation("Rename variables", replacements);
 
         let violation = Violation {
-            rule_id: Cow::Borrowed("test_rule"),
+            rule_id: Some(Cow::Borrowed("test_rule")),
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 21),
@@ -401,6 +402,7 @@ mod tests {
             fix: Some(fix),
             file: Some(Cow::Borrowed("test.nu")),
             source: None,
+            doc_url: None,
         };
 
         let fixed = apply_fixes_to_content(content, &[&violation]);
@@ -536,7 +538,7 @@ mod tests {
     fn test_no_fixes() {
         let content = "let x = 5";
         let violation = Violation {
-            rule_id: Cow::Borrowed("test_rule"),
+            rule_id: Some(Cow::Borrowed("test_rule")),
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(4, 5),
@@ -544,6 +546,7 @@ mod tests {
             fix: None,
             file: Some(Cow::Borrowed("test.nu")),
             source: None,
+            doc_url: None,
         };
 
         let fixed = apply_fixes_to_content(content, &[&violation]);
@@ -555,7 +558,7 @@ mod tests {
         let fix = Fix::with_explanation("Test fix", vec![]);
 
         let with_fix = Violation {
-            rule_id: Cow::Borrowed("test_rule"),
+            rule_id: Some(Cow::Borrowed("test_rule")),
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 5),
@@ -563,10 +566,11 @@ mod tests {
             fix: Some(fix),
             file: Some(Cow::Borrowed("test.nu")),
             source: None,
+            doc_url: None,
         };
 
         let without_fix = Violation {
-            rule_id: Cow::Borrowed("test_rule"),
+            rule_id: Some(Cow::Borrowed("test_rule")),
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 5),
@@ -574,6 +578,7 @@ mod tests {
             fix: None,
             file: Some(Cow::Borrowed("test.nu")),
             source: None,
+            doc_url: None,
         };
 
         let violations = [&with_fix, &without_fix, &with_fix];
@@ -584,7 +589,7 @@ mod tests {
     #[test]
     fn test_group_violations_by_file() {
         let v1 = Violation {
-            rule_id: Cow::Borrowed("test_rule"),
+            rule_id: Some(Cow::Borrowed("test_rule")),
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 5),
@@ -592,10 +597,11 @@ mod tests {
             fix: None,
             file: Some(Cow::Borrowed("file1.nu")),
             source: None,
+            doc_url: None,
         };
 
         let v2 = Violation {
-            rule_id: Cow::Borrowed("test_rule"),
+            rule_id: Some(Cow::Borrowed("test_rule")),
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 5),
@@ -603,10 +609,11 @@ mod tests {
             fix: None,
             file: Some(Cow::Borrowed("file2.nu")),
             source: None,
+            doc_url: None,
         };
 
         let v3 = Violation {
-            rule_id: Cow::Borrowed("test_rule"),
+            rule_id: Some(Cow::Borrowed("test_rule")),
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(5, 10),
@@ -614,6 +621,7 @@ mod tests {
             fix: None,
             file: Some(Cow::Borrowed("file1.nu")),
             source: None,
+            doc_url: None,
         };
 
         let violations = vec![v1, v2, v3];

@@ -87,7 +87,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
             violations.push(
                 Violation::new(
-                    "unnecessary_mut",
                     format!("Variable '{var_name}' is declared as 'mut' but never reassigned"),
                     decl_span,
                 )
@@ -106,6 +105,7 @@ pub const fn rule() -> Rule {
         "Variables should only be marked 'mut' when they are actually reassigned",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/variables.html#mutable-variables")
 }
 
 #[cfg(test)]

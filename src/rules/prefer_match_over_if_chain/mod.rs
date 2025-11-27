@@ -212,7 +212,6 @@ fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<Violation> {
     // Create appropriate violation message
     let violation = if analysis.consistent_variable {
         Violation::new(
-            "prefer_match_over_if_chain",
             format!(
                 "If-else-if chain comparing '{compared_var}' to different values - consider using \
                  'match'"
@@ -226,7 +225,6 @@ fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<Violation> {
         )
     } else {
         Violation::new(
-            "prefer_match_over_if_chain",
             "Long if-else-if chain - consider using 'match' for clearer branching",
             call.span(),
         )
@@ -253,6 +251,7 @@ pub const fn rule() -> Rule {
         "Use 'match' for value-based branching instead of if-else-if chains",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/match.html")
 }
 
 #[cfg(test)]

@@ -108,7 +108,6 @@ fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<Violat
 
             violations.push(
                 Violation::new(
-                    "unnecessary_variable_before_return",
                     format!(
                         "Variable '{}' is assigned and immediately returned - consider returning \
                          the expression directly",
@@ -153,6 +152,7 @@ pub const fn rule() -> Rule {
         "Variable assigned and immediately returned adds unnecessary verbosity",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/thinking_in_nu.html#implicit-return")
 }
 
 #[cfg(test)]

@@ -26,7 +26,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
             } else {
                 Some(
                     Violation::new(
-                        "screaming_snake_constants",
                         format!(
                             "Constant '{const_name}' should use SCREAMING_SNAKE_CASE naming \
                              convention"
@@ -48,10 +47,9 @@ pub const fn rule() -> Rule {
         "Constants should use SCREAMING_SNAKE_CASE naming convention",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/style_guide.html#environment-variables")
 }
 #[cfg(test)]
 mod detect_bad;
-#[cfg(test)]
-mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

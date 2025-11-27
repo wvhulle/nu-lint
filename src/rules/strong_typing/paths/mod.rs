@@ -106,7 +106,7 @@ fn check_parameter(
         if is_optional { "?" } else { "" }
     );
 
-    Some(Violation::new("prefer_path_type", message, function_span).with_help(suggestion))
+    Some(Violation::new(message, function_span).with_help(suggestion))
 }
 
 fn check_function_parameters(
@@ -169,6 +169,7 @@ pub const fn rule() -> Rule {
         "Use Nushell's path type instead of string for parameters with 'path' in the name",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/types_of_data.html#paths")
 }
 
 #[cfg(test)]

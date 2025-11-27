@@ -75,7 +75,6 @@ fn check_call(call: &Call, ctx: &LintContext) -> Option<Violation> {
 
     Some(
         Violation::new(
-            "snake_case_variables",
             format!("{var_type} '{var_name}' should use snake_case naming convention"),
             name_expr.span,
         )
@@ -103,6 +102,7 @@ pub const fn rule() -> Rule {
         "Variables should use snake_case naming convention",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/style_guide.html#variables-and-command-parameters")
 }
 
 #[cfg(test)]

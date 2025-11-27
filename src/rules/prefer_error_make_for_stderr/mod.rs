@@ -28,7 +28,6 @@ fn check_sequential_stderr_exit(
 
     Some(
         Violation::new(
-            "prefer_error_make_for_stderr",
             "Use 'error make' instead of 'print stderr' + 'exit' for error conditions",
             print_call.span().merge(exit_call.span()),
         )
@@ -79,6 +78,7 @@ pub const fn rule() -> Rule {
         "Use 'error make' instead of 'print stderr' + 'exit' for structured error handling",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/error_make.html")
 }
 
 #[cfg(test)]

@@ -10,6 +10,7 @@ use crate::{context::LintContext, violation::Violation};
 pub struct Rule {
     pub id: &'static str,
     pub explanation: &'static str,
+    pub doc_url: Option<&'static str>,
     pub(crate) check: fn(&LintContext) -> Vec<Violation>,
 }
 
@@ -37,8 +38,16 @@ impl Rule {
         Self {
             id,
             explanation,
+            doc_url: None,
             check,
         }
+    }
+
+    /// Add a documentation URL to the rule
+    #[must_use]
+    pub const fn with_doc_url(mut self, url: &'static str) -> Self {
+        self.doc_url = Some(url);
+        self
     }
 
     #[cfg(test)]

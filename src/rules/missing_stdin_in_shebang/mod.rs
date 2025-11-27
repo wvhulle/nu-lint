@@ -179,7 +179,7 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
 
     let fix = create_fix_for_shebang(context.source);
 
-    let mut violation = Violation::new("missing_stdin_in_shebang", message, name_span).with_help(
+    let mut violation = Violation::new(message, name_span).with_help(
         "Add --stdin flag to shebang: #!/usr/bin/env -S nu --stdin or #!/usr/bin/env nu --stdin \
          (if env supports multiple args)",
     );
@@ -214,6 +214,7 @@ pub const fn rule() -> Rule {
         "Scripts with main functions that expect pipeline input must have --stdin in shebang",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/scripts.html")
 }
 
 #[cfg(test)]

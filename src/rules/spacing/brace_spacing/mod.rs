@@ -26,7 +26,6 @@ fn check_brace_spacing(source: &str, span: Span, brace_type: &BraceType) -> Vec<
             {
                 vec![
                     Violation::new(
-                        "brace_spacing",
                         "No space allowed after opening brace before closure parameters"
                             .to_string(),
                         span,
@@ -43,7 +42,6 @@ fn check_brace_spacing(source: &str, span: Span, brace_type: &BraceType) -> Vec<
             if !starts_with_space || !ends_with_space {
                 vec![
                     Violation::new(
-                        "brace_spacing",
                         "Blocks and closures without parameters should have spaces inside braces"
                             .to_string(),
                         span,
@@ -63,7 +61,6 @@ fn check_brace_spacing(source: &str, span: Span, brace_type: &BraceType) -> Vec<
             if starts_with_space || ends_with_space {
                 vec![
                     Violation::new(
-                        "brace_spacing",
                         "Records should not have spaces inside braces".to_string(),
                         span,
                     )
@@ -104,10 +101,9 @@ pub const fn rule() -> Rule {
          use { body }, and closures with params use {|x| body}",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/style_guide.html#one-line-format")
 }
 #[cfg(test)]
 mod detect_bad;
-#[cfg(test)]
-mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

@@ -35,7 +35,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
             return vec![
                 Violation::new(
-                    "exit_only_in_main",
                     format!(
                         "Function '{function_name}' uses 'exit' which terminates the entire script"
                     ),
@@ -57,6 +56,7 @@ pub const fn rule() -> Rule {
         "Avoid using 'exit' in functions other than 'main'",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/exit.html")
 }
 
 #[cfg(test)]

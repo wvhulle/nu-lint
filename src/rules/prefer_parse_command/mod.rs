@@ -4,26 +4,150 @@ use nu_protocol::{
 };
 
 use crate::{
+    Fix, Replacement,
     ast::{block::BlockExt, call::CallExt, pipeline::PipelineExt, span::SpanExt},
     context::LintContext,
     rule::Rule,
     violation::Violation,
 };
 
+const REGEX_SPECIAL_CHARS: &[char] = &[
+    '\\', '.', '+', '*', '?', '(', ')', '[', ']', '{', '}', '|', '^', '$',
+];
+
 fn is_split_row_call(call: &Call, context: &LintContext) -> bool {
     call.is_call_to_command("split row", context)
 }
 
-fn is_indexed_access_call(call: &Call, context: &LintContext) -> bool {
-    let name = call.get_call_name(context);
-    matches!(name.as_str(), "get" | "skip")
+fn is_split_call(call: &Call, context: &LintContext) -> bool {
+    matches!(call.get_call_name(context).as_str(), "split row" | "split")
 }
 
-fn has_index_argument(call: &Call, context: &LintContext) -> bool {
-    call.get_first_positional_arg().is_some_and(|arg| {
-        let arg_text = arg.span.text(context);
-        arg_text.parse::<usize>().is_ok()
+fn extract_delimiter_from_split_call(call: &Call, context: &LintContext) -> Option<String> {
+    if !is_split_call(call, context) {
+        return None;
+    }
+    let arg = call.get_first_positional_arg()?;
+    let text = arg.span.text(context);
+    match &arg.expr {
+        Expr::String(s) | Expr::RawString(s) => Some(s.clone()),
+        _ => {
+            let trimmed = text.trim();
+            let is_quoted = (trimmed.starts_with('"') && trimmed.ends_with('"'))
+                || (trimmed.starts_with('\'') && trimmed.ends_with('\''));
+            is_quoted.then(|| trimmed[1..trimmed.len() - 1].to_string())
+        }
+    }
+}
+
+fn needs_regex_for_delimiter(delimiter: &str) -> bool {
+    delimiter.chars().any(|c| REGEX_SPECIAL_CHARS.contains(&c))
+}
+
+fn escape_regex_delimiter(delimiter: &str) -> String {
+    delimiter.chars().fold(
+        String::with_capacity(delimiter.len() * 2),
+        |mut escaped, c| {
+            if REGEX_SPECIAL_CHARS.contains(&c) {
+                escaped.push('\\');
+            }
+            escaped.push(c);
+            escaped
+        },
+    )
+}
+
+fn generate_parse_pattern(delimiter: &str, num_fields: usize) -> (String, bool) {
+    let needs_regex = needs_regex_for_delimiter(delimiter);
+
+    if needs_regex {
+        let escaped = escape_regex_delimiter(delimiter);
+        let pattern = (0..num_fields)
+            .map(|i| format!("(?P<field{i}>.*)"))
+            .collect::<Vec<_>>()
+            .join(&escaped);
+        (pattern, true)
+    } else {
+        let pattern = (0..num_fields)
+            .map(|i| format!("{{field{i}}}"))
+            .collect::<Vec<_>>()
+            .join(delimiter);
+        (pattern, false)
+    }
+}
+
+fn generate_parse_replacement(delimiter: &str, indexed_fields: &[usize]) -> String {
+    let max_field = indexed_fields.iter().copied().max().unwrap_or(0);
+    let num_fields = max_field + 2;
+    let (pattern, needs_regex) = generate_parse_pattern(delimiter, num_fields);
+
+    if needs_regex {
+        format!("parse --regex '{pattern}'")
+    } else {
+        format!("parse \"{pattern}\"")
+    }
+}
+
+fn contains_split_in_expression(expr: &Expression, ctx: &LintContext) -> bool {
+    match &expr.expr {
+        Expr::Call(call) => {
+            is_split_call(call, ctx)
+                || call.arguments.iter().any(|arg| {
+                    matches!(arg,
+                        Argument::Positional(e) | Argument::Named((_, _, Some(e)))
+                        if contains_split_in_expression(e, ctx)
+                    )
+                })
+        }
+        Expr::Block(id) | Expr::Closure(id) | Expr::Subexpression(id) => ctx
+            .working_set
+            .get_block(*id)
+            .pipelines
+            .iter()
+            .flat_map(|p| &p.elements)
+            .any(|elem| contains_split_in_expression(&elem.expr, ctx)),
+        Expr::FullCellPath(path) => contains_split_in_expression(&path.head, ctx),
+        Expr::BinaryOp(left, _, right) => {
+            contains_split_in_expression(left, ctx) || contains_split_in_expression(right, ctx)
+        }
+        Expr::UnaryNot(inner) => contains_split_in_expression(inner, ctx),
+        _ => false,
+    }
+}
+
+fn check_each_with_split(expr: &Expression, ctx: &LintContext) -> Option<Violation> {
+    let Expr::Call(call) = &expr.expr else {
+        return None;
+    };
+    if !call.is_call_to_command("each", ctx) {
+        return None;
+    }
+
+    let has_split = call
+        .arguments
+        .iter()
+        .any(|arg| matches!(arg, Argument::Positional(e) if contains_split_in_expression(e, ctx)));
+
+    has_split.then(|| {
+        Violation::new(
+            "Manual splitting with 'each' and 'split row' - consider using 'parse'",
+            call.span(),
+        )
+        .with_help(
+            "Use 'parse \"{field0} {field1}\"' for structured text extraction instead of 'each' \
+             with 'split row'. For complex delimiters, use 'parse --regex' with named capture \
+             groups like '(?P<field0>.*)delimiter(?P<field1>.*)'",
+        )
     })
+}
+
+fn is_indexed_access_call(call: &Call, context: &LintContext) -> bool {
+    matches!(call.get_call_name(context).as_str(), "get" | "skip")
+}
+
+fn extract_index_from_call(call: &Call, context: &LintContext) -> Option<usize> {
+    call.get_first_positional_arg()
+        .and_then(|arg| arg.span.text(context).parse().ok())
 }
 
 fn check_pipeline_for_split_get(pipeline: &Pipeline, context: &LintContext) -> Option<Violation> {
@@ -32,26 +156,46 @@ fn check_pipeline_for_split_get(pipeline: &Pipeline, context: &LintContext) -> O
     }
 
     pipeline.elements.windows(2).find_map(|window| {
-        let (current, next) = (&window[0], &window[1]);
-
-        let (Expr::Call(current_call), Expr::Call(next_call)) =
+        let [current, next] = window else {
+            return None;
+        };
+        let (Expr::Call(split_call), Expr::Call(access_call)) =
             (&current.expr.expr, &next.expr.expr)
         else {
             return None;
         };
 
-        (is_split_row_call(current_call, context)
-            && is_indexed_access_call(next_call, context)
-            && has_index_argument(next_call, context))
-        .then(|| {
-            let span = Span::new(current.expr.span.start, next.expr.span.end);
+        if !is_split_row_call(split_call, context) || !is_indexed_access_call(access_call, context)
+        {
+            return None;
+        }
 
-            Violation::new(
-                "prefer_parse_over_split_get",
-                "Manual string splitting with indexed access - consider using 'parse'",
-                span,
+        let index = extract_index_from_call(access_call, context)?;
+        let span = Span::new(current.expr.span.start, next.expr.span.end);
+
+        let delimiter = extract_delimiter_from_split_call(split_call, context);
+        let violation = Violation::new(
+            "Manual string splitting with indexed access - consider using 'parse'",
+            span,
+        );
+
+        Some(if let Some(delim) = delimiter {
+            let replacement = generate_parse_replacement(&delim, &[index]);
+            violation
+                .with_help(format!(
+                    "Use '{replacement}' for structured text extraction. Access fields by name \
+                     (e.g., $result.field{index}) instead of index."
+                ))
+                .with_fix(Fix::with_explanation(
+                    format!("Replace 'split row | get/skip' with '{replacement}'"),
+                    vec![Replacement::new(span, replacement)],
+                ))
+        } else {
+            violation.with_help(
+                "Use 'parse \"{field0} {field1}\"' for structured text extraction. For complex \
+                 delimiters containing regex special characters, use 'parse --regex' with named \
+                 capture groups like '(?P<field0>.*)delimiter(?P<field1>.*)'",
             )
-            .with_help("Use 'parse \"pattern {field1} {field2}\"' for structured text extraction")
         })
     })
 }
@@ -97,7 +241,7 @@ fn extract_split_row_assignment(
 }
 
 fn is_var_used_in_indexed_access(var_id: VarId, call: &Call, context: &LintContext) -> bool {
-    if !is_indexed_access_call(call, context) || !has_index_argument(call, context) {
+    if !is_indexed_access_call(call, context) || extract_index_from_call(call, context).is_none() {
         return false;
     }
 
@@ -113,13 +257,17 @@ fn is_var_used_in_indexed_access(var_id: VarId, call: &Call, context: &LintConte
 
 fn create_indexed_access_violation(var_name: &str, decl_span: Span) -> Violation {
     Violation::new(
-        "prefer_parse_over_split_get",
         format!(
             "Variable '{var_name}' from split row with indexed access - consider using 'parse'"
         ),
         decl_span,
     )
-    .with_help("Use 'parse' command to extract named fields instead of indexed access")
+    .with_help(
+        "Use 'parse' command to extract named fields instead of indexed access. For simple \
+         delimiters like space or colon, use 'parse \"{field0} {field1}\"'. For complex \
+         delimiters or variable patterns, use 'parse --regex \
+         \"(?P<field0>.*)delimiter(?P<field1>.*)\"'",
+    )
 }
 
 fn check_call_arguments_for_violation(
@@ -168,7 +316,7 @@ fn check_element_for_indexed_access(
         Expr::Call(call) => {
             if is_var_used_in_indexed_access(var_id, call, context)
                 || (is_indexed_access_call(call, context)
-                    && has_index_argument(call, context)
+                    && extract_index_from_call(call, context).is_some()
                     && pipeline.variable_is_piped(var_id))
             {
                 Some(create_indexed_access_violation(var_name, decl_span))
@@ -258,27 +406,31 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
     check_block(context.ast, context, &mut violations);
 
-    violations.extend(
-        context.collect_rule_violations(|expr, ctx| match &expr.expr {
-            Expr::Closure(block_id) | Expr::Block(block_id) => {
-                let mut nested_violations = Vec::new();
-                let block = ctx.working_set.get_block(*block_id);
-                check_block(block, ctx, &mut nested_violations);
-                nested_violations
-            }
-            _ => vec![],
-        }),
-    );
+    violations.extend(context.collect_rule_violations(|expr, ctx| {
+        let mut expr_violations = Vec::new();
+
+        // Check for 'each' with 'split row' pattern
+        expr_violations.extend(check_each_with_split(expr, ctx));
+
+        // Check nested blocks/closures for split row | get patterns
+        if let Expr::Closure(block_id) | Expr::Block(block_id) = &expr.expr {
+            let block = ctx.working_set.get_block(*block_id);
+            check_block(block, ctx, &mut expr_violations);
+        }
+
+        expr_violations
+    }));
 
     violations
 }
 
 pub const fn rule() -> Rule {
     Rule::new(
-        "prefer_parse_over_split_get",
-        "Prefer 'parse' command over manual string splitting with indexed access",
+        "prefer_parse_over_split",
+        "Prefer 'parse' command over manual string splitting patterns",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/parse.html")
 }
 
 #[cfg(test)]

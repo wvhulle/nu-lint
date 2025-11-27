@@ -250,7 +250,6 @@ fn check_pattern_nesting(
 
 fn create_violation(span: nu_protocol::Span, depth: usize) -> Violation {
     Violation::new(
-        "forbid_excessive_nesting",
         format!(
             "Code has nesting depth of {depth}, which exceeds the maximum of {MAX_NESTING_DEPTH}"
         ),
@@ -265,6 +264,7 @@ pub const fn rule() -> Rule {
         "Avoid excessive nesting (more than 4 levels deep)",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/thinking_in_nu.html")
 }
 
 #[cfg(test)]

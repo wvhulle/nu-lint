@@ -32,7 +32,6 @@ fn create_suggestion_message(param_name: &str, function_name: &str) -> String {
 /// Create a violation for a parameter that's used as an external command
 fn create_violation(param_name: &str, function_name: &str, context: &LintContext) -> Violation {
     Violation::new(
-        "external_script_as_argument",
         format!(
             "Function '{function_name}' parameter '{param_name}' is used as an external command. \
              This is an anti-pattern."
@@ -80,6 +79,7 @@ pub const fn rule() -> Rule {
          instead",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/modules.html")
 }
 
 #[cfg(test)]

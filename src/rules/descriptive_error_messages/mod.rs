@@ -70,7 +70,6 @@ fn check_record_for_generic_msg(
         if is_generic_error_message(&msg_text) {
             return Some(
                 Violation::new(
-                    "descriptive_error_messages",
                     "Error message is too generic and not descriptive",
                     value.span,
                 )
@@ -120,11 +119,10 @@ pub const fn rule() -> Rule {
         "Error messages should be descriptive and actionable",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/creating_errors.html")
 }
 
 #[cfg(test)]
 mod detect_bad;
-#[cfg(test)]
-mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

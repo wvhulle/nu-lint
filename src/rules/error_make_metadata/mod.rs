@@ -172,7 +172,6 @@ fn check_error_make_metadata(
 
     Some(
         Violation::new(
-            "add_metadata_to_error",
             format!("error make call is missing metadata fields: {missing_list}"),
             call_span,
         )
@@ -213,6 +212,7 @@ pub const fn rule() -> Rule {
          context",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/creating_errors.html")
 }
 
 #[cfg(test)]

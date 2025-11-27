@@ -19,7 +19,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
             let line_end = line_start + line.len();
             violations.push(
                 Violation::new(
-                    "prefer_lines_over_split",
                     "Use 'lines' instead of 'split row \"\\n\"' for splitting by newlines",
                     nu_protocol::Span::new(line_start, line_end),
                 )
@@ -38,10 +37,9 @@ pub const fn rule() -> Rule {
         "Use 'lines' instead of 'split row \"\\n\"' for better performance and clarity",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/lines.html")
 }
 #[cfg(test)]
 mod detect_bad;
-#[cfg(test)]
-mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

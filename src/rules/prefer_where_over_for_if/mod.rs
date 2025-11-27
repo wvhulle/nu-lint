@@ -343,7 +343,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
         if filtering_set.contains(var_id) {
             log::debug!("Creating violation for var '{var_name}'");
             let violation = Violation::new(
-                "prefer_where_over_for_if",
                 format!("Variable '{var_name}' accumulates filtered items - use 'where' instead"),
                 *span,
             )
@@ -364,6 +363,7 @@ pub const fn rule() -> Rule {
         "Prefer 'where' filter over for loop with if statement",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/where.html")
 }
 
 #[cfg(test)]

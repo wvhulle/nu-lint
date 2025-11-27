@@ -188,7 +188,6 @@ fn create_violation(
     );
 
     Violation::new(
-        "systemd_journal_prefix",
         "Output without systemd journal log level prefix - consider adding prefix for proper \
          logging",
         span,
@@ -229,7 +228,6 @@ fn create_numeric_prefix_violation(
     );
 
     Violation::new(
-        "systemd_journal_prefix",
         "Numeric systemd journal prefix found - keyword prefixes are more readable",
         span,
     )
@@ -287,6 +285,7 @@ pub const fn rule() -> Rule {
          journal.",
         check,
     )
+    .with_doc_url("https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html#SyslogLevelPrefix=")
 }
 
 #[cfg(test)]

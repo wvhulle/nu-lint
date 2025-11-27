@@ -49,7 +49,6 @@ fn function_too_long(
 
 fn create_violation(function_name: &str, span: nu_protocol::Span) -> Violation {
     Violation::new(
-        "prefer_multiline_functions",
         format!(
             "Function '{function_name}' is too long for a single line ({} characters)",
             span.end - span.start
@@ -68,6 +67,7 @@ pub const fn rule() -> Rule {
         "Prefer multiline format for long function definitions",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/style_guide.html#multi-line-format")
 }
 
 #[cfg(test)]

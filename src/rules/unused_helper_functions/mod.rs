@@ -23,7 +23,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .map(|name| {
             let span = context.find_declaration_span(name);
             Violation::new(
-                "unused_helper_functions",
                 format!("Function '{name}' is defined but never called from 'main'"),
                 span,
             )
@@ -40,6 +39,7 @@ pub const fn rule() -> Rule {
         "Detect helper functions that are never called in files with a 'main' function",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/custom_commands.html")
 }
 
 #[cfg(test)]

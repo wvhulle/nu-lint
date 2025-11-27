@@ -38,7 +38,6 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
 
             violations.push(
                 Violation::new(
-                    "main_named_args_docs",
                     format!(
                         "Named parameter '{flag_name}' in main function is missing documentation \
                          comment"
@@ -75,11 +74,10 @@ pub const fn rule() -> Rule {
         "Named parameters (flags) in main functions should have documentation comments",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/custom_commands.html#flags")
 }
 
 #[cfg(test)]
 mod detect_bad;
-#[cfg(test)]
-mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

@@ -67,7 +67,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .filter(|(_, name)| count_function_calls(name, context) == 1)
         .map(|(_, function_name)| {
             Violation::new(
-                "inline_single_use_function",
                 format!("Function `{function_name}` has a single-line body and is only used once"),
                 context.find_declaration_span(function_name),
             )
@@ -84,6 +83,7 @@ pub const fn rule() -> Rule {
         "Detect single-line custom commands used only once that could be inlined",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/custom_commands.html")
 }
 #[cfg(test)]
 mod detect_bad;

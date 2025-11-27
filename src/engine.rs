@@ -109,7 +109,9 @@ impl LintEngine {
 
                 let mut violations = (rule.check)(context);
                 for violation in &mut violations {
+                    violation.set_rule_id(rule.id);
                     violation.set_lint_level(lint_level);
+                    violation.set_doc_url(rule.doc_url);
                 }
 
                 (!violations.is_empty()).then_some(violations)

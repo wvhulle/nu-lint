@@ -218,7 +218,7 @@ fn create_violation(span: nu_protocol::Span, pattern: ProblematicPattern) -> Vio
         ),
     };
 
-    Violation::new("escape_string_interpolation_operators", message, span).with_help(suggestion)
+    Violation::new(message, span).with_help(suggestion)
 }
 
 fn check_string_interpolation(
@@ -260,11 +260,10 @@ pub const fn rule() -> Rule {
          operations)",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/working_with_strings.html#string-interpolation")
 }
 
 #[cfg(test)]
 mod detect_bad;
-#[cfg(test)]
-mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

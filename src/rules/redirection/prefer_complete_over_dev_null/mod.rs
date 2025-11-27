@@ -144,7 +144,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
     );
 
     Some(
-        Violation::new("prefer_complete_over_dev_null", message, violation_span)
+        Violation::new(message, violation_span)
             .with_help(help)
             .with_fix(fix),
     )
@@ -204,6 +204,7 @@ pub const fn rule() -> Rule {
         "Prefer 'complete' over redirecting stderr to /dev/null for idiomatic error handling",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/complete.html")
 }
 
 #[cfg(test)]

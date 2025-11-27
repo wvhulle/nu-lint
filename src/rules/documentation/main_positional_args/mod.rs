@@ -30,7 +30,6 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
             if !param_span.has_inline_doc_comment(context) {
                 violations.push(
                     Violation::new(
-                        "main_positional_args_docs",
                         format!(
                             "Positional parameter '{}' in main function is missing documentation \
                              comment",
@@ -55,7 +54,6 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
             if !param_span.has_inline_doc_comment(context) {
                 violations.push(
                     Violation::new(
-                        "main_positional_args_docs",
                         format!(
                             "Optional positional parameter '{}' in main function is missing \
                              documentation comment",
@@ -81,7 +79,6 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
         if !param_span.has_inline_doc_comment(context) {
             violations.push(
                 Violation::new(
-                    "main_positional_args_docs",
                     format!(
                         "Rest positional parameter '{}' in main function is missing documentation \
                          comment",
@@ -118,11 +115,10 @@ pub const fn rule() -> Rule {
         "Positional parameters in main functions should have documentation comments",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/custom_commands.html")
 }
 
 #[cfg(test)]
 mod detect_bad;
-#[cfg(test)]
-mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

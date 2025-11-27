@@ -76,7 +76,7 @@ fn create_violations_for_untyped_io(
     };
 
     vec![
-        Violation::new("typed_pipeline_io", message, name_span)
+        Violation::new(message, name_span)
             .with_help(suggestion)
             .with_fix(fix.clone()),
     ]
@@ -285,6 +285,7 @@ pub const fn rule() -> Rule {
         "Custom commands that use pipeline input or produce output should have type annotations",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/custom_commands.html#input-output-types")
 }
 
 #[cfg(test)]

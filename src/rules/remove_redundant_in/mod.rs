@@ -139,7 +139,6 @@ fn create_violation(
     let span = context.find_declaration_span(&signature.name);
     let suggestion = "Remove redundant $in - it's implicit at the start of pipelines";
     let violation = Violation::new(
-        "remove_redundant_in",
         format!(
             "Redundant $in usage in function '{}' - $in is implicit at the start of pipelines",
             signature.name
@@ -198,6 +197,7 @@ pub const fn rule() -> Rule {
         "Remove redundant $in at the start of pipelines - it's implicit in Nushell",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/special_variables.html")
 }
 #[cfg(test)]
 mod detect_bad;

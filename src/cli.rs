@@ -17,7 +17,7 @@ use rayon::prelude::*;
 use crate::{
     Config, LintEngine, LintLevel, output,
     rules::ALL_RULES,
-    sets::{BUILTIN_LINT_SETS, DEFAULT_RULE_MAP},
+    sets::{BUILTIN_LINT_SETS, RULE_LEVEL_OVERRIDES},
     violation::Violation,
 };
 
@@ -85,10 +85,18 @@ pub enum Commands {
 
 #[derive(clap::ValueEnum, Clone, Copy)]
 pub enum Format {
+    /// Human-readable text format (default)
     Text,
+    /// Simple JSON format (deprecated, use 'lsp' instead for editor
+    /// integration)
     Json,
-    /// VS Code LSP-compatible JSON format
+    /// LSP-compatible JSON format (recommended for editors: VS Code, Neovim,
+    /// Helix, etc.)
+    Lsp,
+    /// Backwards compatibility alias for 'lsp' format (deprecated)
+    #[value(name = "vscode-json")]
     VscodeJson,
+    /// GitHub Actions annotations format
     Github,
 }
 
@@ -249,10 +257,15 @@ pub fn lint_stdin(engine: &LintEngine, source: &str) -> (Vec<Violation>, bool) {
 }
 
 /// Format and output linting results
+#[allow(
+    deprecated,
+    reason = "supporting deprecated vscode-json format for backwards compatibility"
+)]
 pub fn output_results(violations: &[Violation], format: Option<Format>) {
     let output = match format.unwrap_or(Format::Text) {
         Format::Text | Format::Github => output::format_text(violations),
         Format::Json => output::format_json(violations),
+        Format::Lsp => output::format_lsp_json(violations),
         Format::VscodeJson => output::format_vscode_json(violations),
     };
     println!("{output}");
@@ -286,7 +299,7 @@ fn list_sets() {
 fn explain_rule(config: &Config, rule_id: &str) {
     if let Some(rule) = ALL_RULES.iter().find(|r| r.id == rule_id) {
         let lint_level = config.get_lint_level(rule.id);
-        let default_level = DEFAULT_RULE_MAP
+        let default_level = RULE_LEVEL_OVERRIDES
             .rules
             .iter()
             .find(|(id, _)| *id == rule.id)
@@ -338,7 +351,8 @@ mod tests {
         assert!(
             violations
                 .iter()
-                .any(|v| v.rule_id == "snake_case_variables" && v.lint_level == LintLevel::Warn)
+                .any(|v| v.rule_id.as_deref() == Some("snake_case_variables")
+                    && v.lint_level == LintLevel::Warn)
         );
     }
 
@@ -398,7 +412,8 @@ mod tests {
         assert!(
             violations
                 .iter()
-                .any(|v| v.rule_id == "snake_case_variables" && v.lint_level == LintLevel::Deny)
+                .any(|v| v.rule_id.as_deref() == Some("snake_case_variables")
+                    && v.lint_level == LintLevel::Deny)
         );
     }
 
@@ -433,7 +448,8 @@ mod tests {
         assert!(
             violations
                 .iter()
-                .any(|v| v.rule_id == "snake_case_variables" && v.lint_level == LintLevel::Deny)
+                .any(|v| v.rule_id.as_deref() == Some("snake_case_variables")
+                    && v.lint_level == LintLevel::Deny)
         );
     }
 
@@ -472,7 +488,8 @@ mod tests {
         assert!(
             violations
                 .iter()
-                .any(|v| v.rule_id == "snake_case_variables" && v.lint_level == LintLevel::Deny)
+                .any(|v| v.rule_id.as_deref() == Some("snake_case_variables")
+                    && v.lint_level == LintLevel::Deny)
         );
     }
 

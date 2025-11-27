@@ -16,8 +16,10 @@ use rayon::prelude::*;
 
 use crate::{
     Config, LintEngine, LintLevel, output,
-    rules::ALL_RULES,
-    sets::{BUILTIN_LINT_SETS, RULE_LEVEL_OVERRIDES},
+    rules::{
+        ALL_RULES,
+        sets::{BUILTIN_LINT_SETS, RULE_LEVEL_OVERRIDES},
+    },
     violation::Violation,
 };
 
@@ -284,12 +286,12 @@ fn list_sets() {
     println!("Available lint sets:\n");
 
     let mut sorted_sets: Vec<_> = BUILTIN_LINT_SETS.iter().collect();
-    sorted_sets.sort_by_key(|(name, _)| *name);
+    sorted_sets.sort_by_key(|set| set.name);
 
-    for (name, set) in sorted_sets {
+    for set in sorted_sets {
         println!(
             "{:<20} {} ({} rules)",
-            name,
+            set.name,
             set.explanation,
             set.rules.len()
         );
@@ -302,9 +304,8 @@ fn explain_rule(config: &Config, rule_id: &str) {
         let default_level = RULE_LEVEL_OVERRIDES
             .rules
             .iter()
-            .find(|(id, _)| *id == rule.id)
-            .copied()
-            .map_or(LintLevel::Warn, |(_, level)| level);
+            .find(|(r, _)| r.id == rule.id)
+            .map_or(LintLevel::Warn, |(_, level)| *level);
         println!("Rule: {}", rule.id);
         println!("Lint Level: {lint_level:?}");
         println!("Default Lint Level: {default_level}");

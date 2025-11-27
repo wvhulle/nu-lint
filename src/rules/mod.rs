@@ -1,5 +1,7 @@
 use crate::rule::Rule;
 
+pub mod sets;
+
 pub mod check_complete_exit_code;
 mod collapsible_if;
 mod dangerous_file_operations;

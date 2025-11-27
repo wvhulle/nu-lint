@@ -1,6 +1,10 @@
+use crate::rule::Rule;
+
+pub mod check_complete_exit_code;
 mod collapsible_if;
 mod dangerous_file_operations;
 mod descriptive_error_messages;
+
 mod documentation;
 mod error_make_metadata;
 mod escape_string_interpolation_operators;
@@ -17,9 +21,8 @@ mod max_positional_params;
 mod missing_stdin_in_shebang;
 mod naming;
 
-mod upstream;
-
-mod bashisms;
+mod external_tools;
+mod posix;
 mod prefer_compound_assignment;
 mod prefer_direct_use;
 mod prefer_error_make_for_stderr;
@@ -41,42 +44,10 @@ mod systemd_journal_prefix;
 mod unnecessary_mut;
 mod unnecessary_variable_before_return;
 mod unused_helper_functions;
-
-use naming::{kebab_case_commands, screaming_snake_constants, snake_case_variables};
-use spacing::{
-    no_trailing_spaces, omit_list_commas, prefer_multiline_functions, prefer_multiline_lists,
-    prefer_multiline_records,
-};
-
-use crate::rule::Rule;
+mod upstream;
 
 pub const ALL_RULES: &[Rule] = &[
-    bashisms::awk::rule(),
-    bashisms::cat::rule(),
-    bashisms::curl::rule(),
-    bashisms::cut::rule(),
-    bashisms::date::rule(),
-    bashisms::echo::rule(),
-    bashisms::exa::rule(),
-    bashisms::eza::rule(),
-    bashisms::fetch::rule(),
-    bashisms::find::rule(),
-    bashisms::grep::rule(),
-    bashisms::head::rule(),
-    bashisms::hostname::rule(),
-    bashisms::jq::rule(),
-    bashisms::ls::rule(),
-    bashisms::man::rule(),
-    bashisms::printenv::rule(),
-    bashisms::read::rule(),
-    bashisms::rg::rule(),
-    bashisms::sed::rule(),
-    bashisms::sort::rule(),
-    bashisms::tail::rule(),
-    bashisms::uniq::rule(),
-    bashisms::wc::rule(),
-    bashisms::wget::rule(),
-    bashisms::which::rule(),
+    check_complete_exit_code::rule(),
     collapsible_if::rule(),
     dangerous_file_operations::rule(),
     descriptive_error_messages::rule(),
@@ -87,23 +58,45 @@ pub const ALL_RULES: &[Rule] = &[
     escape_string_interpolation_operators::rule(),
     exit_only_in_main::rule(),
     external_script_as_argument::rule(),
+    external_tools::curl::rule(),
+    external_tools::exa::rule(),
+    external_tools::eza::rule(),
+    external_tools::fd::rule(),
+    external_tools::hostname::rule(),
+    external_tools::jq::rule(),
+    external_tools::printenv::rule(),
+    external_tools::rg::rule(),
+    external_tools::wget::rule(),
+    external_tools::which::rule(),
     forbid_excessive_nesting::rule(),
     inline_single_use_function::rule(),
-    kebab_case_commands::rule(),
     max_function_body_length::rule(),
     max_positional_params::rule(),
     missing_stdin_in_shebang::rule(),
-    no_trailing_spaces::rule(),
-    omit_list_commas::rule(),
+    naming::kebab_case_commands::rule(),
+    naming::screaming_snake_constants::rule(),
+    naming::snake_case_variables::rule(),
+    posix::awk::rule(),
+    posix::cat::rule(),
+    posix::cut::rule(),
+    posix::date::rule(),
+    posix::echo::rule(),
+    posix::find::rule(),
+    posix::grep::rule(),
+    posix::head::rule(),
+    posix::ls::rule(),
+    posix::read::rule(),
+    posix::sed::rule(),
+    posix::sort::rule(),
+    posix::tail::rule(),
+    posix::uniq::rule(),
+    posix::wc::rule(),
     prefer_compound_assignment::rule(),
     prefer_direct_use::rule(),
     prefer_error_make_for_stderr::rule(),
     prefer_is_not_empty::rule(),
     prefer_lines_over_split::rule(),
     prefer_match_over_if_chain::rule(),
-    prefer_multiline_functions::rule(),
-    prefer_multiline_lists::rule(),
-    prefer_multiline_records::rule(),
     prefer_parse_command::rule(),
     prefer_parse_over_each_split::rule(),
     prefer_pipeline_input::rule(),
@@ -112,19 +105,21 @@ pub const ALL_RULES: &[Rule] = &[
     prefer_where_over_each_if::rule(),
     prefer_where_over_for_if::rule(),
     print_exit_use_error_make::rule(),
-    redirection::check_complete_exit_code::rule(),
     redirection::prefer_complete_for_external_commands::rule(),
     redirection::prefer_complete_over_dev_null::rule(),
     redirection::redundant_ignore::rule(),
     remove_redundant_in::rule(),
     row_condition_above_closure::rule(),
-    screaming_snake_constants::rule(),
     side_effects::mixed_io_types::rule(),
     side_effects::print_and_return_data::rule(),
     side_effects::pure_before_side_effects::rule(),
-    snake_case_variables::rule(),
     spacing::brace_spacing::rule(),
+    spacing::no_trailing_spaces::rule(),
+    spacing::omit_list_commas::rule(),
     spacing::pipe_spacing::rule(),
+    spacing::prefer_multiline_functions::rule(),
+    spacing::prefer_multiline_lists::rule(),
+    spacing::prefer_multiline_records::rule(),
     strong_typing::argument::rule(),
     strong_typing::paths::rule(),
     strong_typing::pipeline::rule(),

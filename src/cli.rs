@@ -17,7 +17,7 @@ use rayon::prelude::*;
 use crate::{
     Config, LintEngine, LintLevel, output,
     rules::ALL_RULES,
-    sets::{BUILTIN_LINT_SETS, DEFAULT_RULE_MAP},
+    sets::{BUILTIN_LINT_SETS, RULE_LEVEL_OVERRIDES},
     violation::Violation,
 };
 
@@ -286,7 +286,7 @@ fn list_sets() {
 fn explain_rule(config: &Config, rule_id: &str) {
     if let Some(rule) = ALL_RULES.iter().find(|r| r.id == rule_id) {
         let lint_level = config.get_lint_level(rule.id);
-        let default_level = DEFAULT_RULE_MAP
+        let default_level = RULE_LEVEL_OVERRIDES
             .rules
             .iter()
             .find(|(id, _)| *id == rule.id)

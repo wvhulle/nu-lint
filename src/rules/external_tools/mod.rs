@@ -1,0 +1,10 @@
+pub mod curl;
+pub mod exa;
+pub mod eza;
+pub mod fd;
+pub mod hostname;
+pub mod jq;
+pub mod printenv;
+pub mod rg;
+pub mod wget;
+pub mod which;

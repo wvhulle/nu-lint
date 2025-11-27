@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     LintError,
-    sets::{BUILTIN_LINT_SETS, DEFAULT_RULE_MAP},
+    sets::{BUILTIN_LINT_SETS, RULE_LEVEL_OVERRIDES},
 };
 
 /// Lint level configuration (inspired by Clippy)
@@ -211,7 +211,7 @@ impl Config {
         }
 
         max_level.unwrap_or_else(|| {
-            DEFAULT_RULE_MAP
+            RULE_LEVEL_OVERRIDES
                 .rules
                 .iter()
                 .find(|(id, _)| *id == rule_id)

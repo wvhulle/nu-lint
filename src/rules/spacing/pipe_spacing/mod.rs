@@ -206,6 +206,7 @@ pub const fn rule() -> Rule {
         "Pipes should have exactly one space before and after when on the same line",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/style_guide.html#basic")
 }
 
 #[cfg(test)]

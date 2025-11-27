@@ -187,6 +187,7 @@ pub const fn rule() -> Rule {
         "Prefer range iteration over while loops with counters",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/each.html")
 }
 
 #[cfg(test)]

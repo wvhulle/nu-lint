@@ -104,6 +104,7 @@ pub const fn rule() -> Rule {
          use { body }, and closures with params use {|x| body}",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/style_guide.html#one-line-format")
 }
 #[cfg(test)]
 mod detect_bad;

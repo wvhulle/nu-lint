@@ -140,6 +140,7 @@ pub const fn rule() -> Rule {
         "Functions should not mix different types of I/O operations",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/custom_commands.html")
 }
 
 #[cfg(test)]

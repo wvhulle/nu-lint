@@ -32,6 +32,7 @@ pub const fn rule() -> Rule {
         "Use 'select' instead of external cut",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/select.html")
 }
 
 #[cfg(test)]

@@ -201,6 +201,7 @@ pub const fn rule() -> Rule {
         "Use Nu's 'open' command instead of 'cat' for better file handling",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/open.html")
 }
 
 #[cfg(test)]

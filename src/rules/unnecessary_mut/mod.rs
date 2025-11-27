@@ -106,6 +106,7 @@ pub const fn rule() -> Rule {
         "Variables should only be marked 'mut' when they are actually reassigned",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/variables.html#mutable-variables")
 }
 
 #[cfg(test)]

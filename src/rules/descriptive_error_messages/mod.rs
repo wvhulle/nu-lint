@@ -120,6 +120,7 @@ pub const fn rule() -> Rule {
         "Error messages should be descriptive and actionable",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/creating_errors.html")
 }
 
 #[cfg(test)]

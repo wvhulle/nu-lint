@@ -75,6 +75,7 @@ pub const fn rule() -> Rule {
         "Named parameters (flags) in main functions should have documentation comments",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/custom_commands.html#flags")
 }
 
 #[cfg(test)]

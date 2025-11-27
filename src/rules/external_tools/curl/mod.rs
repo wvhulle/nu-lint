@@ -232,6 +232,7 @@ pub const fn rule() -> Rule {
         "Use Nushell's http commands instead of curl for better data handling",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/http_get.html")
 }
 
 #[cfg(test)]

@@ -46,6 +46,7 @@ pub const fn rule() -> Rule {
         "Function bodies should not exceed 80 lines to maintain readability",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/custom_commands.html")
 }
 #[cfg(test)]
 mod detect_bad;

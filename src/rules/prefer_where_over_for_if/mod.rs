@@ -364,6 +364,7 @@ pub const fn rule() -> Rule {
         "Prefer 'where' filter over for loop with if statement",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/where.html")
 }
 
 #[cfg(test)]

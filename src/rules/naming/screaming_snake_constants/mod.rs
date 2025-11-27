@@ -48,6 +48,7 @@ pub const fn rule() -> Rule {
         "Constants should use SCREAMING_SNAKE_CASE naming convention",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/style_guide.html#environment-variables")
 }
 #[cfg(test)]
 mod detect_bad;

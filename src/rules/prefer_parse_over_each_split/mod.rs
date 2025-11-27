@@ -68,6 +68,7 @@ pub const fn rule() -> Rule {
         "Prefer 'parse' over 'each' with 'split row' for structured text processing",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/parse.html")
 }
 
 #[cfg(test)]

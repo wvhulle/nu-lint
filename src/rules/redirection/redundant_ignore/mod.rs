@@ -110,6 +110,7 @@ pub const fn rule() -> Rule {
         "Commands producing output that is discarded with '| ignore'",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/ignore.html")
 }
 
 #[cfg(test)]

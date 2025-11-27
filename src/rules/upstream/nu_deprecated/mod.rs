@@ -26,6 +26,7 @@ pub const fn rule() -> Rule {
         "Nushell parser detected deprecated command or flag usage",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/")
 }
 
 #[cfg(test)]

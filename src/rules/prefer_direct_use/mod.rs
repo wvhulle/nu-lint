@@ -235,6 +235,9 @@ pub const fn rule() -> Rule {
         "Prefer direct list use over copying items into a mutable list",
         check,
     )
+    .with_doc_url(
+        "https://www.nushell.sh/book/thinking_in_nu.html#variables-are-immutable-by-default",
+    )
 }
 
 #[cfg(test)]

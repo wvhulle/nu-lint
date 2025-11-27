@@ -40,6 +40,7 @@ pub const fn rule() -> Rule {
         "Prefer 'length' over external wc",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/length.html")
 }
 
 #[cfg(test)]

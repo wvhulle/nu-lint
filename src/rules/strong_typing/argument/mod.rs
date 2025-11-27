@@ -184,6 +184,7 @@ pub const fn rule() -> Rule {
         "Parameters should have type annotations",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/custom_commands.html#parameter-types")
 }
 
 #[cfg(test)]

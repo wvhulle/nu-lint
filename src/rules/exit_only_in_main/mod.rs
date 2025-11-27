@@ -57,6 +57,7 @@ pub const fn rule() -> Rule {
         "Avoid using 'exit' in functions other than 'main'",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/exit.html")
 }
 
 #[cfg(test)]

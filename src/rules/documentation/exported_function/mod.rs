@@ -79,6 +79,7 @@ pub const fn rule() -> Rule {
         "Exported functions should have documentation comments",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/modules.html")
 }
 
 #[cfg(test)]

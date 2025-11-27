@@ -120,9 +120,10 @@ fn check(context: &LintContext) -> Vec<Violation> {
 pub const fn rule() -> Rule {
     Rule::new(
         "prefer_compound_assignment",
-        "Use compound assignment operators (+=, -=, etc.) for clarity",
+        "Prefer compound assignment operators (+=, -=, etc.) over expanded form",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/operators.html")
 }
 
 #[cfg(test)]

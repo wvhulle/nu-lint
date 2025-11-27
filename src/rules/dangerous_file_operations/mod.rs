@@ -249,6 +249,7 @@ pub const fn rule() -> Rule {
         "Detect dangerous file operations that could cause data loss",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/running_externals.html")
 }
 
 #[cfg(test)]

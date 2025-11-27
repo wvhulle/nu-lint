@@ -80,6 +80,7 @@ pub const fn rule() -> Rule {
          instead",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/modules.html")
 }
 
 #[cfg(test)]

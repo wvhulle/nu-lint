@@ -53,6 +53,7 @@ pub const fn rule() -> Rule {
         "Use Nu's 'first' command instead of 'head' for cleaner syntax",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/first.html")
 }
 
 #[cfg(test)]

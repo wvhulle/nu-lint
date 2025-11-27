@@ -205,6 +205,7 @@ pub const fn rule() -> Rule {
         "Use Nu's built-in 'ls' instead of external ls command for structured data",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/ls.html")
 }
 
 #[cfg(test)]

@@ -287,6 +287,7 @@ pub const fn rule() -> Rule {
          journal.",
         check,
     )
+    .with_doc_url("https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html#SyslogLevelPrefix=")
 }
 
 #[cfg(test)]

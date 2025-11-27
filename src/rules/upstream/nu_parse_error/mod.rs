@@ -68,6 +68,7 @@ pub const fn rule() -> Rule {
         "Nushell parser encountered a syntax error",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/")
 }
 #[cfg(test)]
 mod detect_bad;

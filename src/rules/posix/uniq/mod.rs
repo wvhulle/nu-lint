@@ -166,6 +166,7 @@ pub const fn rule() -> Rule {
         "Use Nu's 'uniq' command for structured data support",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/uniq.html")
 }
 
 #[cfg(test)]

@@ -126,6 +126,7 @@ pub const fn rule() -> Rule {
         "Use Nu's built-in 'cd' instead of external cd command",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/cd.html")
 }
 
 #[cfg(test)]

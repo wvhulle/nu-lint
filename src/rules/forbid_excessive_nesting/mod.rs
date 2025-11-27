@@ -265,6 +265,7 @@ pub const fn rule() -> Rule {
         "Avoid excessive nesting (more than 4 levels deep)",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/thinking_in_nu.html")
 }
 
 #[cfg(test)]

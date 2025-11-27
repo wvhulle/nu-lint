@@ -246,6 +246,7 @@ pub const fn rule() -> Rule {
         "Use Nushell pipelines (where/split column/select/each) instead of awk",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/coming_from_bash.html")
 }
 
 #[cfg(test)]

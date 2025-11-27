@@ -182,6 +182,7 @@ pub const fn rule() -> Rule {
         "Use Nu's 'sort' command for better data type support",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/sort.html")
 }
 
 #[cfg(test)]

@@ -279,6 +279,7 @@ pub const fn rule() -> Rule {
         "Prefer 'parse' command over manual string splitting with indexed access",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/parse.html")
 }
 
 #[cfg(test)]

@@ -79,6 +79,7 @@ pub const fn rule() -> Rule {
         "Use 'error make' instead of 'print stderr' + 'exit' for structured error handling",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/error_make.html")
 }
 
 #[cfg(test)]

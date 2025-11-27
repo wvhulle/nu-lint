@@ -144,6 +144,7 @@ pub const fn rule() -> Rule {
         "Prefer row conditions over closures in 'where' for conciseness",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/where.html")
 }
 
 #[cfg(test)]

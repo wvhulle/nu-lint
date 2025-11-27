@@ -38,6 +38,7 @@ pub const fn rule() -> Rule {
          conditions",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/control_flow.html")
 }
 
 #[cfg(test)]

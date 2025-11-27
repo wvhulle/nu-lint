@@ -61,6 +61,7 @@ pub const fn rule() -> Rule {
         "Omit commas between list items as per Nushell style guide",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/style_guide.html#basic")
 }
 #[cfg(test)]
 mod detect_bad;

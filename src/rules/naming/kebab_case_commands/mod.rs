@@ -40,6 +40,7 @@ pub const fn rule() -> Rule {
         "Custom commands should use kebab-case naming convention",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/style_guide.html#commands")
 }
 
 #[cfg(test)]

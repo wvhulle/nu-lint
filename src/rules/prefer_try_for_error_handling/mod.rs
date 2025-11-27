@@ -107,6 +107,7 @@ pub const fn rule() -> Rule {
         "Use 'try' blocks instead of 'do' blocks for error-prone operations",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/try.html")
 }
 
 #[cfg(test)]

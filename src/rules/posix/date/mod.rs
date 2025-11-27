@@ -111,6 +111,7 @@ pub const fn rule() -> Rule {
         "Use 'date now' instead of external date",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/date_now.html")
 }
 
 #[cfg(test)]

@@ -53,6 +53,7 @@ pub const fn rule() -> Rule {
         "Use Nu's 'last' command instead of 'tail' for cleaner syntax",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/last.html")
 }
 
 #[cfg(test)]

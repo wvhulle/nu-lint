@@ -103,6 +103,7 @@ pub const fn rule() -> Rule {
         "Variables should use snake_case naming convention",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/style_guide.html#variables-and-command-parameters")
 }
 
 #[cfg(test)]

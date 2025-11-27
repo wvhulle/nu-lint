@@ -169,6 +169,7 @@ pub const fn rule() -> Rule {
         "Detect functions that have pure computation before side effects",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/custom_commands.html")
 }
 
 #[cfg(test)]

@@ -256,6 +256,7 @@ pub const fn rule() -> Rule {
         "Use Nu's 'find' or 'where' instead of 'grep' for better data handling",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/find.html")
 }
 
 #[cfg(test)]

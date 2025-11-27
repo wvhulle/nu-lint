@@ -204,6 +204,7 @@ pub const fn rule() -> Rule {
         "Prefer 'complete' over redirecting stderr to /dev/null for idiomatic error handling",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/complete.html")
 }
 
 #[cfg(test)]

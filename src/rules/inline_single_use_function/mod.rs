@@ -84,6 +84,7 @@ pub const fn rule() -> Rule {
         "Detect single-line custom commands used only once that could be inlined",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/custom_commands.html")
 }
 #[cfg(test)]
 mod detect_bad;

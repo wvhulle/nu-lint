@@ -172,6 +172,7 @@ pub const fn rule() -> Rule {
         "Check exit codes when using 'complete' to capture external command results",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/complete.html")
 }
 
 #[cfg(test)]

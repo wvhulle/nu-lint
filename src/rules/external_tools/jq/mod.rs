@@ -379,6 +379,7 @@ pub const fn rule() -> Rule {
         "Prefer Nushell built-ins over jq for data operations that have direct equivalents",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/from_json.html")
 }
 
 #[cfg(test)]

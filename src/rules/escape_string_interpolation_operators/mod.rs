@@ -260,6 +260,7 @@ pub const fn rule() -> Rule {
          operations)",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/working_with_strings.html#string-interpolation")
 }
 
 #[cfg(test)]

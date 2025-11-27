@@ -40,6 +40,7 @@ pub const fn rule() -> Rule {
         "Detect helper functions that are never called in files with a 'main' function",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/custom_commands.html")
 }
 
 #[cfg(test)]

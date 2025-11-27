@@ -199,6 +199,7 @@ pub const fn rule() -> Rule {
         "Replace 'print' + 'exit' patterns with 'error make' for proper error handling",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/error_make.html")
 }
 
 #[cfg(test)]

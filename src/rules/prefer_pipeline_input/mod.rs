@@ -502,6 +502,7 @@ pub const fn rule() -> Rule {
          composability",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/pipelines.html")
 }
 
 #[cfg(test)]

@@ -138,6 +138,7 @@ pub const fn rule() -> Rule {
         "Discourage use of builtin 'echo' command as it's just an identity function",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/thinking_in_nu.html")
 }
 
 #[cfg(test)]

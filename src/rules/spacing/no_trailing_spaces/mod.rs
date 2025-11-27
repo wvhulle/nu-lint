@@ -36,6 +36,7 @@ pub const fn rule() -> Rule {
         "Eliminate trailing spaces at the end of lines",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/style_guide.html#multi-line-format")
 }
 #[cfg(test)]
 mod detect_bad;

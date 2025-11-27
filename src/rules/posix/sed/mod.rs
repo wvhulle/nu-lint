@@ -40,6 +40,7 @@ pub const fn rule() -> Rule {
         "Use Nu's 'str replace' instead of 'sed' for text substitution",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/str_replace.html")
 }
 
 /// Parse sed command arguments to extract the operation and parameters

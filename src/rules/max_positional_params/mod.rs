@@ -30,6 +30,9 @@ pub const fn rule() -> Rule {
         "Custom commands should have ≤ 2 positional parameters",
         check,
     )
+    .with_doc_url(
+        "https://www.nushell.sh/book/style_guide.html#options-and-parameters-of-custom-commands",
+    )
 }
 #[cfg(test)]
 mod detect_bad;

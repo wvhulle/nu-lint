@@ -138,6 +138,7 @@ pub const fn rule() -> Rule {
          propagate pipeline errors by default)",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/complete.html")
 }
 
 #[cfg(test)]

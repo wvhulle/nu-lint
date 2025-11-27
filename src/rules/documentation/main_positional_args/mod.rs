@@ -118,6 +118,7 @@ pub const fn rule() -> Rule {
         "Positional parameters in main functions should have documentation comments",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/custom_commands.html")
 }
 
 #[cfg(test)]

@@ -214,6 +214,7 @@ pub const fn rule() -> Rule {
         "Scripts with main functions that expect pipeline input must have --stdin in shebang",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/scripts.html")
 }
 
 #[cfg(test)]

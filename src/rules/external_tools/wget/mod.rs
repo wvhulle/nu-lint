@@ -91,6 +91,7 @@ pub const fn rule() -> Rule {
         "Use 'http get | save' instead of wget",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/http_get.html")
 }
 
 #[cfg(test)]

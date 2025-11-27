@@ -205,6 +205,7 @@ pub const fn rule() -> Rule {
         "Use Nu's 'ls' with glob patterns instead of 'fd' command",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/glob.html")
 }
 
 #[cfg(test)]

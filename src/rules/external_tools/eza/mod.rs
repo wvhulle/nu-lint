@@ -38,6 +38,7 @@ pub const fn rule() -> Rule {
         "Use Nu's built-in 'ls' instead of eza",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/ls.html")
 }
 
 #[cfg(test)]

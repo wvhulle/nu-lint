@@ -52,6 +52,7 @@ pub const fn rule() -> Rule {
         "Prefer $env over printenv",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/environment.html")
 }
 
 #[cfg(test)]

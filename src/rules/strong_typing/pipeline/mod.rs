@@ -285,6 +285,7 @@ pub const fn rule() -> Rule {
         "Custom commands that use pipeline input or produce output should have type annotations",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/custom_commands.html#input-output-types")
 }
 
 #[cfg(test)]

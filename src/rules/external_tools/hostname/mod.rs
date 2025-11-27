@@ -41,6 +41,7 @@ pub const fn rule() -> Rule {
         "Use '(sys host).hostname' instead of external hostname",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/commands/docs/sys_host.html")
 }
 
 #[cfg(test)]

@@ -124,6 +124,7 @@ pub const fn rule() -> Rule {
         "Functions should not both print to stdout and return data",
         check,
     )
+    .with_doc_url("https://www.nushell.sh/book/pipelines.html")
 }
 
 #[cfg(test)]

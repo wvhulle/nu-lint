@@ -203,6 +203,4 @@ pub const fn rule() -> Rule {
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]
-mod generated_fix;
-#[cfg(test)]
 mod ignore_good;

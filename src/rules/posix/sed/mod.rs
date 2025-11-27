@@ -264,4 +264,8 @@ fn build_fix(
 }
 
 #[cfg(test)]
-mod tests;
+mod detect_bad;
+#[cfg(test)]
+mod generated_fix;
+#[cfg(test)]
+mod ignore_good;

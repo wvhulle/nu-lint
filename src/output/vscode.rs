@@ -72,7 +72,11 @@ fn violation_to_vscode_diagnostic(violation: &Violation) -> VsCodeDiagnostic {
             },
         },
         severity: lint_level_to_severity(violation.lint_level),
-        code: violation.rule_id.as_deref().unwrap_or("unknown").to_string(),
+        code: violation
+            .rule_id
+            .as_deref()
+            .unwrap_or("unknown")
+            .to_string(),
         source: "nu-lint".to_string(),
         message: violation.message.to_string(),
         related_information: violation.help.as_ref().map(|suggestion| {

@@ -10,7 +10,6 @@ pub mod log;
 pub mod output;
 mod rule;
 mod rules;
-mod sets;
 mod violation;
 
 use std::io;

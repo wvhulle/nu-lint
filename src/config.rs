@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     LintError,
-    sets::{BUILTIN_LINT_SETS, RULE_LEVEL_OVERRIDES},
+    rules::sets::{BUILTIN_LINT_SETS, RULE_LEVEL_OVERRIDES},
 };
 
 /// Lint level configuration (inspired by Clippy)
@@ -89,9 +89,7 @@ impl<'de> Deserialize<'de> for Config {
 
 fn merge_bare_items_into_lints(lints: &mut LintConfig, bare_items: HashMap<String, LintLevel>) {
     for (name, level) in bare_items {
-        let is_set = BUILTIN_LINT_SETS
-            .iter()
-            .any(|(set_name, _)| *set_name == name);
+        let is_set = BUILTIN_LINT_SETS.iter().any(|set| set.name == name);
 
         if is_set {
             lints.sets.insert(name, level);
@@ -195,14 +193,14 @@ impl Config {
         let mut max_level: Option<LintLevel> = None;
 
         for (set_name, level) in &self.lints.sets {
-            let Some((_, lint_set)) = BUILTIN_LINT_SETS
+            let Some(lint_set) = BUILTIN_LINT_SETS
                 .iter()
-                .find(|(name, _)| *name == set_name.as_str())
+                .find(|set| set.name == set_name.as_str())
             else {
                 continue;
             };
 
-            if !lint_set.rules.contains(&rule_id) {
+            if !lint_set.rules.iter().any(|rule| rule.id == rule_id) {
                 continue;
             }
 
@@ -214,7 +212,7 @@ impl Config {
             RULE_LEVEL_OVERRIDES
                 .rules
                 .iter()
-                .find(|(id, _)| *id == rule_id)
+                .find(|(rule, _)| rule.id == rule_id)
                 .map(|(_, level)| level)
                 .copied()
                 .unwrap_or(LintLevel::Warn)

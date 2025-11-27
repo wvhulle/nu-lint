@@ -66,7 +66,8 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .filter(|(block_id, _)| has_single_statement_body(**block_id, context))
         .filter(|(_, name)| count_function_calls(name, context) == 1)
         .map(|(_, function_name)| {
-            Violation::new(format!("Function `{function_name}` has a single-line body and is only used once"),
+            Violation::new(
+                format!("Function `{function_name}` has a single-line body and is only used once"),
                 context.find_declaration_span(function_name),
             )
             .with_help(

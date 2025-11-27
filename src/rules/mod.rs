@@ -22,7 +22,7 @@ mod missing_stdin_in_shebang;
 mod naming;
 
 mod external_tools;
-mod posix;
+mod posix_tools;
 mod prefer_compound_assignment;
 mod prefer_direct_use;
 mod prefer_error_make_for_stderr;
@@ -59,7 +59,6 @@ pub const ALL_RULES: &[Rule] = &[
     exit_only_in_main::rule(),
     external_script_as_argument::rule(),
     external_tools::curl::rule(),
-    external_tools::exa::rule(),
     external_tools::eza::rule(),
     external_tools::fd::rule(),
     external_tools::hostname::rule(),
@@ -76,22 +75,22 @@ pub const ALL_RULES: &[Rule] = &[
     naming::kebab_case_commands::rule(),
     naming::screaming_snake_constants::rule(),
     naming::snake_case_variables::rule(),
-    posix::awk::rule(),
-    posix::cat::rule(),
-    posix::cd::rule(),
-    posix::cut::rule(),
-    posix::date::rule(),
-    posix::echo::rule(),
-    posix::find::rule(),
-    posix::grep::rule(),
-    posix::head::rule(),
-    posix::ls::rule(),
-    posix::read::rule(),
-    posix::sed::rule(),
-    posix::sort::rule(),
-    posix::tail::rule(),
-    posix::uniq::rule(),
-    posix::wc::rule(),
+    posix_tools::awk::rule(),
+    posix_tools::cat::rule(),
+    posix_tools::cd::rule(),
+    posix_tools::cut::rule(),
+    posix_tools::date::rule(),
+    posix_tools::echo::rule(),
+    posix_tools::find::rule(),
+    posix_tools::grep::rule(),
+    posix_tools::head::rule(),
+    posix_tools::ls::rule(),
+    posix_tools::read::rule(),
+    posix_tools::sed::rule(),
+    posix_tools::sort::rule(),
+    posix_tools::tail::rule(),
+    posix_tools::uniq::rule(),
+    posix_tools::wc::rule(),
     prefer_compound_assignment::rule(),
     prefer_direct_use::rule(),
     prefer_error_make_for_stderr::rule(),

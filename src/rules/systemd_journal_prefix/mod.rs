@@ -187,7 +187,8 @@ fn create_violation(
         "Add '<{suggested_level}>' prefix to the message:\n  {command_name} {fixed_string}"
     );
 
-    Violation::new("Output without systemd journal log level prefix - consider adding prefix for proper \
+    Violation::new(
+        "Output without systemd journal log level prefix - consider adding prefix for proper \
          logging",
         span,
     )
@@ -226,7 +227,8 @@ fn create_numeric_prefix_violation(
          {command_name} {fixed_string}"
     );
 
-    Violation::new("Numeric systemd journal prefix found - keyword prefixes are more readable",
+    Violation::new(
+        "Numeric systemd journal prefix found - keyword prefixes are more readable",
         span,
     )
     .with_help(help_message)

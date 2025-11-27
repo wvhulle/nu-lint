@@ -80,7 +80,8 @@ fn check(context: &LintContext) -> Vec<Violation> {
         &|expr| {
             is_do_block_with_error_prone_ops(expr, context).map_or_else(Vec::new, |span| {
                 vec![
-                    Violation::new("Use 'try' blocks instead of 'do' blocks for error-prone operations"
+                    Violation::new(
+                        "Use 'try' blocks instead of 'do' blocks for error-prone operations"
                             .to_string(),
                         span,
                     )

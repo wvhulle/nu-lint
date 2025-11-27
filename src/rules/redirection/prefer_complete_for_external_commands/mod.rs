@@ -88,12 +88,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
          $result.stderr}}\n}}\n$result.stdout"
     );
 
-    Some(
-        Violation::new(message,
-            first_element.expr.span,
-        )
-        .with_help(help),
-    )
+    Some(Violation::new(message, first_element.expr.span).with_help(help))
 }
 
 fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<Violation>) {

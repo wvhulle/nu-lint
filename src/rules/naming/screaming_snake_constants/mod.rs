@@ -25,7 +25,8 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 None
             } else {
                 Some(
-                    Violation::new(format!(
+                    Violation::new(
+                        format!(
                             "Constant '{const_name}' should use SCREAMING_SNAKE_CASE naming \
                              convention"
                         ),

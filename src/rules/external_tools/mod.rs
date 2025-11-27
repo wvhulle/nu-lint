@@ -1,5 +1,4 @@
 pub mod curl;
-pub mod exa;
 pub mod eza;
 pub mod fd;
 pub mod hostname;

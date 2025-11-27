@@ -211,7 +211,8 @@ fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<Violation> {
 
     // Create appropriate violation message
     let violation = if analysis.consistent_variable {
-        Violation::new(format!(
+        Violation::new(
+            format!(
                 "If-else-if chain comparing '{compared_var}' to different values - consider using \
                  'match'"
             ),
@@ -223,7 +224,8 @@ fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<Violation> {
                 .to_string(),
         )
     } else {
-        Violation::new("Long if-else-if chain - consider using 'match' for clearer branching",
+        Violation::new(
+            "Long if-else-if chain - consider using 'match' for clearer branching",
             call.span(),
         )
         .with_help("For multiple related conditions, 'match' provides clearer pattern matching")

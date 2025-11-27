@@ -79,7 +79,11 @@ fn violation_to_diagnostic(violation: &Violation) -> Diagnostic {
         },
         severity: Some(lint_level_to_severity(violation.lint_level)),
         code: Some(NumberOrString::String(
-            violation.rule_id.as_deref().unwrap_or("unknown").to_string(),
+            violation
+                .rule_id
+                .as_deref()
+                .unwrap_or("unknown")
+                .to_string(),
         )),
         code_description: violation
             .doc_url

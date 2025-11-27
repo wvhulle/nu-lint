@@ -56,16 +56,14 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
     let combined_span = nu_protocol::Span::new(start_span.start, end_span.end);
     let pipeline_text = &context.source[combined_span.start..combined_span.end];
 
-    let violation = Violation::new("Discarding command output with '| ignore'",
-        ignore_span,
-    )
-    .with_help(format!(
-        "Command '{command_name}' produces output that is being discarded with '| ignore'.\n\nIf \
-         you don't need the output, consider:\n1. Removing the command if it has no side \
-         effects\n2. Using error handling if you only care about success/failure:\n   try {{ \
-         {command_name} }}\n3. If the output is intentionally discarded, add a comment explaining \
-         why"
-    ));
+    let violation = Violation::new("Discarding command output with '| ignore'", ignore_span)
+        .with_help(format!(
+            "Command '{command_name}' produces output that is being discarded with '| \
+             ignore'.\n\nIf you don't need the output, consider:\n1. Removing the command if it \
+             has no side effects\n2. Using error handling if you only care about \
+             success/failure:\n   try {{ {command_name} }}\n3. If the output is intentionally \
+             discarded, add a comment explaining why"
+        ));
 
     let pipeline_span = nu_protocol::Span::new(
         pipeline.elements.first()?.expr.span.start,

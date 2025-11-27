@@ -25,7 +25,8 @@ fn check_brace_spacing(source: &str, span: Span, brace_type: &BraceType) -> Vec<
                 && inner[..pipe_pos].chars().all(char::is_whitespace)
             {
                 vec![
-                    Violation::new("No space allowed after opening brace before closure parameters"
+                    Violation::new(
+                        "No space allowed after opening brace before closure parameters"
                             .to_string(),
                         span,
                     )
@@ -40,7 +41,8 @@ fn check_brace_spacing(source: &str, span: Span, brace_type: &BraceType) -> Vec<
             let ends_with_space = inner.ends_with(char::is_whitespace);
             if !starts_with_space || !ends_with_space {
                 vec![
-                    Violation::new("Blocks and closures without parameters should have spaces inside braces"
+                    Violation::new(
+                        "Blocks and closures without parameters should have spaces inside braces"
                             .to_string(),
                         span,
                     )
@@ -58,7 +60,8 @@ fn check_brace_spacing(source: &str, span: Span, brace_type: &BraceType) -> Vec<
             let ends_with_space = inner.ends_with(char::is_whitespace);
             if starts_with_space || ends_with_space {
                 vec![
-                    Violation::new("Records should not have spaces inside braces".to_string(),
+                    Violation::new(
+                        "Records should not have spaces inside braces".to_string(),
                         span,
                     )
                     .with_help("Use {key: value} for records"),

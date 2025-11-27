@@ -24,7 +24,8 @@ fn check(context: &LintContext) -> Vec<Violation> {
         }
 
         vec![
-            Violation::new(format!("Command '{cmd_name}' should follow naming convention"),
+            Violation::new(
+                format!("Command '{cmd_name}' should follow naming convention"),
                 name_span,
             )
             .with_help(format!("Consider renaming to: {kebab_case_name}")),

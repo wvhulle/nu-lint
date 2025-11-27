@@ -249,7 +249,8 @@ fn check_pattern_nesting(
 }
 
 fn create_violation(span: nu_protocol::Span, depth: usize) -> Violation {
-    Violation::new(format!(
+    Violation::new(
+        format!(
             "Code has nesting depth of {depth}, which exceeds the maximum of {MAX_NESTING_DEPTH}"
         ),
         span,

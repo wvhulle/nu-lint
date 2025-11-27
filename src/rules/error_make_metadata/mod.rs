@@ -171,7 +171,8 @@ fn check_error_make_metadata(
     let suggestion = build_suggestion(&missing_fields, &current_msg, &example_span);
 
     Some(
-        Violation::new(format!("error make call is missing metadata fields: {missing_list}"),
+        Violation::new(
+            format!("error make call is missing metadata fields: {missing_list}"),
             call_span,
         )
         .with_help(suggestion),

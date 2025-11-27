@@ -351,7 +351,8 @@ mod tests {
         assert!(
             violations
                 .iter()
-                .any(|v| v.rule_id.as_deref() == Some("snake_case_variables") && v.lint_level == LintLevel::Warn)
+                .any(|v| v.rule_id.as_deref() == Some("snake_case_variables")
+                    && v.lint_level == LintLevel::Warn)
         );
     }
 
@@ -411,7 +412,8 @@ mod tests {
         assert!(
             violations
                 .iter()
-                .any(|v| v.rule_id.as_deref() == Some("snake_case_variables") && v.lint_level == LintLevel::Deny)
+                .any(|v| v.rule_id.as_deref() == Some("snake_case_variables")
+                    && v.lint_level == LintLevel::Deny)
         );
     }
 
@@ -446,7 +448,8 @@ mod tests {
         assert!(
             violations
                 .iter()
-                .any(|v| v.rule_id.as_deref() == Some("snake_case_variables") && v.lint_level == LintLevel::Deny)
+                .any(|v| v.rule_id.as_deref() == Some("snake_case_variables")
+                    && v.lint_level == LintLevel::Deny)
         );
     }
 
@@ -485,7 +488,8 @@ mod tests {
         assert!(
             violations
                 .iter()
-                .any(|v| v.rule_id.as_deref() == Some("snake_case_variables") && v.lint_level == LintLevel::Deny)
+                .any(|v| v.rule_id.as_deref() == Some("snake_case_variables")
+                    && v.lint_level == LintLevel::Deny)
         );
     }
 

@@ -114,7 +114,8 @@ fn create_dangerous_path_violation(
     is_recursive: bool,
 ) -> Violation {
     let severity = if is_recursive { "CRITICAL" } else { "WARNING" };
-    Violation::new(format!(
+    Violation::new(
+        format!(
             "{severity}: Dangerous file operation '{cmd_name} {path_str}' - could cause data loss"
         ),
         command_span,
@@ -129,7 +130,8 @@ fn create_variable_validation_violation(
     path_str: &str,
     command_span: Span,
 ) -> Violation {
-    Violation::new(format!("Variable '{path_str}' used in '{cmd_name}' command without visible validation"),
+    Violation::new(
+        format!("Variable '{path_str}' used in '{cmd_name}' command without visible validation"),
         command_span,
     )
     .with_help(format!(

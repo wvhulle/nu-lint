@@ -69,7 +69,8 @@ fn check_record_for_generic_msg(
 
         if is_generic_error_message(&msg_text) {
             return Some(
-                Violation::new("Error message is too generic and not descriptive",
+                Violation::new(
+                    "Error message is too generic and not descriptive",
                     value.span,
                 )
                 .with_help(

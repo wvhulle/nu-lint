@@ -74,7 +74,8 @@ fn check_call(call: &Call, ctx: &LintContext) -> Option<Violation> {
     };
 
     Some(
-        Violation::new(format!("{var_type} '{var_name}' should use snake_case naming convention"),
+        Violation::new(
+            format!("{var_type} '{var_name}' should use snake_case naming convention"),
             name_expr.span,
         )
         .with_help(format!("Consider renaming to: {snake_case_name}"))

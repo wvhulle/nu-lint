@@ -47,9 +47,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 parse_error.to_string(),
             );
             seen.insert(key).then(|| {
-                let mut violation = Violation::new(parse_error.to_string(),
-                    parse_error.span(),
-                );
+                let mut violation = Violation::new(parse_error.to_string(), parse_error.span());
 
                 if let Some(help) = build_help_text(parse_error) {
                     violation = violation.with_help(help);

@@ -78,6 +78,7 @@ pub const ALL_RULES: &[Rule] = &[
     naming::snake_case_variables::rule(),
     posix::awk::rule(),
     posix::cat::rule(),
+    posix::cd::rule(),
     posix::cut::rule(),
     posix::date::rule(),
     posix::echo::rule(),

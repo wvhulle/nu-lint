@@ -3,6 +3,7 @@
 
 pub mod awk;
 pub mod cat;
+pub mod cd;
 pub mod cut;
 pub mod date;
 pub mod echo;

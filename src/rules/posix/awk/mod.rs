@@ -8,16 +8,10 @@ use crate::{
     violation::{Fix, Replacement},
 };
 
-const NOTE: &str =
-    "Use 'where' for filtering, 'select' for columns, or 'each' for row-by-row processing.";
-
-#[derive(Default)]
-struct AwkOptions {
-    fs: Option<String>,
-    pattern: Option<String>,
-    print_field: Option<usize>,
-    files: Vec<String>,
-}
+const NOTE: &str = "Use 'where' for filtering rows, 'split column' for field extraction, 'select' \
+                    for column projection, or 'each' for row-by-row transformation. Nushell's \
+                    structured data pipelines replace awk's text-based approach with typed \
+                    columns and native operations.";
 
 fn strip_quotes(s: &str) -> &str {
     let t = s.trim();
@@ -28,97 +22,174 @@ fn strip_quotes(s: &str) -> &str {
     }
 }
 
-fn parse_program(program: &str) -> (Option<String>, Option<usize>) {
-    let p = program.trim();
-    // handle formats: /regex/ {print $N} | {print $N} | /regex/
-    let mut pat: Option<String> = None;
-    let mut print: Option<usize> = None;
-
-    // extract /regex/
-    if let Some((start, end)) = p
-        .find('/')
-        .and_then(|s| p[s + 1..].find('/').map(|er| (s, s + 1 + er)))
-    {
-        pat = Some(p[start + 1..end].to_string());
-    }
-
-    // extract print $N inside braces or alone
-    let body = p
-        .trim_start_matches(|c: char| c == '{' || c.is_whitespace())
-        .trim_end_matches(|c: char| c == '}' || c.is_whitespace());
-    if let Some(idx) = body.find("print $") {
-        let rest = &body[idx + 7..];
-        let digits: String = rest.chars().take_while(char::is_ascii_digit).collect();
-        if let Ok(n) = digits.parse::<usize>() {
-            print = Some(n);
-        }
-    }
-
-    (pat, print)
+#[derive(Default)]
+struct AwkOptions {
+    field_separator: Option<String>,
+    pattern: Option<String>,
+    print_fields: Vec<usize>,
+    files: Vec<String>,
+    nf_referenced: bool,
+    nr_referenced: bool,
 }
 
-fn parse_awk<'a>(args: impl IntoIterator<Item = &'a str>) -> AwkOptions {
-    let mut opts = AwkOptions::default();
-    let mut iter = args.into_iter().peekable();
-    while let Some(arg) = iter.next() {
+impl AwkOptions {
+    fn parse<'a>(args: impl IntoIterator<Item = &'a str>) -> Self {
+        let mut opts = Self::default();
+        let mut iter = args.into_iter();
+
+        while let Some(arg) = iter.next() {
+            Self::parse_arg(&mut opts, arg, &mut iter);
+        }
+
+        opts
+    }
+
+    fn parse_arg<'a>(opts: &mut Self, arg: &'a str, iter: &mut impl Iterator<Item = &'a str>) {
         match arg {
             "-F" => {
                 if let Some(sep) = iter.next() {
-                    opts.fs = Some(strip_quotes(sep).to_string());
+                    opts.field_separator = Some(strip_quotes(sep).to_string());
                 }
             }
             s if s.starts_with("-F") && s.len() > 2 => {
-                opts.fs = Some(strip_quotes(&s[2..]).to_string());
+                opts.field_separator = Some(strip_quotes(&s[2..]).to_string());
+            }
+            "-v" | "-f" => {
+                iter.next();
             }
             s if s.starts_with('"') || s.starts_with('\'') => {
-                let prog = strip_quotes(s);
-                let (pat, print) = parse_program(prog);
-                if pat.is_some() {
-                    opts.pattern = pat;
-                }
-                if print.is_some() {
-                    opts.print_field = print;
-                }
+                opts.parse_program(strip_quotes(s));
             }
-            s if !s.starts_with('-') => opts.files.push(s.to_string()),
+            s if !s.starts_with('-') && !s.contains('{') => {
+                opts.files.push(s.to_string());
+            }
+            s if s.contains('{') => {
+                opts.parse_program(s);
+            }
             _ => {}
         }
     }
-    opts
+
+    fn parse_program(&mut self, program: &str) {
+        let p = program.trim();
+
+        if let Some((start, end)) = p
+            .find('/')
+            .and_then(|s| p[s + 1..].find('/').map(|er| (s, s + 1 + er)))
+        {
+            self.pattern = Some(p[start + 1..end].to_string());
+        }
+
+        let body = p
+            .trim_start_matches(|c: char| c == '{' || c.is_whitespace())
+            .trim_end_matches(|c: char| c == '}' || c.is_whitespace());
+
+        self.extract_print_fields(body);
+
+        if body.contains("NF") {
+            self.nf_referenced = true;
+        }
+        if body.contains("NR") {
+            self.nr_referenced = true;
+        }
+    }
+
+    fn extract_print_fields(&mut self, body: &str) {
+        let mut idx = 0;
+        while let Some(pos) = body[idx..].find("print $") {
+            let field_start = idx + pos + 7;
+            let digits: String = body[field_start..]
+                .chars()
+                .take_while(char::is_ascii_digit)
+                .collect();
+            if let Ok(n) = digits.parse::<usize>() {
+                self.add_field_if_valid(n);
+            }
+            idx = field_start + digits.len();
+        }
+    }
+
+    fn add_field_if_valid(&mut self, n: usize) {
+        if n > 0 && !self.print_fields.contains(&n) {
+            self.print_fields.push(n);
+        }
+    }
+
+    fn to_nushell(&self) -> (String, String) {
+        let mut parts: Vec<String> = Vec::new();
+        let mut examples: Vec<String> = Vec::new();
+
+        if let Some(file) = self.files.first() {
+            parts.push(format!("open --raw {file} | lines"));
+        } else {
+            parts.push("lines".to_string());
+        }
+
+        if let Some(pat) = &self.pattern {
+            parts.push(format!("where $it =~ \"{pat}\""));
+            examples.push(format!("/{pat}/ pattern: use 'where $it =~ \"{pat}\"'"));
+        }
+
+        self.add_field_processing(&mut parts, &mut examples);
+
+        if self.nr_referenced {
+            parts.insert(1, "enumerate".to_string());
+            examples.push("NR: use 'enumerate' for line numbers".to_string());
+        }
+
+        if self.nf_referenced && self.print_fields.is_empty() {
+            examples.push("NF: use '($row | columns | length)' for field count".to_string());
+        }
+
+        if parts.len() == 1 {
+            parts.push("each {|line| $line}".to_string());
+        }
+
+        let replacement = parts.join(" | ");
+        let description = build_description(&examples);
+        (replacement, description)
+    }
+
+    fn add_field_processing(&self, parts: &mut Vec<String>, examples: &mut Vec<String>) {
+        if self.print_fields.is_empty() && !self.nf_referenced {
+            return;
+        }
+
+        let sep = self.field_separator.as_deref().unwrap_or(" ");
+        let sep_display = if sep == " " { "\" \"" } else { sep };
+        parts.push(format!("split column {sep_display}"));
+        examples.push(format!("-F{sep}: use 'split column {sep_display}'"));
+
+        if self.print_fields.len() == 1 {
+            let col = format!("column{}", self.print_fields[0]);
+            parts.push(format!("get {col}"));
+            examples.push(format!("${}: use 'get {col}'", self.print_fields[0]));
+        } else if self.print_fields.len() > 1 {
+            let cols: Vec<String> = self
+                .print_fields
+                .iter()
+                .map(|n| format!("column{n}"))
+                .collect();
+            parts.push(format!("select {}", cols.join(" ")));
+            examples.push("multiple $N: use 'select column1 column2 ...'".to_string());
+        }
+    }
 }
 
-fn build_replacement(opts: &AwkOptions) -> (String, String) {
-    // Base
-    let mut parts: Vec<String> = Vec::new();
-    if let Some(file) = opts.files.first() {
-        parts.push(format!("open {file} | lines"));
-    } else {
-        parts.push("lines".to_string());
+fn build_description(examples: &[String]) -> String {
+    let mut parts = vec!["Convert awk to Nushell pipeline.".to_string()];
+
+    if !examples.is_empty() {
+        parts.push(format!("Conversions: {}.", examples.join("; ")));
     }
 
-    // Pattern filter
-    if let Some(pat) = &opts.pattern {
-        parts.push(format!("where $it =~ \"{pat}\""));
-    }
+    parts.push(
+        "Nushell's structured data replaces awk's $N fields with typed columns, enabling \
+         operations like 'where', 'select', 'sort-by' without text parsing."
+            .to_string(),
+    );
 
-    // Print field
-    if let Some(n) = opts.print_field {
-        let col = format!("column{n}");
-        let sep = opts.fs.as_deref().unwrap_or(" ");
-        if sep == " " {
-            parts.push("split column \" \"".to_string());
-        } else {
-            parts.push(format!("split column {sep}"));
-        }
-        parts.push(format!("get {col}"));
-    } else {
-        // generic map
-        parts.push("each {|it| $it }".to_string());
-    }
-
-    let replacement = parts.join(" | ");
-    let explanation = "Convert awk to Nushell pipeline".to_string();
-    (replacement, explanation)
+    parts.join(" ")
 }
 
 fn build_fix(
@@ -127,55 +198,59 @@ fn build_fix(
     expr_span: nu_protocol::Span,
     context: &LintContext,
 ) -> Fix {
-    let opts = parse_awk(external_args_slices(args, context));
-    let (replacement, description) = build_replacement(&opts);
-    Fix::with_explanation(description, vec![Replacement::new(expr_span, replacement)])
+    let opts = AwkOptions::parse(external_args_slices(args, context));
+    let (replacement, description) = opts.to_nushell();
+
+    Fix {
+        explanation: description.into(),
+        replacements: vec![Replacement {
+            span: expr_span,
+            replacement_text: replacement.into(),
+        }],
+    }
 }
 
 fn check(context: &LintContext) -> Vec<Violation> {
-    detect_external_commands(context, "prefer_builtin_awk", "awk", NOTE, Some(build_fix))
+    let mut violations = Vec::new();
+
+    violations.extend(detect_external_commands(
+        context,
+        "prefer_builtin_awk",
+        "awk",
+        NOTE,
+        Some(build_fix),
+    ));
+
+    violations.extend(detect_external_commands(
+        context,
+        "prefer_builtin_awk",
+        "gawk",
+        NOTE,
+        Some(build_fix),
+    ));
+
+    violations.extend(detect_external_commands(
+        context,
+        "prefer_builtin_awk",
+        "mawk",
+        NOTE,
+        Some(build_fix),
+    ));
+
+    violations
 }
 
 pub const fn rule() -> Rule {
     Rule::new(
         "prefer_builtin_awk",
-        "Use Nushell pipelines (where/select/each) instead of awk",
+        "Use Nushell pipelines (where/split column/select/each) instead of awk",
         check,
     )
 }
 
 #[cfg(test)]
-mod tests {
-    use super::rule;
-
-    #[test]
-    fn converts_awk_to_nu_pipeline() {
-        let source = "^awk";
-        rule().assert_replacement_contains(source, "lines | each");
-        rule().assert_fix_explanation_contains(source, "pipeline");
-    }
-
-    #[test]
-    fn converts_awk_print_first_field() {
-        let source = "^awk '{print $1}' input.txt";
-        rule().assert_replacement_contains(
-            source,
-            "open input.txt | lines | split column \" \" | get column1",
-        );
-    }
-
-    #[test]
-    fn converts_awk_with_field_separator() {
-        let source = "^awk -F, '{print $2}' data.csv";
-        rule().assert_replacement_contains(
-            source,
-            "open data.csv | lines | split column , | get column2",
-        );
-    }
-
-    #[test]
-    fn converts_awk_filter_pattern() {
-        let source = "^awk '/error/' logfile";
-        rule().assert_replacement_contains(source, "open logfile | lines | where $it =~ \"error\"");
-    }
-}
+mod detect_bad;
+#[cfg(test)]
+mod generated_fix;
+#[cfg(test)]
+mod ignore_good;

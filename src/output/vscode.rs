@@ -1,3 +1,9 @@
+//! VS Code JSON output format (deprecated, use `lsp` format instead)
+//!
+//! This module is kept for backwards compatibility with existing VS Code
+//! extensions. New integrations should use the `lsp` module which follows the
+//! standard LSP 3.17 spec.
+
 use std::collections::HashMap;
 
 use serde::Serialize;
@@ -13,6 +19,12 @@ fn lint_level_to_severity(lint_level: LintLevel) -> u8 {
     }
 }
 
+/// Format violations as VS Code JSON (deprecated, use `format_lsp_json`
+/// instead)
+#[deprecated(
+    since = "0.0.51",
+    note = "Use format_lsp_json for standard LSP-compatible output"
+)]
 #[must_use]
 pub fn format_vscode_json(violations: &[Violation]) -> String {
     let mut diagnostics_by_file: HashMap<String, Vec<VsCodeDiagnostic>> = HashMap::new();
@@ -109,7 +121,6 @@ fn violation_to_vscode_diagnostic(violation: &Violation) -> VsCodeDiagnostic {
                 })
                 .collect(),
         }),
-        doc_url: violation.doc_url.map(ToString::to_string),
     }
 }
 
@@ -130,8 +141,6 @@ pub struct VsCodeDiagnostic {
     pub related_information: Option<Vec<VsCodeRelatedInformation>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub code_action: Option<VsCodeCodeAction>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub doc_url: Option<String>,
 }
 
 #[derive(Serialize)]

@@ -18,10 +18,21 @@ use std::io;
 pub use config::{Config, LintLevel};
 pub use engine::LintEngine;
 use miette::Diagnostic;
+// Re-export Diagnostic with an alias to avoid conflict with miette::Diagnostic
+pub use output::Diagnostic as LspDiagnostic;
 pub use output::{
-    JsonFix, JsonOutput, JsonReplacement, JsonViolation, Summary, VsCodeCodeAction,
-    VsCodeDiagnostic, VsCodeJsonOutput, VsCodeLocation, VsCodePosition, VsCodeRange,
-    VsCodeRelatedInformation, VsCodeTextEdit, format_json, format_text, format_vscode_json,
+    CodeDescription, DiagnosticRelatedInformation, DiagnosticSeverity, JsonFix, JsonOutput,
+    JsonReplacement, JsonViolation, Location, LspJsonOutput, Position, QuickFix, Range, Summary,
+    TextEdit, format_json, format_lsp_json, format_text,
+};
+// VS Code format exports (deprecated, kept for backwards compatibility)
+#[allow(
+    deprecated,
+    reason = "re-exporting deprecated module for backwards compatibility"
+)]
+pub use output::{
+    VsCodeCodeAction, VsCodeDiagnostic, VsCodeJsonOutput, VsCodeLocation, VsCodePosition,
+    VsCodeRange, VsCodeRelatedInformation, VsCodeTextEdit, format_vscode_json,
 };
 use thiserror::Error;
 use toml::de;

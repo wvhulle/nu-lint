@@ -85,10 +85,18 @@ pub enum Commands {
 
 #[derive(clap::ValueEnum, Clone, Copy)]
 pub enum Format {
+    /// Human-readable text format (default)
     Text,
+    /// Simple JSON format (deprecated, use 'lsp' instead for editor
+    /// integration)
     Json,
-    /// VS Code LSP-compatible JSON format
+    /// LSP-compatible JSON format (recommended for editors: VS Code, Neovim,
+    /// Helix, etc.)
+    Lsp,
+    /// Backwards compatibility alias for 'lsp' format (deprecated)
+    #[value(name = "vscode-json")]
     VscodeJson,
+    /// GitHub Actions annotations format
     Github,
 }
 
@@ -249,10 +257,15 @@ pub fn lint_stdin(engine: &LintEngine, source: &str) -> (Vec<Violation>, bool) {
 }
 
 /// Format and output linting results
+#[allow(
+    deprecated,
+    reason = "supporting deprecated vscode-json format for backwards compatibility"
+)]
 pub fn output_results(violations: &[Violation], format: Option<Format>) {
     let output = match format.unwrap_or(Format::Text) {
         Format::Text | Format::Github => output::format_text(violations),
         Format::Json => output::format_json(violations),
+        Format::Lsp => output::format_lsp_json(violations),
         Format::VscodeJson => output::format_vscode_json(violations),
     };
     println!("{output}");

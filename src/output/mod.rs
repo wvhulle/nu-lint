@@ -1,12 +1,24 @@
 mod json;
+mod lsp;
 mod text;
 mod vscode;
 
 use std::{borrow::Cow, fs};
 
 pub use json::{JsonFix, JsonOutput, JsonReplacement, JsonViolation, format_json};
+pub use lsp::{LspJsonOutput, QuickFix, format_lsp_json};
+// Re-export LSP types from lsp_types crate
+pub use lsp_types::{
+    CodeDescription, Diagnostic, DiagnosticRelatedInformation, DiagnosticSeverity, Location,
+    Position, Range, TextEdit,
+};
 use serde::Serialize;
 pub use text::format_text;
+// VS Code format exports (deprecated)
+#[allow(
+    deprecated,
+    reason = "re-exporting deprecated module for backwards compatibility"
+)]
 pub use vscode::{
     VsCodeCodeAction, VsCodeDiagnostic, VsCodeJsonOutput, VsCodeLocation, VsCodePosition,
     VsCodeRange, VsCodeRelatedInformation, VsCodeTextEdit, format_vscode_json,

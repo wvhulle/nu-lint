@@ -88,8 +88,10 @@ Output formats:
 
 ```bash
 nu-lint script.nu --format text            # Human-readable (default)
-nu-lint script.nu --format vscode-json     # VS Code LSP-compatible JSON
+nu-lint script.nu --format lsp             # LSP-compatible JSON (recommended for editors)
 ```
+
+The `lsp` format outputs diagnostics compatible with the [Language Server Protocol](https://microsoft.github.io/language-server-protocol/) (LSP 3.17), which is supported by most modern editors including VS Code, Neovim, Helix, Emacs, and Sublime Text.
 
 ## Configuration
 

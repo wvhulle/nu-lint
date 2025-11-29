@@ -8,54 +8,47 @@ use nu_protocol::{
 use crate::{
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
+    effect::{
+        CommonEffect,
+        external::{ExternEffect, has_external_side_effect},
+    },
     rule::Rule,
     violation::Violation,
 };
 
+struct CompleteAssignment {
+    var_id: VarId,
+    var_name: String,
+    span: Span,
+    exit_code_checked_inline: bool,
+    command_name: Option<String>,
+}
+
 fn cell_path_has_member(members: &[PathMember], member_name: &str) -> bool {
-    members.iter().any(|member| {
-        matches!(
-            member,
-            PathMember::String { val, .. } if val == member_name
-        )
+    members
+        .iter()
+        .any(|m| matches!(m, PathMember::String { val, .. } if val == member_name))
+}
+
+fn is_exit_code_cell_path(expr: &Expr) -> bool {
+    matches!(expr, Expr::FullCellPath(cp) if cell_path_has_member(&cp.tail, "exit_code"))
+}
+
+fn is_get_exit_code_call(expr: &Expr, context: &LintContext) -> bool {
+    let Expr::Call(call) = expr else { return false };
+
+    call.is_call_to_command("get", context) && call.get_positional_arg(0).is_some_and(|arg| {
+        matches!(&arg.expr, Expr::CellPath(cp) if cell_path_has_member(&cp.members, "exit_code"))
+            || matches!(&arg.expr, Expr::String(s) if s == "exit_code")
     })
 }
 
-fn is_exit_code_access(expr: &Expression, context: &LintContext) -> bool {
+fn has_exit_code_access(expr: &Expression, context: &LintContext) -> bool {
     use nu_protocol::ast::Traverse;
 
-    expr.find_map(context.working_set, &|inner_expr| {
-        if let Expr::FullCellPath(cell_path) = &inner_expr.expr
-            && cell_path_has_member(&cell_path.tail, "exit_code")
-        {
-            log::debug!("Found .exit_code field access");
-            return FindMapResult::Found(());
-        }
-
-        if let Expr::Call(call) = &inner_expr.expr
-            && call.is_call_to_command("get", context)
-            && call.get_positional_arg(0).is_some_and(|arg| {
-                matches!(&arg.expr,
-                    Expr::CellPath(cp) if cell_path_has_member(&cp.members, "exit_code")
-                ) || matches!(&arg.expr, Expr::String(s) if s == "exit_code")
-            })
-        {
-            log::debug!("Found 'get exit_code' command");
-            return FindMapResult::Found(());
-        }
-
-        FindMapResult::Continue
-    })
-    .is_some()
-}
-
-fn has_complete_call(expr: &Expression, context: &LintContext) -> bool {
-    use nu_protocol::ast::Traverse;
-
-    expr.find_map(context.working_set, &|inner_expr| {
-        if let Expr::Call(inner_call) = &inner_expr.expr
-            && inner_call.is_call_to_command("complete", context)
-        {
+    expr.find_map(context.working_set, &|inner| {
+        if is_exit_code_cell_path(&inner.expr) || is_get_exit_code_call(&inner.expr, context) {
+            log::debug!("Found exit_code access");
             FindMapResult::Found(())
         } else {
             FindMapResult::Continue
@@ -64,54 +57,99 @@ fn has_complete_call(expr: &Expression, context: &LintContext) -> bool {
     .is_some()
 }
 
-fn extract_complete_assignment(
+fn has_complete_call(expr: &Expression, context: &LintContext) -> bool {
+    use nu_protocol::ast::Traverse;
+
+    expr.find_map(context.working_set, &|inner| {
+        if matches!(&inner.expr, Expr::Call(call) if call.is_call_to_command("complete", context)) {
+            FindMapResult::Found(())
+        } else {
+            FindMapResult::Continue
+        }
+    })
+    .is_some()
+}
+
+fn extract_command_name(cmd_expr: &Expression, context: &LintContext) -> String {
+    match &cmd_expr.expr {
+        Expr::String(s) => s.clone(),
+        Expr::GlobPattern(pattern, _) => pattern.clone(),
+        _ => context.source[cmd_expr.span.start..cmd_expr.span.end].to_string(),
+    }
+}
+
+fn has_dangerous_external_command(expr: &Expression, context: &LintContext) -> bool {
+    use nu_protocol::ast::Traverse;
+
+    expr.find_map(context.working_set, &|inner| {
+        let Expr::ExternalCall(cmd_expr, args) = &inner.expr else {
+            return FindMapResult::Continue;
+        };
+
+        let cmd_name = extract_command_name(cmd_expr, context);
+        let is_dangerous = has_external_side_effect(
+            &cmd_name,
+            ExternEffect::CommonEffect(CommonEffect::Dangerous),
+            context,
+            args,
+        );
+
+        if is_dangerous {
+            FindMapResult::Found(())
+        } else {
+            FindMapResult::Continue
+        }
+    })
+    .is_some()
+}
+
+fn try_extract_complete_assignment(
     expr: &Expression,
     context: &LintContext,
-) -> Option<(VarId, String, Span, bool, Option<String>)> {
+) -> Option<CompleteAssignment> {
     let Expr::Call(call) = &expr.expr else {
         return None;
     };
 
-    if !matches!(call.get_call_name(context).as_str(), "let" | "mut") {
-        return None;
-    }
+    matches!(call.get_call_name(context).as_str(), "let" | "mut").then_some(())?;
 
     let (var_id, var_name, _) = call.extract_variable_declaration(context)?;
     let value_arg = call.get_positional_arg(1)?;
 
-    if !has_complete_call(value_arg, context) {
+    has_complete_call(value_arg, context).then_some(())?;
+
+    if !has_dangerous_external_command(value_arg, context) {
+        log::debug!("Skipping '{var_name}' - external command is not marked as dangerous");
         return None;
     }
 
-    let exit_code_checked = is_exit_code_access(value_arg, context);
-    let command_name = value_arg.extract_external_command_name(context);
-
-    Some((var_id, var_name, expr.span, exit_code_checked, command_name))
+    Some(CompleteAssignment {
+        var_id,
+        var_name,
+        span: expr.span,
+        exit_code_checked_inline: has_exit_code_access(value_arg, context),
+        command_name: value_arg.extract_external_command_name(context),
+    })
 }
 
-fn find_complete_assignments(
-    context: &LintContext,
-) -> HashMap<VarId, (String, Span, bool, Option<String>)> {
+fn collect_complete_assignments(context: &LintContext) -> HashMap<VarId, CompleteAssignment> {
     use nu_protocol::ast::Traverse;
 
     let mut assignments = Vec::new();
     context.ast.flat_map(
         context.working_set,
         &|expr| {
-            extract_complete_assignment(expr, context)
+            try_extract_complete_assignment(expr, context)
                 .into_iter()
                 .collect()
         },
         &mut assignments,
     );
 
-    assignments
-        .into_iter()
-        .map(|(id, name, span, checked, cmd)| (id, (name, span, checked, cmd)))
-        .collect()
+    assignments.into_iter().map(|a| (a.var_id, a)).collect()
 }
 
-fn find_exit_code_checks(context: &LintContext) -> HashMap<VarId, Span> {
+fn collect_exit_code_checks(context: &LintContext) -> HashMap<VarId, Span> {
     use nu_protocol::ast::Traverse;
 
     let mut checks = Vec::new();
@@ -124,51 +162,65 @@ fn find_exit_code_checks(context: &LintContext) -> HashMap<VarId, Span> {
     checks.into_iter().collect()
 }
 
+fn is_exit_code_unchecked(
+    assignment: &CompleteAssignment,
+    exit_code_checks: &HashMap<VarId, Span>,
+) -> bool {
+    if assignment.exit_code_checked_inline {
+        log::debug!(
+            "Skipping variable {:?} - exit_code checked in assignment",
+            assignment.var_id
+        );
+        return false;
+    }
+
+    if exit_code_checks.contains_key(&assignment.var_id) {
+        log::debug!(
+            "Skipping variable {:?} - exit_code checked via variable reference",
+            assignment.var_id
+        );
+        return false;
+    }
+
+    true
+}
+
+fn create_violation(assignment: &CompleteAssignment) -> Violation {
+    let cmd_desc = assignment
+        .command_name
+        .as_ref()
+        .map_or(String::new(), |c| format!("'{c}' "));
+
+    Violation::new(
+        format!(
+            "External command {cmd_desc}result '{}' stored but exit code not checked",
+            assignment.var_name
+        ),
+        assignment.span,
+    )
+    .with_help(format!(
+        "Check the exit code to handle command failures. For example:\nif ${}.exit_code != 0 \
+         {{\n\x20   error make {{msg: '{cmd_desc}failed'}}\n}}\nOr use inline checking:\nlet \
+         success = ({cmd_desc}| complete | get exit_code) == 0",
+        assignment.var_name
+    ))
+}
+
 fn check(context: &LintContext) -> Vec<Violation> {
-    let assignments = find_complete_assignments(context);
-    let checks = find_exit_code_checks(context);
+    let assignments = collect_complete_assignments(context);
+    let exit_code_checks = collect_exit_code_checks(context);
 
     assignments
-        .iter()
-        .filter(|(var_id, (_, _, checked_inline, _))| {
-            if *checked_inline {
-                log::debug!("Skipping variable {var_id:?} - exit_code checked in assignment");
-                return false;
-            }
-            if checks.contains_key(var_id) {
-                log::debug!(
-                    "Skipping variable {var_id:?} - exit_code checked via variable reference"
-                );
-                return false;
-            }
-            true
-        })
-        .map(|(_, (var_name, span, _, cmd_name))| {
-            let cmd_desc = cmd_name
-                .as_ref()
-                .map_or(String::new(), |c| format!("'{c}' "));
-
-            Violation::new(
-                format!(
-                    "External command {cmd_desc}result '{var_name}' stored but exit code not \
-                     checked"
-                ),
-                *span,
-            )
-            .with_help(format!(
-                "Check the exit code to handle command failures. For example:\nif \
-                 ${var_name}.exit_code != 0 {{\n\x20   error make {{msg: \
-                 '{cmd_desc}failed'}}\n}}\nOr use inline checking:\nlet success = ({cmd_desc}| \
-                 complete | get exit_code) == 0"
-            ))
-        })
+        .values()
+        .filter(|a| is_exit_code_unchecked(a, &exit_code_checks))
+        .map(create_violation)
         .collect()
 }
 
 pub const fn rule() -> Rule {
     Rule::new(
         "check_complete_exit_code",
-        "Check exit codes when using 'complete' to capture external command results",
+        "Check exit codes when using 'complete' to capture dangerous external command results",
         check,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/complete.html")

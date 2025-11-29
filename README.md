@@ -4,7 +4,7 @@ Linter for the innovative [Nu](https://www.nushell.sh/) shell.
 
 Learning to use a new shell is a radical change that can use some assistance. This project is aimed at helping new users of the [Nu](https://www.nushell.sh/) shell. Nu shell has a lot of interesting and useful features and this program will give you hints to use all the features of Nu.
 
-For example, the rule `prefer_pipeline_input` in this program recommends to use pipelines instead of positional arguments:
+For example, the rule `prefer_pipeline_input` in this program recommends to use pipelines instead of positional arguments (to use lazy instead of eager list processing):
 
 ```nu
 def filter-positive [numbers] { 
@@ -39,7 +39,7 @@ Build from source:
 
 ```bash
 cargo install --path .
-cargo install --git . "$THIS_GIT_URL"
+cargo install --git "$THIS_GIT_URL"
 ```
 
 ### VS Code extension
@@ -71,9 +71,9 @@ in
 Basic:
 
 ```bash
-nu-lint                                    # Lint working directory
-nu-lint script.nu                          # Lint a file
-nu-lint directory/                         # Lint directory
+nu-lint                               # Lint working directory
+nu-lint script.nu                     # Lint a file
+nu-lint directory/                    # Lint directory
 'let x =' | nu-lint                   # Pipe in over stdin
 ```
 
@@ -88,10 +88,8 @@ Output formats:
 
 ```bash
 nu-lint script.nu --format text            # Human-readable (default)
-nu-lint script.nu --format lsp             # LSP-compatible JSON (recommended for editors)
+nu-lint script.nu --format lsp             # JSON 
 ```
-
-The `lsp` format outputs diagnostics compatible with the [Language Server Protocol](https://microsoft.github.io/language-server-protocol/) (LSP 3.17), which is supported by most modern editors including VS Code, Neovim, Helix, Emacs, and Sublime Text.
 
 ## Configuration
 

@@ -2062,6 +2062,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "lsp-server"
+version = "0.7.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7d6ada348dbc2703cbe7637b2dda05cff84d3da2819c24abcb305dd613e0ba2e"
+dependencies = [
+ "crossbeam-channel",
+ "log",
+ "serde",
+ "serde_derive",
+ "serde_json",
+]
+
+[[package]]
 name = "lsp-types"
 version = "0.97.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2516,7 +2529,7 @@ dependencies = [
 
 [[package]]
 name = "nu-lint"
-version = "0.0.53"
+version = "0.0.54"
 dependencies = [
  "clap",
  "criterion",
@@ -2525,6 +2538,7 @@ dependencies = [
  "ignore",
  "jaq-core",
  "log",
+ "lsp-server",
  "lsp-types",
  "miette",
  "nu-cli",

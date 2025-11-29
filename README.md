@@ -42,10 +42,6 @@ cargo install --path .
 cargo install --git "$THIS_GIT_URL"
 ```
 
-### VS Code extension
-
-Available at [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=WillemVanhulle.nu-lint).
-
 ### Nix
 
 To install in Nix or NixOS, add to `configuration.nix`:
@@ -66,7 +62,27 @@ in
 }
 ```
 
-## Usage
+## Editor extension
+
+### VS Code extension
+
+Available at [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=WillemVanhulle.nu-lint).
+
+### Helix
+
+Add to your `~/.config/helix/languages.toml`:
+
+```toml
+[language-server.nu-lint]
+command = "nu-lint"
+args = ["lsp"]
+
+[[language]]
+name = "nu"
+language-servers = ["nu-lint"]
+```
+
+## CLI usage
 
 Basic:
 
@@ -87,8 +103,8 @@ nu-lint --fix             # Apply
 Output formats:
 
 ```bash
-nu-lint script.nu --format text            # Human-readable (default)
-nu-lint script.nu --format lsp             # JSON 
+nu-lint script.nu --format text           # Human-readable (default)
+nu-lint script.nu --format json-vscode    # JSON 
 ```
 
 ## Configuration

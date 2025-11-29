@@ -2,9 +2,16 @@
 
 Linter for the innovative [Nu](https://www.nushell.sh/) shell.
 
-Learning to use a new shell is a radical change that can use some assistance. This project is aimed at helping new users of the [Nu](https://www.nushell.sh/) shell. Nu shell has a lot of interesting and useful features and this program will give you hints to use all the features of Nu.
+Learning to use a new shell is a radical change that can use some assistance. This project is aimed at helping new and intermediate users of the [Nu](https://www.nushell.sh/) shell. Nu shell has a lot of useful features not found in other scripting languages. This linter will give you hints to use all of them and even offer automatic fixes.
 
-For example, the rule `prefer_pipeline_input` in this program recommends to use pipelines instead of positional arguments (to use lazy instead of eager list processing):
+All rules are optional and can be disabled with a configuration file. The rule definitions are designed to be compatible with:
+
+- The standard Nu parser  [nu-check](https://www.nushell.sh/commands/docs/nu-check.html).
+- The standard Nu formatter [topiary-nushell](https://github.com/blindFS/topiary-nushell).
+
+## Example
+
+The rule `prefer_pipeline_input` recommends to use pipelines instead of positional arguments:
 
 ```nu
 def filter-positive [numbers] { 
@@ -18,14 +25,9 @@ def filter-positive [] {
 }
 ```
 
-All rules are optional and can be disabled with a configuration file. The rule definitions are designed to be compatible with:
-
-- The standard Nu parser  [nu-check](https://www.nushell.sh/commands/docs/nu-check.html).
-- The standard Nu formatter [topiary-nushell](https://github.com/blindFS/topiary-nushell).
+This rule in particular encourages you to use lazy pipeline input. When you evaluate a traditional positional list argument, the whole list is processed at once, but when you use implicit pipeline input (by starting the function body with `where`), the list processed lazily (without loading the list in memory completely at once).
 
 ## Installation
-
-### Cross-platform
 
 From crates.io:
 
@@ -82,29 +84,26 @@ name = "nu"
 language-servers = ["nu-lint"]
 ```
 
+### Other
+
+You can also implement your own editor extensions using the `lsp` subcommand as in: `nu-lint lsp`. This will spawn a "[Language Server Protocol](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/)"-compatible server.
+
 ## CLI usage
 
-Basic:
+Run this linter from the command-line with:
 
 ```bash
 nu-lint                               # Lint working directory
-nu-lint script.nu                     # Lint a file
-nu-lint directory/                    # Lint directory
+nu-lint script.nu                     # Lint a file or directory
 'let x =' | nu-lint                   # Pipe in over stdin
 ```
 
-Apply fixes (also works with STDIN):
+Apply automatic fixes:
 
 ```bash
-nu-lint --fix --dry-run   # Test
-nu-lint --fix             # Apply
-```
-
-Output formats:
-
-```bash
-nu-lint script.nu --format text           # Human-readable (default)
-nu-lint script.nu --format json-vscode    # JSON 
+nu-lint --fix --dry-run     # Test fixes
+nu-lint --fix               # Apply fix
+'FRAGMENT' | nu-lint --fix  # Apply fix to STDIN
 ```
 
 ## Configuration

@@ -415,7 +415,7 @@ mod tests {
         let diagnostics = state.lint_document(&uri, "let x = 5");
 
         assert!(state.documents.contains_key(&uri));
-        assert_eq!(state.documents.get(&uri).unwrap().content, "let x = 5");
+        assert_eq!(state.documents[&uri].content, "let x = 5");
         // Diagnostics may or may not be empty depending on rules
         let _ = diagnostics;
     }

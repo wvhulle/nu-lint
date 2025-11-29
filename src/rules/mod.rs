@@ -29,6 +29,7 @@ mod prefer_compound_assignment;
 mod prefer_direct_use;
 mod prefer_error_make_for_stderr;
 mod prefer_is_not_empty;
+mod prefer_items_over_transpose;
 mod prefer_lines_over_split;
 mod prefer_match_over_if_chain;
 mod prefer_parse_command;
@@ -97,6 +98,7 @@ pub const ALL_RULES: &[Rule] = &[
     prefer_direct_use::rule(),
     prefer_error_make_for_stderr::rule(),
     prefer_is_not_empty::rule(),
+    prefer_items_over_transpose::rule(),
     prefer_lines_over_split::rule(),
     prefer_match_over_if_chain::rule(),
     prefer_parse_command::rule(),

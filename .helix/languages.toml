@@ -1,0 +1,7 @@
+[language-server.nu-lint]
+command = "cargo"
+args = ["run", "--", "lsp"]
+
+[[language]]
+name = "nu"
+language-servers = ["nu-lint"]

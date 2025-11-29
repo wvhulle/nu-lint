@@ -34,6 +34,7 @@ mod prefer_match_over_if_chain;
 mod prefer_parse_command;
 mod prefer_pipeline_input;
 mod prefer_range_iteration;
+mod prefer_subcommands_over_dispatch;
 mod prefer_try_for_error_handling;
 mod prefer_where_over_each_if;
 mod prefer_where_over_for_if;
@@ -101,6 +102,7 @@ pub const ALL_RULES: &[Rule] = &[
     prefer_parse_command::rule(),
     prefer_pipeline_input::rule(),
     prefer_range_iteration::rule(),
+    prefer_subcommands_over_dispatch::rule(),
     prefer_try_for_error_handling::rule(),
     prefer_where_over_each_if::rule(),
     prefer_where_over_for_if::rule(),

@@ -344,9 +344,9 @@ impl ExpressionExt for Expression {
     }
 
     fn is_external_filesystem_command(&self, context: &LintContext) -> bool {
-        if let Expr::ExternalCall(head, _) = &self.expr {
+        if let Expr::ExternalCall(head, args) = &self.expr {
             let cmd_name = &context.source[head.span.start..head.span.end];
-            has_external_side_effect(cmd_name, ExternEffect::ModifiesFileSystem, context, &[])
+            has_external_side_effect(cmd_name, ExternEffect::ModifiesFileSystem, context, args)
         } else {
             false
         }

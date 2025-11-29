@@ -12,6 +12,30 @@ pub enum CommonEffect {
     Dangerous,
 }
 
+pub fn is_unvalidated_variable(path: &str) -> bool {
+    path.starts_with('$') && !path.starts_with("$in")
+}
+
+pub fn matches_short_flag(arg_text: &str, flag_char: char) -> bool {
+    arg_text
+        .strip_prefix('-')
+        .filter(|rest| !rest.starts_with('-'))
+        .is_some_and(|rest| rest.contains(flag_char))
+        || is_dashless_flags(arg_text) && arg_text.contains(flag_char)
+}
+
+pub fn matches_long_flag(arg_text: &str, pattern: &str) -> bool {
+    arg_text == pattern || arg_text.starts_with(&format!("{pattern}="))
+}
+
+fn is_dashless_flags(text: &str) -> bool {
+    !text.starts_with('-')
+        && !text.is_empty()
+        && text
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
+}
+
 pub fn is_dangerous_path(path_str: &str) -> bool {
     EXACT_DANGEROUS_PATHS.contains(&path_str)
         || path_str.starts_with("/..")

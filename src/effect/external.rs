@@ -2,7 +2,10 @@ use nu_protocol::ast::ExternalArgument;
 
 use crate::{
     context::LintContext,
-    effect::{CommonEffect, is_dangerous_path},
+    effect::{
+        CommonEffect, is_dangerous_path, is_unvalidated_variable, matches_long_flag,
+        matches_short_flag,
+    },
 };
 
 /// Things that may happen at runtime for external commands.
@@ -95,12 +98,29 @@ pub fn extract_external_arg_text<'a>(arg: &ExternalArgument, context: &'a LintCo
 
 pub type ExternalSideEffectPredicate = fn(&LintContext, &[ExternalArgument]) -> bool;
 
-const fn external_always(_context: &LintContext, _args: &[ExternalArgument]) -> bool {
+const fn always(_context: &LintContext, _args: &[ExternalArgument]) -> bool {
     true
 }
 
-fn is_unvalidated_variable(path: &str) -> bool {
-    path.starts_with('$')
+fn has_flag(args: &[ExternalArgument], context: &LintContext, patterns: &[&str]) -> bool {
+    let matches_pattern = |arg_text: &str, pattern: &str| match pattern.strip_prefix("--") {
+        Some(_) => matches_long_flag(arg_text, pattern),
+        None => pattern
+            .strip_prefix('-')
+            .filter(|rest| rest.len() == 1)
+            .and_then(|rest| rest.chars().next())
+            .is_some_and(|flag_char| {
+                matches_long_flag(arg_text, pattern) || matches_short_flag(arg_text, flag_char)
+            }),
+    };
+
+    args.iter()
+        .map(|arg| extract_external_arg_text(arg, context))
+        .any(|arg_text| {
+            patterns
+                .iter()
+                .any(|pattern| matches_pattern(arg_text, pattern))
+        })
 }
 
 fn external_rm_is_dangerous(context: &LintContext, args: &[ExternalArgument]) -> bool {
@@ -116,6 +136,22 @@ fn external_mv_cp_is_dangerous(context: &LintContext, args: &[ExternalArgument])
         .any(|path| is_dangerous_path(path) || is_unvalidated_variable(path))
 }
 
+fn curl_modifies_fs(context: &LintContext, args: &[ExternalArgument]) -> bool {
+    has_flag(args, context, &["-o", "--output", "-O", "--remote-name"])
+}
+
+fn tar_modifies_fs(context: &LintContext, args: &[ExternalArgument]) -> bool {
+    has_flag(
+        args,
+        context,
+        &["-x", "--extract", "--get", "-c", "--create"],
+    )
+}
+
+fn sed_has_inplace(context: &LintContext, args: &[ExternalArgument]) -> bool {
+    has_flag(args, context, &["-i", "--in-place"])
+}
+
 pub const EXTERNAL_COMMAND_SIDE_EFFECTS: &[(
     &str,
     &[(ExternEffect, ExternalSideEffectPredicate)],
@@ -125,10 +161,10 @@ pub const EXTERNAL_COMMAND_SIDE_EFFECTS: &[(
         &[
             (
                 ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-                external_always,
+                always,
             ),
-            (ExternEffect::ModifiesFileSystem, external_always),
-            (ExternEffect::NoDataInStdout, external_always),
+            (ExternEffect::ModifiesFileSystem, always),
+            (ExternEffect::NoDataInStdout, always),
             (
                 ExternEffect::CommonEffect(CommonEffect::Dangerous),
                 external_rm_is_dangerous,
@@ -140,14 +176,14 @@ pub const EXTERNAL_COMMAND_SIDE_EFFECTS: &[(
         &[
             (
                 ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-                external_always,
+                always,
             ),
-            (ExternEffect::NoDataInStdout, external_always),
+            (ExternEffect::NoDataInStdout, always),
             (
                 ExternEffect::CommonEffect(CommonEffect::Dangerous),
                 external_mv_cp_is_dangerous,
             ),
-            (ExternEffect::ModifiesFileSystem, external_always),
+            (ExternEffect::ModifiesFileSystem, always),
         ],
     ),
     (
@@ -155,14 +191,14 @@ pub const EXTERNAL_COMMAND_SIDE_EFFECTS: &[(
         &[
             (
                 ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-                external_always,
+                always,
             ),
-            (ExternEffect::NoDataInStdout, external_always),
+            (ExternEffect::NoDataInStdout, always),
             (
                 ExternEffect::CommonEffect(CommonEffect::Dangerous),
                 external_mv_cp_is_dangerous,
             ),
-            (ExternEffect::ModifiesFileSystem, external_always),
+            (ExternEffect::ModifiesFileSystem, always),
         ],
     ),
     (
@@ -170,9 +206,9 @@ pub const EXTERNAL_COMMAND_SIDE_EFFECTS: &[(
         &[
             (
                 ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-                external_always,
+                always,
             ),
-            (ExternEffect::ModifiesFileSystem, external_always),
+            (ExternEffect::ModifiesFileSystem, tar_modifies_fs),
         ],
     ),
     ("echo", &[]),
@@ -181,9 +217,9 @@ pub const EXTERNAL_COMMAND_SIDE_EFFECTS: &[(
         &[
             (
                 ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-                external_always,
+                always,
             ),
-            (ExternEffect::ModifiesFileSystem, external_always),
+            (ExternEffect::ModifiesFileSystem, always),
         ],
     ),
     (
@@ -191,9 +227,9 @@ pub const EXTERNAL_COMMAND_SIDE_EFFECTS: &[(
         &[
             (
                 ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-                external_always,
+                always,
             ),
-            (ExternEffect::ModifiesFileSystem, external_always),
+            (ExternEffect::ModifiesFileSystem, always),
         ],
     ),
     (
@@ -201,9 +237,9 @@ pub const EXTERNAL_COMMAND_SIDE_EFFECTS: &[(
         &[
             (
                 ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-                external_always,
+                always,
             ),
-            (ExternEffect::ModifiesFileSystem, external_always),
+            (ExternEffect::ModifiesFileSystem, always),
         ],
     ),
     (
@@ -211,29 +247,26 @@ pub const EXTERNAL_COMMAND_SIDE_EFFECTS: &[(
         &[
             (
                 ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-                external_always,
+                always,
             ),
-            (ExternEffect::ModifiesFileSystem, external_always),
+            (ExternEffect::ModifiesFileSystem, always),
         ],
     ),
     (
         "ssh",
-        &[
-            (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-                external_always,
-            ),
-            (ExternEffect::ModifiesFileSystem, external_always),
-        ],
+        &[(
+            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            always,
+        )],
     ),
     (
         "curl",
         &[
             (
                 ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-                external_always,
+                always,
             ),
-            (ExternEffect::ModifiesFileSystem, external_always),
+            (ExternEffect::ModifiesFileSystem, curl_modifies_fs),
         ],
     ),
     (
@@ -241,30 +274,30 @@ pub const EXTERNAL_COMMAND_SIDE_EFFECTS: &[(
         &[
             (
                 ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-                external_always,
+                always,
             ),
-            (ExternEffect::ModifiesFileSystem, external_always),
+            (ExternEffect::ModifiesFileSystem, always),
         ],
     ),
     (
         "find",
         &[(
             ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-            external_always,
+            always,
         )],
     ),
     (
         "grep",
         &[(
             ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-            external_always,
+            always,
         )],
     ),
     (
         "awk",
         &[(
             ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-            external_always,
+            always,
         )],
     ),
     (
@@ -272,11 +305,12 @@ pub const EXTERNAL_COMMAND_SIDE_EFFECTS: &[(
         &[
             (
                 ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-                external_always,
+                always,
             ),
+            (ExternEffect::ModifiesFileSystem, sed_has_inplace),
             (
                 ExternEffect::CommonEffect(CommonEffect::Dangerous),
-                external_always,
+                sed_has_inplace,
             ),
         ],
     ),
@@ -284,56 +318,220 @@ pub const EXTERNAL_COMMAND_SIDE_EFFECTS: &[(
         "cat",
         &[(
             ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-            external_always,
+            always,
         )],
     ),
     (
         "head",
         &[(
             ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-            external_always,
+            always,
         )],
     ),
     (
         "tail",
         &[(
             ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-            external_always,
+            always,
         )],
     ),
     (
         "sort",
         &[(
             ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-            external_always,
+            always,
         )],
     ),
     (
         "uniq",
         &[(
             ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-            external_always,
+            always,
         )],
     ),
     (
         "wc",
         &[(
             ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-            external_always,
+            always,
         )],
     ),
     (
         "cut",
         &[(
             ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-            external_always,
+            always,
         )],
     ),
     (
         "xargs",
         &[(
             ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-            external_always,
+            always,
         )],
     ),
 ];
+
+#[cfg(test)]
+mod tests {
+    use nu_protocol::ast::Expr;
+
+    use super::*;
+
+    fn with_external_args<F, R>(source: &str, f: F) -> R
+    where
+        F: for<'b> FnOnce(&LintContext<'b>, &[ExternalArgument]) -> R,
+    {
+        LintContext::test_with_parsed_source(source, |context| {
+            let args = context
+                .ast
+                .pipelines
+                .first()
+                .and_then(|pipeline| pipeline.elements.first())
+                .and_then(|element| match &element.expr.expr {
+                    Expr::ExternalCall(_, args) => Some(args.as_ref()),
+                    _ => None,
+                })
+                .unwrap_or(&[]);
+            f(&context, args)
+        })
+    }
+
+    #[test]
+    fn test_curl_without_output_flag_does_not_modify_filesystem() {
+        with_external_args("curl https://example.com", |context, args| {
+            assert!(
+                !has_external_side_effect("curl", ExternEffect::ModifiesFileSystem, context, args),
+                "curl without output flag should not modify filesystem"
+            );
+        });
+    }
+
+    #[test]
+    fn test_curl_with_short_output_flag_modifies_filesystem() {
+        with_external_args("curl -o output.txt https://example.com", |context, args| {
+            assert!(
+                has_external_side_effect("curl", ExternEffect::ModifiesFileSystem, context, args),
+                "curl with -o flag should modify filesystem"
+            );
+        });
+    }
+
+    #[test]
+    fn test_curl_with_long_output_flag_modifies_filesystem() {
+        with_external_args(
+            "curl --output output.txt https://example.com",
+            |context, args| {
+                assert!(
+                    has_external_side_effect(
+                        "curl",
+                        ExternEffect::ModifiesFileSystem,
+                        context,
+                        args
+                    ),
+                    "curl with --output flag should modify filesystem"
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn test_curl_with_remote_name_modifies_filesystem() {
+        with_external_args("curl -O https://example.com/file.txt", |context, args| {
+            assert!(
+                has_external_side_effect("curl", ExternEffect::ModifiesFileSystem, context, args),
+                "curl with -O flag should modify filesystem"
+            );
+        });
+    }
+
+    #[test]
+    fn test_tar_list_does_not_modify_filesystem() {
+        with_external_args("tar -t -f archive.tar", |context, args| {
+            assert!(
+                !has_external_side_effect("tar", ExternEffect::ModifiesFileSystem, context, args),
+                "tar -t (list) should not modify filesystem"
+            );
+        });
+    }
+
+    #[test]
+    fn test_tar_extract_modifies_filesystem() {
+        with_external_args("tar -x -f archive.tar", |context, args| {
+            assert!(
+                has_external_side_effect("tar", ExternEffect::ModifiesFileSystem, context, args),
+                "tar -x (extract) should modify filesystem"
+            );
+        });
+    }
+
+    #[test]
+    fn test_tar_create_modifies_filesystem() {
+        with_external_args("tar -c -f archive.tar files/", |context, args| {
+            assert!(
+                has_external_side_effect("tar", ExternEffect::ModifiesFileSystem, context, args),
+                "tar -c (create) should modify filesystem"
+            );
+        });
+    }
+
+    #[test]
+    fn test_tar_create_combined_flags_modifies_filesystem() {
+        with_external_args("tar czf backup.tar.gz folder/", |context, args| {
+            assert!(
+                has_external_side_effect("tar", ExternEffect::ModifiesFileSystem, context, args),
+                "tar czf (create with compression) should modify filesystem"
+            );
+        });
+    }
+
+    #[test]
+    fn test_sed_without_inplace_does_not_modify_filesystem() {
+        with_external_args("sed 's/foo/bar/' file.txt", |context, args| {
+            assert!(
+                !has_external_side_effect("sed", ExternEffect::ModifiesFileSystem, context, args),
+                "sed without -i should not modify filesystem"
+            );
+        });
+    }
+
+    #[test]
+    fn test_sed_with_inplace_modifies_filesystem() {
+        with_external_args("sed -i 's/foo/bar/' file.txt", |context, args| {
+            assert!(
+                has_external_side_effect("sed", ExternEffect::ModifiesFileSystem, context, args),
+                "sed with -i should modify filesystem"
+            );
+        });
+    }
+
+    #[test]
+    fn test_sed_without_inplace_is_not_dangerous() {
+        with_external_args("sed 's/foo/bar/' file.txt", |context, args| {
+            assert!(
+                !has_external_side_effect(
+                    "sed",
+                    ExternEffect::CommonEffect(CommonEffect::Dangerous),
+                    context,
+                    args
+                ),
+                "sed without -i should not be dangerous"
+            );
+        });
+    }
+
+    #[test]
+    fn test_sed_with_inplace_is_dangerous() {
+        with_external_args("sed -i 's/foo/bar/' file.txt", |context, args| {
+            assert!(
+                has_external_side_effect(
+                    "sed",
+                    ExternEffect::CommonEffect(CommonEffect::Dangerous),
+                    context,
+                    args
+                ),
+                "sed with -i should be dangerous"
+            );
+        });
+    }
+}

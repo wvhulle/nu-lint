@@ -2,7 +2,7 @@ use nu_protocol::ast::{Argument, Call};
 
 use crate::{
     context::LintContext,
-    effect::{CommonEffect, is_dangerous_path},
+    effect::{CommonEffect, is_dangerous_path, is_unvalidated_variable},
 };
 /// Things that may happen at runtime for built-in Nu commands
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -79,7 +79,7 @@ pub fn can_error(command_name: &str, context: &LintContext, call: &Call) -> bool
     )
 }
 
-pub type BuiltinSideEffectPredicate = fn(&LintContext, &Call) -> bool;
+pub type EffectWhenFlags = fn(&LintContext, &Call) -> bool;
 
 const fn always(_context: &LintContext, _call: &Call) -> bool {
     true
@@ -101,9 +101,6 @@ fn print_to_stdout(_context: &LintContext, call: &Call) -> bool {
     !call.has_named_flag("stderr")
 }
 
-fn is_unvalidated_variable(path: &str) -> bool {
-    path.starts_with('$') && !path.starts_with("$in")
-}
 fn rm_is_dangerous(context: &LintContext, call: &Call) -> bool {
     call.arguments
         .iter()
@@ -119,10 +116,18 @@ fn mv_cp_is_dangerous(context: &LintContext, call: &Call) -> bool {
         .any(|path| is_dangerous_path(path) || is_unvalidated_variable(path))
 }
 
-pub const BUILTIN_COMMAND_SIDE_EFFECTS: &[(
-    &str,
-    &[(BuiltinEffect, BuiltinSideEffectPredicate)],
-)] = &[
+fn exit_is_dangerous(context: &LintContext, call: &Call) -> bool {
+    call.arguments.iter().any(|arg| {
+        if let Argument::Positional(expr) = arg {
+            let code_text = &context.source[expr.span.start..expr.span.end];
+            code_text != "0" && !code_text.starts_with('$')
+        } else {
+            false
+        }
+    })
+}
+
+pub const BUILTIN_COMMAND_SIDE_EFFECTS: &[(&str, &[(BuiltinEffect, EffectWhenFlags)])] = &[
     (
         "rm",
         &[
@@ -190,7 +195,10 @@ pub const BUILTIN_COMMAND_SIDE_EFFECTS: &[(
                 BuiltinEffect::CommonEffect(CommonEffect::LikelyErrors),
                 always,
             ),
-            (BuiltinEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (
+                BuiltinEffect::CommonEffect(CommonEffect::Dangerous),
+                exit_is_dangerous,
+            ),
         ],
     ),
     (
@@ -271,21 +279,7 @@ pub const BUILTIN_COMMAND_SIDE_EFFECTS: &[(
         )],
     ),
     (
-        "error make",
-        &[(
-            BuiltinEffect::CommonEffect(CommonEffect::LikelyErrors),
-            always,
-        )],
-    ),
-    (
         "input",
-        &[(
-            BuiltinEffect::CommonEffect(CommonEffect::LikelyErrors),
-            always,
-        )],
-    ),
-    (
-        "input list",
         &[(
             BuiltinEffect::CommonEffect(CommonEffect::LikelyErrors),
             always,
@@ -301,3 +295,94 @@ pub const BUILTIN_COMMAND_SIDE_EFFECTS: &[(
     ),
     ("git", &[]),
 ];
+
+#[cfg(test)]
+mod tests {
+    use nu_protocol::ast::Expr;
+
+    use super::*;
+
+    fn with_builtin_call<F, R>(source: &str, f: F) -> R
+    where
+        F: for<'b> FnOnce(&LintContext<'b>, &Call) -> R,
+    {
+        LintContext::test_with_parsed_source(source, |context| {
+            let call = context
+                .ast
+                .pipelines
+                .first()
+                .and_then(|pipeline| pipeline.elements.first())
+                .and_then(|element| match &element.expr.expr {
+                    Expr::Call(call) => Some(call),
+                    _ => None,
+                })
+                .expect("Expected a call expression");
+            f(&context, call)
+        })
+    }
+
+    #[test]
+    fn test_exit_zero_is_not_dangerous() {
+        with_builtin_call("exit 0", |context, call| {
+            assert!(
+                !has_builtin_side_effect(
+                    "exit",
+                    BuiltinEffect::CommonEffect(CommonEffect::Dangerous),
+                    context,
+                    call
+                ),
+                "exit 0 should not be dangerous"
+            );
+        });
+    }
+
+    #[test]
+    fn test_exit_nonzero_is_dangerous() {
+        with_builtin_call("exit 1", |context, call| {
+            assert!(
+                has_builtin_side_effect(
+                    "exit",
+                    BuiltinEffect::CommonEffect(CommonEffect::Dangerous),
+                    context,
+                    call
+                ),
+                "exit 1 should be dangerous"
+            );
+        });
+    }
+
+    #[test]
+    fn test_exit_variable_is_not_dangerous() {
+        with_builtin_call("exit $status", |context, call| {
+            assert!(
+                !has_builtin_side_effect(
+                    "exit",
+                    BuiltinEffect::CommonEffect(CommonEffect::Dangerous),
+                    context,
+                    call
+                ),
+                "exit $status should not be marked dangerous (unknown at lint time)"
+            );
+        });
+    }
+
+    #[test]
+    fn test_print_without_stderr_prints_to_stdout() {
+        with_builtin_call("print 'hello'", |context, call| {
+            assert!(
+                has_builtin_side_effect("print", BuiltinEffect::PrintToStdout, context, call),
+                "print should print to stdout by default"
+            );
+        });
+    }
+
+    #[test]
+    fn test_print_with_stderr_does_not_print_to_stdout() {
+        with_builtin_call("print --stderr 'hello'", |context, call| {
+            assert!(
+                !has_builtin_side_effect("print", BuiltinEffect::PrintToStdout, context, call),
+                "print --stderr should not print to stdout"
+            );
+        });
+    }
+}

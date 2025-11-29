@@ -83,19 +83,18 @@ pub enum Commands {
         #[arg(help = "Rule ID to explain")]
         rule_id: String,
     },
+
+    #[command(about = "Run as Language Server Protocol (LSP) server over stdio")]
+    Lsp,
 }
 
 #[derive(clap::ValueEnum, Clone, Copy)]
 pub enum Format {
     /// Human-readable text format (default)
     Text,
-    /// Simple JSON format (deprecated, use 'lsp' instead for editor
-    /// integration)
+    /// Simple JSON format
     Json,
-    /// LSP-compatible JSON format (recommended for editors: VS Code, Neovim,
-    /// Helix, etc.)
-    Lsp,
-    /// Backwards compatibility alias for 'lsp' format (deprecated)
+    /// Backwards compatibility alias for old vscode-json format (deprecated)
     #[value(name = "vscode-json")]
     VscodeJson,
     /// GitHub Actions annotations format
@@ -103,11 +102,16 @@ pub enum Format {
 }
 
 /// Handle subcommands (list-rules, list-sets, explain)
+/// Note: The `Lsp` command is handled separately in main.rs
 pub fn handle_command(command: Commands, config: &Config) {
     match command {
         Commands::ListRules => list_rules(config),
         Commands::ListSets => list_sets(),
         Commands::Explain { rule_id } => explain_rule(config, &rule_id),
+        Commands::Lsp => {
+            // LSP command is handled in main.rs with async runtime
+            unreachable!("LSP command should be handled in main.rs")
+        }
     }
 }
 
@@ -267,7 +271,6 @@ pub fn output_results(violations: &[Violation], format: Option<Format>) {
     let output = match format.unwrap_or(Format::Text) {
         Format::Text | Format::Github => output::format_text(violations),
         Format::Json => output::format_json(violations),
-        Format::Lsp => output::format_lsp_json(violations),
         Format::VscodeJson => output::format_vscode_json(violations),
     };
     println!("{output}");

@@ -7,10 +7,14 @@ use std::{
 use clap::{Parser, error::ErrorKind};
 use nu_lint::{
     LintEngine, Violation,
-    cli::{Cli, collect_files_to_lint, handle_command, lint_files, lint_stdin, output_results},
+    cli::{
+        Cli, Commands, collect_files_to_lint, handle_command, lint_files, lint_stdin,
+        output_results,
+    },
     config::Config,
     fix::{apply_fixes, apply_fixes_to_stdin, format_fix_results},
     log::instrument,
+    lsp::run_lsp_server,
 };
 
 fn handle_fixes(violations: &[Violation], is_stdin: bool, dry_run: bool, engine: &LintEngine) {
@@ -75,6 +79,12 @@ fn main() {
     }
 
     let config = Config::load(cli.config.as_ref());
+
+    // Handle LSP command separately
+    if let Some(Commands::Lsp) = &cli.command {
+        run_lsp_server(config);
+        return;
+    }
 
     if let Some(command) = cli.command {
         handle_command(command, &config);

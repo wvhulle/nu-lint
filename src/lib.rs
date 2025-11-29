@@ -7,6 +7,7 @@ mod effect;
 mod engine;
 pub mod fix;
 pub mod log;
+pub mod lsp;
 pub mod output;
 mod rule;
 mod rules;
@@ -17,12 +18,8 @@ use std::io;
 pub use config::{Config, LintLevel};
 pub use engine::LintEngine;
 use miette::Diagnostic;
-// Re-export Diagnostic with an alias to avoid conflict with miette::Diagnostic
-pub use output::Diagnostic as LspDiagnostic;
 pub use output::{
-    CodeDescription, DiagnosticRelatedInformation, DiagnosticSeverity, JsonFix, JsonOutput,
-    JsonReplacement, JsonViolation, Location, LspJsonOutput, Position, QuickFix, Range, Summary,
-    TextEdit, format_json, format_lsp_json, format_text,
+    JsonFix, JsonOutput, JsonReplacement, JsonViolation, Summary, format_json, format_text,
 };
 // VS Code format exports (deprecated, kept for backwards compatibility)
 #[allow(

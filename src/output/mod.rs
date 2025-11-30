@@ -19,6 +19,29 @@ pub use vscode::{
 
 use crate::{config::LintLevel, violation::Violation};
 
+/// Output format for linting results
+#[derive(clap::ValueEnum, Clone, Copy, Default)]
+pub enum Format {
+    /// Human-readable text format (default)
+    #[default]
+    Text,
+    /// Simple JSON format
+    Json,
+    /// Backwards compatibility alias for old vscode-json format (deprecated)
+    #[value(name = "vscode-json")]
+    VscodeJson,
+}
+
+/// Format and output linting results
+#[must_use]
+pub fn format_output(violations: &[Violation], format: Format) -> String {
+    match format {
+        Format::Text => format_text(violations),
+        Format::Json => format_json(violations),
+        Format::VscodeJson => format_vscode_json(violations),
+    }
+}
+
 #[derive(Serialize)]
 pub struct Summary {
     pub errors: usize,

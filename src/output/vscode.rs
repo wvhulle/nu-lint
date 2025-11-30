@@ -19,12 +19,7 @@ fn lint_level_to_severity(lint_level: LintLevel) -> u8 {
     }
 }
 
-/// Format violations as VS Code JSON (deprecated, use `format_lsp_json`
-/// instead)
-#[deprecated(
-    since = "0.0.51",
-    note = "Use format_lsp_json for standard LSP-compatible output"
-)]
+/// Format violations as VS Code JSON
 #[must_use]
 pub fn format_vscode_json(violations: &[Violation]) -> String {
     let mut diagnostics_by_file: HashMap<String, Vec<VsCodeDiagnostic>> = HashMap::new();

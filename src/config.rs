@@ -223,10 +223,11 @@ impl Config {
     }
 }
 
-/// Search for .nu-lint.toml in current directory and parent directories
+/// Search for .nu-lint.toml starting from the given directory and walking up to
+/// parent directories
 #[must_use]
-pub fn find_config_file() -> Option<PathBuf> {
-    let mut current_dir = current_dir().ok()?;
+pub fn find_config_file_from(start_dir: &Path) -> Option<PathBuf> {
+    let mut current_dir = start_dir.to_path_buf();
 
     loop {
         let config_path = current_dir.join(".nu-lint.toml");
@@ -234,13 +235,20 @@ pub fn find_config_file() -> Option<PathBuf> {
             return Some(config_path);
         }
 
-        // Try to go to parent directory
         if !current_dir.pop() {
             break;
         }
     }
 
     None
+}
+
+/// Search for .nu-lint.toml in current directory and parent directories
+#[must_use]
+pub fn find_config_file() -> Option<PathBuf> {
+    current_dir()
+        .ok()
+        .and_then(|dir| find_config_file_from(&dir))
 }
 
 #[cfg(test)]

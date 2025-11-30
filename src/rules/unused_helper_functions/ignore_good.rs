@@ -94,3 +94,77 @@ def save-data [data] {
 "#,
     );
 }
+
+#[test]
+fn helper_called_from_main_subcommand() {
+    rule().assert_ignores(
+        r#"
+def "main subcommand" [] {
+  helper
+}
+
+def helper [] {
+  print "used by subcommand"
+}
+"#,
+    );
+}
+
+#[test]
+fn helper_called_from_multiple_main_subcommands() {
+    rule().assert_ignores(
+        r#"
+def main [] {
+  print "main entry"
+}
+
+def "main build" [] {
+  helper1
+}
+
+def "main test" [] {
+  helper2
+}
+
+def helper1 [] {
+  print "used by build"
+}
+
+def helper2 [] {
+  print "used by test"
+}
+"#,
+    );
+}
+
+#[test]
+fn transitive_call_from_subcommand() {
+    rule().assert_ignores(
+        r#"
+def "main run" [] {
+  process
+}
+
+def process [] {
+  validate
+}
+
+def validate [] {
+  print "transitively used from subcommand"
+}
+"#,
+    );
+}
+
+#[test]
+fn recursive_main() {
+    rule().assert_ignores(
+        r#"
+def main [n: int] {
+  if $n > 0 {
+    main ($n - 1)
+  }
+}
+"#,
+    );
+}

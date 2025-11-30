@@ -147,7 +147,7 @@ impl Config {
     ///
     /// Errors when TOML string is not a valid TOML string.
     pub fn load_from_str(toml_str: &str) -> Result<Self, LintError> {
-        Ok(toml::from_str(toml_str)?)
+        toml::from_str(toml_str).map_err(|source| LintError::Config { source })
     }
     /// Load configuration from a TOML file.
     ///
@@ -156,7 +156,10 @@ impl Config {
     /// Returns an error if the file cannot be read or if the TOML content is
     /// invalid.
     pub fn load_from_file(path: &Path) -> Result<Self, LintError> {
-        let content = fs::read_to_string(path)?;
+        let content = fs::read_to_string(path).map_err(|source| LintError::Io {
+            path: path.to_path_buf(),
+            source,
+        })?;
         Self::load_from_str(&content)
     }
 

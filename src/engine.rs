@@ -64,7 +64,10 @@ impl LintEngine {
     /// Returns an error if the file cannot be read.
     pub(crate) fn lint_file(&self, path: &Path) -> Result<Vec<Violation>, LintError> {
         log::debug!("Linting file: {}", path.display());
-        let source = fs::read_to_string(path)?;
+        let source = fs::read_to_string(path).map_err(|source| LintError::Io {
+            path: path.to_path_buf(),
+            source,
+        })?;
         let mut violations = self.lint_str(&source);
 
         let file_path: &str = path.to_str().unwrap();

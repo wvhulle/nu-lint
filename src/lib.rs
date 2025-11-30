@@ -13,35 +13,39 @@ mod rule;
 mod rules;
 mod violation;
 
-use std::io;
+use std::{error::Error, fmt, io, path::PathBuf};
 
 pub use config::{Config, LintLevel};
 pub use engine::LintEngine;
-use miette::Diagnostic;
 pub use output::{
     JsonFix, JsonOutput, JsonReplacement, JsonViolation, Summary, format_json, format_text,
 };
-// VS Code format exports (deprecated, kept for backwards compatibility)
-#[allow(
-    deprecated,
-    reason = "re-exporting deprecated module for backwards compatibility"
-)]
-pub use output::{
-    VsCodeCodeAction, VsCodeDiagnostic, VsCodeJsonOutput, VsCodeLocation, VsCodePosition,
-    VsCodeRange, VsCodeRelatedInformation, VsCodeTextEdit, format_vscode_json,
-};
-use thiserror::Error;
 use toml::de;
 pub use violation::Violation;
 pub(crate) use violation::{Fix, Replacement};
 
-#[derive(Error, Debug, Diagnostic)]
+#[derive(Debug)]
 pub enum LintError {
-    #[error("Failed to read file: {0}")]
-    #[diagnostic(code(nu_lint::io_error))]
-    IoError(#[from] io::Error),
+    Io { path: PathBuf, source: io::Error },
+    Config { source: de::Error },
+}
 
-    #[error("Failed to parse configuration: {0}")]
-    #[diagnostic(code(nu_lint::config_error))]
-    ConfigError(#[from] de::Error),
+impl fmt::Display for LintError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Io { path, source } => {
+                write!(f, "failed to read '{}': {source}", path.display())
+            }
+            Self::Config { source } => write!(f, "invalid configuration: {source}"),
+        }
+    }
+}
+
+impl Error for LintError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::Io { source, .. } => Some(source),
+            Self::Config { source } => Some(source),
+        }
+    }
 }

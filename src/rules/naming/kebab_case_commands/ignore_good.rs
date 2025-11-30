@@ -73,3 +73,25 @@ def third [] {
 
     rule().assert_ignores(good_code);
 }
+
+#[test]
+fn ignore_subcommand_with_space() {
+    let good_code = r#"
+def "tests calculate-brightness" [] {
+    print "subcommands use space separator"
+}
+"#;
+
+    rule().assert_ignores(good_code);
+}
+
+#[test]
+fn ignore_nested_subcommand() {
+    let good_code = r#"
+def "my-module my-subcommand do-action" [] {
+    print "deeply nested subcommands"
+}
+"#;
+
+    rule().assert_ignores(good_code);
+}

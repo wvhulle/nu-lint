@@ -235,9 +235,14 @@ fn check_def_call(call: &Call, ctx: &LintContext) -> Vec<Violation> {
 
     let uses_in = block.uses_pipeline_input(ctx);
     let produces_out = block.produces_output();
+
+    let inferred_output = block.infer_output_type(ctx);
+    let output_is_nothing = matches!(inferred_output, Type::Nothing);
+
     let needs_input_type = uses_in && is_untyped(signature, sig_span, ctx, |(input, _)| input);
-    let needs_output_type =
-        produces_out && is_untyped(signature, sig_span, ctx, |(_, output)| output);
+    let needs_output_type = produces_out
+        && !output_is_nothing
+        && is_untyped(signature, sig_span, ctx, |(_, output)| output);
 
     if !needs_input_type && !needs_output_type {
         return vec![];

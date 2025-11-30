@@ -35,3 +35,15 @@ def AnotherCommand [] {
     rule().assert_detects(bad_code);
     rule().assert_count(bad_code, 1);
 }
+
+#[test]
+fn detect_bad_naming_in_subcommand() {
+    let bad_code = r#"
+def "tests myBadCommand" [] {
+    print "subcommand with bad naming"
+}
+"#;
+
+    rule().assert_detects(bad_code);
+    rule().assert_count(bad_code, 1);
+}

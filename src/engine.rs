@@ -1,10 +1,21 @@
-use std::{borrow::Cow, fs, path::Path, sync::OnceLock};
+use std::{
+    borrow::Cow,
+    fs,
+    io::{self, BufRead},
+    path::{Path, PathBuf},
+    sync::{
+        Mutex, OnceLock,
+        atomic::{AtomicBool, Ordering},
+    },
+};
 
+use ignore::WalkBuilder;
 use nu_parser::parse;
 use nu_protocol::{
     ast::Block,
     engine::{EngineState, StateWorkingSet},
 };
+use rayon::prelude::*;
 
 use crate::{
     LintError, LintLevel, config::Config, context::LintContext, rules::ALL_RULES,
@@ -18,6 +29,74 @@ fn parse_source<'a>(engine_state: &'a EngineState, source: &[u8]) -> (Block, Sta
     let block = parse(&mut working_set, None, source, false);
 
     ((*block).clone(), working_set)
+}
+
+/// Check if a file is a Nushell script (by extension or shebang)
+fn is_nushell_file(path: &Path) -> bool {
+    path.extension()
+        .and_then(|s| s.to_str())
+        .is_some_and(|ext| ext == "nu")
+        || fs::File::open(path)
+            .ok()
+            .and_then(|file| {
+                let mut reader = io::BufReader::new(file);
+                let mut first_line = String::new();
+                reader.read_line(&mut first_line).ok()?;
+                first_line.starts_with("#!").then(|| {
+                    first_line
+                        .split_whitespace()
+                        .any(|word| word.ends_with("/nu") || word == "nu")
+                })
+            })
+            .unwrap_or(false)
+}
+
+/// Collect .nu files from a directory, respecting .gitignore files
+#[must_use]
+pub fn collect_nu_files_from_dir(dir: &Path) -> Vec<PathBuf> {
+    WalkBuilder::new(dir)
+        .standard_filters(true)
+        .build()
+        .filter_map(|result| match result {
+            Ok(entry) => {
+                let path = entry.path().to_path_buf();
+                (path.is_file() && is_nushell_file(&path)).then_some(path)
+            }
+            Err(err) => {
+                log::warn!("Error walking directory: {err}");
+                None
+            }
+        })
+        .collect()
+}
+
+/// Collect all Nushell files to lint from given paths
+///
+/// For files: includes them if they are `.nu` files or have a nushell shebang
+/// For directories: recursively collects `.nu` files, respecting `.gitignore`
+#[must_use]
+pub fn collect_nu_files(paths: &[PathBuf]) -> Vec<PathBuf> {
+    paths
+        .iter()
+        .flat_map(|path| {
+            if !path.exists() {
+                log::warn!("Path not found: {}", path.display());
+                return vec![];
+            }
+
+            if path.is_file() {
+                if is_nushell_file(path) {
+                    vec![path.clone()]
+                } else {
+                    vec![]
+                }
+            } else if path.is_dir() {
+                collect_nu_files_from_dir(path)
+            } else {
+                vec![]
+            }
+        })
+        .collect()
 }
 
 pub struct LintEngine {
@@ -62,9 +141,12 @@ impl LintEngine {
     /// # Errors
     ///
     /// Returns an error if the file cannot be read.
-    pub(crate) fn lint_file(&self, path: &Path) -> Result<Vec<Violation>, LintError> {
+    pub fn lint_file(&self, path: &Path) -> Result<Vec<Violation>, LintError> {
         log::debug!("Linting file: {}", path.display());
-        let source = fs::read_to_string(path)?;
+        let source = fs::read_to_string(path).map_err(|source| LintError::Io {
+            path: path.to_path_buf(),
+            source,
+        })?;
         let mut violations = self.lint_str(&source);
 
         let file_path: &str = path.to_str().unwrap();
@@ -80,6 +162,59 @@ impl LintEngine {
                 .then(a.lint_level.cmp(&b.lint_level))
         });
         Ok(violations)
+    }
+
+    /// Lint multiple files, optionally in parallel
+    ///
+    /// Returns a tuple of (violations, `has_errors`) where `has_errors`
+    /// indicates if any files failed to be read/parsed.
+    #[must_use]
+    pub fn lint_files(&self, files: &[PathBuf]) -> (Vec<Violation>, bool) {
+        let violations_mutex = Mutex::new(Vec::new());
+        let has_errors = AtomicBool::new(false);
+
+        let process_file = |path: &PathBuf| match self.lint_file(path) {
+            Ok(violations) => {
+                violations_mutex
+                    .lock()
+                    .expect("Failed to lock violations mutex")
+                    .extend(violations);
+            }
+            Err(e) => {
+                log::error!("Error linting {}: {}", path.display(), e);
+                has_errors.store(true, Ordering::Relaxed);
+            }
+        };
+
+        if self.config.sequential {
+            for path in files {
+                log::debug!("Processing file: {}", path.display());
+                process_file(path);
+            }
+        } else {
+            files.par_iter().for_each(process_file);
+        }
+
+        let violations = violations_mutex
+            .into_inner()
+            .expect("Failed to unwrap violations mutex");
+        (violations, has_errors.load(Ordering::Relaxed))
+    }
+
+    /// Lint content from stdin
+    #[must_use]
+    pub fn lint_stdin(&self, source: &str) -> Vec<Violation> {
+        let mut violations = self.lint_str(source);
+
+        let stdin_marker: Cow<'static, str> = "<stdin>".to_owned().into();
+        let source_content: Cow<'static, str> = source.to_owned().into();
+
+        for violation in &mut violations {
+            violation.file = Some(stdin_marker.clone());
+            violation.source = Some(source_content.clone());
+        }
+
+        violations
     }
 
     #[must_use]

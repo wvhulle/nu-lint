@@ -147,7 +147,7 @@ impl Config {
     ///
     /// Errors when TOML string is not a valid TOML string.
     pub fn load_from_str(toml_str: &str) -> Result<Self, LintError> {
-        Ok(toml::from_str(toml_str)?)
+        toml::from_str(toml_str).map_err(|source| LintError::Config { source })
     }
     /// Load configuration from a TOML file.
     ///
@@ -156,7 +156,10 @@ impl Config {
     /// Returns an error if the file cannot be read or if the TOML content is
     /// invalid.
     pub fn load_from_file(path: &Path) -> Result<Self, LintError> {
-        let content = fs::read_to_string(path)?;
+        let content = fs::read_to_string(path).map_err(|source| LintError::Io {
+            path: path.to_path_buf(),
+            source,
+        })?;
         Self::load_from_str(&content)
     }
 
@@ -220,10 +223,11 @@ impl Config {
     }
 }
 
-/// Search for .nu-lint.toml in current directory and parent directories
+/// Search for .nu-lint.toml starting from the given directory and walking up to
+/// parent directories
 #[must_use]
-pub fn find_config_file() -> Option<PathBuf> {
-    let mut current_dir = current_dir().ok()?;
+pub fn find_config_file_from(start_dir: &Path) -> Option<PathBuf> {
+    let mut current_dir = start_dir.to_path_buf();
 
     loop {
         let config_path = current_dir.join(".nu-lint.toml");
@@ -231,13 +235,20 @@ pub fn find_config_file() -> Option<PathBuf> {
             return Some(config_path);
         }
 
-        // Try to go to parent directory
         if !current_dir.pop() {
             break;
         }
     }
 
     None
+}
+
+/// Search for .nu-lint.toml in current directory and parent directories
+#[must_use]
+pub fn find_config_file() -> Option<PathBuf> {
+    current_dir()
+        .ok()
+        .and_then(|dir| find_config_file_from(&dir))
 }
 
 #[cfg(test)]

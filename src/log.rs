@@ -2,6 +2,8 @@ use std::{env::current_dir, io, io::Write};
 
 use env_logger::fmt::Formatter;
 
+/// Initialize the logger with an easy to read format for stdout terminal
+/// output. Use it to debug tests with print debugging.
 pub fn instrument() {
     env_logger::builder()
         .format(format_log_record)

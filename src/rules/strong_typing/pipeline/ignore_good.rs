@@ -102,3 +102,25 @@ def filter-rows []: table -> table {
 ";
     rule().assert_ignores(good_code);
 }
+
+#[test]
+fn ignore_print_only_command() {
+    let good_code = r#"
+def main [] {
+    print "Solar-based brightness manager"
+    print "Use --help to see available subcommands"
+}
+"#;
+    rule().assert_ignores(good_code);
+}
+
+#[test]
+fn ignore_side_effect_only_command() {
+    let good_code = r#"
+def setup [] {
+    mkdir ~/.config/myapp
+    print "Setup complete"
+}
+"#;
+    rule().assert_ignores(good_code);
+}

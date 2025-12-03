@@ -1,7 +1,19 @@
-use heck::ToKebabCase;
 use nu_protocol::ast::Expr;
 
 use crate::{ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation};
+
+fn strip_quotes(name: &str) -> &str {
+    name.strip_prefix('"')
+        .and_then(|s| s.strip_suffix('"'))
+        .unwrap_or(name)
+}
+
+fn to_kebab_case_preserving_spaces(name: &str) -> String {
+    name.split(' ')
+        .map(heck::ToKebabCase::to_kebab_case)
+        .collect::<Vec<_>>()
+        .join(" ")
+}
 
 fn check(context: &LintContext) -> Vec<Violation> {
     context.collect_rule_violations(|expr, ctx| {
@@ -14,11 +26,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
             return vec![];
         }
 
-        let Some((cmd_name, name_span)) = call.extract_declaration_name(ctx) else {
+        let Some((raw_cmd_name, name_span)) = call.extract_declaration_name(ctx) else {
             return vec![];
         };
 
-        let kebab_case_name = cmd_name.to_kebab_case();
+        let cmd_name = strip_quotes(&raw_cmd_name);
+        let kebab_case_name = to_kebab_case_preserving_spaces(cmd_name);
+
         if cmd_name == kebab_case_name {
             return vec![];
         }

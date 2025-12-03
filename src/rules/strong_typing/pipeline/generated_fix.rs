@@ -385,19 +385,6 @@ def nested_conditional [] {
 }
 
 #[test]
-fn test_complex_body_with_let_and_side_effects() {
-    instrument();
-    let bad_code = r"
-def complex_script [] {
-    let x = 42
-    print $x
-    mkdir /tmp/dir
-}
-";
-    rule().assert_replacement_contains(bad_code, "[]: nothing -> nothing");
-}
-
-#[test]
 fn test_preserves_multiline_function_signature() {
     instrument();
     let bad_code = r"

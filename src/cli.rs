@@ -134,20 +134,26 @@ impl Cli {
     }
 
     fn list_rules() {
-        println!("Available lint rules:\n");
-        for rule in ALL_RULES {
+        println!("Available lint rules ({n}):\n", n = ALL_RULES.len());
+        let mut sorted_rules = ALL_RULES.to_vec();
+        sorted_rules.sort_by_key(|rule| rule.id);
+
+        for rule in sorted_rules {
             println!("  {} - {}", rule.id, rule.explanation);
-            if let Some(url) = rule.doc_url {
-                println!("    Documentation: {url}");
-            }
         }
+        println!("\n{n} rules available.", n = ALL_RULES.len());
     }
 
     fn list_sets() {
-        println!("Available rule sets:\n");
+        println!("Available rule sets ({n}):\n", n = BUILTIN_LINT_SETS.len());
         for set in BUILTIN_LINT_SETS {
             println!("  {} - {}", set.name, set.explanation);
+            for rule in set.rules {
+                println!("    - {}", rule.id);
+            }
+            println!();
         }
+        println!("\n{n} sets available.", n = BUILTIN_LINT_SETS.len());
     }
 
     fn explain_rule(rule_id: &str) {
@@ -170,8 +176,10 @@ impl Cli {
 #[derive(Subcommand)]
 enum Commands {
     /// List all available lint rules
+    #[command(alias = "rules")]
     List,
     /// List available rule sets
+    #[command(alias = "groups")]
     Sets,
     /// Explain a lint rule
     Explain {

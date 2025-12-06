@@ -43,7 +43,7 @@ pub const RULES: &[Rule] = &[
 
 pub const fn rule_set() -> RuleSet {
     RuleSet {
-        name: "bashisms",
+        name: "posix-tools",
         explanation: "Replace common bash/POSIX commands with native Nushell equivalents",
         rules: RULES,
     }

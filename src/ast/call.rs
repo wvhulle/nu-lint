@@ -385,38 +385,31 @@ impl CallExt for Call {
 
     fn infer_from_blocks(&self, context: &LintContext) -> Option<nu_protocol::Type> {
         log::debug!("Inferring type from call with blocks");
-        let block_types: Vec<nu_protocol::Type> = self
-            .positional_iter()
-            .filter_map(|arg| {
-                arg.extract_block_id().map(|block_id| {
-                    let output = context
-                        .working_set
-                        .get_block(block_id)
-                        .infer_output_type(context);
-                    log::debug!("Block {block_id:?} output type: {output:?}");
-                    output
-                })
+
+        let mut block_types = self.positional_iter().filter_map(|arg| {
+            arg.extract_block_id().map(|block_id| {
+                let output = context
+                    .working_set
+                    .get_block(block_id)
+                    .infer_output_type(context);
+                log::debug!("Block {block_id:?} output type: {output:?}");
+                output
             })
-            .collect();
+        });
 
-        log::debug!("Block types collected: {block_types:?}");
+        let first = block_types.next()?;
+        log::debug!("First block type: {first:?}");
 
-        if block_types.is_empty() {
-            log::debug!("No block types found");
-            return None;
-        }
+        let unified = block_types.try_fold(first, |acc, ty| {
+            if acc == ty {
+                Some(acc)
+            } else {
+                log::debug!("Block types differ: {acc:?} vs {ty:?}");
+                None
+            }
+        })?;
 
-        if block_types.iter().all(|t| t == &block_types[0]) {
-            log::debug!("All block types are the same: {:?}", block_types[0]);
-            return Some(block_types[0].clone());
-        }
-
-        if block_types.iter().all(|t| t == &nu_protocol::Type::Nothing) {
-            log::debug!("All block types are Nothing");
-            return Some(nu_protocol::Type::Nothing);
-        }
-
-        log::debug!("Block types differ, returning None");
-        None
+        log::debug!("Unified block type: {unified:?}");
+        Some(unified)
     }
 }

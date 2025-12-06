@@ -81,7 +81,7 @@ const fn systemd_rule_set() -> RuleSet {
     }
 }
 
-pub const BUILTIN_LINT_SETS: &[RuleSet] = &[
+pub const ALL_GROUPS: &[RuleSet] = &[
     super::posix_tools::rule_set(),
     super::documentation::rule_set(),
     error_handling_rule_set(),

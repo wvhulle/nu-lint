@@ -13,7 +13,7 @@ use crate::{
     fix::{apply_fixes, apply_fixes_to_stdin, format_fix_results},
     lsp,
     output::{Format, Summary, format_output},
-    rules::{ALL_RULES, sets::BUILTIN_LINT_SETS},
+    rules::{ALL_RULES, sets::ALL_GROUPS},
 };
 
 #[derive(Parser)]
@@ -144,16 +144,16 @@ impl Cli {
         println!("\n{n} rules available.", n = ALL_RULES.len());
     }
 
-    fn list_sets() {
-        println!("Available rule sets ({n}):\n", n = BUILTIN_LINT_SETS.len());
-        for set in BUILTIN_LINT_SETS {
+    fn list_groups() {
+        println!("Available rule groups ({n}):\n", n = ALL_GROUPS.len());
+        for set in ALL_GROUPS {
             println!("  {} - {}", set.name, set.explanation);
             for rule in set.rules {
                 println!("    - {}", rule.id);
             }
             println!();
         }
-        println!("\n{n} sets available.", n = BUILTIN_LINT_SETS.len());
+        println!("\n{n} groups available.", n = ALL_GROUPS.len());
     }
 
     fn explain_rule(rule_id: &str) {
@@ -166,8 +166,7 @@ impl Cli {
                 println!("Documentation: {url}");
             }
         } else {
-            eprintln!("Unknown rule: {rule_id}");
-            eprintln!("Use 'nu-lint list' to see available rules");
+            eprintln!("Unknown rule ID: {rule_id}");
             process::exit(1);
         }
     }
@@ -207,7 +206,7 @@ pub fn run() {
 
     match cli.command {
         Some(Commands::List) => Cli::list_rules(),
-        Some(Commands::Sets) => Cli::list_sets(),
+        Some(Commands::Sets) => Cli::list_groups(),
         Some(Commands::Explain { rule_id }) => Cli::explain_rule(&rule_id),
         Some(Commands::Lsp) => lsp::run_lsp_server(),
         Some(Commands::Fix {
@@ -221,9 +220,16 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
+    use std::{fs, path::PathBuf};
 
-    use super::*;
+    use clap::Parser;
+
+    use crate::{
+        Config, LintEngine,
+        cli::{Cli, Commands},
+        engine::collect_nu_files,
+        output::Format,
+    };
 
     #[test]
     fn test_cli_parsing() {

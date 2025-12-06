@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     LintError,
-    rules::sets::{BUILTIN_LINT_SETS, RULE_LEVEL_OVERRIDES},
+    rules::sets::{ALL_GROUPS, RULE_LEVEL_OVERRIDES},
 };
 
 /// Lint level configuration (inspired by Clippy)
@@ -89,7 +89,7 @@ impl<'de> Deserialize<'de> for Config {
 
 fn merge_bare_items_into_lints(lints: &mut LintConfig, bare_items: HashMap<String, LintLevel>) {
     for (name, level) in bare_items {
-        let is_set = BUILTIN_LINT_SETS.iter().any(|set| set.name == name);
+        let is_set = ALL_GROUPS.iter().any(|set| set.name == name);
 
         if is_set {
             lints.sets.insert(name, level);
@@ -196,10 +196,7 @@ impl Config {
         let mut max_level: Option<LintLevel> = None;
 
         for (set_name, level) in &self.lints.sets {
-            let Some(lint_set) = BUILTIN_LINT_SETS
-                .iter()
-                .find(|set| set.name == set_name.as_str())
-            else {
+            let Some(lint_set) = ALL_GROUPS.iter().find(|set| set.name == set_name.as_str()) else {
                 continue;
             };
 

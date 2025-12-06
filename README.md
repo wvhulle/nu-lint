@@ -86,7 +86,7 @@ language-servers = ["nu-lint"]
 
 ### Other
 
-You can also implement your own editor extensions using the `lsp` subcommand as in: `nu-lint lsp`. This will spawn a "[Language Server Protocol](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/)"-compatible server.
+You can also implement your own editor extensions using the `lsp` subcommand as in: `nu-lint lsp`. This will spawn a language server compliant with the [Language Server Protocol](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/).
 
 ## CLI usage
 
@@ -111,13 +111,13 @@ nu-lint --fix               # Apply fix
 Show all rules:
 
 ```bash
-nu-lint list-rules                         
+nu-lint rules                        
 ```
 
-Show all rule sets:
+Show all rule groups:
 
 ```bash
-nu-lint list-sets
+nu-lint groups
 ```
 
 Create `.nu-lint.toml` in your project root (or any parent directory):

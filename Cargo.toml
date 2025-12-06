@@ -2,12 +2,19 @@
 authors = ["Willem Vanhulle <willemvanhulle@protonmail.com>"]
 description = "Linter for Nu shell scripts that helpfully suggests improvements"
 edition = "2024"
-exclude = ["benches/fixtures/", "result"]
+exclude = [
+    "result",
+    ".helix/",
+    ".vscode/",
+    ".github/",
+    "Cargo.lock",
+    "benches/",
+]
 keywords = ["nushell", "linter", "static-analysis", "code-quality", "shell"]
 license = "MIT"
 name = "nu-lint"
 repository = "https://github.com/wvhulle/nu-lint"
-version = "0.0.57"
+version = "0.0.58"
 
 
 [lints.clippy]

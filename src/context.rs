@@ -46,29 +46,26 @@ impl LintContext<'_> {
     }
 
     /// Find the span of a function/declaration name in the source code
-    /// Returns a span pointing to the first occurrence of the name, or a
-    /// fallback span
     #[must_use]
     pub fn find_declaration_span(&self, name: &str) -> Span {
-        // Use more efficient string search for function declarations
-        // Look for function declarations starting with "def " or "export def "
+        const PATTERNS: &[(&str, &str, usize)] = &[
+            ("def ", "", 4),
+            ("def \"", "\"", 5),
+            ("export def ", "", 11),
+            ("export def \"", "\"", 12),
+        ];
 
-        // Try "def <name>" first (most common case)
-        if let Some(pos) = self.source.find(&format!("def {name}")) {
-            let name_start = pos + 4; // "def ".len() == 4
-            return Span::new(name_start, name_start + name.len());
+        for (prefix, suffix, offset) in PATTERNS {
+            let pattern = format!("{prefix}{name}{suffix}");
+            if let Some(pos) = self.source.find(&pattern) {
+                let start = pos + offset;
+                return Span::new(start, start + name.len());
+            }
         }
 
-        // Try "export def <name>"
-        if let Some(pos) = self.source.find(&format!("export def {name}")) {
-            let name_start = pos + 11; // "export def ".len() == 11
-            return Span::new(name_start, name_start + name.len());
-        }
-
-        // Fallback to simple name search
         self.source.find(name).map_or_else(
             || self.ast.span.unwrap_or_else(Span::unknown),
-            |name_pos| Span::new(name_pos, name_pos + name.len()),
+            |pos| Span::new(pos, pos + name.len()),
         )
     }
 
@@ -116,28 +113,21 @@ impl LintContext<'_> {
     {
         use nu_parser::parse;
 
-        fn create_engine_with_stdlib() -> EngineState {
-            use nu_protocol::engine::StateWorkingSet;
+        let engine_state = nu_cmd_lang::create_default_context();
+        let engine_state = nu_command::add_shell_command_context(engine_state);
+        let mut engine_state = nu_cli::add_cli_context(engine_state);
 
-            let engine_state = nu_cmd_lang::create_default_context();
-            let engine_state = nu_command::add_shell_command_context(engine_state);
-            let mut engine_state = nu_cli::add_cli_context(engine_state);
+        // Add print command (it's in nu-cli but not added by add_cli_context)
+        let delta = {
+            let mut working_set = StateWorkingSet::new(&engine_state);
+            working_set.add_decl(Box::new(nu_cli::Print));
+            working_set.render()
+        };
 
-            // Add print command (it's in nu-cli but not added by add_cli_context)
-            let delta = {
-                let mut working_set = StateWorkingSet::new(&engine_state);
-                working_set.add_decl(Box::new(nu_cli::Print));
-                working_set.render()
-            };
-
-            if let Err(err) = engine_state.merge_delta(delta) {
-                eprintln!("Error adding Print command: {err:?}");
-            }
-
-            engine_state
+        if let Err(err) = engine_state.merge_delta(delta) {
+            eprintln!("Error adding Print command: {err:?}");
         }
 
-        let engine_state = create_engine_with_stdlib();
         let mut working_set = StateWorkingSet::new(&engine_state);
         let block = parse(&mut working_set, None, source.as_bytes(), false);
 

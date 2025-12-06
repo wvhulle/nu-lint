@@ -5,6 +5,7 @@ pub mod hostname;
 pub mod jq;
 pub mod printenv;
 pub mod rg;
+pub mod unnecessary_hat;
 pub mod wget;
 pub mod which;
 
@@ -19,6 +20,7 @@ pub const RULES: &[Rule] = &[
     jq::rule(),
     printenv::rule(),
     rg::rule(),
+    unnecessary_hat::rule(),
     wget::rule(),
     which::rule(),
 ];

@@ -17,18 +17,29 @@ fn extract_label_texts(parse_error: &ParseError) -> Vec<String> {
         .collect()
 }
 
-fn build_help_text(parse_error: &ParseError) -> Option<String> {
+const NU_PARSER_VERSION: &str = env!("NU_PARSER_VERSION");
+
+fn build_help_text(parse_error: &ParseError) -> String {
+    let version_note = format!(
+        "nu-lint expects Nushell {NU_PARSER_VERSION}. If your installed version differs, this may \
+         cause false positives."
+    );
+
     // Prefer the help text from ParseError if available, as it's usually more
     // comprehensive
     if let Some(help_text) = parse_error.help() {
-        return Some(help_text.to_string());
+        return format!("{help_text}\n\n{version_note}");
     }
 
     // Fall back to label texts if no help is available
     // Labels often contain useful context about what was expected or what went
     // wrong
     let labels = extract_label_texts(parse_error);
-    (!labels.is_empty()).then(|| labels.join("\n"))
+    if labels.is_empty() {
+        version_note
+    } else {
+        format!("{}\n\n{version_note}", labels.join("\n"))
+    }
 }
 
 fn check(context: &LintContext) -> Vec<Violation> {
@@ -47,13 +58,8 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 parse_error.to_string(),
             );
             seen.insert(key).then(|| {
-                let mut violation = Violation::new(parse_error.to_string(), parse_error.span());
-
-                if let Some(help) = build_help_text(parse_error) {
-                    violation = violation.with_help(help);
-                }
-
-                violation
+                Violation::new(parse_error.to_string(), parse_error.span())
+                    .with_help(build_help_text(parse_error))
             })
         })
         .collect()
@@ -64,7 +70,7 @@ pub const fn rule() -> Rule {
         "Nushell parser encountered a syntax error",
         check,
     )
-    .with_doc_url("https://www.nushell.sh/book/")
+    .with_doc_url("https://www.nushell.sh/blog/")
 }
 #[cfg(test)]
 mod detect_bad;

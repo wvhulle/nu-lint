@@ -21,9 +21,7 @@ pub fn format_text(violations: &[Violation]) -> String {
         .map(|(idx, violation)| format_violation_text(violation, idx < violations.len() - 1))
         .collect();
 
-    let footer = format!("\n{}", summary.format_compact());
-
-    format!("{header}{violations_output}{footer}")
+    format!("{header}{violations_output}")
 }
 
 fn format_violation_text(violation: &Violation, add_separator: bool) -> String {

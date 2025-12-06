@@ -95,7 +95,7 @@ Run this linter from the command-line with:
 ```bash
 nu-lint                               # Lint working directory
 nu-lint script.nu                     # Lint a file or directory
-'let x =' | nu-lint                   # Pipe in over stdin
+'let x =' | nu-lint --stdin                   # Pipe in over stdin
 ```
 
 Apply automatic fixes:
@@ -103,7 +103,7 @@ Apply automatic fixes:
 ```bash
 nu-lint --fix --dry-run     # Test fixes
 nu-lint --fix               # Apply fix
-'FRAGMENT' | nu-lint --fix  # Apply fix to STDIN
+'FRAGMENT' | nu-lint --fix --stdin  # Apply fix to STDIN
 ```
 
 ## Configuration

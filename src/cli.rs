@@ -39,6 +39,10 @@ pub struct Cli {
     /// Read from stdin
     #[arg(long)]
     stdin: bool,
+
+    /// Auto-fix lint violations
+    #[arg(long)]
+    fix: bool,
 }
 
 impl Cli {
@@ -60,17 +64,22 @@ impl Cli {
         source
     }
 
+    fn should_read_stdin(&self) -> bool {
+        self.stdin || (self.paths.len() == 1 && self.paths[0].as_os_str() == "-")
+    }
+
     fn lint(self) {
+        let read_stdin = self.should_read_stdin();
         let config = Self::load_config(self.config);
         let engine = LintEngine::new(config);
 
-        let (violations, has_errors) = if self.stdin {
+        let (violations, has_errors) = if read_stdin {
             let source = Self::read_stdin();
             (engine.lint_stdin(&source), false)
         } else {
             let files = collect_nu_files(&self.paths);
             if files.is_empty() {
-                log::warn!("No Nushell files found in specified paths");
+                eprintln!("Warning: No Nushell files found in specified paths");
                 return;
             }
             engine.lint_files(&files)
@@ -115,7 +124,7 @@ impl Cli {
     fn fix_files(paths: &[PathBuf], engine: &LintEngine) {
         let files = collect_nu_files(paths);
         if files.is_empty() {
-            log::warn!("No Nushell files found in specified paths");
+            eprintln!("Warning: No Nushell files found in specified paths");
             return;
         }
 
@@ -127,7 +136,7 @@ impl Cli {
                 print!("{output}");
             }
             Err(e) => {
-                log::error!("Error applying fixes: {e}");
+                eprintln!("Error applying fixes: {e}");
                 process::exit(1);
             }
         }
@@ -214,6 +223,7 @@ pub fn run() {
             stdin,
             config,
         }) => Cli::fix(&paths, stdin, config),
+        None if cli.fix => Cli::fix(&cli.paths, cli.stdin, cli.config),
         None => cli.lint(),
     }
 }

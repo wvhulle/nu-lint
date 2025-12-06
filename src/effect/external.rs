@@ -156,6 +156,8 @@ pub const EXTERNAL_COMMAND_SIDE_EFFECTS: &[(
     &str,
     &[(ExternEffect, ExternalSideEffectPredicate)],
 )] = &[
+    // Nushell std lib assert commands (parsed as external when std not loaded)
+    ("assert", &[(ExternEffect::NoDataInStdout, always)]),
     (
         "rm",
         &[

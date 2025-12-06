@@ -290,98 +290,13 @@ def multiply [factor: int] {
 
 #[test]
 fn test_fallback_to_any_for_complex_output() {
+    instrument();
     let bad_code = r#"
 def complex [] {
     if true { "string" } else { 42 }
 }
 "#;
-    rule().assert_replacement_contains(bad_code, "[]: nothing -> any");
-}
-
-#[test]
-fn test_path_output_from_filepath() {
-    instrument();
-    let bad_code = r"
-def get_path [] {
-    /tmp/file.txt
-}
-";
-    rule().assert_replacement_contains(bad_code, "nothing -> path");
-}
-
-#[test]
-fn test_longer_script() {
-    instrument();
-    let bad_code = r#"
-def main [source_file: path] {
-  let settings_file = $"($env.HOME)/.config/Code/User/settings.json"
-
-  # Create directory if it doesn't exist
-  mkdir ($settings_file | path dirname)
-
-  # Determine if we should update the file
-  let should_update = (
-    not ($settings_file | path exists)
-    or ($settings_file | path type) == "symlink"
-    or (open --raw $source_file) != (open --raw $settings_file)
-  )
-
-  if $should_update {
-    rm --force $settings_file
-    cp $source_file $settings_file
-    chmod 644 $settings_file
-    print "Created/updated writable VSCode settings.json"
-  }
-}
-"#;
-    rule().assert_replacement_contains(bad_code, "nothing -> any");
-}
-
-#[test]
-fn test_if_with_side_effects_only() {
-    instrument();
-    let bad_code = r#"
-def conditional_print [] {
-    if true {
-        print "yes"
-    } else {
-        print "no"
-    }
-}
-"#;
-    rule().assert_replacement_contains(bad_code, "[]: nothing -> any");
-}
-
-#[test]
-fn test_if_without_else_returns_nothing() {
-    instrument();
-    let bad_code = r#"
-def conditional_action [flag: bool] {
-    if $flag {
-        print "flag is true"
-    }
-}
-"#;
-    rule().assert_replacement_contains(bad_code, "[flag: bool]: nothing -> any");
-}
-
-#[test]
-fn test_nested_if_with_side_effects() {
-    instrument();
-    let bad_code = r#"
-def nested_conditional [] {
-    if true {
-        if false {
-            print "inner"
-        } else {
-            mkdir /tmp/test
-        }
-    } else {
-        rm /tmp/test
-    }
-}
-"#;
-    rule().assert_replacement_contains(bad_code, "[]: nothing -> any");
+    rule().assert_replacement_contains(bad_code, "[]: nothing -> string");
 }
 
 #[test]

@@ -749,15 +749,31 @@ fn infer_from_call(
 }
 
 const fn is_filepath_expr(expr: &Expr) -> bool {
-    matches!(expr, Expr::Filepath(..) | Expr::GlobPattern(..))
+    matches!(expr, Expr::Filepath(..))
+}
+
+const fn is_glob_pattern_expr(expr: &Expr) -> bool {
+    matches!(expr, Expr::GlobPattern(..))
 }
 
 fn check_filepath_output(expr: &Expr) -> Option<Type> {
     let ty = Type::Custom("path".into());
     match expr {
-        Expr::ExternalCall(head, _) if is_filepath_expr(&head.expr) => Some(ty),
-        Expr::Collect(_, inner) if is_filepath_expr(&inner.expr) => Some(ty),
-        expr if is_filepath_expr(expr) => Some(ty),
+        Expr::ExternalCall(head, _) if matches!(&head.expr, Expr::Filepath(..)) => {
+            log::debug!(
+                "check_filepath_output: ExternalCall with filepath head: {:?}",
+                head.expr
+            );
+            Some(ty)
+        }
+        Expr::Collect(_, inner) if is_filepath_expr(&inner.expr) => {
+            log::debug!("check_filepath_output: Collect with filepath inner");
+            Some(ty)
+        }
+        expr if is_filepath_expr(expr) || is_glob_pattern_expr(expr) => {
+            log::debug!("check_filepath_output: filepath expr: {expr:?}");
+            Some(ty)
+        }
         _ => None,
     }
 }

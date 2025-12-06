@@ -1,4 +1,5 @@
 use super::rule;
+use crate::log::instrument;
 
 #[test]
 fn ignore_properly_typed_input() {
@@ -17,6 +18,36 @@ def create-list []: nothing -> list<int> {
     [1, 2, 3]
 }
 ";
+    rule().assert_ignores(good_code);
+}
+
+#[test]
+fn ignore_only_side_effect_pipeline_io() {
+    instrument();
+    let good_code = r#"
+def "main postpone" [] {
+  if (stop-timer) {
+    print "Timer stopped - brightness adjustments postponed"
+    print "Run 'solar-brightness resume' to restart and resume adjustments"
+  } else {
+    print "Failed to stop timer"
+    exit 1
+  }
+}
+"#;
+    rule().assert_ignores(good_code);
+}
+
+#[test]
+fn ignore_assert() {
+    instrument();
+    let good_code = r#"
+def "tests extract-time" [] {
+  assert equal ("Sunrise is at: 2025-11-20 08:21:51 +01:00" | extract-time) "08:21:51"
+  assert equal ("Civil dawn is at: 2025-11-20 07:44:37 +01:00" | extract-time) "07:44:37"
+  assert equal ("Sunset is at: 2025-11-20 17:08:05 +01:00" | extract-time) "17:08:05"
+}
+"#;
     rule().assert_ignores(good_code);
 }
 

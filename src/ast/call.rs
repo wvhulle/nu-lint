@@ -163,6 +163,18 @@ impl CallExt for Call {
             "Could not find compatible type mapping for '{}'",
             self.get_call_name(context)
         );
+
+        if self.is_control_flow_command(context)
+            && let Some(inferred) = self.infer_from_blocks(context)
+        {
+            log::debug!(
+                "Control flow command '{}' inferred output type from blocks: {:?}",
+                self.get_call_name(context),
+                inferred
+            );
+            return inferred;
+        }
+
         sig.get_output_type()
     }
     fn get_call_name(&self, context: &LintContext) -> String {
@@ -377,13 +389,17 @@ impl CallExt for Call {
             .positional_iter()
             .filter_map(|arg| {
                 arg.extract_block_id().map(|block_id| {
-                    context
+                    let output = context
                         .working_set
                         .get_block(block_id)
-                        .infer_output_type(context)
+                        .infer_output_type(context);
+                    log::debug!("Block {block_id:?} output type: {output:?}");
+                    output
                 })
             })
             .collect();
+
+        log::debug!("Block types collected: {block_types:?}");
 
         if block_types.is_empty() {
             log::debug!("No block types found");
@@ -391,7 +407,7 @@ impl CallExt for Call {
         }
 
         if block_types.iter().all(|t| t == &block_types[0]) {
-            log::debug!("All block types are the same");
+            log::debug!("All block types are the same: {:?}", block_types[0]);
             return Some(block_types[0].clone());
         }
 
@@ -400,6 +416,7 @@ impl CallExt for Call {
             return Some(nu_protocol::Type::Nothing);
         }
 
+        log::debug!("Block types differ, returning None");
         None
     }
 }

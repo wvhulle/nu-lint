@@ -123,23 +123,22 @@ impl Violation {
         self
     }
 
-    /// Add a label next to the primary span for context
+    /// Add a secondary label for context (displayed with different styling than
+    /// the primary span)
     #[must_use]
     pub fn with_extra_label(mut self, label: impl Into<Cow<'static, str>>, span: Span) -> Self {
-        self.extra_labels.push(LabeledSpan::new_primary_with_span(
+        self.extra_labels.push(LabeledSpan::new_with_span(
             Some(label.into().to_string()),
             span.start..span.end,
         ));
         self
     }
 
-    /// Add an unlabeled span next to the primary span for context
+    /// Add an unlabeled secondary span for context
     #[must_use]
     pub fn with_extra_span(mut self, span: Span) -> Self {
-        self.extra_labels.push(LabeledSpan::new_primary_with_span(
-            None,
-            span.start..span.end,
-        ));
+        self.extra_labels
+            .push(LabeledSpan::new_with_span(None, span.start..span.end));
         self
     }
 
@@ -260,17 +259,6 @@ pub struct Replacement {
 
 impl Replacement {
     /// Create a new code replacement
-    ///
-    /// # Arguments
-    ///
-    /// * `span` - Location in source code to replace
-    /// * `replacement_text` - Actual code to write (not a description!)
-    ///
-    /// # Example
-    ///
-    /// ```rust,ignore
-    /// Replacement::new(param_span, "[]")  // Replace "[x: int]" with "[]"
-    /// ```
     #[must_use]
     pub fn new(span: Span, replacement_text: impl Into<Cow<'static, str>>) -> Self {
         Self {

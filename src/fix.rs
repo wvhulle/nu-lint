@@ -376,7 +376,8 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 21),
-            labels: vec![],
+            primary_label: None,
+            extra_labels: vec![],
             help: None,
             notes: vec![],
             fix: Some(fix),
@@ -515,24 +516,6 @@ mod tests {
     }
 
     #[test]
-    fn test_no_fixes() {
-        let content = "let x = 5";
-        let violation = Violation {
-            rule_id: Some(Cow::Borrowed("test_rule")),
-            lint_level: LintLevel::Warn,
-            message: Cow::Borrowed("Test"),
-            span: Span::new(4, 5),
-            labels: vec![],
-            help: None,
-            notes: vec![],
-            fix: None,
-            file: Some(Cow::Borrowed("test.nu")),
-            source: None,
-            doc_url: None,
-        };
-    }
-
-    #[test]
     fn test_count_applicable_fixes() {
         let fix = Fix::with_explanation("Test fix", vec![]);
 
@@ -541,7 +524,8 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 5),
-            labels: vec![],
+            primary_label: None,
+            extra_labels: vec![],
             help: None,
             notes: vec![],
             fix: Some(fix),
@@ -555,7 +539,8 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 5),
-            labels: vec![],
+            primary_label: None,
+            extra_labels: vec![],
             help: None,
             notes: vec![],
             fix: None,
@@ -576,7 +561,8 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 5),
-            labels: vec![],
+            primary_label: None,
+            extra_labels: vec![],
             help: None,
             notes: vec![],
             fix: None,
@@ -590,7 +576,8 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 5),
-            labels: vec![],
+            primary_label: None,
+            extra_labels: vec![],
             help: None,
             notes: vec![],
             fix: None,
@@ -604,7 +591,8 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(5, 10),
-            labels: vec![],
+            primary_label: None,
+            extra_labels: vec![],
             help: None,
             notes: vec![],
             fix: None,

@@ -41,7 +41,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 let labels = extract_labels(parse_error);
                 Violation::new(parse_error.to_string(), parse_error.span())
                     .with_help(build_help_text(parse_error))
-                    .with_labels(labels)
+                    .with_extra_labels(labels)
             })
         })
         .collect()

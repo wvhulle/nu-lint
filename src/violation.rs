@@ -17,39 +17,7 @@ impl From<LintLevel> for Severity {
 }
 
 /// A lint violation with its diagnostic information
-///
-/// # Display Format
-///
-/// When displayed to the user, violations appear as:
-///
-/// ```text
-/// file.nu:10:5
-/// warn(rule_name)
-///
-///   ⚠ [message]                  <- Short diagnostic message
-///    ╭─[10:5]
-/// 10 │ code here
-///    ·     ─┬─
-///    ·      ╰── [label text]     <- Message (or help if short)
-///    ╰────
-///
-///   help: [help text]            <- Detailed explanation/rationale
-///
-///   ℹ Available fix: [explanation] <- Fix explanation
-///   - old code
-///   + new code                   <- From replacements
-/// ```
-///
-/// # Example
-///
-/// ```rust,ignore
-/// Violation::new("Use pipeline input", span)
-///     .with_help("Pipeline input enables better composability and streaming performance")
-///     .with_fix(Fix::with_explanation(
-///         format!("Use $in instead of ${}:\n  {}", param, transformed_code),
-///         vec![Replacement::new(def_span, transformed_code)]
-///     ))
-/// ```
+
 #[derive(Debug, Clone)]
 pub struct Violation {
     pub rule_id: Option<Cow<'static, str>>,
@@ -63,9 +31,13 @@ pub struct Violation {
     /// Primary span in source code where the violation occurs
     pub span: Span,
 
+    /// Optional label text displayed on the primary span underline
+    /// If None, the span is underlined without text
+    pub primary_label: Option<Cow<'static, str>>,
+
     /// Additional labeled spans for context (e.g., related locations)
     /// These are displayed as secondary highlights in diagnostic output
-    pub labels: Vec<LabeledSpan>,
+    pub extra_labels: Vec<LabeledSpan>,
 
     /// Optional detailed explanation shown in the "help:" section
     /// Use this to explain WHY the code should change or provide rationale
@@ -104,7 +76,8 @@ impl Violation {
             lint_level: LintLevel::Allow, // Placeholder, will be set by engine
             message: message.into(),
             span,
-            labels: Vec::new(),
+            primary_label: None,
+            extra_labels: Vec::new(),
             help: None,
             notes: Vec::new(),
             fix: None,
@@ -120,14 +93,6 @@ impl Violation {
     }
 
     /// Add detailed help text explaining why this change should be made
-    ///
-    /// This appears in the "help:" section of the diagnostic output.
-    ///
-    /// # Example
-    ///
-    /// ```rust,ignore
-    /// violation.with_help("Pipeline input enables better composability and streaming performance")
-    /// ```
     #[must_use]
     pub fn with_help(mut self, help: impl Into<Cow<'static, str>>) -> Self {
         self.help = Some(help.into());
@@ -135,15 +100,6 @@ impl Violation {
     }
 
     /// Add an automated fix to this violation
-    ///
-    /// # Example
-    ///
-    /// ```rust,ignore
-    /// violation.with_fix(Fix::with_explanation(
-    ///     "Replace with pipeline input version",
-    ///     vec![Replacement::new(span, new_code)]
-    /// ))
-    /// ```
     #[must_use]
     pub fn with_fix(mut self, fix: Fix) -> Self {
         self.fix = Some(fix);
@@ -160,19 +116,26 @@ impl Violation {
         self.doc_url = url;
     }
 
+    /// Set the label text displayed on the primary span
+    #[must_use]
+    pub fn with_primary_label(mut self, label: impl Into<Cow<'static, str>>) -> Self {
+        self.primary_label = Some(label.into());
+        self
+    }
+
     /// Add additional labeled spans for context
     ///
     /// # Example
     ///
     /// ```rust,ignore
     /// use miette::LabeledSpan;
-    /// violation.with_labels(vec![
+    /// violation.with_extra_labels(vec![
     ///     LabeledSpan::at(10..20, "related to this"),
     /// ])
     /// ```
     #[must_use]
-    pub fn with_labels(mut self, labels: Vec<LabeledSpan>) -> Self {
-        self.labels = labels;
+    pub fn with_extra_labels(mut self, labels: Vec<LabeledSpan>) -> Self {
+        self.extra_labels = labels;
         self
     }
 
@@ -239,42 +202,20 @@ impl Diagnostic for Violation {
     }
 
     fn labels(&self) -> Option<Box<dyn Iterator<Item = LabeledSpan> + '_>> {
-        let primary = LabeledSpan::underline(self.span.start..self.span.end);
+        let span_range = self.span.start..self.span.end;
+        let primary = self.primary_label.as_ref().map_or_else(
+            || LabeledSpan::underline(span_range.clone()),
+            |label| LabeledSpan::new_primary_with_span(Some(label.to_string()), span_range.clone()),
+        );
         Some(Box::new(
-            [primary].into_iter().chain(self.labels.iter().cloned()),
+            [primary]
+                .into_iter()
+                .chain(self.extra_labels.iter().cloned()),
         ))
     }
 }
 
 /// An automated fix that can be applied to resolve a violation
-///
-/// # Display Format
-///
-/// Fixes are displayed as:
-///
-/// ```text
-/// ℹ Available fix: [explanation]
-/// - old code
-/// + new code
-/// ```
-///
-/// # Important
-///
-/// - `explanation`: User-facing text shown in "Available fix:" (can be
-///   multi-line)
-/// - `replacements[].replacement_text`: Actual code written to the file
-///
-/// These should be different! The explanation describes the change,
-/// the `replacement_text` is the actual code.
-///
-/// # Example
-///
-/// ```rust,ignore
-/// Fix::with_explanation(
-///     format!("Use pipeline input ($in) instead of parameter (${}):\n  {}", param, full_code),
-///     vec![Replacement::new(span, actual_code_to_write)]
-/// )
-/// ```
 #[derive(Debug, Clone)]
 pub struct Fix {
     /// User-facing explanation of what this fix does
@@ -287,20 +228,6 @@ pub struct Fix {
 
 impl Fix {
     /// Create a fix with an explanation and code replacements
-    ///
-    /// # Arguments
-    ///
-    /// * `explanation` - User-facing description (shown in "Available fix:")
-    /// * `replacements` - Actual code changes to apply to the file
-    ///
-    /// # Example
-    ///
-    /// ```rust,ignore
-    /// Fix::with_explanation(
-    ///     "Replace with is-not-empty",
-    ///     vec![Replacement::new(span, "is-not-empty")]
-    /// )
-    /// ```
     #[must_use]
     pub fn with_explanation(
         explanation: impl Into<Cow<'static, str>>,

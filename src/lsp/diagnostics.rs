@@ -1,4 +1,7 @@
-use lsp_types::{CodeDescription, Diagnostic, DiagnosticSeverity, NumberOrString, Range};
+use lsp_types::{
+    CodeDescription, Diagnostic, DiagnosticRelatedInformation, DiagnosticSeverity, Location,
+    NumberOrString, Range, Uri,
+};
 
 use super::line_index::LineIndex;
 use crate::{LintLevel, violation::Violation};
@@ -15,11 +18,10 @@ pub fn violation_to_diagnostic(
     violation: &Violation,
     source: &str,
     line_index: &LineIndex,
+    file_uri: &Uri,
 ) -> Diagnostic {
-    let message = violation.help.as_ref().map_or_else(
-        || violation.message.to_string(),
-        |help| format!("{}\n\nHelp: {help}", violation.message),
-    );
+    let message = build_message(violation);
+    let related_information = build_related_information(violation, source, line_index, file_uri);
 
     Diagnostic {
         range: line_index.span_to_range(source, violation.span.start, violation.span.end),
@@ -34,10 +36,58 @@ pub fn violation_to_diagnostic(
             .map(|href| CodeDescription { href }),
         source: Some(String::from("nu-lint")),
         message,
-        related_information: None,
+        related_information: if related_information.is_empty() {
+            None
+        } else {
+            Some(related_information)
+        },
         tags: None,
         data: None,
     }
+}
+
+fn build_message(violation: &Violation) -> String {
+    let base_message = violation.primary_label.as_ref().map_or_else(
+        || violation.message.to_string(),
+        |label| format!("{}: {label}", violation.message),
+    );
+
+    violation
+        .help
+        .as_ref()
+        .map_or(base_message.clone(), |help| {
+            format!("{base_message}\n\nHelp: {help}")
+        })
+}
+
+fn build_related_information(
+    violation: &Violation,
+    source: &str,
+    line_index: &LineIndex,
+    file_uri: &Uri,
+) -> Vec<DiagnosticRelatedInformation> {
+    violation
+        .extra_labels
+        .iter()
+        .filter_map(|labeled_span| {
+            let label_text = labeled_span.label()?;
+            if label_text.is_empty() {
+                return None;
+            }
+
+            let span_start = labeled_span.offset();
+            let span_end = span_start + labeled_span.len();
+            let range = line_index.span_to_range(source, span_start, span_end);
+
+            Some(DiagnosticRelatedInformation {
+                location: Location {
+                    uri: file_uri.clone(),
+                    range,
+                },
+                message: label_text.to_string(),
+            })
+        })
+        .collect()
 }
 
 #[must_use]
@@ -124,5 +174,37 @@ mod tests {
             },
         };
         assert!(!ranges_overlap(&a, &b));
+    }
+
+    #[test]
+    fn diagnostic_includes_related_information() {
+        use lsp_types::Uri;
+        use nu_protocol::Span;
+
+        use super::{LineIndex, violation_to_diagnostic};
+        use crate::{LintLevel, violation::Violation};
+
+        let source = "if $x {\n    if $y {\n        foo\n    }\n}";
+        let line_index = LineIndex::new(source);
+        let file_uri: Uri = "file:///test.nu".parse().unwrap();
+
+        let violation = Violation::new("Nested if can be collapsed", Span::new(0, 39))
+            .with_primary_label("outer if")
+            .with_extra_label("inner if", Span::new(12, 35))
+            .with_help("Combine with 'and'");
+        let mut v = violation;
+        v.lint_level = LintLevel::Warn;
+
+        let diagnostic = violation_to_diagnostic(&v, source, &line_index, &file_uri);
+
+        assert!(diagnostic.message.contains("outer if"));
+        assert!(diagnostic.message.contains("Combine with 'and'"));
+
+        let related = diagnostic
+            .related_information
+            .expect("should have related_information");
+        assert_eq!(related.len(), 1);
+        assert_eq!(related[0].message, "inner if");
+        assert_eq!(related[0].location.uri.as_str(), "file:///test.nu");
     }
 }

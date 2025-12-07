@@ -68,14 +68,14 @@ pub trait ExpressionExt: Traverse {
     /// contains `$x`
     fn contains_variable(&self, var_id: VarId) -> bool;
     /// Finds the first usage span of a specific variable. Example: `$x + 1`
-    /// with var_id of x returns span of `$x`
+    /// with `var_id` of x returns span of `$x`
     fn find_var_usage(&self, var_id: VarId) -> Option<Span>;
 
     /// Checks if expression uses pipeline input variable. Example: `$in` or
     /// `$in | length`
     fn uses_pipeline_input(&self, context: &LintContext) -> bool;
     /// Finds the `$in` variable and its span in this expression. Example:
-    /// `$in.field` returns (var_id, span of $in)
+    /// `$in.field` returns (`var_id`, span of `$in`)
     fn find_pipeline_input(&self, context: &LintContext) -> Option<(VarId, Span)>;
     /// Infers the output type of an expression. Example: `ls` returns "table",
     /// `1 + 2` returns "int"
@@ -442,7 +442,6 @@ impl ExpressionExt for Expression {
             Expr::StringInterpolation(items) => {
                 items.iter().find_map(|item| item.find_var_usage(var_id))
             }
-            Expr::Subexpression(_) | Expr::Block(_) | Expr::Closure(_) => None,
             _ => None,
         }
     }

@@ -141,7 +141,7 @@ pub trait BlockExt {
     /// length }` returns `(var_id, span of $in)`
     fn find_pipeline_input(&self, context: &LintContext) -> Option<(VarId, Span)>;
     /// Finds the first usage span of a specific variable in this block.
-    /// Example: `{ $x + 1 }` with var_id of x returns span of `$x`
+    /// Example: `{ $x + 1 }` with `var_id` of x returns span of `$x`
     fn find_var_usage(&self, var_id: VarId) -> Option<Span>;
     /// Infers the output type of a block. Example: `{ ls }` returns "table"
     fn infer_output_type(&self, context: &LintContext) -> Type;

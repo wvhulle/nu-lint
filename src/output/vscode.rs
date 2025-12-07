@@ -55,6 +55,13 @@ fn violation_to_vscode_diagnostic(violation: &Violation) -> VsCodeDiagnostic {
     let line_end_zero = line_end.saturating_sub(1);
     let column_end_zero = column_end.saturating_sub(1);
 
+    let file_uri = violation
+        .file
+        .as_ref()
+        .map_or_else(|| "unknown".to_string(), ToString::to_string);
+
+    let related_information = build_related_information(violation, &source_code, &file_uri);
+
     VsCodeDiagnostic {
         range: VsCodeRange {
             start: VsCodePosition {
@@ -73,37 +80,30 @@ fn violation_to_vscode_diagnostic(violation: &Violation) -> VsCodeDiagnostic {
             .unwrap_or("unknown")
             .to_string(),
         source: "nu-lint".to_string(),
-        message: violation.message.to_string(),
-        related_information: violation.help.as_ref().map(|suggestion| {
-            vec![VsCodeRelatedInformation {
-                location: VsCodeLocation {
-                    uri: violation
-                        .file
-                        .as_ref()
-                        .map_or_else(|| "unknown".to_string(), ToString::to_string),
-                    range: VsCodeRange {
-                        start: VsCodePosition {
-                            line: line_start_zero,
-                            character: column_start_zero,
-                        },
-                        end: VsCodePosition {
-                            line: line_end_zero,
-                            character: column_end_zero,
-                        },
-                    },
-                },
-                message: suggestion.to_string(),
-            }]
+        message: build_message(violation),
+        code_description: violation.doc_url.map(|url| VsCodeCodeDescription {
+            href: url.to_string(),
         }),
+        related_information: if related_information.is_empty() {
+            None
+        } else {
+            Some(related_information)
+        },
         code_action: violation.fix.as_ref().map(|fix| VsCodeCodeAction {
             title: fix.explanation.to_string(),
             edits: fix
                 .replacements
                 .iter()
-                .map(|r| {
+                .enumerate()
+                .map(|(idx, r)| {
                     let (r_line_start, r_col_start) =
                         calculate_line_column(&source_code, r.span.start);
                     let (r_line_end, r_col_end) = calculate_line_column(&source_code, r.span.end);
+                    let description = if fix.replacements.len() == 1 {
+                        Some(fix.explanation.to_string())
+                    } else {
+                        Some(format!("{} (edit {})", fix.explanation, idx + 1))
+                    };
                     VsCodeTextEdit {
                         range: VsCodeRange {
                             start: VsCodePosition {
@@ -116,11 +116,81 @@ fn violation_to_vscode_diagnostic(violation: &Violation) -> VsCodeDiagnostic {
                             },
                         },
                         replacement_text: r.replacement_text.to_string(),
+                        description,
                     }
                 })
                 .collect(),
         }),
     }
+}
+
+fn build_message(violation: &Violation) -> String {
+    violation.primary_label.as_ref().map_or_else(
+        || violation.message.to_string(),
+        |label| format!("{}: {label}", violation.message),
+    )
+}
+
+fn build_related_information(
+    violation: &Violation,
+    source_code: &str,
+    file_uri: &str,
+) -> Vec<VsCodeRelatedInformation> {
+    let mut info = Vec::new();
+
+    for labeled_span in &violation.extra_labels {
+        let label_text = labeled_span.label().unwrap_or_default();
+        if label_text.is_empty() {
+            continue;
+        }
+
+        let span_start = labeled_span.offset();
+        let span_end = span_start + labeled_span.len();
+
+        let (line_start, col_start) = calculate_line_column(source_code, span_start);
+        let (line_end, col_end) = calculate_line_column(source_code, span_end);
+
+        info.push(VsCodeRelatedInformation {
+            location: VsCodeLocation {
+                uri: file_uri.to_string(),
+                range: VsCodeRange {
+                    start: VsCodePosition {
+                        line: line_start.saturating_sub(1),
+                        character: col_start.saturating_sub(1),
+                    },
+                    end: VsCodePosition {
+                        line: line_end.saturating_sub(1),
+                        character: col_end.saturating_sub(1),
+                    },
+                },
+            },
+            message: label_text.to_string(),
+        });
+    }
+
+    if let Some(help) = &violation.help {
+        let (line_start, col_start) = calculate_line_column(source_code, violation.span.start);
+        let (line_end, col_end) = calculate_line_column(source_code, violation.span.end);
+
+        info.push(VsCodeRelatedInformation {
+            location: VsCodeLocation {
+                uri: file_uri.to_string(),
+                range: VsCodeRange {
+                    start: VsCodePosition {
+                        line: line_start.saturating_sub(1),
+                        character: col_start.saturating_sub(1),
+                    },
+                    end: VsCodePosition {
+                        line: line_end.saturating_sub(1),
+                        character: col_end.saturating_sub(1),
+                    },
+                },
+            },
+            message: format!("Help: {help}"),
+        });
+    }
+
+    info
 }
 
 #[derive(Serialize)]
@@ -136,10 +206,17 @@ pub struct VsCodeDiagnostic {
     pub code: String,
     pub source: String,
     pub message: String,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "codeDescription")]
+    pub code_description: Option<VsCodeCodeDescription>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub related_information: Option<Vec<VsCodeRelatedInformation>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub code_action: Option<VsCodeCodeAction>,
+}
+
+#[derive(Serialize)]
+pub struct VsCodeCodeDescription {
+    pub href: String,
 }
 
 #[derive(Serialize)]
@@ -176,4 +253,6 @@ pub struct VsCodeCodeAction {
 pub struct VsCodeTextEdit {
     pub range: VsCodeRange,
     pub replacement_text: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
 }

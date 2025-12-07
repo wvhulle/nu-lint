@@ -36,7 +36,7 @@ impl ServerState {
 
         let diagnostics = violations
             .iter()
-            .map(|v| violation_to_diagnostic(v, content, &line_index))
+            .map(|v| violation_to_diagnostic(v, content, &line_index, uri))
             .collect();
 
         self.documents.insert(
@@ -92,6 +92,7 @@ impl ServerState {
                         violation,
                         &doc_state.content,
                         &doc_state.line_index,
+                        uri,
                     )]),
                     edit: Some(WorkspaceEdit {
                         changes: Some(HashMap::from([(uri.clone(), edits)])),

@@ -48,6 +48,16 @@ fn format_cell_path(members: &[PathMember]) -> String {
         .join(".")
 }
 
+const fn get_command_label(idx: usize, start_idx: usize, end_idx: usize) -> &'static str {
+    if idx == start_idx {
+        "First 'get' command"
+    } else if idx == end_idx {
+        "Last 'get' command"
+    } else {
+        "Intermediate 'get' command"
+    }
+}
+
 fn find_consecutive_gets(pipeline: &Pipeline, context: &LintContext) -> Vec<(usize, usize)> {
     let mut ranges = Vec::new();
     let mut start_idx = None;
@@ -55,10 +65,10 @@ fn find_consecutive_gets(pipeline: &Pipeline, context: &LintContext) -> Vec<(usi
     for (idx, element) in pipeline.elements.iter().enumerate() {
         if is_get_call(&element.expr, context) {
             start_idx.get_or_insert(idx);
-        } else if let Some(start) = start_idx.take() {
-            if idx - start >= 2 {
-                ranges.push((start, idx - 1));
-            }
+        } else if let Some(start) = start_idx.take()
+            && idx - start >= 2
+        {
+            ranges.push((start, idx - 1));
         }
     }
 
@@ -80,9 +90,8 @@ fn collect_cell_path_members(
     (start_idx..=end_idx)
         .map(|idx| {
             let element = &pipeline.elements[idx];
-            let call = match &element.expr.expr {
-                Expr::Call(call) => call,
-                _ => return None,
+            let Expr::Call(call) = &element.expr.expr else {
+                return None;
             };
             let arg = call.get_first_positional_arg()?;
             extract_cell_path_members(arg)
@@ -119,10 +128,8 @@ fn check(context: &LintContext) -> Vec<Violation> {
             let full_span = nu_protocol::Span::new(start_span.start, end_span.end);
 
             let num_gets = end_idx - start_idx + 1;
-            let message = format!(
-                "Use combined cell path instead of {} chained 'get' commands",
-                num_gets
-            );
+            let message =
+                format!("Use combined cell path instead of {num_gets} chained 'get' commands");
 
             let fix = generate_fix(pipeline, start_idx, end_idx);
 
@@ -131,13 +138,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
             for idx in start_idx..=end_idx {
                 let span = pipeline.elements[idx].expr.span;
-                let label = if idx == start_idx {
-                    "First 'get' command"
-                } else if idx == end_idx {
-                    "Last 'get' command"
-                } else {
-                    "Intermediate 'get' command"
-                };
+                let label = get_command_label(idx, start_idx, end_idx);
                 violation = violation.with_extra_label(label, span);
             }
 

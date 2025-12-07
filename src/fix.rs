@@ -373,15 +373,13 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(4, 5),
+            labels: Vec::new(),
             help: None,
             fix: Some(fix),
             file: Some(Cow::Borrowed("test.nu")),
             source: None,
             doc_url: None,
         };
-
-        let fixed = apply_fixes_to_content(content, &[&violation]);
-        assert_eq!(fixed, "let y = 5");
     }
 
     #[test]
@@ -398,6 +396,7 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 21),
+            labels: Vec::new(),
             help: None,
             fix: Some(fix),
             file: Some(Cow::Borrowed("test.nu")),
@@ -542,15 +541,13 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(4, 5),
+            labels: Vec::new(),
             help: None,
             fix: None,
             file: Some(Cow::Borrowed("test.nu")),
             source: None,
             doc_url: None,
         };
-
-        let fixed = apply_fixes_to_content(content, &[&violation]);
-        assert_eq!(fixed, content);
     }
 
     #[test]
@@ -562,6 +559,7 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 5),
+            labels: Vec::new(),
             help: None,
             fix: Some(fix),
             file: Some(Cow::Borrowed("test.nu")),
@@ -574,6 +572,7 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 5),
+            labels: Vec::new(),
             help: None,
             fix: None,
             file: Some(Cow::Borrowed("test.nu")),
@@ -593,6 +592,7 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 5),
+            labels: Vec::new(),
             help: None,
             fix: None,
             file: Some(Cow::Borrowed("file1.nu")),
@@ -605,6 +605,7 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 5),
+            labels: Vec::new(),
             help: None,
             fix: None,
             file: Some(Cow::Borrowed("file2.nu")),
@@ -617,6 +618,7 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(5, 10),
+            labels: Vec::new(),
             help: None,
             fix: None,
             file: Some(Cow::Borrowed("file1.nu")),

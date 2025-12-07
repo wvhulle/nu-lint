@@ -206,6 +206,31 @@ impl Rule {
 
     #[cfg(test)]
     #[track_caller]
+    /// Test helper: assert that the rule generates a violation with a label
+    /// containing the expected string
+    pub fn assert_label_contains(&self, code: &str, expected_text: &str) {
+        let violations =
+            LintContext::test_with_parsed_source(code, |context| (self.check)(&context));
+        assert!(
+            !violations.is_empty(),
+            "Expected rule '{}' to detect violations, but found none",
+            self.id
+        );
+
+        let labels = &violations[0].labels;
+        let label_texts: Vec<_> = labels
+            .iter()
+            .filter_map(|l| l.text.as_ref().map(AsRef::as_ref))
+            .collect();
+
+        assert!(
+            label_texts.iter().any(|t| t.contains(expected_text)),
+            "Expected a label to contain '{expected_text}', but got labels: {label_texts:?}"
+        );
+    }
+
+    #[cfg(test)]
+    #[track_caller]
     /// Test helper: assert that the rule generates a fix that removes/erases
     /// the expected string
     pub fn assert_replacement_erases(&self, code: &str, erased_text: &str) {

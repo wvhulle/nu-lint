@@ -3,21 +3,28 @@ use std::collections::HashSet;
 use miette::Diagnostic;
 use nu_protocol::ParseError;
 
-use crate::{context::LintContext, rule::Rule, violation::Violation};
+use crate::{
+    context::LintContext,
+    rule::Rule,
+    violation::{Label, Violation},
+};
 
-fn extract_label_texts(parse_error: &ParseError) -> Vec<String> {
+const NU_PARSER_VERSION: &str = env!("NU_PARSER_VERSION");
+
+fn extract_labels(parse_error: &ParseError) -> Vec<Label> {
     parse_error
         .labels()
         .into_iter()
         .flatten()
-        .filter_map(|label| {
-            let text = label.label()?;
-            (!text.is_empty()).then(|| text.to_string())
+        .map(|miette_label| {
+            let span = nu_protocol::Span::new(miette_label.offset(), miette_label.offset() + miette_label.len());
+            match miette_label.label() {
+                Some(text) if !text.is_empty() => Label::new(span, text.to_string()),
+                _ => Label::span_only(span),
+            }
         })
         .collect()
 }
-
-const NU_PARSER_VERSION: &str = env!("NU_PARSER_VERSION");
 
 fn build_help_text(parse_error: &ParseError) -> String {
     let version_note = format!(
@@ -25,27 +32,15 @@ fn build_help_text(parse_error: &ParseError) -> String {
          cause false positives."
     );
 
-    // Prefer the help text from ParseError if available, as it's usually more
-    // comprehensive
     if let Some(help_text) = parse_error.help() {
-        return format!("{help_text}\n\n{version_note}");
-    }
-
-    // Fall back to label texts if no help is available
-    // Labels often contain useful context about what was expected or what went
-    // wrong
-    let labels = extract_label_texts(parse_error);
-    if labels.is_empty() {
-        version_note
+        format!("{help_text}\n\n{version_note}")
     } else {
-        format!("{}\n\n{version_note}", labels.join("\n"))
+        version_note
     }
 }
 
 fn check(context: &LintContext) -> Vec<Violation> {
     let mut seen = HashSet::new();
-    // Convert each parse error to a violation, deduplicating by span and message
-    // Filter out module-related errors since the linter works at AST level only
     context
         .working_set
         .parse_errors
@@ -58,8 +53,10 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 parse_error.to_string(),
             );
             seen.insert(key).then(|| {
+                let labels = extract_labels(parse_error);
                 Violation::new(parse_error.to_string(), parse_error.span())
                     .with_help(build_help_text(parse_error))
+                    .with_labels(labels)
             })
         })
         .collect()

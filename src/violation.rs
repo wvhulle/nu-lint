@@ -1,9 +1,34 @@
 use std::borrow::Cow;
 
-use miette::SourceSpan;
 use nu_protocol::Span;
 
 use crate::config::LintLevel;
+
+/// A labeled span for diagnostic output
+#[derive(Debug, Clone)]
+pub struct Label {
+    /// Span in source code
+    pub span: Span,
+    /// Optional label text to display
+    pub text: Option<Cow<'static, str>>,
+}
+
+impl Label {
+    /// Create a new label with text
+    #[must_use]
+    pub fn new(span: Span, text: impl Into<Cow<'static, str>>) -> Self {
+        Self {
+            span,
+            text: Some(text.into()),
+        }
+    }
+
+    /// Create a label without text (just highlights the span)
+    #[must_use]
+    pub const fn span_only(span: Span) -> Self {
+        Self { span, text: None }
+    }
+}
 
 /// A lint violation with its diagnostic information
 ///
@@ -49,8 +74,12 @@ pub struct Violation {
     /// Example: "Use pipeline input instead of parameter"
     pub message: Cow<'static, str>,
 
-    /// Span in source code where the violation occurs
+    /// Primary span in source code where the violation occurs
     pub span: Span,
+
+    /// Additional labeled spans for context (e.g., related locations)
+    /// These are displayed as secondary highlights in diagnostic output
+    pub labels: Vec<Label>,
 
     /// Optional detailed explanation shown in the "help:" section
     /// Use this to explain WHY the code should change or provide rationale
@@ -85,6 +114,7 @@ impl Violation {
             lint_level: LintLevel::Allow, // Placeholder, will be set by engine
             message: message.into(),
             span,
+            labels: Vec::new(),
             help: None,
             fix: None,
             file: None,
@@ -139,9 +169,19 @@ impl Violation {
         self.doc_url = url;
     }
 
+    /// Add additional labeled spans for context
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// violation.with_labels(vec![
+    ///     Label::new(other_span, "related to this"),
+    /// ])
+    /// ```
     #[must_use]
-    pub(crate) fn to_source_span(&self) -> SourceSpan {
-        SourceSpan::from((self.span.start, self.span.end - self.span.start))
+    pub fn with_labels(mut self, labels: Vec<Label>) -> Self {
+        self.labels = labels;
+        self
     }
 }
 

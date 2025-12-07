@@ -123,34 +123,20 @@ impl Violation {
         self
     }
 
+    #[must_use]
+    pub fn with_label(mut self, label: LabeledSpan) -> Self {
+        self.extra_labels.push(label);
+        self
+    }
+
     /// Add additional labeled spans for context
-    ///
-    /// # Example
-    ///
-    /// ```rust,ignore
-    /// use miette::LabeledSpan;
-    /// violation.with_extra_labels(vec![
-    ///     LabeledSpan::at(10..20, "related to this"),
-    /// ])
-    /// ```
     #[must_use]
     pub fn with_extra_labels(mut self, labels: Vec<LabeledSpan>) -> Self {
         self.extra_labels = labels;
         self
     }
 
-    /// Add informational notes to this violation
-    ///
     /// Notes appear after help text and provide supplementary context.
-    ///
-    /// # Example
-    ///
-    /// ```rust,ignore
-    /// violation.with_notes(vec![
-    ///     "This pattern is deprecated since Nushell 0.90",
-    ///     "See RFC-123 for migration guide",
-    /// ])
-    /// ```
     #[must_use]
     pub fn with_notes<I, S>(mut self, notes: I) -> Self
     where

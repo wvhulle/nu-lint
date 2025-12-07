@@ -63,7 +63,17 @@ fn infer_output_type_with_depth(block: &Block, context: &LintContext, depth: usi
         return block.output_type();
     };
 
-    let block_input_type = infer_input_type_with_depth(block, context, depth + 1);
+    let block_input_type = block
+        .all_elements()
+        .iter()
+        .find_map(|element| element.expr.find_pipeline_input_variable(context))
+        .and_then(|in_var| {
+            block
+                .all_elements()
+                .iter()
+                .find_map(|element| element.expr.infer_input_type(Some(in_var), context))
+        })
+        .unwrap_or(Type::Any);
     log::debug!("Block inferred input type: {block_input_type:?}");
     let mut current_type = Some(block_input_type);
 
@@ -89,29 +99,6 @@ fn infer_output_type_with_depth(block: &Block, context: &LintContext, depth: usi
     final_type
 }
 
-fn infer_input_type_with_depth(block: &Block, context: &LintContext, depth: usize) -> Type {
-    if depth >= MAX_TYPE_INFERENCE_DEPTH {
-        log::warn!(
-            "Type inference depth limit ({MAX_TYPE_INFERENCE_DEPTH}) reached, returning Any"
-        );
-        return Type::Any;
-    }
-
-    let Some(in_var) = block
-        .all_elements()
-        .iter()
-        .find_map(|element| element.expr.find_pipeline_input_variable(context))
-    else {
-        return Type::Any;
-    };
-
-    block
-        .all_elements()
-        .iter()
-        .find_map(|element| element.expr.infer_input_type(Some(in_var), context))
-        .unwrap_or(Type::Any)
-}
-
 pub trait BlockExt {
     /// Checks if block has side effects. Example: `{ print "hello"; ls }` has
     /// side effects
@@ -124,11 +111,6 @@ pub trait BlockExt {
     fn contains_span(&self, span: Span) -> bool;
     /// All pipeline elements: `{ ls | where size > 1kb }`
     fn all_elements(&self) -> Vec<&PipelineElement>;
-    /// Tests if any pipeline element matches predicate. Example: finds `print`
-    /// call
-    fn any_element<F>(&self, predicate: F) -> bool
-    where
-        F: Fn(&PipelineElement) -> bool;
     /// Checks if block contains variable references. Example: `{ $x + 1 }`
     fn contains_variables(&self, context: &LintContext) -> bool;
     /// Extracts single `if` call from block. Example: `{ if $x { ... } }`
@@ -193,15 +175,10 @@ impl BlockExt for Block {
         self.pipelines.iter().flat_map(|p| &p.elements).collect()
     }
 
-    fn any_element<F>(&self, predicate: F) -> bool
-    where
-        F: Fn(&PipelineElement) -> bool,
-    {
-        self.all_elements().iter().any(|e| predicate(e))
-    }
-
     fn contains_variables(&self, context: &LintContext) -> bool {
-        self.any_element(|elem| elem.expr.contains_variables(context))
+        self.all_elements()
+            .iter()
+            .any(|elem| elem.expr.contains_variables(context))
     }
 
     fn contains_call_in_single_pipeline(&self, command_name: &str, context: &LintContext) -> bool {
@@ -262,7 +239,9 @@ impl BlockExt for Block {
     }
 
     fn uses_pipeline_input(&self, context: &LintContext) -> bool {
-        self.any_element(|elem| elem.expr.uses_pipeline_input(context))
+        self.all_elements()
+            .iter()
+            .any(|elem| elem.expr.uses_pipeline_input(context))
     }
 
     fn produces_output(&self) -> bool {

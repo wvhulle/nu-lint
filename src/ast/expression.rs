@@ -68,10 +68,6 @@ pub trait ExpressionExt: Traverse {
     /// contains `$x`
     fn contains_variable(&self, var_id: VarId) -> bool;
 
-    /// Tests if any nested expression matches predicate. Example: finds `$in`
-    /// in `$in.field + 1`
-    #[allow(dead_code, reason = "It is actually used")]
-    fn any(&self, context: &LintContext, predicate: impl Fn(&Expression) -> bool) -> bool;
     /// Checks if expression uses pipeline input variable. Example: `$in` or
     /// `$in | length`
     fn uses_pipeline_input(&self, context: &LintContext) -> bool;
@@ -106,15 +102,6 @@ const fn extract_var_from_full_cell_path(cell_path: &FullCellPath) -> Option<Var
 }
 
 impl ExpressionExt for Expression {
-    fn any(&self, context: &LintContext, predicate: impl Fn(&Self) -> bool) -> bool {
-        self.find_map(context.working_set, &|inner_expr| {
-            if predicate(inner_expr) {
-                return FindMapResult::Found(());
-            }
-            FindMapResult::Continue
-        })
-        .is_some()
-    }
     fn refers_to_same_variable(&self, other: &Expression, context: &LintContext) -> bool {
         match (
             self.extract_variable_name(context),
@@ -205,7 +192,7 @@ impl ExpressionExt for Expression {
     }
 
     fn span_text<'a>(&self, context: &'a LintContext) -> &'a str {
-        &context.source[self.span.start..self.span.end]
+        self.span.text(context)
     }
 
     fn extract_assigned_variable(&self) -> Option<VarId> {
@@ -265,6 +252,17 @@ impl ExpressionExt for Expression {
                 }
             }),
 
+            Expr::Table(table) => {
+                table
+                    .columns
+                    .iter()
+                    .any(|col| col.contains_variables(context))
+                    || table
+                        .rows
+                        .iter()
+                        .any(|row| row.iter().any(|cell| cell.contains_variables(context)))
+            }
+
             Expr::Record(fields) => fields.iter().any(|field| match field {
                 RecordItem::Pair(key, val) => {
                     key.contains_variables(context) || val.contains_variables(context)
@@ -275,8 +273,9 @@ impl ExpressionExt for Expression {
             Expr::Call(call) => call.arguments.iter().any(|arg| match arg {
                 Argument::Positional(expr)
                 | Argument::Unknown(expr)
+                | Argument::Spread(expr)
                 | Argument::Named((_, _, Some(expr))) => expr.contains_variables(context),
-                _ => false,
+                Argument::Named(_) => false,
             }),
 
             _ => false,
@@ -345,7 +344,7 @@ impl ExpressionExt for Expression {
 
     fn is_external_filesystem_command(&self, context: &LintContext) -> bool {
         if let Expr::ExternalCall(head, args) = &self.expr {
-            let cmd_name = &context.source[head.span.start..head.span.end];
+            let cmd_name = head.span.text(context);
             has_external_side_effect(cmd_name, ExternEffect::ModifiesFileSystem, context, args)
         } else {
             false
@@ -401,34 +400,15 @@ impl ExpressionExt for Expression {
     }
 
     fn uses_pipeline_input(&self, context: &LintContext) -> bool {
-        use super::block::BlockExt;
-
-        match &self.expr {
-            Expr::Var(var_id) => {
-                let var = context.working_set.get_variable(*var_id);
-                is_pipeline_input_var(*var_id, context) && var.const_val.is_none()
-            }
-            Expr::BinaryOp(left, _, right) => {
-                left.uses_pipeline_input(context) || right.uses_pipeline_input(context)
-            }
-            Expr::UnaryNot(inner) => inner.uses_pipeline_input(context),
-            Expr::Collect(_var_id, _inner_expr) => true,
-            Expr::Call(call) => call.arguments.iter().any(|arg| {
-                if let Argument::Positional(arg_expr) | Argument::Named((_, _, Some(arg_expr))) =
-                    arg
-                {
-                    arg_expr.uses_pipeline_input(context)
-                } else {
-                    false
-                }
-            }),
-            Expr::FullCellPath(cell_path) => cell_path.head.uses_pipeline_input(context),
-            Expr::Subexpression(block_id) | Expr::Block(block_id) => context
-                .working_set
-                .get_block(*block_id)
-                .uses_pipeline_input(context),
-            _ => false,
+        if matches!(&self.expr, Expr::Collect(..)) {
+            return true;
         }
+
+        self.find_pipeline_input_variable(context)
+            .is_some_and(|var_id| {
+                let var = context.working_set.get_variable(var_id);
+                var.const_val.is_none()
+            })
     }
 
     fn find_pipeline_input_variable(&self, context: &LintContext) -> Option<VarId> {

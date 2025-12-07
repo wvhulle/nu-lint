@@ -82,11 +82,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
          ignored."
     );
 
-    let help = format!(
-        "Wrap the external command in 'complete' to capture its exit code:\nlet result = \
-         (^{external_cmd} ... | complete)\nif $result.exit_code != 0 {{\n\x20   error make {{msg: \
-         $result.stderr}}\n}}\n$result.stdout"
-    );
+    let help = "Wrap the external command in 'complete' to capture its exit code.";
 
     Some(Violation::new(message, first_element.expr.span).with_help(help))
 }

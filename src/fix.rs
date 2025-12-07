@@ -363,27 +363,6 @@ mod tests {
     };
 
     #[test]
-    fn test_apply_single_replacement() {
-        let content = "let x = 5";
-        let replacement = Replacement::new(Span::new(4, 5), "y");
-        let fix = Fix::with_explanation("Rename variable", vec![replacement]);
-
-        let violation = Violation {
-            rule_id: Some(Cow::Borrowed("test_rule")),
-            lint_level: LintLevel::Warn,
-            message: Cow::Borrowed("Test"),
-            span: Span::new(4, 5),
-            labels: vec![],
-            help: None,
-            notes: vec![],
-            fix: Some(fix),
-            file: Some(Cow::Borrowed("test.nu")),
-            source: None,
-            doc_url: None,
-        };
-    }
-
-    #[test]
     fn test_apply_multiple_replacements() {
         let content = "let x = 5; let y = 10";
         let replacements = vec![

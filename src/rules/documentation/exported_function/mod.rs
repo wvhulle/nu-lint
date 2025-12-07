@@ -54,10 +54,7 @@ fn check_exported_function(call: &Call, context: &LintContext) -> Option<Violati
                 format!("Exported function '{func_name}' is missing documentation"),
                 call.head,
             )
-            .with_help(format!(
-                "Add a documentation comment above the function:\n# Description of \
-                 {func_name}\nexport def {func_name} ..."
-            )),
+            .with_help("Add a documentation comment above the function."),
         )
     }
 }

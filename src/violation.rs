@@ -1,6 +1,6 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, error::Error, fmt};
 
-use miette::{LabeledSpan, Severity};
+use miette::{Diagnostic, LabeledSpan, Severity};
 use nu_protocol::Span;
 
 use crate::config::LintLevel;
@@ -203,6 +203,46 @@ impl Violation {
     pub fn with_note(mut self, note: impl Into<Cow<'static, str>>) -> Self {
         self.notes.push(note.into());
         self
+    }
+}
+
+impl fmt::Display for Violation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}
+
+impl Error for Violation {}
+
+impl Diagnostic for Violation {
+    fn code<'a>(&'a self) -> Option<Box<dyn fmt::Display + 'a>> {
+        Some(Box::new(format!(
+            "{}({})",
+            self.lint_level,
+            self.rule_id.as_deref().unwrap_or("unknown")
+        )))
+    }
+
+    fn severity(&self) -> Option<Severity> {
+        Some(self.lint_level.into())
+    }
+
+    fn help<'a>(&'a self) -> Option<Box<dyn fmt::Display + 'a>> {
+        self.help
+            .as_ref()
+            .map(|h| Box::new(h.clone()) as Box<dyn fmt::Display>)
+    }
+
+    fn url<'a>(&'a self) -> Option<Box<dyn fmt::Display + 'a>> {
+        self.doc_url
+            .map(|url| Box::new(url) as Box<dyn fmt::Display>)
+    }
+
+    fn labels(&self) -> Option<Box<dyn Iterator<Item = LabeledSpan> + '_>> {
+        let primary = LabeledSpan::underline(self.span.start..self.span.end);
+        Some(Box::new(
+            [primary].into_iter().chain(self.labels.iter().cloned()),
+        ))
     }
 }
 

@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use miette::LabeledSpan;
 use nu_protocol::{BlockId, Span};
 
 use crate::{ast::block::BlockExt, context::LintContext};
@@ -26,10 +25,6 @@ pub trait SpanExt {
     /// Check if there's a documentation comment on the same line as this span
     /// This is used for inline parameter documentation: `param # Description`
     fn has_inline_doc_comment(&self, context: &LintContext) -> bool;
-
-    /// Create a `LabeledSpan` from this span without a message
-    #[must_use]
-    fn unlabeled(self) -> LabeledSpan;
 }
 
 impl SpanExt for Span {
@@ -79,9 +74,5 @@ impl SpanExt for Span {
         let line_text = &context.source[line_start..line_end];
 
         line_text.contains(" # ")
-    }
-
-    fn unlabeled(self) -> LabeledSpan {
-        LabeledSpan::new(None, self.start, self.end - self.start)
     }
 }

@@ -1,32 +1,18 @@
 use std::borrow::Cow;
 
+use miette::{LabeledSpan, Severity};
 use nu_protocol::Span;
 
 use crate::config::LintLevel;
 
-/// A labeled span for diagnostic output
-#[derive(Debug, Clone)]
-pub struct Label {
-    /// Span in source code
-    pub span: Span,
-    /// Optional label text to display
-    pub text: Option<Cow<'static, str>>,
-}
-
-impl Label {
-    /// Create a new label with text
-    #[must_use]
-    pub fn new(span: Span, text: impl Into<Cow<'static, str>>) -> Self {
-        Self {
-            span,
-            text: Some(text.into()),
+/// Convert `LintLevel` to miette's `Severity`
+impl From<LintLevel> for Severity {
+    fn from(level: LintLevel) -> Self {
+        match level {
+            LintLevel::Deny => Self::Error,
+            LintLevel::Warn => Self::Warning,
+            LintLevel::Allow => Self::Advice,
         }
-    }
-
-    /// Create a label without text (just highlights the span)
-    #[must_use]
-    pub const fn span_only(span: Span) -> Self {
-        Self { span, text: None }
     }
 }
 
@@ -79,13 +65,17 @@ pub struct Violation {
 
     /// Additional labeled spans for context (e.g., related locations)
     /// These are displayed as secondary highlights in diagnostic output
-    pub labels: Vec<Label>,
+    pub labels: Vec<LabeledSpan>,
 
     /// Optional detailed explanation shown in the "help:" section
     /// Use this to explain WHY the code should change or provide rationale
     /// Example: "Pipeline input enables better composability and streaming
     /// performance"
     pub help: Option<Cow<'static, str>>,
+
+    /// Additional informational notes shown after help
+    /// Use for supplementary context, references, or caveats
+    pub notes: Vec<Cow<'static, str>>,
 
     /// Optional automated fix that can be applied
     pub fix: Option<Fix>,
@@ -116,6 +106,7 @@ impl Violation {
             span,
             labels: Vec::new(),
             help: None,
+            notes: Vec::new(),
             fix: None,
             file: None,
             source: None,
@@ -174,13 +165,43 @@ impl Violation {
     /// # Example
     ///
     /// ```rust,ignore
+    /// use miette::LabeledSpan;
     /// violation.with_labels(vec![
-    ///     Label::new(other_span, "related to this"),
+    ///     LabeledSpan::at(10..20, "related to this"),
     /// ])
     /// ```
     #[must_use]
-    pub fn with_labels(mut self, labels: Vec<Label>) -> Self {
+    pub fn with_labels(mut self, labels: Vec<LabeledSpan>) -> Self {
         self.labels = labels;
+        self
+    }
+
+    /// Add informational notes to this violation
+    ///
+    /// Notes appear after help text and provide supplementary context.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// violation.with_notes(vec![
+    ///     "This pattern is deprecated since Nushell 0.90",
+    ///     "See RFC-123 for migration guide",
+    /// ])
+    /// ```
+    #[must_use]
+    pub fn with_notes<I, S>(mut self, notes: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<Cow<'static, str>>,
+    {
+        self.notes = notes.into_iter().map(Into::into).collect();
+        self
+    }
+
+    /// Add a single note to this violation
+    #[must_use]
+    pub fn with_note(mut self, note: impl Into<Cow<'static, str>>) -> Self {
+        self.notes.push(note.into());
         self
     }
 }

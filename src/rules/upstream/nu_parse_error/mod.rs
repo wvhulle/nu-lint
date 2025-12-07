@@ -1,29 +1,14 @@
 use std::collections::HashSet;
 
-use miette::Diagnostic;
+use miette::{Diagnostic, LabeledSpan};
 use nu_protocol::ParseError;
 
-use crate::{
-    context::LintContext,
-    rule::Rule,
-    violation::{Label, Violation},
-};
+use crate::{context::LintContext, rule::Rule, violation::Violation};
 
 const NU_PARSER_VERSION: &str = env!("NU_PARSER_VERSION");
 
-fn extract_labels(parse_error: &ParseError) -> Vec<Label> {
-    parse_error
-        .labels()
-        .into_iter()
-        .flatten()
-        .map(|miette_label| {
-            let span = nu_protocol::Span::new(miette_label.offset(), miette_label.offset() + miette_label.len());
-            match miette_label.label() {
-                Some(text) if !text.is_empty() => Label::new(span, text.to_string()),
-                _ => Label::span_only(span),
-            }
-        })
-        .collect()
+fn extract_labels(parse_error: &ParseError) -> Vec<LabeledSpan> {
+    parse_error.labels().into_iter().flatten().collect()
 }
 
 fn build_help_text(parse_error: &ParseError) -> String {

@@ -218,10 +218,7 @@ impl Rule {
         );
 
         let labels = &violations[0].labels;
-        let label_texts: Vec<_> = labels
-            .iter()
-            .filter_map(|l| l.text.as_ref().map(AsRef::as_ref))
-            .collect();
+        let label_texts: Vec<_> = labels.iter().filter_map(|l| l.label()).collect();
 
         assert!(
             label_texts.iter().any(|t| t.contains(expected_text)),

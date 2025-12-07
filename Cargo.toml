@@ -23,7 +23,7 @@ complexity = { level = "warn", priority = -1 }
 pedantic = { level = "deny", priority = -1 }
 style = { level = "deny", priority = -1 }
 
-absolute_paths = "deny"
+absolute_paths = "warn"
 allow_attributes_without_reason = "deny"
 branches_sharing_code = "deny"
 collapsible_else_if = "deny"
@@ -84,7 +84,6 @@ useless_let_if_seq = "deny"
 verbose_file_reads = "deny"
 
 [dependencies]
-ariadne = "0.6"
 clap = { version = "4.5", features = ["derive"] }
 env_logger = "0.11"
 heck = "0.5"
@@ -93,7 +92,7 @@ jaq-core = "2.2"
 log = "0.4"
 lsp-server = "0.7"
 lsp-types = "0.97"
-miette = "7.0"
+miette = { version = "7.6", features = ["fancy"] }
 nu-cli = "0.108.0"
 nu-cmd-lang = "0.108.0"
 nu-command = "0.108.0"

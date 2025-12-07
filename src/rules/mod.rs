@@ -25,6 +25,7 @@ mod naming;
 
 mod external_tools;
 mod posix_tools;
+mod prefer_cell_path;
 mod prefer_compound_assignment;
 mod prefer_direct_use;
 mod prefer_error_make_for_stderr;
@@ -95,6 +96,7 @@ pub const ALL_RULES: &[Rule] = &[
     posix_tools::tail::rule(),
     posix_tools::uniq::rule(),
     posix_tools::wc::rule(),
+    prefer_cell_path::rule(),
     prefer_compound_assignment::rule(),
     prefer_direct_use::rule(),
     prefer_error_make_for_stderr::rule(),

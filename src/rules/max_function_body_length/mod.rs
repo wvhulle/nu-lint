@@ -37,7 +37,9 @@ fn function_violation(
             "Consider refactoring `{function_name}` into smaller, more focused functions. Break \
              down complex logic into helper functions with clear responsibilities."
         );
-        Violation::new(message, function_span).with_help(suggestion)
+        Violation::new(message, function_span)
+            .with_primary_label(format!("{line_count} lines"))
+            .with_help(suggestion)
     })
 }
 pub const fn rule() -> Rule {

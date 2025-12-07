@@ -1,44 +1,23 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, error::Error, fmt};
 
-use miette::SourceSpan;
+use miette::{Diagnostic, LabeledSpan, Severity};
 use nu_protocol::Span;
 
 use crate::config::LintLevel;
 
+/// Convert `LintLevel` to miette's `Severity`
+impl From<LintLevel> for Severity {
+    fn from(level: LintLevel) -> Self {
+        match level {
+            LintLevel::Deny => Self::Error,
+            LintLevel::Warn => Self::Warning,
+            LintLevel::Allow => Self::Advice,
+        }
+    }
+}
+
 /// A lint violation with its diagnostic information
-///
-/// # Display Format
-///
-/// When displayed to the user, violations appear as:
-///
-/// ```text
-/// file.nu:10:5
-/// warn(rule_name)
-///
-///   ⚠ [message]                  <- Short diagnostic message
-///    ╭─[10:5]
-/// 10 │ code here
-///    ·     ─┬─
-///    ·      ╰── [label text]     <- Message (or help if short)
-///    ╰────
-///
-///   help: [help text]            <- Detailed explanation/rationale
-///
-///   ℹ Available fix: [explanation] <- Fix explanation
-///   - old code
-///   + new code                   <- From replacements
-/// ```
-///
-/// # Example
-///
-/// ```rust,ignore
-/// Violation::new("Use pipeline input", span)
-///     .with_help("Pipeline input enables better composability and streaming performance")
-///     .with_fix(Fix::with_explanation(
-///         format!("Use $in instead of ${}:\n  {}", param, transformed_code),
-///         vec![Replacement::new(def_span, transformed_code)]
-///     ))
-/// ```
+
 #[derive(Debug, Clone)]
 pub struct Violation {
     pub rule_id: Option<Cow<'static, str>>,
@@ -49,14 +28,26 @@ pub struct Violation {
     /// Example: "Use pipeline input instead of parameter"
     pub message: Cow<'static, str>,
 
-    /// Span in source code where the violation occurs
+    /// Primary span in source code where the violation occurs
     pub span: Span,
+
+    /// Optional label text displayed on the primary span underline
+    /// If None, the span is underlined without text
+    pub primary_label: Option<Cow<'static, str>>,
+
+    /// Additional labeled spans for context (e.g., related locations)
+    /// These are displayed as secondary highlights in diagnostic output
+    pub extra_labels: Vec<LabeledSpan>,
 
     /// Optional detailed explanation shown in the "help:" section
     /// Use this to explain WHY the code should change or provide rationale
     /// Example: "Pipeline input enables better composability and streaming
     /// performance"
     pub help: Option<Cow<'static, str>>,
+
+    /// Additional informational notes shown after help
+    /// Use for supplementary context, references, or caveats
+    pub notes: Vec<Cow<'static, str>>,
 
     /// Optional automated fix that can be applied
     pub fix: Option<Fix>,
@@ -85,7 +76,10 @@ impl Violation {
             lint_level: LintLevel::Allow, // Placeholder, will be set by engine
             message: message.into(),
             span,
+            primary_label: None,
+            extra_labels: Vec::new(),
             help: None,
+            notes: Vec::new(),
             fix: None,
             file: None,
             source: None,
@@ -99,14 +93,6 @@ impl Violation {
     }
 
     /// Add detailed help text explaining why this change should be made
-    ///
-    /// This appears in the "help:" section of the diagnostic output.
-    ///
-    /// # Example
-    ///
-    /// ```rust,ignore
-    /// violation.with_help("Pipeline input enables better composability and streaming performance")
-    /// ```
     #[must_use]
     pub fn with_help(mut self, help: impl Into<Cow<'static, str>>) -> Self {
         self.help = Some(help.into());
@@ -114,15 +100,6 @@ impl Violation {
     }
 
     /// Add an automated fix to this violation
-    ///
-    /// # Example
-    ///
-    /// ```rust,ignore
-    /// violation.with_fix(Fix::with_explanation(
-    ///     "Replace with pipeline input version",
-    ///     vec![Replacement::new(span, new_code)]
-    /// ))
-    /// ```
     #[must_use]
     pub fn with_fix(mut self, fix: Fix) -> Self {
         self.fix = Some(fix);
@@ -139,41 +116,105 @@ impl Violation {
         self.doc_url = url;
     }
 
+    /// Set the label text displayed on the primary span
     #[must_use]
-    pub(crate) fn to_source_span(&self) -> SourceSpan {
-        SourceSpan::from((self.span.start, self.span.end - self.span.start))
+    pub fn with_primary_label(mut self, label: impl Into<Cow<'static, str>>) -> Self {
+        self.primary_label = Some(label.into());
+        self
+    }
+
+    /// Add a secondary label for context (displayed with different styling than
+    /// the primary span)
+    #[must_use]
+    pub fn with_extra_label(mut self, label: impl Into<Cow<'static, str>>, span: Span) -> Self {
+        self.extra_labels.push(LabeledSpan::new_with_span(
+            Some(label.into().to_string()),
+            span.start..span.end,
+        ));
+        self
+    }
+
+    /// Add an unlabeled secondary span for context
+    #[must_use]
+    pub fn with_extra_span(mut self, span: Span) -> Self {
+        self.extra_labels
+            .push(LabeledSpan::new_with_span(None, span.start..span.end));
+        self
+    }
+
+    /// Add additional labeled spans for context
+    #[must_use]
+    pub fn with_extra_labels(mut self, labels: Vec<LabeledSpan>) -> Self {
+        self.extra_labels = labels;
+        self
+    }
+
+    /// Notes appear after help text and provide supplementary context.
+    #[must_use]
+    pub fn with_notes<I, S>(mut self, notes: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<Cow<'static, str>>,
+    {
+        self.notes = notes.into_iter().map(Into::into).collect();
+        self
+    }
+
+    /// Add a single note to this violation
+    #[must_use]
+    pub fn with_note(mut self, note: impl Into<Cow<'static, str>>) -> Self {
+        self.notes.push(note.into());
+        self
+    }
+}
+
+impl fmt::Display for Violation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}
+
+impl Error for Violation {}
+
+impl Diagnostic for Violation {
+    fn code<'a>(&'a self) -> Option<Box<dyn fmt::Display + 'a>> {
+        Some(Box::new(format!(
+            "{}({})",
+            self.lint_level,
+            self.rule_id.as_deref().unwrap_or("unknown")
+        )))
+    }
+
+    fn severity(&self) -> Option<Severity> {
+        Some(self.lint_level.into())
+    }
+
+    fn help<'a>(&'a self) -> Option<Box<dyn fmt::Display + 'a>> {
+        self.help
+            .as_ref()
+            .map(|h| Box::new(h.clone()) as Box<dyn fmt::Display>)
+    }
+
+    fn url<'a>(&'a self) -> Option<Box<dyn fmt::Display + 'a>> {
+        self.doc_url
+            .map(|url| Box::new(url) as Box<dyn fmt::Display>)
+    }
+
+    fn labels(&self) -> Option<Box<dyn Iterator<Item = LabeledSpan> + '_>> {
+        let span_range = self.span.start..self.span.end;
+        let primary = self.primary_label.as_ref().map_or_else(
+            || LabeledSpan::underline(span_range.clone()),
+            |label| LabeledSpan::new_primary_with_span(Some(label.to_string()), span_range.clone()),
+        );
+        Some(Box::new(
+            [primary]
+                .into_iter()
+                .chain(self.extra_labels.iter().cloned()),
+        ))
     }
 }
 
 /// An automated fix that can be applied to resolve a violation
-///
-/// # Display Format
-///
-/// Fixes are displayed as:
-///
-/// ```text
-/// ℹ Available fix: [explanation]
-/// - old code
-/// + new code
-/// ```
-///
-/// # Important
-///
-/// - `explanation`: User-facing text shown in "Available fix:" (can be
-///   multi-line)
-/// - `replacements[].replacement_text`: Actual code written to the file
-///
-/// These should be different! The explanation describes the change,
-/// the `replacement_text` is the actual code.
-///
-/// # Example
-///
-/// ```rust,ignore
-/// Fix::with_explanation(
-///     format!("Use pipeline input ($in) instead of parameter (${}):\n  {}", param, full_code),
-///     vec![Replacement::new(span, actual_code_to_write)]
-/// )
-/// ```
 #[derive(Debug, Clone)]
 pub struct Fix {
     /// User-facing explanation of what this fix does
@@ -186,20 +227,6 @@ pub struct Fix {
 
 impl Fix {
     /// Create a fix with an explanation and code replacements
-    ///
-    /// # Arguments
-    ///
-    /// * `explanation` - User-facing description (shown in "Available fix:")
-    /// * `replacements` - Actual code changes to apply to the file
-    ///
-    /// # Example
-    ///
-    /// ```rust,ignore
-    /// Fix::with_explanation(
-    ///     "Replace with is-not-empty",
-    ///     vec![Replacement::new(span, "is-not-empty")]
-    /// )
-    /// ```
     #[must_use]
     pub fn with_explanation(
         explanation: impl Into<Cow<'static, str>>,
@@ -232,17 +259,6 @@ pub struct Replacement {
 
 impl Replacement {
     /// Create a new code replacement
-    ///
-    /// # Arguments
-    ///
-    /// * `span` - Location in source code to replace
-    /// * `replacement_text` - Actual code to write (not a description!)
-    ///
-    /// # Example
-    ///
-    /// ```rust,ignore
-    /// Replacement::new(param_span, "[]")  // Replace "[x: int]" with "[]"
-    /// ```
     #[must_use]
     pub fn new(span: Span, replacement_text: impl Into<Cow<'static, str>>) -> Self {
         Self {

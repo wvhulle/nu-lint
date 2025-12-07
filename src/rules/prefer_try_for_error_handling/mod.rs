@@ -15,89 +15,71 @@ use crate::{
     violation::Violation,
 };
 
-fn has_external_command(expr: &Expression, context: &LintContext) -> bool {
-    expr.find_map(context.working_set, &|inner_expr| {
-        if let Expr::ExternalCall(head, args) = &inner_expr.expr {
+enum ErrorSource {
+    External(Span),
+    Builtin(Span, String),
+}
+
+fn find_error_prone_command(expr: &Expression, context: &LintContext) -> Option<ErrorSource> {
+    expr.find_map(context.working_set, &|inner_expr| match &inner_expr.expr {
+        Expr::ExternalCall(head, args) => {
             let cmd_name = &context.source[head.span.start..head.span.end];
-            // External commands can error unless explicitly marked otherwise
-            // Check if we have explicit info, otherwise assume it can error
             if has_external_side_effect(
                 cmd_name,
                 ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
                 context,
                 args,
             ) {
-                return FindMapResult::Found(());
+                return FindMapResult::Found(ErrorSource::External(head.span));
             }
-            // If not in registry, assume external commands can error (conservative
-            // approach)
-            return FindMapResult::Found(());
+            FindMapResult::Found(ErrorSource::External(head.span))
         }
-        FindMapResult::Continue
-    })
-    .is_some()
-}
-
-fn has_error_prone_builtin(expr: &Expression, context: &LintContext) -> bool {
-    expr.find_map(context.working_set, &|inner_expr| {
-        if let Expr::Call(call) = &inner_expr.expr {
+        Expr::Call(call) => {
             let cmd_name = call.get_call_name(context);
-            log::debug!("Checking command: {cmd_name}");
             if can_error(&cmd_name, context, call) {
-                log::debug!("Found error-prone builtin command: {cmd_name}");
-                return FindMapResult::Found(());
+                log::debug!("Found error-prone builtin: {cmd_name}");
+                return FindMapResult::Found(ErrorSource::Builtin(call.head, cmd_name));
             }
+            FindMapResult::Continue
         }
-        FindMapResult::Continue
+        _ => FindMapResult::Continue,
     })
-    .is_some()
-}
-
-fn is_do_block_with_error_prone_ops(expr: &Expression, context: &LintContext) -> Option<Span> {
-    if let Expr::Call(call) = &expr.expr
-        && call.is_call_to_command("do", context)
-        && let Some(block_arg) = call.get_positional_arg(0)
-    {
-        log::debug!("Found do block, checking for error-prone operations");
-        let has_external = has_external_command(block_arg, context);
-        let has_builtin = has_error_prone_builtin(block_arg, context);
-        log::debug!("External commands: {has_external}, Error-prone builtins: {has_builtin}");
-        if has_external || has_builtin {
-            log::debug!(
-                "Found do block with error-prone operations at span {:?}",
-                expr.span
-            );
-            return Some(expr.span);
-        }
-    }
-    None
 }
 
 fn check(context: &LintContext) -> Vec<Violation> {
-    let mut violations = Vec::new();
-    context.ast.flat_map(
-        context.working_set,
-        &|expr| {
-            is_do_block_with_error_prone_ops(expr, context).map_or_else(Vec::new, |span| {
-                vec![
-                    Violation::new(
-                        "Use 'try' blocks instead of 'do' blocks for error-prone operations"
-                            .to_string(),
-                        span,
-                    )
-                    .with_help(
-                        "Replace 'do { ... }' with 'try { ... }' when the block contains external \
-                         commands or error-prone operations like file I/O or network requests. \
-                         This provides proper error handling and prevents script termination on \
-                         failures.",
-                    ),
-                ]
-            })
-        },
-        &mut violations,
-    );
+    context.collect_rule_violations(|expr, ctx| {
+        let Expr::Call(call) = &expr.expr else {
+            return vec![];
+        };
 
-    violations
+        if !call.is_call_to_command("do", ctx) {
+            return vec![];
+        }
+
+        let Some(block_arg) = call.get_positional_arg(0) else {
+            return vec![];
+        };
+
+        let Some(error_source) = find_error_prone_command(block_arg, ctx) else {
+            return vec![];
+        };
+
+        let do_span = Span::new(expr.span.start, expr.span.start + 2);
+        let (error_span, error_label) = match &error_source {
+            ErrorSource::External(span) => (*span, "external command can fail".to_string()),
+            ErrorSource::Builtin(span, name) => (*span, format!("`{name}` can error")),
+        };
+
+        vec![
+            Violation::new(
+                "Use 'try' instead of 'do' for error-prone operations",
+                do_span,
+            )
+            .with_primary_label("do keyword")
+            .with_extra_label(error_label, error_span)
+            .with_help("Replace 'do { ... }' with 'try { ... }' for proper error handling"),
+        ]
+    })
 }
 
 pub const fn rule() -> Rule {
@@ -111,7 +93,5 @@ pub const fn rule() -> Rule {
 
 #[cfg(test)]
 mod detect_bad;
-#[cfg(test)]
-mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

@@ -92,6 +92,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 format!("Function '{name}' is defined but never called from 'main'"),
                 name_span,
             )
+            .with_primary_label("unused function")
             .with_help(
                 "Remove unused helper functions or call them from 'main' or other used functions",
             )

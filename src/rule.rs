@@ -1,12 +1,11 @@
-use core::hash::Hasher;
-use std::hash::Hash;
+#[cfg(test)]
+use std::borrow::Cow;
+use std::hash::{Hash, Hasher};
 
 use crate::{context::LintContext, violation::Violation};
 
-/// Lint sets (collections of rules, similar to Clippy's lint groups)
-#[derive(Debug, Clone, Copy)]
-
 /// A concrete rule struct that wraps the check function
+#[derive(Debug, Clone, Copy)]
 pub struct Rule {
     pub id: &'static str,
     pub explanation: &'static str,
@@ -29,7 +28,6 @@ impl PartialEq for Rule {
 impl Eq for Rule {}
 
 impl Rule {
-    /// Create a new rule
     pub(crate) const fn new(
         id: &'static str,
         explanation: &'static str,
@@ -43,19 +41,48 @@ impl Rule {
         }
     }
 
-    /// Add a documentation URL to the rule
     #[must_use]
     pub const fn with_doc_url(mut self, url: &'static str) -> Self {
         self.doc_url = Some(url);
         self
     }
+}
 
-    #[cfg(test)]
+#[cfg(test)]
+impl Rule {
+    fn run_check(&self, code: &str) -> Vec<Violation> {
+        LintContext::test_with_parsed_source(code, |context| (self.check)(&context))
+    }
+
+    fn first_violation(&self, code: &str) -> Violation {
+        let violations = self.run_check(code);
+        assert!(
+            !violations.is_empty(),
+            "Expected rule '{}' to detect violations, but found none",
+            self.id
+        );
+        violations.into_iter().next().unwrap()
+    }
+
+    fn first_replacement_text(&self, code: &str) -> Cow<'static, str> {
+        let fix = self
+            .first_violation(code)
+            .fix
+            .expect("Expected violation to have a fix");
+        assert!(
+            !fix.replacements.is_empty(),
+            "Expected fix to have replacements"
+        );
+        fix.replacements
+            .into_iter()
+            .next()
+            .unwrap()
+            .replacement_text
+    }
+
     #[track_caller]
-    /// Test helper: assert that the rule finds violations in the given code
     pub fn assert_detects(&self, code: &str) {
-        let violations =
-            LintContext::test_with_parsed_source(code, |context| (self.check)(&context));
+        let violations = self.run_check(code);
         assert!(
             !violations.is_empty(),
             "Expected rule '{}' to detect violations in code, but found none",
@@ -63,12 +90,9 @@ impl Rule {
         );
     }
 
-    #[cfg(test)]
     #[track_caller]
-    /// Test helper: assert that the rule finds no violations in the given code
     pub fn assert_ignores(&self, code: &str) {
-        let violations =
-            LintContext::test_with_parsed_source(code, |context| (self.check)(&context));
+        let violations = self.run_check(code);
         assert!(
             violations.is_empty(),
             "Expected rule '{}' to ignore code, but found {} violations",
@@ -77,13 +101,9 @@ impl Rule {
         );
     }
 
-    #[cfg(test)]
     #[track_caller]
-    /// Test helper: assert that the rule finds exactly the expected number of
-    /// violations
     pub fn assert_count(&self, code: &str, expected: usize) {
-        let violations =
-            LintContext::test_with_parsed_source(code, |context| (self.check)(&context));
+        let violations = self.run_check(code);
         assert_eq!(
             violations.len(),
             expected,
@@ -94,30 +114,9 @@ impl Rule {
         );
     }
 
-    #[cfg(test)]
     #[track_caller]
-    /// Test helper: assert that the rule generates a fix with replacement text
-    /// containing the expected string
     pub fn assert_replacement_contains(&self, code: &str, expected_text: &str) {
-        let violations =
-            LintContext::test_with_parsed_source(code, |context| (self.check)(&context));
-        assert!(
-            !violations.is_empty(),
-            "Expected rule '{}' to detect violations, but found none",
-            self.id
-        );
-
-        let fix = violations[0]
-            .fix
-            .as_ref()
-            .expect("Expected violation to have a fix");
-
-        assert!(
-            !fix.replacements.is_empty(),
-            "Expected fix to have replacements"
-        );
-
-        let replacement_text = &fix.replacements[0].replacement_text;
+        let replacement_text = self.first_replacement_text(code);
         assert!(
             replacement_text.contains(expected_text),
             "Expected fix replacement text to contain '{expected_text}', but got: \
@@ -125,29 +124,9 @@ impl Rule {
         );
     }
 
-    #[cfg(test)]
     #[track_caller]
-    /// Test helper: assert that applying the fix produces the expected code
     pub fn assert_replacement_is(&self, bad_code: &str, expected_code: &str) {
-        let violations =
-            LintContext::test_with_parsed_source(bad_code, |context| (self.check)(&context));
-        assert!(
-            !violations.is_empty(),
-            "Expected rule '{}' to detect violations, but found none",
-            self.id
-        );
-
-        let fix = violations[0]
-            .fix
-            .as_ref()
-            .expect("Expected violation to have a fix");
-
-        assert!(
-            !fix.replacements.is_empty(),
-            "Expected fix to have replacements"
-        );
-
-        let replacement_text = &fix.replacements[0].replacement_text;
+        let replacement_text = self.first_replacement_text(bad_code);
         assert_eq!(
             replacement_text.as_ref(),
             expected_code,
@@ -155,73 +134,70 @@ impl Rule {
         );
     }
 
-    #[cfg(test)]
     #[track_caller]
-    /// Test helper: assert that the rule generates a fix with explanation
-    /// containing the expected string
     pub fn assert_fix_explanation_contains(&self, code: &str, expected_text: &str) {
-        let violations =
-            LintContext::test_with_parsed_source(code, |context| (self.check)(&context));
-        assert!(
-            !violations.is_empty(),
-            "Expected rule '{}' to detect violations, but found none",
-            self.id
-        );
-
-        let fix = violations[0]
+        let fix = self
+            .first_violation(code)
             .fix
-            .as_ref()
             .expect("Expected violation to have a fix");
-
-        let explanation = &fix.explanation;
         assert!(
-            explanation.contains(expected_text),
-            "Expected fix explanation to contain '{expected_text}', but got: {explanation}"
+            fix.explanation.contains(expected_text),
+            "Expected fix explanation to contain '{expected_text}', but got: {}",
+            fix.explanation
         );
     }
 
-    #[cfg(test)]
     #[track_caller]
-    /// Test helper: assert that the rule generates help text containing the
-    /// expected string
     pub fn assert_help_contains(&self, code: &str, expected_text: &str) {
-        let violations =
-            LintContext::test_with_parsed_source(code, |context| (self.check)(&context));
-        assert!(
-            !violations.is_empty(),
-            "Expected rule '{}' to detect violations, but found none",
-            self.id
-        );
-
-        let help = violations[0]
+        let help = self
+            .first_violation(code)
             .help
-            .as_ref()
             .expect("Expected violation to have help text");
-
         assert!(
             help.contains(expected_text),
             "Expected help to contain '{expected_text}', but got: {help}"
         );
     }
 
-    #[cfg(test)]
+    #[allow(unused, reason = "Will be used.")]
     #[track_caller]
-    /// Test helper: assert that the rule generates a fix that removes/erases
-    /// the expected string
-    pub fn assert_replacement_erases(&self, code: &str, erased_text: &str) {
-        let violations =
-            LintContext::test_with_parsed_source(code, |context| (self.check)(&context));
+    pub fn assert_span_label_contains(&self, code: &str, expected_text: &str) {
+        let violation = self.first_violation(code);
+        let label_texts: Vec<&str> = violation
+            .extra_labels
+            .iter()
+            .filter_map(|l| l.label())
+            .collect();
+
         assert!(
-            !violations.is_empty(),
-            "Expected rule '{}' to detect violations, but found none",
-            self.id
+            violation
+                .primary_label
+                .is_some_and(|text| text.contains(expected_text)),
+            "Expected a label to contain '{expected_text}', but got labels: {label_texts:?}"
         );
+    }
 
-        let fix = violations[0]
+    #[track_caller]
+    pub fn assert_labels_contain(&self, code: &str, expected_text: &str) {
+        let violation = self.first_violation(code);
+        let label_texts: Vec<&str> = violation
+            .extra_labels
+            .iter()
+            .filter_map(|l| l.label())
+            .collect();
+
+        assert!(
+            label_texts.iter().any(|t| t.contains(expected_text)),
+            "Expected a label to contain '{expected_text}', but got labels: {label_texts:?}"
+        );
+    }
+
+    #[track_caller]
+    pub fn assert_replacement_erases(&self, code: &str, erased_text: &str) {
+        let fix = self
+            .first_violation(code)
             .fix
-            .as_ref()
             .expect("Expected violation to have a fix");
-
         assert!(
             !fix.replacements.is_empty(),
             "Expected fix to have replacements"

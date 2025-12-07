@@ -42,7 +42,7 @@ fn check_exported_function(call: &Call, context: &LintContext) -> Option<Violati
         return None;
     }
 
-    let (func_name, _name_span) = call.extract_declaration_name(context)?;
+    let (func_name, name_span) = call.extract_declaration_name(context)?;
 
     let has_docs = has_doc_comment_before(context, call.head);
 
@@ -54,10 +54,9 @@ fn check_exported_function(call: &Call, context: &LintContext) -> Option<Violati
                 format!("Exported function '{func_name}' is missing documentation"),
                 call.head,
             )
-            .with_help(format!(
-                "Add a documentation comment above the function:\n# Description of \
-                 {func_name}\nexport def {func_name} ..."
-            )),
+            .with_primary_label("without documentation")
+            .with_extra_label("function name", name_span)
+            .with_help("Add a documentation comment above the function."),
         )
     }
 }

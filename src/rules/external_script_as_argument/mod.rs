@@ -33,11 +33,11 @@ fn create_suggestion_message(param_name: &str, function_name: &str) -> String {
 fn create_violation(param_name: &str, function_name: &str, context: &LintContext) -> Violation {
     Violation::new(
         format!(
-            "Function '{function_name}' parameter '{param_name}' is used as an external command. \
-             This is an anti-pattern."
+            "Function '{function_name}' parameter '{param_name}' is used as an external command."
         ),
         context.find_declaration_span(function_name),
     )
+    .with_primary_label("using script parameter")
     .with_help(create_suggestion_message(param_name, function_name))
 }
 

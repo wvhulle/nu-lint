@@ -72,7 +72,7 @@ fn check_for_compound_assignment(expr: &Expression, ctx: &LintContext) -> Option
     let pipeline = block.pipelines.first()?;
     let element = pipeline.elements.first()?;
 
-    let Expr::BinaryOp(sub_left, sub_op_expr, _sub_right) = &element.expr.expr else {
+    let Expr::BinaryOp(sub_left, sub_op_expr, sub_right) = &element.expr.expr else {
         return None;
     };
 
@@ -96,8 +96,11 @@ fn check_for_compound_assignment(expr: &Expression, ctx: &LintContext) -> Option
             "Use compound assignment: {var_text} {compound_op} instead of {var_text} = {var_text} \
              {op_symbol} ..."
         ),
-        expr.span,
+        left.span,
     )
+    .with_primary_label("variable being reassigned")
+    .with_extra_label("same variable repeated on RHS", sub_left.span)
+    .with_extra_label("operand could be compound-assigned", sub_right.span)
     .with_help(format!("Replace with: {var_text} {compound_op}"));
 
     let violation = match fix {

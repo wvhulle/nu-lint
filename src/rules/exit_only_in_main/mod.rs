@@ -40,6 +40,8 @@ fn check(context: &LintContext) -> Vec<Violation> {
                     ),
                     call.head,
                 )
+                .with_primary_label("exit call")
+                .with_extra_label(format!("inside '{function_name}'"), expr.span)
                 .with_help(
                     "Use 'return' to exit the function, or 'error make' to signal an error. Only \
                      'main' should use 'exit'.",

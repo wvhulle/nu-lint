@@ -57,6 +57,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
     let pipeline_text = &context.source[combined_span.start..combined_span.end];
 
     let violation = Violation::new("Discarding command output with '| ignore'", ignore_span)
+        .with_primary_label("redundant ignore")
         .with_help(format!(
             "Command '{command_name}' produces output that is being discarded with '| \
              ignore'.\n\nIf you don't need the output, consider:\n1. Removing the command if it \

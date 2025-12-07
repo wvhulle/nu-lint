@@ -73,10 +73,10 @@ fn check_record_for_generic_msg(
                     "Error message is too generic and not descriptive",
                     value.span,
                 )
+                .with_primary_label("generic message")
                 .with_help(
                     "Use a descriptive error message that explains what went wrong and how to fix \
-                     it.\nExample: error make { msg: \"Failed to parse input: expected number, \
-                     got string\" }",
+                     it.",
                 ),
             );
         }

@@ -14,7 +14,7 @@ keywords = ["nushell", "linter", "static-analysis", "code-quality", "shell"]
 license = "MIT"
 name = "nu-lint"
 repository = "https://github.com/wvhulle/nu-lint"
-version = "0.0.59"
+version = "0.0.60"
 
 
 [lints.clippy]
@@ -23,7 +23,7 @@ complexity = { level = "warn", priority = -1 }
 pedantic = { level = "deny", priority = -1 }
 style = { level = "deny", priority = -1 }
 
-absolute_paths = "deny"
+absolute_paths = "warn"
 allow_attributes_without_reason = "deny"
 branches_sharing_code = "deny"
 collapsible_else_if = "deny"
@@ -92,7 +92,7 @@ jaq-core = "2.2"
 log = "0.4"
 lsp-server = "0.7"
 lsp-types = "0.97"
-miette = { version = "7.0", features = ["fancy"] }
+miette = { version = "7.6", features = ["fancy"] }
 nu-cli = "0.108.0"
 nu-cmd-lang = "0.108.0"
 nu-command = "0.108.0"

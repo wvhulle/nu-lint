@@ -101,11 +101,15 @@ fn check_expression(expr: &Expression, context: &LintContext) -> Vec<Violation> 
 
     is_filtering_pattern(block_id, context, &loop_var_name)
         .then(|| {
+            let block = context.working_set.get_block(block_id);
+            let block_span = block.span.unwrap_or(expr.span);
             Violation::new(
                 "Consider using 'where' for filtering instead of 'each' with 'if'",
                 expr.span,
             )
-            .with_help("Use '$list | where <condition>' for better performance")
+            .with_primary_label("each with if pattern")
+            .with_extra_label("filtering logic inside closure", block_span)
+            .with_help("Use '$list | where <condition>' for readability")
         })
         .into_iter()
         .collect()

@@ -346,6 +346,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 format!("Variable '{var_name}' accumulates filtered items - use 'where' instead"),
                 *span,
             )
+            .with_primary_label("accumulator variable")
             .with_help(
                 "Use '$input | where <condition>' for simple filtering without transformation",
             );

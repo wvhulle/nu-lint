@@ -87,11 +87,20 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 "Replace 'not ... is-empty' with 'is-not-empty'",
                 vec![Replacement::new(expr.span, fix_text)],
             );
+
+            let Expr::UnaryNot(inner_expr) = &expr.expr else {
+                return vec![];
+            };
+
+            let not_span = nu_protocol::Span::new(expr.span.start, expr.span.start + 3);
+
             vec![
                 Violation::new(
                     "Use 'is-not-empty' instead of 'not ... is-empty' for better readability",
-                    expr.span,
+                    not_span,
                 )
+                .with_primary_label("negation operator")
+                .with_extra_label("is-empty check", inner_expr.span)
                 .with_help("Replace with 'is-not-empty'")
                 .with_fix(fix),
             ]

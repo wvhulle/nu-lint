@@ -1,6 +1,6 @@
 use nu_protocol::ParseWarning;
 
-use crate::{context::LintContext, rule::Rule, violation::Violation};
+use crate::{NU_PARSER_VERSION, context::LintContext, rule::Rule, violation::Violation};
 
 fn check(context: &LintContext) -> Vec<Violation> {
     context
@@ -11,9 +11,14 @@ fn check(context: &LintContext) -> Vec<Violation> {
             let ParseWarning::Deprecated {
                 label, span, help, ..
             } = warning;
-            let mut violation = Violation::new(label.clone(), *span);
+            let mut violation =
+                Violation::new(label.clone(), *span).with_primary_label("deprecated");
+            let nu_version_note =
+                format!("This linter was compiled against Nu {NU_PARSER_VERSION}");
             if let Some(help_text) = help {
-                violation = violation.with_help(help_text.clone());
+                violation = violation.with_help(help_text.clone() + "\n\n" + &nu_version_note);
+            } else {
+                violation = violation.with_help(nu_version_note);
             }
             violation
         })

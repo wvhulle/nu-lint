@@ -62,7 +62,9 @@ fn create_violation(
 
     let fix = fix_builder.map(|builder| builder(cmd_text, args, expr.span, ctx));
 
-    let violation = Violation::new(message, expr.span).with_help(suggestion);
+    let violation = Violation::new(message, expr.span)
+        .with_primary_label(format!("external '{cmd_text}'"))
+        .with_help(suggestion);
 
     match fix {
         Some(f) => violation.with_fix(f),

@@ -32,6 +32,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
                         ),
                         nu_protocol::Span::new(const_match.start(), const_match.end()),
                     )
+                    .with_primary_label("non-SCREAMING_SNAKE_CASE")
                     .with_help(format!(
                         "Consider renaming to: {}",
                         const_name.to_shouty_snake_case()

@@ -65,11 +65,16 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .filter(|(_, name)| !is_exported_function(name, context))
         .filter(|(block_id, _)| has_single_statement_body(**block_id, context))
         .filter(|(_, name)| count_function_calls(name, context) == 1)
-        .map(|(_, function_name)| {
+        .map(|(block_id, function_name)| {
+            let name_span = context.find_declaration_span(function_name);
+            let block = context.working_set.get_block(*block_id);
+            let body_span = block.span.unwrap_or(name_span);
             Violation::new(
                 format!("Function `{function_name}` has a single-line body and is only used once"),
-                context.find_declaration_span(function_name),
+                name_span,
             )
+            .with_primary_label("single-use function")
+            .with_extra_label("could be inlined", body_span)
             .with_help(
                 "Consider inlining this function at its call site. Single-line helper functions \
                  used only once may add unnecessary indirection and reduce code clarity.",

@@ -179,10 +179,12 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
 
     let fix = create_fix_for_shebang(context.source);
 
-    let mut violation = Violation::new(message, name_span).with_help(
-        "Add --stdin flag to shebang: #!/usr/bin/env -S nu --stdin or #!/usr/bin/env nu --stdin \
-         (if env supports multiple args)",
-    );
+    let mut violation = Violation::new(message, name_span)
+        .with_primary_label("main function expecting stdin")
+        .with_help(
+            "Add --stdin flag to shebang: #!/usr/bin/env -S nu --stdin or #!/usr/bin/env nu \
+             --stdin (if env supports multiple args)",
+        );
 
     if let Some(fix) = fix {
         violation = violation.with_fix(fix);

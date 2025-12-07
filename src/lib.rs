@@ -24,6 +24,8 @@ use toml::de;
 pub use violation::Violation;
 pub(crate) use violation::{Fix, Replacement};
 
+pub const NU_PARSER_VERSION: &str = env!("NU_PARSER_VERSION");
+
 #[derive(Debug)]
 pub enum LintError {
     Io { path: PathBuf, source: io::Error },

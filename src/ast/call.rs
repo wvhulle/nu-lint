@@ -58,9 +58,6 @@ pub trait CallExt {
     /// Gets else branch from if call. Example: `if $x { } else { }` returns
     /// else block
     fn get_else_branch(&self) -> Option<(bool, &Expression)>;
-    /// Checks if if call has no else branch. Example: `if $x { 1 }` returns
-    /// true
-    fn has_no_else_branch(&self) -> bool;
     /// Gets nested single if call from then branch. Example: `if $x { if $y { }
     /// }`
     fn get_nested_single_if<'a>(&self, context: &'a LintContext<'a>) -> Option<&'a Call>;
@@ -87,8 +84,11 @@ pub trait CallExt {
     /// Gets named argument expression by flag name. Example: `try { ... }
     /// --catch { ... }` returns catch block
     fn get_named_arg_expr(&self, flag_name: &str) -> Option<&Expression>;
-    /// Checks if this is a control flow command. Example: `if`, `for`,
-    /// `while`, `match`, `try`
+    /// Checks if this is a branching control flow command whose output type
+    /// can be inferred from branch blocks. Example: `if`, `match`, `try`
+    fn is_branching_control_flow(&self, context: &LintContext) -> bool;
+    /// Checks if this is a control flow command that adds nesting depth.
+    /// Example: `if`, `for`, `while`, `match`, `try`, `loop`
     fn is_control_flow_command(&self, context: &LintContext) -> bool;
     /// Gets all argument expressions from a call. Example: positional, named,
     /// spread arguments
@@ -164,11 +164,11 @@ impl CallExt for Call {
             self.get_call_name(context)
         );
 
-        if self.is_control_flow_command(context)
+        if self.is_branching_control_flow(context)
             && let Some(inferred) = self.infer_from_blocks(context)
         {
             log::debug!(
-                "Control flow command '{}' inferred output type from blocks: {:?}",
+                "Branching control flow '{}' inferred output type from blocks: {:?}",
                 self.get_call_name(context),
                 inferred
             );
@@ -273,10 +273,6 @@ impl CallExt for Call {
         }
     }
 
-    fn has_no_else_branch(&self) -> bool {
-        self.get_else_branch().is_none()
-    }
-
     fn get_nested_single_if<'a>(&self, context: &'a LintContext<'a>) -> Option<&'a Call> {
         let then_block = self.get_positional_arg(1)?;
         let then_block_id = then_block.extract_block_id()?;
@@ -287,11 +283,11 @@ impl CallExt for Call {
     }
 
     fn generate_collapsed_if(&self, context: &LintContext) -> Option<String> {
-        self.has_no_else_branch().then_some(())?;
+        self.get_else_branch().is_none().then_some(())?;
 
         let inner_call = self.get_nested_single_if(context)?;
 
-        inner_call.has_no_else_branch().then_some(())?;
+        inner_call.get_else_branch().is_none().then_some(())?;
 
         let outer_condition = self.get_first_positional_arg()?;
         let inner_condition = inner_call.get_first_positional_arg()?;
@@ -366,10 +362,14 @@ impl CallExt for Call {
         })
     }
 
+    fn is_branching_control_flow(&self, context: &LintContext) -> bool {
+        matches!(self.get_call_name(context).as_str(), "if" | "match" | "try")
+    }
+
     fn is_control_flow_command(&self, context: &LintContext) -> bool {
         matches!(
             self.get_call_name(context).as_str(),
-            "if" | "for" | "while" | "match" | "try"
+            "if" | "for" | "while" | "loop" | "match" | "try"
         )
     }
 

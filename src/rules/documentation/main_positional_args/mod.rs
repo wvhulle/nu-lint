@@ -37,6 +37,7 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
                         ),
                         param_span,
                     )
+                    .with_primary_label("undocumented parameter")
                     .with_help(format!(
                         "Add a documentation comment after the parameter: {} # Description of {}",
                         param.name, param.name
@@ -61,6 +62,7 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
                         ),
                         param_span,
                     )
+                    .with_primary_label("undocumented optional parameter")
                     .with_help(format!(
                         "Add a documentation comment after the parameter: {} # Description of {}",
                         param.name, param.name
@@ -86,6 +88,7 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
                     ),
                     param_span,
                 )
+                .with_primary_label("undocumented rest parameter")
                 .with_help(format!(
                     "Add a documentation comment after the parameter: ...{} # Description of {}",
                     rest_param.name, rest_param.name

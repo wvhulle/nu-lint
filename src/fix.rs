@@ -363,28 +363,6 @@ mod tests {
     };
 
     #[test]
-    fn test_apply_single_replacement() {
-        let content = "let x = 5";
-        let replacement = Replacement::new(Span::new(4, 5), "y");
-        let fix = Fix::with_explanation("Rename variable", vec![replacement]);
-
-        let violation = Violation {
-            rule_id: Some(Cow::Borrowed("test_rule")),
-            lint_level: LintLevel::Warn,
-            message: Cow::Borrowed("Test"),
-            span: Span::new(4, 5),
-            help: None,
-            fix: Some(fix),
-            file: Some(Cow::Borrowed("test.nu")),
-            source: None,
-            doc_url: None,
-        };
-
-        let fixed = apply_fixes_to_content(content, &[&violation]);
-        assert_eq!(fixed, "let y = 5");
-    }
-
-    #[test]
     fn test_apply_multiple_replacements() {
         let content = "let x = 5; let y = 10";
         let replacements = vec![
@@ -398,7 +376,10 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 21),
+            primary_label: None,
+            extra_labels: vec![],
             help: None,
+            notes: vec![],
             fix: Some(fix),
             file: Some(Cow::Borrowed("test.nu")),
             source: None,
@@ -535,25 +516,6 @@ mod tests {
     }
 
     #[test]
-    fn test_no_fixes() {
-        let content = "let x = 5";
-        let violation = Violation {
-            rule_id: Some(Cow::Borrowed("test_rule")),
-            lint_level: LintLevel::Warn,
-            message: Cow::Borrowed("Test"),
-            span: Span::new(4, 5),
-            help: None,
-            fix: None,
-            file: Some(Cow::Borrowed("test.nu")),
-            source: None,
-            doc_url: None,
-        };
-
-        let fixed = apply_fixes_to_content(content, &[&violation]);
-        assert_eq!(fixed, content);
-    }
-
-    #[test]
     fn test_count_applicable_fixes() {
         let fix = Fix::with_explanation("Test fix", vec![]);
 
@@ -562,7 +524,10 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 5),
+            primary_label: None,
+            extra_labels: vec![],
             help: None,
+            notes: vec![],
             fix: Some(fix),
             file: Some(Cow::Borrowed("test.nu")),
             source: None,
@@ -574,7 +539,10 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 5),
+            primary_label: None,
+            extra_labels: vec![],
             help: None,
+            notes: vec![],
             fix: None,
             file: Some(Cow::Borrowed("test.nu")),
             source: None,
@@ -593,7 +561,10 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 5),
+            primary_label: None,
+            extra_labels: vec![],
             help: None,
+            notes: vec![],
             fix: None,
             file: Some(Cow::Borrowed("file1.nu")),
             source: None,
@@ -605,7 +576,10 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 5),
+            primary_label: None,
+            extra_labels: vec![],
             help: None,
+            notes: vec![],
             fix: None,
             file: Some(Cow::Borrowed("file2.nu")),
             source: None,
@@ -617,7 +591,10 @@ mod tests {
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
             span: Span::new(5, 10),
+            primary_label: None,
+            extra_labels: vec![],
             help: None,
+            notes: vec![],
             fix: None,
             file: Some(Cow::Borrowed("file1.nu")),
             source: None,

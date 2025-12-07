@@ -78,6 +78,7 @@ fn check_call(call: &Call, ctx: &LintContext) -> Option<Violation> {
             format!("{var_type} '{var_name}' should use snake_case naming convention"),
             name_expr.span,
         )
+        .with_primary_label("non-snake_case name")
         .with_help(format!("Consider renaming to: {snake_case_name}"))
         .with_fix(Fix::with_explanation(
             format!("Rename variable '{var_name}' to '{snake_case_name}'"),

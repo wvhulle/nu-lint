@@ -67,7 +67,7 @@ fn generate_fix(
     ))
 }
 
-fn check_where_call(call: &Call, expr: &Expression, context: &LintContext) -> Vec<Violation> {
+fn check_where_call(call: &Call, _expr: &Expression, context: &LintContext) -> Vec<Violation> {
     if call.get_call_name(context) != "where" {
         return vec![];
     }
@@ -102,8 +102,10 @@ fn check_where_call(call: &Call, expr: &Expression, context: &LintContext) -> Ve
 
     let violation = Violation::new(
         "Use row condition with `$it` instead of closure for more concise code",
-        expr.span,
+        arg_expr.span,
     )
+    .with_primary_label("closure syntax")
+    .with_extra_label("where command", call.span())
     .with_help(
         "Replace `where {|param| $param ...}` with `where $it ...` for simpler syntax. Row \
          conditions are more concise and idiomatic when you don't need to store the condition in \

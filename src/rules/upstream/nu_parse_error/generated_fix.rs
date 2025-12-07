@@ -13,9 +13,9 @@ fn test_shell_andand_help_suggests_and() {
 }
 
 #[test]
-fn test_unclosed_parenthesis_has_label_help() {
+fn test_unclosed_parenthesis_has_label() {
     let code = "let x = (";
-    rule().assert_help_contains(code, "expected closing )");
+    rule().assert_labels_contain(code, "expected closing )");
 }
 
 #[test]
@@ -25,13 +25,13 @@ fn test_missing_positional_has_usage_help() {
 }
 
 #[test]
-fn test_unclosed_bracket_has_help() {
+fn test_unclosed_bracket_has_label() {
     let code = "let x = [1, 2, 3";
-    rule().assert_help_contains(code, "expected closing ]");
+    rule().assert_labels_contain(code, "expected closing ]");
 }
 
 #[test]
-fn test_unclosed_brace_has_help() {
+fn test_unclosed_brace_has_label() {
     let code = "def foo [] {";
-    rule().assert_help_contains(code, "expected closing }");
+    rule().assert_labels_contain(code, "expected closing }");
 }

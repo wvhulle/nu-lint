@@ -123,9 +123,23 @@ impl Violation {
         self
     }
 
+    /// Add a label next to the primary span for context
     #[must_use]
-    pub fn with_label(mut self, label: LabeledSpan) -> Self {
-        self.extra_labels.push(label);
+    pub fn with_extra_label(mut self, label: impl Into<Cow<'static, str>>, span: Span) -> Self {
+        self.extra_labels.push(LabeledSpan::new_primary_with_span(
+            Some(label.into().to_string()),
+            span.start..span.end,
+        ));
+        self
+    }
+
+    /// Add an unlabeled span next to the primary span for context
+    #[must_use]
+    pub fn with_extra_span(mut self, span: Span) -> Self {
+        self.extra_labels.push(LabeledSpan::new_primary_with_span(
+            None,
+            span.start..span.end,
+        ));
         self
     }
 

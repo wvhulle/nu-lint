@@ -27,6 +27,15 @@ def filter-positive [] {
 
 This rule in particular encourages you to use lazy pipeline input. When you evaluate a traditional positional list argument, the whole list is processed at once, but when you use implicit pipeline input (by starting the function body with `where`), the list processed lazily (without loading the list in memory completely at once).
 
+## CLI usage
+
+For all available options and usage information, run:
+
+```bash
+nu-lint # Lint all Nu files in working directory
+nu-lint --help
+```
+
 ## Installation
 
 From crates.io:
@@ -77,48 +86,56 @@ Add to your `~/.config/helix/languages.toml`:
 ```toml
 [language-server.nu-lint]
 command = "nu-lint"
-args = ["lsp"]
+args = ["--lsp"]
 
 [[language]]
 name = "nu"
 language-servers = ["nu-lint"]
 ```
 
+### Neovim
+
+Add to your Neovim configuration (Lua):
+
+```lua
+vim.lsp.config['nu-lint'] = {
+  cmd = { 'nu-lint', '--lsp' },
+  filetypes = { 'nu' },
+  root_markers = { '.git' }
+}
+vim.lsp.enable('nu-lint')
+```
+
+### Emacs
+
+Add to your Emacs configuration (with Eglot, built-in since Emacs 29):
+
+```elisp
+(with-eval-after-load 'eglot
+  (add-to-list 'eglot-server-programs
+               '(nushell-mode "nu-lint" "--lsp")))
+```
+
+### Kate
+
+Add to your `~/.config/kate/lspclient/settings.json`:
+
+```json
+{
+  "servers": {
+    "nushell": {
+      "command": ["nu-lint", "--lsp"],
+      "highlightingModeRegex": "^Nushell$"
+    }
+  }
+}
+```
+
 ### Other
 
-You can also implement your own editor extensions using the `lsp` subcommand as in: `nu-lint lsp`. This will spawn a language server compliant with the [Language Server Protocol](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/).
-
-## CLI usage
-
-Run this linter from the command-line with:
-
-```bash
-nu-lint                               # Lint working directory
-nu-lint script.nu                     # Lint a file or directory
-'let x =' | nu-lint --stdin                   # Pipe in over stdin
-```
-
-Apply automatic fixes:
-
-```bash
-nu-lint --fix --dry-run     # Test fixes
-nu-lint --fix               # Apply fix
-'FRAGMENT' | nu-lint --fix --stdin  # Apply fix to STDIN
-```
+You can also implement your own editor extensions using the `--lsp` flag as in: `nu-lint --lsp`. This will spawn a language server compliant with the [Language Server Protocol](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/).
 
 ## Configuration
-
-Show all rules:
-
-```bash
-nu-lint rules                        
-```
-
-Show all rule groups:
-
-```bash
-nu-lint groups
-```
 
 Create `.nu-lint.toml` in your project root (or any parent directory):
 

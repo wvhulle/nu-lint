@@ -4,7 +4,7 @@ use std::{
     process,
 };
 
-use clap::{Parser, Subcommand};
+use clap::Parser;
 
 use crate::{
     LintLevel,
@@ -21,12 +21,29 @@ use crate::{
 #[command(about = "A linter for Nushell scripts")]
 #[command(version)]
 pub struct Cli {
-    #[command(subcommand)]
-    command: Option<Commands>,
-
-    /// Files or directories to lint
+    /// Files or directories to lint/fix
     #[arg(default_value = ".")]
     paths: Vec<PathBuf>,
+
+    /// Auto-fix lint violations
+    #[arg(long, conflicts_with_all = ["lsp", "list_rules", "list_groups", "explain"])]
+    fix: bool,
+
+    /// Start the LSP server
+    #[arg(long, conflicts_with_all = ["fix", "list_rules", "list_groups", "explain"])]
+    lsp: bool,
+
+    /// List all available lint rules
+    #[arg(long, conflicts_with_all = ["fix", "lsp", "list_groups", "explain"])]
+    list_rules: bool,
+
+    /// List all available rule groups
+    #[arg(long, conflicts_with_all = ["fix", "lsp", "list_rules", "explain"])]
+    list_groups: bool,
+
+    /// Explain a specific lint rule
+    #[arg(long, value_name = "RULE_ID", conflicts_with_all = ["fix", "lsp", "list_rules", "list_groups"])]
+    explain: Option<String>,
 
     /// Output format
     #[arg(long, short = 'f', value_enum, default_value_t = Format::Text)]
@@ -39,10 +56,6 @@ pub struct Cli {
     /// Read from stdin
     #[arg(long)]
     stdin: bool,
-
-    /// Auto-fix lint violations
-    #[arg(long)]
-    fix: bool,
 }
 
 impl Cli {
@@ -64,16 +77,21 @@ impl Cli {
         source
     }
 
-    fn should_read_stdin(&self) -> bool {
-        self.stdin || (self.paths.len() == 1 && self.paths[0].as_os_str() == "-")
+    fn validate(&self) -> Result<(), String> {
+        if (self.list_rules || self.list_groups || self.explain.is_some() || self.lsp)
+            && !self.paths.is_empty()
+            && self.paths != vec![PathBuf::from(".")]
+        {
+            return Err("Paths cannot be specified with info or LSP flags".to_string());
+        }
+        Ok(())
     }
 
-    fn lint(self) {
-        let read_stdin = self.should_read_stdin();
-        let config = Self::load_config(self.config);
+    fn lint(&self) {
+        let config = Self::load_config(self.config.clone());
         let engine = LintEngine::new(config);
 
-        let (violations, has_errors) = if read_stdin {
+        let (violations, has_errors) = if self.stdin {
             let source = Self::read_stdin();
             (engine.lint_stdin(&source), false)
         } else {
@@ -99,14 +117,14 @@ impl Cli {
         }
     }
 
-    fn fix(paths: &[PathBuf], stdin: bool, config: Option<PathBuf>) {
-        let config = Self::load_config(config);
+    fn fix(&self) {
+        let config = Self::load_config(self.config.clone());
         let engine = LintEngine::new(config);
 
-        if stdin {
+        if self.stdin {
             Self::fix_stdin(&engine);
         } else {
-            Self::fix_files(paths, &engine);
+            Self::fix_files(&self.paths, &engine);
         }
     }
 
@@ -181,50 +199,26 @@ impl Cli {
     }
 }
 
-#[derive(Subcommand)]
-enum Commands {
-    /// List all available lint rules
-    #[command(alias = "rules")]
-    List,
-    /// List available rule sets
-    #[command(alias = "groups")]
-    Sets,
-    /// Explain a lint rule
-    Explain {
-        /// Rule ID to explain
-        rule_id: String,
-    },
-    /// Start the LSP server
-    Lsp,
-    /// Auto-fix lint violations
-    Fix {
-        /// Files or directories to fix
-        #[arg(default_value = ".")]
-        paths: Vec<PathBuf>,
-        /// Read from stdin
-        #[arg(long)]
-        stdin: bool,
-        /// Path to config file
-        #[arg(long, short)]
-        config: Option<PathBuf>,
-    },
-}
-
 pub fn run() {
     let cli = Cli::parse();
 
-    match cli.command {
-        Some(Commands::List) => Cli::list_rules(),
-        Some(Commands::Sets) => Cli::list_groups(),
-        Some(Commands::Explain { rule_id }) => Cli::explain_rule(&rule_id),
-        Some(Commands::Lsp) => lsp::run_lsp_server(),
-        Some(Commands::Fix {
-            paths,
-            stdin,
-            config,
-        }) => Cli::fix(&paths, stdin, config),
-        None if cli.fix => Cli::fix(&cli.paths, cli.stdin, cli.config),
-        None => cli.lint(),
+    if let Err(e) = cli.validate() {
+        eprintln!("Error: {e}");
+        process::exit(1);
+    }
+
+    if cli.list_rules {
+        Cli::list_rules();
+    } else if cli.list_groups {
+        Cli::list_groups();
+    } else if let Some(ref rule_id) = cli.explain {
+        Cli::explain_rule(rule_id);
+    } else if cli.lsp {
+        lsp::run_lsp_server();
+    } else if cli.fix {
+        cli.fix();
+    } else {
+        cli.lint();
     }
 }
 
@@ -234,12 +228,7 @@ mod tests {
 
     use clap::Parser;
 
-    use crate::{
-        Config, LintEngine,
-        cli::{Cli, Commands},
-        engine::collect_nu_files,
-        output::Format,
-    };
+    use crate::{Config, LintEngine, cli::Cli, engine::collect_nu_files, output::Format};
 
     #[test]
     fn test_cli_parsing() {
@@ -261,15 +250,41 @@ mod tests {
     }
 
     #[test]
-    fn test_cli_list_command() {
-        let cli = Cli::try_parse_from(["nu-lint", "list"]).unwrap();
-        assert!(matches!(cli.command, Some(Commands::List)));
+    fn test_cli_list_rules_flag() {
+        let cli = Cli::try_parse_from(["nu-lint", "--list-rules"]).unwrap();
+        assert!(cli.list_rules);
     }
 
     #[test]
-    fn test_cli_explain_command() {
-        let cli = Cli::try_parse_from(["nu-lint", "explain", "some-rule"]).unwrap();
-        assert!(matches!(cli.command, Some(Commands::Explain { .. })));
+    fn test_cli_list_groups_flag() {
+        let cli = Cli::try_parse_from(["nu-lint", "--list-groups"]).unwrap();
+        assert!(cli.list_groups);
+    }
+
+    #[test]
+    fn test_cli_explain_flag() {
+        let cli = Cli::try_parse_from(["nu-lint", "--explain", "some-rule"]).unwrap();
+        assert_eq!(cli.explain, Some("some-rule".to_string()));
+    }
+
+    #[test]
+    fn test_cli_lsp_flag() {
+        let cli = Cli::try_parse_from(["nu-lint", "--lsp"]).unwrap();
+        assert!(cli.lsp);
+    }
+
+    #[test]
+    fn test_cli_fix_flag() {
+        let cli = Cli::try_parse_from(["nu-lint", "--fix", "file.nu"]).unwrap();
+        assert!(cli.fix);
+        assert_eq!(cli.paths, vec![PathBuf::from("file.nu")]);
+    }
+
+    #[test]
+    fn test_cli_mutually_exclusive_flags() {
+        assert!(Cli::try_parse_from(["nu-lint", "--fix", "--lsp"]).is_err());
+        assert!(Cli::try_parse_from(["nu-lint", "--list-rules", "--list-groups"]).is_err());
+        assert!(Cli::try_parse_from(["nu-lint", "--fix", "--explain", "rule"]).is_err());
     }
 
     #[test]

@@ -133,6 +133,7 @@ fn check_each_with_split(expr: &Expression, ctx: &LintContext) -> Option<Violati
             "Manual splitting with 'each' and 'split row' - consider using 'parse'",
             call.span(),
         )
+        .with_primary_label("manual split pattern")
         .with_help(
             "Use 'parse \"{field0} {field1}\"' for structured text extraction instead of 'each' \
              with 'split row'. For complex delimiters, use 'parse --regex' with named capture \
@@ -177,7 +178,8 @@ fn check_pipeline_for_split_get(pipeline: &Pipeline, context: &LintContext) -> O
         let violation = Violation::new(
             "Manual string splitting with indexed access - consider using 'parse'",
             span,
-        );
+        )
+        .with_primary_label("split + index pattern");
 
         Some(if let Some(delim) = delimiter {
             let replacement = generate_parse_replacement(&delim, &[index]);
@@ -262,6 +264,7 @@ fn create_indexed_access_violation(var_name: &str, decl_span: Span) -> Violation
         ),
         decl_span,
     )
+    .with_primary_label("split result with indexed access")
     .with_help(
         "Use 'parse' command to extract named fields instead of indexed access. For simple \
          delimiters like space or colon, use 'parse \"{field0} {field1}\"'. For complex \

@@ -94,6 +94,7 @@ fn build_violation(param_name: &str, match_call: &Call) -> Violation {
         ),
         match_call.span(),
     )
+    .with_primary_label("match-based dispatch")
     .with_help(format!(
         "Replace match-based dispatch with native subcommands for automatic help, tab completion, \
          and cleaner code:\n\n{subcommand_examples}\n\nRun 'script.nu --help' to see all \

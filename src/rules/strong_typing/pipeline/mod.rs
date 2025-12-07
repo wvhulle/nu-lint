@@ -1,6 +1,6 @@
 use nu_protocol::{
     BlockId, Span, Type,
-    ast::{Call, Expr},
+    ast::{Block, Call, Expr},
 };
 
 use crate::{
@@ -9,6 +9,14 @@ use crate::{
     rule::Rule,
     violation::{Fix, Replacement, Violation},
 };
+
+fn find_return_span(block: &Block) -> Option<Span> {
+    block
+        .pipelines
+        .last()
+        .and_then(|p| p.elements.last())
+        .map(|e| e.expr.span)
+}
 
 fn has_explicit_type_annotation(signature_span: Option<Span>, ctx: &LintContext) -> bool {
     signature_span.is_some_and(|span| span.text(ctx).contains("->"))
@@ -35,12 +43,18 @@ fn find_signature_span(call: &Call, _ctx: &LintContext) -> Option<Span> {
     Some(sig_arg.span)
 }
 
+#[allow(
+    clippy::too_many_arguments,
+    reason = "Grouping related parameters for violation creation"
+)]
 fn create_violations_for_untyped_io(
     func_name: &str,
     name_span: Span,
     uses_in: bool,
     needs_input_type: bool,
     needs_output_type: bool,
+    in_usage_span: Option<Span>,
+    return_span: Option<Span>,
     fix: &Fix,
 ) -> Vec<Violation> {
     if !needs_input_type && !needs_output_type {
@@ -75,11 +89,20 @@ fn create_violations_for_untyped_io(
         (false, false) => unreachable!(),
     };
 
-    vec![
-        Violation::new(message, name_span)
-            .with_help(suggestion)
-            .with_fix(fix.clone()),
-    ]
+    let mut violation = Violation::new(message, name_span)
+        .with_primary_label("missing type annotation")
+        .with_help(suggestion)
+        .with_fix(fix.clone());
+
+    if needs_input_type && let Some(span) = in_usage_span {
+        violation = violation.with_extra_label("uses $in here", span);
+    }
+
+    if needs_output_type && let Some(span) = return_span {
+        violation = violation.with_extra_label("returns value here", span);
+    }
+
+    vec![violation]
 }
 
 fn generate_typed_signature(
@@ -252,6 +275,18 @@ fn check_def_call(call: &Call, ctx: &LintContext) -> Vec<Violation> {
         return vec![];
     };
 
+    let in_usage_span = if needs_input_type {
+        block.find_pipeline_input(ctx).map(|(_, span)| span)
+    } else {
+        None
+    };
+
+    let return_span = if needs_output_type {
+        find_return_span(block)
+    } else {
+        None
+    };
+
     let new_signature = generate_typed_signature(
         signature,
         ctx,
@@ -273,6 +308,8 @@ fn check_def_call(call: &Call, ctx: &LintContext) -> Vec<Violation> {
         uses_in,
         needs_input_type,
         needs_output_type,
+        in_usage_span,
+        return_span,
         &fix,
     )
 }

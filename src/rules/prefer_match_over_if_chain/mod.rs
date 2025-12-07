@@ -210,15 +210,20 @@ fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<Violation> {
         .then(|| build_match_fix(call, &compared_var, context));
 
     // Create appropriate violation message
+    let first_branch_span = call.get_first_positional_arg().map(|arg| arg.span);
     let violation = if analysis.consistent_variable {
-        Violation::new(
+        let mut v = Violation::new(
             format!(
                 "If-else-if chain comparing '{compared_var}' to different values - consider using \
                  'match'"
             ),
-            call.span(),
+            call.head,
         )
-        .with_help(
+        .with_primary_label("if keyword");
+        if let Some(cond_span) = first_branch_span {
+            v = v.with_extra_label(format!("comparing '{compared_var}'"), cond_span);
+        }
+        v.with_help(
             "Use 'match $var { value1 => { ... }, value2 => { ... }, _ => { ... } }' for clearer \
              value-based branching"
                 .to_string(),
@@ -226,8 +231,9 @@ fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<Violation> {
     } else {
         Violation::new(
             "Long if-else-if chain - consider using 'match' for clearer branching",
-            call.span(),
+            call.head,
         )
+        .with_primary_label("start of chain")
         .with_help("For multiple related conditions, 'match' provides clearer pattern matching")
     };
 

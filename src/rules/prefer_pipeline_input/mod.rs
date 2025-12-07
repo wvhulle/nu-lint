@@ -455,6 +455,7 @@ fn create_violation(
     let fix = create_fix(full_code, &param.name, def_span);
 
     Violation::new("Use pipeline input instead of parameter", name_span)
+        .with_primary_label("function with single data parameter")
         .with_help("Pipeline input enables better composability and streaming performance")
         .with_fix(fix)
 }
@@ -470,6 +471,7 @@ fn create_violation_with_span(
     let fix = create_fix(full_code, &param.name, def_span);
 
     Violation::new("Use pipeline input instead of parameter", name_span)
+        .with_primary_label("function with single data parameter")
         .with_help("Pipeline input enables better composability and streaming performance")
         .with_fix(fix)
 }

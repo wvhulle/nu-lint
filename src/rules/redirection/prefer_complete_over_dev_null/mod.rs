@@ -145,6 +145,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
 
     Some(
         Violation::new(message, violation_span)
+            .with_primary_label("redirect")
             .with_help(help)
             .with_fix(fix),
     )

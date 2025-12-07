@@ -42,6 +42,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 format!("Command '{cmd_name}' should follow naming convention"),
                 name_span,
             )
+            .with_primary_label("non-kebab-case name")
             .with_help(format!("Consider renaming to: {kebab_case_name}")),
         ]
     })

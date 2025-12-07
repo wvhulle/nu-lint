@@ -5,8 +5,8 @@ use nu_protocol::{
 
 use crate::{
     ast::{
-        call::CallExt, expression::ExpressionExt, pipeline::PipelineExt, span::SpanExt,
-        syntax_shape::SyntaxShapeExt,
+        block::BlockExt, call::CallExt, expression::ExpressionExt, pipeline::PipelineExt,
+        span::SpanExt, syntax_shape::SyntaxShapeExt,
     },
     context::LintContext,
     rule::Rule,
@@ -115,12 +115,20 @@ fn check_signature(
     ctx: &LintContext,
 ) -> Vec<Violation> {
     log::debug!("Checking signature for missing type annotations: {sig:?}");
+    let block = ctx.working_set.get_block(body_block_id);
+
     let params_needing_types: Vec<_> = sig
         .required_positional
         .iter()
         .chain(&sig.optional_positional)
         .chain(sig.rest_positional.iter())
         .filter(|param| param.shape == nu_protocol::SyntaxShape::Any)
+        .map(|param| {
+            (
+                param,
+                param.var_id.and_then(|var_id| block.find_var_usage(var_id)),
+            )
+        })
         .collect();
 
     if params_needing_types.is_empty() {
@@ -136,14 +144,21 @@ fn check_signature(
 
     params_needing_types
         .into_iter()
-        .map(|param| {
+        .map(|(param, usage_span)| {
             let param_span = signature_span.find_substring_span(&param.name, ctx);
-            Violation::new(
-                format!("Parameter '{}' is missing type annotation", param.name),
+            let mut violation = Violation::new(
+                format!("Parameter `{}` is missing type annotation", param.name),
                 param_span,
             )
+            .with_primary_label("add type annotation")
             .with_help("Add type annotation like 'param: string' or 'param: int'")
-            .with_fix(fix.clone())
+            .with_fix(fix.clone());
+
+            if let Some(usage_span) = usage_span {
+                violation = violation.with_extra_label("used here", usage_span);
+            }
+
+            violation
         })
         .collect()
 }

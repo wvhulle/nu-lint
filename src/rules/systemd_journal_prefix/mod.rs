@@ -192,6 +192,7 @@ fn create_violation(
          logging",
         span,
     )
+    .with_primary_label("missing journal prefix")
     .with_help(help_message)
     .with_fix(Fix::with_explanation(
         fix_explanation,

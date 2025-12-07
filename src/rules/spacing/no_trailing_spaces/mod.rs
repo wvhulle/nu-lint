@@ -21,6 +21,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
                     format!("Line {} has trailing whitespace", line_num + 1),
                     nu_protocol::Span::new(violation_start, violation_end),
                 )
+                .with_primary_label("trailing whitespace")
                 .with_help("Remove trailing spaces"),
             );
         }

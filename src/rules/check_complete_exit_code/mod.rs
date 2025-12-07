@@ -198,6 +198,7 @@ fn create_violation(assignment: &CompleteAssignment) -> Violation {
         ),
         assignment.span,
     )
+    .with_primary_label("without exit_code check")
     .with_help(format!(
         "Check the exit code to handle command failures. For example:\nif ${}.exit_code != 0 \
          {{\n\x20   error make {{msg: '{cmd_desc}failed'}}\n}}\nOr use inline checking:\nlet \

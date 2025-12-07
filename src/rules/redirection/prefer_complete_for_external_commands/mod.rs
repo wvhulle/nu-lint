@@ -84,7 +84,17 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
 
     let help = "Wrap the external command in 'complete' to capture its exit code.";
 
-    Some(Violation::new(message, first_element.expr.span).with_help(help))
+    let last_element_span = pipeline.elements.last().map(|e| e.expr.span);
+
+    let mut violation = Violation::new(message, first_element.expr.span)
+        .with_primary_label("external command without error handling");
+
+    if let Some(last_span) = last_element_span {
+        violation =
+            violation.with_extra_label("only this command's exit code is checked", last_span);
+    }
+
+    Some(violation.with_help(help))
 }
 
 fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<Violation>) {

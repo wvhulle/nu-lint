@@ -13,6 +13,9 @@ struct TransposeEachPattern {
     col1: String,
     col2: String,
     combined_span: nu_protocol::Span,
+    transpose_span: nu_protocol::Span,
+    each_span: nu_protocol::Span,
+    closure_span: nu_protocol::Span,
 }
 
 fn extract_transpose_column_names(call: &Call) -> Option<(String, String)> {
@@ -197,6 +200,9 @@ fn detect_pattern_in_pipeline(
             col1,
             col2,
             combined_span,
+            transpose_span: transpose_call.head,
+            each_span: each_call.head,
+            closure_span: closure_arg.span,
         });
     }
 
@@ -302,6 +308,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 Violation::new(
                     "Use 'items' instead of 'transpose | each' when iterating over record entries",
                     pattern.combined_span,
+                )
+                .with_primary_label("transpose | each pattern")
+                .with_extra_label("converts record to table", pattern.transpose_span)
+                .with_extra_label("iterates over rows", pattern.each_span)
+                .with_extra_label(
+                    format!("accesses ${} and ${}", pattern.col1, pattern.col2),
+                    pattern.closure_span,
                 )
                 .with_help(
                     "The 'items' command directly iterates over key-value pairs without needing \

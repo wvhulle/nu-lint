@@ -31,6 +31,8 @@ fn check_sequential_stderr_exit(
             "Use 'error make' instead of 'print stderr' + 'exit' for error conditions",
             print_call.span().merge(exit_call.span()),
         )
+        .with_primary_label("print stderr call")
+        .with_extra_label("followed by exit", exit_call.span())
         .with_help(
             "Use 'error make { msg: \"error message\" }' instead. Consider adding 'label' with \
              span for precise error location, and 'help' field for user guidance.",

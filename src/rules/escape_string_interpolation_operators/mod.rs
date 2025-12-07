@@ -191,13 +191,14 @@ fn is_valid_interpolation(expr: &Expression, context: &LintContext) -> bool {
 }
 
 fn create_violation(span: nu_protocol::Span, pattern: ProblematicPattern) -> Violation {
-    let (message, suggestion) = match pattern {
+    let (message, suggestion, label) = match pattern {
         ProblematicPattern::StandaloneOperator(op) => (
             format!(
                 "String interpolation contains standalone operator '{op}' which will cause \
                  runtime error"
             ),
             "Use a complete expression or escape as literal text: \\(...\\)".to_string(),
+            format!("standalone '{op}' operator"),
         ),
         ProblematicPattern::ExternalBooleanOperator(op) => (
             format!(
@@ -208,6 +209,7 @@ fn create_violation(span: nu_protocol::Span, pattern: ProblematicPattern) -> Vio
                 "Use the operator in a complete expression or escape as literal text: \\({op} \
                  ...\\)"
             ),
+            format!("'{op}' parsed as external command"),
         ),
         ProblematicPattern::LiteralBinaryOp(op) => (
             format!(
@@ -215,10 +217,13 @@ fn create_violation(span: nu_protocol::Span, pattern: ProblematicPattern) -> Vio
                  intended as text"
             ),
             "Escape literal parentheses with backslashes: \\(...\\)".to_string(),
+            format!("literal '{op}' operation"),
         ),
     };
 
-    Violation::new(message, span).with_help(suggestion)
+    Violation::new(message, span)
+        .with_primary_label(label)
+        .with_help(suggestion)
 }
 
 fn check_string_interpolation(

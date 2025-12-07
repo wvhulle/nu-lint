@@ -44,6 +44,7 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
                     ),
                     flag_span,
                 )
+                .with_primary_label("undocumented flag")
                 .with_help(format!(
                     "Add a documentation comment after the parameter: {flag_name} # Description \
                      of {}",

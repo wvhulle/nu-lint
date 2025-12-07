@@ -113,8 +113,10 @@ fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<Violat
                          the expression directly",
                         let_decl.var_name
                     ),
-                    combined_span,
+                    let_decl.span,
                 )
+                .with_primary_label("variable declared here")
+                .with_extra_label("immediately returned here", ref_span)
                 .with_help(
                     "Return the expression directly instead of assigning to a variable first",
                 )

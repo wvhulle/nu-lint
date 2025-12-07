@@ -1,5 +1,5 @@
 use nu_protocol::{
-    Type,
+    Span, Type,
     ast::{Block, Call, Expr},
 };
 
@@ -14,10 +14,10 @@ use crate::{
     violation::Violation,
 };
 
-fn has_stdout_print(block: &Block, context: &LintContext) -> bool {
+fn collect_stdout_print_spans(block: &Block, context: &LintContext) -> Vec<Span> {
     use nu_protocol::ast::Traverse;
 
-    let mut print_calls = Vec::new();
+    let mut print_spans = Vec::new();
     block.flat_map(
         context.working_set,
         &|expr| {
@@ -25,13 +25,13 @@ fn has_stdout_print(block: &Block, context: &LintContext) -> bool {
                 && call.is_call_to_command("print", context)
                 && !call.has_named_flag("stderr")
             {
-                return vec![()];
+                return vec![call.head];
             }
             vec![]
         },
-        &mut print_calls,
+        &mut print_spans,
     );
-    !print_calls.is_empty()
+    print_spans
 }
 
 fn last_command_produces_output(block: &Block, context: &LintContext) -> bool {
@@ -89,8 +89,9 @@ fn check_function_definition(call: &Call, context: &LintContext) -> Option<Viola
     }
 
     let block = context.working_set.get_block(block_id);
+    let print_spans = collect_stdout_print_spans(block, context);
 
-    if !has_stdout_print(block, context) || !returns_data(block, context) {
+    if print_spans.is_empty() || !returns_data(block, context) {
         return None;
     }
 
@@ -104,7 +105,15 @@ fn check_function_definition(call: &Call, context: &LintContext) -> Option<Viola
                       document the intentional mixing"
         .to_string();
 
-    Some(Violation::new(message, name_span).with_help(suggestion))
+    let mut violation = Violation::new(message, name_span)
+        .with_primary_label("function with mixed output")
+        .with_help(suggestion);
+
+    for span in print_spans {
+        violation = violation.with_extra_label("prints to stdout", span);
+    }
+
+    Some(violation)
 }
 
 fn check(context: &LintContext) -> Vec<Violation> {

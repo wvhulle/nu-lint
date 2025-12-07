@@ -255,6 +255,7 @@ fn create_violation(span: nu_protocol::Span, depth: usize) -> Violation {
         ),
         span,
     )
+    .with_primary_label(format!("depth {depth} here"))
     .with_help("Consider refactoring this code into smaller functions to reduce nesting depth")
 }
 

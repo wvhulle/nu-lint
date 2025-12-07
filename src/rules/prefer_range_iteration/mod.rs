@@ -150,6 +150,8 @@ fn check_while_loop_for_counter(
             format!("While loop with counter '{counter_name}' - consider using range iteration"),
             counter_span,
         )
+        .with_primary_label("counter initialization")
+        .with_extra_label("while loop using counter", call.span())
         .with_help("Use '1..$max | each { |i| ... }' instead of while loop with counter")
     })
 }

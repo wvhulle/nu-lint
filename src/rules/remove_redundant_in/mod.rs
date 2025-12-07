@@ -136,18 +136,26 @@ fn create_violation(
     block_span: Option<nu_protocol::Span>,
     context: &LintContext,
 ) -> Violation {
-    let span = context.find_declaration_span(&signature.name);
+    let name_span = context.find_declaration_span(&signature.name);
     let suggestion = "Remove redundant $in - it's implicit at the start of pipelines";
     let violation = Violation::new(
         format!(
             "Redundant $in usage in function '{}' - $in is implicit at the start of pipelines",
             signature.name
         ),
-        span,
+        name_span,
     )
+    .with_primary_label("function with redundant $in")
     .with_help(suggestion.to_string());
+
+    let violation = if let Some(body_span) = block_span {
+        violation.with_extra_label("$in used at pipeline start", body_span)
+    } else {
+        violation
+    };
+
     generate_fix_text(signature, block_span, context).map_or(violation.clone(), |fix_text| {
-        violation.with_fix(create_fix(fix_text, span))
+        violation.with_fix(create_fix(fix_text, name_span))
     })
 }
 fn check(context: &LintContext) -> Vec<Violation> {

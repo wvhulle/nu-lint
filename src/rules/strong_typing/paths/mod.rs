@@ -1,13 +1,13 @@
 use nu_protocol::{
-    VarId,
+    Span, VarId,
     ast::{Block, Expr, Expression, FindMapResult, Traverse},
 };
 
 use crate::{
-    ast::{call::CallExt, expression::ExpressionExt},
+    ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
     context::LintContext,
     rule::Rule,
-    violation::Violation,
+    violation::{Fix, Replacement, Violation},
 };
 
 const PATH_KEYWORDS: &[&str] = &["path", "file", "dir", "directory", "folder", "location"];
@@ -65,7 +65,7 @@ fn check_parameter(
     param_var_id: VarId,
     block: &Block,
     function_name: &str,
-    function_span: nu_protocol::Span,
+    signature_span: Span,
     is_optional: bool,
     context: &LintContext,
 ) -> Option<Violation> {
@@ -79,40 +79,57 @@ fn check_parameter(
         return None;
     }
 
-    let (current_type, message) = match param.shape {
-        StringShape => (
-            "string",
-            format!(
-                "Parameter `{}` in function `{function_name}` is used as a path but has `string` \
-                 type",
-                param.name
-            ),
-        ),
-        Any => (
-            "no type annotation",
-            format!(
-                "Parameter `{}` in function `{function_name}` is used as a path but has no type \
-                 annotation",
-                param.name
-            ),
-        ),
-        _ => unreachable!(),
-    };
+    let var = context.working_set.get_variable(param_var_id);
+    let param_span = var.declaration_span;
 
-    let suggestion = format!(
-        "Change parameter `{}` type from `{current_type}` to `path`:\n  {}{}:  path",
+    let message = format!(
+        "Parameter `{}` in `{function_name}` used as path but typed as {}",
         param.name,
-        param.name,
-        if is_optional { "?" } else { "" }
+        match param.shape {
+            StringShape => "string",
+            Any => "any",
+            _ => "unknown",
+        }
     );
 
-    Some(Violation::new(message, function_span).with_help(suggestion))
+    let optional_marker = if is_optional { "?" } else { "" };
+    let new_param_text = format!("{}{optional_marker}: path", param.name);
+
+    let param_in_sig_span = signature_span.find_substring_span(&param.name, context);
+    let param_end = find_param_type_end(param_in_sig_span, signature_span, context);
+    let replace_span = Span::new(param_in_sig_span.start, param_end);
+
+    let fix = Fix::with_explanation(
+        format!("Change `{}` type to `path`", param.name),
+        vec![Replacement::new(replace_span, new_param_text)],
+    );
+
+    Some(
+        Violation::new(message, param_span)
+            .with_primary_label("used as path")
+            .with_help(format!("Use `{}{optional_marker}: path`", param.name))
+            .with_fix(fix),
+    )
+}
+
+fn find_param_type_end(param_start: Span, signature_span: Span, context: &LintContext) -> usize {
+    let sig_text = &context.source[signature_span.start..signature_span.end];
+    let param_offset = param_start.start - signature_span.start;
+
+    let after_param = &sig_text[param_offset..];
+
+    for (i, c) in after_param.char_indices() {
+        if c == ',' || c == ']' || c == '#' {
+            return param_start.start + i;
+        }
+    }
+    signature_span.end
 }
 
 fn check_function_parameters(
     block: &Block,
     function_name: &str,
-    function_span: nu_protocol::Span,
+    signature_span: Span,
     context: &LintContext,
 ) -> Vec<Violation> {
     let check_param = |param: &nu_protocol::PositionalArg, is_optional: bool| {
@@ -122,7 +139,7 @@ fn check_function_parameters(
                 var_id,
                 block,
                 function_name,
-                function_span,
+                signature_span,
                 is_optional,
                 context,
             )
@@ -152,15 +169,27 @@ fn check_function_parameters(
 }
 
 fn check(context: &LintContext) -> Vec<Violation> {
-    context
-        .collect_function_definitions()
-        .iter()
-        .flat_map(|(block_id, function_name)| {
-            let block = context.working_set.get_block(*block_id);
-            let function_span = context.find_declaration_span(function_name);
-            check_function_parameters(block, function_name, function_span, context)
-        })
-        .collect()
+    context.collect_rule_violations(|expr, ctx| {
+        let Expr::Call(call) = &expr.expr else {
+            return vec![];
+        };
+
+        let decl = ctx.working_set.get_decl(call.decl_id);
+        if !matches!(decl.name(), "def" | "export def") {
+            return vec![];
+        }
+
+        let Some((block_id, function_name)) = call.extract_function_definition(ctx) else {
+            return vec![];
+        };
+
+        let Some(sig_arg) = call.get_positional_arg(1) else {
+            return vec![];
+        };
+
+        let block = ctx.working_set.get_block(block_id);
+        check_function_parameters(block, &function_name, sig_arg.span, ctx)
+    })
 }
 
 pub const fn rule() -> Rule {
@@ -174,5 +203,7 @@ pub const fn rule() -> Rule {
 
 #[cfg(test)]
 mod detect_bad;
+#[cfg(test)]
+mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

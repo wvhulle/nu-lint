@@ -66,8 +66,8 @@ fn infer_output_type_with_depth(block: &Block, context: &LintContext, depth: usi
     let block_input_type = block
         .all_elements()
         .iter()
-        .find_map(|element| element.expr.find_pipeline_input_variable(context))
-        .and_then(|in_var| {
+        .find_map(|element| element.expr.find_pipeline_input(context))
+        .and_then(|(in_var, _)| {
             block
                 .all_elements()
                 .iter()
@@ -137,9 +137,12 @@ pub trait BlockExt {
     /// Checks if block produces output. Example: `{ ls }` produces output, `{
     /// print "x" }` doesn't
     fn produces_output(&self) -> bool;
-    /// Finds the `$in` variable used in this block. Example: `def foo [] { $in
-    /// | each { ... } }`
-    fn find_pipeline_input_variable(&self, context: &LintContext) -> Option<VarId>;
+    /// Finds the `$in` variable and its span in this block. Example: `{ $in |
+    /// length }` returns `(var_id, span of $in)`
+    fn find_pipeline_input(&self, context: &LintContext) -> Option<(VarId, Span)>;
+    /// Finds the first usage span of a specific variable in this block.
+    /// Example: `{ $x + 1 }` with var_id of x returns span of `$x`
+    fn find_var_usage(&self, var_id: VarId) -> Option<Span>;
     /// Infers the output type of a block. Example: `{ ls }` returns "table"
     fn infer_output_type(&self, context: &LintContext) -> Type;
     /// Infers the input type expected by a block. Example: `{ $in | length }`
@@ -253,10 +256,16 @@ impl BlockExt for Block {
         })
     }
 
-    fn find_pipeline_input_variable(&self, context: &LintContext) -> Option<VarId> {
+    fn find_pipeline_input(&self, context: &LintContext) -> Option<(VarId, Span)> {
         self.all_elements()
             .iter()
-            .find_map(|element| element.expr.find_pipeline_input_variable(context))
+            .find_map(|element| element.expr.find_pipeline_input(context))
+    }
+
+    fn find_var_usage(&self, var_id: VarId) -> Option<Span> {
+        self.all_elements()
+            .iter()
+            .find_map(|element| element.expr.find_var_usage(var_id))
     }
 
     fn infer_output_type(&self, context: &LintContext) -> Type {
@@ -264,7 +273,7 @@ impl BlockExt for Block {
     }
 
     fn infer_input_type(&self, context: &LintContext) -> Type {
-        let Some(in_var) = self.find_pipeline_input_variable(context) else {
+        let Some((in_var, _)) = self.find_pipeline_input(context) else {
             return Type::Any;
         };
 

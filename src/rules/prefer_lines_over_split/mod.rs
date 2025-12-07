@@ -17,11 +17,22 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 .map(|l| l.len() + 1) // +1 for newline
                 .sum();
             let line_end = line_start + line.len();
+            let full_span = nu_protocol::Span::new(line_start, line_end);
+
+            // Find the "split row" part
+            let split_row_pos = line.find("split row").unwrap_or(0);
+            let split_span = nu_protocol::Span::new(
+                line_start + split_row_pos,
+                line_start + split_row_pos + 9, // "split row" is 9 chars
+            );
+
             violations.push(
                 Violation::new(
                     "Use 'lines' instead of 'split row \"\\n\"' for splitting by newlines",
-                    nu_protocol::Span::new(line_start, line_end),
+                    full_span,
                 )
+                .with_primary_label("inefficient newline split")
+                .with_extra_label("replace with 'lines'", split_span)
                 .with_help(
                     "Replace with: | lines\nThe 'lines' command is more efficient and clearer for \
                      splitting text by newlines.",

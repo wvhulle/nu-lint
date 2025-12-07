@@ -55,11 +55,15 @@ fn check(ctx: &LintContext) -> Vec<Violation> {
             return vec![];
         }
 
+        let hat_span = nu_protocol::Span::new(expr.span.start, expr.span.start + 1);
+
         vec![
             Violation::new(
                 format!("Unnecessary '^' prefix on external command '{cmd}'"),
-                expr.span,
+                hat_span,
             )
+            .with_primary_label("redundant prefix")
+            .with_extra_label("has no built-in equivalent", head.span)
             .with_help(format!(
                 "The '^' prefix is only needed when a built-in command with the same name exists. \
                  '{cmd}' has no built-in equivalent, so the prefix is redundant."

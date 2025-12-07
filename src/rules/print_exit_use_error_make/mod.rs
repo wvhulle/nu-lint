@@ -135,6 +135,7 @@ fn create_violation(pattern: &PrintExitPattern, context: &LintContext) -> Violat
         "Use 'error make' instead of 'print' + 'exit' for error conditions",
         pattern.span,
     )
+    .with_primary_label("print + exit pattern")
     .with_help(suggestion)
 }
 

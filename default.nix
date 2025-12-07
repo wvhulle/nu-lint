@@ -14,6 +14,7 @@ let
 
   toolchain = fenix.fromToolchainFile {
     file = ./rust-toolchain.toml;
+    sha256 = "sha256-IQUcjhizZsNE1NYkdrwkVNxGpUlujMlfy8tdcbp7NnQ=";
   };
 
   rustPlatform = pkgs.makeRustPlatform {

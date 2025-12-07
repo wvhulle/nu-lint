@@ -3,10 +3,7 @@ use std::collections::HashSet;
 use miette::{Diagnostic, LabeledSpan};
 use nu_protocol::ParseError;
 
-use crate::{context::LintContext, rule::Rule, violation::Violation};
-
-const NU_PARSER_VERSION: &str = env!("NU_PARSER_VERSION");
-
+use crate::{NU_PARSER_VERSION, context::LintContext, rule::Rule, violation::Violation};
 fn extract_labels(parse_error: &ParseError) -> Vec<LabeledSpan> {
     parse_error.labels().into_iter().flatten().collect()
 }

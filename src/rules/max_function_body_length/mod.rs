@@ -27,7 +27,7 @@ fn function_violation(
     let block = context.working_set.get_block(block_id);
     let function_span = context.find_declaration_span(function_name);
     let block_span = block.span?;
-    let line_count = count_lines_in_span(context.source, block_span);
+    let line_count = count_lines_in_span(unsafe { context.source() }, block_span);
     (line_count > MAX_LINES).then(|| {
         let message = format!(
             "Function `{function_name}` has {line_count} lines, which exceeds the maximum of \

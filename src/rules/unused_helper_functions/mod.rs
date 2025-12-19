@@ -81,7 +81,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .filter(|(name, _)| !is_main_entry_point(name) && !called_functions.contains(*name))
         .map(|(name, (_, def_span))| {
             let name_span = context.find_declaration_span(name);
-            let removal_span = expand_span_to_full_line(*def_span, context.source);
+            let removal_span = expand_span_to_full_line(*def_span, unsafe { context.source() });
 
             let fix = Fix::with_explanation(
                 format!("Remove unused function '{name}'"),

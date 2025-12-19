@@ -10,7 +10,8 @@ pub fn external_args_slices<'a>(
 ) -> impl Iterator<Item = &'a str> + 'a {
     args.iter().map(move |arg| match arg {
         ExternalArgument::Regular(expr) | ExternalArgument::Spread(expr) => {
-            &context.source[expr.span.start..expr.span.end]
+            std::str::from_utf8(context.working_set.get_span_contents(expr.span))
+                .unwrap_or("")
         }
     })
 }
@@ -33,7 +34,8 @@ pub fn detect_external_commands(
 ) -> Vec<Violation> {
     context.collect_rule_violations(|expr, ctx| {
         if let Expr::ExternalCall(head, args) = &expr.expr {
-            let cmd_text = &ctx.source[head.span.start..head.span.end];
+            let cmd_text = std::str::from_utf8(ctx.working_set.get_span_contents(head.span))
+                .unwrap_or("");
 
             if cmd_text == external_cmd {
                 let violation = create_violation(fix_builder, expr, ctx, cmd_text, note, args);

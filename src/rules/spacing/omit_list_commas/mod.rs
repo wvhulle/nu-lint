@@ -47,7 +47,7 @@ fn check_list_commas(source: &str, span: Span, items: &[ListItem]) -> Vec<Violat
 }
 fn check(context: &LintContext) -> Vec<Violation> {
     context.collect_rule_violations(|expr, ctx| match &expr.expr {
-        Expr::List(items) => check_list_commas(ctx.source, expr.span, items),
+        Expr::List(items) => check_list_commas(unsafe { ctx.source() }, expr.span, items),
         _ => vec![],
     })
 }

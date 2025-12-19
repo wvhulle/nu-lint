@@ -74,7 +74,9 @@ fn extract_command_name(cmd_expr: &Expression, context: &LintContext) -> String 
     match &cmd_expr.expr {
         Expr::String(s) => s.clone(),
         Expr::GlobPattern(pattern, _) => pattern.clone(),
-        _ => context.source[cmd_expr.span.start..cmd_expr.span.end].to_string(),
+        _ => std::str::from_utf8(context.working_set.get_span_contents(cmd_expr.span))
+            .unwrap_or("")
+            .to_string(),
     }
 }
 

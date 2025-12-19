@@ -3,7 +3,7 @@ use std::{borrow::Cow, error::Error, fmt};
 use miette::{Diagnostic, LabeledSpan, Severity};
 use nu_protocol::Span;
 
-use crate::config::LintLevel;
+use crate::{config::LintLevel, context::LintContext};
 
 /// Convert `LintLevel` to miette's `Severity`
 impl From<LintLevel> for Severity {
@@ -165,6 +165,28 @@ impl Violation {
     pub fn with_note(mut self, note: impl Into<Cow<'static, str>>) -> Self {
         self.notes.push(note.into());
         self
+    }
+
+    /// Normalize all spans in this violation to be relative to the current file
+    pub fn normalize_spans(&mut self, context: &LintContext) {
+        self.span = context.normalize_span(self.span);
+
+        if let Some(fix) = &mut self.fix {
+            for replacement in &mut fix.replacements {
+                replacement.span = context.normalize_span(replacement.span);
+            }
+        }
+
+        // Normalize extra labels - we need to recreate them since LabeledSpan fields are private
+        self.extra_labels = self.extra_labels
+            .iter()
+            .map(|label| {
+                let normalized = context.normalize_span(
+                    Span::new(label.offset(), label.offset() + label.len())
+                );
+                LabeledSpan::new(label.label().map(ToString::to_string), normalized.start, normalized.end - normalized.start)
+            })
+            .collect();
     }
 }
 

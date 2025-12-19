@@ -127,7 +127,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
          has_complete={}",
         pipeline_start,
         pipeline_end,
-        context.source.len(),
+        context.source_len(),
         replacement_text,
         has_complete
     );

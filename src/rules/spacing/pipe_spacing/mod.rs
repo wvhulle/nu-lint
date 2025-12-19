@@ -195,7 +195,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     walk_block_for_pipelines(
         context.ast,
         context.working_set,
-        context.source,
+        unsafe { context.source() },
         &mut violations,
     );
     violations

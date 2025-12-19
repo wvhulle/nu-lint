@@ -62,7 +62,8 @@ fn last_command_produces_output(block: &Block, context: &LintContext) -> bool {
         }
         Expr::ExternalCall(head, args) => {
             // Extract external command name span text
-            let cmd_name = &context.source[head.span.start..head.span.end];
+            let cmd_name = std::str::from_utf8(context.working_set.get_span_contents(head.span))
+                .unwrap_or("");
             // If external side effect registry marks command as NoDataInStdout, treat as no
             // output
             !has_external_side_effect(cmd_name, ExternEffect::NoDataInStdout, context, args)

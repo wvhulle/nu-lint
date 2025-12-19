@@ -29,7 +29,8 @@ pub trait SpanExt {
 
 impl SpanExt for Span {
     fn text<'a>(&self, context: &'a LintContext) -> &'a str {
-        &context.source[self.start..self.end]
+        std::str::from_utf8(context.working_set.get_span_contents(*self))
+            .unwrap_or("")
     }
 
     fn find_containing_function(
@@ -63,16 +64,24 @@ impl SpanExt for Span {
     }
 
     fn has_inline_doc_comment(&self, context: &LintContext) -> bool {
-        let line_start = context.source[..self.start]
+        let before = context.source_before(self.start);
+        let line_start = before
             .rfind('\n')
             .map_or(0, |pos| pos + 1);
 
-        let line_end = context.source[self.end..]
-            .find('\n')
-            .map_or(context.source.len(), |pos| self.end + pos);
+        // For finding line end, we need to get text starting from self.end
+        // Since we can't safely slice source with spans, we approximate using source_lines
+        let all_lines: Vec<&str> = context.source_lines().collect();
+        let line_at_span = all_lines.iter()
+            .find(|line| {
+                // Check if this line likely contains our span
+                line.len() >= self.end - line_start
+            });
 
-        let line_text = &context.source[line_start..line_end];
-
-        line_text.contains(" # ")
+        if let Some(line_text) = line_at_span {
+            line_text.contains(" # ")
+        } else {
+            false
+        }
     }
 }

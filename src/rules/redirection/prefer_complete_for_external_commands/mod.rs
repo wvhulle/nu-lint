@@ -1,7 +1,4 @@
-use nu_protocol::{
-    Span,
-    ast::{Block, Expr, Expression, Pipeline, Traverse},
-};
+use nu_protocol::ast::{Block, Expr, Pipeline, Traverse};
 
 use crate::{
     ast::{call::CallExt, expression::ExpressionExt},
@@ -10,34 +7,6 @@ use crate::{
     rule::Rule,
     violation::Violation,
 };
-
-fn is_wrapped_in_complete(pipeline: &Pipeline, context: &LintContext) -> bool {
-    pipeline.elements.iter().any(|element| {
-        matches!(&element.expr.expr, Expr::Call(call)
-            if call.is_call_to_command("complete", context))
-    })
-}
-
-fn is_in_try_block(expr_span: Span, context: &LintContext) -> bool {
-    use nu_protocol::ast::Traverse;
-
-    let mut try_spans = Vec::new();
-    context.ast.flat_map(
-        context.working_set,
-        &|expr| {
-            matches!(&expr.expr, Expr::Call(call)
-            if call.is_call_to_command("try", context))
-            .then_some(expr.span)
-            .into_iter()
-            .collect()
-        },
-        &mut try_spans,
-    );
-
-    try_spans
-        .iter()
-        .any(|try_span| try_span.contains_span(expr_span))
-}
 
 fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violation> {
     if !{ pipeline.elements.len() > 1 } {
@@ -57,6 +26,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
                     log::debug!("This is already the last element.");
                     return None;
                 }
+
                 let next_pipeline_element = &pipeline.elements[i + 1].expr.expr;
 
                 if let Expr::Call(call) = &next_pipeline_element {

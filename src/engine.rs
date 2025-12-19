@@ -23,12 +23,16 @@ use crate::{
 };
 
 /// Parse Nushell source code into an AST and return both the Block and
-/// `StateWorkingSet`.
-fn parse_source<'a>(engine_state: &'a EngineState, source: &[u8]) -> (Block, StateWorkingSet<'a>) {
+/// `StateWorkingSet`, along with the file's starting offset in the span space.
+fn parse_source<'a>(engine_state: &'a EngineState, source: &[u8]) -> (Block, StateWorkingSet<'a>, usize) {
     let mut working_set = StateWorkingSet::new(engine_state);
-    let block = parse(&mut working_set, None, source, false);
+    // Get the offset where this file will start in the virtual span space
+    let file_offset = working_set.next_span_start();
+    // Add the source to the working set's file stack so spans work correctly
+    let _file_id = working_set.add_file("source".to_string(), source);
+    let block = parse(&mut working_set, Some("source"), source, false);
 
-    ((*block).clone(), working_set)
+    ((*block).clone(), working_set, file_offset)
 }
 
 /// Check if a file is a Nushell script (by extension or shebang)
@@ -206,16 +210,18 @@ impl LintEngine {
 
     #[must_use]
     pub fn lint_str(&self, source: &str) -> Vec<Violation> {
-        let (block, working_set) = parse_source(self.engine_state, source.as_bytes());
+        let (block, working_set, file_offset) = parse_source(self.engine_state, source.as_bytes());
 
-        let context = LintContext {
-            source,
-            ast: &block,
-            engine_state: self.engine_state,
-            working_set: &working_set,
-        };
+        let context = LintContext::new(source, &block, self.engine_state, &working_set, file_offset);
 
-        self.collect_violations(&context)
+        let mut violations = self.collect_violations(&context);
+
+        // Normalize all spans in violations to be file-relative
+        for violation in &mut violations {
+            violation.normalize_spans(&context);
+        }
+
+        violations
     }
 
     /// Collect violations from all enabled rules

@@ -164,7 +164,7 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
         return vec![];
     }
 
-    if has_stdin_flag_in_shebang(context.source) {
+    if has_stdin_flag_in_shebang(unsafe { context.source() }) {
         return vec![];
     }
 
@@ -177,7 +177,7 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
         "Main function declares pipeline input type but shebang is missing --stdin flag"
     };
 
-    let fix = create_fix_for_shebang(context.source);
+    let fix = create_fix_for_shebang(unsafe { context.source() });
 
     let mut violation = Violation::new(message, name_span)
         .with_primary_label("main function expecting stdin")
@@ -195,8 +195,7 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
 
 fn check(context: &LintContext) -> Vec<Violation> {
     let has_shebang = context
-        .source
-        .lines()
+        .source_lines()
         .next()
         .is_some_and(|line| line.starts_with("#!"));
 

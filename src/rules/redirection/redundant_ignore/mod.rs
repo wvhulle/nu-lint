@@ -54,7 +54,8 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
     let start_span = elements_without_ignore.first()?.expr.span;
     let end_span = elements_without_ignore.last()?.expr.span;
     let combined_span = nu_protocol::Span::new(start_span.start, end_span.end);
-    let pipeline_text = &context.source[combined_span.start..combined_span.end];
+    let pipeline_text = std::str::from_utf8(context.working_set.get_span_contents(combined_span))
+        .unwrap_or("");
 
     let violation = Violation::new("Discarding command output with '| ignore'", ignore_span)
         .with_primary_label("redundant ignore")

@@ -11,13 +11,99 @@ use crate::{ast::call::CallExt, violation::Violation};
 /// Context containing all lint information (source, AST, and engine state)
 /// Rules can use whatever they need from this context
 pub struct LintContext<'a> {
-    pub source: &'a str,
+    /// Raw source string - DO NOT slice directly with spans!
+    /// Use `get_span_text()` or `working_set.get_span_contents()` instead.
+    /// Direct slicing will fail when the engine state contains loaded files (like stdlib).
+    source: &'a str,
     pub ast: &'a Block,
     pub engine_state: &'a EngineState,
     pub working_set: &'a StateWorkingSet<'a>,
+    /// Offset of the current file in the virtual span space
+    /// Used to normalize spans to file-relative positions for fixes
+    file_offset: usize,
 }
 
-impl LintContext<'_> {
+impl<'a> LintContext<'a> {
+    /// Create a new LintContext
+    /// Only the engine module should construct this
+    pub(crate) fn new(
+        source: &'a str,
+        ast: &'a Block,
+        engine_state: &'a EngineState,
+        working_set: &'a StateWorkingSet<'a>,
+        file_offset: usize,
+    ) -> Self {
+        Self {
+            source,
+            ast,
+            engine_state,
+            working_set,
+            file_offset,
+        }
+    }
+
+    /// Normalize a span to be relative to the current file
+    /// This is needed because spans are absolute positions in the virtual file space,
+    /// but we need file-relative positions for applying fixes
+    #[must_use]
+    pub fn normalize_span(&self, span: Span) -> Span {
+        Span::new(
+            span.start.saturating_sub(self.file_offset),
+            span.end.saturating_sub(self.file_offset),
+        )
+    }
+
+    /// Get the raw source text
+    ///
+    /// # Safety
+    ///
+    /// DO NOT slice the returned string with span indices! When the engine state
+    /// contains loaded files (like stdlib), spans are absolute positions in a virtual
+    /// file space and won't match this source string's indices.
+    ///
+    /// Only use this for operations like:
+    /// - Line counting (`source().lines().count()`)
+    /// - Pattern searching (`source().contains()`)
+    /// - Getting full source length (`source().len()`)
+    ///
+    /// For span-based text extraction, ALWAYS use `get_span_text()` instead.
+    #[must_use]
+    pub unsafe fn source(&self) -> &str {
+        self.source
+    }
+
+    /// Safely get text for a span by using the working set
+    /// This properly handles file offsets from loaded stdlib files
+    #[must_use]
+    pub fn get_span_text(&self, span: Span) -> &str {
+        std::str::from_utf8(self.working_set.get_span_contents(span))
+            .unwrap_or("")
+    }
+
+    /// Get the full source length (safe - doesn't involve span slicing)
+    #[must_use]
+    pub fn source_len(&self) -> usize {
+        self.source.len()
+    }
+
+    /// Check if source contains a substring (safe - doesn't involve span slicing)
+    #[must_use]
+    pub fn source_contains(&self, pattern: &str) -> bool {
+        self.source.contains(pattern)
+    }
+
+    /// Get source lines iterator (safe - doesn't involve span slicing)
+    pub fn source_lines(&self) -> impl Iterator<Item = &str> {
+        self.source.lines()
+    }
+
+    /// Get source text before a position (safe - doesn't involve span slicing)
+    /// Use this for checking what comes before a span (e.g., for doc comments)
+    #[must_use]
+    pub fn source_before(&self, position: usize) -> &str {
+        self.source.get(..position).unwrap_or("")
+    }
+
     /// Collect all rule violations using a closure over expressions
     pub(crate) fn collect_rule_violations<F>(&self, collector: F) -> Vec<Violation>
     where
@@ -131,12 +217,7 @@ impl LintContext<'_> {
         let mut working_set = StateWorkingSet::new(&engine_state);
         let block = parse(&mut working_set, None, source.as_bytes(), false);
 
-        let context = LintContext {
-            source,
-            ast: &block,
-            engine_state: &engine_state,
-            working_set: &working_set,
-        };
+        let context = LintContext::new(source, &block, &engine_state, &working_set, 0);
 
         f(context)
     }

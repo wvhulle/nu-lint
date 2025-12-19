@@ -9,7 +9,7 @@ fn trailing_space_pattern() -> &'static Regex {
 }
 fn check(context: &LintContext) -> Vec<Violation> {
     let mut violations = Vec::new();
-    let source = context.source;
+    let source = unsafe { context.source() };
     let lines: Vec<&str> = source.lines().collect();
     let mut byte_offset = 0;
     for (line_num, line) in lines.iter().enumerate() {

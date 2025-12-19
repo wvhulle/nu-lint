@@ -8,7 +8,8 @@ fn is_non_comment_statement(pipeline: &Pipeline) -> bool {
         .any(|elem| !matches!(&elem.expr.expr, Expr::Nothing))
 }
 fn is_single_line_in_source(block_span: nu_protocol::Span, context: &LintContext) -> bool {
-    let source_text = &context.source[block_span.start..block_span.end];
+    let source_text = std::str::from_utf8(context.working_set.get_span_contents(block_span))
+        .unwrap_or("");
     source_text.lines().count() <= 3
 }
 fn has_single_statement_body(block_id: nu_protocol::BlockId, context: &LintContext) -> bool {
@@ -49,9 +50,7 @@ fn count_function_calls(function_name: &str, context: &LintContext) -> usize {
     all_calls.len()
 }
 fn is_exported_function(function_name: &str, context: &LintContext) -> bool {
-    context
-        .source
-        .contains(&format!("export def {function_name}"))
+    context.source_contains(&format!("export def {function_name}"))
 }
 fn check(context: &LintContext) -> Vec<Violation> {
     let function_definitions = context.collect_function_definitions();

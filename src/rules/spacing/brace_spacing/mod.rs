@@ -97,10 +97,10 @@ fn check(context: &LintContext) -> Vec<Violation> {
             } else {
                 BraceType::BlockWithoutParams
             };
-            check_brace_spacing(ctx.source, expr.span, &brace_type)
+            check_brace_spacing(unsafe { ctx.source() }, expr.span, &brace_type)
         }
         Expr::Record(items) if !items.is_empty() => {
-            check_brace_spacing(ctx.source, expr.span, &BraceType::Record)
+            check_brace_spacing(unsafe { ctx.source() }, expr.span, &BraceType::Record)
         }
         _ => vec![],
     })

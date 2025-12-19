@@ -46,7 +46,7 @@ fn extract_mut_declaration(
         return None;
     }
 
-    let mut_span = find_mut_keyword_span(context.source, var_span);
+    let mut_span = find_mut_keyword_span(unsafe { context.source() }, var_span);
     Some((var_id, var_name, var_span, mut_span))
 }
 

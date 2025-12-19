@@ -45,7 +45,7 @@ fn check_call(call: &Call, ctx: &LintContext) -> Option<Violation> {
         return None;
     };
 
-    let var_name = ctx.source.get(name_expr.span.start..name_expr.span.end)?;
+    let var_name = ctx.get_span_text(name_expr.span);
     let snake_case_name = var_name.to_snake_case();
 
     if var_name == snake_case_name {

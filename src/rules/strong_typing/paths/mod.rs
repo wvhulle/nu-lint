@@ -113,7 +113,7 @@ fn check_parameter(
 }
 
 fn find_param_type_end(param_start: Span, signature_span: Span, context: &LintContext) -> usize {
-    let sig_text = &context.source[signature_span.start..signature_span.end];
+    let sig_text = context.get_span_text(signature_span);
     let param_offset = param_start.start - signature_span.start;
 
     let after_param = &sig_text[param_offset..];

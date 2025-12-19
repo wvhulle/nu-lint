@@ -2,7 +2,7 @@ use crate::{context::LintContext, rule::Rule, violation::Violation};
 fn check(context: &LintContext) -> Vec<Violation> {
     let mut violations = Vec::new();
     // Search for "split row" patterns with newline in the source code
-    let source_lines: Vec<&str> = context.source.lines().collect();
+    let source_lines: Vec<&str> = context.source_lines().collect();
     for (line_idx, line) in source_lines.iter().enumerate() {
         // Look for split row with newline patterns
         if line.contains("split row")

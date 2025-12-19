@@ -5,7 +5,7 @@ use crate::{ast::call::CallExt, context::LintContext, rule::Rule, violation::Vio
 /// Check if there's a documentation comment before the given span
 /// Since comments are not preserved in AST, we need to check source text
 fn has_doc_comment_before(context: &LintContext, span: nu_protocol::Span) -> bool {
-    let before_text = &context.source[..span.start];
+    let before_text = context.source_before(span.start);
     let lines: Vec<&str> = before_text.lines().collect();
 
     if lines.is_empty() {

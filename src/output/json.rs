@@ -29,7 +29,10 @@ fn violation_to_json(violation: &Violation) -> JsonViolation {
             .to_string(),
         lint_level: violation.lint_level.to_string(),
         message: violation.message.to_string(),
-        file: violation.file.as_ref().map(|f| f.to_string()),
+        file: violation
+            .file
+            .as_ref()
+            .map(std::string::ToString::to_string),
         line_start,
         line_end,
         column_start,

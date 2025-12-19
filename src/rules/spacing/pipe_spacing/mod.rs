@@ -12,13 +12,15 @@ use crate::{
 /// AST visitor that checks for pipe spacing issues
 struct PipeSpacingVisitor<'a> {
     source: &'a str,
+    file_offset: usize,
     violations: Vec<Violation>,
 }
 
 impl<'a> PipeSpacingVisitor<'a> {
-    const fn new(source: &'a str) -> Self {
+    const fn new(source: &'a str, file_offset: usize) -> Self {
         Self {
             source,
+            file_offset,
             violations: Vec::new(),
         }
     }
@@ -28,12 +30,16 @@ impl<'a> PipeSpacingVisitor<'a> {
         let start = prev_span.end;
         let end = curr_span.start;
 
-        if start >= end || end > self.source.len() {
+        // Convert to file-relative for source slicing
+        let file_start = start.saturating_sub(self.file_offset);
+        let file_end = end.saturating_sub(self.file_offset);
+
+        if file_start >= file_end || file_end > self.source.len() {
             return;
         }
 
         // Check the actual text to see if it's already correctly formatted
-        let between = &self.source[start..end];
+        let between = &self.source[file_start..file_end];
 
         // If it's exactly " | ", it's correct
         if between == " | " {
@@ -41,8 +47,8 @@ impl<'a> PipeSpacingVisitor<'a> {
         }
 
         // Check if it's a multi-line pipe using minimal line counting
-        let prev_line = self.get_line_number_optimized(prev_span.end);
-        let curr_line = self.get_line_number_optimized(curr_span.start);
+        let prev_line = self.get_line_number_optimized(file_start);
+        let curr_line = self.get_line_number_optimized(file_end);
 
         if prev_line != curr_line {
             // Multi-line pipe is fine - skip checking
@@ -78,13 +84,12 @@ impl<'a> PipeSpacingVisitor<'a> {
                 before_pipe,
             );
 
+            // Use global spans (will be normalized later by the engine)
             let violation_start = start + pipe_pos.saturating_sub(1);
             let violation_end = (start + pipe_pos + 2).min(end);
             let violation_span = Span::new(violation_start, violation_end);
 
-            let fix_start = start;
-            let fix_end = end;
-            let fix_span = Span::new(fix_start, fix_end);
+            let fix_span = Span::new(start, end);
 
             let fix = Fix::with_explanation(
                 "Fix pipe spacing to ' | '",
@@ -134,9 +139,9 @@ impl<'a> PipeSpacingVisitor<'a> {
     }
 }
 
-fn check_pipeline_spacing(pipeline: &Pipeline, source: &str) -> Vec<Violation> {
+fn check_pipeline_spacing(pipeline: &Pipeline, source: &str, file_offset: usize) -> Vec<Violation> {
     let mut violations = Vec::new();
-    let mut visitor = PipeSpacingVisitor::new(source);
+    let mut visitor = PipeSpacingVisitor::new(source, file_offset);
 
     // Check spacing between consecutive pipeline elements
     for i in 1..pipeline.elements.len() {
@@ -153,14 +158,15 @@ fn walk_block_for_pipelines(
     block: &Block,
     working_set: &nu_protocol::engine::StateWorkingSet,
     source: &str,
+    file_offset: usize,
     violations: &mut Vec<Violation>,
 ) {
     for pipeline in &block.pipelines {
-        violations.extend(check_pipeline_spacing(pipeline, source));
+        violations.extend(check_pipeline_spacing(pipeline, source, file_offset));
 
         // Also check nested blocks
         for element in &pipeline.elements {
-            walk_expr_for_pipelines(&element.expr, working_set, source, violations);
+            walk_expr_for_pipelines(&element.expr, working_set, source, file_offset, violations);
         }
     }
 }
@@ -169,6 +175,7 @@ fn walk_expr_for_pipelines(
     expr: &Expression,
     working_set: &nu_protocol::engine::StateWorkingSet,
     source: &str,
+    file_offset: usize,
     violations: &mut Vec<Violation>,
 ) {
     match &expr.expr {
@@ -177,12 +184,12 @@ fn walk_expr_for_pipelines(
         | Expr::Subexpression(block_id)
         | Expr::RowCondition(block_id) => {
             let block = working_set.get_block(*block_id);
-            walk_block_for_pipelines(block, working_set, source, violations);
+            walk_block_for_pipelines(block, working_set, source, file_offset, violations);
         }
         Expr::Call(call) => {
             for arg in &call.arguments {
                 if let Some(expr) = arg.expr() {
-                    walk_expr_for_pipelines(expr, working_set, source, violations);
+                    walk_expr_for_pipelines(expr, working_set, source, file_offset, violations);
                 }
             }
         }
@@ -195,7 +202,8 @@ fn check(context: &LintContext) -> Vec<Violation> {
     walk_block_for_pipelines(
         context.ast,
         context.working_set,
-        unsafe { context.source() },
+        context.whole_source(),
+        context.file_offset(),
         &mut violations,
     );
     violations

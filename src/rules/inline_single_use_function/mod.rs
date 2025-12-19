@@ -8,8 +8,8 @@ fn is_non_comment_statement(pipeline: &Pipeline) -> bool {
         .any(|elem| !matches!(&elem.expr.expr, Expr::Nothing))
 }
 fn is_single_line_in_source(block_span: nu_protocol::Span, context: &LintContext) -> bool {
-    let source_text = std::str::from_utf8(context.working_set.get_span_contents(block_span))
-        .unwrap_or("");
+    let source_text =
+        std::str::from_utf8(context.working_set.get_span_contents(block_span)).unwrap_or("");
     source_text.lines().count() <= 3
 }
 fn has_single_statement_body(block_id: nu_protocol::BlockId, context: &LintContext) -> bool {

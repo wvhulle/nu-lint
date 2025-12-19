@@ -16,9 +16,7 @@ fn build_fix(
     let args_text: String = args
         .iter()
         .map(|arg| match arg {
-            ExternalArgument::Regular(e) | ExternalArgument::Spread(e) => {
-                ctx.get_span_text(e.span)
-            }
+            ExternalArgument::Regular(e) | ExternalArgument::Spread(e) => ctx.get_span_text(e.span),
         })
         .collect::<Vec<_>>()
         .join(" ");

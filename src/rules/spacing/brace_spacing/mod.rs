@@ -6,18 +6,22 @@ enum BraceType {
     BlockWithoutParams,
     Record,
 }
-fn check_brace_spacing(source: &str, span: Span, brace_type: &BraceType) -> Vec<Violation> {
-    if span.start >= span.end || span.end > source.len() {
-        return vec![];
-    }
-    let text = &source[span.start..span.end];
-    if !text.starts_with('{') || !text.ends_with('}') {
+
+fn check_brace_spacing(
+    context: &LintContext,
+    span: Span,
+    brace_type: &BraceType,
+) -> Vec<Violation> {
+    let text = context.get_span_text(span);
+    if text.is_empty() || !text.starts_with('{') || !text.ends_with('}') {
         return vec![];
     }
     let inner = &text[1..text.len() - 1];
     if inner.trim().is_empty() {
         return vec![];
     }
+
+    // Use global (AST) spans - they will be normalized later by the engine
     match brace_type {
         BraceType::ClosureWithParams => {
             if let Some(pipe_pos) = inner.find('|')
@@ -97,10 +101,10 @@ fn check(context: &LintContext) -> Vec<Violation> {
             } else {
                 BraceType::BlockWithoutParams
             };
-            check_brace_spacing(unsafe { ctx.source() }, expr.span, &brace_type)
+            check_brace_spacing(ctx, expr.span, &brace_type)
         }
         Expr::Record(items) if !items.is_empty() => {
-            check_brace_spacing(unsafe { ctx.source() }, expr.span, &BraceType::Record)
+            check_brace_spacing(ctx, expr.span, &BraceType::Record)
         }
         _ => vec![],
     })

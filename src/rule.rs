@@ -51,7 +51,7 @@ impl Rule {
 #[cfg(test)]
 impl Rule {
     fn run_check(&self, code: &str) -> Vec<Violation> {
-        LintContext::test_with_parsed_source(code, |context| (self.check)(&context))
+        LintContext::test_get_violations(code, |context| (self.check)(context))
     }
 
     fn first_violation(&self, code: &str) -> Violation {

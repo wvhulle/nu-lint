@@ -49,8 +49,8 @@ fn extract_pipeline_text(pipeline: &Pipeline, context: &LintContext) -> Option<S
     let start_span = elements_before_is_empty.first().unwrap().expr.span;
     let end_span = elements_before_is_empty.last().unwrap().expr.span;
     let combined_span = nu_protocol::Span::new(start_span.start, end_span.end);
-    let expr_text = std::str::from_utf8(context.working_set.get_span_contents(combined_span))
-        .unwrap_or("");
+    let expr_text =
+        std::str::from_utf8(context.working_set.get_span_contents(combined_span)).unwrap_or("");
     Some(format!("{} | is-not-empty", expr_text.trim()))
 }
 fn generate_fix_from_subexpression(

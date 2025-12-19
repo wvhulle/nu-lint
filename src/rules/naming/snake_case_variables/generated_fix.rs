@@ -3,9 +3,8 @@ use crate::{context::LintContext, fix::apply_fixes_to_stdin};
 
 /// Helper function to apply fixes and get the fixed code
 fn apply_fix(code: &str) -> String {
-    let violations = LintContext::test_with_parsed_source(code, |context| {
-        let mut violations = (rule().check)(&context);
-        // Mark violations as coming from stdin for fix application
+    let violations = LintContext::test_get_violations(code, |context| {
+        let mut violations = (rule().check)(context);
         for v in &mut violations {
             v.file = Some(crate::violation::SourceFile::Stdin);
             v.source = Some(code.to_string().into());

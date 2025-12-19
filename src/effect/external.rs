@@ -91,8 +91,7 @@ pub fn external_command_has_no_output(command_name: &str) -> bool {
 pub fn extract_external_arg_text<'a>(arg: &ExternalArgument, context: &'a LintContext) -> &'a str {
     match arg {
         ExternalArgument::Regular(expr) | ExternalArgument::Spread(expr) => {
-            std::str::from_utf8(context.working_set.get_span_contents(expr.span))
-                .unwrap_or("")
+            std::str::from_utf8(context.working_set.get_span_contents(expr.span)).unwrap_or("")
         }
     }
 }

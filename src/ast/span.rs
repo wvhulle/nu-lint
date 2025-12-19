@@ -29,8 +29,7 @@ pub trait SpanExt {
 
 impl SpanExt for Span {
     fn text<'a>(&self, context: &'a LintContext) -> &'a str {
-        std::str::from_utf8(context.working_set.get_span_contents(*self))
-            .unwrap_or("")
+        std::str::from_utf8(context.working_set.get_span_contents(*self)).unwrap_or("")
     }
 
     fn find_containing_function(
@@ -65,20 +64,17 @@ impl SpanExt for Span {
 
     fn has_inline_doc_comment(&self, context: &LintContext) -> bool {
         // Get the source text after this span
-        let after_text = unsafe { context.source() }
-            .get(self.end..)
-            .unwrap_or("");
+        let after_text = context.source_after_span(*self);
 
         // Find the end of the line (either newline or end of file)
-        let line_end = after_text
-            .find('\n')
-            .unwrap_or(after_text.len());
+        let line_end = after_text.find('\n').unwrap_or(after_text.len());
 
         let rest_of_line = &after_text[..line_end];
 
         // Check if the rest of the line contains a documentation comment
-        // For typed parameters like "count: int # Description", the span only covers "count"
-        // so we need to check if " # " appears anywhere on the rest of the line
+        // For typed parameters like "count: int # Description", the span only covers
+        // "count" so we need to check if " # " appears anywhere on the rest of
+        // the line
         rest_of_line.contains(" # ")
     }
 }

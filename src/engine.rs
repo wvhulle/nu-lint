@@ -1,5 +1,4 @@
 use std::{
-    borrow::Cow,
     fs,
     io::{self, BufRead},
     path::{Path, PathBuf},
@@ -24,7 +23,10 @@ use crate::{
 
 /// Parse Nushell source code into an AST and return both the Block and
 /// `StateWorkingSet`, along with the file's starting offset in the span space.
-fn parse_source<'a>(engine_state: &'a EngineState, source: &[u8]) -> (Block, StateWorkingSet<'a>, usize) {
+fn parse_source<'a>(
+    engine_state: &'a EngineState,
+    source: &[u8],
+) -> (Block, StateWorkingSet<'a>, usize) {
     let mut working_set = StateWorkingSet::new(engine_state);
     // Get the offset where this file will start in the virtual span space
     let file_offset = working_set.next_span_start();
@@ -110,11 +112,25 @@ pub struct LintEngine {
 
 impl LintEngine {
     /// Get or initialize the default engine state
-    fn default_engine_state() -> &'static EngineState {
+    #[must_use]
+    pub fn default_engine_state() -> &'static EngineState {
         static ENGINE: OnceLock<EngineState> = OnceLock::new();
         ENGINE.get_or_init(|| {
             let mut engine_state = nu_cmd_lang::create_default_context();
             engine_state = nu_command::add_shell_command_context(engine_state);
+            engine_state = nu_cli::add_cli_context(engine_state);
+
+            // Add print command (exported by nu-cli but not added by add_cli_context)
+            let delta = {
+                let mut working_set = StateWorkingSet::new(&engine_state);
+                working_set.add_decl(Box::new(nu_cli::Print));
+                working_set.render()
+            };
+            engine_state
+                .merge_delta(delta)
+                .expect("Failed to add Print command");
+
+            nu_std::load_standard_library(&mut engine_state).unwrap();
             engine_state
         })
     }
@@ -208,7 +224,8 @@ impl LintEngine {
     pub fn lint_str(&self, source: &str) -> Vec<Violation> {
         let (block, working_set, file_offset) = parse_source(self.engine_state, source.as_bytes());
 
-        let context = LintContext::new(source, &block, self.engine_state, &working_set, file_offset);
+        let context =
+            LintContext::new(source, &block, self.engine_state, &working_set, file_offset);
 
         let mut violations = self.collect_violations(&context);
 

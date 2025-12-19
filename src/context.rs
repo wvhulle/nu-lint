@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, str::from_utf8};
 
 use nu_protocol::{
     BlockId, DeclId, Span,
@@ -9,24 +9,33 @@ use nu_protocol::{
 use crate::{ast::call::CallExt, violation::Violation};
 
 /// Context containing all lint information (source, AST, and engine state)
-/// Rules can use whatever they need from this context
+///
+/// # Span Handling
+///
+/// AST spans are in a "global" coordinate system that includes all loaded files
+/// (stdlib, etc.). This context encapsulates span translation - rule authors
+/// should use the provided methods and never manually slice source with spans.
+///
+/// ## Safe methods for rules:
+/// - `get_span_text(span)` - get text for an AST span
+/// - `source_before_span(span)` / `source_after_span(span)` - get context
+///   around a span
+/// - `normalize_span(span)` - convert to file-relative for `Replacement`
+/// - `source_lines()` - iterate over lines (for line counting, etc.)
+/// - `source_contains(pattern)` - check for substring presence
 pub struct LintContext<'a> {
-    /// Raw source string - DO NOT slice directly with spans!
-    /// Use `get_span_text()` or `working_set.get_span_contents()` instead.
-    /// Direct slicing will fail when the engine state contains loaded files (like stdlib).
+    /// Raw source string of the file being linted (file-relative coordinates)
     source: &'a str,
     pub ast: &'a Block,
     pub engine_state: &'a EngineState,
     pub working_set: &'a StateWorkingSet<'a>,
-    /// Offset of the current file in the virtual span space
-    /// Used to normalize spans to file-relative positions for fixes
+    /// Byte offset where this file starts in the global span space
     file_offset: usize,
 }
 
 impl<'a> LintContext<'a> {
-    /// Create a new LintContext
-    /// Only the engine module should construct this
-    pub(crate) fn new(
+    /// Create a new `LintContext`
+    pub(crate) const fn new(
         source: &'a str,
         ast: &'a Block,
         engine_state: &'a EngineState,
@@ -42,9 +51,32 @@ impl<'a> LintContext<'a> {
         }
     }
 
-    /// Normalize a span to be relative to the current file
-    /// This is needed because spans are absolute positions in the virtual file space,
-    /// but we need file-relative positions for applying fixes
+    /// Get text for an AST span
+    #[must_use]
+    pub fn get_span_text(&self, span: Span) -> &str {
+        from_utf8(self.working_set.get_span_contents(span))
+            .expect("span contents should be valid UTF-8")
+    }
+
+    /// Get source text before an AST span
+    #[must_use]
+    pub fn source_before_span(&self, span: Span) -> &str {
+        let file_pos = span.start.saturating_sub(self.file_offset);
+        self.source
+            .get(..file_pos)
+            .expect("file position should be within source bounds")
+    }
+
+    /// Get source text after an AST span
+    #[must_use]
+    pub fn source_after_span(&self, span: Span) -> &str {
+        let file_pos = span.end.saturating_sub(self.file_offset);
+        self.source
+            .get(file_pos..)
+            .expect("file position should be within source bounds")
+    }
+
+    /// Convert an AST span to file-relative positions for `Replacement` spans
     #[must_use]
     pub fn normalize_span(&self, span: Span) -> Span {
         Span::new(
@@ -53,55 +85,45 @@ impl<'a> LintContext<'a> {
         )
     }
 
-    /// Get the raw source text
-    ///
-    /// # Safety
-    ///
-    /// DO NOT slice the returned string with span indices! When the engine state
-    /// contains loaded files (like stdlib), spans are absolute positions in a virtual
-    /// file space and won't match this source string's indices.
-    ///
-    /// Only use this for operations like:
-    /// - Line counting (`source().lines().count()`)
-    /// - Pattern searching (`source().contains()`)
-    /// - Getting full source length (`source().len()`)
-    ///
-    /// For span-based text extraction, ALWAYS use `get_span_text()` instead.
     #[must_use]
-    pub unsafe fn source(&self) -> &str {
-        self.source
-    }
-
-    /// Safely get text for a span by using the working set
-    /// This properly handles file offsets from loaded stdlib files
-    #[must_use]
-    pub fn get_span_text(&self, span: Span) -> &str {
-        std::str::from_utf8(self.working_set.get_span_contents(span))
-            .unwrap_or("")
-    }
-
-    /// Get the full source length (safe - doesn't involve span slicing)
-    #[must_use]
-    pub fn source_len(&self) -> usize {
+    pub const fn source_len(&self) -> usize {
         self.source.len()
     }
 
-    /// Check if source contains a substring (safe - doesn't involve span slicing)
     #[must_use]
     pub fn source_contains(&self, pattern: &str) -> bool {
         self.source.contains(pattern)
     }
 
-    /// Get source lines iterator (safe - doesn't involve span slicing)
     pub fn source_lines(&self) -> impl Iterator<Item = &str> {
         self.source.lines()
     }
 
-    /// Get source text before a position (safe - doesn't involve span slicing)
-    /// Use this for checking what comes before a span (e.g., for doc comments)
+    /// Iterate over source lines with 1-indexed line numbers
+    pub fn source_lines_enumerated(&self) -> impl Iterator<Item = (usize, &str)> {
+        self.source
+            .lines()
+            .enumerate()
+            .map(|(i, line)| (i + 1, line))
+    }
+
     #[must_use]
-    pub fn source_before(&self, position: usize) -> &str {
-        self.source.get(..position).unwrap_or("")
+    pub fn first_line(&self) -> Option<&str> {
+        self.source.lines().next()
+    }
+
+    /// Byte offset where this file starts in the global span space
+    #[must_use]
+    pub const fn file_offset(&self) -> usize {
+        self.file_offset
+    }
+
+    /// Get the full source for whole-file operations like regex matching
+    ///
+    /// Do NOT slice with AST span indices - use `get_span_text()` instead.
+    #[must_use]
+    pub const fn whole_source(&self) -> &str {
+        self.source
     }
 
     /// Collect all rule violations using a closure over expressions
@@ -110,17 +132,12 @@ impl<'a> LintContext<'a> {
         F: Fn(&Expression, &Self) -> Vec<Violation>,
     {
         let mut violations = Vec::new();
-
         let f = |expr: &Expression| collector(expr, self);
-
-        // Visit main AST
         self.ast.flat_map(self.working_set, &f, &mut violations);
-
         violations
     }
 
     /// Iterator over newly added user-defined function declarations
-    /// Filters out built-in functions (those with spaces or starting with '_')
     pub fn new_user_functions(&self) -> impl Iterator<Item = (usize, &dyn Command)> + '_ {
         let (base_count, total_count) = self.new_decl_range();
         (base_count..total_count)
@@ -155,9 +172,7 @@ impl<'a> LintContext<'a> {
         )
     }
 
-    /// Get the range of declaration IDs that were added during parsing (the
-    /// delta) Returns (`base_count`, `total_count`) for iterating:
-    /// `base_count..total_count`
+    /// Range of declaration IDs added during parsing: `base..total`
     #[must_use]
     pub fn new_decl_range(&self) -> (usize, usize) {
         let base_count = self.engine_state.num_decls();
@@ -199,26 +214,31 @@ impl LintContext<'_> {
     {
         use nu_parser::parse;
 
-        let engine_state = nu_cmd_lang::create_default_context();
-        let engine_state = nu_command::add_shell_command_context(engine_state);
-        let mut engine_state = nu_cli::add_cli_context(engine_state);
+        use crate::engine::LintEngine;
 
-        // Add print command (it's in nu-cli but not added by add_cli_context)
-        let delta = {
-            let mut working_set = StateWorkingSet::new(&engine_state);
-            working_set.add_decl(Box::new(nu_cli::Print));
-            working_set.render()
-        };
-
-        if let Err(err) = engine_state.merge_delta(delta) {
-            eprintln!("Error adding Print command: {err:?}");
-        }
-
-        let mut working_set = StateWorkingSet::new(&engine_state);
+        let engine_state = LintEngine::default_engine_state();
+        let mut working_set = StateWorkingSet::new(engine_state);
+        let file_offset = working_set.next_span_start();
         let block = parse(&mut working_set, None, source.as_bytes(), false);
 
-        let context = LintContext::new(source, &block, &engine_state, &working_set, 0);
+        let context = LintContext::new(source, &block, engine_state, &working_set, file_offset);
 
         f(context)
+    }
+
+    /// Helper to get normalized violations from source code (matches production
+    /// behavior)
+    #[track_caller]
+    pub fn test_get_violations<F>(source: &str, f: F) -> Vec<crate::violation::Violation>
+    where
+        F: for<'b> FnOnce(&LintContext<'b>) -> Vec<crate::violation::Violation>,
+    {
+        Self::test_with_parsed_source(source, |context| {
+            let mut violations = f(&context);
+            for v in &mut violations {
+                v.normalize_spans(&context);
+            }
+            violations
+        })
     }
 }

@@ -1,4 +1,4 @@
-use std::{borrow::Cow, error::Error, fmt, path::{Path, PathBuf}};
+use std::{borrow::Cow, error::Error, fmt, path::Path};
 
 use miette::{Diagnostic, LabeledSpan, Severity};
 use nu_protocol::Span;
@@ -15,7 +15,7 @@ pub enum SourceFile {
 impl SourceFile {
     /// Get the file path as a string slice (for display and file operations)
     #[must_use]
-    pub fn as_str(&self) -> &str {
+    pub const fn as_str(&self) -> &str {
         match self {
             Self::Stdin => "<stdin>",
             Self::File(path) => path.as_str(),
@@ -234,14 +234,19 @@ impl Violation {
             }
         }
 
-        // Normalize extra labels - we need to recreate them since LabeledSpan fields are private
-        self.extra_labels = self.extra_labels
+        // Normalize extra labels - we need to recreate them since LabeledSpan fields
+        // are private
+        self.extra_labels = self
+            .extra_labels
             .iter()
             .map(|label| {
-                let normalized = context.normalize_span(
-                    Span::new(label.offset(), label.offset() + label.len())
-                );
-                LabeledSpan::new(label.label().map(ToString::to_string), normalized.start, normalized.end - normalized.start)
+                let normalized =
+                    context.normalize_span(Span::new(label.offset(), label.offset() + label.len()));
+                LabeledSpan::new(
+                    label.label().map(ToString::to_string),
+                    normalized.start,
+                    normalized.end - normalized.start,
+                )
             })
             .collect();
     }

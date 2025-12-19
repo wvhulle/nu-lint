@@ -1,4 +1,4 @@
-use nu_protocol::ast::{Block, Expr, Pipeline, Traverse};
+use nu_protocol::ast::{self, Block, Expr, Pipeline, Traverse};
 
 use crate::{
     ast::{call::CallExt, expression::ExpressionExt},
@@ -9,7 +9,7 @@ use crate::{
 };
 
 fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violation> {
-    if !{ pipeline.elements.len() > 1 } {
+    if pipeline.elements.len() == 1 {
         return None;
     }
 
@@ -19,49 +19,53 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
     {
         if let Expr::ExternalCall(command, _) = &element.expr.expr {
             let external_command = command.span_text(context);
-            log::debug!("Found an external call to {external_command} in the pipeline");
-            if !is_external_command_safe(external_command) {
-                log::debug!("External call to {external_command} is not safe");
-                if i + 1 > pipeline.elements.len() - 1 {
-                    log::debug!("This is already the last element.");
-                    return None;
-                }
-
-                let next_pipeline_element = &pipeline.elements[i + 1].expr.expr;
-
-                if let Expr::Call(call) = &next_pipeline_element {
-                    let builtin_name = call.get_call_name(context);
-                    log::debug!("Next element is a call to built-in {builtin_name}.");
-                    if call.is_call_to_command("complete", context) {
-                        return None;
-                    }
-                    let message = format!(
-                        "External command '{external_command}' in pipeline without error handling: Nushell only \
-         checks the last command's exit code. If this command fails, the error will be silently \
-         ignored."
-                    );
-
-                    let help = "Wrap the external command in 'complete' to capture its exit code.";
-
-                    let last_element_span = pipeline.elements.last().map(|e| e.expr.span);
-
-                    let mut violation = Violation::new(message, element.expr.span)
-                        .with_primary_label("external command without error handling");
-
-                    if let Some(last_span) = last_element_span {
-                        violation = violation.with_extra_label(
-                            "only this command's exit code is checked",
-                            last_span,
-                        );
-                    }
-
-                    return Some(violation.with_help(help));
-                }
+            log::debug!(
+                "Found an external call to {external_command} in the pipeline at position {i}."
+            );
+            if is_external_command_safe(external_command) {
+                continue;
             }
+            log::debug!("External call to {external_command} is not safe");
+
+            let next_pipeline_element = &pipeline.elements[i + 1].expr.expr;
+
+            if let Expr::Call(call) = &next_pipeline_element
+                && call.is_call_to_command("complete", context)
+            {
+                continue;
+            }
+            let violation = create_violation(pipeline, element, external_command);
+            return Some(violation);
         }
     }
 
     None
+}
+
+fn create_violation(
+    pipeline: &Pipeline,
+    element: &ast::PipelineElement,
+    external_command: &str,
+) -> Violation {
+    let message = format!(
+        "External command '{external_command}' in pipeline without error handling: Nushell only \
+         checks the last command's exit code. If this command fails, the error will be silently \
+         ignored."
+    );
+
+    let help = "Wrap the external command in 'complete' to capture its exit code.";
+
+    let last_element_span = pipeline.elements.last().map(|e| e.expr.span);
+
+    let mut violation = Violation::new(message, element.expr.span)
+        .with_primary_label("external command without error handling");
+
+    if let Some(last_span) = last_element_span {
+        violation =
+            violation.with_extra_label("only this command's exit code is checked", last_span);
+    }
+
+    violation.with_help(help)
 }
 
 fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<Violation>) {

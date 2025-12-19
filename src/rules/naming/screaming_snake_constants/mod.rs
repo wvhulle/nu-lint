@@ -17,7 +17,7 @@ fn is_valid_screaming_snake(name: &str) -> bool {
 }
 fn check(context: &LintContext) -> Vec<Violation> {
     const_pattern()
-        .captures_iter(unsafe { context.source() })
+        .captures_iter(context.whole_source())
         .filter_map(|cap| {
             let const_match = cap.get(1)?;
             let const_name = const_match.as_str();

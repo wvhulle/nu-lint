@@ -13,13 +13,19 @@ use crate::{
 };
 
 /// Find the span of 'mut ' keyword before the variable name
-fn find_mut_keyword_span(source: &str, var_span: Span) -> Span {
-    let start = var_span.start.min(source.len());
-    let search_start = start.saturating_sub(20);
-    let text_before = &source[search_start..start];
+/// Returns a global span (will be normalized later by the engine)
+fn find_mut_keyword_span(context: &LintContext, var_span: Span) -> Span {
+    let text_before = context.source_before_span(var_span);
+    let search_text = if text_before.len() > 20 {
+        &text_before[text_before.len() - 20..]
+    } else {
+        text_before
+    };
 
-    if let Some(mut_pos) = text_before.rfind("mut ") {
-        let abs_mut_start = search_start + mut_pos;
+    if let Some(mut_pos) = search_text.rfind("mut ") {
+        // Calculate global position
+        let offset_in_search = search_text.len() - mut_pos;
+        let abs_mut_start = var_span.start.saturating_sub(offset_in_search);
         let abs_mut_end = abs_mut_start + 4;
         return Span::new(abs_mut_start, abs_mut_end);
     }
@@ -46,7 +52,7 @@ fn extract_mut_declaration(
         return None;
     }
 
-    let mut_span = find_mut_keyword_span(unsafe { context.source() }, var_span);
+    let mut_span = find_mut_keyword_span(context, var_span);
     Some((var_id, var_name, var_span, mut_span))
 }
 

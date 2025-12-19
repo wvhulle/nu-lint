@@ -68,8 +68,8 @@ fn extract_dangerous_command<'a>(
 ) -> Option<DangerousCommand<'a>> {
     match &expr.expr {
         Expr::ExternalCall(head, args) => {
-            let cmd_name = std::str::from_utf8(context.working_set.get_span_contents(head.span))
-                .unwrap_or("");
+            let cmd_name =
+                std::str::from_utf8(context.working_set.get_span_contents(head.span)).unwrap_or("");
 
             if !has_external_side_effect(
                 cmd_name,

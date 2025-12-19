@@ -28,7 +28,7 @@ pub fn format_vscode_json(violations: &[Violation]) -> String {
         let file_path = violation
             .file
             .as_ref()
-            .map_or_else(|| "unknown".to_string(), |f| f.to_string());
+            .map_or_else(|| "unknown".to_string(), std::string::ToString::to_string);
         diagnostics_by_file
             .entry(file_path)
             .or_default()
@@ -58,7 +58,7 @@ fn violation_to_vscode_diagnostic(violation: &Violation) -> VsCodeDiagnostic {
     let file_uri = violation
         .file
         .as_ref()
-        .map_or_else(|| "unknown".to_string(), |f| f.to_string());
+        .map_or_else(|| "unknown".to_string(), std::string::ToString::to_string);
 
     let related_information = build_related_information(violation, &source_code, &file_uri);
 

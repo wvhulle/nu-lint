@@ -43,10 +43,10 @@ fn build_source_cache(violations: &[Violation]) -> HashMap<&str, String> {
     by_file
         .into_iter()
         .map(|(file_name, v)| {
-            let source = v.source.as_ref().map_or_else(
-                || read_source_code(v.file.as_ref()),
-                ToString::to_string,
-            );
+            let source = v
+                .source
+                .as_ref()
+                .map_or_else(|| read_source_code(v.file.as_ref()), ToString::to_string);
             (file_name, source)
         })
         .collect()

@@ -2,7 +2,7 @@ mod json;
 mod text;
 mod vscode;
 
-use std::{borrow::Cow, fs};
+use std::fs;
 
 pub use json::{JsonFix, JsonOutput, JsonReplacement, JsonViolation, format_json};
 use serde::Serialize;

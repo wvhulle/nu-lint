@@ -118,19 +118,14 @@ impl LintSpan {
         }
     }
 
+    /// Get the file-relative span, panicking if not normalized.
+    ///
+    /// This should only be called after `normalize_spans()` has been invoked.
     #[must_use]
-    pub const fn start(&self) -> usize {
+    pub fn file_span(&self) -> FileSpan {
         match self {
-            Self::Global(g) => g.start,
-            Self::File(f) => f.start,
-        }
-    }
-
-    #[must_use]
-    pub const fn end(&self) -> usize {
-        match self {
-            Self::Global(g) => g.end,
-            Self::File(f) => f.end,
+            Self::File(f) => *f,
+            Self::Global(_) => panic!("Span not normalized - call normalize_spans first"),
         }
     }
 }
@@ -158,7 +153,10 @@ impl From<FileSpan> for nu_protocol::Span {
 
 impl From<LintSpan> for nu_protocol::Span {
     fn from(span: LintSpan) -> Self {
-        Self::new(span.start(), span.end())
+        match span {
+            LintSpan::Global(g) => Self::new(g.start, g.end),
+            LintSpan::File(f) => Self::new(f.start, f.end),
+        }
     }
 }
 

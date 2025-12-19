@@ -22,9 +22,10 @@ pub fn violation_to_diagnostic(
 ) -> Diagnostic {
     let message = build_message(violation);
     let related_information = build_related_information(violation, source, line_index, file_uri);
+    let file_span = violation.file_span();
 
     Diagnostic {
-        range: line_index.span_to_range(source, violation.span.start(), violation.span.end()),
+        range: line_index.span_to_range(source, file_span.start, file_span.end),
         severity: Some(lint_level_to_severity(violation.lint_level)),
         code: violation
             .rule_id
@@ -75,7 +76,8 @@ fn build_related_information(
                 return None;
             }
 
-            let range = line_index.span_to_range(source, span.start(), span.end());
+            let file_span = span.file_span();
+            let range = line_index.span_to_range(source, file_span.start, file_span.end);
 
             Some(DiagnosticRelatedInformation {
                 location: Location {
@@ -177,23 +179,25 @@ mod tests {
     #[test]
     fn diagnostic_includes_related_information() {
         use lsp_types::Uri;
-        use nu_protocol::Span;
 
         use super::{LineIndex, violation_to_diagnostic};
-        use crate::{LintLevel, violation::Violation};
+        use crate::{LintLevel, span::FileSpan, violation::Violation};
 
         let source = "if $x {\n    if $y {\n        foo\n    }\n}";
         let line_index = LineIndex::new(source);
         let file_uri: Uri = "file:///test.nu".parse().unwrap();
 
-        let violation = Violation::new("Nested if can be collapsed", Span::new(0, 39))
-            .with_primary_label("outer if")
-            .with_extra_label("inner if", Span::new(12, 35))
-            .with_help("Combine with 'and'");
-        let mut v = violation;
-        v.lint_level = LintLevel::Warn;
+        let mut violation =
+            Violation::with_file_span("Nested if can be collapsed", FileSpan::new(0, 39))
+                .with_primary_label("outer if")
+                .with_help("Combine with 'and'");
+        // Add extra label with file-relative span
+        violation
+            .extra_labels
+            .push((FileSpan::new(12, 35).into(), Some("inner if".to_string())));
+        violation.lint_level = LintLevel::Warn;
 
-        let diagnostic = violation_to_diagnostic(&v, source, &line_index, &file_uri);
+        let diagnostic = violation_to_diagnostic(&violation, source, &line_index, &file_uri);
 
         assert!(diagnostic.message.contains("outer if"));
         assert!(diagnostic.message.contains("Combine with 'and'"));

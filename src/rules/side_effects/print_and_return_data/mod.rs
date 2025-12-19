@@ -4,7 +4,7 @@ use nu_protocol::{
 };
 
 use crate::{
-    ast::{block::BlockExt, call::CallExt},
+    ast::{block::BlockExt, call::CallExt, span::SpanExt},
     context::LintContext,
     effect::{
         builtin::{BuiltinEffect, has_builtin_side_effect},
@@ -61,9 +61,7 @@ fn last_command_produces_output(block: &Block, context: &LintContext) -> bool {
                 .any(|(_in, out)| !matches!(out, nu_protocol::Type::Nothing))
         }
         Expr::ExternalCall(head, args) => {
-            // Extract external command name span text
-            let cmd_name =
-                std::str::from_utf8(context.working_set.get_span_contents(head.span)).unwrap_or("");
+            let cmd_name = head.span.source_code(context);
             // If external side effect registry marks command as NoDataInStdout, treat as no
             // output
             !has_external_side_effect(cmd_name, ExternEffect::NoDataInStdout, context, args)

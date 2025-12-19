@@ -270,7 +270,7 @@ fn extract_function_body(
             }
 
             let block = context.working_set.get_block(block_id);
-            let body_text = block.span?.text(context);
+            let body_text = block.span?.source_code(context);
             let trimmed = body_text.trim();
 
             Some(

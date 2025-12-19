@@ -91,7 +91,7 @@ fn closure_only_uses_fields(
         if let Expr::FullCellPath(cell_path) = &expr.expr
             && cell_path.tail.len() == 1
         {
-            let field_name = cell_path.tail[0].span().text(context);
+            let field_name = cell_path.tail[0].span().source_code(context);
             log::debug!("Field access: {field_name} (expecting {field1} or {field2})");
             field_name == field1 || field_name == field2
         } else {
@@ -245,7 +245,7 @@ fn generate_fix(pattern: &TransposeEachPattern, context: &LintContext) -> Option
     let block = context.working_set.get_block(*block_id);
     let param = &block.signature.required_positional[0];
 
-    let closure_body_text = block.span?.text(context);
+    let closure_body_text = block.span?.source_code(context);
     let mut closure_body_trimmed = closure_body_text
         .trim()
         .strip_prefix('{')

@@ -3,7 +3,7 @@ use super::rule;
 #[test]
 fn test_detect_evtest_err_redirect() {
     let bad_code = r"^evtest $keyboard err> /dev/null | lines";
-    rule().assert_detects(bad_code);
+    rule().assert_count(bad_code, 1);
 }
 
 #[test]
@@ -58,5 +58,5 @@ fn test_detect_multiple_redirects_in_file() {
 ^grep 'foo' file1.txt err> /dev/null | lines
 ^grep 'bar' file2.txt err> /dev/null | lines
 ";
-    rule().assert_detects(bad_code);
+    rule().assert_count(bad_code, 2);
 }

@@ -226,6 +226,19 @@ impl Violation {
         self
     }
 
+    /// Get the span as file-relative. Panics if not normalized.
+    #[must_use]
+    pub fn file_span(&self) -> FileSpan {
+        self.span.file_span()
+    }
+
+    /// Get extra labels as file-relative spans. Panics if not normalized.
+    pub fn extra_labels_file_spans(&self) -> impl Iterator<Item = (FileSpan, Option<&String>)> {
+        self.extra_labels
+            .iter()
+            .map(|(span, label)| (span.file_span(), label.as_ref()))
+    }
+
     /// Normalize all spans to be file-relative (called by engine before output)
     pub fn normalize_spans(&mut self, file_offset: usize) {
         // Convert main span to file-relative
@@ -285,13 +298,15 @@ impl Diagnostic for Violation {
     }
 
     fn labels(&self) -> Option<Box<dyn Iterator<Item = LabeledSpan> + '_>> {
-        let span_range = self.span.start()..self.span.end();
+        let file_span = self.file_span();
+        let span_range = file_span.start..file_span.end;
         let primary = self.primary_label.as_ref().map_or_else(
             || LabeledSpan::underline(span_range.clone()),
             |label| LabeledSpan::new_primary_with_span(Some(label.to_string()), span_range.clone()),
         );
         let extras = self.extra_labels.iter().map(|(span, label)| {
-            LabeledSpan::new_with_span(label.clone(), span.start()..span.end())
+            let file_span = span.file_span();
+            LabeledSpan::new_with_span(label.clone(), file_span.start..file_span.end)
         });
         Some(Box::new([primary].into_iter().chain(extras)))
     }

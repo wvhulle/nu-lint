@@ -12,7 +12,7 @@ use crate::{
 fn command_produces_output(expr: &Expression, context: &LintContext) -> bool {
     match &expr.expr {
         Expr::ExternalCall(call, _) => {
-            let cmd_name = call.span.text(context);
+            let cmd_name = call.span.source_code(context);
             !external_command_has_no_output(cmd_name)
         }
         Expr::Call(call) => {
@@ -44,7 +44,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
 
     let command_name = match &expr_before_ignore.expr {
         Expr::Call(call) => call.get_call_name(context),
-        Expr::ExternalCall(head, _) => head.span.text(context).to_string(),
+        Expr::ExternalCall(head, _) => head.span.source_code(context).to_string(),
         _ => "pipeline".to_string(),
     };
 
@@ -54,8 +54,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
     let start_span = elements_without_ignore.first()?.expr.span;
     let end_span = elements_without_ignore.last()?.expr.span;
     let combined_span = nu_protocol::Span::new(start_span.start, end_span.end);
-    let pipeline_text =
-        std::str::from_utf8(context.working_set.get_span_contents(combined_span)).unwrap_or("");
+    let pipeline_text = combined_span.source_code(context);
 
     let violation = Violation::new("Discarding command output with '| ignore'", ignore_span)
         .with_primary_label("redundant ignore")

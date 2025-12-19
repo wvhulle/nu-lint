@@ -6,7 +6,7 @@ use nu_protocol::{
 };
 
 use crate::{
-    ast::{call::CallExt, expression::ExpressionExt},
+    ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
     context::LintContext,
     effect::{
         CommonEffect,
@@ -74,9 +74,7 @@ fn extract_command_name(cmd_expr: &Expression, context: &LintContext) -> String 
     match &cmd_expr.expr {
         Expr::String(s) => s.clone(),
         Expr::GlobPattern(pattern, _) => pattern.clone(),
-        _ => std::str::from_utf8(context.working_set.get_span_contents(cmd_expr.span))
-            .unwrap_or("")
-            .to_string(),
+        _ => cmd_expr.span.source_code(context).to_string(),
     }
 }
 

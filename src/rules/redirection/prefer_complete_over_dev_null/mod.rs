@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use nu_protocol::ast::{
     Block, Expr, Expression, Pipeline, PipelineElement, PipelineRedirection, RedirectionTarget,
     Traverse,
@@ -66,7 +64,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
         return None;
     };
 
-    let cmd_name = head.span.text(context);
+    let cmd_name = head.span.source_code(context);
 
     // Check if complete is already in the pipeline
     let has_complete = pipeline_has_complete(pipeline, context);
@@ -98,7 +96,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
     let violation_span = first_element.expr.span;
 
     // Build the fix
-    let external_cmd_text = first_element.expr.span.text(context);
+    let external_cmd_text = first_element.expr.span.source_code(context);
     let mut replacement_parts = vec![external_cmd_text.to_string()];
 
     // If complete is not already present, add it
@@ -109,7 +107,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
     // Add all remaining pipeline elements
     for element in &pipeline.elements[1..] {
         replacement_parts.push("|".to_string());
-        replacement_parts.push(element.expr.span.text(context).to_string());
+        replacement_parts.push(element.expr.span.source_code(context).to_string());
     }
 
     let replacement_text = replacement_parts.join(" ");
@@ -152,22 +150,9 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
 }
 
 fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<Violation>) {
-    check_block_impl(block, context, violations, &mut HashSet::new());
-}
-
-fn check_block_impl(
-    block: &Block,
-    context: &LintContext,
-    violations: &mut Vec<Violation>,
-    seen_spans: &mut HashSet<(usize, usize)>,
-) {
     for pipeline in &block.pipelines {
         if let Some(violation) = check_pipeline(pipeline, context) {
-            let span_key = (violation.span.start(), violation.span.end());
-            // Only add violation if we haven't seen this span before
-            if seen_spans.insert(span_key) {
-                violations.push(violation);
-            }
+            violations.push(violation);
         }
 
         for element in &pipeline.elements {
@@ -187,7 +172,7 @@ fn check_block_impl(
 
             for &block_id in &blocks {
                 let nested_block = context.working_set.get_block(block_id);
-                check_block_impl(nested_block, context, violations, seen_spans);
+                check_block(nested_block, context, violations);
             }
         }
     }

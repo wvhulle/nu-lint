@@ -122,8 +122,9 @@ fn format_fix(fix: &Fix, source_code: &str, has_help: bool) -> String {
 }
 
 fn format_diff(source_code: &str, replacement: &Replacement) -> String {
+    let file_span = replacement.file_span();
     let old_text = source_code
-        .get(replacement.span.start()..replacement.span.end())
+        .get(file_span.start..file_span.end)
         .unwrap_or("");
     let new_text = &replacement.replacement_text;
 

@@ -6,6 +6,8 @@ use nu_protocol::{
     engine::{Command, EngineState, StateWorkingSet},
 };
 
+#[cfg(test)]
+use crate::violation;
 use crate::{ast::call::CallExt, span::FileSpan, violation::Violation};
 
 /// Context containing all lint information (source, AST, and engine state)
@@ -222,9 +224,9 @@ impl LintContext<'_> {
     /// Helper to get normalized violations from source code (matches production
     /// behavior)
     #[track_caller]
-    pub fn test_get_violations<F>(source: &str, f: F) -> Vec<crate::violation::Violation>
+    pub fn test_get_violations<F>(source: &str, f: F) -> Vec<violation::Violation>
     where
-        F: for<'b> FnOnce(&LintContext<'b>) -> Vec<crate::violation::Violation>,
+        F: for<'b> FnOnce(&LintContext<'b>) -> Vec<violation::Violation>,
     {
         Self::test_with_parsed_source(source, |context| {
             let file_offset = context.file_offset();

@@ -17,9 +17,10 @@ pub fn format_json(violations: &[Violation]) -> String {
 
 fn violation_to_json(violation: &Violation) -> JsonViolation {
     let source_code = read_source_code(violation.file.as_ref());
+    let file_span = violation.file_span();
 
-    let (line_start, column_start) = calculate_line_column(&source_code, violation.span.start());
-    let (line_end, column_end) = calculate_line_column(&source_code, violation.span.end());
+    let (line_start, column_start) = calculate_line_column(&source_code, file_span.start);
+    let (line_end, column_end) = calculate_line_column(&source_code, file_span.end);
 
     JsonViolation {
         rule_id: violation
@@ -29,16 +30,13 @@ fn violation_to_json(violation: &Violation) -> JsonViolation {
             .to_string(),
         lint_level: violation.lint_level.to_string(),
         message: violation.message.to_string(),
-        file: violation
-            .file
-            .as_ref()
-            .map(std::string::ToString::to_string),
+        file: violation.file.as_ref().map(ToString::to_string),
         line_start,
         line_end,
         column_start,
         column_end,
-        offset_start: violation.span.start(),
-        offset_end: violation.span.end(),
+        offset_start: file_span.start,
+        offset_end: file_span.end,
         suggestion: violation.help.as_ref().map(ToString::to_string),
         fix: violation.fix.as_ref().map(fix_to_json),
         doc_url: violation.doc_url.map(ToString::to_string),
@@ -51,10 +49,13 @@ fn fix_to_json(fix: &Fix) -> JsonFix {
         replacements: fix
             .replacements
             .iter()
-            .map(|r| JsonReplacement {
-                offset_start: r.span.start(),
-                offset_end: r.span.end(),
-                new_text: r.replacement_text.to_string(),
+            .map(|r| {
+                let file_span = r.file_span();
+                JsonReplacement {
+                    offset_start: file_span.start,
+                    offset_end: file_span.end,
+                    new_text: r.replacement_text.to_string(),
+                }
             })
             .collect(),
     }

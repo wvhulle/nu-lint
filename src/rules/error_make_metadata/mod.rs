@@ -83,7 +83,7 @@ fn extract_first_function_parameter(
                                 .working_set
                                 .get_variable(var_id)
                                 .declaration_span
-                                .text(context)
+                                .source_code(context)
                                 .to_string()
                         })
                 })

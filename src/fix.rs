@@ -164,13 +164,13 @@ fn apply_single_fix_to_content(content: &str, fix: &Fix) -> String {
     }
 
     // Sort replacements by span start in reverse order
-    replacements.sort_by(|a, b| b.span.start().cmp(&a.span.start()));
+    replacements.sort_by(|a, b| b.file_span().start.cmp(&a.file_span().start));
 
     let mut result = content.to_string();
 
     for replacement in replacements {
-        let start = replacement.span.start();
-        let end = replacement.span.end();
+        let start = replacement.file_span().start;
+        let end = replacement.file_span().end;
 
         // Validate span bounds
         if start > result.len() || end > result.len() || start > end {
@@ -229,18 +229,20 @@ fn apply_fixes_to_content(content: &str, violations: &[&Violation]) -> String {
 
     // Sort replacements by span start in reverse order to apply from end to start
     // This ensures that earlier positions remain valid as we modify the string
-    replacements.sort_by(|a, b| b.span.start().cmp(&a.span.start()));
+    replacements.sort_by(|a, b| b.file_span().start.cmp(&a.file_span().start));
 
     // Deduplicate replacements with identical spans
     // This prevents applying the same fix multiple times
-    replacements.dedup_by(|a, b| a.span.start() == b.span.start() && a.span.end() == b.span.end());
+    replacements.dedup_by(|a, b| {
+        a.file_span().start == b.file_span().start && a.file_span().end == b.file_span().end
+    });
 
     let mut result = content.to_string();
     let content_bytes = content.as_bytes();
 
     for replacement in replacements {
-        let start = replacement.span.start();
-        let end = replacement.span.end();
+        let start = replacement.file_span().start;
+        let end = replacement.file_span().end;
 
         // Validate span bounds against original content
         if start > content_bytes.len() || end > content_bytes.len() || start > end {
@@ -374,15 +376,17 @@ mod tests {
     use super::*;
     use crate::{
         config::LintLevel,
-        violation::{Fix, Replacement, Violation},
+        violation::{Fix, Replacement, SourceFile, Violation},
     };
 
     #[test]
     fn test_apply_multiple_replacements() {
+        use crate::span::FileSpan;
+
         let content = "let x = 5; let y = 10";
         let replacements = vec![
-            Replacement::new(Span::new(4, 5), "a"),
-            Replacement::new(Span::new(15, 16), "b"),
+            Replacement::with_file_span(FileSpan::new(4, 5), "a"),
+            Replacement::with_file_span(FileSpan::new(15, 16), "b"),
         ];
         let fix = Fix::with_explanation("Rename variables", replacements);
 
@@ -390,13 +394,13 @@ mod tests {
             rule_id: Some(Cow::Borrowed("test_rule")),
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
-            span: Span::new(0, 21).into(),
+            span: FileSpan::new(0, 21).into(),
             primary_label: None,
             extra_labels: vec![],
             help: None,
             notes: vec![],
             fix: Some(fix),
-            file: Some(crate::violation::SourceFile::from("test.nu")),
+            file: Some(SourceFile::from("test.nu")),
             source: None,
             doc_url: None,
         };
@@ -543,7 +547,7 @@ mod tests {
             help: None,
             notes: vec![],
             fix: Some(fix),
-            file: Some(crate::violation::SourceFile::from("test.nu")),
+            file: Some(SourceFile::from("test.nu")),
             source: None,
             doc_url: None,
         };
@@ -558,7 +562,7 @@ mod tests {
             help: None,
             notes: vec![],
             fix: None,
-            file: Some(crate::violation::SourceFile::from("test.nu")),
+            file: Some(SourceFile::from("test.nu")),
             source: None,
             doc_url: None,
         };
@@ -580,7 +584,7 @@ mod tests {
             help: None,
             notes: vec![],
             fix: None,
-            file: Some(crate::violation::SourceFile::from("file1.nu")),
+            file: Some(SourceFile::from("file1.nu")),
             source: None,
             doc_url: None,
         };
@@ -595,7 +599,7 @@ mod tests {
             help: None,
             notes: vec![],
             fix: None,
-            file: Some(crate::violation::SourceFile::from("file2.nu")),
+            file: Some(SourceFile::from("file2.nu")),
             source: None,
             doc_url: None,
         };
@@ -610,7 +614,7 @@ mod tests {
             help: None,
             notes: vec![],
             fix: None,
-            file: Some(crate::violation::SourceFile::from("file1.nu")),
+            file: Some(SourceFile::from("file1.nu")),
             source: None,
             doc_url: None,
         };

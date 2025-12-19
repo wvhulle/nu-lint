@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, str::from_utf8};
 
 use nu_protocol::{BlockId, Span};
 
@@ -8,7 +8,7 @@ pub trait SpanExt {
     #[must_use]
     /// Returns source text for this span. Example: span of `$x + 1` returns "$x
     /// + 1"
-    fn text<'a>(&self, context: &'a LintContext) -> &'a str;
+    fn source_code<'a>(&self, context: &'a LintContext) -> &'a str;
     #[must_use]
     /// Finds function containing this span. Example: statement span inside `def
     /// process [] { ... }`
@@ -28,8 +28,8 @@ pub trait SpanExt {
 }
 
 impl SpanExt for Span {
-    fn text<'a>(&self, context: &'a LintContext) -> &'a str {
-        std::str::from_utf8(context.working_set.get_span_contents(*self)).unwrap_or("")
+    fn source_code<'a>(&self, context: &'a LintContext) -> &'a str {
+        from_utf8(context.working_set.get_span_contents(*self)).unwrap_or("")
     }
 
     fn find_containing_function(
@@ -53,7 +53,7 @@ impl SpanExt for Span {
     }
 
     fn find_substring_span(&self, substring: &str, context: &LintContext) -> Span {
-        self.text(context)
+        self.source_code(context)
             .as_bytes()
             .windows(substring.len())
             .position(|window| window == substring.as_bytes())

@@ -59,7 +59,7 @@ fn check_call(call: &Call, ctx: &LintContext) -> Option<Violation> {
     }];
 
     for usage_span in find_variable_usages(*var_id, ctx) {
-        if usage_span.text(ctx).starts_with('$') {
+        if usage_span.source_code(ctx).starts_with('$') {
             replacements.push(Replacement {
                 span: usage_span.into(),
                 replacement_text: format!("${snake_case_name}").into(),

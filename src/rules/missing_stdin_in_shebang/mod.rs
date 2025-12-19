@@ -126,7 +126,7 @@ fn has_explicit_type_annotation(
     signature_span: Option<nu_protocol::Span>,
     ctx: &LintContext,
 ) -> bool {
-    signature_span.is_some_and(|span| span.text(ctx).contains("->"))
+    signature_span.is_some_and(|span| span.source_code(ctx).contains("->"))
 }
 
 fn find_signature_span(call: &Call, _ctx: &LintContext) -> Option<nu_protocol::Span> {

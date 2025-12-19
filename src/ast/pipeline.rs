@@ -63,7 +63,7 @@ impl PipelineExt for Pipeline {
             let name = call.get_call_name(context);
             matches!(name.as_str(), "get" | "skip")
                 && call.get_first_positional_arg().is_some_and(|arg| {
-                    let arg_text = arg.span.text(context);
+                    let arg_text = arg.span.source_code(context);
                     arg_text.parse::<usize>().is_ok()
                 })
         })

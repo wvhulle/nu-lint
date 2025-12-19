@@ -25,7 +25,7 @@ fn extract_closure_parameter_name(
     let var_id = param.var_id?;
 
     let var = context.working_set.get_variable(var_id);
-    Some(var.declaration_span.text(context).to_string())
+    Some(var.declaration_span.source_code(context).to_string())
 }
 
 fn generate_fix(
@@ -41,7 +41,7 @@ fn generate_fix(
     }
 
     let block_span = block.span?;
-    let block_text = block_span.text(context);
+    let block_text = block_span.source_code(context);
 
     let body_text = block_text
         .strip_prefix('{')
@@ -92,7 +92,7 @@ fn check_where_call(call: &Call, _expr: &Expression, context: &LintContext) -> V
         return vec![];
     }
 
-    let arg_text = arg_expr.span.text(context);
+    let arg_text = arg_expr.span.source_code(context);
     let closure_param_syntax = format!("|{param_name}|");
     if !arg_text.contains(&closure_param_syntax) {
         return vec![];

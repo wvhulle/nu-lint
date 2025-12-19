@@ -4,7 +4,7 @@ use nu_protocol::{
 };
 
 use crate::{
-    ast::call::CallExt,
+    ast::{call::CallExt, span::SpanExt},
     context::LintContext,
     effect::{
         CommonEffect,
@@ -23,8 +23,7 @@ enum ErrorSource {
 fn find_error_prone_command(expr: &Expression, context: &LintContext) -> Option<ErrorSource> {
     expr.find_map(context.working_set, &|inner_expr| match &inner_expr.expr {
         Expr::ExternalCall(head, args) => {
-            let cmd_name =
-                std::str::from_utf8(context.working_set.get_span_contents(head.span)).unwrap_or("");
+            let cmd_name = head.span.source_code(context);
             if has_external_side_effect(
                 cmd_name,
                 ExternEffect::CommonEffect(CommonEffect::LikelyErrors),

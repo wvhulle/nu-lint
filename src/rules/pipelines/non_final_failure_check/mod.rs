@@ -103,9 +103,10 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
 pub const fn rule() -> Rule {
     Rule::new(
-        "prefer_complete_for_external_commands",
-        "External commands in pipelines should use 'complete' for error handling (Nushell doesn't \
-         propagate pipeline errors by default)",
+        "non_final_failure_check",
+        "Only the exit code of the last external command may cause Nu shell to report failure of \
+         the whole pipeline. You may use a configuration option on recent versions of Nu shell to \
+         check non-final external commands as well.",
         check,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/complete.html")

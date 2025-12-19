@@ -1,12 +1,12 @@
 use super::rule;
-use crate::{context::LintContext, fix::apply_fixes_to_stdin};
+use crate::{context::LintContext, fix::apply_fixes_to_stdin, violation};
 
 /// Helper function to apply fixes and get the fixed code
 fn apply_fix(code: &str) -> String {
     let violations = LintContext::test_get_violations(code, |context| {
         let mut violations = (rule().check)(context);
         for v in &mut violations {
-            v.file = Some(crate::violation::SourceFile::Stdin);
+            v.file = Some(violation::SourceFile::Stdin);
             v.source = Some(code.to_string().into());
         }
         violations

@@ -17,8 +17,11 @@ use nu_protocol::{
 use rayon::prelude::*;
 
 use crate::{
-    LintError, LintLevel, config::Config, context::LintContext, rules::ALL_RULES,
-    violation::Violation,
+    LintError, LintLevel,
+    config::Config,
+    context::LintContext,
+    rules::ALL_RULES,
+    violation::{SourceFile, Violation},
 };
 
 /// Parse Nushell source code into an AST and return both the Block and
@@ -161,9 +164,9 @@ impl LintEngine {
         }
 
         violations.sort_by(|a, b| {
-            a.span
-                .start()
-                .cmp(&b.span.start())
+            a.file_span()
+                .start
+                .cmp(&b.file_span().start)
                 .then(a.lint_level.cmp(&b.lint_level))
         });
         Ok(violations)
@@ -213,7 +216,7 @@ impl LintEngine {
         let source_owned = source.to_string();
 
         for violation in &mut violations {
-            violation.file = Some(crate::violation::SourceFile::Stdin);
+            violation.file = Some(SourceFile::Stdin);
             violation.source = Some(source_owned.clone().into());
         }
 

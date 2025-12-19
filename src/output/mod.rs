@@ -7,17 +7,15 @@ use std::fs;
 pub use json::{JsonFix, JsonOutput, JsonReplacement, JsonViolation, format_json};
 use serde::Serialize;
 pub use text::format_text;
-// VS Code format exports (deprecated)
-#[allow(
-    deprecated,
-    reason = "re-exporting deprecated module for backwards compatibility"
-)]
 pub use vscode::{
     VsCodeCodeAction, VsCodeDiagnostic, VsCodeJsonOutput, VsCodeLocation, VsCodePosition,
     VsCodeRange, VsCodeRelatedInformation, VsCodeTextEdit, format_vscode_json,
 };
 
-use crate::{config::LintLevel, violation::Violation};
+use crate::{
+    config::LintLevel,
+    violation::{SourceFile, Violation},
+};
 
 /// Output format for linting results
 #[derive(clap::ValueEnum, Clone, Copy, Default)]
@@ -102,7 +100,7 @@ pub(super) fn calculate_line_column(source: &str, offset: usize) -> (usize, usiz
         })
 }
 
-pub(super) fn read_source_code(file: Option<&crate::violation::SourceFile>) -> String {
+pub(super) fn read_source_code(file: Option<&SourceFile>) -> String {
     file.and_then(|f| f.as_path())
         .and_then(|path| fs::read_to_string(path).ok())
         .unwrap_or_default()

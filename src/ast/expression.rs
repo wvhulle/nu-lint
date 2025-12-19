@@ -119,7 +119,7 @@ impl ExpressionExt for Expression {
         match &self.expr {
             Expr::Var(var_id) | Expr::VarDecl(var_id) => {
                 let var = context.working_set.get_variable(*var_id);
-                Some(var.declaration_span.text(context).to_string())
+                Some(var.declaration_span.source_code(context).to_string())
             }
             Expr::FullCellPath(cell_path) => cell_path.head.extract_variable_name(context),
             _ => None,
@@ -195,7 +195,7 @@ impl ExpressionExt for Expression {
     }
 
     fn span_text<'a>(&self, context: &'a LintContext) -> &'a str {
-        self.span.text(context)
+        self.span.source_code(context)
     }
 
     fn extract_assigned_variable(&self) -> Option<VarId> {
@@ -301,7 +301,7 @@ impl ExpressionExt for Expression {
         }
 
         if let Expr::FullCellPath(cell_path) = &left.expr {
-            Some(cell_path.head.span.text(context).to_string())
+            Some(cell_path.head.span.source_code(context).to_string())
         } else {
             None
         }
@@ -347,7 +347,7 @@ impl ExpressionExt for Expression {
 
     fn is_external_filesystem_command(&self, context: &LintContext) -> bool {
         if let Expr::ExternalCall(head, args) = &self.expr {
-            let cmd_name = head.span.text(context);
+            let cmd_name = head.span.source_code(context);
             has_external_side_effect(cmd_name, ExternEffect::ModifiesFileSystem, context, args)
         } else {
             false
@@ -568,7 +568,7 @@ impl ExpressionExt for Expression {
                 )
             }
             Expr::ExternalCall(call, _) => {
-                let cmd_name = call.span.text(context);
+                let cmd_name = call.span.source_code(context);
                 log::debug!("Encountered ExternalCall: '{cmd_name}'");
                 if external_command_has_no_output(cmd_name) {
                     Some(Type::Nothing)

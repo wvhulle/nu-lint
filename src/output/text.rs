@@ -23,7 +23,7 @@ pub fn format_text(violations: &[Violation]) -> String {
         .iter()
         .enumerate()
         .map(|(idx, v)| {
-            let file_name = v.file.as_deref().unwrap_or("<stdin>");
+            let file_name = v.file.as_ref().map_or("<stdin>", |f| f.as_str());
             let source = sources.get(file_name).map_or("", String::as_str);
             let is_last = idx == violations.len() - 1;
             format_violation(v, source, file_name, is_last)
@@ -36,7 +36,7 @@ pub fn format_text(violations: &[Violation]) -> String {
 fn build_source_cache(violations: &[Violation]) -> HashMap<&str, String> {
     let mut by_file: HashMap<&str, &Violation> = HashMap::new();
     for v in violations {
-        let file_name = v.file.as_deref().unwrap_or("<stdin>");
+        let file_name = v.file.as_ref().map_or("<stdin>", |f| f.as_str());
         by_file.entry(file_name).or_insert(v);
     }
 
@@ -44,7 +44,7 @@ fn build_source_cache(violations: &[Violation]) -> HashMap<&str, String> {
         .into_iter()
         .map(|(file_name, v)| {
             let source = v.source.as_ref().map_or_else(
-                || read_source_code(Some(&Cow::Borrowed(file_name))),
+                || read_source_code(v.file.as_ref()),
                 ToString::to_string,
             );
             (file_name, source)

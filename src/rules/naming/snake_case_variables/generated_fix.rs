@@ -7,7 +7,7 @@ fn apply_fix(code: &str) -> String {
         let mut violations = (rule().check)(&context);
         // Mark violations as coming from stdin for fix application
         for v in &mut violations {
-            v.file = Some("<stdin>".into());
+            v.file = Some(crate::violation::SourceFile::Stdin);
             v.source = Some(code.to_string().into());
         }
         violations

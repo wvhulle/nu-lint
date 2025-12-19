@@ -1,9 +1,66 @@
-use std::{borrow::Cow, error::Error, fmt};
+use std::{borrow::Cow, error::Error, fmt, path::{Path, PathBuf}};
 
 use miette::{Diagnostic, LabeledSpan, Severity};
 use nu_protocol::Span;
 
 use crate::{config::LintLevel, context::LintContext};
+
+/// Represents the source of a lint violation (either stdin or a file path)
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum SourceFile {
+    Stdin,
+    File(String),
+}
+
+impl SourceFile {
+    /// Get the file path as a string slice (for display and file operations)
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Stdin => "<stdin>",
+            Self::File(path) => path.as_str(),
+        }
+    }
+
+    /// Convert to Path for file operations
+    #[must_use]
+    pub fn as_path(&self) -> Option<&Path> {
+        match self {
+            Self::Stdin => None,
+            Self::File(path) => Some(Path::new(path)),
+        }
+    }
+
+    /// Check if this is stdin
+    #[must_use]
+    pub const fn is_stdin(&self) -> bool {
+        matches!(self, Self::Stdin)
+    }
+}
+
+impl fmt::Display for SourceFile {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl From<&str> for SourceFile {
+    fn from(s: &str) -> Self {
+        Self::File(s.to_string())
+    }
+}
+
+impl From<String> for SourceFile {
+    fn from(s: String) -> Self {
+        Self::File(s)
+    }
+}
+
+impl From<&Path> for SourceFile {
+    fn from(p: &Path) -> Self {
+        Self::File(p.to_string_lossy().to_string())
+    }
+}
 
 /// Convert `LintLevel` to miette's `Severity`
 impl From<LintLevel> for Severity {
@@ -52,7 +109,7 @@ pub struct Violation {
     /// Optional automated fix that can be applied
     pub fix: Option<Fix>,
 
-    pub(crate) file: Option<Cow<'static, str>>,
+    pub(crate) file: Option<SourceFile>,
 
     /// Optional source code content (used for stdin or when file is not
     /// accessible)

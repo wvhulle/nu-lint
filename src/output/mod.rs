@@ -102,7 +102,8 @@ pub(super) fn calculate_line_column(source: &str, offset: usize) -> (usize, usiz
         })
 }
 
-pub(super) fn read_source_code(file: Option<&Cow<'_, str>>) -> String {
-    file.and_then(|path| fs::read_to_string(path.as_ref()).ok())
+pub(super) fn read_source_code(file: Option<&crate::violation::SourceFile>) -> String {
+    file.and_then(|f| f.as_path())
+        .and_then(|path| fs::read_to_string(path).ok())
         .unwrap_or_default()
 }

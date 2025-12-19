@@ -140,10 +140,8 @@ impl LintEngine {
         })?;
         let mut violations = self.lint_str(&source);
 
-        let file_path: &str = path.to_str().unwrap();
-        let file_path: Cow<'static, str> = file_path.to_owned().into();
         for violation in &mut violations {
-            violation.file = Some(file_path.clone());
+            violation.file = Some(path.into());
         }
 
         violations.sort_by(|a, b| {
@@ -196,13 +194,11 @@ impl LintEngine {
     #[must_use]
     pub fn lint_stdin(&self, source: &str) -> Vec<Violation> {
         let mut violations = self.lint_str(source);
-
-        let stdin_marker: Cow<'static, str> = "<stdin>".to_owned().into();
-        let source_content: Cow<'static, str> = source.to_owned().into();
+        let source_owned = source.to_string();
 
         for violation in &mut violations {
-            violation.file = Some(stdin_marker.clone());
-            violation.source = Some(source_content.clone());
+            violation.file = Some(crate::violation::SourceFile::Stdin);
+            violation.source = Some(source_owned.clone().into());
         }
 
         violations

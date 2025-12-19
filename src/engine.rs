@@ -114,7 +114,7 @@ impl LintEngine {
         static ENGINE: OnceLock<EngineState> = OnceLock::new();
         ENGINE.get_or_init(|| {
             let mut engine_state = nu_cmd_lang::create_default_context();
-            nu_std::load_standard_library(&mut engine_state).unwrap();
+            engine_state = nu_command::add_shell_command_context(engine_state);
             engine_state
         })
     }

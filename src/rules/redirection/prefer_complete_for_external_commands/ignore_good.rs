@@ -36,3 +36,9 @@ fn test_complete_in_subexpression() {
         r"let data = (^curl https://api.example.com | complete | get stdout | from json)";
     rule().assert_ignores(good_code);
 }
+
+#[test]
+fn complete_stor() {
+    instrument();
+    rule().assert_ignores("stor open | query db 'select'");
+}

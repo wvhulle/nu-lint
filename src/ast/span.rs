@@ -64,24 +64,21 @@ impl SpanExt for Span {
     }
 
     fn has_inline_doc_comment(&self, context: &LintContext) -> bool {
-        let before = context.source_before(self.start);
-        let line_start = before
-            .rfind('\n')
-            .map_or(0, |pos| pos + 1);
+        // Get the source text after this span
+        let after_text = unsafe { context.source() }
+            .get(self.end..)
+            .unwrap_or("");
 
-        // For finding line end, we need to get text starting from self.end
-        // Since we can't safely slice source with spans, we approximate using source_lines
-        let all_lines: Vec<&str> = context.source_lines().collect();
-        let line_at_span = all_lines.iter()
-            .find(|line| {
-                // Check if this line likely contains our span
-                line.len() >= self.end - line_start
-            });
+        // Find the end of the line (either newline or end of file)
+        let line_end = after_text
+            .find('\n')
+            .unwrap_or(after_text.len());
 
-        if let Some(line_text) = line_at_span {
-            line_text.contains(" # ")
-        } else {
-            false
-        }
+        let rest_of_line = &after_text[..line_end];
+
+        // Check if the rest of the line contains a documentation comment
+        // For typed parameters like "count: int # Description", the span only covers "count"
+        // so we need to check if " # " appears anywhere on the rest of the line
+        rest_of_line.contains(" # ")
     }
 }

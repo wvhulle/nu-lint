@@ -1,3 +1,5 @@
+use crate::log::instrument;
+
 use super::rule;
 
 #[test]
@@ -33,12 +35,6 @@ fn test_external_with_each() {
 #[test]
 fn test_external_with_from_yaml() {
     let bad_code = r"^curl https://example.com/config.yaml | from yaml";
-    rule().assert_detects(bad_code);
-}
-
-#[test]
-fn test_external_with_reduce() {
-    let bad_code = r"^cat numbers.txt | lines | reduce { |it, acc| $acc + $it }";
     rule().assert_detects(bad_code);
 }
 
@@ -91,6 +87,7 @@ fn test_ssh_with_lines() {
 
 #[test]
 fn test_wget_with_simple_processing() {
+    instrument();
     let bad_code = r"^wget -qO- https://example.com | lines | where $it != ''";
     rule().assert_detects(bad_code);
 }

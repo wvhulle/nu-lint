@@ -109,21 +109,8 @@ impl LintEngine {
     fn default_engine_state() -> &'static EngineState {
         static ENGINE: OnceLock<EngineState> = OnceLock::new();
         ENGINE.get_or_init(|| {
-            let engine_state = nu_cmd_lang::create_default_context();
-            let engine_state = nu_command::add_shell_command_context(engine_state);
-            let mut engine_state = nu_cli::add_cli_context(engine_state);
-
-            // Add print command (it's in nu-cli but not added by add_cli_context)
-            let delta = {
-                let mut working_set = StateWorkingSet::new(&engine_state);
-                working_set.add_decl(Box::new(nu_cli::Print));
-                working_set.render()
-            };
-
-            if let Err(err) = engine_state.merge_delta(delta) {
-                eprintln!("Error adding Print command: {err:?}");
-            }
-
+            let mut engine_state = nu_cmd_lang::create_default_context();
+            nu_std::load_standard_library(&mut engine_state).unwrap();
             engine_state
         })
     }

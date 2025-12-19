@@ -11,6 +11,7 @@ pub mod lsp;
 pub mod output;
 mod rule;
 mod rules;
+mod span;
 mod violation;
 
 use std::{error::Error, fmt, io, path::PathBuf};
@@ -20,6 +21,7 @@ pub use engine::LintEngine;
 pub use output::{
     JsonFix, JsonOutput, JsonReplacement, JsonViolation, Summary, format_json, format_text,
 };
+pub use span::{FileSpan, GlobalSpan, LintSpan};
 use toml::de;
 pub use violation::Violation;
 pub(crate) use violation::{Fix, Replacement};

@@ -1,12 +1,9 @@
 use std::collections::HashSet;
 
-use miette::{Diagnostic, LabeledSpan};
+use miette::Diagnostic;
 use nu_protocol::ParseError;
 
 use crate::{NU_PARSER_VERSION, context::LintContext, rule::Rule, violation::Violation};
-fn extract_labels(parse_error: &ParseError) -> Vec<LabeledSpan> {
-    parse_error.labels().into_iter().flatten().collect()
-}
 
 fn build_help_text(parse_error: &ParseError) -> String {
     let version_note = format!(
@@ -34,12 +31,25 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 parse_error.span().end,
                 parse_error.to_string(),
             );
-            seen.insert(key).then(|| {
-                let labels = extract_labels(parse_error);
-                Violation::new(parse_error.to_string(), parse_error.span())
-                    .with_help(build_help_text(parse_error))
-                    .with_extra_labels(labels)
-            })
+            if !seen.insert(key) {
+                return None;
+            }
+
+            let mut violation = Violation::new(parse_error.to_string(), parse_error.span())
+                .with_help(build_help_text(parse_error));
+
+            // Add extra labels from parse error
+            let labels: Vec<_> = parse_error.labels().into_iter().flatten().collect();
+            for label in labels {
+                let span = nu_protocol::Span::new(label.offset(), label.offset() + label.len());
+                let label_text = label.label().map(ToString::to_string);
+                violation = match label_text {
+                    Some(text) => violation.with_extra_label(text, span),
+                    None => violation.with_extra_span(span),
+                };
+            }
+
+            Some(violation)
         })
         .collect()
 }

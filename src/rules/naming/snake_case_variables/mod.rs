@@ -54,14 +54,14 @@ fn check_call(call: &Call, ctx: &LintContext) -> Option<Violation> {
 
     // Create replacements for declaration and all usages
     let mut replacements = vec![Replacement {
-        span: name_expr.span,
+        span: name_expr.span.into(),
         replacement_text: snake_case_name.clone().into(),
     }];
 
     for usage_span in find_variable_usages(*var_id, ctx) {
         if usage_span.text(ctx).starts_with('$') {
             replacements.push(Replacement {
-                span: usage_span,
+                span: usage_span.into(),
                 replacement_text: format!("${snake_case_name}").into(),
             });
         }

@@ -451,10 +451,11 @@ fn create_violation(
 ) -> violation::Violation {
     let name_span = context.find_declaration_span(&signature.name);
     let full_code = generate_fix_code_full(signature, param, context);
-    let def_span = find_function_definition_span(&signature.name, context).unwrap_or(name_span);
+    let def_span =
+        find_function_definition_span(&signature.name, context).unwrap_or(name_span.into());
     let fix = create_fix(full_code, &param.name, def_span);
 
-    Violation::new("Use pipeline input instead of parameter", name_span)
+    Violation::with_file_span("Use pipeline input instead of parameter", name_span)
         .with_primary_label("function with single data parameter")
         .with_help("Pipeline input enables better composability and streaming performance")
         .with_fix(fix)
@@ -470,7 +471,7 @@ fn create_violation_with_span(
     let full_code = generate_fix_code_full(signature, param, context);
     let fix = create_fix(full_code, &param.name, def_span);
 
-    Violation::new("Use pipeline input instead of parameter", name_span)
+    Violation::with_file_span("Use pipeline input instead of parameter", name_span)
         .with_primary_label("function with single data parameter")
         .with_help("Pipeline input enables better composability and streaming performance")
         .with_fix(fix)

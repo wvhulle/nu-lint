@@ -164,13 +164,13 @@ fn apply_single_fix_to_content(content: &str, fix: &Fix) -> String {
     }
 
     // Sort replacements by span start in reverse order
-    replacements.sort_by(|a, b| b.span.start.cmp(&a.span.start));
+    replacements.sort_by(|a, b| b.span.start().cmp(&a.span.start()));
 
     let mut result = content.to_string();
 
     for replacement in replacements {
-        let start = replacement.span.start;
-        let end = replacement.span.end;
+        let start = replacement.span.start();
+        let end = replacement.span.end();
 
         // Validate span bounds
         if start > result.len() || end > result.len() || start > end {
@@ -229,18 +229,18 @@ fn apply_fixes_to_content(content: &str, violations: &[&Violation]) -> String {
 
     // Sort replacements by span start in reverse order to apply from end to start
     // This ensures that earlier positions remain valid as we modify the string
-    replacements.sort_by(|a, b| b.span.start.cmp(&a.span.start));
+    replacements.sort_by(|a, b| b.span.start().cmp(&a.span.start()));
 
     // Deduplicate replacements with identical spans
     // This prevents applying the same fix multiple times
-    replacements.dedup_by(|a, b| a.span.start == b.span.start && a.span.end == b.span.end);
+    replacements.dedup_by(|a, b| a.span.start() == b.span.start() && a.span.end() == b.span.end());
 
     let mut result = content.to_string();
     let content_bytes = content.as_bytes();
 
     for replacement in replacements {
-        let start = replacement.span.start;
-        let end = replacement.span.end;
+        let start = replacement.span.start();
+        let end = replacement.span.end();
 
         // Validate span bounds against original content
         if start > content_bytes.len() || end > content_bytes.len() || start > end {
@@ -390,7 +390,7 @@ mod tests {
             rule_id: Some(Cow::Borrowed("test_rule")),
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
-            span: Span::new(0, 21),
+            span: Span::new(0, 21).into(),
             primary_label: None,
             extra_labels: vec![],
             help: None,
@@ -537,7 +537,7 @@ mod tests {
             rule_id: Some(Cow::Borrowed("test_rule")),
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
-            span: Span::new(0, 5),
+            span: Span::new(0, 5).into(),
             primary_label: None,
             extra_labels: vec![],
             help: None,
@@ -552,7 +552,7 @@ mod tests {
             rule_id: Some(Cow::Borrowed("test_rule")),
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
-            span: Span::new(0, 5),
+            span: Span::new(0, 5).into(),
             primary_label: None,
             extra_labels: vec![],
             help: None,
@@ -574,7 +574,7 @@ mod tests {
             rule_id: Some(Cow::Borrowed("test_rule")),
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
-            span: Span::new(0, 5),
+            span: Span::new(0, 5).into(),
             primary_label: None,
             extra_labels: vec![],
             help: None,
@@ -589,7 +589,7 @@ mod tests {
             rule_id: Some(Cow::Borrowed("test_rule")),
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
-            span: Span::new(0, 5),
+            span: Span::new(0, 5).into(),
             primary_label: None,
             extra_labels: vec![],
             help: None,
@@ -604,7 +604,7 @@ mod tests {
             rule_id: Some(Cow::Borrowed("test_rule")),
             lint_level: LintLevel::Warn,
             message: Cow::Borrowed("Test"),
-            span: Span::new(5, 10),
+            span: Span::new(5, 10).into(),
             primary_label: None,
             extra_labels: vec![],
             help: None,

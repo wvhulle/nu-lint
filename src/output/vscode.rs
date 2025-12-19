@@ -47,8 +47,8 @@ pub fn format_vscode_json(violations: &[Violation]) -> String {
 fn violation_to_vscode_diagnostic(violation: &Violation) -> VsCodeDiagnostic {
     let source_code = read_source_code(violation.file.as_ref());
 
-    let (line_start, column_start) = calculate_line_column(&source_code, violation.span.start);
-    let (line_end, column_end) = calculate_line_column(&source_code, violation.span.end);
+    let (line_start, column_start) = calculate_line_column(&source_code, violation.span.start());
+    let (line_end, column_end) = calculate_line_column(&source_code, violation.span.end());
 
     let line_start_zero = line_start.saturating_sub(1);
     let column_start_zero = column_start.saturating_sub(1);
@@ -97,8 +97,8 @@ fn violation_to_vscode_diagnostic(violation: &Violation) -> VsCodeDiagnostic {
                 .enumerate()
                 .map(|(idx, r)| {
                     let (r_line_start, r_col_start) =
-                        calculate_line_column(&source_code, r.span.start);
-                    let (r_line_end, r_col_end) = calculate_line_column(&source_code, r.span.end);
+                        calculate_line_column(&source_code, r.span.start());
+                    let (r_line_end, r_col_end) = calculate_line_column(&source_code, r.span.end());
                     let description = if fix.replacements.len() == 1 {
                         Some(fix.explanation.to_string())
                     } else {
@@ -138,17 +138,14 @@ fn build_related_information(
 ) -> Vec<VsCodeRelatedInformation> {
     let mut info = Vec::new();
 
-    for labeled_span in &violation.extra_labels {
-        let label_text = labeled_span.label().unwrap_or_default();
+    for (span, label) in &violation.extra_labels {
+        let label_text = label.as_deref().unwrap_or_default();
         if label_text.is_empty() {
             continue;
         }
 
-        let span_start = labeled_span.offset();
-        let span_end = span_start + labeled_span.len();
-
-        let (line_start, col_start) = calculate_line_column(source_code, span_start);
-        let (line_end, col_end) = calculate_line_column(source_code, span_end);
+        let (line_start, col_start) = calculate_line_column(source_code, span.start());
+        let (line_end, col_end) = calculate_line_column(source_code, span.end());
 
         info.push(VsCodeRelatedInformation {
             location: VsCodeLocation {
@@ -169,8 +166,8 @@ fn build_related_information(
     }
 
     if let Some(help) = &violation.help {
-        let (line_start, col_start) = calculate_line_column(source_code, violation.span.start);
-        let (line_end, col_end) = calculate_line_column(source_code, violation.span.end);
+        let (line_start, col_start) = calculate_line_column(source_code, violation.span.start());
+        let (line_end, col_end) = calculate_line_column(source_code, violation.span.end());
 
         info.push(VsCodeRelatedInformation {
             location: VsCodeLocation {

@@ -163,7 +163,7 @@ fn check_block_impl(
 ) {
     for pipeline in &block.pipelines {
         if let Some(violation) = check_pipeline(pipeline, context) {
-            let span_key = (violation.span.start, violation.span.end);
+            let span_key = (violation.span.start(), violation.span.end());
             // Only add violation if we haven't seen this span before
             if seen_spans.insert(span_key) {
                 violations.push(violation);

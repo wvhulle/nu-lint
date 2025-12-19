@@ -67,8 +67,10 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .map(|(block_id, function_name)| {
             let name_span = context.find_declaration_span(function_name);
             let block = context.working_set.get_block(*block_id);
-            let body_span = block.span.unwrap_or(name_span);
-            Violation::new(
+            // body_span is global (AST), name_span is file-relative - use AST span or
+            // convert
+            let body_span = block.span.unwrap_or_else(|| name_span.into());
+            Violation::with_file_span(
                 format!("Function `{function_name}` has a single-line body and is only used once"),
                 name_span,
             )

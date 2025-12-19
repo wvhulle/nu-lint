@@ -18,8 +18,8 @@ pub fn format_json(violations: &[Violation]) -> String {
 fn violation_to_json(violation: &Violation) -> JsonViolation {
     let source_code = read_source_code(violation.file.as_ref());
 
-    let (line_start, column_start) = calculate_line_column(&source_code, violation.span.start);
-    let (line_end, column_end) = calculate_line_column(&source_code, violation.span.end);
+    let (line_start, column_start) = calculate_line_column(&source_code, violation.span.start());
+    let (line_end, column_end) = calculate_line_column(&source_code, violation.span.end());
 
     JsonViolation {
         rule_id: violation
@@ -37,8 +37,8 @@ fn violation_to_json(violation: &Violation) -> JsonViolation {
         line_end,
         column_start,
         column_end,
-        offset_start: violation.span.start,
-        offset_end: violation.span.end,
+        offset_start: violation.span.start(),
+        offset_end: violation.span.end(),
         suggestion: violation.help.as_ref().map(ToString::to_string),
         fix: violation.fix.as_ref().map(fix_to_json),
         doc_url: violation.doc_url.map(ToString::to_string),
@@ -52,8 +52,8 @@ fn fix_to_json(fix: &Fix) -> JsonFix {
             .replacements
             .iter()
             .map(|r| JsonReplacement {
-                offset_start: r.span.start,
-                offset_end: r.span.end,
+                offset_start: r.span.start(),
+                offset_end: r.span.end(),
                 new_text: r.replacement_text.to_string(),
             })
             .collect(),

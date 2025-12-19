@@ -362,7 +362,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .into_iter()
         .filter(|violation| {
             let source_text =
-                std::str::from_utf8(context.working_set.get_span_contents(violation.span))
+                std::str::from_utf8(context.working_set.get_span_contents(violation.span.into()))
                     .unwrap_or("");
             contains_simple_jq_op(source_text)
         })

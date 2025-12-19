@@ -6,7 +6,7 @@ use nu_protocol::{
     engine::{Command, EngineState, StateWorkingSet},
 };
 
-use crate::{ast::call::CallExt, violation::Violation};
+use crate::{ast::call::CallExt, span::FileSpan, violation::Violation};
 
 /// Context containing all lint information (source, AST, and engine state)
 ///
@@ -78,8 +78,8 @@ impl<'a> LintContext<'a> {
 
     /// Convert an AST span to file-relative positions for `Replacement` spans
     #[must_use]
-    pub fn normalize_span(&self, span: Span) -> Span {
-        Span::new(
+    pub const fn normalize_span(&self, span: Span) -> FileSpan {
+        FileSpan::new(
             span.start.saturating_sub(self.file_offset),
             span.end.saturating_sub(self.file_offset),
         )
@@ -97,14 +97,6 @@ impl<'a> LintContext<'a> {
 
     pub fn source_lines(&self) -> impl Iterator<Item = &str> {
         self.source.lines()
-    }
-
-    /// Iterate over source lines with 1-indexed line numbers
-    pub fn source_lines_enumerated(&self) -> impl Iterator<Item = (usize, &str)> {
-        self.source
-            .lines()
-            .enumerate()
-            .map(|(i, line)| (i + 1, line))
     }
 
     #[must_use]
@@ -149,8 +141,9 @@ impl<'a> LintContext<'a> {
     }
 
     /// Find the span of a function/declaration name in the source code
+    /// Returns a file-relative span since it searches the source string
     #[must_use]
-    pub fn find_declaration_span(&self, name: &str) -> Span {
+    pub fn find_declaration_span(&self, name: &str) -> FileSpan {
         const PATTERNS: &[(&str, &str, usize)] = &[
             ("def ", "", 4),
             ("def \"", "\"", 5),
@@ -162,13 +155,13 @@ impl<'a> LintContext<'a> {
             let pattern = format!("{prefix}{name}{suffix}");
             if let Some(pos) = self.source.find(&pattern) {
                 let start = pos + offset;
-                return Span::new(start, start + name.len());
+                return FileSpan::new(start, start + name.len());
             }
         }
 
         self.source.find(name).map_or_else(
-            || self.ast.span.unwrap_or_else(Span::unknown),
-            |pos| Span::new(pos, pos + name.len()),
+            || self.normalize_span(self.ast.span.unwrap_or_else(Span::unknown)),
+            |pos| FileSpan::new(pos, pos + name.len()),
         )
     }
 
@@ -234,9 +227,10 @@ impl LintContext<'_> {
         F: for<'b> FnOnce(&LintContext<'b>) -> Vec<crate::violation::Violation>,
     {
         Self::test_with_parsed_source(source, |context| {
+            let file_offset = context.file_offset();
             let mut violations = f(&context);
             for v in &mut violations {
-                v.normalize_spans(&context);
+                v.normalize_spans(file_offset);
             }
             violations
         })

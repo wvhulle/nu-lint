@@ -3,7 +3,10 @@ use std::{borrow::Cow, error::Error, fmt, path::Path};
 use miette::{Diagnostic, LabeledSpan, Severity};
 use nu_protocol::Span;
 
-use crate::{config::LintLevel, context::LintContext};
+use crate::{
+    config::LintLevel,
+    span::{FileSpan, LintSpan},
+};
 
 /// Represents the source of a lint violation (either stdin or a file path)
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -81,29 +84,21 @@ pub struct Violation {
     pub lint_level: LintLevel,
 
     /// Short message shown in the warning header
-    /// Should be concise, typically < 80 chars
-    /// Example: "Use pipeline input instead of parameter"
     pub message: Cow<'static, str>,
 
     /// Primary span in source code where the violation occurs
-    pub span: Span,
+    pub span: LintSpan,
 
     /// Optional label text displayed on the primary span underline
-    /// If None, the span is underlined without text
     pub primary_label: Option<Cow<'static, str>>,
 
-    /// Additional labeled spans for context (e.g., related locations)
-    /// These are displayed as secondary highlights in diagnostic output
-    pub extra_labels: Vec<LabeledSpan>,
+    /// Additional labeled spans for context
+    pub extra_labels: Vec<(LintSpan, Option<String>)>,
 
     /// Optional detailed explanation shown in the "help:" section
-    /// Use this to explain WHY the code should change or provide rationale
-    /// Example: "Pipeline input enables better composability and streaming
-    /// performance"
     pub help: Option<Cow<'static, str>>,
 
     /// Additional informational notes shown after help
-    /// Use for supplementary context, references, or caveats
     pub notes: Vec<Cow<'static, str>>,
 
     /// Optional automated fix that can be applied
@@ -111,8 +106,7 @@ pub struct Violation {
 
     pub(crate) file: Option<SourceFile>,
 
-    /// Optional source code content (used for stdin or when file is not
-    /// accessible)
+    /// Optional source code content
     pub(crate) source: Option<Cow<'static, str>>,
 
     /// Optional URL to official Nushell documentation
@@ -120,19 +114,38 @@ pub struct Violation {
 }
 
 impl Violation {
-    /// Create a new violation
+    /// Create a new violation with an AST span (global coordinates)
     ///
-    /// # Arguments
-    ///
-    /// * `message` - Short diagnostic message shown in the warning header
-    /// * `span` - Location in source code where the violation occurs
+    /// The span will be normalized to file-relative coordinates by the engine.
     #[must_use]
     pub fn new(message: impl Into<Cow<'static, str>>, span: Span) -> Self {
         Self {
             rule_id: None,
-            lint_level: LintLevel::Allow, // Placeholder, will be set by engine
+            lint_level: LintLevel::Allow,
             message: message.into(),
-            span,
+            span: LintSpan::from(span),
+            primary_label: None,
+            extra_labels: Vec::new(),
+            help: None,
+            notes: Vec::new(),
+            fix: None,
+            file: None,
+            source: None,
+            doc_url: None,
+        }
+    }
+
+    /// Create a new violation with a file-relative span
+    ///
+    /// Use this when the span was computed from the source string directly
+    /// (e.g., regex matches, manual line counting).
+    #[must_use]
+    pub fn with_file_span(message: impl Into<Cow<'static, str>>, span: FileSpan) -> Self {
+        Self {
+            rule_id: None,
+            lint_level: LintLevel::Allow,
+            message: message.into(),
+            span: LintSpan::File(span),
             primary_label: None,
             extra_labels: Vec::new(),
             help: None,
@@ -180,29 +193,18 @@ impl Violation {
         self
     }
 
-    /// Add a secondary label for context (displayed with different styling than
-    /// the primary span)
+    /// Add a secondary label for context with an AST span
     #[must_use]
     pub fn with_extra_label(mut self, label: impl Into<Cow<'static, str>>, span: Span) -> Self {
-        self.extra_labels.push(LabeledSpan::new_with_span(
-            Some(label.into().to_string()),
-            span.start..span.end,
-        ));
+        self.extra_labels
+            .push((LintSpan::from(span), Some(label.into().to_string())));
         self
     }
 
     /// Add an unlabeled secondary span for context
     #[must_use]
     pub fn with_extra_span(mut self, span: Span) -> Self {
-        self.extra_labels
-            .push(LabeledSpan::new_with_span(None, span.start..span.end));
-        self
-    }
-
-    /// Add additional labeled spans for context
-    #[must_use]
-    pub fn with_extra_labels(mut self, labels: Vec<LabeledSpan>) -> Self {
-        self.extra_labels = labels;
+        self.extra_labels.push((LintSpan::from(span), None));
         self
     }
 
@@ -224,29 +226,27 @@ impl Violation {
         self
     }
 
-    /// Normalize all spans in this violation to be relative to the current file
-    pub fn normalize_spans(&mut self, context: &LintContext) {
-        self.span = context.normalize_span(self.span);
+    /// Normalize all spans to be file-relative (called by engine before output)
+    pub fn normalize_spans(&mut self, file_offset: usize) {
+        // Convert main span to file-relative
+        let file_span = self.span.to_file_span(file_offset);
+        self.span = LintSpan::File(file_span);
 
+        // Normalize fix replacements
         if let Some(fix) = &mut self.fix {
             for replacement in &mut fix.replacements {
-                replacement.span = context.normalize_span(replacement.span);
+                let file_span = replacement.span.to_file_span(file_offset);
+                replacement.span = LintSpan::File(file_span);
             }
         }
 
-        // Normalize extra labels - we need to recreate them since LabeledSpan fields
-        // are private
+        // Normalize extra labels
         self.extra_labels = self
             .extra_labels
             .iter()
-            .map(|label| {
-                let normalized =
-                    context.normalize_span(Span::new(label.offset(), label.offset() + label.len()));
-                LabeledSpan::new(
-                    label.label().map(ToString::to_string),
-                    normalized.start,
-                    normalized.end - normalized.start,
-                )
+            .map(|(span, label)| {
+                let file_span = span.to_file_span(file_offset);
+                (LintSpan::File(file_span), label.clone())
             })
             .collect();
     }
@@ -285,16 +285,15 @@ impl Diagnostic for Violation {
     }
 
     fn labels(&self) -> Option<Box<dyn Iterator<Item = LabeledSpan> + '_>> {
-        let span_range = self.span.start..self.span.end;
+        let span_range = self.span.start()..self.span.end();
         let primary = self.primary_label.as_ref().map_or_else(
             || LabeledSpan::underline(span_range.clone()),
             |label| LabeledSpan::new_primary_with_span(Some(label.to_string()), span_range.clone()),
         );
-        Some(Box::new(
-            [primary]
-                .into_iter()
-                .chain(self.extra_labels.iter().cloned()),
-        ))
+        let extras = self.extra_labels.iter().map(|(span, label)| {
+            LabeledSpan::new_with_span(label.clone(), span.start()..span.end())
+        });
+        Some(Box::new([primary].into_iter().chain(extras)))
     }
 }
 
@@ -333,21 +332,38 @@ impl Fix {
 /// runs.
 #[derive(Debug, Clone)]
 pub struct Replacement {
-    /// Span in source code to replace
-    pub span: Span,
+    /// Span in source code to replace (tracks global vs file-relative)
+    pub span: LintSpan,
 
     /// New text to insert at this location
-    /// This is the ACTUAL CODE written to the file when the fix is applied
     pub replacement_text: Cow<'static, str>,
 }
 
 impl Replacement {
-    /// Create a new code replacement
+    /// Create a new code replacement with an AST span (global coordinates)
     #[must_use]
     pub fn new(span: Span, replacement_text: impl Into<Cow<'static, str>>) -> Self {
         Self {
-            span,
+            span: LintSpan::from(span),
             replacement_text: replacement_text.into(),
+        }
+    }
+
+    /// Create a new code replacement with a file-relative span
+    #[must_use]
+    pub fn with_file_span(span: FileSpan, replacement_text: impl Into<Cow<'static, str>>) -> Self {
+        Self {
+            span: LintSpan::File(span),
+            replacement_text: replacement_text.into(),
+        }
+    }
+
+    /// Get the span as file-relative (for output). Panics if not normalized.
+    #[must_use]
+    pub fn file_span(&self) -> FileSpan {
+        match self.span {
+            LintSpan::File(f) => f,
+            LintSpan::Global(_) => panic!("Span not normalized - call normalize_spans first"),
         }
     }
 }

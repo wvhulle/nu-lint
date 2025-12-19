@@ -162,8 +162,8 @@ impl LintEngine {
 
         violations.sort_by(|a, b| {
             a.span
-                .start
-                .cmp(&b.span.start)
+                .start()
+                .cmp(&b.span.start())
                 .then(a.lint_level.cmp(&b.lint_level))
         });
         Ok(violations)
@@ -231,7 +231,7 @@ impl LintEngine {
 
         // Normalize all spans in violations to be file-relative
         for violation in &mut violations {
-            violation.normalize_spans(&context);
+            violation.normalize_spans(file_offset);
         }
 
         violations

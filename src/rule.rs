@@ -166,7 +166,7 @@ impl Rule {
         let label_texts: Vec<&str> = violation
             .extra_labels
             .iter()
-            .filter_map(|l| l.label())
+            .filter_map(|(_, label)| label.as_deref())
             .collect();
 
         assert!(
@@ -183,7 +183,7 @@ impl Rule {
         let label_texts: Vec<&str> = violation
             .extra_labels
             .iter()
-            .filter_map(|l| l.label())
+            .filter_map(|(_, label)| label.as_deref())
             .collect();
 
         assert!(
@@ -204,7 +204,7 @@ impl Rule {
         );
 
         let replacement = &fix.replacements[0];
-        let original_text = &code[replacement.span.start..replacement.span.end];
+        let original_text = &code[replacement.span.start()..replacement.span.end()];
         let replacement_text = &replacement.replacement_text;
 
         assert!(

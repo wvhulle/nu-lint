@@ -63,8 +63,8 @@ impl ServerState {
                 let fix = violation.fix.as_ref()?;
                 let violation_range = doc_state.line_index.span_to_range(
                     &doc_state.content,
-                    violation.span.start,
-                    violation.span.end,
+                    violation.span.start(),
+                    violation.span.end(),
                 );
 
                 let overlaps = ranges_overlap(&range, &violation_range);
@@ -78,8 +78,8 @@ impl ServerState {
                     .map(|r| TextEdit {
                         range: doc_state.line_index.span_to_range(
                             &doc_state.content,
-                            r.span.start,
-                            r.span.end,
+                            r.span.start(),
+                            r.span.end(),
                         ),
                         new_text: r.replacement_text.to_string(),
                     })

@@ -24,7 +24,7 @@ pub fn violation_to_diagnostic(
     let related_information = build_related_information(violation, source, line_index, file_uri);
 
     Diagnostic {
-        range: line_index.span_to_range(source, violation.span.start, violation.span.end),
+        range: line_index.span_to_range(source, violation.span.start(), violation.span.end()),
         severity: Some(lint_level_to_severity(violation.lint_level)),
         code: violation
             .rule_id
@@ -69,15 +69,13 @@ fn build_related_information(
     violation
         .extra_labels
         .iter()
-        .filter_map(|labeled_span| {
-            let label_text = labeled_span.label()?;
+        .filter_map(|(span, label)| {
+            let label_text = label.as_deref()?;
             if label_text.is_empty() {
                 return None;
             }
 
-            let span_start = labeled_span.offset();
-            let span_end = span_start + labeled_span.len();
-            let range = line_index.span_to_range(source, span_start, span_end);
+            let range = line_index.span_to_range(source, span.start(), span.end());
 
             Some(DiagnosticRelatedInformation {
                 location: Location {

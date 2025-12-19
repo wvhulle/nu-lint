@@ -97,7 +97,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 vec![Replacement::new(removal_span, String::new())],
             );
 
-            Violation::new(
+            Violation::with_file_span(
                 format!("Function '{name}' is defined but never called from 'main'"),
                 name_span,
             )

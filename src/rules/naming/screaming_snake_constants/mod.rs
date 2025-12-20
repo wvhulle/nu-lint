@@ -1,46 +1,56 @@
-use std::sync::OnceLock;
-
 use heck::ToShoutySnakeCase;
-use regex::Regex;
+use nu_protocol::ast::Expr;
 
-use crate::{context::LintContext, rule::Rule, violation::Violation};
-fn screaming_snake_pattern() -> &'static Regex {
-    static PATTERN: OnceLock<Regex> = OnceLock::new();
-    PATTERN.get_or_init(|| Regex::new(r"^[A-Z][A-Z0-9_]*$").unwrap())
-}
-fn const_pattern() -> &'static Regex {
-    static PATTERN: OnceLock<Regex> = OnceLock::new();
-    PATTERN.get_or_init(|| Regex::new(r"\bconst\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=").unwrap())
-}
+use crate::{ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation};
+
 fn is_valid_screaming_snake(name: &str) -> bool {
-    screaming_snake_pattern().is_match(name)
+    let mut chars = name.chars();
+    let Some(first) = chars.next() else {
+        return false;
+    };
+
+    first.is_ascii_uppercase()
+        && chars.all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_')
 }
+
 fn check(context: &LintContext) -> Vec<Violation> {
-    const_pattern()
-        .captures_iter(context.whole_source())
-        .filter_map(|cap| {
-            let const_match = cap.get(1)?;
-            let const_name = const_match.as_str();
-            if is_valid_screaming_snake(const_name) {
-                None
-            } else {
-                Some(
-                    Violation::new(
-                        format!(
-                            "Constant '{const_name}' should use SCREAMING_SNAKE_CASE naming \
-                             convention"
-                        ),
-                        nu_protocol::Span::new(const_match.start(), const_match.end()),
-                    )
-                    .with_primary_label("non-SCREAMING_SNAKE_CASE")
-                    .with_help(format!(
-                        "Consider renaming to: {}",
-                        const_name.to_shouty_snake_case()
-                    )),
+    context.collect_rule_violations(|expr, ctx| {
+        let Expr::Call(call) = &expr.expr else {
+            return vec![];
+        };
+
+        if !call.is_call_to_command("const", ctx) {
+            return vec![];
+        }
+
+        let Some(var_arg) = call.get_first_positional_arg() else {
+            return vec![];
+        };
+
+        let Expr::VarDecl(_) = &var_arg.expr else {
+            return vec![];
+        };
+
+        let const_name = ctx.get_span_text(var_arg.span);
+
+        if is_valid_screaming_snake(const_name) {
+            vec![]
+        } else {
+            vec![
+                Violation::new(
+                    format!(
+                        "Constant '{const_name}' should use SCREAMING_SNAKE_CASE naming convention"
+                    ),
+                    var_arg.span,
                 )
-            }
-        })
-        .collect()
+                .with_primary_label("non-SCREAMING_SNAKE_CASE")
+                .with_help(format!(
+                    "Consider renaming to: {}",
+                    const_name.to_shouty_snake_case()
+                )),
+            ]
+        }
+    })
 }
 pub const fn rule() -> Rule {
     Rule::new(

@@ -91,22 +91,22 @@ fn block_uses_pipeline_input_directly(block: &Block, context: &LintContext) -> b
     })
 }
 
-fn has_stdin_flag_in_shebang(source: &str) -> bool {
-    source
-        .lines()
-        .next()
-        .is_some_and(|first_line| first_line.starts_with("#!") && first_line.contains("--stdin"))
+fn has_stdin_flag_in_shebang(first_line: &str) -> bool {
+    first_line.starts_with("#!") && first_line.contains("--stdin")
 }
 
-fn create_fix_for_shebang(source: &str) -> Option<crate::Fix> {
+fn create_fix_for_shebang(context: &LintContext) -> Option<crate::Fix> {
+    let source = unsafe { context.source() };
+    let file_offset = context.file_offset();
     let first_line = source.lines().next()?;
+
     if !first_line.starts_with("#!") {
         return None;
     }
 
     // Find the end of the first line including the newline
     let first_line_end = source.find('\n').map_or(source.len(), |pos| pos);
-    let span = nu_protocol::Span::new(0, first_line_end);
+    let span = nu_protocol::Span::new(file_offset, first_line_end + file_offset);
 
     let new_shebang = if first_line.contains("-S ") {
         first_line.replace("-S nu", "-S nu --stdin")
@@ -164,7 +164,17 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
         return vec![];
     }
 
-    if has_stdin_flag_in_shebang(context.first_line().unwrap_or("")) {
+    let source = unsafe { context.source() };
+    let Some(first_line) = source.lines().next() else {
+        return vec![];
+    };
+
+    // Only check scripts with shebangs
+    if !first_line.starts_with("#!") {
+        return vec![];
+    }
+
+    if has_stdin_flag_in_shebang(first_line) {
         return vec![];
     }
 
@@ -177,7 +187,7 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
         "Main function declares pipeline input type but shebang is missing --stdin flag"
     };
 
-    let fix = create_fix_for_shebang(context.first_line().unwrap_or(""));
+    let fix = create_fix_for_shebang(context);
 
     let mut violation = Violation::new(message, name_span)
         .with_primary_label("main function expecting stdin")
@@ -194,15 +204,6 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
 }
 
 fn check(context: &LintContext) -> Vec<Violation> {
-    let has_shebang = context
-        .source_lines()
-        .next()
-        .is_some_and(|line| line.starts_with("#!"));
-
-    if !has_shebang {
-        return vec![];
-    }
-
     context.collect_rule_violations(|expr, ctx| match &expr.expr {
         Expr::Call(call) => check_main_function(call, ctx),
         _ => vec![],

@@ -17,14 +17,6 @@ use crate::{ast::call::CallExt, span::FileSpan, violation::Violation};
 /// AST spans are in a "global" coordinate system that includes all loaded files
 /// (stdlib, etc.). This context encapsulates span translation - rule authors
 /// should use the provided methods and never manually slice source with spans.
-///
-/// ## Safe methods for rules:
-/// - `get_span_text(span)` - get text for an AST span
-/// - `source_before_span(span)` / `source_after_span(span)` - get context
-///   around a span
-/// - `normalize_span(span)` - convert to file-relative for `Replacement`
-/// - `source_lines()` - iterate over lines (for line counting, etc.)
-/// - `source_contains(pattern)` - check for substring presence
 pub struct LintContext<'a> {
     /// Raw source string of the file being linted (file-relative coordinates)
     source: &'a str,
@@ -53,6 +45,11 @@ impl<'a> LintContext<'a> {
         }
     }
 
+    #[must_use]
+    pub const unsafe fn source(&self) -> &str {
+        self.source
+    }
+
     /// Get text for an AST span
     #[must_use]
     pub fn get_span_text(&self, span: Span) -> &str {
@@ -78,6 +75,30 @@ impl<'a> LintContext<'a> {
             .expect("file position should be within source bounds")
     }
 
+    /// Get source text between two span endpoints (from end of first to start
+    /// of second) Returns empty string if the range is invalid
+    #[must_use]
+    pub fn source_between_span_ends(&self, end_span: Span, start_span: Span) -> &str {
+        let file_start = end_span.end.saturating_sub(self.file_offset);
+        let file_end = start_span.start.saturating_sub(self.file_offset);
+
+        if file_start >= file_end || file_end > self.source.len() {
+            return "";
+        }
+
+        &self.source[file_start..file_end]
+    }
+
+    /// Count newlines up to a file-relative offset
+    #[must_use]
+    pub fn count_newlines_before(&self, offset: usize) -> usize {
+        let safe_offset = offset.min(self.source.len());
+        self.source[..safe_offset]
+            .bytes()
+            .filter(|&b| b == b'\n')
+            .count()
+    }
+
     /// Convert an AST span to file-relative positions for `Replacement` spans
     #[must_use]
     pub const fn normalize_span(&self, span: Span) -> FileSpan {
@@ -88,22 +109,8 @@ impl<'a> LintContext<'a> {
     }
 
     #[must_use]
-    pub const fn source_len(&self) -> usize {
-        self.source.len()
-    }
-
-    #[must_use]
     pub fn source_contains(&self, pattern: &str) -> bool {
         self.source.contains(pattern)
-    }
-
-    pub fn source_lines(&self) -> impl Iterator<Item = &str> {
-        self.source.lines()
-    }
-
-    #[must_use]
-    pub fn first_line(&self) -> Option<&str> {
-        self.source.lines().next()
     }
 
     /// Byte offset where this file starts in the global span space
@@ -112,12 +119,26 @@ impl<'a> LintContext<'a> {
         self.file_offset
     }
 
-    /// Get the full source for whole-file operations like regex matching
-    ///
-    /// Do NOT slice with AST span indices - use `get_span_text()` instead.
+    /// Expand a span to include the full line(s) it occupies
+    /// Takes a global AST span and returns a global span
     #[must_use]
-    pub const fn whole_source(&self) -> &str {
-        self.source
+    pub fn expand_span_to_full_lines(&self, span: Span) -> Span {
+        let bytes = self.source.as_bytes();
+
+        let file_start = span.start.saturating_sub(self.file_offset);
+        let file_end = span.end.saturating_sub(self.file_offset);
+
+        let start = bytes[..file_start]
+            .iter()
+            .rposition(|&b| b == b'\n')
+            .map_or(0, |pos| pos + 1);
+
+        let end = bytes[file_end..]
+            .iter()
+            .position(|&b| b == b'\n')
+            .map_or(self.source.len(), |pos| file_end + pos + 1);
+
+        Span::new(start + self.file_offset, end + self.file_offset)
     }
 
     /// Collect all rule violations using a closure over expressions

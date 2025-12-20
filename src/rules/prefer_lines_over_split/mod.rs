@@ -1,46 +1,54 @@
-use crate::{context::LintContext, rule::Rule, violation::Violation};
+use nu_protocol::ast::{Expr, Expression};
+
+use crate::{
+    ast::call::CallExt,
+    context::LintContext,
+    rule::Rule,
+    violation::{Fix, Replacement, Violation},
+};
+
+fn is_newline_string(expr: &Expression, context: &LintContext) -> bool {
+    let text = context.get_span_text(expr.span);
+    // Only double-quoted strings interpret \n as newline in Nushell
+    // Single-quoted strings are raw and treat \n literally
+    matches!(text, "\"\\n\"" | "\"\\r\\n\"")
+}
+
 fn check(context: &LintContext) -> Vec<Violation> {
-    let mut violations = Vec::new();
-    // Search for "split row" patterns with newline in the source code
-    let source_lines: Vec<&str> = context.source_lines().collect();
-    for (line_idx, line) in source_lines.iter().enumerate() {
-        // Look for split row with newline patterns
-        if line.contains("split row")
-            && (line.contains("\"\\n\"")
-                || line.contains("'\\n'")
-                || line.contains("\"\n\"")
-                || line.contains("'\n'"))
-        {
-            // Calculate the span for this line
-            let line_start: usize = source_lines[..line_idx]
-                .iter()
-                .map(|l| l.len() + 1) // +1 for newline
-                .sum();
-            let line_end = line_start + line.len();
-            let full_span = nu_protocol::Span::new(line_start, line_end);
+    context.collect_rule_violations(|expr, ctx| {
+        let Expr::Call(call) = &expr.expr else {
+            return vec![];
+        };
 
-            // Find the "split row" part
-            let split_row_pos = line.find("split row").unwrap_or(0);
-            let split_span = nu_protocol::Span::new(
-                line_start + split_row_pos,
-                line_start + split_row_pos + 9, // "split row" is 9 chars
-            );
-
-            violations.push(
-                Violation::new(
-                    "Use 'lines' instead of 'split row \"\\n\"' for splitting by newlines",
-                    full_span,
-                )
-                .with_primary_label("inefficient newline split")
-                .with_extra_label("replace with 'lines'", split_span)
-                .with_help(
-                    "Replace with: | lines\nThe 'lines' command is more efficient and clearer for \
-                     splitting text by newlines.",
-                ),
-            );
+        if !call.is_call_to_command("split row", ctx) {
+            return vec![];
         }
-    }
-    violations
+
+        let Some(separator_arg) = call.get_first_positional_arg() else {
+            return vec![];
+        };
+
+        if !is_newline_string(separator_arg, ctx) {
+            return vec![];
+        }
+
+        let fix = Fix::with_explanation(
+            "Replace with 'lines'",
+            vec![Replacement::new(expr.span, "lines")],
+        );
+
+        vec![
+            Violation::new(
+                "Use 'lines' instead of 'split row \"\\n\"' for splitting by newlines",
+                expr.span,
+            )
+            .with_primary_label("inefficient newline split")
+            .with_help(
+                "The 'lines' command is more efficient and clearer for splitting text by newlines",
+            )
+            .with_fix(fix),
+        ]
+    })
 }
 pub const fn rule() -> Rule {
     Rule::new(

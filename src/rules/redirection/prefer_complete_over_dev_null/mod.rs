@@ -121,13 +121,8 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
     let replace_span = nu_protocol::Span::new(pipeline_start, pipeline_end);
 
     log::debug!(
-        "Fix spans: pipeline_start={}, pipeline_end={}, source_len={}, replace_text='{}', \
-         has_complete={}",
-        pipeline_start,
-        pipeline_end,
-        context.source_len(),
-        replacement_text,
-        has_complete
+        "Fix spans: pipeline_start={pipeline_start}, pipeline_end={pipeline_end}, \
+         replace_text='{replacement_text}', has_complete={has_complete}"
     );
 
     let fix_explanation = if has_complete {

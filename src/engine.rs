@@ -133,7 +133,7 @@ impl LintEngine {
                 .merge_delta(delta)
                 .expect("Failed to add Print command");
 
-            nu_std::load_standard_library(&mut engine_state).unwrap();
+            // nu_std::load_standard_library(&mut engine_state).unwrap();
             engine_state
         })
     }

@@ -70,7 +70,8 @@ fn pipeline_starts_with_redundant_in(pipeline: &Pipeline, context: &LintContext)
 }
 fn extract_function_body_from_source(decl_name: &str, context: &LintContext) -> Option<String> {
     let decl_span = context.find_declaration_span(decl_name);
-    let contents = nu_protocol::Span::from(decl_span).source_code(context);
+    let span: nu_protocol::Span = decl_span.into();
+    let contents = span.source_code(context);
     log::debug!(
         "Extracting body for '{decl_name}' from source: span={decl_span:?}, contents='{contents}'"
     );

@@ -21,7 +21,7 @@ pub use engine::LintEngine;
 pub use output::{
     JsonFix, JsonOutput, JsonReplacement, JsonViolation, Summary, format_json, format_text,
 };
-pub use span::{FileSpan, GlobalSpan, LintSpan};
+pub use span::{FileSpan, LintSpan};
 use toml::de;
 pub use violation::Violation;
 pub(crate) use violation::{Fix, Replacement};

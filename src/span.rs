@@ -1,15 +1,5 @@
 use std::ops::Range;
 
-/// A span in global coordinate space (from AST, includes stdlib offset)
-///
-/// All spans obtained from AST nodes (expressions, calls, blocks) are global.
-/// These cannot be used directly for slicing the source file.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct GlobalSpan {
-    pub start: usize,
-    pub end: usize,
-}
-
 /// A span relative to the current file being linted (starts at 0)
 ///
 /// Use for:
@@ -27,45 +17,14 @@ pub struct FileSpan {
 ///
 /// Rules return this type, and the engine normalizes all to `FileSpan` before
 /// output.
+///
+/// Global spans are from AST nodes (`nu_protocol::Span`) and include stdlib
+/// offset. File spans are relative to the current file being linted (starts at
+/// 0).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LintSpan {
-    Global(GlobalSpan),
+    Global(nu_protocol::Span),
     File(FileSpan),
-}
-
-impl GlobalSpan {
-    #[must_use]
-    pub const fn new(start: usize, end: usize) -> Self {
-        Self { start, end }
-    }
-
-    /// Convert to file-relative span by subtracting the file offset
-    #[must_use]
-    pub const fn to_file_span(self, file_offset: usize) -> FileSpan {
-        FileSpan {
-            start: self.start.saturating_sub(file_offset),
-            end: self.end.saturating_sub(file_offset),
-        }
-    }
-
-    /// Create a span that encompasses both self and other
-    #[must_use]
-    pub fn merge(self, other: Self) -> Self {
-        Self {
-            start: self.start.min(other.start),
-            end: self.end.max(other.end),
-        }
-    }
-
-    #[must_use]
-    pub const fn len(&self) -> usize {
-        self.end.saturating_sub(self.start)
-    }
-
-    #[must_use]
-    pub const fn is_empty(&self) -> bool {
-        self.start >= self.end
-    }
 }
 
 impl FileSpan {
@@ -76,11 +35,8 @@ impl FileSpan {
 
     /// Convert to global span by adding the file offset
     #[must_use]
-    pub const fn to_global_span(self, file_offset: usize) -> GlobalSpan {
-        GlobalSpan {
-            start: self.start + file_offset,
-            end: self.end + file_offset,
-        }
+    pub fn to_global_span(self, file_offset: usize) -> nu_protocol::Span {
+        nu_protocol::Span::new(self.start + file_offset, self.end + file_offset)
     }
 
     /// Create a span that encompasses both self and other
@@ -113,7 +69,10 @@ impl LintSpan {
     #[must_use]
     pub const fn to_file_span(self, file_offset: usize) -> FileSpan {
         match self {
-            Self::Global(g) => g.to_file_span(file_offset),
+            Self::Global(g) => FileSpan {
+                start: g.start.saturating_sub(file_offset),
+                end: g.end.saturating_sub(file_offset),
+            },
             Self::File(f) => f,
         }
     }
@@ -130,44 +89,8 @@ impl LintSpan {
     }
 }
 
-impl From<nu_protocol::Span> for GlobalSpan {
-    fn from(span: nu_protocol::Span) -> Self {
-        Self {
-            start: span.start,
-            end: span.end,
-        }
-    }
-}
-
-impl From<GlobalSpan> for nu_protocol::Span {
-    fn from(span: GlobalSpan) -> Self {
-        Self::new(span.start, span.end)
-    }
-}
-
-impl From<FileSpan> for nu_protocol::Span {
-    fn from(span: FileSpan) -> Self {
-        Self::new(span.start, span.end)
-    }
-}
-
-impl From<LintSpan> for nu_protocol::Span {
-    fn from(span: LintSpan) -> Self {
-        match span {
-            LintSpan::Global(g) => Self::new(g.start, g.end),
-            LintSpan::File(f) => Self::new(f.start, f.end),
-        }
-    }
-}
-
 impl From<nu_protocol::Span> for LintSpan {
     fn from(span: nu_protocol::Span) -> Self {
-        Self::Global(GlobalSpan::from(span))
-    }
-}
-
-impl From<GlobalSpan> for LintSpan {
-    fn from(span: GlobalSpan) -> Self {
         Self::Global(span)
     }
 }
@@ -175,5 +98,11 @@ impl From<GlobalSpan> for LintSpan {
 impl From<FileSpan> for LintSpan {
     fn from(span: FileSpan) -> Self {
         Self::File(span)
+    }
+}
+
+impl From<FileSpan> for nu_protocol::Span {
+    fn from(span: FileSpan) -> Self {
+        Self::new(span.start, span.end)
     }
 }

@@ -1,4 +1,11 @@
 use super::rule;
+use crate::log::instrument;
+
+#[test]
+fn issue_64() {
+    instrument();
+    rule().assert_ignores("use std/log");
+}
 
 #[test]
 fn function_with_no_params() {

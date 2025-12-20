@@ -362,7 +362,11 @@ fn check(context: &LintContext) -> Vec<Violation> {
     violations
         .into_iter()
         .filter(|violation| {
-            let source_text = nu_protocol::Span::from(violation.span).source_code(context);
+            let span: nu_protocol::Span = match violation.span {
+                crate::LintSpan::Global(s) => s,
+                crate::LintSpan::File(f) => f.into(),
+            };
+            let source_text = span.source_code(context);
             contains_simple_jq_op(source_text)
         })
         .collect()

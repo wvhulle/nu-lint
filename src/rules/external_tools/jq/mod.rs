@@ -11,6 +11,7 @@ use nu_protocol::ast::ExternalArgument;
 use crate::{
     Violation,
     alternatives::{detect_external_commands, external_args_slices},
+    ast::span::SpanExt,
     context::LintContext,
     rule::Rule,
     violation::{Fix, Replacement},
@@ -361,7 +362,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     violations
         .into_iter()
         .filter(|violation| {
-            let source_text = &context.source[violation.span.start..violation.span.end];
+            let source_text = nu_protocol::Span::from(violation.span).source_code(context);
             contains_simple_jq_op(source_text)
         })
         .collect()

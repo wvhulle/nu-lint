@@ -10,7 +10,7 @@ use crate::{
 fn uses_echo(element: &PipelineElement, context: &LintContext) -> bool {
     match &element.expr.expr {
         Expr::Call(call) => call.is_call_to_command("echo", context),
-        Expr::ExternalCall(head, _) => &context.source[head.span.start..head.span.end] == "echo",
+        Expr::ExternalCall(head, _) => context.get_span_text(head.span) == "echo",
         _ => false,
     }
 }
@@ -44,7 +44,7 @@ fn get_pipeline_continuation<'a>(
     pipeline.elements.get(element_idx + 1).map(|next_element| {
         let start = next_element.expr.span.start;
         let end = pipeline.elements.last().unwrap().expr.span.end;
-        &context.source[start..end]
+        context.get_span_text(nu_protocol::Span::new(start, end))
     })
 }
 
@@ -55,7 +55,7 @@ fn create_violation(
 ) -> Violation {
     let message = "Avoid 'echo' - it's just an identity function. Use the value directly, or \
                    'print' for debugging";
-    let code_snippet = &context.source[element.expr.span.start..element.expr.span.end];
+    let code_snippet = context.get_span_text(element.expr.span);
     let fix = generate_fix(code_snippet, element.expr.span);
 
     let violation = Violation::new(message, element.expr.span);

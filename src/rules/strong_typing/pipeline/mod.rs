@@ -19,7 +19,7 @@ fn find_return_span(block: &Block) -> Option<Span> {
 }
 
 fn has_explicit_type_annotation(signature_span: Option<Span>, ctx: &LintContext) -> bool {
-    signature_span.is_some_and(|span| span.text(ctx).contains("->"))
+    signature_span.is_some_and(|span| span.source_code(ctx).contains("->"))
 }
 
 fn is_untyped<F>(
@@ -124,7 +124,7 @@ fn generate_typed_signature(
          needs_output_type={needs_output_type}"
     );
 
-    let original_sig_text = original_sig_span.text(ctx);
+    let original_sig_text = original_sig_span.source_code(ctx);
     let is_multiline = has_multiline_parameters(original_sig_text);
 
     let params_text = if has_no_params {

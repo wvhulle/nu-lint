@@ -1,6 +1,8 @@
 use nu_protocol::ast::{Expr, Expression, Pipeline};
 
-use crate::{Fix, Replacement, context::LintContext, rule::Rule, violation::Violation};
+use crate::{
+    Fix, Replacement, ast::span::SpanExt, context::LintContext, rule::Rule, violation::Violation,
+};
 fn check_subexpression_for_is_empty(block_id: nu_protocol::BlockId, context: &LintContext) -> bool {
     let block = context.working_set.get_block(block_id);
     let Some(pipeline) = block.pipelines.first() else {
@@ -49,7 +51,7 @@ fn extract_pipeline_text(pipeline: &Pipeline, context: &LintContext) -> Option<S
     let start_span = elements_before_is_empty.first().unwrap().expr.span;
     let end_span = elements_before_is_empty.last().unwrap().expr.span;
     let combined_span = nu_protocol::Span::new(start_span.start, end_span.end);
-    let expr_text = &context.source[combined_span.start..combined_span.end];
+    let expr_text = combined_span.source_code(context);
     Some(format!("{} | is-not-empty", expr_text.trim()))
 }
 fn generate_fix_from_subexpression(

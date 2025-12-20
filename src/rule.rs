@@ -51,7 +51,7 @@ impl Rule {
 #[cfg(test)]
 impl Rule {
     fn run_check(&self, code: &str) -> Vec<Violation> {
-        LintContext::test_with_parsed_source(code, |context| (self.check)(&context))
+        LintContext::test_get_violations(code, |context| (self.check)(context))
     }
 
     fn first_violation(&self, code: &str) -> Violation {
@@ -159,31 +159,13 @@ impl Rule {
         );
     }
 
-    #[allow(unused, reason = "Will be used.")]
-    #[track_caller]
-    pub fn assert_span_label_contains(&self, code: &str, expected_text: &str) {
-        let violation = self.first_violation(code);
-        let label_texts: Vec<&str> = violation
-            .extra_labels
-            .iter()
-            .filter_map(|l| l.label())
-            .collect();
-
-        assert!(
-            violation
-                .primary_label
-                .is_some_and(|text| text.contains(expected_text)),
-            "Expected a label to contain '{expected_text}', but got labels: {label_texts:?}"
-        );
-    }
-
     #[track_caller]
     pub fn assert_labels_contain(&self, code: &str, expected_text: &str) {
         let violation = self.first_violation(code);
         let label_texts: Vec<&str> = violation
             .extra_labels
             .iter()
-            .filter_map(|l| l.label())
+            .filter_map(|(_, label)| label.as_deref())
             .collect();
 
         assert!(
@@ -204,7 +186,8 @@ impl Rule {
         );
 
         let replacement = &fix.replacements[0];
-        let original_text = &code[replacement.span.start..replacement.span.end];
+        let file_span = replacement.file_span();
+        let original_text = &code[file_span.start..file_span.end];
         let replacement_text = &replacement.replacement_text;
 
         assert!(

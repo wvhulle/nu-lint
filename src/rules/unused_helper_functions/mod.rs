@@ -36,20 +36,29 @@ fn collect_function_definitions_with_spans(
     functions.into_iter().collect()
 }
 
-fn expand_span_to_full_line(span: Span, source: &str) -> Span {
+/// Expand a span to include the full line(s) it occupies
+/// Takes a global AST span and returns a global span (will be normalized later)
+fn expand_span_to_full_line(context: &LintContext, span: Span) -> Span {
+    let source = context.whole_source();
     let bytes = source.as_bytes();
+    let file_offset = context.file_offset();
 
-    let start = bytes[..span.start]
+    // Convert global span to file-relative for slicing
+    let file_start = span.start.saturating_sub(file_offset);
+    let file_end = span.end.saturating_sub(file_offset);
+
+    let start = bytes[..file_start]
         .iter()
         .rposition(|&b| b == b'\n')
         .map_or(0, |pos| pos + 1);
 
-    let end = bytes[span.end..]
+    let end = bytes[file_end..]
         .iter()
         .position(|&b| b == b'\n')
-        .map_or(source.len(), |pos| span.end + pos + 1);
+        .map_or(source.len(), |pos| file_end + pos + 1);
 
-    Span::new(start, end)
+    // Return as global span (add offset back) so it gets normalized consistently
+    Span::new(start + file_offset, end + file_offset)
 }
 
 fn check(context: &LintContext) -> Vec<Violation> {
@@ -81,14 +90,14 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .filter(|(name, _)| !is_main_entry_point(name) && !called_functions.contains(*name))
         .map(|(name, (_, def_span))| {
             let name_span = context.find_declaration_span(name);
-            let removal_span = expand_span_to_full_line(*def_span, context.source);
+            let removal_span = expand_span_to_full_line(context, *def_span);
 
             let fix = Fix::with_explanation(
                 format!("Remove unused function '{name}'"),
                 vec![Replacement::new(removal_span, String::new())],
             );
 
-            Violation::new(
+            Violation::with_file_span(
                 format!("Function '{name}' is defined but never called from 'main'"),
                 name_span,
             )

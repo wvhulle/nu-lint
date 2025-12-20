@@ -2,14 +2,7 @@ use nu_protocol::{Id, marker::Block};
 
 use crate::{context::LintContext, rule::Rule, violation::Violation};
 const MAX_LINES: usize = 40;
-fn count_lines_in_span(source: &str, span: nu_protocol::Span) -> usize {
-    let start = span.start;
-    let end = span.end;
-    if start >= source.len() || end > source.len() || start >= end {
-        return 0;
-    }
-    source[start..end].lines().count()
-}
+
 fn check(context: &LintContext) -> Vec<Violation> {
     context
         .collect_function_definitions()
@@ -27,7 +20,7 @@ fn function_violation(
     let block = context.working_set.get_block(block_id);
     let function_span = context.find_declaration_span(function_name);
     let block_span = block.span?;
-    let line_count = count_lines_in_span(context.source, block_span);
+    let line_count = context.get_span_text(block_span).lines().count();
     (line_count > MAX_LINES).then(|| {
         let message = format!(
             "Function `{function_name}` has {line_count} lines, which exceeds the maximum of \
@@ -37,7 +30,7 @@ fn function_violation(
             "Consider refactoring `{function_name}` into smaller, more focused functions. Break \
              down complex logic into helper functions with clear responsibilities."
         );
-        Violation::new(message, function_span)
+        Violation::with_file_span(message, function_span)
             .with_primary_label(format!("{line_count} lines"))
             .with_help(suggestion)
     })

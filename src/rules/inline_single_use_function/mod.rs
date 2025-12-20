@@ -1,6 +1,6 @@
 use nu_protocol::ast::{Expr, Pipeline, Traverse};
 
-use crate::{context::LintContext, rule::Rule, violation::Violation};
+use crate::{ast::span::SpanExt, context::LintContext, rule::Rule, violation::Violation};
 fn is_non_comment_statement(pipeline: &Pipeline) -> bool {
     pipeline
         .elements
@@ -8,7 +8,7 @@ fn is_non_comment_statement(pipeline: &Pipeline) -> bool {
         .any(|elem| !matches!(&elem.expr.expr, Expr::Nothing))
 }
 fn is_single_line_in_source(block_span: nu_protocol::Span, context: &LintContext) -> bool {
-    let source_text = &context.source[block_span.start..block_span.end];
+    let source_text = block_span.source_code(context);
     source_text.lines().count() <= 3
 }
 fn has_single_statement_body(block_id: nu_protocol::BlockId, context: &LintContext) -> bool {
@@ -49,9 +49,7 @@ fn count_function_calls(function_name: &str, context: &LintContext) -> usize {
     all_calls.len()
 }
 fn is_exported_function(function_name: &str, context: &LintContext) -> bool {
-    context
-        .source
-        .contains(&format!("export def {function_name}"))
+    context.source_contains(&format!("export def {function_name}"))
 }
 fn check(context: &LintContext) -> Vec<Violation> {
     let function_definitions = context.collect_function_definitions();
@@ -68,8 +66,10 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .map(|(block_id, function_name)| {
             let name_span = context.find_declaration_span(function_name);
             let block = context.working_set.get_block(*block_id);
-            let body_span = block.span.unwrap_or(name_span);
-            Violation::new(
+            // body_span is global (AST), name_span is file-relative - use AST span or
+            // convert
+            let body_span = block.span.unwrap_or_else(|| name_span.into());
+            Violation::with_file_span(
                 format!("Function `{function_name}` has a single-line body and is only used once"),
                 name_span,
             )

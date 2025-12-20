@@ -1,6 +1,8 @@
 use nu_protocol::ast::{Expr, Pipeline};
 
-use crate::{Fix, Replacement, context::LintContext, rule::Rule, violation::Violation};
+use crate::{
+    Fix, Replacement, ast::span::SpanExt, context::LintContext, rule::Rule, violation::Violation,
+};
 /// Check if a pipeline starts with redundant $in
 fn pipeline_starts_with_redundant_in(pipeline: &Pipeline, context: &LintContext) -> bool {
     log::debug!(
@@ -68,7 +70,7 @@ fn pipeline_starts_with_redundant_in(pipeline: &Pipeline, context: &LintContext)
 }
 fn extract_function_body_from_source(decl_name: &str, context: &LintContext) -> Option<String> {
     let decl_span = context.find_declaration_span(decl_name);
-    let contents = String::from_utf8_lossy(context.working_set.get_span_contents(decl_span));
+    let contents = nu_protocol::Span::from(decl_span).source_code(context);
     log::debug!(
         "Extracting body for '{decl_name}' from source: span={decl_span:?}, contents='{contents}'"
     );
@@ -86,7 +88,7 @@ fn extract_function_body_from_block(
     context: &LintContext,
 ) -> Option<String> {
     block_span.and_then(|span| {
-        let contents = String::from_utf8_lossy(context.working_set.get_span_contents(span));
+        let contents = span.source_code(context);
         let trimmed = contents.trim();
         trimmed
             .strip_prefix('{')
@@ -138,7 +140,7 @@ fn create_violation(
 ) -> Violation {
     let name_span = context.find_declaration_span(&signature.name);
     let suggestion = "Remove redundant $in - it's implicit at the start of pipelines";
-    let violation = Violation::new(
+    let violation = Violation::with_file_span(
         format!(
             "Redundant $in usage in function '{}' - $in is implicit at the start of pipelines",
             signature.name
@@ -155,7 +157,7 @@ fn create_violation(
     };
 
     generate_fix_text(signature, block_span, context).map_or(violation.clone(), |fix_text| {
-        violation.with_fix(create_fix(fix_text, name_span))
+        violation.with_fix(create_fix(fix_text, name_span.into()))
     })
 }
 fn check(context: &LintContext) -> Vec<Violation> {

@@ -208,7 +208,7 @@ impl CallExt for Call {
         let var_id = block.signature.required_positional.first()?.var_id?;
 
         let var = context.working_set.get_variable(var_id);
-        Some(var.declaration_span.text(context).to_string())
+        Some(var.declaration_span.source_code(context).to_string())
     }
 
     fn loop_var_from_for(&self, context: &LintContext) -> Option<String> {
@@ -218,7 +218,7 @@ impl CallExt for Call {
 
     fn extract_declaration_name(&self, context: &LintContext) -> Option<(String, Span)> {
         let name_arg = self.get_first_positional_arg()?;
-        let name = name_arg.span.text(context);
+        let name = name_arg.span.source_code(context);
         Some((name.to_string(), name_arg.span))
     }
 
@@ -231,7 +231,7 @@ impl CallExt for Call {
         let name_arg = self.get_first_positional_arg()?;
         let name = match &name_arg.expr {
             Expr::String(s) | Expr::RawString(s) => s.clone(),
-            _ => name_arg.span.text(context).to_string(),
+            _ => name_arg.span.source_code(context).to_string(),
         };
 
         let body_expr = self.get_positional_arg(2)?;
@@ -252,7 +252,7 @@ impl CallExt for Call {
         let var_arg = self.get_first_positional_arg()?;
 
         if let Expr::VarDecl(var_id) = &var_arg.expr {
-            let var_name = var_arg.span.text(context);
+            let var_name = var_arg.span.source_code(context);
             Some((*var_id, var_name.to_string(), var_arg.span))
         } else {
             None

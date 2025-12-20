@@ -28,7 +28,7 @@ fn extract_delimiter_from_split_call(call: &Call, context: &LintContext) -> Opti
         return None;
     }
     let arg = call.get_first_positional_arg()?;
-    let text = arg.span.text(context);
+    let text = arg.span.source_code(context);
     match &arg.expr {
         Expr::String(s) | Expr::RawString(s) => Some(s.clone()),
         _ => {
@@ -148,7 +148,7 @@ fn is_indexed_access_call(call: &Call, context: &LintContext) -> bool {
 
 fn extract_index_from_call(call: &Call, context: &LintContext) -> Option<usize> {
     call.get_first_positional_arg()
-        .and_then(|arg| arg.span.text(context).parse().ok())
+        .and_then(|arg| arg.span.source_code(context).parse().ok())
 }
 
 fn check_pipeline_for_split_get(pipeline: &Pipeline, context: &LintContext) -> Option<Violation> {

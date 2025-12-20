@@ -9,10 +9,8 @@ fn trailing_space_pattern() -> &'static Regex {
 }
 fn check(context: &LintContext) -> Vec<Violation> {
     let mut violations = Vec::new();
-    let source = context.source;
-    let lines: Vec<&str> = source.lines().collect();
     let mut byte_offset = 0;
-    for (line_num, line) in lines.iter().enumerate() {
+    for (line_num, line) in context.source_lines().enumerate() {
         if let Some(m) = trailing_space_pattern().find(line) {
             let violation_start = byte_offset + m.start();
             let violation_end = byte_offset + m.end();

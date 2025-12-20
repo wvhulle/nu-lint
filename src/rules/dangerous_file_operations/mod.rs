@@ -4,7 +4,7 @@ use nu_protocol::{
 };
 
 use crate::{
-    ast::call::CallExt,
+    ast::{call::CallExt, span::SpanExt},
     context::LintContext,
     effect::{
         CommonEffect,
@@ -68,7 +68,7 @@ fn extract_dangerous_command<'a>(
 ) -> Option<DangerousCommand<'a>> {
     match &expr.expr {
         Expr::ExternalCall(head, args) => {
-            let cmd_name = &context.source[head.span.start..head.span.end];
+            let cmd_name = head.span.source_code(context);
 
             if !has_external_side_effect(
                 cmd_name,

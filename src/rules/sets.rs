@@ -21,7 +21,7 @@ const ERROR_HANDLING_RULES: &[Rule] = &[
     super::check_complete_exit_code::rule(),
     super::descriptive_error_messages::rule(),
     super::escape_string_interpolation_operators::rule(),
-    super::redirection::prefer_complete_for_external_commands::rule(),
+    super::pipelines::non_final_failure_check::rule(),
     super::prefer_error_make_for_stderr::rule(),
     super::prefer_try_for_error_handling::rule(),
     super::print_exit_use_error_make::rule(),

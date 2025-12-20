@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, str::from_utf8};
 
 use nu_protocol::{BlockId, Span};
 
@@ -8,7 +8,7 @@ pub trait SpanExt {
     #[must_use]
     /// Returns source text for this span. Example: span of `$x + 1` returns "$x
     /// + 1"
-    fn text<'a>(&self, context: &'a LintContext) -> &'a str;
+    fn source_code<'a>(&self, context: &'a LintContext) -> &'a str;
     #[must_use]
     /// Finds function containing this span. Example: statement span inside `def
     /// process [] { ... }`
@@ -28,8 +28,8 @@ pub trait SpanExt {
 }
 
 impl SpanExt for Span {
-    fn text<'a>(&self, context: &'a LintContext) -> &'a str {
-        &context.source[self.start..self.end]
+    fn source_code<'a>(&self, context: &'a LintContext) -> &'a str {
+        from_utf8(context.working_set.get_span_contents(*self)).unwrap_or("")
     }
 
     fn find_containing_function(
@@ -53,7 +53,7 @@ impl SpanExt for Span {
     }
 
     fn find_substring_span(&self, substring: &str, context: &LintContext) -> Span {
-        self.text(context)
+        self.source_code(context)
             .as_bytes()
             .windows(substring.len())
             .position(|window| window == substring.as_bytes())
@@ -63,16 +63,18 @@ impl SpanExt for Span {
     }
 
     fn has_inline_doc_comment(&self, context: &LintContext) -> bool {
-        let line_start = context.source[..self.start]
-            .rfind('\n')
-            .map_or(0, |pos| pos + 1);
+        // Get the source text after this span
+        let after_text = context.source_after_span(*self);
 
-        let line_end = context.source[self.end..]
-            .find('\n')
-            .map_or(context.source.len(), |pos| self.end + pos);
+        // Find the end of the line (either newline or end of file)
+        let line_end = after_text.find('\n').unwrap_or(after_text.len());
 
-        let line_text = &context.source[line_start..line_end];
+        let rest_of_line = &after_text[..line_end];
 
-        line_text.contains(" # ")
+        // Check if the rest of the line contains a documentation comment
+        // For typed parameters like "count: int # Description", the span only covers
+        // "count" so we need to check if " # " appears anywhere on the rest of
+        // the line
+        rest_of_line.contains(" # ")
     }
 }

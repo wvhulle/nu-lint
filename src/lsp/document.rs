@@ -61,10 +61,11 @@ impl ServerState {
             .iter()
             .filter_map(|violation| {
                 let fix = violation.fix.as_ref()?;
+                let file_span = violation.file_span();
                 let violation_range = doc_state.line_index.span_to_range(
                     &doc_state.content,
-                    violation.span.start,
-                    violation.span.end,
+                    file_span.start,
+                    file_span.end,
                 );
 
                 let overlaps = ranges_overlap(&range, &violation_range);
@@ -75,13 +76,16 @@ impl ServerState {
                 let edits: Vec<TextEdit> = fix
                     .replacements
                     .iter()
-                    .map(|r| TextEdit {
-                        range: doc_state.line_index.span_to_range(
-                            &doc_state.content,
-                            r.span.start,
-                            r.span.end,
-                        ),
-                        new_text: r.replacement_text.to_string(),
+                    .map(|r| {
+                        let file_span = r.file_span();
+                        TextEdit {
+                            range: doc_state.line_index.span_to_range(
+                                &doc_state.content,
+                                file_span.start,
+                                file_span.end,
+                            ),
+                            new_text: r.replacement_text.to_string(),
+                        }
                     })
                     .collect();
 

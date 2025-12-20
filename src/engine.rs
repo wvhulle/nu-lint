@@ -1,5 +1,4 @@
 use std::{
-    borrow::Cow,
     fs,
     io::{self, BufRead},
     path::{Path, PathBuf},
@@ -18,17 +17,27 @@ use nu_protocol::{
 use rayon::prelude::*;
 
 use crate::{
-    LintError, LintLevel, config::Config, context::LintContext, rules::ALL_RULES,
-    violation::Violation,
+    LintError, LintLevel,
+    config::Config,
+    context::LintContext,
+    rules::ALL_RULES,
+    violation::{SourceFile, Violation},
 };
 
 /// Parse Nushell source code into an AST and return both the Block and
-/// `StateWorkingSet`.
-fn parse_source<'a>(engine_state: &'a EngineState, source: &[u8]) -> (Block, StateWorkingSet<'a>) {
+/// `StateWorkingSet`, along with the file's starting offset in the span space.
+fn parse_source<'a>(
+    engine_state: &'a EngineState,
+    source: &[u8],
+) -> (Block, StateWorkingSet<'a>, usize) {
     let mut working_set = StateWorkingSet::new(engine_state);
-    let block = parse(&mut working_set, None, source, false);
+    // Get the offset where this file will start in the virtual span space
+    let file_offset = working_set.next_span_start();
+    // Add the source to the working set's file stack so spans work correctly
+    let _file_id = working_set.add_file("source".to_string(), source);
+    let block = parse(&mut working_set, Some("source"), source, false);
 
-    ((*block).clone(), working_set)
+    ((*block).clone(), working_set, file_offset)
 }
 
 /// Check if a file is a Nushell script (by extension or shebang)
@@ -106,24 +115,25 @@ pub struct LintEngine {
 
 impl LintEngine {
     /// Get or initialize the default engine state
-    fn default_engine_state() -> &'static EngineState {
+    #[must_use]
+    pub fn default_engine_state() -> &'static EngineState {
         static ENGINE: OnceLock<EngineState> = OnceLock::new();
         ENGINE.get_or_init(|| {
-            let engine_state = nu_cmd_lang::create_default_context();
-            let engine_state = nu_command::add_shell_command_context(engine_state);
-            let mut engine_state = nu_cli::add_cli_context(engine_state);
+            let mut engine_state = nu_cmd_lang::create_default_context();
+            engine_state = nu_command::add_shell_command_context(engine_state);
+            engine_state = nu_cli::add_cli_context(engine_state);
 
-            // Add print command (it's in nu-cli but not added by add_cli_context)
+            // Add print command (exported by nu-cli but not added by add_cli_context)
             let delta = {
                 let mut working_set = StateWorkingSet::new(&engine_state);
                 working_set.add_decl(Box::new(nu_cli::Print));
                 working_set.render()
             };
+            engine_state
+                .merge_delta(delta)
+                .expect("Failed to add Print command");
 
-            if let Err(err) = engine_state.merge_delta(delta) {
-                eprintln!("Error adding Print command: {err:?}");
-            }
-
+            nu_std::load_standard_library(&mut engine_state).unwrap();
             engine_state
         })
     }
@@ -149,16 +159,14 @@ impl LintEngine {
         })?;
         let mut violations = self.lint_str(&source);
 
-        let file_path: &str = path.to_str().unwrap();
-        let file_path: Cow<'static, str> = file_path.to_owned().into();
         for violation in &mut violations {
-            violation.file = Some(file_path.clone());
+            violation.file = Some(path.into());
         }
 
         violations.sort_by(|a, b| {
-            a.span
+            a.file_span()
                 .start
-                .cmp(&b.span.start)
+                .cmp(&b.file_span().start)
                 .then(a.lint_level.cmp(&b.lint_level))
         });
         Ok(violations)
@@ -205,13 +213,11 @@ impl LintEngine {
     #[must_use]
     pub fn lint_stdin(&self, source: &str) -> Vec<Violation> {
         let mut violations = self.lint_str(source);
-
-        let stdin_marker: Cow<'static, str> = "<stdin>".to_owned().into();
-        let source_content: Cow<'static, str> = source.to_owned().into();
+        let source_owned = source.to_string();
 
         for violation in &mut violations {
-            violation.file = Some(stdin_marker.clone());
-            violation.source = Some(source_content.clone());
+            violation.file = Some(SourceFile::Stdin);
+            violation.source = Some(source_owned.clone().into());
         }
 
         violations
@@ -219,16 +225,19 @@ impl LintEngine {
 
     #[must_use]
     pub fn lint_str(&self, source: &str) -> Vec<Violation> {
-        let (block, working_set) = parse_source(self.engine_state, source.as_bytes());
+        let (block, working_set, file_offset) = parse_source(self.engine_state, source.as_bytes());
 
-        let context = LintContext {
-            source,
-            ast: &block,
-            engine_state: self.engine_state,
-            working_set: &working_set,
-        };
+        let context =
+            LintContext::new(source, &block, self.engine_state, &working_set, file_offset);
 
-        self.collect_violations(&context)
+        let mut violations = self.collect_violations(&context);
+
+        // Normalize all spans in violations to be file-relative
+        for violation in &mut violations {
+            violation.normalize_spans(file_offset);
+        }
+
+        violations
     }
 
     /// Collect violations from all enabled rules

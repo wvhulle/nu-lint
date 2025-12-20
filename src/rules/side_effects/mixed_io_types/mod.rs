@@ -105,7 +105,7 @@ fn analyze_function_body(
     );
 
     Some(
-        Violation::new(message, context.find_declaration_span(function_name))
+        Violation::with_file_span(message, context.find_declaration_span(function_name))
             .with_primary_label("function with mixed I/O")
             .with_help(
                 "Consider separating different I/O operations into focused functions. This makes \

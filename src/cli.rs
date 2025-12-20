@@ -11,6 +11,7 @@ use crate::{
     config::Config,
     engine::{LintEngine, collect_nu_files},
     fix::{apply_fixes, apply_fixes_to_stdin, format_fix_results},
+    log::instrument,
     lsp,
     output::{Format, Summary, format_output},
     rules::{ALL_RULES, sets::ALL_GROUPS},
@@ -56,6 +57,10 @@ pub struct Cli {
     /// Read from stdin
     #[arg(long)]
     stdin: bool,
+
+    /// Verbose output
+    #[arg(long, short = 'v')]
+    verbose: bool,
 }
 
 impl Cli {
@@ -205,6 +210,10 @@ pub fn run() {
     if let Err(e) = cli.validate() {
         eprintln!("Error: {e}");
         process::exit(1);
+    }
+
+    if cli.verbose {
+        instrument();
     }
 
     if cli.list_rules {

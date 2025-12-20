@@ -16,9 +16,7 @@ fn build_fix(
     let args_text: String = args
         .iter()
         .map(|arg| match arg {
-            ExternalArgument::Regular(e) | ExternalArgument::Spread(e) => {
-                &ctx.source[e.span.start..e.span.end]
-            }
+            ExternalArgument::Regular(e) | ExternalArgument::Spread(e) => ctx.get_span_text(e.span),
         })
         .collect::<Vec<_>>()
         .join(" ");
@@ -50,7 +48,7 @@ fn check(ctx: &LintContext) -> Vec<Violation> {
             return vec![];
         }
 
-        let cmd = &ctx.source[head.span.start..head.span.end];
+        let cmd = ctx.get_span_text(head.span);
         if has_builtin(cmd, ctx) {
             return vec![];
         }

@@ -4,12 +4,13 @@ use nu_protocol::{
 };
 
 use crate::{context::LintContext, rule::Rule, violation::Violation};
-fn check_list_commas(source: &str, span: Span, items: &[ListItem]) -> Vec<Violation> {
+
+fn check_list_commas(context: &LintContext, span: Span, items: &[ListItem]) -> Vec<Violation> {
     let mut violations = Vec::new();
-    if items.len() < 2 || span.end > source.len() {
+    if items.len() < 2 {
         return violations;
     }
-    let list_text = &source[span.start..span.end];
+    let list_text = context.get_span_text(span);
     // Skip if not a bracket list
     if !list_text.trim_start().starts_with('[') {
         return violations;
@@ -25,17 +26,16 @@ fn check_list_commas(source: &str, span: Span, items: &[ListItem]) -> Vec<Violat
         if current_expr.span.end >= next_expr.span.start {
             continue;
         }
-        let between_start = current_expr.span.end;
-        let between_end = next_expr.span.start;
-        if between_start >= between_end || between_end > source.len() {
-            continue;
-        }
-        let between_text = &source[between_start..between_end];
+        let between_span = Span::new(current_expr.span.end, next_expr.span.start);
+        let between_text = context.get_span_text(between_span);
         if between_text.contains(',') {
-            // Find the comma position for precise span
+            // Find the comma position for precise span (use global span - will be
+            // normalized later)
             if let Some(comma_pos) = between_text.find(',') {
-                let comma_span =
-                    Span::new(between_start + comma_pos, between_start + comma_pos + 1);
+                let comma_span = Span::new(
+                    between_span.start + comma_pos,
+                    between_span.start + comma_pos + 1,
+                );
                 violations.push(
                     Violation::new("Omit commas between list items", comma_span)
                         .with_help("Remove the comma - Nushell lists don't need commas"),
@@ -47,7 +47,7 @@ fn check_list_commas(source: &str, span: Span, items: &[ListItem]) -> Vec<Violat
 }
 fn check(context: &LintContext) -> Vec<Violation> {
     context.collect_rule_violations(|expr, ctx| match &expr.expr {
-        Expr::List(items) => check_list_commas(ctx.source, expr.span, items),
+        Expr::List(items) => check_list_commas(ctx, expr.span, items),
         _ => vec![],
     })
 }

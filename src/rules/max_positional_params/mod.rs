@@ -12,7 +12,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
             // Only create violation if count exceeds threshold
             (positional_count > MAX_POSITIONAL).then(|| {
                 let name_span = context.find_declaration_span(&signature.name);
-                Violation::new(
+                Violation::with_file_span(
                     format!(
                         "Command has {positional_count} positional parameters, should have ≤ \
                          {MAX_POSITIONAL}"

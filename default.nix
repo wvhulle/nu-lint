@@ -3,7 +3,7 @@
   fetchFromGitHub ? pkgs.fetchFromGitHub,
 }:
 let
-  meta = builtins.fromTOML (pkgs.lib.readFile ./Cargo.toml);
+  meta = builtins.fromTOML (builtins.readFile ./Cargo.toml);
 
   fenix = pkgs.callPackage (fetchFromGitHub {
     owner = "nix-community";

@@ -12,24 +12,21 @@ fn has_doc_comment_before(context: &LintContext, span: nu_protocol::Span) -> boo
         return false;
     }
 
-    // Look for the last non-empty line before the span
+    // Look for documentation comments, skipping over attributes and empty lines
     for line in lines.iter().rev() {
         let trimmed = line.trim();
         if trimmed.is_empty() {
-            continue; // Skip empty lines
+            continue;
         }
 
-        // Check if it's a documentation comment
+        // Skip attribute lines (like @example, @search-terms, etc.)
+        if trimmed.starts_with('@') {
+            continue;
+        }
+
+        // Check if it's a documentation comment (not a shebang ##)
         let is_comment = trimmed.starts_with('#') && !trimmed.starts_with("##");
-
-        let is_test_comment = trimmed.to_lowercase().contains("bad:")
-            || trimmed.to_lowercase().contains("good:")
-            || trimmed.to_lowercase().contains("todo:")
-            || trimmed.to_lowercase().contains("fixme:")
-            || trimmed.to_lowercase().contains("test:")
-            || trimmed.to_lowercase().contains("example:");
-
-        return is_comment && !is_test_comment;
+        return is_comment;
     }
 
     false
@@ -51,12 +48,15 @@ fn check_exported_function(call: &Call, context: &LintContext) -> Option<Violati
     } else {
         Some(
             Violation::new(
-                format!("Exported function '{func_name}' is missing documentation"),
+                format!("Exported function '{func_name}' lacks documentation comment"),
                 call.head,
             )
-            .with_primary_label("without documentation")
-            .with_extra_label("function name", name_span)
-            .with_help("Add a documentation comment above the function."),
+            .with_primary_label("missing doc comment")
+            .with_extra_label("exported function", name_span)
+            .with_help(format!(
+                "Add a documentation comment (starting with #) above the export.\nExample:\n  # \
+                 Description of what this function does\n  export def {func_name} [] {{ ... }}"
+            )),
         )
     }
 }
@@ -73,11 +73,11 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
 pub const fn rule() -> Rule {
     Rule::new(
-        "exported_function_docs",
+        "add_doc_comment_exported_fn",
         "Exported functions should have documentation comments",
         check,
     )
-    .with_doc_url("https://www.nushell.sh/book/modules.html")
+    .with_doc_url("https://www.nushell.sh/book/custom_commands.html#documenting-your-command")
 }
 
 #[cfg(test)]

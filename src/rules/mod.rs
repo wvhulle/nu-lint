@@ -47,6 +47,7 @@ mod spacing;
 mod systemd_journal_prefix;
 mod unnecessary_mut;
 mod unnecessary_variable_before_return;
+mod unsafe_dynamic_record_access;
 mod unused_helper_functions;
 mod upstream;
 
@@ -132,6 +133,7 @@ pub const ALL_RULES: &[Rule] = &[
     systemd_journal_prefix::rule(),
     unnecessary_mut::rule(),
     unnecessary_variable_before_return::rule(),
+    unsafe_dynamic_record_access::rule(),
     unused_helper_functions::rule(),
     upstream::nu_deprecated::rule(),
     upstream::nu_parse_error::rule(),

@@ -58,7 +58,7 @@ cargo install --git "$THIS_GIT_URL"
 Run without installing (using flakes):
 
 ```bash
-nix run github:wvhulle/nu-lint
+nix run git+https://codeberg.org/wvhulle/nu-lint
 ```
 
 ## Editor extension

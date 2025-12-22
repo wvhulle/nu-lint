@@ -1,4 +1,4 @@
-use crate::{context::LintContext, rule::Rule, violation::Violation};
+use crate::{LintLevel, context::LintContext, rule::Rule, violation::Violation};
 const MAX_POSITIONAL: usize = 2;
 fn check(context: &LintContext) -> Vec<Violation> {
     context
@@ -30,6 +30,7 @@ pub const fn rule() -> Rule {
         "max_positional_params",
         "Custom commands should have ≤ 2 positional parameters",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url(
         "https://www.nushell.sh/book/style_guide.html#options-and-parameters-of-custom-commands",

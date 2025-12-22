@@ -1,6 +1,8 @@
 use nu_protocol::ast::{Call, Expr};
 
-use crate::{ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation};
+use crate::{
+    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation,
+};
 
 /// Check if there's a documentation comment before the given span
 /// Since comments are not preserved in AST, we need to check source text
@@ -76,6 +78,7 @@ pub const fn rule() -> Rule {
         "add_doc_comment_exported_fn",
         "Exported functions should have documentation comments",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/custom_commands.html#documenting-your-command")
 }

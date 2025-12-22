@@ -6,6 +6,7 @@ use nu_protocol::{
 };
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
     context::LintContext,
     effect::{
@@ -223,6 +224,7 @@ pub const fn rule() -> Rule {
         "check_complete_exit_code",
         "Check exit codes when using 'complete' to capture dangerous external command results",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/complete.html")
 }

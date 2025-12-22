@@ -28,7 +28,7 @@ fn violation_to_json(violation: &Violation) -> JsonViolation {
             .as_deref()
             .unwrap_or("unknown")
             .to_string(),
-        lint_level: violation.lint_level.to_string(),
+        lint_level: format!("{0:?}", violation.lint_level),
         message: violation.message.to_string(),
         file: violation.file.as_ref().map(ToString::to_string),
         line_start,

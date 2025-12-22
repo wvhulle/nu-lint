@@ -1,6 +1,7 @@
 use nu_protocol::ast::{Call, Expr, Expression};
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, span::SpanExt},
     context::LintContext,
     rule::Rule,
@@ -144,6 +145,7 @@ pub const fn rule() -> Rule {
         "row_condition_above_closure",
         "Prefer row conditions over closures in 'where' for conciseness",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/where.html")
 }

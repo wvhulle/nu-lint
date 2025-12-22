@@ -6,6 +6,7 @@ use nu_protocol::{
 };
 
 use crate::{
+    LintLevel,
     ast::{block::BlockExt, call::CallExt},
     context::LintContext,
     rule::Rule,
@@ -90,6 +91,7 @@ pub const fn rule() -> Rule {
         "unused_helper_functions",
         "Detect helper functions that are never called in files with a 'main' function",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/custom_commands.html")
 }

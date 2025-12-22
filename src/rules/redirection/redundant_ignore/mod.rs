@@ -1,7 +1,7 @@
 use nu_protocol::ast::{Expr, Expression, Pipeline};
 
 use crate::{
-    Fix, Replacement,
+    Fix, LintLevel, Replacement,
     ast::{call::CallExt, pipeline::PipelineExt, span::SpanExt},
     context::LintContext,
     effect::external::external_command_has_no_output,
@@ -106,6 +106,7 @@ pub const fn rule() -> Rule {
         "redundant_ignore",
         "Commands producing output that is discarded with '| ignore'",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/ignore.html")
 }

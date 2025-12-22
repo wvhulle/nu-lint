@@ -13,7 +13,7 @@ mod exit_only_in_main;
 mod external_script_as_argument;
 mod forbid_excessive_nesting;
 mod inline_single_use_function;
-mod pipelines;
+mod non_final_failure_check;
 mod redirection;
 mod side_effects;
 mod strong_typing;
@@ -112,7 +112,7 @@ pub const ALL_RULES: &[Rule] = &[
     prefer_where_over_each_if::rule(),
     prefer_where_over_for_if::rule(),
     print_exit_use_error_make::rule(),
-    pipelines::non_final_failure_check::rule(),
+    non_final_failure_check::rule(),
     redirection::prefer_complete_over_dev_null::rule(),
     redirection::redundant_ignore::rule(),
     remove_redundant_in::rule(),

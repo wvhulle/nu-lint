@@ -392,7 +392,7 @@ mod tests {
 
         let violation = Violation {
             rule_id: Some(Cow::Borrowed("test_rule")),
-            lint_level: LintLevel::Warn,
+            lint_level: LintLevel::Warning,
             message: Cow::Borrowed("Test"),
             span: FileSpan::new(0, 21).into(),
             primary_label: None,
@@ -539,7 +539,7 @@ mod tests {
 
         let with_fix = Violation {
             rule_id: Some(Cow::Borrowed("test_rule")),
-            lint_level: LintLevel::Warn,
+            lint_level: LintLevel::Warning,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 5).into(),
             primary_label: None,
@@ -554,7 +554,7 @@ mod tests {
 
         let without_fix = Violation {
             rule_id: Some(Cow::Borrowed("test_rule")),
-            lint_level: LintLevel::Warn,
+            lint_level: LintLevel::Warning,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 5).into(),
             primary_label: None,
@@ -576,7 +576,7 @@ mod tests {
     fn test_group_violations_by_file() {
         let v1 = Violation {
             rule_id: Some(Cow::Borrowed("test_rule")),
-            lint_level: LintLevel::Warn,
+            lint_level: LintLevel::Warning,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 5).into(),
             primary_label: None,
@@ -591,7 +591,7 @@ mod tests {
 
         let v2 = Violation {
             rule_id: Some(Cow::Borrowed("test_rule")),
-            lint_level: LintLevel::Warn,
+            lint_level: LintLevel::Warning,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 5).into(),
             primary_label: None,
@@ -606,7 +606,7 @@ mod tests {
 
         let v3 = Violation {
             rule_id: Some(Cow::Borrowed("test_rule")),
-            lint_level: LintLevel::Warn,
+            lint_level: LintLevel::Warning,
             message: Cow::Borrowed("Test"),
             span: Span::new(5, 10).into(),
             primary_label: None,

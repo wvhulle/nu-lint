@@ -1,6 +1,7 @@
 use nu_protocol::ast::{Expr, Expression};
 
 use crate::{
+    LintLevel,
     ast::call::CallExt,
     context::LintContext,
     rule::Rule,
@@ -55,6 +56,7 @@ pub const fn rule() -> Rule {
         "prefer_lines_over_split",
         "Use 'lines' instead of 'split row \"\\n\"' for better performance and clarity",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/lines.html")
 }

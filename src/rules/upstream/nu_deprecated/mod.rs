@@ -1,6 +1,6 @@
 use nu_protocol::ParseWarning;
 
-use crate::{NU_PARSER_VERSION, context::LintContext, rule::Rule, violation::Violation};
+use crate::{LintLevel, NU_PARSER_VERSION, context::LintContext, rule::Rule, violation::Violation};
 
 fn check(context: &LintContext) -> Vec<Violation> {
     context
@@ -30,6 +30,7 @@ pub const fn rule() -> Rule {
         "nu_deprecated",
         "Nushell parser detected deprecated command or flag usage",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/")
 }

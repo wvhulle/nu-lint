@@ -4,6 +4,7 @@ use nu_protocol::{
 };
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::Rule,
@@ -153,6 +154,7 @@ pub const fn rule() -> Rule {
         "unnecessary_variable_before_return",
         "Variable assigned and immediately returned adds unnecessary verbosity",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/thinking_in_nu.html#implicit-return")
 }

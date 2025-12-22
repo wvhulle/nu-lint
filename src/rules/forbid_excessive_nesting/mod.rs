@@ -2,7 +2,9 @@ use nu_protocol::ast::{
     Block, Call, Expr, Expression, ListItem, MatchPattern, Pattern, Pipeline, RecordItem,
 };
 
-use crate::{ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation};
+use crate::{
+    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation,
+};
 
 const MAX_NESTING_DEPTH: usize = 4;
 
@@ -264,6 +266,7 @@ pub const fn rule() -> Rule {
         "forbid_excessive_nesting",
         "Avoid excessive nesting (more than 4 levels deep)",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/thinking_in_nu.html")
 }

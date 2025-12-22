@@ -1,6 +1,7 @@
 use nu_protocol::ast::{Expr, Expression};
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::Rule,
@@ -279,13 +280,9 @@ fn check(context: &LintContext) -> Vec<Violation> {
     context.collect_rule_violations(|expr, ctx| check_print_or_echo_call(expr, ctx))
 }
 pub const fn rule() -> Rule {
-    Rule::new(
-        "systemd_journal_prefix",
-        "Assign log levels to output that is compatible with the SystemD service option \
-         SyslogLevelPrefix. This will allow proper categorization of log messages in the systemd \
-         journal.",
-        check,
-    )
+    Rule::new("systemd_journal_prefix","Assign log levels to output that is compatible with the SystemD service option \
+     SyslogLevelPrefix. This will allow proper categorization of log messages in the systemd \
+     journal.",check,LintLevel::Hint)
     .with_doc_url("https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html#SyslogLevelPrefix=")
 }
 

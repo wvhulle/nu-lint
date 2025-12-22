@@ -6,6 +6,7 @@ use nu_protocol::{
 };
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     effect::builtin::{BuiltinEffect, has_builtin_side_effect},
@@ -136,6 +137,7 @@ pub const fn rule() -> Rule {
         "mixed_io_types",
         "Functions should not mix different types of I/O operations",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/custom_commands.html")
 }

@@ -1,6 +1,7 @@
 use nu_protocol::ast::{Call, Expr, Expression, RecordItem};
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::Rule,
@@ -118,6 +119,7 @@ pub const fn rule() -> Rule {
         "descriptive_error_messages",
         "Error messages should be descriptive and actionable",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/creating_errors.html")
 }

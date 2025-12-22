@@ -116,7 +116,7 @@ impl Cli {
         let summary = Summary::from_violations(&violations);
         eprintln!("{}", summary.format_compact());
 
-        let has_deny = violations.iter().any(|v| v.lint_level == LintLevel::Deny);
+        let has_deny = violations.iter().any(|v| v.lint_level == LintLevel::Error);
         if has_errors || has_deny {
             process::exit(1);
         }

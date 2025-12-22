@@ -1,6 +1,8 @@
 use nu_protocol::ast::{Expr, Pipeline, Traverse};
 
-use crate::{ast::span::SpanExt, context::LintContext, rule::Rule, violation::Violation};
+use crate::{
+    LintLevel, ast::span::SpanExt, context::LintContext, rule::Rule, violation::Violation,
+};
 fn is_non_comment_statement(pipeline: &Pipeline) -> bool {
     pipeline
         .elements
@@ -87,6 +89,7 @@ pub const fn rule() -> Rule {
         "inline_single_use_function",
         "Detect single-line custom commands used only once that could be inlined",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/custom_commands.html")
 }

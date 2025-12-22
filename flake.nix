@@ -19,10 +19,7 @@
       let
         pkgs = import nixpkgs { inherit system; };
 
-        toolchain = fenix.packages.${system}.fromToolchainFile {
-          file = ./rust-toolchain.toml;
-          sha256 = "sha256-IQUcjhizZsNE1NYkdrwkVNxGpUlujMlfy8tdcbp7NnQ=";
-        };
+        toolchain = fenix.packages.${system}.default.toolchain;
 
         naersk' = pkgs.callPackage naersk {
           cargo = toolchain;

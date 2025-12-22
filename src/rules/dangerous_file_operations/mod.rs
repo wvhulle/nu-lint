@@ -4,6 +4,7 @@ use nu_protocol::{
 };
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, span::SpanExt},
     context::LintContext,
     effect::{
@@ -253,6 +254,7 @@ pub const fn rule() -> Rule {
         "dangerous_file_operations",
         "Detect dangerous file operations that could cause data loss",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/running_externals.html")
 }

@@ -1,7 +1,7 @@
 use nu_protocol::ast::ExternalArgument;
 
 use crate::{
-    Violation,
+    LintLevel, Violation,
     alternatives::detect_external_commands,
     context::LintContext,
     rule::Rule,
@@ -34,6 +34,7 @@ pub const fn rule() -> Rule {
         "prefer_builtin_hostname",
         "Use '(sys host).hostname' instead of external hostname",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/sys_host.html")
 }

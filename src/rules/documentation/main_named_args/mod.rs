@@ -1,6 +1,7 @@
 use nu_protocol::ast::{Call, Expr};
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, span::SpanExt},
     context::LintContext,
     rule::Rule,
@@ -74,6 +75,7 @@ pub const fn rule() -> Rule {
         "main_named_args_docs",
         "Named parameters (flags) in main functions should have documentation comments",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/custom_commands.html#flags")
 }

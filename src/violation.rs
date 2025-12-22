@@ -69,9 +69,9 @@ impl From<&Path> for SourceFile {
 impl From<LintLevel> for Severity {
     fn from(level: LintLevel) -> Self {
         match level {
-            LintLevel::Deny => Self::Error,
-            LintLevel::Warn => Self::Warning,
-            LintLevel::Allow => Self::Advice,
+            LintLevel::Error => Self::Error,
+            LintLevel::Warning => Self::Warning,
+            LintLevel::Hint => Self::Advice,
         }
     }
 }
@@ -121,7 +121,7 @@ impl Violation {
     pub fn new(message: impl Into<Cow<'static, str>>, span: Span) -> Self {
         Self {
             rule_id: None,
-            lint_level: LintLevel::Allow,
+            lint_level: LintLevel::default(),
             message: message.into(),
             span: LintSpan::from(span),
             primary_label: None,
@@ -143,7 +143,7 @@ impl Violation {
     pub fn with_file_span(message: impl Into<Cow<'static, str>>, span: FileSpan) -> Self {
         Self {
             rule_id: None,
-            lint_level: LintLevel::Allow,
+            lint_level: LintLevel::default(),
             message: message.into(),
             span: LintSpan::File(span),
             primary_label: None,
@@ -276,7 +276,7 @@ impl Error for Violation {}
 impl Diagnostic for Violation {
     fn code<'a>(&'a self) -> Option<Box<dyn fmt::Display + 'a>> {
         Some(Box::new(format!(
-            "{}({})",
+            "{:?}({})",
             self.lint_level,
             self.rule_id.as_deref().unwrap_or("unknown")
         )))

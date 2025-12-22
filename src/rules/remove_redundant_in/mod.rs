@@ -1,7 +1,8 @@
 use nu_protocol::ast::{Expr, Pipeline};
 
 use crate::{
-    Fix, Replacement, ast::span::SpanExt, context::LintContext, rule::Rule, violation::Violation,
+    Fix, LintLevel, Replacement, ast::span::SpanExt, context::LintContext, rule::Rule,
+    violation::Violation,
 };
 /// Check if a pipeline starts with redundant $in
 fn pipeline_starts_with_redundant_in(pipeline: &Pipeline, context: &LintContext) -> bool {
@@ -207,6 +208,7 @@ pub const fn rule() -> Rule {
         "remove_redundant_in",
         "Remove redundant $in at the start of pipelines - it's implicit in Nushell",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/special_variables.html")
 }

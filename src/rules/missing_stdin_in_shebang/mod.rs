@@ -1,6 +1,7 @@
 use nu_protocol::ast::{Argument, Block, Call, Expr, Expression, Pipeline};
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, expression::is_pipeline_input_var, span::SpanExt},
     context::LintContext,
     rule::Rule,
@@ -215,6 +216,7 @@ pub const fn rule() -> Rule {
         "missing_stdin_in_shebang",
         "Scripts with main functions that expect pipeline input must have --stdin in shebang",
         check,
+        LintLevel::Error,
     )
     .with_doc_url("https://www.nushell.sh/book/scripts.html")
 }

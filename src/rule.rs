@@ -2,7 +2,7 @@
 use std::borrow::Cow;
 use std::hash::{Hash, Hasher};
 
-use crate::{context::LintContext, violation::Violation};
+use crate::{LintLevel, context::LintContext, violation::Violation};
 
 /// A concrete rule struct that wraps the check function
 #[derive(Debug, Clone, Copy)]
@@ -10,7 +10,8 @@ pub struct Rule {
     pub id: &'static str,
     pub explanation: &'static str,
     pub doc_url: Option<&'static str>,
-    pub(crate) check: fn(&LintContext) -> Vec<Violation>,
+    pub level: LintLevel,
+    pub(crate) check: for<'a> fn(&LintContext<'a>) -> Vec<Violation>,
 }
 
 impl Hash for Rule {
@@ -32,12 +33,14 @@ impl Rule {
         id: &'static str,
         explanation: &'static str,
         check: fn(&LintContext) -> Vec<Violation>,
+        level: LintLevel,
     ) -> Self {
         Self {
             id,
             explanation,
             doc_url: None,
             check,
+            level,
         }
     }
 

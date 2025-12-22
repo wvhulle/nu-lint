@@ -1,6 +1,7 @@
 use nu_protocol::ast::{Block, Call, Expr, Pipeline, PipelineElement};
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
     context::LintContext,
     rule::Rule,
@@ -198,6 +199,7 @@ pub const fn rule() -> Rule {
         "print_exit_use_error_make",
         "Replace 'print' + 'exit' patterns with 'error make' for proper error handling",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/error_make.html")
 }

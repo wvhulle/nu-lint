@@ -1,7 +1,8 @@
 use nu_protocol::ast::{Expr, Expression, ListItem, Traverse};
 
 use crate::{
-    ast::expression::ExpressionExt, context::LintContext, rule::Rule, violation::Violation,
+    LintLevel, ast::expression::ExpressionExt, context::LintContext, rule::Rule,
+    violation::Violation,
 };
 
 const MAX_LIST_LINE_LENGTH: usize = 80;
@@ -73,6 +74,7 @@ pub const fn rule() -> Rule {
         "prefer_multiline_lists",
         "Prefer multiline format for long or complex lists",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/style_guide.html#multi-line-format")
 }

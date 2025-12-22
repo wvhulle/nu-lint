@@ -2,7 +2,7 @@ use std::sync::OnceLock;
 
 use regex::Regex;
 
-use crate::{context::LintContext, rule::Rule, violation::Violation};
+use crate::{LintLevel, context::LintContext, rule::Rule, violation::Violation};
 fn trailing_space_pattern() -> &'static Regex {
     static PATTERN: OnceLock<Regex> = OnceLock::new();
     PATTERN.get_or_init(|| Regex::new(r"[ \t]+$").unwrap())
@@ -39,6 +39,7 @@ pub const fn rule() -> Rule {
         "no_trailing_spaces",
         "Eliminate trailing spaces at the end of lines",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/style_guide.html#multi-line-format")
 }

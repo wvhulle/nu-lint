@@ -4,6 +4,7 @@ use nu_protocol::{
 };
 
 use crate::{
+    LintLevel,
     ast::{
         block::BlockExt, call::CallExt, expression::ExpressionExt, pipeline::PipelineExt,
         span::SpanExt, syntax_shape::SyntaxShapeExt,
@@ -197,6 +198,7 @@ pub const fn rule() -> Rule {
         "missing_type_annotation",
         "Parameters should have type annotations",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/custom_commands.html#parameter-types")
 }

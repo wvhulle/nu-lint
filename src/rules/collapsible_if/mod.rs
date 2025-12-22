@@ -1,7 +1,8 @@
 use nu_protocol::ast::{Call, Expr};
 
 use crate::{
-    Fix, Replacement, ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation,
+    Fix, LintLevel, Replacement, ast::call::CallExt, context::LintContext, rule::Rule,
+    violation::Violation,
 };
 
 /// Creates a violation with fix for a collapsible if statement
@@ -45,6 +46,7 @@ pub const fn rule() -> Rule {
         "Collapse nested if statements without else clauses into a single if with combined \
          conditions",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/control_flow.html")
 }

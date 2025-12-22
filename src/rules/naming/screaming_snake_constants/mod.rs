@@ -1,7 +1,9 @@
 use heck::ToShoutySnakeCase;
 use nu_protocol::ast::Expr;
 
-use crate::{ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation};
+use crate::{
+    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation,
+};
 
 fn is_valid_screaming_snake(name: &str) -> bool {
     let mut chars = name.chars();
@@ -57,6 +59,7 @@ pub const fn rule() -> Rule {
         "screaming_snake_constants",
         "Constants should use SCREAMING_SNAKE_CASE naming convention",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/style_guide.html#environment-variables")
 }

@@ -6,6 +6,7 @@ use nu_protocol::{
 };
 
 use crate::{
+    LintLevel,
     ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::Rule,
@@ -234,6 +235,7 @@ pub const fn rule() -> Rule {
         "prefer_direct_use",
         "Prefer direct list use over copying items into a mutable list",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url(
         "https://www.nushell.sh/book/thinking_in_nu.html#variables-are-immutable-by-default",

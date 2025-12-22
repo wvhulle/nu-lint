@@ -11,11 +11,11 @@ use serde::Serialize;
 use super::{Summary, calculate_line_column, read_source_code};
 use crate::{config::LintLevel, violation::Violation};
 
-fn lint_level_to_severity(lint_level: LintLevel) -> u8 {
+const fn lint_level_to_severity(lint_level: LintLevel) -> u8 {
     match lint_level {
-        LintLevel::Deny => 1,
-        LintLevel::Warn => 2,
-        LintLevel::Allow => unreachable!("Allow level violations should never be created"),
+        LintLevel::Error => 1,
+        LintLevel::Warning => 2,
+        LintLevel::Hint => 3,
     }
 }
 

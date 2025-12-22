@@ -1,6 +1,8 @@
 use nu_protocol::SyntaxShape;
 
-use crate::{ast::block::BlockExt, context::LintContext, rule::Rule, violation::Violation};
+use crate::{
+    LintLevel, ast::block::BlockExt, context::LintContext, rule::Rule, violation::Violation,
+};
 
 /// Check if a parameter is a string-like type that could be used as a script
 /// path
@@ -78,6 +80,7 @@ pub const fn rule() -> Rule {
         "Avoid passing external scripts as arguments to custom commands; define them as functions \
          instead",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/modules.html")
 }

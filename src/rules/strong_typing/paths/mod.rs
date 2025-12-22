@@ -4,6 +4,7 @@ use nu_protocol::{
 };
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
     context::LintContext,
     rule::Rule,
@@ -197,6 +198,7 @@ pub const fn rule() -> Rule {
         "prefer_path_type",
         "Use Nushell's path type instead of string for parameters with 'path' in the name",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/types_of_data.html#paths")
 }

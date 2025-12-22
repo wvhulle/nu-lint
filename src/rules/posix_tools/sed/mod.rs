@@ -1,7 +1,7 @@
 use nu_protocol::ast::ExternalArgument;
 
 use crate::{
-    Violation,
+    LintLevel, Violation,
     alternatives::{detect_external_commands, external_args_slices},
     context::LintContext,
     rule::Rule,
@@ -37,6 +37,7 @@ pub const fn rule() -> Rule {
         "prefer_builtin_sed",
         "Use Nu's 'str replace' instead of 'sed' for text substitution",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/str_replace.html")
 }

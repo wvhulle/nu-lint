@@ -1,6 +1,6 @@
 use nu_protocol::{Span, ast::Expr};
 
-use crate::{context::LintContext, rule::Rule, violation::Violation};
+use crate::{LintLevel, context::LintContext, rule::Rule, violation::Violation};
 enum BraceType {
     ClosureWithParams,
     BlockWithoutParams,
@@ -115,6 +115,7 @@ pub const fn rule() -> Rule {
         "Enforces Nushell style guide: records use {key: value}, blocks/closures without params \
          use { body }, and closures with params use {|x| body}",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/style_guide.html#one-line-format")
 }

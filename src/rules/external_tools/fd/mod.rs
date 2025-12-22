@@ -1,7 +1,7 @@
 use nu_protocol::ast::ExternalArgument;
 
 use crate::{
-    Violation,
+    LintLevel, Violation,
     alternatives::{detect_external_commands, external_args_slices},
     context::LintContext,
     rule::Rule,
@@ -204,6 +204,7 @@ pub const fn rule() -> Rule {
         "prefer_builtin_fd",
         "Use Nu's 'ls' with glob patterns instead of 'fd' command",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/glob.html")
 }

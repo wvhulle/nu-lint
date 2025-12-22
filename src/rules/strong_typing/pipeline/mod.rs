@@ -4,6 +4,7 @@ use nu_protocol::{
 };
 
 use crate::{
+    LintLevel,
     ast::{block::BlockExt, call::CallExt, span::SpanExt, syntax_shape::SyntaxShapeExt},
     context::LintContext,
     rule::Rule,
@@ -326,6 +327,7 @@ pub const fn rule() -> Rule {
         "typed_pipeline_io",
         "Custom commands that use pipeline input or produce output should have type annotations",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/custom_commands.html#input-output-types")
 }

@@ -1,7 +1,7 @@
 use nu_protocol::ast::ExternalArgument;
 
 use crate::{
-    Violation,
+    LintLevel, Violation,
     alternatives::{detect_external_commands, external_args_slices},
     context::LintContext,
     rule::Rule,
@@ -242,6 +242,7 @@ pub const fn rule() -> Rule {
         "prefer_builtin_awk",
         "Use Nushell pipelines (where/split column/select/each) instead of awk",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/coming_from_bash.html")
 }

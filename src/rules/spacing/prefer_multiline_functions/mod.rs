@@ -1,6 +1,7 @@
 use nu_protocol::ast::{Call, Expr, Expression, Traverse};
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::Rule,
@@ -66,6 +67,7 @@ pub const fn rule() -> Rule {
         "prefer_multiline_functions",
         "Prefer multiline format for long function definitions",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/style_guide.html#multi-line-format")
 }

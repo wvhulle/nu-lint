@@ -1,6 +1,8 @@
 use nu_protocol::ast::{Argument, Block, Expr, PipelineElement};
 
-use crate::{ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation};
+use crate::{
+    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation,
+};
 
 fn check_sequential_stderr_exit(
     first: &PipelineElement,
@@ -79,6 +81,7 @@ pub const fn rule() -> Rule {
         "prefer_error_make_for_stderr",
         "Use 'error make' instead of 'print stderr' + 'exit' for structured error handling",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/error_make.html")
 }

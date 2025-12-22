@@ -1,6 +1,7 @@
 use nu_protocol::ast::{Argument, Call, Expr, Expression};
 
 use crate::{
+    LintLevel,
     ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::Rule,
@@ -133,6 +134,7 @@ pub const fn rule() -> Rule {
         "prefer_where_over_each_if",
         "Use 'where' for filtering instead of 'each' with 'if'",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/where.html")
 }

@@ -1,7 +1,7 @@
 use nu_protocol::ast::{Argument, Call, Expr, Expression, Pipeline, Traverse};
 
 use crate::{
-    Fix, Replacement,
+    Fix, LintLevel, Replacement,
     ast::{call::CallExt, span::SpanExt},
     context::LintContext,
     rule::Rule,
@@ -331,6 +331,7 @@ pub const fn rule() -> Rule {
         "prefer_items_over_transpose",
         "Use 'items' instead of 'transpose | each' when iterating over record entries",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/items.html")
 }

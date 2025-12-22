@@ -44,7 +44,7 @@ pub fn format_output(violations: &[Violation], format: Format) -> String {
 pub struct Summary {
     pub errors: usize,
     pub warnings: usize,
-    pub info: usize,
+    pub hint: usize,
     pub files_checked: usize,
 }
 
@@ -53,17 +53,17 @@ impl Summary {
     pub fn from_violations(violations: &[Violation]) -> Self {
         let (errors, warnings, info) = violations.iter().fold(
             (0, 0, 0),
-            |(errors, warnings, info), violation| match violation.lint_level {
-                LintLevel::Deny => (errors + 1, warnings, info),
-                LintLevel::Warn => (errors, warnings + 1, info),
-                LintLevel::Allow => (errors, warnings, info + 1),
+            |(errors, warnings, hint), violation| match violation.lint_level {
+                LintLevel::Error => (errors + 1, warnings, hint),
+                LintLevel::Warning => (errors, warnings + 1, hint),
+                LintLevel::Hint => (errors, warnings, hint + 1),
             },
         );
 
         Self {
             errors,
             warnings,
-            info,
+            hint: info,
             files_checked: 1,
         }
     }
@@ -73,7 +73,7 @@ impl Summary {
         let parts: Vec<String> = [
             (self.errors > 0).then(|| format!("{} error(s)", self.errors)),
             (self.warnings > 0).then(|| format!("{} warning(s)", self.warnings)),
-            (self.info > 0).then(|| format!("{} info", self.info)),
+            (self.hint > 0).then(|| format!("{} info", self.hint)),
         ]
         .into_iter()
         .flatten()

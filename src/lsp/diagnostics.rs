@@ -8,9 +8,9 @@ use crate::{LintLevel, violation::Violation};
 
 const fn lint_level_to_severity(level: LintLevel) -> DiagnosticSeverity {
     match level {
-        LintLevel::Deny => DiagnosticSeverity::ERROR,
-        LintLevel::Warn => DiagnosticSeverity::WARNING,
-        LintLevel::Allow => DiagnosticSeverity::HINT,
+        LintLevel::Error => DiagnosticSeverity::ERROR,
+        LintLevel::Warning => DiagnosticSeverity::WARNING,
+        LintLevel::Hint => DiagnosticSeverity::HINT,
     }
 }
 
@@ -195,7 +195,7 @@ mod tests {
         violation
             .extra_labels
             .push((FileSpan::new(12, 35).into(), Some("inner if".to_string())));
-        violation.lint_level = LintLevel::Warn;
+        violation.lint_level = LintLevel::Warning;
 
         let diagnostic = violation_to_diagnostic(&violation, source, &line_index, &file_uri);
 

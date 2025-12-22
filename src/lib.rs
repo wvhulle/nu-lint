@@ -18,9 +18,6 @@ use std::{error::Error, fmt, io, path::PathBuf};
 
 pub use config::{Config, LintLevel};
 pub use engine::LintEngine;
-pub use output::{
-    JsonFix, JsonOutput, JsonReplacement, JsonViolation, Summary, format_json, format_text,
-};
 pub use span::{FileSpan, LintSpan};
 use toml::de;
 pub use violation::Violation;

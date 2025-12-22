@@ -1,6 +1,7 @@
 use nu_protocol::ast::{self, Block, Expr, Pipeline, Traverse};
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     effect::external::is_external_command_safe,
@@ -108,6 +109,7 @@ pub const fn rule() -> Rule {
          the whole pipeline. You may use a configuration option on recent versions of Nu shell to \
          check non-final external commands as well.",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/complete.html")
 }

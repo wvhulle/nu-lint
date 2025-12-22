@@ -1,6 +1,7 @@
 use nu_protocol::ast::{Call, Expr, MatchPattern, Pattern};
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::Rule,
@@ -133,6 +134,7 @@ pub const fn rule() -> Rule {
         "prefer_subcommands_over_dispatch",
         "Use native 'def \"main subcommand\"' instead of match-based command dispatch in main",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/modules/creating_subcommands.html")
 }

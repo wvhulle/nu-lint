@@ -4,7 +4,8 @@ use nu_protocol::ast::{
 };
 
 use crate::{
-    ast::expression::ExpressionExt, context::LintContext, rule::Rule, violation::Violation,
+    LintLevel, ast::expression::ExpressionExt, context::LintContext, rule::Rule,
+    violation::Violation,
 };
 
 /// Detection categories for problematic AST patterns in string interpolations
@@ -264,6 +265,7 @@ pub const fn rule() -> Rule {
          runtime errors (standalone operators, external boolean operator calls, literal boolean \
          operations)",
         check,
+        LintLevel::Error,
     )
     .with_doc_url("https://www.nushell.sh/book/working_with_strings.html#string-interpolation")
 }

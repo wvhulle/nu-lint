@@ -4,7 +4,8 @@ use nu_protocol::ast::{
 };
 
 use crate::{
-    Fix, Replacement, ast::span::SpanExt, context::LintContext, rule::Rule, violation::Violation,
+    Fix, LintLevel, Replacement, ast::span::SpanExt, context::LintContext, rule::Rule,
+    violation::Violation,
 };
 
 fn is_dev_null_redirect(element: &PipelineElement, _context: &LintContext) -> bool {
@@ -184,6 +185,7 @@ pub const fn rule() -> Rule {
         "prefer_complete_over_dev_null",
         "Prefer 'complete' over redirecting stderr to /dev/null for idiomatic error handling",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/complete.html")
 }

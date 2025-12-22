@@ -4,6 +4,7 @@ use nu_protocol::{
 };
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
     context::LintContext,
     rule::Rule,
@@ -496,6 +497,7 @@ pub const fn rule() -> Rule {
         "Custom commands with single data parameters should use pipeline input for better \
          composability",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/pipelines.html")
 }

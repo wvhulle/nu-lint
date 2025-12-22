@@ -17,7 +17,7 @@ use nu_protocol::{
 use rayon::prelude::*;
 
 use crate::{
-    LintError, LintLevel,
+    LintError,
     config::Config,
     context::LintContext,
     rules::ALL_RULES,
@@ -245,11 +245,7 @@ impl LintEngine {
         ALL_RULES
             .iter()
             .filter_map(|rule| {
-                let lint_level = self.config.get_lint_level(rule.id);
-
-                if lint_level == LintLevel::Allow {
-                    return None;
-                }
+                let lint_level = self.config.get_lint_level(rule)?;
 
                 let mut violations = (rule.check)(context);
                 for violation in &mut violations {

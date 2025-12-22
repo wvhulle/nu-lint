@@ -1,7 +1,7 @@
 use nu_protocol::ast::ExternalArgument;
 
 use crate::{
-    Violation,
+    LintLevel, Violation,
     alternatives::{detect_external_commands, external_args_slices},
     context::LintContext,
     rule::Rule,
@@ -321,6 +321,7 @@ pub const fn rule() -> Rule {
         "prefer_builtin_rg",
         "Use Nu's 'find' or 'where' instead of 'rg'",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/find.html")
 }

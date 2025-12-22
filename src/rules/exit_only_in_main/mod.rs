@@ -1,6 +1,7 @@
 use nu_protocol::ast::{Call, Expr};
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, span::SpanExt},
     context::LintContext,
     rule::Rule,
@@ -57,6 +58,7 @@ pub const fn rule() -> Rule {
         "exit_only_in_main",
         "Avoid using 'exit' in functions other than 'main'",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/exit.html")
 }

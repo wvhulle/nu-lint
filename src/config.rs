@@ -1,6 +1,5 @@
-use core::fmt::{self, Display};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     env::current_dir,
     fs,
     path::{Path, PathBuf},
@@ -9,135 +8,24 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    LintError,
-    rules::sets::{ALL_GROUPS, RULE_LEVEL_OVERRIDES},
-};
+use crate::{LintError, rule::Rule, rules::sets::ALL_GROUPS};
 
-/// Lint level configuration (inspired by Clippy)
-/// - Allow: Don't report this lint
-/// - Warn: Report as a warning
-/// - Deny: Report as an error
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(rename_all = "lowercase")]
 pub enum LintLevel {
-    Allow,
+    Hint,
     #[default]
-    Warn,
-    Deny,
+    Warning,
+    Error,
 }
 
-impl Display for LintLevel {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Allow => write!(f, "allow"),
-            Self::Warn => write!(f, "warn"),
-            Self::Deny => write!(f, "deny"),
-        }
-    }
-}
-
-#[derive(Deserialize)]
-#[serde(untagged)]
-enum ConfigField {
-    Lints(LintConfig),
-    Sequential(bool),
-    Level(LintLevel),
-}
-
-#[derive(Debug, Clone, Serialize, Default, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
+#[serde(default)]
 pub struct Config {
-    #[serde(default)]
-    pub lints: LintConfig,
-
-    /// Process files sequentially instead of in parallel (useful for debugging)
-    #[serde(default)]
-    pub sequential: bool,
-}
-
-impl<'de> Deserialize<'de> for Config {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let map = HashMap::<String, ConfigField>::deserialize(deserializer)?;
-
-        let mut lints = None;
-        let mut sequential = None;
-        let mut bare_items = HashMap::new();
-
-        for (key, value) in map {
-            match (key.as_str(), value) {
-                ("lints", ConfigField::Lints(l)) => lints = Some(l),
-                ("sequential", ConfigField::Sequential(s)) => sequential = Some(s),
-                (_, ConfigField::Level(level)) => {
-                    bare_items.insert(key, level);
-                }
-                _ => {}
-            }
-        }
-
-        let mut lints = lints.unwrap_or_default();
-        merge_bare_items_into_lints(&mut lints, bare_items);
-
-        Ok(Self {
-            lints,
-            sequential: sequential.unwrap_or(false),
-        })
-    }
-}
-
-fn merge_bare_items_into_lints(lints: &mut LintConfig, bare_items: HashMap<String, LintLevel>) {
-    for (name, level) in bare_items {
-        let is_set = ALL_GROUPS.iter().any(|set| set.name == name);
-
-        if is_set {
-            lints.sets.insert(name, level);
-        } else {
-            lints.rules.insert(name, level);
-        }
-    }
-}
-
-/// Lint configuration with support for set-level and individual rule
-/// configuration
-#[derive(Debug, Clone, Serialize, PartialEq, Eq, Default)]
-pub struct LintConfig {
-    /// Configure entire lint sets (e.g., "naming", "idioms", "pedantic")
-    #[serde(default)]
     pub sets: HashMap<String, LintLevel>,
-
-    /// Configure individual rules (overrides set settings)
-    #[serde(default)]
     pub rules: HashMap<String, LintLevel>,
-}
-
-impl<'de> Deserialize<'de> for LintConfig {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        #[derive(Deserialize)]
-        struct LintConfigHelper {
-            #[serde(default)]
-            sets: HashMap<String, LintLevel>,
-            #[serde(default)]
-            rules: HashMap<String, LintLevel>,
-        }
-
-        let helper = LintConfigHelper::deserialize(deserializer)?;
-
-        Ok(Self {
-            sets: helper.sets,
-            rules: helper.rules,
-        })
-    }
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
-pub struct ExcludeConfig {
-    #[serde(default)]
-    pub patterns: Vec<String>,
+    pub ignored: HashSet<String>,
+    pub sequential: bool,
 }
 
 impl Config {
@@ -178,24 +66,23 @@ impl Config {
     }
 
     /// Get the effective lint level for a specific rule
-    /// Priority (high to low):
-    /// 1. Individual rule level in config
-    /// 2. Lint set level in config (highest level if rule appears in multiple
-    ///    sets)
-    /// 3. Default level from default rule map
     #[must_use]
-    pub fn get_lint_level(&self, rule_id: &'static str) -> LintLevel {
-        if let Some(level) = self.lints.rules.get(rule_id) {
+    pub fn get_lint_level(&self, rule: &Rule) -> Option<LintLevel> {
+        let rule_id = rule.id;
+
+        if self.ignored.contains(rule_id) {
+            return None;
+        }
+
+        if let Some(level) = self.rules.get(rule_id) {
             log::debug!(
                 "Rule '{rule_id}' has individual level '{level:?}' in config, overriding set \
                  levels"
             );
-            return *level;
+            return Some(*level);
         }
 
-        let mut max_level: Option<LintLevel> = None;
-
-        for (set_name, level) in &self.lints.sets {
+        for (set_name, level) in &self.sets {
             let Some(lint_set) = ALL_GROUPS.iter().find(|set| set.name == set_name.as_str()) else {
                 continue;
             };
@@ -205,18 +92,10 @@ impl Config {
             }
 
             log::debug!("Rule '{rule_id}' found in set '{set_name}' with level {level:?}");
-            max_level = Some(max_level.map_or(*level, |existing| existing.max(*level)));
+            return Some(*level);
         }
 
-        max_level.unwrap_or_else(|| {
-            RULE_LEVEL_OVERRIDES
-                .rules
-                .iter()
-                .find(|(rule, _)| rule.id == rule_id)
-                .map(|(_, level)| level)
-                .copied()
-                .unwrap_or(LintLevel::Warn)
-        })
+        Some(rule.level)
     }
 }
 
@@ -251,147 +130,37 @@ pub fn find_config_file() -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::log::instrument;
+    use crate::rules::ALL_RULES;
 
     #[test]
     fn test_load_config_simple_str() {
         let toml_str = r#"
-        [lints.rules]
-        snake_case_variables = "deny"
+        [rules]
+        snake_case_variables = "error"
     "#;
 
         let config = Config::load_from_str(toml_str).unwrap();
         assert_eq!(
-            config.lints.rules.get("snake_case_variables"),
-            Some(&LintLevel::Deny)
+            config.rules.get("snake_case_variables"),
+            Some(&LintLevel::Error)
         );
     }
 
     #[test]
     fn test_load_config_simple_str_set() {
         let toml_str = r#"
-        [lints.sets]
-        naming = "deny"
+        ignored = [ "snake_case_variables" ]
+        [sets]
+        naming = "error"
     "#;
 
         let config = Config::load_from_str(toml_str).unwrap();
-        let found_set_level = config.lints.sets.iter().find(|(k, _)| **k == "naming");
-        assert!(matches!(found_set_level, Some((_, LintLevel::Deny))));
-    }
-
-    #[test]
-    fn test_load_config_load_from_set_deny() {
-        let toml_str = r#"
-        [lints.sets]
-        naming = "deny"
-    "#;
-
-        let config = Config::load_from_str(toml_str).unwrap();
-        let found_set_level = config.get_lint_level("snake_case_variables");
-        assert_eq!(found_set_level, LintLevel::Deny);
-    }
-
-    #[test]
-    fn test_load_config_load_from_set_allow() {
-        instrument();
-        let toml_str = r#"
-        [lints.sets]
-        naming = "allow"
-
-    "#;
-
-        let config = Config::load_from_str(toml_str).unwrap();
-        let found_set_level = config.get_lint_level("snake_case_variables");
-        assert_eq!(found_set_level, LintLevel::Allow);
-    }
-
-    #[test]
-    fn test_load_config_load_from_set_deny_empty() {
-        instrument();
-        let toml_str = r"
-    ";
-
-        let config = Config::load_from_str(toml_str).unwrap();
-        let found_set_level = config.get_lint_level("snake_case_variables");
-        assert_eq!(found_set_level, LintLevel::Warn);
-    }
-
-    #[test]
-    fn test_load_config_load_from_set_deny_conflict() {
-        instrument();
-        let toml_str = r#"
-        [lints.sets]
-        naming = "deny"
-        [lints.rules]
-        snake_case_variables = "allow"
-    "#;
-
-        let config = Config::load_from_str(toml_str).unwrap();
-        let found_set_level = config.get_lint_level("snake_case_variables");
-        assert_eq!(found_set_level, LintLevel::Allow);
-    }
-
-    #[test]
-    fn test_bare_rule_format() {
-        let toml_str = r#"
-        snake_case_variables = "deny"
-        systemd_journal_prefix = "warn"
-    "#;
-        let config = Config::load_from_str(toml_str).unwrap();
-        assert_eq!(
-            config.lints.rules.get("snake_case_variables"),
-            Some(&LintLevel::Deny)
-        );
-        assert_eq!(
-            config.lints.rules.get("systemd_journal_prefix"),
-            Some(&LintLevel::Warn)
-        );
-    }
-
-    #[test]
-    fn test_bare_set_format() {
-        let toml_str = r#"
-        naming = "deny"
-        performance = "warn"
-    "#;
-        let config = Config::load_from_str(toml_str).unwrap();
-        assert_eq!(config.lints.sets.get("naming"), Some(&LintLevel::Deny));
-        assert_eq!(config.lints.sets.get("performance"), Some(&LintLevel::Warn));
-    }
-
-    #[test]
-    fn test_mixed_bare_and_structured() {
-        let toml_str = r#"
-        naming = "deny"
-        systemd_journal_prefix = "warn"
-        
-        [lints.rules]
-        snake_case_variables = "allow"
-    "#;
-        let config = Config::load_from_str(toml_str).unwrap();
-        assert_eq!(config.lints.sets.get("naming"), Some(&LintLevel::Deny));
-        // Bare rules get added to rules
-        assert_eq!(
-            config.lints.rules.get("systemd_journal_prefix"),
-            Some(&LintLevel::Warn)
-        );
-        // Structured format values are merged with bare format
-        assert_eq!(
-            config.lints.rules.get("snake_case_variables"),
-            Some(&LintLevel::Allow)
-        );
-    }
-
-    #[test]
-    fn test_bare_format_resolves_level() {
-        let toml_str = r#"
-        naming = "deny"
-    "#;
-        let config = Config::load_from_str(toml_str).unwrap();
-        // snake_case_variables is in the naming set
-        assert_eq!(
-            config.get_lint_level("snake_case_variables"),
-            LintLevel::Deny
-        );
+        let found_set_level = config.sets.iter().find(|(k, _)| **k == "naming");
+        assert!(matches!(found_set_level, Some((_, LintLevel::Error))));
+        let ignored_rule = ALL_RULES
+            .iter()
+            .find(|r| r.id == "snake_case_variables")
+            .unwrap();
+        assert_eq!(config.get_lint_level(ignored_rule), None);
     }
 }

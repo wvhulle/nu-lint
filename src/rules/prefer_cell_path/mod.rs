@@ -1,6 +1,7 @@
 use nu_protocol::ast::{Expr, Expression, PathMember, Pipeline};
 
 use crate::{
+    LintLevel,
     ast::call::CallExt,
     context::LintContext,
     rule::Rule,
@@ -158,6 +159,7 @@ pub const fn rule() -> Rule {
         "prefer_cell_path",
         "Prefer combined cell paths over chained 'get' commands",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/navigating_structured_data.html")
 }

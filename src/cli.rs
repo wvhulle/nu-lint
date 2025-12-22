@@ -116,7 +116,7 @@ impl Cli {
         let summary = Summary::from_violations(&violations);
         eprintln!("{}", summary.format_compact());
 
-        let has_deny = violations.iter().any(|v| v.lint_level == LintLevel::Deny);
+        let has_deny = violations.iter().any(|v| v.lint_level == LintLevel::Error);
         if has_errors || has_deny {
             process::exit(1);
         }
@@ -237,7 +237,7 @@ mod tests {
 
     use clap::Parser;
 
-    use crate::{Config, LintEngine, cli::Cli, engine::collect_nu_files, output::Format};
+    use crate::{Config, LintEngine, cli::Cli, engine::collect_nu_files};
 
     #[test]
     fn test_cli_parsing() {
@@ -250,12 +250,6 @@ mod tests {
     fn test_cli_stdin_flag() {
         let cli = Cli::try_parse_from(["nu-lint", "--stdin"]).unwrap();
         assert!(cli.stdin);
-    }
-
-    #[test]
-    fn test_cli_format_flag() {
-        let cli = Cli::try_parse_from(["nu-lint", "--format", "json"]).unwrap();
-        assert!(matches!(cli.format, Format::Json));
     }
 
     #[test]

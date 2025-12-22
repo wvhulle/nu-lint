@@ -1,7 +1,7 @@
 use nu_protocol::ast::ExternalArgument;
 
 use crate::{
-    Violation,
+    LintLevel, Violation,
     alternatives::{detect_external_commands, external_args_slices},
     context::LintContext,
     rule::Rule,
@@ -31,8 +31,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
 }
 
 pub const fn rule() -> Rule {
-    Rule::new("prefer_builtin_which", "Prefer built-in 'which'", check)
-        .with_doc_url("https://www.nushell.sh/commands/docs/which.html")
+    Rule::new(
+        "prefer_builtin_which",
+        "Prefer built-in 'which'",
+        check,
+        LintLevel::Warning,
+    )
+    .with_doc_url("https://www.nushell.sh/commands/docs/which.html")
 }
 
 #[cfg(test)]

@@ -1,7 +1,7 @@
 use nu_protocol::ast::ExternalArgument;
 
 use crate::{
-    Violation,
+    LintLevel, Violation,
     alternatives::{detect_external_commands, external_args_slices},
     context::LintContext,
     rule::Rule,
@@ -46,6 +46,7 @@ pub const fn rule() -> Rule {
         "prefer_builtin_tail",
         "Use Nu's 'last' command instead of 'tail' for cleaner syntax",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/last.html")
 }

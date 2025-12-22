@@ -1,6 +1,6 @@
 use core::fmt::{self, Display};
 
-use crate::{LintLevel, rule::Rule};
+use crate::rule::Rule;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RuleSet {
@@ -9,19 +9,12 @@ pub struct RuleSet {
     pub rules: &'static [Rule],
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RuleMap {
-    pub name: &'static str,
-    pub explanation: &'static str,
-    pub rules: &'static [(Rule, LintLevel)],
-}
-
 const ERROR_HANDLING_RULES: &[Rule] = &[
     super::error_make_metadata::rule(),
     super::check_complete_exit_code::rule(),
     super::descriptive_error_messages::rule(),
     super::escape_string_interpolation_operators::rule(),
-    super::pipelines::non_final_failure_check::rule(),
+    super::non_final_failure_check::rule(),
     super::prefer_error_make_for_stderr::rule(),
     super::prefer_try_for_error_handling::rule(),
     super::print_exit_use_error_make::rule(),
@@ -94,32 +87,7 @@ pub const ALL_GROUPS: &[RuleSet] = &[
     type_safety_rule_set(),
 ];
 
-const RULE_LEVEL_OVERRIDE_RULES: &[(Rule, LintLevel)] = &[
-    (
-        super::escape_string_interpolation_operators::rule(),
-        LintLevel::Deny,
-    ),
-    (super::exit_only_in_main::rule(), LintLevel::Deny),
-    (super::missing_stdin_in_shebang::rule(), LintLevel::Deny),
-    (super::upstream::nu_deprecated::rule(), LintLevel::Deny),
-    (super::upstream::nu_parse_error::rule(), LintLevel::Deny),
-    (super::prefer_direct_use::rule(), LintLevel::Deny),
-    (super::systemd_journal_prefix::rule(), LintLevel::Allow),
-];
-
-pub const RULE_LEVEL_OVERRIDES: RuleMap = RuleMap {
-    name: "default",
-    explanation: "Default lint levels for all rules",
-    rules: RULE_LEVEL_OVERRIDE_RULES,
-};
-
 impl Display for RuleSet {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.name)
-    }
-}
-
-impl Display for RuleMap {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name)
     }

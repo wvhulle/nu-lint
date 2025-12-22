@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use miette::Diagnostic;
 use nu_protocol::ParseError;
 
-use crate::{NU_PARSER_VERSION, context::LintContext, rule::Rule, violation::Violation};
+use crate::{LintLevel, NU_PARSER_VERSION, context::LintContext, rule::Rule, violation::Violation};
 
 fn build_help_text(parse_error: &ParseError) -> String {
     let version_note = format!(
@@ -58,6 +58,7 @@ pub const fn rule() -> Rule {
         "nu_parse_error",
         "Nushell parser encountered a syntax error",
         check,
+        LintLevel::Error,
     )
     .with_doc_url("https://www.nushell.sh/blog/")
 }

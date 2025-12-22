@@ -4,6 +4,7 @@ use nu_protocol::{
 };
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, span::SpanExt},
     context::LintContext,
     effect::{
@@ -87,6 +88,7 @@ pub const fn rule() -> Rule {
         "prefer_try_for_error_handling",
         "Use 'try' blocks instead of 'do' blocks for error-prone operations",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/try.html")
 }

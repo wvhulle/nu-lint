@@ -6,7 +6,7 @@ Learning to use a new shell is a radical change that can use some assistance. Th
 
 All rules are optional and can be disabled with a configuration file. The rule definitions are designed to be compatible with:
 
-- The standard Nu parser  [nu-check](https://www.nushell.sh/commands/docs/nu-check.html).
+- The standard Nu parser [nu-check](https://www.nushell.sh/commands/docs/nu-check.html).
 - The standard Nu formatter [topiary-nushell](https://github.com/blindFS/topiary-nushell).
 
 ## Example
@@ -55,22 +55,10 @@ cargo install --git "$THIS_GIT_URL"
 
 ### Nix
 
-To install in Nix or NixOS, add to `configuration.nix`:
+Run without installing (using flakes):
 
-```nix
-let
-  nu-lint = pkgs.callPackage (pkgs.fetchFromGitHub {
-    owner = "wvhulle";
-    repo = "nu-lint";
-    rev = "COMMIT_HASH";
-    sha256 = ""; # nix will tell you the correct hash
-  }) {};
-in
-{
-  environment.systemPackages = [
-    nu-lint
-  ];
-}
+```bash
+nix run github:wvhulle/nu-lint
 ```
 
 ## Editor extension
@@ -137,30 +125,20 @@ You can also implement your own editor extensions using the `--lsp` flag as in: 
 
 ## Configuration
 
-Create `.nu-lint.toml` in your project root (or any parent directory):
+Create `.nu-lint.toml` in your project root:
 
 ```toml
-# Simple format - just list rules and sets with their levels
-systemd_journal_prefix = "warn"
-snake_case_variables = "deny"
-naming = "deny"  # Apply deny level to all rules in the "naming" set
+# This rule is ignored
+ignored = ["snake_case_variables"]
 
-# Or use the structured format for more complex configs
-[lints.sets]
-performance = "warn"
-type-safety = "deny"
+# Set lint level of a set of rules at once.
+[sets]
+performance = "warning"
+type-safety = "error"
 
-[lints.rules]
-prefer_pipeline_input = "deny"
-max_function_body_length = "allow"
-```
-
-Available lint levels: `allow`, `warn`, `deny`.
-
-The linter will automatically find and use this config file when you run it. Otherwise:
-
-```bash
-nu-lint --config custom.toml script.nu  
+# Override a single rule lievel
+[rules]
+prefer_pipeline_input = "hint"
 ```
 
 ## Rules

@@ -1,6 +1,8 @@
 use nu_protocol::ast::Expr;
 
-use crate::{ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation};
+use crate::{
+    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation,
+};
 
 fn strip_quotes(name: &str) -> &str {
     name.strip_prefix('"')
@@ -53,6 +55,7 @@ pub const fn rule() -> Rule {
         "kebab_case_commands",
         "Custom commands should use kebab-case naming convention",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/style_guide.html#commands")
 }

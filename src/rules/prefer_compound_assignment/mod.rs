@@ -1,6 +1,7 @@
 use nu_protocol::ast::{Assignment, Expr, Expression, Math, Operator, PipelineElement};
 
 use crate::{
+    LintLevel,
     ast::expression::ExpressionExt,
     context::LintContext,
     rule::Rule,
@@ -124,6 +125,7 @@ pub const fn rule() -> Rule {
         "prefer_compound_assignment",
         "Prefer compound assignment operators (+=, -=, etc.) over expanded form",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/operators.html")
 }

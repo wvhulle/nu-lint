@@ -4,7 +4,7 @@ use nu_protocol::{
 };
 
 use crate::{
-    Fix, Replacement,
+    Fix, LintLevel, Replacement,
     ast::{block::BlockExt, call::CallExt, pipeline::PipelineExt, span::SpanExt},
     context::LintContext,
     rule::Rule,
@@ -432,6 +432,7 @@ pub const fn rule() -> Rule {
         "prefer_parse_over_split",
         "Prefer 'parse' command over manual string splitting patterns",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/parse.html")
 }

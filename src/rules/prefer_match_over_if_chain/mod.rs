@@ -3,6 +3,7 @@ use core::iter;
 use nu_protocol::ast::{Call, Expr};
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::Rule,
@@ -256,6 +257,7 @@ pub const fn rule() -> Rule {
         "prefer_match_over_if_chain",
         "Use 'match' for value-based branching instead of if-else-if chains",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/match.html")
 }

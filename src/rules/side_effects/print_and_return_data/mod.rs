@@ -4,6 +4,7 @@ use nu_protocol::{
 };
 
 use crate::{
+    LintLevel,
     ast::{block::BlockExt, call::CallExt, span::SpanExt},
     context::LintContext,
     effect::{
@@ -131,6 +132,7 @@ pub const fn rule() -> Rule {
         "print_and_return_data",
         "Functions should not both print to stdout and return data",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/pipelines.html")
 }

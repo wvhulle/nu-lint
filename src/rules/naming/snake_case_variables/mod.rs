@@ -5,6 +5,7 @@ use nu_protocol::{
 };
 
 use crate::{
+    LintLevel,
     ast::span::SpanExt,
     context::LintContext,
     rule::Rule,
@@ -102,6 +103,7 @@ pub const fn rule() -> Rule {
         "snake_case_variables",
         "Variables should use snake_case naming convention",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/style_guide.html#variables-and-command-parameters")
 }

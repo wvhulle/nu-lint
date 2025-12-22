@@ -6,6 +6,7 @@ use nu_protocol::{
 };
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::Rule,
@@ -112,6 +113,7 @@ pub const fn rule() -> Rule {
         "unnecessary_mut",
         "Variables should only be marked 'mut' when they are actually reassigned",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/variables.html#mutable-variables")
 }

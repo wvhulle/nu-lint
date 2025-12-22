@@ -1,6 +1,7 @@
 use nu_protocol::ast::{Call, Expr, Expression, RecordItem};
 
 use crate::{
+    LintLevel,
     ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
     context::LintContext,
     rule::Rule,
@@ -212,6 +213,7 @@ pub const fn rule() -> Rule {
         "error make calls should include metadata fields like label and help for better error \
          context",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/creating_errors.html")
 }

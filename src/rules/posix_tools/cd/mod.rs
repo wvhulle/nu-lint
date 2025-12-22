@@ -1,7 +1,7 @@
 use nu_protocol::ast::ExternalArgument;
 
 use crate::{
-    Violation,
+    LintLevel, Violation,
     alternatives::{detect_external_commands, external_args_slices},
     context::LintContext,
     rule::Rule,
@@ -125,6 +125,7 @@ pub const fn rule() -> Rule {
         "prefer_builtin_cd",
         "Use Nu's built-in 'cd' instead of external cd command",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/cd.html")
 }

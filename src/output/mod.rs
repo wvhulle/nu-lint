@@ -1,16 +1,9 @@
-mod json;
 mod text;
-mod vscode;
 
 use std::fs;
 
-pub use json::{JsonFix, JsonOutput, JsonReplacement, JsonViolation, format_json};
 use serde::Serialize;
 pub use text::format_text;
-pub use vscode::{
-    VsCodeCodeAction, VsCodeDiagnostic, VsCodeJsonOutput, VsCodeLocation, VsCodePosition,
-    VsCodeRange, VsCodeRelatedInformation, VsCodeTextEdit, format_vscode_json,
-};
 
 use crate::{
     config::LintLevel,
@@ -23,11 +16,6 @@ pub enum Format {
     /// Human-readable text format (default)
     #[default]
     Text,
-    /// Simple JSON format
-    Json,
-    /// Backwards compatibility alias for old vscode-json format (deprecated)
-    #[value(name = "vscode-json")]
-    VscodeJson,
 }
 
 /// Format and output linting results
@@ -35,8 +23,6 @@ pub enum Format {
 pub fn format_output(violations: &[Violation], format: Format) -> String {
     match format {
         Format::Text => format_text(violations),
-        Format::Json => format_json(violations),
-        Format::VscodeJson => format_vscode_json(violations),
     }
 }
 
@@ -44,26 +30,26 @@ pub fn format_output(violations: &[Violation], format: Format) -> String {
 pub struct Summary {
     pub errors: usize,
     pub warnings: usize,
-    pub info: usize,
+    pub hints: usize,
     pub files_checked: usize,
 }
 
 impl Summary {
     #[must_use]
     pub fn from_violations(violations: &[Violation]) -> Self {
-        let (errors, warnings, info) = violations.iter().fold(
+        let (errors, warnings, hints) = violations.iter().fold(
             (0, 0, 0),
-            |(errors, warnings, info), violation| match violation.lint_level {
-                LintLevel::Deny => (errors + 1, warnings, info),
-                LintLevel::Warn => (errors, warnings + 1, info),
-                LintLevel::Allow => (errors, warnings, info + 1),
+            |(errors, warnings, hints), violation| match violation.lint_level {
+                LintLevel::Error => (errors + 1, warnings, hints),
+                LintLevel::Warning => (errors, warnings + 1, hints),
+                LintLevel::Hint => (errors, warnings, hints + 1),
             },
         );
 
         Self {
             errors,
             warnings,
-            info,
+            hints,
             files_checked: 1,
         }
     }
@@ -73,7 +59,7 @@ impl Summary {
         let parts: Vec<String> = [
             (self.errors > 0).then(|| format!("{} error(s)", self.errors)),
             (self.warnings > 0).then(|| format!("{} warning(s)", self.warnings)),
-            (self.info > 0).then(|| format!("{} info", self.info)),
+            (self.hints > 0).then(|| format!("{} hint(s)", self.hints)),
         ]
         .into_iter()
         .flatten()
@@ -85,19 +71,6 @@ impl Summary {
             parts.join(", ")
         }
     }
-}
-
-pub(super) fn calculate_line_column(source: &str, offset: usize) -> (usize, usize) {
-    source
-        .char_indices()
-        .take_while(|(pos, _)| *pos < offset)
-        .fold((1, 1), |(line, column), (_, ch)| {
-            if ch == '\n' {
-                (line + 1, 1)
-            } else {
-                (line, column + 1)
-            }
-        })
 }
 
 pub(super) fn read_source_code(file: Option<&SourceFile>) -> String {

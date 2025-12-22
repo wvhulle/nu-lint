@@ -1,7 +1,8 @@
 use nu_protocol::ast::{Expr, Expression, Pipeline};
 
 use crate::{
-    Fix, Replacement, ast::span::SpanExt, context::LintContext, rule::Rule, violation::Violation,
+    Fix, LintLevel, Replacement, ast::span::SpanExt, context::LintContext, rule::Rule,
+    violation::Violation,
 };
 fn check_subexpression_for_is_empty(block_id: nu_protocol::BlockId, context: &LintContext) -> bool {
     let block = context.working_set.get_block(block_id);
@@ -116,6 +117,7 @@ pub const fn rule() -> Rule {
         "prefer_is_not_empty",
         "Use 'is-not-empty' instead of 'not ... is-empty' for better readability",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/is-not-empty.html")
 }

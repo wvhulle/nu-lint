@@ -1,6 +1,6 @@
 use nu_protocol::{Id, marker::Block};
 
-use crate::{context::LintContext, rule::Rule, violation::Violation};
+use crate::{LintLevel, context::LintContext, rule::Rule, violation::Violation};
 const MAX_LINES: usize = 40;
 
 fn check(context: &LintContext) -> Vec<Violation> {
@@ -40,6 +40,7 @@ pub const fn rule() -> Rule {
         "max_function_body_length",
         "Function bodies should not exceed 80 lines to maintain readability",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/custom_commands.html")
 }

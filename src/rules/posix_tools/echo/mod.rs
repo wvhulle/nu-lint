@@ -1,6 +1,7 @@
 use nu_protocol::ast::{Block, Expr, Pipeline, PipelineElement};
 
 use crate::{
+    LintLevel,
     ast::call::CallExt,
     context::LintContext,
     rule::Rule,
@@ -137,6 +138,7 @@ pub const fn rule() -> Rule {
         "prefer_builtin_echo",
         "Discourage use of builtin 'echo' command as it's just an identity function",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/thinking_in_nu.html")
 }

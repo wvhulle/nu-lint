@@ -1,7 +1,7 @@
 use nu_protocol::ast::{Expr, ExternalArgument};
 
 use crate::{
-    Violation,
+    LintLevel, Violation,
     context::LintContext,
     rule::Rule,
     violation::{Fix, Replacement},
@@ -76,6 +76,7 @@ pub const fn rule() -> Rule {
         "unnecessary_hat",
         "Detect unnecessary '^' prefix on external commands",
         check,
+        LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/book/external_commands.html")
 }

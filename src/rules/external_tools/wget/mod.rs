@@ -81,7 +81,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
 pub const fn rule() -> Rule {
     Rule::new(
-        "prefer_builtin_wget",
+        "use_builtin_wget",
         "Use 'http get | save' instead of wget",
         check,
         LintLevel::Warning,

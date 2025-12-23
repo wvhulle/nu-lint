@@ -8,7 +8,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::{LintError, rule::Rule, rules::sets::ALL_GROUPS};
+use crate::{LintError, rule::Rule, rules::groups::ALL_GROUPS};
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(rename_all = "lowercase")]
@@ -22,7 +22,7 @@ pub enum LintLevel {
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
 #[serde(default)]
 pub struct Config {
-    pub sets: HashMap<String, LintLevel>,
+    pub groups: HashMap<String, LintLevel>,
     pub rules: HashMap<String, LintLevel>,
     pub ignored: HashSet<String>,
     pub sequential: bool,
@@ -82,7 +82,7 @@ impl Config {
             return Some(*level);
         }
 
-        for (set_name, level) in &self.sets {
+        for (set_name, level) in &self.groups {
             let Some(lint_set) = ALL_GROUPS.iter().find(|set| set.name == set_name.as_str()) else {
                 continue;
             };
@@ -150,12 +150,12 @@ mod tests {
     fn test_load_config_simple_str_set() {
         let toml_str = r#"
         ignored = [ "snake_case_variables" ]
-        [sets]
+        [groups]
         naming = "error"
     "#;
 
         let config = Config::load_from_str(toml_str).unwrap();
-        let found_set_level = config.sets.iter().find(|(k, _)| **k == "naming");
+        let found_set_level = config.groups.iter().find(|(k, _)| **k == "naming");
         assert!(matches!(found_set_level, Some((_, LintLevel::Error))));
         let ignored_rule = ALL_RULES
             .iter()

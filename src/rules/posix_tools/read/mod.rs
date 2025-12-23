@@ -37,7 +37,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
 pub const fn rule() -> Rule {
     Rule::new(
-        "prefer_builtin_read",
+        "use_builtin_read",
         "Prefer 'input' over 'read'",
         check,
         LintLevel::Warning,

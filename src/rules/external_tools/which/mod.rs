@@ -32,10 +32,10 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
 pub const fn rule() -> Rule {
     Rule::new(
-        "prefer_builtin_which",
+        "use_builtin_which",
         "Prefer built-in 'which'",
         check,
-        LintLevel::Warning,
+        LintLevel::Hint,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/which.html")
 }

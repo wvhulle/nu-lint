@@ -1,5 +1,3 @@
-use std::str::from_utf8;
-
 use nu_protocol::ast::{Expr, Expression, ExternalArgument};
 
 use crate::{Fix, Violation, context::LintContext};
@@ -12,7 +10,7 @@ pub fn external_args_slices<'a>(
 ) -> impl Iterator<Item = &'a str> + 'a {
     args.iter().map(move |arg| match arg {
         ExternalArgument::Regular(expr) | ExternalArgument::Spread(expr) => {
-            from_utf8(context.working_set.get_span_contents(expr.span)).unwrap_or("")
+            context.get_span_text(expr.span)
         }
     })
 }
@@ -35,7 +33,7 @@ pub fn detect_external_commands(
 ) -> Vec<Violation> {
     context.collect_rule_violations(|expr, ctx| {
         if let Expr::ExternalCall(head, args) = &expr.expr {
-            let cmd_text = from_utf8(ctx.working_set.get_span_contents(head.span)).unwrap_or("");
+            let cmd_text = ctx.get_span_text(head.span);
 
             if cmd_text == external_cmd {
                 let violation = create_violation(fix_builder, expr, ctx, cmd_text, note, args);

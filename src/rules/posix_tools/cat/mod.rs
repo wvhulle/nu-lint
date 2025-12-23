@@ -193,7 +193,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
 pub const fn rule() -> Rule {
     Rule::new(
-        "prefer_builtin_cat",
+        "use_builtin_cat",
         "Use Nu's 'open' command instead of 'cat' for better file handling",
         check,
         LintLevel::Warning,

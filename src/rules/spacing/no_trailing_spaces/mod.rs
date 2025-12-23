@@ -39,7 +39,7 @@ pub const fn rule() -> Rule {
         "no_trailing_spaces",
         "Eliminate trailing spaces at the end of lines",
         check,
-        LintLevel::Warning,
+        LintLevel::Hint,
     )
     .with_doc_url("https://www.nushell.sh/book/style_guide.html#multi-line-format")
 }

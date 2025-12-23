@@ -254,7 +254,7 @@ pub const fn rule() -> Rule {
         "dangerous_file_operations",
         "Detect dangerous file operations that could cause data loss",
         check,
-        LintLevel::Warning,
+        LintLevel::Hint,
     )
     .with_doc_url("https://www.nushell.sh/book/running_externals.html")
 }

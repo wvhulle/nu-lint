@@ -78,7 +78,7 @@ pub const fn rule() -> Rule {
         "add_doc_comment_exported_fn",
         "Exported functions should have documentation comments",
         check,
-        LintLevel::Warning,
+        LintLevel::Hint,
     )
     .with_doc_url("https://www.nushell.sh/book/custom_commands.html#documenting-your-command")
 }

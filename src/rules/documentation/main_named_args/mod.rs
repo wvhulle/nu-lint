@@ -75,7 +75,7 @@ pub const fn rule() -> Rule {
         "main_named_args_docs",
         "Named parameters (flags) in main functions should have documentation comments",
         check,
-        LintLevel::Warning,
+        LintLevel::Hint,
     )
     .with_doc_url("https://www.nushell.sh/book/custom_commands.html#flags")
 }

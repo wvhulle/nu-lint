@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::from_utf8};
+use std::collections::HashMap;
 
 use nu_protocol::{BlockId, Span};
 
@@ -29,7 +29,7 @@ pub trait SpanExt {
 
 impl SpanExt for Span {
     fn source_code<'a>(&self, context: &'a LintContext) -> &'a str {
-        from_utf8(context.working_set.get_span_contents(*self)).unwrap_or("")
+        context.get_span_text(*self)
     }
 
     fn find_containing_function(

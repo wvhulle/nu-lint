@@ -118,7 +118,7 @@ pub const fn rule() -> Rule {
         "main_positional_args_docs",
         "Positional parameters in main functions should have documentation comments",
         check,
-        LintLevel::Warning,
+        LintLevel::Hint,
     )
     .with_doc_url("https://www.nushell.sh/book/custom_commands.html")
 }

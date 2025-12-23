@@ -432,7 +432,7 @@ pub const fn rule() -> Rule {
         "prefer_parse_over_split",
         "Prefer 'parse' command over manual string splitting patterns",
         check,
-        LintLevel::Warning,
+        LintLevel::Hint,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/parse.html")
 }

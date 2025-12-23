@@ -59,7 +59,7 @@ pub const fn rule() -> Rule {
         "screaming_snake_constants",
         "Constants should use SCREAMING_SNAKE_CASE naming convention",
         check,
-        LintLevel::Warning,
+        LintLevel::Hint,
     )
     .with_doc_url("https://www.nushell.sh/book/style_guide.html#environment-variables")
 }

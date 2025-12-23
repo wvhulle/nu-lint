@@ -105,13 +105,11 @@ fn check(context: &LintContext) -> Vec<Violation> {
 pub const fn rule() -> Rule {
     Rule::new(
         "non_final_failure_check",
-        "Only the exit code of the last external command may cause Nu shell to report failure of \
-         the whole pipeline. You may use a configuration option on recent versions of Nu shell to \
-         check non-final external commands as well.",
+        "Only the exit code of the last external command in a pipeline is reported.",
         check,
         LintLevel::Warning,
     )
-    .with_doc_url("https://www.nushell.sh/commands/docs/complete.html")
+    .with_doc_url("https://www.nushell.sh/blog/2025-10-15-nushell_v0_108_0.html#pipefail-16449-toc")
 }
 
 #[cfg(test)]

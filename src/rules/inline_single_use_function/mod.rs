@@ -89,7 +89,7 @@ pub const fn rule() -> Rule {
         "inline_single_use_function",
         "Detect single-line custom commands used only once that could be inlined",
         check,
-        LintLevel::Warning,
+        LintLevel::Hint,
     )
     .with_doc_url("https://www.nushell.sh/book/custom_commands.html")
 }

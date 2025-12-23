@@ -103,7 +103,7 @@ pub const fn rule() -> Rule {
         "avoid_self_import",
         "Avoid importing the current script from itself; functions are already available in scope",
         check,
-        LintLevel::Warning,
+        LintLevel::Error,
     )
 }
 

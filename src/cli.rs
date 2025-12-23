@@ -14,7 +14,7 @@ use crate::{
     log::instrument,
     lsp,
     output::{Format, Summary, format_output},
-    rules::{ALL_RULES, sets::ALL_GROUPS},
+    rules::{ALL_RULES, groups::ALL_GROUPS},
 };
 
 #[derive(Parser)]
@@ -27,23 +27,23 @@ pub struct Cli {
     paths: Vec<PathBuf>,
 
     /// Auto-fix lint violations
-    #[arg(long, conflicts_with_all = ["lsp", "list_rules", "list_groups", "explain"])]
+    #[arg(long, conflicts_with_all = ["lsp", "list", "groups", "explain"])]
     fix: bool,
 
     /// Start the LSP server
-    #[arg(long, conflicts_with_all = ["fix", "list_rules", "list_groups", "explain"])]
+    #[arg(long, conflicts_with_all = ["fix", "list", "groups", "explain"])]
     lsp: bool,
 
     /// List all available lint rules
-    #[arg(long, conflicts_with_all = ["fix", "lsp", "list_groups", "explain"])]
-    list_rules: bool,
+    #[arg(long, conflicts_with_all = ["fix", "lsp", "groups", "explain"], alias = "rules")]
+    list: bool,
 
     /// List all available rule groups
-    #[arg(long, conflicts_with_all = ["fix", "lsp", "list_rules", "explain"])]
-    list_groups: bool,
+    #[arg(long, conflicts_with_all = ["fix", "lsp", "list", "explain"], alias = "sets")]
+    groups: bool,
 
     /// Explain a specific lint rule
-    #[arg(long, value_name = "RULE_ID", conflicts_with_all = ["fix", "lsp", "list_rules", "list_groups"])]
+    #[arg(long, value_name = "RULE_ID", conflicts_with_all = ["fix", "lsp", "list", "groups"])]
     explain: Option<String>,
 
     /// Output format
@@ -80,16 +80,6 @@ impl Cli {
             .read_to_string(&mut source)
             .expect("Failed to read from stdin");
         source
-    }
-
-    fn validate(&self) -> Result<(), String> {
-        if (self.list_rules || self.list_groups || self.explain.is_some() || self.lsp)
-            && !self.paths.is_empty()
-            && self.paths != vec![PathBuf::from(".")]
-        {
-            return Err("Paths cannot be specified with info or LSP flags".to_string());
-        }
-        Ok(())
     }
 
     fn lint(&self) {
@@ -179,7 +169,7 @@ impl Cli {
     fn list_groups() {
         println!("Available rule groups ({n}):\n", n = ALL_GROUPS.len());
         for set in ALL_GROUPS {
-            println!("  {} - {}", set.name, set.explanation);
+            println!("  {} - {}", set.name, set.description);
             for rule in set.rules {
                 println!("    - {}", rule.id);
             }
@@ -207,18 +197,13 @@ impl Cli {
 pub fn run() {
     let cli = Cli::parse();
 
-    if let Err(e) = cli.validate() {
-        eprintln!("Error: {e}");
-        process::exit(1);
-    }
-
     if cli.verbose {
         instrument();
     }
 
-    if cli.list_rules {
+    if cli.list {
         Cli::list_rules();
-    } else if cli.list_groups {
+    } else if cli.groups {
         Cli::list_groups();
     } else if let Some(ref rule_id) = cli.explain {
         Cli::explain_rule(rule_id);
@@ -254,14 +239,14 @@ mod tests {
 
     #[test]
     fn test_cli_list_rules_flag() {
-        let cli = Cli::try_parse_from(["nu-lint", "--list-rules"]).unwrap();
-        assert!(cli.list_rules);
+        let cli = Cli::try_parse_from(["nu-lint", "--list"]).unwrap();
+        assert!(cli.list);
     }
 
     #[test]
     fn test_cli_list_groups_flag() {
-        let cli = Cli::try_parse_from(["nu-lint", "--list-groups"]).unwrap();
-        assert!(cli.list_groups);
+        let cli = Cli::try_parse_from(["nu-lint", "--groups"]).unwrap();
+        assert!(cli.groups);
     }
 
     #[test]

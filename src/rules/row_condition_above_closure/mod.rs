@@ -145,7 +145,7 @@ pub const fn rule() -> Rule {
         "row_condition_above_closure",
         "Prefer row conditions over closures in 'where' for conciseness",
         check,
-        LintLevel::Warning,
+        LintLevel::Hint,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/where.html")
 }

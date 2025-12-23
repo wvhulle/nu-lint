@@ -199,7 +199,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
 pub const fn rule() -> Rule {
     Rule::new(
-        "prefer_builtin_ls",
+        "use_builtin_ls",
         "Use Nu's built-in 'ls' instead of external ls command for structured data",
         check,
         LintLevel::Warning,

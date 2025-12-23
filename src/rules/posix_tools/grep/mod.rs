@@ -250,7 +250,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
 pub const fn rule() -> Rule {
     Rule::new(
-        "prefer_builtin_grep",
+        "use_builtin_grep",
         "Use Nu's 'find' or 'where' instead of 'grep' for better data handling",
         check,
         LintLevel::Warning,

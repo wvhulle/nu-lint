@@ -132,7 +132,7 @@ Create `.nu-lint.toml` in your project root:
 ignored = ["snake_case_variables"]
 
 # Set lint level of a set of rules at once.
-[sets]
+[groups]
 performance = "warning"
 type-safety = "error"
 

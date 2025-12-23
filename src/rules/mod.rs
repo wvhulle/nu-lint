@@ -1,6 +1,6 @@
 use crate::rule::Rule;
 
-pub mod sets;
+pub mod groups;
 
 mod avoid_nu_subprocess;
 mod avoid_self_import;
@@ -25,28 +25,29 @@ mod max_positional_params;
 mod missing_stdin_in_shebang;
 mod naming;
 
+mod combine_print_stderr_exit;
 mod external_tools;
+mod merge_get_cell_path;
+mod merge_multiline_print;
+mod positional_to_pipeline;
 mod posix_tools;
-mod prefer_cell_path;
 mod prefer_compound_assignment;
 mod prefer_direct_use;
-mod prefer_error_make_for_stderr;
 mod prefer_is_not_empty;
 mod prefer_items_over_transpose;
 mod prefer_lines_over_split;
-mod prefer_match_over_if_chain;
 mod prefer_parse_command;
-mod prefer_pipeline_input;
-mod prefer_range_iteration;
 mod prefer_subcommands_over_dispatch;
-mod prefer_try_for_error_handling;
 mod prefer_where_over_each_if;
 mod prefer_where_over_for_if;
 mod print_exit_use_error_make;
+mod range_instead_of_for;
 mod remove_redundant_in;
+mod replace_else_if_with_match;
 mod row_condition_above_closure;
 mod spacing;
-mod systemd_journal_prefix;
+mod systemd;
+mod try_instead_of_do;
 mod unnecessary_mut;
 mod unnecessary_variable_before_return;
 mod unsafe_dynamic_record_access;
@@ -70,9 +71,7 @@ pub const ALL_RULES: &[Rule] = &[
     external_tools::curl::rule(),
     external_tools::eza::rule(),
     external_tools::fd::rule(),
-    external_tools::hostname::rule(),
     external_tools::jq::rule(),
-    external_tools::printenv::rule(),
     external_tools::rg::rule(),
     external_tools::unnecessary_hat::rule(),
     external_tools::wget::rule(),
@@ -101,19 +100,20 @@ pub const ALL_RULES: &[Rule] = &[
     posix_tools::tail::rule(),
     posix_tools::uniq::rule(),
     posix_tools::wc::rule(),
-    prefer_cell_path::rule(),
+    merge_get_cell_path::rule(),
     prefer_compound_assignment::rule(),
     prefer_direct_use::rule(),
-    prefer_error_make_for_stderr::rule(),
+    combine_print_stderr_exit::rule(),
     prefer_is_not_empty::rule(),
     prefer_items_over_transpose::rule(),
     prefer_lines_over_split::rule(),
-    prefer_match_over_if_chain::rule(),
+    replace_else_if_with_match::rule(),
+    merge_multiline_print::rule(),
     prefer_parse_command::rule(),
-    prefer_pipeline_input::rule(),
-    prefer_range_iteration::rule(),
+    positional_to_pipeline::rule(),
+    range_instead_of_for::rule(),
     prefer_subcommands_over_dispatch::rule(),
-    prefer_try_for_error_handling::rule(),
+    try_instead_of_do::rule(),
     prefer_where_over_each_if::rule(),
     prefer_where_over_for_if::rule(),
     print_exit_use_error_make::rule(),
@@ -128,13 +128,14 @@ pub const ALL_RULES: &[Rule] = &[
     spacing::no_trailing_spaces::rule(),
     spacing::omit_list_commas::rule(),
     spacing::pipe_spacing::rule(),
-    spacing::prefer_multiline_functions::rule(),
-    spacing::prefer_multiline_lists::rule(),
+    spacing::reflow_wide_pipelines::rule(),
+    spacing::wrap_long_lists::rule(),
     spacing::prefer_multiline_records::rule(),
     strong_typing::argument::rule(),
     strong_typing::paths::rule(),
     strong_typing::pipeline::rule(),
-    systemd_journal_prefix::rule(),
+    systemd::add_journal_prefix::rule(),
+    systemd::mnemonic_log_level::rule(),
     unnecessary_mut::rule(),
     unnecessary_variable_before_return::rule(),
     unsafe_dynamic_record_access::rule(),

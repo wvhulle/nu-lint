@@ -89,7 +89,7 @@ pub const fn rule() -> Rule {
         "avoid_nu_subprocess",
         "Spawning `nu -c` from within a Nu script is redundant; call functions directly instead",
         check,
-        LintLevel::Warning,
+        LintLevel::Error,
     )
 }
 

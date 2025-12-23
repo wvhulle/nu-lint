@@ -122,7 +122,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
 pub const fn rule() -> Rule {
     Rule::new(
-        "prefer_builtin_cd",
+        "use_builtin_cd",
         "Use Nu's built-in 'cd' instead of external cd command",
         check,
         LintLevel::Warning,

@@ -201,10 +201,10 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
 pub const fn rule() -> Rule {
     Rule::new(
-        "prefer_builtin_fd",
+        "use_builtin_fd",
         "Use Nu's 'ls' with glob patterns instead of 'fd' command",
         check,
-        LintLevel::Warning,
+        LintLevel::Hint,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/glob.html")
 }

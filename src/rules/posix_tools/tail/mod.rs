@@ -43,7 +43,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
 pub const fn rule() -> Rule {
     Rule::new(
-        "prefer_builtin_tail",
+        "use_builtin_tail",
         "Use Nu's 'last' command instead of 'tail' for cleaner syntax",
         check,
         LintLevel::Warning,

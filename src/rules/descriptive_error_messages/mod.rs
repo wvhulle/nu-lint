@@ -119,7 +119,7 @@ pub const fn rule() -> Rule {
         "descriptive_error_messages",
         "Error messages should be descriptive and actionable",
         check,
-        LintLevel::Warning,
+        LintLevel::Hint,
     )
     .with_doc_url("https://www.nushell.sh/book/creating_errors.html")
 }

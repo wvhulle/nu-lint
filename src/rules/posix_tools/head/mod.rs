@@ -43,7 +43,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
 pub const fn rule() -> Rule {
     Rule::new(
-        "prefer_builtin_head",
+        "use_builtin_head",
         "Use Nu's 'first' command instead of 'head' for cleaner syntax",
         check,
         LintLevel::Warning,

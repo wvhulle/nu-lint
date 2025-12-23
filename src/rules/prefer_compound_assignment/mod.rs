@@ -122,10 +122,10 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
 pub const fn rule() -> Rule {
     Rule::new(
-        "prefer_compound_assignment",
-        "Prefer compound assignment operators (+=, -=, etc.) over expanded form",
+        "shorten_with_compound_assignment",
+        "Compound assignment operators simplify simple arithmetic.",
         check,
-        LintLevel::Warning,
+        LintLevel::Hint,
     )
     .with_doc_url("https://www.nushell.sh/book/operators.html")
 }

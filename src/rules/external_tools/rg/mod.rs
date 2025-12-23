@@ -318,10 +318,10 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
 pub const fn rule() -> Rule {
     Rule::new(
-        "prefer_builtin_rg",
+        "use_builtin_rg",
         "Use Nu's 'find' or 'where' instead of 'rg'",
         check,
-        LintLevel::Warning,
+        LintLevel::Hint,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/find.html")
 }

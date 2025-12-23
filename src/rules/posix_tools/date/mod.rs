@@ -101,7 +101,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
 pub const fn rule() -> Rule {
     Rule::new(
-        "prefer_builtin_date",
+        "use_builtin_date",
         "Use 'date now' instead of external date",
         check,
         LintLevel::Warning,

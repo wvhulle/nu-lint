@@ -106,7 +106,7 @@ pub const fn rule() -> Rule {
         "redundant_ignore",
         "Commands producing output that is discarded with '| ignore'",
         check,
-        LintLevel::Warning,
+        LintLevel::Hint,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/ignore.html")
 }

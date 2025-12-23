@@ -135,8 +135,8 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
 pub const fn rule() -> Rule {
     Rule::new(
-        "prefer_builtin_echo",
-        "Discourage use of builtin 'echo' command as it's just an identity function",
+        "use_builtin_echo",
+        "D not use builtin 'echo' as it's just an identity function",
         check,
         LintLevel::Warning,
     )

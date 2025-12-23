@@ -208,7 +208,7 @@ pub const fn rule() -> Rule {
         "remove_redundant_in",
         "Remove redundant $in at the start of pipelines - it's implicit in Nushell",
         check,
-        LintLevel::Warning,
+        LintLevel::Hint,
     )
     .with_doc_url("https://www.nushell.sh/book/special_variables.html")
 }

@@ -1,5 +1,3 @@
-use std::str::from_utf8;
-
 use nu_protocol::ast::{Argument, Call};
 
 use crate::{
@@ -65,9 +63,7 @@ pub fn has_recursive_flag(call: &Call, context: &LintContext) -> bool {
 
 pub fn extract_arg_text<'a>(arg: &Argument, context: &'a LintContext) -> &'a str {
     match arg {
-        Argument::Positional(expr) | Argument::Spread(expr) => {
-            from_utf8(context.working_set.get_span_contents(expr.span)).unwrap_or("")
-        }
+        Argument::Positional(expr) | Argument::Spread(expr) => context.get_span_text(expr.span),
         _ => "",
     }
 }
@@ -121,8 +117,7 @@ fn mv_cp_is_dangerous(context: &LintContext, call: &Call) -> bool {
 fn exit_is_dangerous(context: &LintContext, call: &Call) -> bool {
     call.arguments.iter().any(|arg| {
         if let Argument::Positional(expr) = arg {
-            let code_text =
-                from_utf8(context.working_set.get_span_contents(expr.span)).unwrap_or("");
+            let code_text = context.get_span_text(expr.span);
             code_text != "0" && !code_text.starts_with('$')
         } else {
             false

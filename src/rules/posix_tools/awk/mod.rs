@@ -239,7 +239,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
 pub const fn rule() -> Rule {
     Rule::new(
-        "prefer_builtin_awk",
+        "use_builtin_awk",
         "Use Nushell pipelines (where/split column/select/each) instead of awk",
         check,
         LintLevel::Warning,

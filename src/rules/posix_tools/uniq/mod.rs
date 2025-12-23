@@ -156,7 +156,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
 pub const fn rule() -> Rule {
     Rule::new(
-        "prefer_builtin_uniq",
+        "use_builtin_uniq",
         "Use Nu's 'uniq' command for structured data support",
         check,
         LintLevel::Warning,

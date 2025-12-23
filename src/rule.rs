@@ -67,7 +67,7 @@ impl Rule {
         violations.into_iter().next().unwrap()
     }
 
-    fn first_replacement_text(&self, code: &str) -> Cow<'static, str> {
+    pub fn first_replacement_text(&self, code: &str) -> Cow<'static, str> {
         let fix = self
             .first_violation(code)
             .fix

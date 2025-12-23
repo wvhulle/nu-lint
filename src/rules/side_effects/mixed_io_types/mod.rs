@@ -135,11 +135,10 @@ fn check(context: &LintContext) -> Vec<Violation> {
 pub const fn rule() -> Rule {
     Rule::new(
         "mixed_io_types",
-        "Functions should not mix different types of I/O operations",
+        "Functions should not mix different types of I/O operations.",
         check,
-        LintLevel::Warning,
+        LintLevel::Hint,
     )
-    .with_doc_url("https://www.nushell.sh/book/custom_commands.html")
 }
 
 #[cfg(test)]

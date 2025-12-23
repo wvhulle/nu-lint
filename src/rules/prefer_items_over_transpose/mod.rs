@@ -331,7 +331,7 @@ pub const fn rule() -> Rule {
         "prefer_items_over_transpose",
         "Use 'items' instead of 'transpose | each' when iterating over record entries",
         check,
-        LintLevel::Warning,
+        LintLevel::Hint,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/items.html")
 }

@@ -8,244 +8,31 @@ use crate::{
     violation::{Fix, Replacement},
 };
 
-const NOTE_SED: &str = "Use 'str replace' for text substitution. Supports --all for global \
-                        replacement (sed's /g flag), --regex for pattern matching, and works \
-                        seamlessly with structured data in pipelines.";
-const NOTE_GSED: &str = "Use 'str replace' instead of GNU sed for text substitution.";
-
 fn check(context: &LintContext) -> Vec<Violation> {
     let mut out = Vec::new();
     out.extend(detect_external_commands(
         context,
         "sed",
-        NOTE_SED,
+        "Use 'str replace' for text substitution",
         Some(build_fix),
     ));
-
     out.extend(detect_external_commands(
         context,
         "gsed",
-        NOTE_GSED,
+        "Use 'str replace' for text substitution",
         Some(build_fix),
     ));
-
     out
 }
 
 pub const fn rule() -> Rule {
     Rule::new(
-        "prefer_builtin_sed",
-        "Use Nu's 'str replace' instead of 'sed' for text substitution",
+        "use_builtin_sed",
+        "Use Nu's 'str replace' instead of 'sed'",
         check,
         LintLevel::Warning,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/str_replace.html")
-}
-
-/// Parse sed command arguments to extract the operation and parameters
-#[derive(Default)]
-
-struct SedOptions {
-    pattern: Option<String>,
-    in_place: bool,
-    global: bool,
-    extended_regex: bool,
-    delete: bool,
-    files: Vec<String>,
-}
-
-impl SedOptions {
-    fn parse<'a>(args: impl IntoIterator<Item = &'a str>) -> Self {
-        let mut opts = Self::default();
-        let mut iter = args.into_iter();
-
-        while let Some(arg) = iter.next() {
-            match arg {
-                "-i" | "--in-place" => opts.in_place = true,
-                "-E" | "-r" | "--regexp-extended" => opts.extended_regex = true,
-                "-e" | "--expression" => Self::handle_expression_flag(&mut opts, &mut iter),
-                s if s.starts_with('-') && !s.starts_with("--") => {
-                    Self::handle_combined_flags(&mut opts, s, &mut iter);
-                }
-                s if !s.starts_with('-') => Self::handle_non_flag_arg(&mut opts, s),
-                _ => {}
-            }
-        }
-
-        opts
-    }
-
-    fn handle_expression_flag<'a, I: Iterator<Item = &'a str>>(opts: &mut Self, iter: &mut I) {
-        if let Some(expr) = iter.next() {
-            opts.pattern = Some(expr.to_string());
-        }
-    }
-
-    fn handle_combined_flags<'a, I: Iterator<Item = &'a str>>(
-        opts: &mut Self,
-        arg: &str,
-        iter: &mut I,
-    ) {
-        for ch in arg.chars().skip(1) {
-            match ch {
-                'i' => opts.in_place = true,
-                'E' | 'r' => opts.extended_regex = true,
-                'e' => Self::handle_expression_flag(opts, iter),
-                _ => {}
-            }
-        }
-    }
-
-    fn handle_non_flag_arg(opts: &mut Self, arg: &str) {
-        if opts.pattern.is_none() {
-            opts.pattern = Some(arg.to_string());
-            Self::detect_operation(opts, arg);
-        } else {
-            opts.files.push(arg.to_string());
-        }
-    }
-
-    fn detect_operation(opts: &mut Self, pattern: &str) {
-        let clean = pattern.trim_matches('"').trim_matches('\'');
-
-        // Check for global flag in substitution
-        if clean.contains("/g") {
-            opts.global = true;
-        }
-
-        // Check for delete operation
-        if clean.starts_with('d') || clean.ends_with('d') {
-            opts.delete = true;
-        }
-    }
-
-    fn to_nushell(&self) -> (String, String) {
-        let pattern = self.pattern.as_deref().unwrap_or("");
-        let clean_pattern = pattern.trim_matches('"').trim_matches('\'');
-
-        // Parse sed substitution pattern s/find/replace/[g]
-        if let Some(conversion) = self.parse_substitution(clean_pattern) {
-            return conversion;
-        }
-
-        // Handle delete operations
-        if self.delete {
-            return Self::build_delete_suggestion(clean_pattern);
-        }
-
-        // Default fallback
-        Self::build_default_suggestion()
-    }
-
-    fn parse_substitution(&self, pattern: &str) -> Option<(String, String)> {
-        // Parse s/find/replace/[g] patterns
-        if !pattern.starts_with('s') || !pattern.contains('/') {
-            return None;
-        }
-
-        let parts: Vec<&str> = pattern.split('/').collect();
-        if parts.len() < 3 {
-            return None;
-        }
-
-        let find = parts[1];
-        let replace = parts[2];
-        let global_flag = parts.len() > 3 && parts[3].contains('g');
-        let is_global = global_flag || self.global;
-
-        let (replacement, description) =
-            self.build_replacement_for_context(find, replace, is_global);
-
-        Some((replacement, description))
-    }
-
-    fn build_replacement_for_context(
-        &self,
-        find: &str,
-        replace: &str,
-        global: bool,
-    ) -> (String, String) {
-        if self.files.is_empty() {
-            Self::build_str_replace(find, replace, global)
-        } else if self.in_place {
-            self.build_in_place_replace(find, replace, global)
-        } else {
-            self.build_file_replace(find, replace, global)
-        }
-    }
-
-    fn build_str_replace(find: &str, replace: &str, global: bool) -> (String, String) {
-        let flag = if global { " --all" } else { "" };
-        let replacement = format!("str replace{flag} '{find}' '{replace}'");
-
-        let mut desc_parts = vec!["Use 'str replace' for text substitution.".to_string()];
-
-        if global {
-            desc_parts.push("--all flag replaces all occurrences (sed's /g flag)".to_string());
-        } else {
-            desc_parts.push(
-                "By default replaces first occurrence (use --all for global replacement)"
-                    .to_string(),
-            );
-        }
-
-        desc_parts
-            .push("'str replace' works on strings and structured data in pipelines.".to_string());
-
-        (replacement, desc_parts.join(" "))
-    }
-
-    fn build_in_place_replace(&self, find: &str, replace: &str, global: bool) -> (String, String) {
-        let file = self.files.first().map_or("file", String::as_str);
-        let flag = if global { " --all" } else { "" };
-        let replacement =
-            format!("open {file} | str replace{flag} '{find}' '{replace}' | save -f {file}");
-
-        let desc = format!(
-            "For in-place file editing: open → str replace{} → save. Use --all for global \
-             replacement.",
-            if global { " --all" } else { "" }
-        );
-
-        (replacement, desc)
-    }
-
-    fn build_file_replace(&self, find: &str, replace: &str, global: bool) -> (String, String) {
-        let file = self.files.first().map_or("file", String::as_str);
-        let flag = if global { " --all" } else { "" };
-        let replacement = format!("open {file} | str replace{flag} '{find}' '{replace}'");
-
-        let desc = "Use 'open' to read file, then 'str replace' for substitution. Add '| save \
-                    file' for in-place editing."
-            .to_string();
-
-        (replacement, desc)
-    }
-
-    fn build_delete_suggestion(pattern: &str) -> (String, String) {
-        let desc = if pattern.contains("//d") || pattern == "d" {
-            "Use 'lines | where' to filter out lines. Example: 'lines | where $it !~ \"pattern\"' \
-             to delete matching lines."
-        } else {
-            "Use 'lines | where' to filter lines, or 'str replace' to remove patterns from text."
-        };
-
-        (
-            "lines | where $it !~ 'pattern'".to_string(),
-            desc.to_string(),
-        )
-    }
-
-    fn build_default_suggestion() -> (String, String) {
-        let replacement = "str replace 'pattern' 'replacement'".to_string();
-        let description = "Use 'str replace' for text substitution. Common patterns: 'str replace \
-                           \"old\" \"new\"' (first occurrence), 'str replace --all \"old\" \
-                           \"new\"' (all occurrences), 'str replace --regex \"pattern\" \
-                           \"replacement\"' (regex mode)."
-            .to_string();
-
-        (replacement, description)
-    }
 }
 
 fn build_fix(
@@ -254,16 +41,92 @@ fn build_fix(
     expr_span: nu_protocol::Span,
     context: &LintContext,
 ) -> Fix {
-    let opts = SedOptions::parse(external_args_slices(args, context));
-    let (replacement, description) = opts.to_nushell();
+    let replacement = parse_sed_args(external_args_slices(args, context));
 
     Fix {
-        explanation: description.into(),
+        explanation: "Replace with str replace".into(),
         replacements: vec![Replacement {
             span: expr_span.into(),
             replacement_text: replacement.into(),
         }],
     }
+}
+
+fn parse_sed_args<'a>(args: impl IntoIterator<Item = &'a str>) -> String {
+    let mut pattern = None;
+    let mut global = false;
+    let mut file = None;
+    let mut in_place = false;
+    let mut regex_mode = false;
+    let mut expect_expression = false;
+
+    for arg in args {
+        if expect_expression {
+            pattern = Some(arg);
+            global = arg.contains("/g");
+            expect_expression = false;
+            continue;
+        }
+
+        match arg {
+            "-i" | "--in-place" => in_place = true,
+            "-e" | "--expression" => expect_expression = true,
+            "-E" | "-r" | "--regexp-extended" => regex_mode = true,
+            "-n" | "--quiet" | "--silent" => {}
+            s if s.starts_with('-') && !s.starts_with("--") => {
+                (in_place, regex_mode, expect_expression) =
+                    parse_combined_flags(s, in_place, regex_mode);
+            }
+            s if pattern.is_none() => {
+                pattern = Some(s);
+                global = s.contains("/g");
+            }
+            s => file = Some(s),
+        }
+    }
+
+    let (find, replace) = parse_substitution(pattern.unwrap_or(""));
+    let mut flags = String::new();
+    if global {
+        flags.push_str(" --all");
+    }
+    if regex_mode {
+        flags.push_str(" --regex");
+    }
+
+    match (file, in_place) {
+        (Some(f), true) => {
+            format!("open {f} | str replace{flags} '{find}' '{replace}' | save -f {f}")
+        }
+        (Some(f), false) => format!("open {f} | str replace{flags} '{find}' '{replace}'"),
+        _ => format!("str replace{flags} '{find}' '{replace}'"),
+    }
+}
+
+fn parse_combined_flags(arg: &str, mut in_place: bool, mut regex_mode: bool) -> (bool, bool, bool) {
+    let mut expect_expression = false;
+    for ch in arg.chars().skip(1) {
+        match ch {
+            'i' => in_place = true,
+            'e' => expect_expression = true,
+            'E' | 'r' => regex_mode = true,
+            _ => {}
+        }
+    }
+    (in_place, regex_mode, expect_expression)
+}
+
+fn parse_substitution(pattern: &str) -> (&str, &str) {
+    let clean = pattern.trim_matches('"').trim_matches('\'');
+
+    if clean.starts_with('s') && clean.contains('/') {
+        let parts: Vec<&str> = clean.split('/').collect();
+        if parts.len() >= 3 {
+            return (parts[1], parts[2]);
+        }
+    }
+
+    ("pattern", "replacement")
 }
 
 #[cfg(test)]

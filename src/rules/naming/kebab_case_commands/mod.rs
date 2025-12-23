@@ -55,7 +55,7 @@ pub const fn rule() -> Rule {
         "kebab_case_commands",
         "Custom commands should use kebab-case naming convention",
         check,
-        LintLevel::Warning,
+        LintLevel::Hint,
     )
     .with_doc_url("https://www.nushell.sh/book/style_guide.html#commands")
 }

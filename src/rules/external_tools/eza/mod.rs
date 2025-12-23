@@ -255,10 +255,10 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
 pub const fn rule() -> Rule {
     Rule::new(
-        "prefer_builtin_eza",
+        "use_builtin_eza",
         "Use Nu's built-in 'ls' instead of eza",
         check,
-        LintLevel::Warning,
+        LintLevel::Hint,
     )
     .with_doc_url("https://www.nushell.sh/commands/docs/ls.html")
 }

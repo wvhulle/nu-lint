@@ -36,7 +36,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
 pub const fn rule() -> Rule {
     Rule::new(
-        "prefer_builtin_wc",
+        "use_builtin_wc",
         "Prefer 'length' over external wc",
         check,
         LintLevel::Warning,

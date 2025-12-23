@@ -19,7 +19,7 @@
       let
         pkgs = import nixpkgs { inherit system; };
 
-        toolchain = fenix.packages.${system}.default.toolchain;
+        toolchain = fenix.packages.${system}.latest.toolchain;
 
         naersk' = pkgs.callPackage naersk {
           cargo = toolchain;

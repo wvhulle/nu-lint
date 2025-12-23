@@ -191,7 +191,6 @@ mod tests {
             Violation::with_file_span("Nested if can be collapsed", FileSpan::new(0, 39))
                 .with_primary_label("outer if")
                 .with_help("Combine with 'and'");
-        // Add extra label with file-relative span
         violation
             .extra_labels
             .push((FileSpan::new(12, 35).into(), Some("inner if".to_string())));

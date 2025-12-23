@@ -155,3 +155,25 @@ def setup [] {
 "#;
     rule().assert_ignores(good_code);
 }
+
+#[test]
+fn ignore_function_using_env_not_in() {
+    let good_code = r#"
+def get-cache-dir [name: string]: nothing -> string {
+    let cache_dir = $"($env.HOME)/.cache/myapp"
+    let session_dirs = (glob $"($cache_dir)/*/session_info/($name)")
+    $session_dirs | first
+}
+"#;
+    rule().assert_ignores(good_code);
+}
+
+#[test]
+fn ignore_function_using_nu_not_in() {
+    let good_code = r#"
+def get-config-path []: nothing -> string {
+    $"($nu.home-path)/.config/myapp"
+}
+"#;
+    rule().assert_ignores(good_code);
+}

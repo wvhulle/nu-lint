@@ -4,6 +4,7 @@ use nu_protocol::{
         Argument, Call, Comparison, Expr, Expression, ExternalArgument, FindMapResult,
         FullCellPath, ListItem, Operator, PathMember, RecordItem, Traverse,
     },
+    engine::Variable,
 };
 
 use super::{block::BlockExt, call::CallExt, pipeline::PipelineExt, span::SpanExt};
@@ -74,9 +75,13 @@ pub trait ExpressionExt: Traverse {
     /// Checks if expression uses pipeline input variable. Example: `$in` or
     /// `$in | length`
     fn uses_pipeline_input(&self, context: &LintContext) -> bool;
-    /// Finds the `$in` variable and its span in this expression. Example:
+    /// Finds pipeline input-like variables (includes `$in` and closure
+    /// parameters) and their spans. Used for type inference. Example:
     /// `$in.field` returns (`var_id`, span of `$in`)
     fn find_pipeline_input(&self, context: &LintContext) -> Option<(VarId, Span)>;
+    /// Finds the actual `$in` variable usage and its span. Example: `$in.field`
+    /// returns span of `$in`. Does not match closure parameters.
+    fn find_dollar_in_usage(&self) -> Option<Span>;
     /// Infers the output type of an expression. Example: `ls` returns "table",
     /// `1 + 2` returns "int"
     fn infer_output_type(&self, context: &LintContext) -> Option<Type>;
@@ -90,11 +95,30 @@ pub trait ExpressionExt: Traverse {
     fn extract_external_command_name(&self, context: &LintContext) -> Option<String>;
 }
 
-pub fn is_pipeline_input_var(var_id: VarId, context: &LintContext) -> bool {
-    let var = context.working_set.get_variable(var_id);
+pub const fn is_dollar_in_var(var_id: VarId) -> bool {
+    use nu_protocol::IN_VARIABLE_ID;
+    var_id.get() == IN_VARIABLE_ID.get()
+}
+
+const fn has_synthetic_declaration_span(var: &Variable) -> bool {
     (var.declaration_span.start == 0 && var.declaration_span.end == 0)
         || (var.declaration_span.start == var.declaration_span.end
             && var.declaration_span.start > 0)
+}
+
+pub fn is_pipeline_input_var(var_id: VarId, context: &LintContext) -> bool {
+    use nu_protocol::{ENV_VARIABLE_ID, NU_VARIABLE_ID};
+
+    if is_dollar_in_var(var_id) {
+        return true;
+    }
+
+    if var_id == ENV_VARIABLE_ID || var_id == NU_VARIABLE_ID {
+        return false;
+    }
+
+    let var = context.working_set.get_variable(var_id);
+    has_synthetic_declaration_span(var)
 }
 
 const fn extract_var_from_full_cell_path(cell_path: &FullCellPath) -> Option<VarId> {
@@ -486,6 +510,28 @@ impl ExpressionExt for Expression {
             Expr::StringInterpolation(items) => items
                 .iter()
                 .find_map(|item| item.find_pipeline_input(context)),
+            _ => None,
+        }
+    }
+
+    fn find_dollar_in_usage(&self) -> Option<Span> {
+        match &self.expr {
+            Expr::Var(var_id) if is_dollar_in_var(*var_id) => Some(self.span),
+            Expr::FullCellPath(cell_path) => cell_path.head.find_dollar_in_usage(),
+            Expr::Call(call) => call.arguments.iter().find_map(|arg| match arg {
+                Argument::Positional(e)
+                | Argument::Unknown(e)
+                | Argument::Named((_, _, Some(e)))
+                | Argument::Spread(e) => e.find_dollar_in_usage(),
+                Argument::Named(_) => None,
+            }),
+            Expr::BinaryOp(lhs, _, rhs) => lhs
+                .find_dollar_in_usage()
+                .or_else(|| rhs.find_dollar_in_usage()),
+            Expr::UnaryNot(e) | Expr::Collect(_, e) => e.find_dollar_in_usage(),
+            Expr::StringInterpolation(items) => {
+                items.iter().find_map(ExpressionExt::find_dollar_in_usage)
+            }
             _ => None,
         }
     }

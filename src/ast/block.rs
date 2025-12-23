@@ -137,9 +137,13 @@ pub trait BlockExt {
     /// Checks if block produces output. Example: `{ ls }` produces output, `{
     /// print "x" }` doesn't
     fn produces_output(&self) -> bool;
-    /// Finds the `$in` variable and its span in this block. Example: `{ $in |
-    /// length }` returns `(var_id, span of $in)`
+    /// Finds pipeline input-like variables (includes `$in` and closure
+    /// parameters) and their spans. Example: `{ $in | length }` returns
+    /// `(var_id, span of $in)`
     fn find_pipeline_input(&self, context: &LintContext) -> Option<(VarId, Span)>;
+    /// Finds the actual `$in` variable usage and its span. Example: `{ $in |
+    /// length }` returns span of `$in`. Does not match closure parameters.
+    fn find_dollar_in_usage(&self) -> Option<Span>;
     /// Finds the first usage span of a specific variable in this block.
     /// Example: `{ $x + 1 }` with `var_id` of x returns span of `$x`
     fn find_var_usage(&self, var_id: VarId) -> Option<Span>;
@@ -260,6 +264,12 @@ impl BlockExt for Block {
         self.all_elements()
             .iter()
             .find_map(|element| element.expr.find_pipeline_input(context))
+    }
+
+    fn find_dollar_in_usage(&self) -> Option<Span> {
+        self.all_elements()
+            .iter()
+            .find_map(|element| element.expr.find_dollar_in_usage())
     }
 
     fn find_var_usage(&self, var_id: VarId) -> Option<Span> {

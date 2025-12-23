@@ -277,7 +277,7 @@ fn check_def_call(call: &Call, ctx: &LintContext) -> Vec<Violation> {
     };
 
     let in_usage_span = if needs_input_type {
-        block.find_pipeline_input(ctx).map(|(_, span)| span)
+        block.find_dollar_in_usage()
     } else {
         None
     };

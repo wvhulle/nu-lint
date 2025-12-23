@@ -2,6 +2,8 @@ use crate::rule::Rule;
 
 pub mod sets;
 
+mod avoid_nu_subprocess;
+mod avoid_self_import;
 pub mod check_complete_exit_code;
 mod collapsible_if;
 mod dangerous_file_operations;
@@ -52,6 +54,8 @@ mod unused_helper_functions;
 mod upstream;
 
 pub const ALL_RULES: &[Rule] = &[
+    avoid_nu_subprocess::rule(),
+    avoid_self_import::rule(),
     check_complete_exit_code::rule(),
     collapsible_if::rule(),
     dangerous_file_operations::rule(),

@@ -10,7 +10,6 @@ def double [] {
 }
 ";
     RULE.assert_replacement_contains(bad_code, "[]: int -> int");
-    RULE.assert_help_contains(bad_code, "pipeline input and output type annotations");
 }
 
 #[test]

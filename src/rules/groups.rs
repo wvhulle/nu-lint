@@ -20,10 +20,13 @@ const ERROR_HANDLING: Group = Group {
         super::check_complete_exit_code::RULE,
         super::documentation::descriptive_error_messages::RULE,
         super::escape_string_interpolation_operators::RULE,
+        super::exit_only_in_main::RULE,
+        super::missing_stdin_in_shebang::RULE,
         super::non_final_failure_check::RULE,
         super::make_error_from_exit::RULE,
         super::try_instead_of_do::RULE,
         super::errors_to_stderr::RULE,
+        super::unsafe_dynamic_record_access::RULE,
     ],
 };
 
@@ -45,6 +48,8 @@ const PERFORMANCE: Group = Group {
     rules: &[
         super::avoid_self_import::RULE,
         super::avoid_nu_subprocess::RULE,
+        super::builtin_not_empty::RULE,
+        super::dispatch_with_subcommands::RULE,
         super::shorten_with_compound_assignment::RULE,
         super::unnecessary_accumulate::RULE,
         super::lines_instead_of_split::RULE,
@@ -55,7 +60,15 @@ const PERFORMANCE: Group = Group {
         super::filter_with_where::over_each_if::RULE,
         super::filter_with_where::filter_collect::RULE,
         super::remove_redundant_in::RULE,
+        super::row_condition_above_closure::RULE,
         super::unnecessary_variable_before_return::RULE,
+        super::inline_single_use_function::RULE,
+        super::items_instead_of_transpose_each::RULE,
+        super::merge_get_cell_path::RULE,
+        super::merge_multiline_print::RULE,
+        super::redundant_ignore::RULE,
+        super::unnecessary_mut::RULE,
+        super::unused_helper_functions::RULE,
     ],
 };
 
@@ -72,6 +85,7 @@ const POSIX_TOOLS: Group = Group {
     name: "posix-tools",
     description: "Replace common bash/POSIX commands with native Nushell equivalents",
     rules: &[
+        super::ignore_over_dev_null::RULE,
         super::posix_tools::awk::RULE,
         super::posix_tools::cat::RULE,
         super::posix_tools::cut::RULE,
@@ -103,6 +117,7 @@ const DOCUMENTATION: Group = Group {
         super::error_make::add_url::RULE,
         super::documentation::main_positional_args::RULE,
         super::documentation::main_named_args::RULE,
+        super::max_positional_params::RULE,
     ],
 };
 
@@ -125,6 +140,10 @@ const FORMATTING: Group = Group {
     name: "formatting",
     description: "Check that code is formatted according to the official Nushell guidelines.",
     rules: &[
+        super::collapsible_if::RULE,
+        super::forbid_excessive_nesting::RULE,
+        super::max_function_body_length::RULE,
+        super::replace_else_if_with_match::RULE,
         super::spacing::brace_spacing::RULE,
         super::spacing::no_trailing_spaces::RULE,
         super::spacing::omit_list_commas::RULE,
@@ -147,25 +166,35 @@ const NAMING: Group = Group {
 
 const SIDE_EFFECTS: Group = Group {
     name: "side-effects",
-    description: "Side effects (or effects) are things commands do that escape the type system, \
-                  but happen often and may cause unexpected behavior.",
+    description: "Commands that escape the type system",
     rules: &[
+        super::dangerous_file_operations::RULE,
         super::side_effects::mixed_io_types::RULE,
         super::side_effects::print_and_return_data::RULE,
     ],
 };
 
+const UPSTREAM: Group = Group {
+    name: "upstream",
+    description: "Rules that detect issues also flagged by the Nushell parser.",
+    rules: &[
+        super::upstream::nu_deprecated::RULE,
+        super::upstream::nu_parse_error::RULE,
+    ],
+};
+
 pub const ALL_GROUPS: &[Group] = &[
-    POSIX_TOOLS,
     DOCUMENTATION,
     ERROR_HANDLING,
     EXTERNAL_TOOLS,
     FORMATTING,
     NAMING,
     PERFORMANCE,
+    POSIX_TOOLS,
     SIDE_EFFECTS,
     SYSTEMD,
     TYPE_SAFETY,
+    UPSTREAM,
 ];
 
 impl Display for Group {

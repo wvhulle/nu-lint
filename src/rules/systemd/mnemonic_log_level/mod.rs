@@ -110,7 +110,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
 }
 
 pub const RULE: Rule = Rule::new(
-    "prefer_keyword_journal_prefix",
+    "attach_loglevel_to_log_statement",
     "Use mnemonic log levels instead of numeric ones for systemd journal log levels.",
     check,
     LintLevel::Hint,

@@ -373,7 +373,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
 }
 
 pub const RULE: Rule = Rule::new(
-    "prefer_nushell_over_jq",
+    "replace_jq_with_nu_get",
     "Prefer Nushell built-ins over jq for data operations that have direct equivalents",
     check,
     LintLevel::Warning,

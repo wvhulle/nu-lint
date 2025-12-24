@@ -51,7 +51,7 @@ fn find_signature_span(call: &Call, _ctx: &LintContext) -> Option<Span> {
 fn create_violations_for_untyped_io(
     func_name: &str,
     name_span: Span,
-    uses_in: bool,
+    _uses_in: bool,
     needs_input_type: bool,
     needs_output_type: bool,
     in_usage_span: Option<Span>,
@@ -62,45 +62,32 @@ fn create_violations_for_untyped_io(
         return vec![];
     }
 
-    let (message, suggestion) = match (needs_input_type, needs_output_type) {
+    let (message, label) = match (needs_input_type, needs_output_type) {
         (true, true) => (
-            format!(
-                "Custom command '{func_name}' uses pipeline input ($in) and produces output but \
-                 lacks type annotations"
-            ),
-            "Add pipeline input and output type annotations",
+            format!("'{func_name}' missing input/output types"),
+            "add type annotation",
         ),
         (true, false) => (
-            format!(
-                "Custom command '{func_name}' uses pipeline input ($in) but lacks input type \
-                 annotation"
-            ),
-            "Add pipeline input type annotation",
+            format!("'{func_name}' missing input type"),
+            "add input type",
         ),
         (false, true) => (
-            format!(
-                "Custom command '{func_name}' produces output but lacks output type annotation"
-            ),
-            if uses_in {
-                "Add pipeline output type annotation"
-            } else {
-                "Add output type annotation"
-            },
+            format!("'{func_name}' missing output type"),
+            "add output type",
         ),
         (false, false) => unreachable!(),
     };
 
     let mut violation = Violation::new(message, name_span)
-        .with_primary_label("missing type annotation")
-        .with_help(suggestion)
+        .with_primary_label(label)
         .with_fix(fix.clone());
 
     if needs_input_type && let Some(span) = in_usage_span {
-        violation = violation.with_extra_label("uses $in here", span);
+        violation = violation.with_extra_label("$in used here", span);
     }
 
     if needs_output_type && let Some(span) = return_span {
-        violation = violation.with_extra_label("returns value here", span);
+        violation = violation.with_extra_label("returned here", span);
     }
 
     vec![violation]

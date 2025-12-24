@@ -18,6 +18,7 @@ mod external_script_as_argument;
 mod external_tools;
 mod filter_with_where;
 mod forbid_excessive_nesting;
+mod ignore_over_dev_null;
 mod inline_single_use_function;
 mod items_instead_of_transpose_each;
 mod lines_instead_of_split;
@@ -33,7 +34,8 @@ mod parse_instead_of_split;
 mod positional_to_pipeline;
 mod posix_tools;
 mod range_for_iteration;
-mod redirection;
+
+pub mod redundant_ignore;
 mod remove_redundant_in;
 mod replace_else_if_with_match;
 mod row_condition_above_closure;
@@ -42,6 +44,7 @@ mod side_effects;
 mod spacing;
 mod strong_typing;
 mod systemd;
+
 mod try_instead_of_do;
 mod unnecessary_accumulate;
 mod unnecessary_mut;
@@ -116,8 +119,8 @@ pub const ALL_RULES: &[Rule] = &[
     range_for_iteration::while_counter::RULE,
     filter_with_where::over_each_if::RULE,
     filter_with_where::filter_collect::RULE,
-    redirection::prefer_complete_over_dev_null::RULE,
-    redirection::redundant_ignore::RULE,
+    ignore_over_dev_null::RULE,
+    redundant_ignore::RULE,
     remove_redundant_in::RULE,
     replace_else_if_with_match::RULE,
     row_condition_above_closure::RULE,

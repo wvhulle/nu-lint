@@ -448,8 +448,7 @@ mod tests {
         // iteratively
         use crate::{config::Config, engine::LintEngine};
 
-        // This triggers multiple rules: prefer_complete_over_dev_null,
-        // prefer_builtin_grep, etc.
+        // This triggers multiple rules: ignore_over_dev_null, posix_tools::grep, etc.
         let content = "^grep pattern file.txt err> /dev/null | lines\n";
 
         let config = Config::default();

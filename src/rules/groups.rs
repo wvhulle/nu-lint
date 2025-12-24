@@ -13,7 +13,10 @@ const ERROR_HANDLING: Group = Group {
     name: "error-handling",
     description: "Error handling best practices",
     rules: &[
-        super::error_make_metadata::RULE,
+        super::error_make::add_label::RULE,
+        super::error_make::add_help::RULE,
+        super::error_make::add_span_to_label::RULE,
+        super::error_make::add_url::RULE,
         super::check_complete_exit_code::RULE,
         super::documentation::descriptive_error_messages::RULE,
         super::escape_string_interpolation_operators::RULE,
@@ -94,6 +97,10 @@ const DOCUMENTATION: Group = Group {
     rules: &[
         super::documentation::exported_function::RULE,
         super::documentation::descriptive_error_messages::RULE,
+        super::error_make::add_label::RULE,
+        super::error_make::add_help::RULE,
+        super::error_make::add_span_to_label::RULE,
+        super::error_make::add_url::RULE,
         super::documentation::main_positional_args::RULE,
         super::documentation::main_named_args::RULE,
     ],

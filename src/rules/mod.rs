@@ -10,7 +10,7 @@ mod collapsible_if;
 mod dangerous_file_operations;
 mod dispatch_with_subcommands;
 mod documentation;
-mod error_make_metadata;
+mod error_make;
 mod errors_to_stderr;
 mod escape_string_interpolation_operators;
 mod exit_only_in_main;
@@ -60,7 +60,10 @@ pub const ALL_RULES: &[Rule] = &[
     documentation::exported_function::RULE,
     documentation::main_named_args::RULE,
     documentation::main_positional_args::RULE,
-    error_make_metadata::RULE,
+    error_make::add_help::RULE,
+    error_make::add_label::RULE,
+    error_make::add_span_to_label::RULE,
+    error_make::add_url::RULE,
     errors_to_stderr::RULE,
     escape_string_interpolation_operators::RULE,
     exit_only_in_main::RULE,

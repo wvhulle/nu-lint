@@ -18,9 +18,9 @@ const ERROR_HANDLING: Group = Group {
         super::descriptive_error_messages::RULE,
         super::escape_string_interpolation_operators::RULE,
         super::non_final_failure_check::RULE,
-        super::combine_print_stderr_exit::RULE,
+        super::make_error_from_exit::RULE,
         super::try_instead_of_do::RULE,
-        super::print_exit_use_error_make::RULE,
+        super::errors_to_stderr::RULE,
     ],
 };
 
@@ -123,7 +123,7 @@ const FORMATTING: Group = Group {
         super::spacing::pipe_spacing::RULE,
         super::spacing::reflow_wide_pipelines::RULE,
         super::spacing::wrap_long_lists::RULE,
-        super::spacing::prefer_multiline_records::RULE,
+        super::spacing::wrap_records::RULE,
     ],
 };
 

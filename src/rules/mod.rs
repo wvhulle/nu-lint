@@ -25,8 +25,9 @@ mod max_positional_params;
 mod missing_stdin_in_shebang;
 mod naming;
 
-mod combine_print_stderr_exit;
+mod errors_to_stderr;
 mod external_tools;
+mod make_error_from_exit;
 mod merge_get_cell_path;
 mod merge_multiline_print;
 mod positional_to_pipeline;
@@ -40,7 +41,6 @@ mod prefer_parse_command;
 mod prefer_subcommands_over_dispatch;
 mod prefer_where_over_each_if;
 mod prefer_where_over_for_if;
-mod print_exit_use_error_make;
 mod range_instead_of_for;
 mod remove_redundant_in;
 mod replace_else_if_with_match;
@@ -103,7 +103,7 @@ pub const ALL_RULES: &[Rule] = &[
     merge_get_cell_path::RULE,
     prefer_compound_assignment::RULE,
     prefer_direct_use::RULE,
-    combine_print_stderr_exit::RULE,
+    make_error_from_exit::RULE,
     prefer_is_not_empty::RULE,
     prefer_items_over_transpose::RULE,
     prefer_lines_over_split::RULE,
@@ -116,7 +116,7 @@ pub const ALL_RULES: &[Rule] = &[
     try_instead_of_do::RULE,
     prefer_where_over_each_if::RULE,
     prefer_where_over_for_if::RULE,
-    print_exit_use_error_make::RULE,
+    errors_to_stderr::RULE,
     non_final_failure_check::RULE,
     redirection::prefer_complete_over_dev_null::RULE,
     redirection::redundant_ignore::RULE,
@@ -130,7 +130,7 @@ pub const ALL_RULES: &[Rule] = &[
     spacing::pipe_spacing::RULE,
     spacing::reflow_wide_pipelines::RULE,
     spacing::wrap_long_lists::RULE,
-    spacing::prefer_multiline_records::RULE,
+    spacing::wrap_records::RULE,
     strong_typing::argument::RULE,
     strong_typing::paths::RULE,
     strong_typing::pipeline::RULE,

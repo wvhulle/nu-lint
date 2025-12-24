@@ -1,6 +1,12 @@
 use super::RULE;
 
 #[test]
+fn test_good_print_stderr() {
+    let good = "print --stderr 'Error occurred'; exit 1";
+    RULE.assert_ignores(good);
+}
+
+#[test]
 fn test_good_error_make() {
     let good = "error make { msg: 'Something went wrong', label: { text: 'here', span: $span } }";
     RULE.assert_ignores(good);

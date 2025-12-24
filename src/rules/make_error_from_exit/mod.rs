@@ -77,8 +77,8 @@ fn check(context: &LintContext) -> Vec<Violation> {
 }
 
 pub const RULE: Rule = Rule::new(
-    "combine_print_stderr_exit",
-    "Use 'error make' instead of 'print stderr' + 'exit' for structured error handling",
+    "make_error_from_exit",
+    "Use 'error make' instead of 'print --stderr' + 'exit' for structured error handling",
     check,
     LintLevel::Hint,
 )

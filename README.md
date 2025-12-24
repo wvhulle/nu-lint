@@ -11,7 +11,7 @@ All rules are optional and can be disabled with a configuration file. The rule d
 
 ## Example
 
-The rule `prefer_pipeline_input` recommends to use pipelines instead of positional arguments:
+The rule `positional_to_pipeline` recommends to use pipelines instead of positional arguments:
 
 ```nu
 def filter-positive [numbers] { 

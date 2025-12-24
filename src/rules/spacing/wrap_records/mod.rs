@@ -71,10 +71,10 @@ fn create_violation(span: nu_protocol::Span) -> Violation {
 /// tree-sitter formatting. It analyzes actual record structures rather than
 /// regex patterns.
 pub const RULE: Rule = Rule::new(
-    "prefer_multiline_records",
+    "wrap_wide_records",
     "Prefer multiline format for long or complex records",
     check,
-    LintLevel::Warning,
+    LintLevel::Hint,
 )
 .with_doc_url("https://www.nushell.sh/book/style_guide.html#multi-line-format");
 

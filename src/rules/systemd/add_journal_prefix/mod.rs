@@ -106,17 +106,15 @@ fn check(context: &LintContext) -> Vec<Violation> {
     violations
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "add_journal_prefix",
-        "Add systemd journal log level prefixes to print/echo statements.",
-        check,
-        LintLevel::Hint,
-    )
-    .with_doc_url(
-        "https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html#SyslogLevelPrefix=",
-    )
-}
+pub const RULE: Rule = Rule::new(
+    "add_journal_prefix",
+    "Add systemd journal log level prefixes to print/echo statements.",
+    check,
+    LintLevel::Hint,
+)
+.with_doc_url(
+    "https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html#SyslogLevelPrefix=",
+);
 
 #[cfg(test)]
 mod detect_bad;

@@ -1,8 +1,8 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn long_function_with_assignments() {
-    let rule = rule();
+    let rule = RULE;
     let long_function = format!(
         r"def very_long_function [] {{
 {}
@@ -17,7 +17,7 @@ fn long_function_with_assignments() {
 
 #[test]
 fn exported_long_function() {
-    let rule = rule();
+    let rule = RULE;
     let long_function = format!(
         r"export def long_exported_function [] {{
 {}
@@ -32,7 +32,7 @@ fn exported_long_function() {
 
 #[test]
 fn long_function_with_match_statements() {
-    let rule = rule();
+    let rule = RULE;
     let long_function = format!(
         r"def handle_cases [value] {{
     match $value {{
@@ -49,7 +49,7 @@ fn long_function_with_match_statements() {
 
 #[test]
 fn multiple_long_functions() {
-    let rule = rule();
+    let rule = RULE;
     let code = format!(
         r"def first_long_function [] {{
 {}

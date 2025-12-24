@@ -1,15 +1,15 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn test_detect_source_current_file() {
     let bad_code = r#"source $env.CURRENT_FILE"#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
 fn test_detect_source_nu_current_file() {
     let bad_code = r#"source $nu.current-file"#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -19,5 +19,5 @@ def reload [] {
     source $env.CURRENT_FILE
 }
 "#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }

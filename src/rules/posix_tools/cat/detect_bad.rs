@@ -1,13 +1,13 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn detect_simple_cat() {
-    rule().assert_detects("^cat file.txt");
+    RULE.assert_detects("^cat file.txt");
 }
 
 #[test]
 fn detect_cat_multiple_files() {
-    rule().assert_detects("^cat file1.txt file2.txt");
+    RULE.assert_detects("^cat file1.txt file2.txt");
 }
 
 #[test]
@@ -21,7 +21,7 @@ fn detect_cat_with_flags() {
     ];
 
     for code in bad_codes {
-        rule().assert_detects(code);
+        RULE.assert_detects(code);
     }
 }
 
@@ -36,28 +36,28 @@ fn detect_cat_long_options() {
     ];
 
     for code in bad_codes {
-        rule().assert_detects(code);
+        RULE.assert_detects(code);
     }
 }
 
 #[test]
 fn detect_tac() {
-    rule().assert_detects("^tac file.log");
+    RULE.assert_detects("^tac file.log");
 }
 
 #[test]
 fn detect_more() {
-    rule().assert_detects("^more documentation.txt");
+    RULE.assert_detects("^more documentation.txt");
 }
 
 #[test]
 fn detect_less() {
-    rule().assert_detects("^less output.log");
+    RULE.assert_detects("^less output.log");
 }
 
 #[test]
 fn detect_cat_in_pipeline() {
-    rule().assert_detects("^cat file.txt | head -5");
+    RULE.assert_detects("^cat file.txt | head -5");
 }
 
 #[test]
@@ -67,7 +67,7 @@ def read-file [path] {
     ^cat $path
 }
 ";
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -76,7 +76,7 @@ fn detect_multiple_cat_uses() {
 ^cat file1.txt
 ^cat file2.txt
 ";
-    rule().assert_count(bad_code, 2);
+    RULE.assert_count(bad_code, 2);
 }
 
 #[test]
@@ -84,7 +84,7 @@ fn detect_cat_in_subexpression() {
     let bad_code = r"
 let content = (^cat config.json)
 ";
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -94,7 +94,7 @@ ls | each { |file|
     ^cat $file.name
 }
 ";
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -106,6 +106,6 @@ fn detect_pager_commands() {
     ];
 
     for (code, expected) in bad_codes {
-        rule().assert_count(code, expected);
+        RULE.assert_count(code, expected);
     }
 }

@@ -1,10 +1,4 @@
-//! Rule: `prefer_multiline_string`
-//!
-//! Detects consecutive `print` statements with string literals or string
-//! interpolations and suggests merging them into a single `print` with a
-//! multiline string.
-
-use std::mem;
+use std::{mem, str::from_utf8};
 
 use nu_protocol::{
     Span,
@@ -21,23 +15,63 @@ use crate::{
 
 const MIN_CONSECUTIVE_PRINTS: usize = 3;
 
-/// The type of string content in a print statement.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum StringType {
-    /// Plain string literal: `"text"` or `'text'`
-    Plain,
-    /// String interpolation: `$"text ($var)"` or `$'text ($var)'`
-    Interpolation,
+/// The type and content of a string in a print statement.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum StringFormat {
+    /// Double-quoted string literal: `"text"`
+    Double(String),
+    /// Single-quoted string literal: `'text'`
+    Single(String),
+    /// Raw string: `r#'text'#`
+    Raw(String),
+    /// Bare word string: `text` (no quotes)
+    BareWord(String),
+    /// String interpolation with double quotes: `$"text ($var)"`
+    InterpolationDouble(String),
+    /// String interpolation with single quotes: `$'text ($var)'`
+    InterpolationSingle(String),
+    /// Backtick string: `` `text` `` (used for paths/commands, has different
+    /// semantics)
+    Backtick(String),
+}
+
+impl StringFormat {
+    fn content(&self) -> &str {
+        match self {
+            Self::Double(s)
+            | Self::Single(s)
+            | Self::Raw(s)
+            | Self::BareWord(s)
+            | Self::InterpolationDouble(s)
+            | Self::InterpolationSingle(s)
+            | Self::Backtick(s) => s,
+        }
+    }
+
+    const fn is_compatible(&self, other: &Self) -> bool {
+        use StringFormat::{
+            BareWord, Double, InterpolationDouble, InterpolationSingle, Raw, Single,
+        };
+        matches!(
+            (self, other),
+            // Plain strings (Double, Single, Raw, BareWord) can all be merged together
+            (Double(_) | Single(_) | Raw(_) | BareWord(_), Double(_) | Single(_) | Raw(_) | BareWord(_))
+                // Interpolations must match quote style
+                | (InterpolationDouble(_), InterpolationDouble(_))
+                | (InterpolationSingle(_), InterpolationSingle(_)) /* Backtick strings are never
+                                                                    * compatible for merging
+                                                                    * as they have different
+                                                                    * semantics */
+        )
+    }
 }
 
 /// Information extracted from a single `print` statement.
 #[derive(Debug, Clone)]
 struct PrintInfo {
     span: Span,
-    /// The inner content of the string (without quotes/interpolation markers)
-    content: String,
+    string_type: StringFormat,
     to_stderr: bool,
-    string_type: StringType,
 }
 
 impl PrintInfo {
@@ -59,106 +93,98 @@ impl PrintInfo {
         }
 
         let to_stderr = call.has_named_flag("stderr") || call.has_named_flag("e");
-        let (string_content, string_type) = Self::extract_string_content(call, context)?;
+        let string_type = Self::extract_string_content(call, context)?;
 
         Some(Self {
             span: element.expr.span,
-            content: string_content,
-            to_stderr,
             string_type,
+            to_stderr,
         })
     }
 
-    /// Extracts the string content and type from a print call's first
-    /// positional argument.
-    fn extract_string_content(call: &Call, context: &LintContext) -> Option<(String, StringType)> {
+    /// Extracts the string content directly from the AST.
+    fn extract_string_content(call: &Call, context: &LintContext) -> Option<StringFormat> {
         let expr = call.arguments.iter().find_map(|arg| match arg {
             Argument::Positional(e) | Argument::Unknown(e) => Some(e),
             _ => None,
         })?;
 
         match &expr.expr {
-            Expr::String(s) | Expr::RawString(s) => Some((s.clone(), StringType::Plain)),
+            Expr::String(s) => {
+                // Detect quote style from source
+                let bytes = context.working_set.get_span_contents(expr.span);
+                let source = from_utf8(bytes).unwrap_or("");
+
+                if source.starts_with('`') {
+                    Some(StringFormat::Backtick(s.clone()))
+                } else if source.starts_with('"') {
+                    Some(StringFormat::Double(s.clone()))
+                } else if source.starts_with('\'') {
+                    Some(StringFormat::Single(s.clone()))
+                } else if source.starts_with("r#") || source.starts_with("r'") {
+                    // This case should be handled by Expr::RawString, but check defensively
+                    Some(StringFormat::Raw(s.clone()))
+                } else {
+                    // Bare word (no quotes)
+                    Some(StringFormat::BareWord(s.clone()))
+                }
+            }
+            Expr::RawString(s) => Some(StringFormat::Raw(s.clone())),
             Expr::StringInterpolation(_) => {
-                let text = context.get_span_text(expr.span);
-                Self::parse_interpolation_string(text)
+                // For interpolations, extract from source and detect quote style
+                let bytes = context.working_set.get_span_contents(expr.span);
+                let source = from_utf8(bytes).unwrap_or("");
+
+                let single_quote = source
+                    .strip_prefix("$'")
+                    .and_then(|s| s.strip_suffix('\''))
+                    .map(|stripped| StringFormat::InterpolationSingle(stripped.to_string()));
+
+                source
+                    .strip_prefix("$\"")
+                    .and_then(|s| s.strip_suffix('"'))
+                    .map(|stripped| StringFormat::InterpolationDouble(stripped.to_string()))
+                    .or(single_quote)
             }
-            _ => {
-                let text = context.get_span_text(expr.span);
-                Self::parse_quoted_string(text).map(|s| (s, StringType::Plain))
-            }
+            _ => None,
         }
-    }
-
-    /// Parses a quoted string, returning its content without quotes.
-    fn parse_quoted_string(text: &str) -> Option<String> {
-        let is_double_quoted = text.starts_with('"') && text.ends_with('"');
-        let is_single_quoted = text.starts_with('\'') && text.ends_with('\'');
-
-        (is_double_quoted || is_single_quoted).then(|| text[1..text.len() - 1].to_string())
-    }
-
-    /// Parses a string interpolation, returning its inner content.
-    /// Input: `$"Hello ($name)"` -> Output: `Hello ($name)`
-    fn parse_interpolation_string(text: &str) -> Option<(String, StringType)> {
-        let content = text
-            .strip_prefix("$\"")
-            .and_then(|s| s.strip_suffix('"'))
-            .or_else(|| text.strip_prefix("$'").and_then(|s| s.strip_suffix('\'')))?;
-
-        Some((content.to_string(), StringType::Interpolation))
     }
 }
 
-/// Groups consecutive print statements that share the same output stream.
-struct PrintGrouper<'a> {
-    context: &'a LintContext<'a>,
-}
+fn find_print_groups(block: &Block, context: &LintContext) -> Vec<Vec<PrintInfo>> {
+    let mut groups = Vec::new();
+    let mut current_group: Vec<PrintInfo> = Vec::new();
 
-impl<'a> PrintGrouper<'a> {
-    const fn new(context: &'a LintContext<'a>) -> Self {
-        Self { context }
-    }
-
-    /// Finds all groups of consecutive print statements in a block.
-    fn find_groups(&self, block: &Block) -> Vec<Vec<PrintInfo>> {
-        let mut groups = Vec::new();
-        let mut current_group: Vec<PrintInfo> = Vec::new();
-
-        for pipeline in &block.pipelines {
-            match PrintInfo::from_pipeline(pipeline, self.context) {
-                Some(info) if Self::can_extend_group(&current_group, &info) => {
-                    current_group.push(info);
-                }
-                Some(info) => {
-                    Self::flush_group(&mut groups, &mut current_group);
-                    current_group.push(info);
-                }
-                None => {
-                    Self::flush_group(&mut groups, &mut current_group);
-                }
+    for pipeline in &block.pipelines {
+        match PrintInfo::from_pipeline(pipeline, context) {
+            Some(info) if can_extend_group(&current_group, &info) => {
+                current_group.push(info);
+            }
+            Some(info) => {
+                flush_group(&mut groups, &mut current_group);
+                current_group.push(info);
+            }
+            None => {
+                flush_group(&mut groups, &mut current_group);
             }
         }
-
-        Self::flush_group(&mut groups, &mut current_group);
-        groups
     }
 
-    /// Checks if a print info can extend the current group.
-    /// Groups must have same stderr flag AND same string type.
-    fn can_extend_group(group: &[PrintInfo], info: &PrintInfo) -> bool {
-        group.first().is_none_or(|first| {
-            first.to_stderr == info.to_stderr && first.string_type == info.string_type
-        })
-    }
+    flush_group(&mut groups, &mut current_group);
+    groups
+}
 
-    /// Flushes the current group to the groups list if it meets the threshold.
-    fn flush_group(groups: &mut Vec<Vec<PrintInfo>>, current: &mut Vec<PrintInfo>) {
-        if current.len() >= MIN_CONSECUTIVE_PRINTS {
-            groups.push(mem::take(current));
-        } else {
-            current.clear();
-        }
+fn can_extend_group(group: &[PrintInfo], info: &PrintInfo) -> bool {
+    group.first().is_none_or(|first| {
+        first.to_stderr == info.to_stderr && first.string_type.is_compatible(&info.string_type)
+    })
+}
+
+fn flush_group(groups: &mut Vec<Vec<PrintInfo>>, current: &mut Vec<PrintInfo>) {
+    if current.len() >= MIN_CONSECUTIVE_PRINTS {
+        groups.push(mem::take(current));
+    } else {
+        current.clear();
     }
 }
 
@@ -169,24 +195,54 @@ fn create_violation(prints: &[PrintInfo]) -> Violation {
         prints.last().map_or(0, |p| p.span.end),
     );
 
-    // Join content with actual newlines for a multiline string
-    let merged_content = prints
-        .iter()
-        .map(|p| p.content.as_str())
-        .collect::<Vec<_>>()
-        .join("\n");
+    let (merged_content, quote_style) = {
+        let first_type = prints.first().map(|p| &p.string_type);
 
+        let content = prints
+            .iter()
+            .map(|p| {
+                match &p.string_type {
+                    StringFormat::InterpolationDouble(_) | StringFormat::InterpolationSingle(_) => {
+                        // Interpolations don't need escaping - they're already in the right format
+                        p.string_type.content().to_string()
+                    }
+                    StringFormat::Double(_)
+                    | StringFormat::Single(_)
+                    | StringFormat::Raw(_)
+                    | StringFormat::BareWord(_) => {
+                        // Escape backslashes first, then double quotes for output as double-quoted
+                        // string
+                        p.string_type
+                            .content()
+                            .replace('\\', r"\\")
+                            .replace('"', r#"\""#)
+                    }
+                    StringFormat::Backtick(_) => {
+                        // Backtick strings should not be in a group (is_compatible prevents this)
+                        // But handle it defensively
+                        p.string_type.content().to_string()
+                    }
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        let style = match first_type {
+            Some(StringFormat::InterpolationDouble(_)) => "$\"",
+            Some(StringFormat::InterpolationSingle(_)) => "$'",
+            _ => "\"",
+        };
+
+        (content, style)
+    };
+
+    log::debug!("Merged content is: '{merged_content}'");
     let stderr_flag = prints.first().filter(|p| p.to_stderr).map_or("", |_| " -e");
 
-    // Use $"..." for interpolation, "..." for plain strings
-    let is_interpolation = prints
-        .first()
-        .is_some_and(|p| p.string_type == StringType::Interpolation);
-
-    let replacement_text = if is_interpolation {
-        format!("print{stderr_flag} $\"{merged_content}\"")
-    } else {
-        format!("print{stderr_flag} \"{merged_content}\"")
+    let replacement_text = match quote_style {
+        "$\"" => format!("print{stderr_flag} $\"{merged_content}\""),
+        "$'" => format!("print{stderr_flag} $'{merged_content}'"),
+        _ => format!("print{stderr_flag} \"{merged_content}\""),
     };
 
     let fix = Fix::with_explanation(
@@ -214,9 +270,7 @@ fn create_violation(prints: &[PrintInfo]) -> Violation {
 
 /// Recursively checks a block and all nested blocks for violations.
 fn check_block(block: &Block, context: &LintContext) -> Vec<Violation> {
-    let grouper = PrintGrouper::new(context);
-    let mut violations: Vec<_> = grouper
-        .find_groups(block)
+    let mut violations: Vec<_> = find_print_groups(block, context)
         .iter()
         .map(|group| create_violation(group))
         .collect();
@@ -244,15 +298,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     check_block(context.ast, context)
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "merge_multiline_print",
-        "Consecutive print statements with string literals should be merged into a single print \
-         with a multiline string",
-        check,
-        LintLevel::Hint,
-    )
-}
+pub const RULE: Rule = Rule::new(
+    "merge_multiline_print",
+    "Consecutive print statements can be merged into a single print with a multiline string",
+    check,
+    LintLevel::Hint,
+)
+.with_doc_url("https://www.nushell.sh/book/working_with_strings.html#string-formats-at-a-glance");
 
 #[cfg(test)]
 mod detect_bad;

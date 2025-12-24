@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn detect_camel_case_let_variables() {
@@ -10,7 +10,7 @@ def bad-func [] {
 }
 "#;
 
-    rule().assert_count(bad_code, 3);
+    RULE.assert_count(bad_code, 3);
 }
 
 #[test]
@@ -23,7 +23,7 @@ def bad-func [] {
 }
 ";
 
-    rule().assert_count(bad_code, 2);
+    RULE.assert_count(bad_code, 2);
 }
 
 #[test]
@@ -38,7 +38,7 @@ def shadow-test [] {
 }
 ";
 
-    rule().assert_count(bad_code, 3);
+    RULE.assert_count(bad_code, 3);
 }
 
 #[test]
@@ -52,5 +52,5 @@ def test-func [] {
 }
 "#;
 
-    rule().assert_count(bad_code, 4);
+    RULE.assert_count(bad_code, 4);
 }

@@ -65,15 +65,13 @@ fn pipeline_span(pipeline: &Pipeline) -> Option<nu_protocol::Span> {
     ))
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "reflow_wide_pipelines",
-        "Wrap wide pipelines vertically across multiple lines.",
-        check,
-        LintLevel::Hint,
-    )
-    .with_doc_url("https://www.nushell.sh/book/style_guide.html#multi-line-format")
-}
+pub const RULE: Rule = Rule::new(
+    "reflow_wide_pipelines",
+    "Wrap wide pipelines vertically across multiple lines.",
+    check,
+    LintLevel::Hint,
+)
+.with_doc_url("https://www.nushell.sh/book/style_guide.html#multi-line-format");
 
 #[cfg(test)]
 mod detect_bad;

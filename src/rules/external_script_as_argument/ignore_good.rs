@@ -1,8 +1,8 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn main_without_external_calls() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r"
 def main [config_path: string] {
   let config = (open $config_path)
@@ -14,7 +14,7 @@ def main [config_path: string] {
 
 #[test]
 fn main_with_external_call_but_hardcoded_command() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r"
 def main [] {
   let result = (^powerprofilesctl get | complete)
@@ -26,7 +26,7 @@ def main [] {
 
 #[test]
 fn main_with_string_param_not_used_as_external() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"
 def main [message: string] {
   print $message
@@ -38,7 +38,7 @@ def main [message: string] {
 
 #[test]
 fn main_with_number_parameter() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r"
 def main [count: int] {
   for i in 1..$count {
@@ -51,7 +51,7 @@ def main [count: int] {
 
 #[test]
 fn main_calls_defined_function() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"
 def handle-profile [profile: string] {
   print $"Handling profile: ($profile)"
@@ -67,7 +67,7 @@ def main [] {
 
 #[test]
 fn main_with_external_call_different_variable() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"
 def main [config: string] {
   let cmd = "ls"

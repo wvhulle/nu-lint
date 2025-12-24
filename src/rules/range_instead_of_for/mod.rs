@@ -183,15 +183,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .collect()
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "range_instead_of_for",
-        "Prefer range iteration over while loops with counters",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/each.html")
-}
+pub const RULE: Rule = Rule::new(
+    "range_instead_of_for",
+    "Prefer range iteration over while loops with counters",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/each.html");
 
 #[cfg(test)]
 mod detect_bad;

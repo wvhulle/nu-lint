@@ -114,15 +114,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "descriptive_error_messages",
-        "Error messages should be descriptive and actionable",
-        check,
-        LintLevel::Hint,
-    )
-    .with_doc_url("https://www.nushell.sh/book/creating_errors.html")
-}
+pub const RULE: Rule = Rule::new(
+    "descriptive_error_messages",
+    "Error messages should be descriptive and actionable",
+    check,
+    LintLevel::Hint,
+)
+.with_doc_url("https://www.nushell.sh/book/creating_errors.html");
 
 #[cfg(test)]
 mod detect_bad;

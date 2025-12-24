@@ -79,15 +79,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     detect_external_commands(context, "wget", NOTE, Some(build_fix))
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "use_builtin_wget",
-        "Use 'http get | save' instead of wget",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/http_get.html")
-}
+pub const RULE: Rule = Rule::new(
+    "use_builtin_wget",
+    "Use 'http get | save' instead of wget",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/http_get.html");
 
 #[cfg(test)]
 mod detect_bad;

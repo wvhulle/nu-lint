@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn ignore_multiple_parameters() {
@@ -10,7 +10,7 @@ fn ignore_multiple_parameters() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
@@ -23,7 +23,7 @@ fn ignore_no_parameters() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
@@ -36,7 +36,7 @@ fn ignore_optional_parameters() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
@@ -48,7 +48,7 @@ fn ignore_rest_parameters() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
@@ -62,7 +62,7 @@ fn ignore_generator_commands() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
@@ -76,7 +76,7 @@ fn ignore_configuration_parameters() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
@@ -90,7 +90,7 @@ fn ignore_non_pipeline_usage() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
@@ -103,7 +103,7 @@ fn ignore_path_and_filename_parameters() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
@@ -116,6 +116,6 @@ fn ignore_typed_non_data_parameters() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }

@@ -99,52 +99,50 @@ fn check(context: &LintContext) -> Vec<Violation> {
     detect_external_commands(context, "date", NOTE, Some(build_fix))
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "use_builtin_date",
-        "Use 'date now' instead of external date",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/date_now.html")
-}
+pub const RULE: Rule = Rule::new(
+    "use_builtin_date",
+    "Use 'date now' instead of external date",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/date_now.html");
 
 #[cfg(test)]
 mod tests {
-    use super::rule;
+    use super::RULE;
 
     #[test]
     fn converts_date_command_to_date_now() {
         let source = "^date";
-        rule().assert_replacement_contains(source, "date now");
-        rule().assert_fix_explanation_contains(source, "datetime");
+        RULE.assert_replacement_contains(source, "date now");
+        RULE.assert_fix_explanation_contains(source, "datetime");
     }
 
     #[test]
     fn converts_date_with_format_string() {
         // External date formatting like +%Y-%m-%d should still prefer 'date now'
         let source = "^date +%Y-%m-%d";
-        rule().assert_replacement_contains(source, "date now");
-        rule().assert_fix_explanation_contains(source, "datetime");
+        RULE.assert_replacement_contains(source, "date now");
+        RULE.assert_fix_explanation_contains(source, "datetime");
     }
 
     #[test]
     fn converts_date_with_utc_flag() {
         // UTC flag doesn't change the recommendation to use 'date now'
         let source = "^date -u";
-        rule().assert_replacement_contains(source, "date now");
-        rule().assert_fix_explanation_contains(source, "datetime");
+        RULE.assert_replacement_contains(source, "date now");
+        RULE.assert_fix_explanation_contains(source, "datetime");
     }
 
     #[test]
     fn ignores_builtin_date_now() {
         let source = "date now";
-        rule().assert_ignores(source);
+        RULE.assert_ignores(source);
     }
 
     #[test]
     fn ignores_builtin_date_pipeline() {
         let source = "date now | format date '%Y-%m-%d'";
-        rule().assert_ignores(source);
+        RULE.assert_ignores(source);
     }
 }

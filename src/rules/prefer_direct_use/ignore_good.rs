@@ -1,15 +1,15 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn test_immutable_list() {
     let good = "let items = [1, 2, 3]";
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }
 
 #[test]
 fn test_direct_assignment() {
     let good = "let data = [1 2 3]";
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }
 
 #[test]
@@ -21,7 +21,7 @@ for x in $input {
     $data = ($data | append $x)
 }
 ";
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }
 
 #[test]
@@ -33,7 +33,7 @@ for x in [1 2 3] {
     $data = ($data | append ($x * 2))
 }
 ";
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }
 
 #[test]
@@ -47,5 +47,5 @@ for x in [1 2 3] {
     }
 }
 ";
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }

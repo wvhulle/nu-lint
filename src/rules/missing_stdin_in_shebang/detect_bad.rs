@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn detect_main_with_pipeline_input_type_missing_stdin() {
@@ -8,7 +8,7 @@ def main []: string -> string {
     $in | str upcase
 }
 ";
-    rule().assert_count(source, 1);
+    RULE.assert_count(source, 1);
 }
 
 #[test]
@@ -20,7 +20,7 @@ def main [] {
     print $data
 }
 ";
-    rule().assert_count(source, 1);
+    RULE.assert_count(source, 1);
 }
 
 #[test]
@@ -31,7 +31,7 @@ def main []: list<string> -> string {
     $in | str join ", "
 }
 "#;
-    rule().assert_count(source, 1);
+    RULE.assert_count(source, 1);
 }
 
 #[test]
@@ -42,7 +42,7 @@ def main []: any -> any {
     $in
 }
 ";
-    rule().assert_count(source, 1);
+    RULE.assert_count(source, 1);
 }
 
 #[test]
@@ -53,7 +53,7 @@ def main []: table -> int {
     $in | length
 }
 ";
-    rule().assert_count(source, 1);
+    RULE.assert_count(source, 1);
 }
 
 #[test]
@@ -64,7 +64,7 @@ def main [] {
     each { |x| $x * 2 }
 }
 ";
-    rule().assert_count(source, 1);
+    RULE.assert_count(source, 1);
 }
 
 #[test]
@@ -75,7 +75,7 @@ def main [] {
     where { |x| $x > 2 }
 }
 ";
-    rule().assert_count(source, 1);
+    RULE.assert_count(source, 1);
 }
 
 #[test]
@@ -86,7 +86,7 @@ def main [] {
     reduce { |it, acc| $it + $acc }
 }
 ";
-    rule().assert_count(source, 1);
+    RULE.assert_count(source, 1);
 }
 
 #[test]
@@ -97,7 +97,7 @@ def main [] {
     items { |k, v| {key: $k, value: $v} }
 }
 ";
-    rule().assert_count(source, 1);
+    RULE.assert_count(source, 1);
 }
 
 #[test]
@@ -108,5 +108,5 @@ def main [] {
     select name age
 }
 ";
-    rule().assert_count(source, 1);
+    RULE.assert_count(source, 1);
 }

@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn test_ignore_path_type_used() {
@@ -7,7 +7,7 @@ def copy-file [source_path: path, dest_path: path] {
     cp $source_path $dest_path
 }
 ";
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }
 
 #[test]
@@ -17,7 +17,7 @@ def greet [name: string, message: string] {
     print $'Hello ($name): ($message)'
 }
 ";
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }
 
 #[test]
@@ -27,7 +27,7 @@ def process [input_data] {
     $input_data | to json
 }
 ";
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }
 
 #[test]
@@ -37,7 +37,7 @@ def count-paths [path_count: int] {
     print $path_count
 }
 ";
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }
 
 #[test]
@@ -48,7 +48,7 @@ def process-config [config: record] {
     open $path
 }
 ";
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }
 
 #[test]
@@ -58,7 +58,7 @@ def filter-paths [paths: table] {
     $paths | where type == 'file'
 }
 ";
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }
 
 #[test]
@@ -70,7 +70,7 @@ def backup-files [file_paths: list<path>] {
     }
 }
 ";
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }
 
 #[test]
@@ -80,7 +80,7 @@ def each-path [callback: closure] {
     ['a.txt', 'b.txt'] | each $callback
 }
 ";
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }
 
 #[test]
@@ -91,7 +91,7 @@ def query-xml [xpath: string, xml_data: string] {
     $xml_data | query web $xpath
 }
 ";
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }
 
 #[test]
@@ -102,7 +102,7 @@ def query-json [jsonpath: string, data: string] {
     $data | from json | query $jsonpath
 }
 ";
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }
 
 #[test]
@@ -113,7 +113,7 @@ def run-java [class_path: string, main_class: string] {
     ^java -cp $class_path $main_class
 }
 ";
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }
 
 #[test]
@@ -123,7 +123,7 @@ def compress [input: string, output: string] {
     tar czf $output $input
 }
 ";
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }
 
 #[test]
@@ -133,7 +133,7 @@ def search [pattern: string, text: string] {
     grep $pattern $text
 }
 ";
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }
 
 #[test]
@@ -143,7 +143,7 @@ def replace [pattern: string, replacement: string, input: string] {
     sed $pattern $replacement $input
 }
 ";
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }
 
 #[test]
@@ -153,7 +153,7 @@ def build [image: string, tag: string] {
     docker build -t $image:$tag .
 }
 ";
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }
 
 #[test]
@@ -163,7 +163,7 @@ def switch-branch [branch: string] {
     git checkout $branch
 }
 ";
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }
 
 #[test]
@@ -181,5 +181,5 @@ def handle_profile_change [last_profile: string] {
     }
 }
 "#;
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }

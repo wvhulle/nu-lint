@@ -25,15 +25,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     out
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "use_builtin_sed",
-        "Use Nu's 'str replace' instead of 'sed'",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/str_replace.html")
-}
+pub const RULE: Rule = Rule::new(
+    "use_builtin_sed",
+    "Use Nu's 'str replace' instead of 'sed'",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/str_replace.html");
 
 fn build_fix(
     _cmd_text: &str,

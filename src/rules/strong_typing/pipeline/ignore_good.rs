@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 use crate::log::instrument;
 
 #[test]
@@ -8,7 +8,7 @@ def double []: int -> int {
     $in * 2
 }
 ";
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -18,7 +18,7 @@ def create-list []: nothing -> list<int> {
     [1, 2, 3]
 }
 ";
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -35,7 +35,7 @@ def "main postpone" [] {
   }
 }
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -48,7 +48,7 @@ def "tests extract-time" [] {
   assert equal ("Sunset is at: 2025-11-20 17:08:05 +01:00" | extract-time) "17:08:05"
 }
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -58,7 +58,7 @@ def transform []: list<int> -> list<int> {
     $in | each { |x| $x + 1 }
 }
 ";
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -71,7 +71,7 @@ def stringify []: [
     $in | into string
 }
 ";
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -81,7 +81,7 @@ def add [a: int, b: int]: nothing -> int {
     $a + $b
 }
 ";
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -91,7 +91,7 @@ export def process []: string -> string {
     $in | str trim
 }
 ";
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -101,7 +101,7 @@ def multiply [factor: int]: int -> int {
     $in * $factor
 }
 ";
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -111,7 +111,7 @@ def save-data [path: string]: any -> nothing {
     $in | save $path
 }
 ";
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -121,7 +121,7 @@ def parse-json []: string -> record {
     $in | from json
 }
 ";
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -131,7 +131,7 @@ def filter-rows []: table -> table {
     $in | where size > 100
 }
 ";
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -142,7 +142,7 @@ def main [] {
     print "Use --help to see available subcommands"
 }
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -153,7 +153,7 @@ def setup [] {
     print "Setup complete"
 }
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -165,7 +165,7 @@ def get-cache-dir [name: string]: nothing -> string {
     $session_dirs | first
 }
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -175,5 +175,5 @@ def get-config-path []: nothing -> string {
     $"($nu.home-path)/.config/myapp"
 }
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }

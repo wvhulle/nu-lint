@@ -191,15 +191,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     violations
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "use_builtin_cat",
-        "Use Nu's 'open' command instead of 'cat' for better file handling",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/open.html")
-}
+pub const RULE: Rule = Rule::new(
+    "use_builtin_cat",
+    "Use Nu's 'open' command instead of 'cat' for better file handling",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/open.html");
 
 #[cfg(test)]
 mod detect_bad;

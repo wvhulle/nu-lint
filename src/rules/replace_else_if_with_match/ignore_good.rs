@@ -1,40 +1,40 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn test_good_match_statement() {
     let good = "match $status { 'ok' => 'success', 'error' => 'failed', _ => 'unknown' }";
 
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }
 
 #[test]
 fn test_good_simple_if() {
     let good = "if $condition { 'yes' } else { 'no' }";
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }
 
 #[test]
 fn test_good_different_variables() {
     let good = "if $x == 1 { 'one' } else if $y == 2 { 'two' } else { 'other' }";
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }
 
 #[test]
 fn test_good_complex_conditions() {
     let good = "if $x > 5 and $y < 10 { 'range' } else { 'outside' }";
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }
 
 #[test]
 fn test_good_match_with_guard() {
     let good = "match $value { x if $x > 10 => 'big', x if $x > 5 => 'medium', _ => 'small' }";
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }
 
 #[test]
 fn test_good_single_if_no_else() {
     let good = "if $condition { print 'yes' }";
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }
 
 #[test]
@@ -49,31 +49,31 @@ if $x == 1 {
     "other"
 }
 "#;
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }
 
 #[test]
 fn test_good_match_with_alternatives() {
     let good = "match $val { 1 | 2 | 3 => 'low', 4 | 5 | 6 => 'mid', _ => 'high' }";
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }
 
 #[test]
 fn test_good_match_with_range() {
     let good = "match $num { 1..10 => 'small', 11..100 => 'medium', _ => 'large' }";
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }
 
 #[test]
 fn test_good_match_with_record_destructuring() {
     let good = "match $rec { {a: $val} => $val, _ => 0 }";
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }
 
 #[test]
 fn test_good_match_with_list_destructuring() {
     let good = "match $list { [$first, ..$rest] => $first, _ => null }";
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }
 
 #[test]
@@ -87,7 +87,7 @@ if $x > 0 and $x < 10 {
     "normal"
 }
 "#;
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }
 
 #[test]
@@ -101,13 +101,13 @@ if ($str | str contains "error") {
     "info"
 }
 "#;
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }
 
 #[test]
 fn test_good_if_with_not_operator() {
     let good = "if not $flag { 'disabled' } else { 'enabled' }";
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }
 
 #[test]
@@ -119,5 +119,5 @@ $data | match $in {
     _ => "Unknown data"
 }
 "#;
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }

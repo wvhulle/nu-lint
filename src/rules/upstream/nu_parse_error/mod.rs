@@ -53,15 +53,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
         })
         .collect()
 }
-pub const fn rule() -> Rule {
-    Rule::new(
-        "nu_parse_error",
-        "Nushell parser encountered a syntax error",
-        check,
-        LintLevel::Error,
-    )
-    .with_doc_url("https://www.nushell.sh/blog/")
-}
+pub const RULE: Rule = Rule::new(
+    "nu_parse_error",
+    "Nushell parser encountered a syntax error",
+    check,
+    LintLevel::Error,
+)
+.with_doc_url("https://www.nushell.sh/blog/");
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]

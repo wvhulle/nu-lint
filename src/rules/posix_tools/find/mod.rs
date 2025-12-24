@@ -219,15 +219,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     detect_external_commands(context, "find", NOTE, Some(build_fix))
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "use_builtin_find",
-        "Use Nu's 'ls' with glob patterns instead of 'find' command",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/glob.html")
-}
+pub const RULE: Rule = Rule::new(
+    "use_builtin_find",
+    "Use Nu's 'ls' with glob patterns instead of 'find' command",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/glob.html");
 
 #[cfg(test)]
 mod detect_bad;

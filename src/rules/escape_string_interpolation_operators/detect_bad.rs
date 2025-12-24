@@ -1,6 +1,6 @@
 #[test]
 fn detects_not_operator_without_escaping() {
-    let rule = super::rule();
+    let rule = super::RULE;
 
     let code = r#"
 def bad_example [] {
@@ -14,7 +14,7 @@ def bad_example [] {
 
 #[test]
 fn detects_or_operator_in_conditional_branch() {
-    let rule = super::rule();
+    let rule = super::RULE;
 
     let code = r#"
 def write_sysfs [path: string, value: string] {
@@ -32,7 +32,7 @@ def write_sysfs [path: string, value: string] {
 
 #[test]
 fn detects_and_or_operators_without_escaping() {
-    let rule = super::rule();
+    let rule = super::RULE;
 
     for (keyword, var_val) in [("and", "y"), ("or", "z")] {
         let code = format!(
@@ -49,7 +49,7 @@ def test [] {{
 
 #[test]
 fn detects_multiple_unescaped_operators_in_single_string() {
-    let rule = super::rule();
+    let rule = super::RULE;
 
     let code = r#"
 def test [] {
@@ -64,7 +64,7 @@ def test [] {
 
 #[test]
 fn detects_unescaped_operators_in_error_messages() {
-    let rule = super::rule();
+    let rule = super::RULE;
 
     let code = r#"
 def bad_error_msg [path: string] {
@@ -79,7 +79,7 @@ def bad_error_msg [path: string] {
 
 #[test]
 fn detects_and_operator_after_interpolated_values() {
-    let rule = super::rule();
+    let rule = super::RULE;
 
     let code = r#"
 def bad_nested [] {
@@ -94,7 +94,7 @@ def bad_nested [] {
 
 #[test]
 fn detects_multiple_unescaped_operators_across_strings() {
-    let rule = super::rule();
+    let rule = super::RULE;
 
     let code = r#"
 def test_errors [] {
@@ -111,7 +111,7 @@ def test_errors [] {
 
 #[test]
 fn detects_incomplete_comparison_and_arithmetic_operators() {
-    let rule = super::rule();
+    let rule = super::RULE;
 
     let code = r#"
 def test_incomplete [] {
@@ -127,7 +127,7 @@ def test_incomplete [] {
 
 #[test]
 fn detects_unescaped_boolean_expressions() {
-    let rule = super::rule();
+    let rule = super::RULE;
 
     let code = r#"
 def test_complex [] {
@@ -142,7 +142,7 @@ def test_complex [] {
 
 #[test]
 fn detects_common_unescaped_operator_patterns() {
-    let rule = super::rule();
+    let rule = super::RULE;
 
     let code = r#"
 def test_common [] {
@@ -159,7 +159,7 @@ def test_common [] {
 
 #[test]
 fn detects_unescaped_or_operator_in_ansi_string() {
-    let rule = super::rule();
+    let rule = super::RULE;
 
     let code = r#"
 def fix_file [file: string] {

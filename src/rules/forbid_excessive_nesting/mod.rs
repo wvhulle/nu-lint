@@ -261,15 +261,13 @@ fn create_violation(span: nu_protocol::Span, depth: usize) -> Violation {
     .with_help("Consider refactoring this code into smaller functions to reduce nesting depth")
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "forbid_excessive_nesting",
-        "Avoid excessive nesting (more than 4 levels deep)",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/book/thinking_in_nu.html")
-}
+pub const RULE: Rule = Rule::new(
+    "forbid_excessive_nesting",
+    "Avoid excessive nesting (more than 4 levels deep)",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/book/thinking_in_nu.html");
 
 #[cfg(test)]
 mod detect_bad;

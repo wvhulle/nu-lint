@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 use crate::log::instrument;
 
 #[test]
@@ -17,7 +17,7 @@ def main [
 }
 "#;
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -37,7 +37,7 @@ def main [
 }
 "#;
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -56,7 +56,7 @@ def main [
 }
 "#;
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -76,7 +76,7 @@ def main [
 }
 "#;
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -95,5 +95,5 @@ def main [
 }
 "#;
 
-    rule().assert_count(bad_code, 1);
+    RULE.assert_count(bad_code, 1);
 }

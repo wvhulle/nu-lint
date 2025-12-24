@@ -316,15 +316,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     detect_external_commands(context, "rg", NOTE, Some(build_fix))
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "use_builtin_rg",
-        "Use Nu's 'find' or 'where' instead of 'rg'",
-        check,
-        LintLevel::Hint,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/find.html")
-}
+pub const RULE: Rule = Rule::new(
+    "use_builtin_rg",
+    "Use Nu's 'find' or 'where' instead of 'rg'",
+    check,
+    LintLevel::Hint,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/find.html");
 
 #[cfg(test)]
 mod detect_bad;

@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn test_ignore_direct_function_call() {
@@ -11,7 +11,7 @@ def main [] {
     greet "world"
 }
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -24,23 +24,23 @@ def main [...args: string] {
     }
 }
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
 fn test_ignore_nu_without_c_flag() {
     let good_code = r#"nu script.nu"#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
 fn test_ignore_other_external_commands() {
     let good_code = r#"bash -c "echo hello""#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
 fn test_ignore_nu_help() {
     let good_code = r#"nu --help"#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }

@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn function_with_four_typed_params() {
@@ -13,7 +13,7 @@ def complex-command [
 }
 ";
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -24,5 +24,5 @@ def too-many [a: int, b: int, c: int, d: int, e: int] {
 }
 ";
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }

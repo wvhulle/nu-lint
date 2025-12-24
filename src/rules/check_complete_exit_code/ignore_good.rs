@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 use crate::log::instrument;
 
 #[test]
@@ -10,7 +10,7 @@ if $result.exit_code != 0 {
 }
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -18,7 +18,7 @@ fn test_ignores_regular_pipeline_without_complete() {
     let good_code = r"
 let result = (some | regular | pipeline)
 ";
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -34,7 +34,7 @@ def wait_for_service [] {
   }
 }
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -46,7 +46,7 @@ if $result.exit_code > 0 {
 }
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -58,7 +58,7 @@ if $result.exit_code == 0 and ($result.stdout | str contains 'PASS') {
 }
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -71,7 +71,7 @@ match $result.exit_code {
 }
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -81,7 +81,7 @@ let result = (^rm -rf /tmp/cache | complete)
 $result.exit_code | if $in != 0 { return }
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -94,7 +94,7 @@ if $code != 0 {
 }
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -107,7 +107,7 @@ if $fetch_ok and $pull_result.exit_code == 0 {
 }
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -122,7 +122,7 @@ for file in $files {
 }
 "#;
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -136,7 +136,7 @@ let status = {
 }
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -152,7 +152,7 @@ if $fetch_result.exit_code != 0 {
 }
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -161,7 +161,7 @@ fn test_ignores_non_dangerous_command_without_exit_code_check() {
 let result = (^echo hello | complete)
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -172,7 +172,7 @@ let output = (^grep pattern file.txt | complete)
 let data = (^find . -name '*.rs' | complete)
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -182,5 +182,5 @@ let result = (^git status | complete)
 let pull_result = (^git pull | complete)
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }

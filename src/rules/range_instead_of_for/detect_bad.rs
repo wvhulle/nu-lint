@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 use crate::log::instrument;
 
 #[test]
@@ -12,7 +12,7 @@ while $attempts < 10 {
 }
 ";
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -26,5 +26,5 @@ while $count < 5 {
 }
 ";
 
-    rule().assert_count(bad_code, 1);
+    RULE.assert_count(bad_code, 1);
 }

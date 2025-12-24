@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn ignore_fully_annotated_params() {
@@ -8,7 +8,7 @@ def greet [name: string] {
 }
 "#;
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -19,7 +19,7 @@ def add [x: int, y: int] {
 }
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -34,7 +34,7 @@ def process [
 }
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -45,7 +45,7 @@ def variadic [...args: list] {
 }
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -56,7 +56,7 @@ def hello [] {
 }
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -70,5 +70,5 @@ def process [
 }
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }

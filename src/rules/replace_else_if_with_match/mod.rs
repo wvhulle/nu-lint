@@ -252,15 +252,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "replace_if_else_chain_with_match",
-        "Use 'match' for value-based branching instead of if-else-if chains",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/match.html")
-}
+pub const RULE: Rule = Rule::new(
+    "replace_if_else_chain_with_match",
+    "Use 'match' for value-based branching instead of if-else-if chains",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/match.html");
 
 #[cfg(test)]
 mod detect_bad;

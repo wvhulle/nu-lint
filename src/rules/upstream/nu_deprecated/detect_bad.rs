@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn detect_when_deprecation_warning_exists() {
@@ -15,26 +15,26 @@ fn detect_when_deprecation_warning_exists() {
 
     // For now, test that the rule doesn't crash
     let code = "let x = 5";
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }
 
 #[test]
 fn detect_deprecated_flag_usage() {
     // Placeholder for when a deprecated flag exists
     let code = "let x = 5";
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }
 
 #[test]
 fn detect_deprecated_command_usage() {
     // Placeholder for when a deprecated command exists
     let code = "let x = 5";
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }
 
 #[test]
 fn detect_multiple_deprecations() {
     // Placeholder for when multiple deprecations can be tested
     let code = "let x = 5\nlet y = 10";
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }

@@ -30,23 +30,21 @@ fn check(context: &LintContext) -> Vec<Violation> {
     detect_external_commands(context, "which", NOTE, Some(build_fix))
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "use_builtin_which",
-        "Prefer built-in 'which'",
-        check,
-        LintLevel::Hint,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/which.html")
-}
+pub const RULE: Rule = Rule::new(
+    "use_builtin_which",
+    "Prefer built-in 'which'",
+    check,
+    LintLevel::Hint,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/which.html");
 
 #[cfg(test)]
 mod tests {
-    use super::rule;
+    use super::RULE;
 
     #[test]
     fn converts_which_to_builtin_which() {
         let source = "^which python";
-        rule().assert_replacement_contains(source, "which python");
+        RULE.assert_replacement_contains(source, "which python");
     }
 }

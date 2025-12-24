@@ -1,8 +1,8 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn test_items_already_used() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"
         {a: [1 2], b: [3]} | items {|key, val| {key: $key, value: $val}}
         "#,
@@ -11,7 +11,7 @@ fn test_items_already_used() {
 
 #[test]
 fn test_transpose_without_each() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"
         {a: [1], b: [2]} | transpose key val
         "#,
@@ -20,7 +20,7 @@ fn test_transpose_without_each() {
 
 #[test]
 fn test_transpose_with_wrong_number_of_args() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"
         [[x y]; [1 2]] | transpose | each {|row| $row}
         "#,
@@ -29,7 +29,7 @@ fn test_transpose_with_wrong_number_of_args() {
 
 #[test]
 fn test_transpose_with_one_arg() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"
         {a: [1], b: [2]} | transpose key | each {|row| $row.key}
         "#,
@@ -38,7 +38,7 @@ fn test_transpose_with_one_arg() {
 
 #[test]
 fn test_transpose_with_three_args() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"
         {a: [1], b: [2]} | transpose x y z | each {|row| $row.x}
         "#,
@@ -47,7 +47,7 @@ fn test_transpose_with_three_args() {
 
 #[test]
 fn test_each_uses_row_variable_directly() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"
         {a: [1], b: [2]} | transpose k v | each {|row| $row | get k}
         "#,
@@ -56,7 +56,7 @@ fn test_each_uses_row_variable_directly() {
 
 #[test]
 fn test_each_accesses_other_fields() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"
         {a: [1], b: [2]} | transpose k v | each {|row| $row.k + $row.other}
         "#,
@@ -65,7 +65,7 @@ fn test_each_accesses_other_fields() {
 
 #[test]
 fn test_each_with_multiple_parameters() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"
         {a: [1], b: [2]} | transpose k v | each {|row, idx| {key: $row.k, index: $idx}}
         "#,
@@ -74,7 +74,7 @@ fn test_each_with_multiple_parameters() {
 
 #[test]
 fn test_each_without_closure() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"
         {a: [1], b: [2]} | transpose k v | each $some_var
         "#,
@@ -83,7 +83,7 @@ fn test_each_without_closure() {
 
 #[test]
 fn test_transpose_separated_from_each() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"
         let data = {a: [1], b: [2]} | transpose k v
         $data | each {|row| $row.k}
@@ -93,7 +93,7 @@ fn test_transpose_separated_from_each() {
 
 #[test]
 fn test_each_closure_without_field_usage() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"
         {a: [1], b: [2]} | transpose k v | each {|row| 42}
         "#,
@@ -102,7 +102,7 @@ fn test_each_closure_without_field_usage() {
 
 #[test]
 fn test_field_name_in_string_literal() {
-    rule().assert_detects(
+    RULE.assert_detects(
         r#"
         {a: [1], b: [2]} | transpose k v | each {|row| {msg: "row.k is useful", val: $row.k}}
         "#,

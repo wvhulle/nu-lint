@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn test_detect_nu_c_with_use_self() {
@@ -8,19 +8,19 @@ def main [...args] {
     nu -c $'use "($script_path)" *; mycommand ($args | str join " ")'
 }
 "#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
 fn test_detect_nu_c_simple() {
     let bad_code = r#"nu -c 'print "hello"'"#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
 fn test_detect_nu_commands_flag() {
     let bad_code = r#"nu --commands 'ls | length'"#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -29,7 +29,7 @@ fn test_detect_nu_c_with_variable() {
 let cmd = "print hello"
 nu -c $cmd
 "#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -39,5 +39,5 @@ def dispatch [cmd: string] {
     nu -c $cmd
 }
 "#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }

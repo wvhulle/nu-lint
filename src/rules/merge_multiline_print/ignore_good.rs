@@ -1,9 +1,9 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn test_ignore_single_print() {
     let good_code = r#"print "single line""#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -12,7 +12,7 @@ fn test_ignore_two_prints() {
 print "line 1"
 print "line 2"
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -22,7 +22,7 @@ print "line 1
 line 2
 line 3"
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -35,7 +35,7 @@ print $"Hello ($name)"
 print "Static line"
 print $"Bye ($name)"
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -47,7 +47,7 @@ print "Processing..."
 let y = 10
 print "Done."
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -57,7 +57,7 @@ print "stdout 1"
 print -e "stderr"
 print "stdout 2"
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -67,5 +67,30 @@ print "header"
 ls | print
 print "footer"
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
+fn test_ignore_backtick_strings() {
+    // Backtick strings have different semantics (used for paths/commands)
+    // and should not be merged even if consecutive
+    let good_code = r#"
+print `line one`
+print `line two`
+print `line three`
+"#;
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
+fn test_ignore_mixed_double_and_single_quote_interpolations() {
+    // $"..." and $'...' interpolations should not be merged together
+    // because they use different quote styles
+    let good_code = r#"
+let x = 5
+print $"Double: ($x)"
+print $'Single: ($x)'
+print $"Double again: ($x)"
+"#;
+    RULE.assert_ignores(good_code);
 }

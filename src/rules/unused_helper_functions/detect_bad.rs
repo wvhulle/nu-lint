@@ -1,8 +1,8 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn single_unused_helper() {
-    rule().assert_detects(
+    RULE.assert_detects(
         r#"
 def main [] {
   print "hello"
@@ -17,7 +17,7 @@ def helper [] {
 
 #[test]
 fn multiple_unused_helpers() {
-    rule().assert_count(
+    RULE.assert_count(
         r#"
 def main [] {
   print "hello"
@@ -37,7 +37,7 @@ def helper2 [] {
 
 #[test]
 fn transitive_unused_helper() {
-    rule().assert_detects(
+    RULE.assert_detects(
         r#"
 def main [] {
   helper1
@@ -56,7 +56,7 @@ def helper2 [] {
 
 #[test]
 fn unused_chain() {
-    rule().assert_count(
+    RULE.assert_count(
         r#"
 def main [] {
   print "main"
@@ -76,7 +76,7 @@ def helper2 [] {
 
 #[test]
 fn unused_helper_with_subcommands() {
-    rule().assert_detects(
+    RULE.assert_detects(
         r#"
 def "main build" [] {
   print "building"
@@ -95,7 +95,7 @@ def unused-helper [] {
 
 #[test]
 fn recursive_unused_helper() {
-    rule().assert_detects(
+    RULE.assert_detects(
         r#"
 def main [] {
   print "main"
@@ -112,7 +112,7 @@ def recursive-unused [n: int] {
 
 #[test]
 fn mutually_recursive_unused_helpers() {
-    rule().assert_count(
+    RULE.assert_count(
         r#"
 def main [] {
   print "main"

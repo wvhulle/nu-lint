@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 use crate::log::instrument;
 
 #[test]
@@ -10,7 +10,7 @@ let mac = ($parts | get 1)
 let name = ($parts | skip 2 | str join " ")
 "#;
 
-    rule().assert_count(bad_code, 1);
+    RULE.assert_count(bad_code, 1);
 }
 
 #[test]
@@ -19,7 +19,7 @@ fn test_detect_split_row_with_get_inline() {
     let bad_code = r#"
 let ip = "192.168.1.100:8080" | split row ":" | get 0
 "#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -30,7 +30,7 @@ let log = "[2024-01-15] INFO: Server started"
 let parts = ($log | split row " ")
 let message = ($parts | skip 2)
 "#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -42,7 +42,7 @@ let parts = ($record | split row ", ")
 let name_part = ($parts | get 0)
 let age_part = ($parts | get 1)
 "#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -51,7 +51,7 @@ fn test_detect_split_in_pipeline_with_get() {
     let bad_code = r#"
 "user@example.com" | split row "@" | get 1
 "#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -62,7 +62,7 @@ let entry = "temperature:25.5:celsius"
 let data = ($entry | split row ":")
 let temp = ($data | get 1)
 "#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -71,7 +71,7 @@ fn test_detect_whitespace_split_with_index() {
     let bad_code = r#"
 "foo   bar   baz" | split row " " | get 2
 "#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -80,7 +80,7 @@ fn test_detect_each_with_split_row() {
 $data | lines | each { |line| $line | split row " " }
 "#;
 
-    rule().assert_count(bad_code, 1);
+    RULE.assert_count(bad_code, 1);
 }
 
 #[test]
@@ -89,7 +89,7 @@ fn test_detect_each_with_split() {
 $lines | each { |l| $l | split " " }
 "#;
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -101,5 +101,5 @@ $text | lines | each { |line|
 }
 "#;
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }

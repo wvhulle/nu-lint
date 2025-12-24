@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn test_variable_used_multiple_times_not_flagged() {
@@ -10,7 +10,7 @@ def foo [] {
 }
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -21,7 +21,7 @@ def foo [] {
 }
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -36,7 +36,7 @@ def process [] {
 }
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -48,7 +48,7 @@ def process [] {
 }
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -60,7 +60,7 @@ def process [] {
 }
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -74,7 +74,7 @@ def outer [] {
 }
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -88,7 +88,7 @@ def process [] {
 }
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -100,5 +100,5 @@ def process [] {
 }
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }

@@ -41,15 +41,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     detect_external_commands(context, "head", NOTE, Some(build_fix))
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "use_builtin_head",
-        "Use Nu's 'first' command instead of 'head' for cleaner syntax",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/first.html")
-}
+pub const RULE: Rule = Rule::new(
+    "use_builtin_head",
+    "Use Nu's 'first' command instead of 'head' for cleaner syntax",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/first.html");
 
 #[cfg(test)]
 mod tests;

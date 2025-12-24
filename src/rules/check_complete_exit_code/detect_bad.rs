@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn test_detects_unchecked_complete_result() {
@@ -6,7 +6,7 @@ fn test_detects_unchecked_complete_result() {
 let result = (^sed -i 's/foo/bar/g' file.txt | complete)
 ";
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -18,7 +18,7 @@ if ($result.stderr | is-empty) {
 }
 "#;
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -28,7 +28,7 @@ let result = (^rm -rf /tmp/build | complete)
 print "Build finished"
 "#;
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -41,7 +41,7 @@ if $success1 {
 }
 ";
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -54,5 +54,5 @@ if $inner != 0 {
 }
 ";
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }

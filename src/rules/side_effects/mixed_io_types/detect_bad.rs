@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 use crate::log::instrument;
 
 #[test]
@@ -11,7 +11,7 @@ def sync-data [] {
     http get https://api.example.com/data | save output.json
 }
 ";
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -25,7 +25,7 @@ def save-with-log [data] {
     $data | save output.json
 }
 "#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -39,7 +39,7 @@ def fetch-with-log [] {
     http get https://api.example.com/data
 }
 "#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -54,7 +54,7 @@ def process-all [] {
     $data | save output.json
 }
 "#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -68,7 +68,7 @@ def backup-and-notify [] {
     print "Backup created"
 }
 "#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -84,7 +84,7 @@ def complex-operation [] {
     }
 }
 "#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -97,7 +97,7 @@ def download-and-archive [] {
     http get https://api.example.com/file | save /tmp/download.txt
 }
 ";
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -113,5 +113,5 @@ def setup-directories [] {
     touch /tmp/dir1/file.txt
 }
 "#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }

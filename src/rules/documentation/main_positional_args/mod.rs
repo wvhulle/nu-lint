@@ -113,15 +113,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "main_positional_args_docs",
-        "Positional parameters in main functions should have documentation comments",
-        check,
-        LintLevel::Hint,
-    )
-    .with_doc_url("https://www.nushell.sh/book/custom_commands.html")
-}
+pub const RULE: Rule = Rule::new(
+    "main_positional_args_docs",
+    "Positional parameters in main functions should have documentation comments",
+    check,
+    LintLevel::Hint,
+)
+.with_doc_url("https://www.nushell.sh/book/custom_commands.html");
 
 #[cfg(test)]
 mod detect_bad;

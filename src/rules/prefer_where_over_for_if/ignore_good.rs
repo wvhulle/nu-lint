@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 use crate::log::instrument;
 
 #[test]
@@ -6,7 +6,7 @@ fn test_ignore_functional_where_usage() {
     instrument();
 
     let good = "$input | where $it > 5";
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }
 
 #[test]
@@ -22,7 +22,7 @@ for x in $input {
     }
 }
 ";
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }
 
 #[test]
@@ -39,7 +39,7 @@ for x in $input {
     }
 }
 ";
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }
 
 #[test]
@@ -53,7 +53,7 @@ for x in $input {
     $output = ($output | append ($x * 2))
 }
 ";
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }
 
 #[test]
@@ -67,7 +67,7 @@ for x in [1 2 3] {
     $data = ($data | append $x)
 }
 ";
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }
 
 #[test]
@@ -86,5 +86,5 @@ for it in $params {
     }
 }
 ";
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }

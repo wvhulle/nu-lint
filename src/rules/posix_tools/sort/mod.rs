@@ -170,15 +170,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     detect_external_commands(context, "sort", NOTE, Some(build_fix))
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "use_builtin_sort",
-        "Use Nu's 'sort' command for better data type support",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/sort.html")
-}
+pub const RULE: Rule = Rule::new(
+    "use_builtin_sort",
+    "Use Nu's 'sort' command for better data type support",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/sort.html");
 
 #[cfg(test)]
 mod basic_conversion;

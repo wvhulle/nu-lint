@@ -326,15 +326,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .collect()
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "prefer_items_over_transpose",
-        "Use 'items' instead of 'transpose | each' when iterating over record entries",
-        check,
-        LintLevel::Hint,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/items.html")
-}
+pub const RULE: Rule = Rule::new(
+    "prefer_items_over_transpose",
+    "Use 'items' instead of 'transpose | each' when iterating over record entries",
+    check,
+    LintLevel::Hint,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/items.html");
 
 #[cfg(test)]
 mod detect_bad;

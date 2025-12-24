@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn test_error_make_with_all_metadata() {
@@ -14,7 +14,7 @@ def validate [input: string] {
 }
 "#;
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -29,7 +29,7 @@ def process [data: record] {
 }
 "#;
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -49,7 +49,7 @@ def check-file [path: string] {
 }
 "#;
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -73,5 +73,5 @@ def validate-range [min: int, max: int] {
 }
 "#;
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }

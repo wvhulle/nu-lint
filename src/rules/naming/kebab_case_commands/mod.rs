@@ -50,15 +50,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "kebab_case_commands",
-        "Custom commands should use kebab-case naming convention",
-        check,
-        LintLevel::Hint,
-    )
-    .with_doc_url("https://www.nushell.sh/book/style_guide.html#commands")
-}
+pub const RULE: Rule = Rule::new(
+    "kebab_case_commands",
+    "Custom commands should use kebab-case naming convention",
+    check,
+    LintLevel::Hint,
+)
+.with_doc_url("https://www.nushell.sh/book/style_guide.html#commands");
 
 #[cfg(test)]
 mod detect_bad;

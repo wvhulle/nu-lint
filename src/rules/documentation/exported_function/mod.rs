@@ -73,15 +73,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "add_doc_comment_exported_fn",
-        "Exported functions should have documentation comments",
-        check,
-        LintLevel::Hint,
-    )
-    .with_doc_url("https://www.nushell.sh/book/custom_commands.html#documenting-your-command")
-}
+pub const RULE: Rule = Rule::new(
+    "add_doc_comment_exported_fn",
+    "Exported functions should have documentation comments",
+    check,
+    LintLevel::Hint,
+)
+.with_doc_url("https://www.nushell.sh/book/custom_commands.html#documenting-your-command");
 
 #[cfg(test)]
 mod detect_bad;

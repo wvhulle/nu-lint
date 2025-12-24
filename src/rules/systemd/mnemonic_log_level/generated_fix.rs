@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn test_fix_numeric_to_keyword_all_levels() {
@@ -13,22 +13,22 @@ fn test_fix_numeric_to_keyword_all_levels() {
         (r#"print "<7>Debug messages""#, "<debug>"),
     ];
     for (code, expected_keyword) in cases {
-        rule().assert_detects(code);
-        rule().assert_replacement_contains(code, expected_keyword);
+        RULE.assert_detects(code);
+        RULE.assert_replacement_contains(code, expected_keyword);
     }
 }
 
 #[test]
 fn test_fix_numeric_prefix_preserves_string_type() {
-    rule().assert_replacement_contains(r"print '<3>Connection failed'", "'<err>");
-    rule().assert_replacement_contains(r#"print $"<6>Processing ($file)""#, "$\"<info>");
+    RULE.assert_replacement_contains(r"print '<3>Connection failed'", "'<err>");
+    RULE.assert_replacement_contains(r#"print $"<6>Processing ($file)""#, "$\"<info>");
 }
 
 #[test]
 fn test_fix_echo_command() {
     let bad_code = r#"echo "<4>Warning: check logs""#;
-    rule().assert_detects(bad_code);
-    rule().assert_replacement_contains(bad_code, "<warning>");
+    RULE.assert_detects(bad_code);
+    RULE.assert_replacement_contains(bad_code, "<warning>");
 }
 
 #[test]
@@ -38,6 +38,6 @@ def main [] {
     print "<3>Error: something went wrong"
 }
 "#;
-    rule().assert_detects(bad_code);
-    rule().assert_replacement_contains(bad_code, "<err>");
+    RULE.assert_detects(bad_code);
+    RULE.assert_replacement_contains(bad_code, "<err>");
 }

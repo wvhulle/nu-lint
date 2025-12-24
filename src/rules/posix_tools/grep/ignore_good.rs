@@ -1,18 +1,18 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn ignore_nushell_find() {
-    rule().assert_ignores(r#"find "pattern""#);
+    RULE.assert_ignores(r#"find "pattern""#);
 }
 
 #[test]
 fn ignore_nushell_where() {
-    rule().assert_ignores(r#"lines | where $it =~ "pattern""#);
+    RULE.assert_ignores(r#"lines | where $it =~ "pattern""#);
 }
 
 #[test]
 fn ignore_nushell_where_with_field() {
-    rule().assert_ignores(r#"ls | where name =~ "pattern""#);
+    RULE.assert_ignores(r#"ls | where name =~ "pattern""#);
 }
 
 #[test]
@@ -24,7 +24,7 @@ fn ignore_lines_where_pipeline() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
@@ -37,7 +37,7 @@ fn ignore_structured_data_where() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
@@ -50,28 +50,28 @@ fn ignore_regex_operators() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
 #[test]
 fn ignore_case_insensitive_regex() {
-    rule().assert_ignores(r"ls | where name =~ '(?i)readme'");
+    RULE.assert_ignores(r"ls | where name =~ '(?i)readme'");
 }
 
 #[test]
 fn ignore_find_with_closure() {
-    rule().assert_ignores(r#"ls | find {|f| $f.name | str contains "test" }"#);
+    RULE.assert_ignores(r#"ls | find {|f| $f.name | str contains "test" }"#);
 }
 
 #[test]
 fn ignore_enumerate_for_line_numbers() {
-    rule().assert_ignores(r#"lines | enumerate | where item =~ "pattern""#);
+    RULE.assert_ignores(r#"lines | enumerate | where item =~ "pattern""#);
 }
 
 #[test]
 fn ignore_length_for_counting() {
-    rule().assert_ignores(r#"lines | where $it =~ "pattern" | length"#);
+    RULE.assert_ignores(r#"lines | where $it =~ "pattern" | length"#);
 }
 
 #[test]
@@ -83,7 +83,7 @@ fn ignore_other_commands() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
@@ -96,11 +96,11 @@ fn ignore_complex_where_conditions() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
 #[test]
 fn ignore_str_contains() {
-    rule().assert_ignores(r#"lines | where ($it | str contains "pattern")"#);
+    RULE.assert_ignores(r#"lines | where ($it | str contains "pattern")"#);
 }

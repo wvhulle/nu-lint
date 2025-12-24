@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 use crate::log::instrument;
 
 #[test]
@@ -17,7 +17,7 @@ fn test_detect_various_path_parameter_names() {
 
     for (param_name, body) in test_cases {
         let code = format!(r"def test-fn [{param_name}: string] {{ {body} }}");
-        rule().assert_detects(&code);
+        RULE.assert_detects(&code);
     }
 }
 
@@ -32,7 +32,7 @@ fn test_detect_path_parameters_without_type_annotation() {
         "backup_location",
     ] {
         let code = format!(r"def test-fn [{param_name}] {{ open ${param_name} }}");
-        rule().assert_detects(&code);
+        RULE.assert_detects(&code);
     }
 }
 
@@ -45,7 +45,7 @@ def sync-files [source_path: string, target_path: string, backup_path: string] {
     cp $target_path $backup_path
 }
 ";
-    rule().assert_count(code, 3);
+    RULE.assert_count(code, 3);
 }
 
 #[test]
@@ -58,7 +58,7 @@ def read-file [file_path?: string] {
     }
 }
 ";
-    rule().assert_detects(code);
+    RULE.assert_detects(code);
 }
 
 #[test]
@@ -69,7 +69,7 @@ export def save-data [output_path: string, data] {
     $data | save $output_path
 }
 ";
-    rule().assert_detects(code);
+    RULE.assert_detects(code);
 }
 
 #[test]
@@ -80,7 +80,7 @@ fn test_detect_different_case_variations() {
         ("SOURCE_PATH", "cp $SOURCE_PATH dest"),
     ] {
         let code = format!(r"def test-fn [{param}: string] {{ {body} }}");
-        rule().assert_detects(&code);
+        RULE.assert_detects(&code);
     }
 }
 
@@ -95,7 +95,7 @@ fn test_detect_path_params_with_external_commands() {
 
     for (param, body) in test_cases {
         let code = format!(r"def test-fn [{param}: string] {{ {body} }}");
-        rule().assert_detects(&code);
+        RULE.assert_detects(&code);
     }
 }
 
@@ -118,6 +118,6 @@ fn test_detect_multipath_external_commands() {
 
     for (param1, param2, body, expected_count) in test_cases {
         let code = format!(r"def test-fn [{param1}: string, {param2}: string] {{ {body} }}");
-        rule().assert_count(&code, expected_count);
+        RULE.assert_count(&code, expected_count);
     }
 }

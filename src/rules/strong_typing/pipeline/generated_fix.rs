@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 use crate::log::instrument;
 
 #[test]
@@ -9,8 +9,8 @@ def double [] {
     $in * 2
 }
 ";
-    rule().assert_replacement_contains(bad_code, "[]: int -> int");
-    rule().assert_help_contains(bad_code, "pipeline input and output type annotations");
+    RULE.assert_replacement_contains(bad_code, "[]: int -> int");
+    RULE.assert_help_contains(bad_code, "pipeline input and output type annotations");
 }
 
 #[test]
@@ -26,8 +26,8 @@ export def "git age" [] {
   } | sort-by last_commit
 }
 "#;
-    rule().assert_count(bad_code, 1);
-    rule().assert_replacement_contains(bad_code, "nothing -> table");
+    RULE.assert_count(bad_code, 1);
+    RULE.assert_replacement_contains(bad_code, "nothing -> table");
 }
 
 #[test]
@@ -38,7 +38,7 @@ def create-list [] {
     [1, 2, 3]
 }
 ";
-    rule().assert_replacement_contains(bad_code, "[]: nothing -> list<int>");
+    RULE.assert_replacement_contains(bad_code, "[]: nothing -> list<int>");
 }
 
 #[test]
@@ -52,7 +52,7 @@ def time_to_hours [time_str: string] {
     # Ignore seconds for simplicity
     $hour + ($minute / 60.0)
 }"#;
-    rule().assert_replacement_contains(bad_code, "nothing -> float");
+    RULE.assert_replacement_contains(bad_code, "nothing -> float");
 }
 
 #[test]
@@ -63,7 +63,7 @@ def transform [] {
     $in | each { |x| $x + 1 }
 }
 ";
-    rule().assert_replacement_contains(bad_code, "list<any> -> list<any>");
+    RULE.assert_replacement_contains(bad_code, "list<any> -> list<any>");
 }
 
 #[test]
@@ -73,13 +73,13 @@ def multiply [factor: int] {
     $in * $factor
 }
 ";
-    rule().assert_replacement_contains(bad_code, "[factor: int]: int -> int");
+    RULE.assert_replacement_contains(bad_code, "[factor: int]: int -> int");
 }
 
 #[test]
 fn test_fix_description_mentions_type_annotations() {
     let bad_code = "def double [] { $in * 2 }";
-    rule().assert_fix_explanation_contains(bad_code, "type annotations");
+    RULE.assert_fix_explanation_contains(bad_code, "type annotations");
 }
 
 #[test]
@@ -89,9 +89,9 @@ def process [data?, --verbose] {
     $in | str trim
 }
 ";
-    rule().assert_replacement_contains(bad_code, "data?");
-    rule().assert_replacement_contains(bad_code, "--verbose");
-    rule().assert_replacement_contains(bad_code, "string -> string");
+    RULE.assert_replacement_contains(bad_code, "data?");
+    RULE.assert_replacement_contains(bad_code, "--verbose");
+    RULE.assert_replacement_contains(bad_code, "string -> string");
 }
 
 #[test]
@@ -101,7 +101,7 @@ export def process [] {
     $in | str trim
 }
 ";
-    rule().assert_replacement_contains(bad_code, "string -> string");
+    RULE.assert_replacement_contains(bad_code, "string -> string");
 }
 
 #[test]
@@ -112,7 +112,7 @@ def get-value [] {
     42
 }
 ";
-    rule().assert_replacement_contains(bad_code, "[]: nothing -> int");
+    RULE.assert_replacement_contains(bad_code, "[]: nothing -> int");
 }
 
 #[test]
@@ -122,7 +122,7 @@ def greet [] {
     "hello"
 }
 "#;
-    rule().assert_replacement_contains(bad_code, "[]: nothing -> string");
+    RULE.assert_replacement_contains(bad_code, "[]: nothing -> string");
 }
 
 #[test]
@@ -132,7 +132,7 @@ def get_count [] {
     42
 }
 ";
-    rule().assert_replacement_contains(bad_code, "[]: nothing -> int");
+    RULE.assert_replacement_contains(bad_code, "[]: nothing -> int");
 }
 
 #[test]
@@ -142,7 +142,7 @@ def get_pi [] {
     3.14
 }
 ";
-    rule().assert_replacement_contains(bad_code, "[]: nothing -> float");
+    RULE.assert_replacement_contains(bad_code, "[]: nothing -> float");
 }
 
 #[test]
@@ -153,7 +153,7 @@ def is_ready [] {
     true
 }
 ";
-    rule().assert_replacement_contains(bad_code, "[]: nothing -> bool");
+    RULE.assert_replacement_contains(bad_code, "[]: nothing -> bool");
 }
 
 #[test]
@@ -164,7 +164,7 @@ def get_items [] {
     [1, 2, 3]
 }
 ";
-    rule().assert_replacement_contains(bad_code, "[]: nothing -> list");
+    RULE.assert_replacement_contains(bad_code, "[]: nothing -> list");
 }
 
 #[test]
@@ -174,7 +174,7 @@ def get_config [] {
     {name: "test", value: 42}
 }
 "#;
-    rule().assert_replacement_contains(bad_code, "[]: nothing -> record");
+    RULE.assert_replacement_contains(bad_code, "[]: nothing -> record");
 }
 
 #[test]
@@ -184,7 +184,7 @@ def get_data [] {
     [[name, age]; [Alice, 30], [Bob, 25]]
 }
 ";
-    rule().assert_replacement_contains(bad_code, "[]: nothing -> table");
+    RULE.assert_replacement_contains(bad_code, "[]: nothing -> table");
 }
 
 #[test]
@@ -194,7 +194,7 @@ def serialize [] {
     $in | to json
 }
 ";
-    rule().assert_replacement_contains(bad_code, "[]: any -> string");
+    RULE.assert_replacement_contains(bad_code, "[]: any -> string");
 }
 
 #[test]
@@ -204,7 +204,7 @@ def split_lines [] {
     $in | lines
 }
 ";
-    rule().assert_replacement_contains(bad_code, "any -> list<string>");
+    RULE.assert_replacement_contains(bad_code, "any -> list<string>");
 }
 
 #[test]
@@ -214,7 +214,7 @@ def filter_items [] {
     $in | where {|x| $x > 5}
 }
 ";
-    rule().assert_replacement_contains(bad_code, "list<any> -> list<any>");
+    RULE.assert_replacement_contains(bad_code, "list<any> -> list<any>");
 }
 
 #[test]
@@ -224,7 +224,7 @@ def count_items [] {
     $in | length
 }
 ";
-    rule().assert_replacement_contains(bad_code, "list<any> -> int");
+    RULE.assert_replacement_contains(bad_code, "list<any> -> int");
 }
 
 #[test]
@@ -234,7 +234,7 @@ def check_empty [] {
     $in | is-empty
 }
 ";
-    rule().assert_replacement_contains(bad_code, "[]: any -> bool");
+    RULE.assert_replacement_contains(bad_code, "[]: any -> bool");
 }
 
 #[test]
@@ -244,7 +244,7 @@ def get_name [] {
     $in.name
 }
 ";
-    rule().assert_replacement_contains(bad_code, "[]: record -> any");
+    RULE.assert_replacement_contains(bad_code, "[]: record -> any");
 }
 
 #[test]
@@ -255,7 +255,7 @@ def process_items [] {
     $in | each {|x| $x + 1}
 }
 ";
-    rule().assert_replacement_contains(bad_code, "list<any> -> list<any>");
+    RULE.assert_replacement_contains(bad_code, "list<any> -> list<any>");
 }
 
 #[test]
@@ -265,7 +265,7 @@ def split_text [] {
     $in | lines
 }
 ";
-    rule().assert_replacement_contains(bad_code, "[]: any -> list<string>");
+    RULE.assert_replacement_contains(bad_code, "[]: any -> list<string>");
 }
 
 #[test]
@@ -275,7 +275,7 @@ def process [] {
     $in | each {|x| $x * 2}
 }
 ";
-    rule().assert_replacement_contains(bad_code, "[]: list<any> -> list<any>");
+    RULE.assert_replacement_contains(bad_code, "[]: list<any> -> list<any>");
 }
 
 #[test]
@@ -285,7 +285,7 @@ def multiply [factor: int] {
     $in | each {|x| $x * $factor}
 }
 ";
-    rule().assert_replacement_contains(bad_code, "list<any> -> list<any>");
+    RULE.assert_replacement_contains(bad_code, "list<any> -> list<any>");
 }
 
 #[test]
@@ -296,7 +296,7 @@ def complex [] {
     if true { "string" } else { 42 }
 }
 "#;
-    rule().assert_replacement_contains(bad_code, "[]: nothing -> string");
+    RULE.assert_replacement_contains(bad_code, "[]: nothing -> string");
 }
 
 #[test]
@@ -316,11 +316,11 @@ def calculate-brightness [
 }
 ";
     // Should preserve the multiline formatting with newlines and indentation
-    rule().assert_replacement_contains(bad_code, "\n  current: float\n");
-    rule().assert_replacement_contains(bad_code, "\n  times: record\n");
-    rule().assert_replacement_contains(bad_code, "\n  --min: float\n");
-    rule().assert_replacement_contains(bad_code, "\n  --max: float\n");
-    rule().assert_replacement_contains(bad_code, "\n  --offset: int\n");
+    RULE.assert_replacement_contains(bad_code, "\n  current: float\n");
+    RULE.assert_replacement_contains(bad_code, "\n  times: record\n");
+    RULE.assert_replacement_contains(bad_code, "\n  --min: float\n");
+    RULE.assert_replacement_contains(bad_code, "\n  --max: float\n");
+    RULE.assert_replacement_contains(bad_code, "\n  --offset: int\n");
 }
 
 #[test]
@@ -337,11 +337,11 @@ export def process-data [
 }
 ";
     // Should preserve the multiline formatting
-    rule().assert_replacement_contains(bad_code, "\n  input: string\n");
-    rule().assert_replacement_contains(bad_code, "\n  output: string\n");
-    rule().assert_replacement_contains(bad_code, "\n  --verbose: bool\n");
-    rule().assert_replacement_contains(bad_code, "\n  --format: string\n");
-    rule().assert_replacement_contains(bad_code, "nothing -> table");
+    RULE.assert_replacement_contains(bad_code, "\n  input: string\n");
+    RULE.assert_replacement_contains(bad_code, "\n  output: string\n");
+    RULE.assert_replacement_contains(bad_code, "\n  --verbose: bool\n");
+    RULE.assert_replacement_contains(bad_code, "\n  --format: string\n");
+    RULE.assert_replacement_contains(bad_code, "nothing -> table");
 }
 
 #[test]
@@ -353,6 +353,6 @@ def transform [data: string, options: record] {
 }
 ";
     // Should keep single-line format
-    rule().assert_replacement_contains(bad_code, "[data: string, options: record]:");
-    rule().assert_replacement_contains(bad_code, "nothing -> string");
+    RULE.assert_replacement_contains(bad_code, "[data: string, options: record]:");
+    RULE.assert_replacement_contains(bad_code, "nothing -> string");
 }

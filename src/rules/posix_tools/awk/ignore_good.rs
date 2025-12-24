@@ -1,18 +1,18 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn ignores_nushell_where() {
-    rule().assert_ignores(r#"lines | where $it =~ "pattern""#);
+    RULE.assert_ignores(r#"lines | where $it =~ "pattern""#);
 }
 
 #[test]
 fn ignores_nushell_split_column() {
-    rule().assert_ignores(r#"lines | split column "," | get column1"#);
+    RULE.assert_ignores(r#"lines | split column "," | get column1"#);
 }
 
 #[test]
 fn ignores_nushell_select() {
-    rule().assert_ignores(r#"open data.csv | select name age"#);
+    RULE.assert_ignores(r#"open data.csv | select name age"#);
 }
 
 #[test]
@@ -24,7 +24,7 @@ fn ignores_open_lines_pipeline() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
@@ -37,13 +37,13 @@ fn ignores_structured_data_operations() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
 #[test]
 fn ignores_enumerate_for_line_numbers() {
-    rule().assert_ignores(r#"lines | enumerate | where item =~ "pattern""#);
+    RULE.assert_ignores(r#"lines | enumerate | where item =~ "pattern""#);
 }
 
 #[test]
@@ -55,7 +55,7 @@ fn ignores_split_column_with_separator() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
@@ -68,16 +68,16 @@ fn ignores_other_commands() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
 #[test]
 fn ignores_get_command() {
-    rule().assert_ignores(r#"$data | get column1"#);
+    RULE.assert_ignores(r#"$data | get column1"#);
 }
 
 #[test]
 fn ignores_each_transformation() {
-    rule().assert_ignores(r#"lines | each {|line| $line | str trim}"#);
+    RULE.assert_ignores(r#"lines | each {|line| $line | str trim}"#);
 }

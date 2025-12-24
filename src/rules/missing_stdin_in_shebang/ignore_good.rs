@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 use crate::log::instrument;
 
 #[test]
@@ -9,7 +9,7 @@ def main []: string -> string {
     $in | str upcase
 }
 ";
-    rule().assert_count(source, 0);
+    RULE.assert_count(source, 0);
 }
 
 #[test]
@@ -20,7 +20,7 @@ def main []: string -> string {
     $in | str upcase
 }
 ";
-    rule().assert_count(source, 0);
+    RULE.assert_count(source, 0);
 }
 
 #[test]
@@ -31,7 +31,7 @@ def main [] {
     print "Hello"
 }
 "#;
-    rule().assert_count(source, 0);
+    RULE.assert_count(source, 0);
 }
 
 #[test]
@@ -42,7 +42,7 @@ def main []: nothing -> string {
     "Hello"
 }
 "#;
-    rule().assert_count(source, 0);
+    RULE.assert_count(source, 0);
 }
 
 #[test]
@@ -53,7 +53,7 @@ def main [name: string] {
     print $"Hello ($name)"
 }
 "#;
-    rule().assert_count(source, 0);
+    RULE.assert_count(source, 0);
 }
 
 #[test]
@@ -69,7 +69,7 @@ def main [] {
     "test" | helper
 }
 "#;
-    rule().assert_count(source, 0);
+    RULE.assert_count(source, 0);
 }
 
 #[test]
@@ -79,7 +79,7 @@ def main []: string -> string {
     $in | str upcase
 }
 ";
-    rule().assert_count(source, 0);
+    RULE.assert_count(source, 0);
 }
 
 #[test]
@@ -91,7 +91,7 @@ def main [] {
     print $data
 }
 ";
-    rule().assert_count(source, 0);
+    RULE.assert_count(source, 0);
 }
 
 #[test]
@@ -117,5 +117,5 @@ def main [
   }
 }
 "#;
-    rule().assert_count(source, 0);
+    RULE.assert_count(source, 0);
 }

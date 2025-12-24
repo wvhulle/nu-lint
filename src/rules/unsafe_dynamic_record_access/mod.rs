@@ -62,16 +62,14 @@ fn check(context: &LintContext) -> Vec<Violation> {
     context.collect_rule_violations(|expr, ctx| check_get_call(expr, ctx).into_iter().collect())
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "unsafe_dynamic_record_access",
-        "Detect 'get' calls with dynamic keys that don't use the -o/--optional flag, which can \
-         cause silent failures when the key doesn't exist",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/get.html")
-}
+pub const RULE: Rule = Rule::new(
+    "unsafe_dynamic_record_access",
+    "Detect 'get' calls with dynamic keys that don't use the -o/--optional flag, which can cause \
+     silent failures when the key doesn't exist",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/get.html");
 
 #[cfg(test)]
 mod detect_bad;

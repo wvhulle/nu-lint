@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn test_detect_multiline_nested_if() {
@@ -10,14 +10,14 @@ if $x > 0 {
 }
 "#;
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
 fn test_detect_inline_nested_if() {
     let bad_code = r#"if $a { if $b { print "nested" } }"#;
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -32,7 +32,7 @@ def check-conditions [] {
 }
 "#;
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -45,7 +45,7 @@ if ($status == "active") {
 }
 "#;
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -58,7 +58,7 @@ if $env == "prod" {
 }
 "#;
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -71,5 +71,5 @@ if ($x > 10 and $x < 100) {
 }
 ";
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }

@@ -14,14 +14,14 @@ keywords = ["nushell", "linter", "static-analysis", "code-quality", "shell"]
 license = "MIT"
 name = "nu-lint"
 repository = "https://codeberg.org/wvhulle/nu-lint"
-version = "0.0.72"
+version = "0.0.73"
 
 
 [lints.clippy]
 # https://rust-lang.github.io/rust-clippy/master/index.html
 complexity = { level = "warn", priority = -1 }
-pedantic = { level = "deny", priority = -1 }
-style = { level = "deny", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+style = { level = "warn", priority = -1 }
 
 absolute_paths = "warn"
 allow_attributes_without_reason = "deny"

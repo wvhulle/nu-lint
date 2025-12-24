@@ -248,15 +248,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     violations
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "use_builtin_grep",
-        "Use Nu's 'find' or 'where' instead of 'grep' for better data handling",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/find.html")
-}
+pub const RULE: Rule = Rule::new(
+    "use_builtin_grep",
+    "Use Nu's 'find' or 'where' instead of 'grep' for better data handling",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/find.html");
 
 #[cfg(test)]
 mod detect_bad;

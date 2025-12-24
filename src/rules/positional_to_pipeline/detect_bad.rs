@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn detect_single_data_parameter_with_pipeline_operations() {
@@ -33,7 +33,7 @@ fn detect_single_data_parameter_with_pipeline_operations() {
     ];
 
     for code in test_cases {
-        rule().assert_detects(code);
+        RULE.assert_detects(code);
     }
 }
 
@@ -46,7 +46,7 @@ fn detect_list_typed_single_parameter() {
     ];
 
     for code in bad_codes {
-        rule().assert_detects(code);
+        RULE.assert_detects(code);
     }
 }
 
@@ -59,7 +59,7 @@ fn detect_table_typed_single_parameter() {
     ];
 
     for code in bad_codes {
-        rule().assert_detects(code);
+        RULE.assert_detects(code);
     }
 }
 
@@ -72,7 +72,7 @@ fn detect_record_typed_single_parameter() {
     ];
 
     for code in bad_codes {
-        rule().assert_detects(code);
+        RULE.assert_detects(code);
     }
 }
 
@@ -85,6 +85,6 @@ fn detect_string_parameter_used_for_data_processing() {
     ];
 
     for code in bad_codes {
-        rule().assert_detects(code);
+        RULE.assert_detects(code);
     }
 }

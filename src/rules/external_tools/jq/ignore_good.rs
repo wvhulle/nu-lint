@@ -1,23 +1,23 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn ignore_nushell_length() {
-    rule().assert_ignores("$data | length");
+    RULE.assert_ignores("$data | length");
 }
 
 #[test]
 fn ignore_nushell_columns() {
-    rule().assert_ignores("$record | columns");
+    RULE.assert_ignores("$record | columns");
 }
 
 #[test]
 fn ignore_nushell_describe() {
-    rule().assert_ignores("$value | describe");
+    RULE.assert_ignores("$value | describe");
 }
 
 #[test]
 fn ignore_nushell_flatten() {
-    rule().assert_ignores("$nested | flatten");
+    RULE.assert_ignores("$nested | flatten");
 }
 
 #[test]
@@ -30,7 +30,7 @@ fn ignore_nushell_math_operations() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
@@ -44,7 +44,7 @@ fn ignore_nushell_get_operations() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
@@ -52,7 +52,7 @@ fn ignore_nushell_get_operations() {
 fn ignore_jq_with_function_definitions() {
     // jq allows defining custom functions - no direct Nushell equivalent in jq
     // syntax
-    rule().assert_ignores("^jq 'def f: .; . | f' input.json");
+    RULE.assert_ignores("^jq 'def f: .; . | f' input.json");
 }
 
 #[test]
@@ -64,7 +64,7 @@ fn ignore_jq_with_complex_conditionals() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
@@ -77,7 +77,7 @@ fn ignore_jq_with_arithmetic_in_filters() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
@@ -90,14 +90,14 @@ fn ignore_jq_with_string_operations_in_select() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
 #[test]
 fn ignore_jq_multiline_with_complex_select() {
     // Multiline jq with complex select condition (comparison)
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"$data | to json | ^jq '
         .users[]
         | select(.role == "admin")
@@ -116,7 +116,7 @@ fn ignore_proper_structured_pipelines() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
@@ -129,7 +129,7 @@ fn ignore_mixed_valid_operations() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
@@ -142,7 +142,7 @@ fn ignore_from_json() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
@@ -155,13 +155,13 @@ fn ignore_to_json_for_external_tools() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
 #[test]
 fn ignore_to_json_standalone() {
-    rule().assert_ignores("$data | to json");
+    RULE.assert_ignores("$data | to json");
 }
 
 #[test]
@@ -173,7 +173,7 @@ fn ignore_to_json_for_output() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
@@ -187,7 +187,7 @@ fn ignore_structured_data_operations() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
@@ -201,7 +201,7 @@ fn ignore_structured_data_get() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
@@ -214,7 +214,7 @@ fn ignore_structured_data_each() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
@@ -227,7 +227,7 @@ fn ignore_structured_data_grouping() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
@@ -240,6 +240,6 @@ fn ignore_structured_data_sorting() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }

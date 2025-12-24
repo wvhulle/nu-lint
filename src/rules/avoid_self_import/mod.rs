@@ -98,14 +98,12 @@ fn check(context: &LintContext) -> Vec<Violation> {
     check_block(context.ast, context)
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "avoid_self_import",
-        "Avoid importing the current script from itself; functions are already available in scope",
-        check,
-        LintLevel::Error,
-    )
-}
+pub const RULE: Rule = Rule::new(
+    "avoid_self_import",
+    "Avoid importing the current script from itself; functions are already available in scope",
+    check,
+    LintLevel::Error,
+);
 
 #[cfg(test)]
 mod detect_bad;

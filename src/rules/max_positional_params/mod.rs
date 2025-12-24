@@ -25,17 +25,15 @@ fn check(context: &LintContext) -> Vec<Violation> {
         })
         .collect()
 }
-pub const fn rule() -> Rule {
-    Rule::new(
-        "max_positional_params",
-        "Custom commands should have ≤ 2 positional parameters",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url(
-        "https://www.nushell.sh/book/style_guide.html#options-and-parameters-of-custom-commands",
-    )
-}
+pub const RULE: Rule = Rule::new(
+    "max_positional_params",
+    "Custom commands should have ≤ 2 positional parameters",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url(
+    "https://www.nushell.sh/book/style_guide.html#options-and-parameters-of-custom-commands",
+);
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]

@@ -258,17 +258,14 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "escape_string_interpolation_operators",
-        "Detect reliably identifiable AST patterns in string interpolations that will cause \
-         runtime errors (standalone operators, external boolean operator calls, literal boolean \
-         operations)",
-        check,
-        LintLevel::Error,
-    )
-    .with_doc_url("https://www.nushell.sh/book/working_with_strings.html#string-interpolation")
-}
+pub const RULE: Rule = Rule::new(
+    "escape_string_interpolation_operators",
+    "Detect reliably identifiable AST patterns in string interpolations that will cause runtime \
+     errors (standalone operators, external boolean operator calls, literal boolean operations)",
+    check,
+    LintLevel::Error,
+)
+.with_doc_url("https://www.nushell.sh/book/working_with_strings.html#string-interpolation");
 
 #[cfg(test)]
 mod detect_bad;

@@ -109,17 +109,15 @@ fn check(context: &LintContext) -> Vec<Violation> {
     violations
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "prefer_keyword_journal_prefix",
-        "Use mnemonic log levels instead of numeric ones for systemd journal log levels.",
-        check,
-        LintLevel::Hint,
-    )
-    .with_doc_url(
-        "https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html#SyslogLevelPrefix=",
-    )
-}
+pub const RULE: Rule = Rule::new(
+    "prefer_keyword_journal_prefix",
+    "Use mnemonic log levels instead of numeric ones for systemd journal log levels.",
+    check,
+    LintLevel::Hint,
+)
+.with_doc_url(
+    "https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html#SyslogLevelPrefix=",
+);
 
 #[cfg(test)]
 mod detect_bad;

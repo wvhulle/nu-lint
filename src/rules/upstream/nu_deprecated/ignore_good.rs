@@ -1,9 +1,9 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn ignore_simple_let_statement() {
     let code = "let x = 5";
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }
 
 #[test]
@@ -14,5 +14,5 @@ def greet [name: string] {
 }
 greet "World"
 "#;
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }

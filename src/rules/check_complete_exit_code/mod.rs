@@ -219,15 +219,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .collect()
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "check_complete_exit_code",
-        "Check exit codes when using 'complete' to capture dangerous external command results",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/complete.html")
-}
+pub const RULE: Rule = Rule::new(
+    "check_complete_exit_code",
+    "Check exit codes when using 'complete' to capture dangerous external command results",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/complete.html");
 
 #[cfg(test)]
 mod detect_bad;

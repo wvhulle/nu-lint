@@ -230,17 +230,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     create_violations(&empty_list_vars, &direct_copy_set)
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "prefer_direct_use",
-        "Prefer direct list use over copying items into a mutable list",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url(
-        "https://www.nushell.sh/book/thinking_in_nu.html#variables-are-immutable-by-default",
-    )
-}
+pub const RULE: Rule = Rule::new(
+    "prefer_direct_use",
+    "Prefer direct list use over copying items into a mutable list",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/book/thinking_in_nu.html#variables-are-immutable-by-default");
 
 #[cfg(test)]
 mod detect_bad;

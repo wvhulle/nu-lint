@@ -193,15 +193,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "missing_type_annotation",
-        "Parameters should have type annotations",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/book/custom_commands.html#parameter-types")
-}
+pub const RULE: Rule = Rule::new(
+    "missing_type_annotation",
+    "Parameters should have type annotations",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/book/custom_commands.html#parameter-types");
 
 #[cfg(test)]
 mod detect_bad;

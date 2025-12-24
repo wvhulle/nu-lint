@@ -102,15 +102,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     violations
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "non_final_failure_check",
-        "Only the exit code of the last external command in a pipeline is reported.",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/blog/2025-10-15-nushell_v0_108_0.html#pipefail-16449-toc")
-}
+pub const RULE: Rule = Rule::new(
+    "non_final_failure_check",
+    "Only the exit code of the last external command in a pipeline is reported.",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/blog/2025-10-15-nushell_v0_108_0.html#pipefail-16449-toc");
 
 #[cfg(test)]
 mod detect_bad;

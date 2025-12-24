@@ -1,8 +1,8 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn function_at_line_limit() {
-    let rule = rule();
+    let rule = RULE;
     let function = format!(
         r"def acceptable_function [] {{
 {}
@@ -17,13 +17,13 @@ fn function_at_line_limit() {
 
 #[test]
 fn short_function() {
-    let rule = rule();
+    let rule = RULE;
     rule.assert_ignores(r"def short_function [] { print 'hello' }");
 }
 
 #[test]
 fn function_with_few_lines() {
-    let rule = rule();
+    let rule = RULE;
     rule.assert_ignores(
         r"def simple_function [x y] {
     let sum = $x + $y
@@ -35,13 +35,13 @@ fn function_with_few_lines() {
 
 #[test]
 fn empty_function() {
-    let rule = rule();
+    let rule = RULE;
     rule.assert_ignores(r"def empty_function [] {}");
 }
 
 #[test]
 fn function_with_comments() {
-    let rule = rule();
+    let rule = RULE;
     let function = format!(
         r"def documented_function [] {{
     # This function does something
@@ -58,7 +58,7 @@ fn function_with_comments() {
 
 #[test]
 fn function_with_moderate_complexity() {
-    let rule = rule();
+    let rule = RULE;
     rule.assert_ignores(
         r"def process_items [items] {
     let filtered = $items | where value > 10
@@ -71,7 +71,7 @@ fn function_with_moderate_complexity() {
 
 #[test]
 fn main_function_within_limit() {
-    let rule = rule();
+    let rule = RULE;
     let function = format!(
         r"def main [] {{
 {}
@@ -86,7 +86,7 @@ fn main_function_within_limit() {
 
 #[test]
 fn exported_function_within_limit() {
-    let rule = rule();
+    let rule = RULE;
     let function = format!(
         r"export def helper_function [] {{
 {}
@@ -101,7 +101,7 @@ fn exported_function_within_limit() {
 
 #[test]
 fn multiple_short_functions() {
-    let rule = rule();
+    let rule = RULE;
     rule.assert_ignores(
         r"def func1 [] { print 'one' }
 def func2 [] { print 'two' }
@@ -111,7 +111,7 @@ def func3 [] { print 'three' }",
 
 #[test]
 fn function_with_nested_blocks() {
-    let rule = rule();
+    let rule = RULE;
     rule.assert_ignores(
         r"def process_data [data] {
     if ($data | is-empty) {
@@ -134,7 +134,7 @@ fn function_with_nested_blocks() {
 
 #[test]
 fn closure_definitions() {
-    let rule = rule();
+    let rule = RULE;
     rule.assert_ignores(
         r"def create_processor [] {
     let processor = { |x|

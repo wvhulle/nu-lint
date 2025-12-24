@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn test_fix_basic_env_nu_shebang() {
@@ -9,8 +9,8 @@ def main []: string -> string {
 }
 ";
 
-    rule().assert_replacement_contains(source, "--stdin");
-    rule().assert_replacement_contains(source, "#!/usr/bin/env -S nu --stdin");
+    RULE.assert_replacement_contains(source, "--stdin");
+    RULE.assert_replacement_contains(source, "#!/usr/bin/env -S nu --stdin");
 }
 
 #[test]
@@ -22,8 +22,8 @@ def main [] {
 }
 ";
 
-    rule().assert_replacement_contains(source, "--stdin");
-    rule().assert_replacement_contains(source, "#!/usr/bin/env -S nu --stdin");
+    RULE.assert_replacement_contains(source, "--stdin");
+    RULE.assert_replacement_contains(source, "#!/usr/bin/env -S nu --stdin");
 }
 
 #[test]
@@ -35,7 +35,7 @@ def main []: string -> string {
 }
 ";
 
-    rule().assert_replacement_contains(source, "#!/usr/bin/nu --stdin");
+    RULE.assert_replacement_contains(source, "#!/usr/bin/nu --stdin");
 }
 
 #[test]
@@ -48,7 +48,7 @@ def main [] {
 }
 ";
 
-    rule().assert_replacement_contains(source, "#!/usr/bin/env -S nu --stdin");
+    RULE.assert_replacement_contains(source, "#!/usr/bin/env -S nu --stdin");
 }
 
 #[test]
@@ -60,7 +60,7 @@ def main []: list<string> -> string {
 }
 ";
 
-    rule().assert_replacement_contains(source, "#!/usr/bin/env -S nu --stdin");
+    RULE.assert_replacement_contains(source, "#!/usr/bin/env -S nu --stdin");
 }
 
 #[test]
@@ -72,7 +72,7 @@ def main []: string -> string {
 }
 ";
 
-    rule().assert_count(source, 0);
+    RULE.assert_count(source, 0);
 }
 
 #[test]
@@ -84,7 +84,7 @@ def main [] {
 }
 ";
 
-    rule().assert_replacement_contains(source, "#!/usr/bin/env -S nu --stdin --log-level debug");
+    RULE.assert_replacement_contains(source, "#!/usr/bin/env -S nu --stdin --log-level debug");
 }
 
 #[test]
@@ -96,7 +96,7 @@ def main [] {
 }
 ";
 
-    rule().assert_fix_explanation_contains(source, "Add --stdin flag");
+    RULE.assert_fix_explanation_contains(source, "Add --stdin flag");
 }
 
 #[test]
@@ -108,8 +108,8 @@ def main []: string -> string {
 }
 ";
 
-    rule().assert_help_contains(source, "--stdin");
-    rule().assert_help_contains(source, "shebang");
+    RULE.assert_help_contains(source, "--stdin");
+    RULE.assert_help_contains(source, "shebang");
 }
 
 #[test]
@@ -124,10 +124,10 @@ def main [] {
 ";
 
     // Verify the fix contains the corrected shebang
-    rule().assert_replacement_contains(source, "#!/usr/bin/env -S nu --stdin");
+    RULE.assert_replacement_contains(source, "#!/usr/bin/env -S nu --stdin");
 
     // Verify there's exactly one violation
-    rule().assert_count(source, 1);
+    RULE.assert_count(source, 1);
 }
 
 #[test]
@@ -138,6 +138,6 @@ def helper [] { \"test\" }
 def main [] { $in | str upcase }
 ";
 
-    rule().assert_replacement_contains(source, "#!/usr/bin/env -S nu --stdin");
-    rule().assert_count(source, 1);
+    RULE.assert_replacement_contains(source, "#!/usr/bin/env -S nu --stdin");
+    RULE.assert_count(source, 1);
 }

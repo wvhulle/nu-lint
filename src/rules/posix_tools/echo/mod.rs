@@ -133,15 +133,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     check_block(context.ast, context)
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "use_builtin_echo",
-        "D not use builtin 'echo' as it's just an identity function",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/book/thinking_in_nu.html")
-}
+pub const RULE: Rule = Rule::new(
+    "use_builtin_echo",
+    "D not use builtin 'echo' as it's just an identity function",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/book/thinking_in_nu.html");
 
 #[cfg(test)]
 mod detect_bad;

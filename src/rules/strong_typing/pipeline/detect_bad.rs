@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 use crate::log::instrument;
 
 #[test]
@@ -8,7 +8,7 @@ def double [] {
     $in * 2
 }
 ";
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -18,7 +18,7 @@ def create-list [] {
     [1, 2, 3]
 }
 ";
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -75,7 +75,7 @@ export def parse [] {
 
 ";
 
-    rule().assert_count(bad_code, 1);
+    RULE.assert_count(bad_code, 1);
 }
 
 #[test]
@@ -85,7 +85,7 @@ def transform [] {
     $in | each { |x| $x + 1 }
 }
 ";
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -95,7 +95,7 @@ export def process [] {
     $in | str trim
 }
 ";
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -105,7 +105,7 @@ def multiply [factor: int] {
     $in * $factor
 }
 ";
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -114,5 +114,5 @@ fn detect_multiple_functions_missing_pipeline_types() {
 def first [] { $in | first }
 def last [] { $in | last }
 ";
-    rule().assert_count(bad_code, 2);
+    RULE.assert_count(bad_code, 2);
 }

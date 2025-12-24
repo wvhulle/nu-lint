@@ -69,15 +69,13 @@ fn create_violation(span: nu_protocol::Span) -> Violation {
 /// This rule uses AST-based detection and is compatible with topiary-nushell
 /// tree-sitter formatting. It analyzes actual list structures rather than regex
 /// patterns.
-pub const fn rule() -> Rule {
-    Rule::new(
-        "reflow_wide_lists",
-        "Wrap wide lists vertically across multiple lines.",
-        check,
-        LintLevel::Hint,
-    )
-    .with_doc_url("https://www.nushell.sh/book/style_guide.html#multi-line-format")
-}
+pub const RULE: Rule = Rule::new(
+    "reflow_wide_lists",
+    "Wrap wide lists vertically across multiple lines.",
+    check,
+    LintLevel::Hint,
+)
+.with_doc_url("https://www.nushell.sh/book/style_guide.html#multi-line-format");
 
 #[cfg(test)]
 mod detect_bad;

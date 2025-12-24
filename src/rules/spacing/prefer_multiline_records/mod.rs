@@ -70,15 +70,13 @@ fn create_violation(span: nu_protocol::Span) -> Violation {
 /// This rule uses AST-based detection and is compatible with topiary-nushell
 /// tree-sitter formatting. It analyzes actual record structures rather than
 /// regex patterns.
-pub const fn rule() -> Rule {
-    Rule::new(
-        "prefer_multiline_records",
-        "Prefer multiline format for long or complex records",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/book/style_guide.html#multi-line-format")
-}
+pub const RULE: Rule = Rule::new(
+    "prefer_multiline_records",
+    "Prefer multiline format for long or complex records",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/book/style_guide.html#multi-line-format");
 
 #[cfg(test)]
 mod detect_bad;

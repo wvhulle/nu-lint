@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn main_positional_with_documentation() {
@@ -9,7 +9,7 @@ def main [
     echo $input
 }
 ";
-    rule().assert_count(source, 0);
+    RULE.assert_count(source, 0);
 }
 
 #[test]
@@ -22,7 +22,7 @@ def main [
     echo $input | save $output
 }
 ";
-    rule().assert_count(source, 0);
+    RULE.assert_count(source, 0);
 }
 
 #[test]
@@ -34,7 +34,7 @@ def main [
     1..$count
 }
 ";
-    rule().assert_count(source, 0);
+    RULE.assert_count(source, 0);
 }
 
 #[test]
@@ -46,7 +46,7 @@ def main [
     $files | each { |f| open $f }
 }
 ";
-    rule().assert_count(source, 0);
+    RULE.assert_count(source, 0);
 }
 
 #[test]
@@ -56,7 +56,7 @@ def helper [input] {
     echo $input
 }
 ";
-    rule().assert_count(source, 0);
+    RULE.assert_count(source, 0);
 }
 
 #[test]
@@ -66,5 +66,5 @@ def main [] {
     echo "Hello"
 }
 "#;
-    rule().assert_count(source, 0);
+    RULE.assert_count(source, 0);
 }

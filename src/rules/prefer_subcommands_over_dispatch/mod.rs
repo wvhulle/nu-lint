@@ -129,15 +129,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "prefer_subcommands_over_dispatch",
-        "Use native 'def \"main subcommand\"' instead of match-based command dispatch in main",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/book/modules/creating_subcommands.html")
-}
+pub const RULE: Rule = Rule::new(
+    "prefer_subcommands_over_dispatch",
+    "Use native 'def \"main subcommand\"' instead of match-based command dispatch in main",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/book/modules/creating_subcommands.html");
 
 #[cfg(test)]
 mod detect_bad;

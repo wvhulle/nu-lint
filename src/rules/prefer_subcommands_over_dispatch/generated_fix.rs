@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 use crate::log::instrument;
 
 #[test]
@@ -17,9 +17,9 @@ def main [
 }
 "#;
 
-    rule().assert_help_contains(bad_code, "def \"main info\"");
-    rule().assert_help_contains(bad_code, "def \"main adjust\"");
-    rule().assert_help_contains(bad_code, "def \"main test\"");
+    RULE.assert_help_contains(bad_code, "def \"main info\"");
+    RULE.assert_help_contains(bad_code, "def \"main adjust\"");
+    RULE.assert_help_contains(bad_code, "def \"main test\"");
 }
 
 #[test]
@@ -38,7 +38,7 @@ def main [
 }
 "#;
 
-    rule().assert_help_contains(bad_code, "--help");
+    RULE.assert_help_contains(bad_code, "--help");
 }
 
 #[test]
@@ -57,6 +57,6 @@ def main [
 }
 "#;
 
-    rule().assert_help_contains(bad_code, "def \"main build\"");
-    rule().assert_help_contains(bad_code, "def \"main deploy\"");
+    RULE.assert_help_contains(bad_code, "def \"main build\"");
+    RULE.assert_help_contains(bad_code, "def \"main deploy\"");
 }

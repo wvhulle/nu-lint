@@ -1,8 +1,8 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn no_main_function() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"
 def helper1 [] {
   print "no main"
@@ -17,7 +17,7 @@ def helper2 [] {
 
 #[test]
 fn transitive_call_chain() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"
 def main [] {
   helper1
@@ -36,7 +36,7 @@ def helper2 [] {
 
 #[test]
 fn helper_called_from_helper() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r"
 def main [] {
   do-work
@@ -56,7 +56,7 @@ def calculate [] {
 
 #[test]
 fn script_without_functions() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"
 print "just a script"
 let x = 42
@@ -66,7 +66,7 @@ let x = 42
 
 #[test]
 fn complex_call_chain() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"
 def main [] {
   process-data
@@ -97,7 +97,7 @@ def save-data [data] {
 
 #[test]
 fn helper_called_from_main_subcommand() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"
 def "main subcommand" [] {
   helper
@@ -112,7 +112,7 @@ def helper [] {
 
 #[test]
 fn helper_called_from_multiple_main_subcommands() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"
 def main [] {
   print "main entry"
@@ -139,7 +139,7 @@ def helper2 [] {
 
 #[test]
 fn transitive_call_from_subcommand() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"
 def "main run" [] {
   process
@@ -158,7 +158,7 @@ def validate [] {
 
 #[test]
 fn recursive_main() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"
 def main [n: int] {
   if $n > 0 {

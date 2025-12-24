@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 use crate::log::instrument;
 
 #[test]
@@ -15,7 +15,7 @@ fn detect_redundant_in_at_pipeline_start() {
     ];
 
     for code in bad_codes {
-        rule().assert_detects(code);
+        RULE.assert_detects(code);
     }
 }
 
@@ -29,7 +29,7 @@ fn detect_redundant_in_no_parameters() {
     ];
 
     for code in bad_codes {
-        rule().assert_detects(code);
+        RULE.assert_detects(code);
     }
 }
 
@@ -42,7 +42,7 @@ fn detect_redundant_in_with_spaces() {
     ];
 
     for code in bad_codes {
-        rule().assert_detects(code);
+        RULE.assert_detects(code);
     }
 }
 
@@ -55,6 +55,6 @@ fn detect_redundant_in_complex_pipelines() {
     ];
 
     for code in bad_codes {
-        rule().assert_detects(code);
+        RULE.assert_detects(code);
     }
 }

@@ -180,15 +180,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     violations
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "prefer_complete_over_dev_null",
-        "Prefer 'complete' over redirecting stderr to /dev/null for idiomatic error handling",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/complete.html")
-}
+pub const RULE: Rule = Rule::new(
+    "prefer_complete_over_dev_null",
+    "Prefer 'complete' over redirecting stderr to /dev/null for idiomatic error handling",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/complete.html");
 
 #[cfg(test)]
 mod detect_bad;

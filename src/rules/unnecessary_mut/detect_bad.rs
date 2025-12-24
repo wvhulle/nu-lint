@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn test_unnecessary_mut_detected() {
@@ -9,8 +9,8 @@ def process [] {
 }
 ";
 
-    rule().assert_detects(bad_code);
-    rule().assert_count(bad_code, 1);
+    RULE.assert_detects(bad_code);
+    RULE.assert_count(bad_code, 1);
 }
 
 #[test]
@@ -26,7 +26,7 @@ def process [] {
 }
 ";
 
-    rule().assert_count(bad_code, 1);
+    RULE.assert_count(bad_code, 1);
 }
 
 #[test]
@@ -40,5 +40,5 @@ def outer [] {
     inner
 }
 ";
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }

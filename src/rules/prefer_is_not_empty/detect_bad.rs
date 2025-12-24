@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn test_detect_not_is_empty_in_if_statement() {
@@ -8,12 +8,12 @@ if not ($list | is-empty) {
 }
 "#;
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
 fn test_detect_not_is_empty_in_variable_assignment() {
     let bad_code = "let has_data = not ($data | is-empty)";
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }

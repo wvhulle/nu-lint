@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn detect_camel_case_command() {
@@ -8,8 +8,8 @@ def myCommand [] {
 }
 "#;
 
-    rule().assert_detects(bad_code);
-    rule().assert_count(bad_code, 1);
+    RULE.assert_detects(bad_code);
+    RULE.assert_count(bad_code, 1);
 }
 
 #[test]
@@ -20,8 +20,8 @@ def my_command [] {
 }
 "#;
 
-    rule().assert_detects(bad_code);
-    rule().assert_count(bad_code, 1);
+    RULE.assert_detects(bad_code);
+    RULE.assert_count(bad_code, 1);
 }
 
 #[test]
@@ -32,8 +32,8 @@ def AnotherCommand [] {
 }
 "#;
 
-    rule().assert_detects(bad_code);
-    rule().assert_count(bad_code, 1);
+    RULE.assert_detects(bad_code);
+    RULE.assert_count(bad_code, 1);
 }
 
 #[test]
@@ -44,6 +44,6 @@ def "tests myBadCommand" [] {
 }
 "#;
 
-    rule().assert_detects(bad_code);
-    rule().assert_count(bad_code, 1);
+    RULE.assert_detects(bad_code);
+    RULE.assert_count(bad_code, 1);
 }

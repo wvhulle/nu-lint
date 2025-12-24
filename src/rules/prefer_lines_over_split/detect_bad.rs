@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn test_detect_split_row_with_newline() {
@@ -6,7 +6,7 @@ fn test_detect_split_row_with_newline() {
 $text | split row "\n"
 "#;
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -17,5 +17,5 @@ def process-text [] {
 }
 "#;
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }

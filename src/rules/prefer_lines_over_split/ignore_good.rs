@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn test_ignore_lines_usage() {
@@ -6,7 +6,7 @@ fn test_ignore_lines_usage() {
 open file.txt | lines
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -15,7 +15,7 @@ fn test_ignore_split_row_with_other_delimiter() {
 "a,b,c" | split row ","
 "#;
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -24,7 +24,7 @@ fn test_ignore_split_row_with_colon() {
 "PATH=/usr/bin:/bin" | split row ":"
 "#;
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -33,5 +33,5 @@ fn test_ignore_split_row_with_space() {
 "one two three" | split row " "
 "#;
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }

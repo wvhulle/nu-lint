@@ -54,15 +54,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
         }
     })
 }
-pub const fn rule() -> Rule {
-    Rule::new(
-        "screaming_snake_constants",
-        "Constants should use SCREAMING_SNAKE_CASE naming convention",
-        check,
-        LintLevel::Hint,
-    )
-    .with_doc_url("https://www.nushell.sh/book/style_guide.html#environment-variables")
-}
+pub const RULE: Rule = Rule::new(
+    "screaming_snake_constants",
+    "Constants should use SCREAMING_SNAKE_CASE naming convention",
+    check,
+    LintLevel::Hint,
+)
+.with_doc_url("https://www.nushell.sh/book/style_guide.html#environment-variables");
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]

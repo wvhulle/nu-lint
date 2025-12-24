@@ -182,15 +182,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     violations
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "pipe_spacing",
-        "Pipes should have exactly one space before and after when on the same line",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/book/style_guide.html#basic")
-}
+pub const RULE: Rule = Rule::new(
+    "pipe_spacing",
+    "Pipes should have exactly one space before and after when on the same line",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/book/style_guide.html#basic");
 
 #[cfg(test)]
 mod detect_bad;

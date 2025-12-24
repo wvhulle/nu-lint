@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn exported_function_with_documentation() {
@@ -8,7 +8,7 @@ export def my-command [] {
     echo "hello"
 }
 "#;
-    rule().assert_ignores(source);
+    RULE.assert_ignores(source);
 }
 
 #[test]
@@ -18,7 +18,7 @@ def my-command [] {
     echo "hello"
 }
 "#;
-    rule().assert_ignores(source);
+    RULE.assert_ignores(source);
 }
 
 #[test]
@@ -30,7 +30,7 @@ export def process-data [input: string] {
     echo $input
 }
 ";
-    rule().assert_ignores(source);
+    RULE.assert_ignores(source);
 }
 
 #[test]
@@ -42,7 +42,7 @@ export def my-command [] {
     echo "hello"
 }
 "#;
-    rule().assert_ignores(source);
+    RULE.assert_ignores(source);
 }
 
 #[test]
@@ -56,7 +56,7 @@ export def process-data [input: string] {
     echo $input
 }
 "#;
-    rule().assert_ignores(source);
+    RULE.assert_ignores(source);
 }
 
 #[test]
@@ -68,5 +68,5 @@ export def my-command [] {
     echo "hello"
 }
 "#;
-    rule().assert_ignores(source);
+    RULE.assert_ignores(source);
 }

@@ -71,15 +71,13 @@ fn check(ctx: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "unnecessary_hat",
-        "Detect unnecessary '^' prefix on external commands",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/book/external_commands.html")
-}
+pub const RULE: Rule = Rule::new(
+    "unnecessary_hat",
+    "Detect unnecessary '^' prefix on external commands",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/book/external_commands.html");
 
 #[cfg(test)]
 mod detect_bad;

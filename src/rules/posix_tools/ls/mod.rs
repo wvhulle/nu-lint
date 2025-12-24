@@ -197,15 +197,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     violations
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "use_builtin_ls",
-        "Use Nu's built-in 'ls' instead of external ls command for structured data",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/ls.html")
-}
+pub const RULE: Rule = Rule::new(
+    "use_builtin_ls",
+    "Use Nu's built-in 'ls' instead of external ls command for structured data",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/ls.html");
 
 #[cfg(test)]
 mod detect_bad;

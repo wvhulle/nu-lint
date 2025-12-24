@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 use crate::context::LintContext;
 
 #[test]
@@ -10,7 +10,7 @@ def validate [input: string] {
 "#;
 
     LintContext::test_with_parsed_source(bad_code, |context| {
-        let violations = (rule().check)(&context);
+        let violations = (RULE.check)(&context);
         assert_eq!(violations.len(), 1);
 
         let violation = &violations[0];
@@ -46,7 +46,7 @@ def process [data: string] {
 "#;
 
     LintContext::test_with_parsed_source(bad_code, |context| {
-        let violations = (rule().check)(&context);
+        let violations = (RULE.check)(&context);
         assert_eq!(violations.len(), 1);
 
         let violation = &violations[0];
@@ -84,7 +84,7 @@ def check [value: int] {
 "#;
 
     LintContext::test_with_parsed_source(bad_code, |context| {
-        let violations = (rule().check)(&context);
+        let violations = (RULE.check)(&context);
         assert_eq!(violations.len(), 1);
 
         let violation = &violations[0];
@@ -123,7 +123,7 @@ def test [arg: string] {
 "#;
 
     LintContext::test_with_parsed_source(bad_code, |context| {
-        let violations = (rule().check)(&context);
+        let violations = (RULE.check)(&context);
         assert_eq!(violations.len(), 1);
 
         let suggestion = violations[0].help.as_ref().unwrap();

@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn test_detect_print_stderr_exit_pattern() {
@@ -6,7 +6,7 @@ fn test_detect_print_stderr_exit_pattern() {
         print --stderr "File not found"
         exit 1
     "#;
-    rule().assert_count(code, 1);
+    RULE.assert_count(code, 1);
 }
 
 #[test]
@@ -16,7 +16,7 @@ fn test_detect_print_stderr_with_variable() {
         print --stderr $msg
         exit 1
     "#;
-    rule().assert_detects(code);
+    RULE.assert_detects(code);
 }
 
 #[test]
@@ -29,7 +29,7 @@ fn test_detect_in_function() {
             }
         }
     "#;
-    rule().assert_detects(code);
+    RULE.assert_detects(code);
 }
 
 #[test]
@@ -40,7 +40,7 @@ fn test_detect_in_closure() {
             exit 1
         }
     "#;
-    rule().assert_detects(code);
+    RULE.assert_detects(code);
 }
 
 #[test]
@@ -49,7 +49,7 @@ fn test_detect_with_zero_exit_code() {
         print --stderr "Warning message"
         exit 0
     "#;
-    rule().assert_detects(code);
+    RULE.assert_detects(code);
 }
 
 #[test]
@@ -63,7 +63,7 @@ fn test_detect_multiple_occurrences() {
             exit 2
         }
     "#;
-    rule().assert_count(code, 2);
+    RULE.assert_count(code, 2);
 }
 
 #[test]
@@ -73,7 +73,7 @@ fn test_detect_with_interpolation() {
         print --stderr $"Could not open ($file)"
         exit 1
     "#;
-    rule().assert_detects(code);
+    RULE.assert_detects(code);
 }
 
 #[test]
@@ -86,7 +86,7 @@ fn test_detect_in_nested_block() {
             }
         }
     "#;
-    rule().assert_detects(code);
+    RULE.assert_detects(code);
 }
 
 #[test]
@@ -95,5 +95,5 @@ fn test_detect_with_no_exit_code() {
         print --stderr "Default exit code"
         exit
     "#;
-    rule().assert_detects(code);
+    RULE.assert_detects(code);
 }

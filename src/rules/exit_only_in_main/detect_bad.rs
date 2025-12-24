@@ -1,8 +1,8 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn exit_in_helper_function() {
-    rule().assert_detects(
+    RULE.assert_detects(
         "
 def helper [] {
   exit 0
@@ -13,7 +13,7 @@ def helper [] {
 
 #[test]
 fn exit_in_check_function() {
-    rule().assert_detects(
+    RULE.assert_detects(
         "
 def check-tools [] {
   if (some-condition) {
@@ -26,7 +26,7 @@ def check-tools [] {
 
 #[test]
 fn exit_in_exported_function() {
-    rule().assert_detects(
+    RULE.assert_detects(
         r#"
 export def my-command [] {
   print "error"
@@ -38,7 +38,7 @@ export def my-command [] {
 
 #[test]
 fn multiple_functions_with_exit() {
-    rule().assert_count(
+    RULE.assert_count(
         "
 def helper1 [] {
   exit 0

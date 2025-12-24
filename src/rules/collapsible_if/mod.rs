@@ -40,16 +40,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "collapsible_if",
-        "Collapse nested if statements without else clauses into a single if with combined \
-         conditions",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/book/control_flow.html")
-}
+pub const RULE: Rule = Rule::new(
+    "collapsible_if",
+    "Collapse nested if statements without else clauses into a single if with combined conditions",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/book/control_flow.html");
 
 #[cfg(test)]
 mod detect_bad;

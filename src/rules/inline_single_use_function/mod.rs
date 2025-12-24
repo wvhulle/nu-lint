@@ -84,15 +84,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
         })
         .collect()
 }
-pub const fn rule() -> Rule {
-    Rule::new(
-        "inline_single_use_function",
-        "Detect single-line custom commands used only once that could be inlined",
-        check,
-        LintLevel::Hint,
-    )
-    .with_doc_url("https://www.nushell.sh/book/custom_commands.html")
-}
+pub const RULE: Rule = Rule::new(
+    "inline_single_use_function",
+    "Detect single-line custom commands used only once that could be inlined",
+    check,
+    LintLevel::Hint,
+)
+.with_doc_url("https://www.nushell.sh/book/custom_commands.html");
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]

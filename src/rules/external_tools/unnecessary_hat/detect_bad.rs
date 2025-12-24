@@ -1,28 +1,28 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn detects_hat_on_simple_command() {
-    rule().assert_detects("^ddcutil setvcp 10");
+    RULE.assert_detects("^ddcutil setvcp 10");
 }
 
 #[test]
 fn detects_hat_on_command_no_args() {
-    rule().assert_detects("^hostname");
+    RULE.assert_detects("^hostname");
 }
 
 #[test]
 fn detects_hat_on_systemctl() {
-    rule().assert_detects("^systemctl --user start timer.service");
+    RULE.assert_detects("^systemctl --user start timer.service");
 }
 
 #[test]
 fn detects_hat_in_subexpression() {
-    rule().assert_detects("let result = (^git status)");
+    RULE.assert_detects("let result = (^git status)");
 }
 
 #[test]
 fn detects_hat_in_function() {
-    rule().assert_detects(
+    RULE.assert_detects(
         r#"
 def run-command [] {
     ^curl https://example.com
@@ -33,5 +33,5 @@ def run-command [] {
 
 #[test]
 fn detects_hat_with_flags() {
-    rule().assert_detects("^git commit -m 'message'");
+    RULE.assert_detects("^git commit -m 'message'");
 }

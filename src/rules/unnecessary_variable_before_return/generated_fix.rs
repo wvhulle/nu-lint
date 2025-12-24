@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 use crate::log::instrument;
 
 #[test]
@@ -12,10 +12,10 @@ def foo [] {
 }
 ";
 
-    rule().assert_detects(bad_code);
-    rule().assert_help_contains(bad_code, "Return the expression directly");
-    rule().assert_help_contains(bad_code, "instead of assigning to a variable first");
-    rule().assert_replacement_contains(bad_code, "some | pipeline");
+    RULE.assert_detects(bad_code);
+    RULE.assert_help_contains(bad_code, "Return the expression directly");
+    RULE.assert_help_contains(bad_code, "instead of assigning to a variable first");
+    RULE.assert_replacement_contains(bad_code, "some | pipeline");
 }
 
 #[test]
@@ -27,7 +27,7 @@ def foo [] {
 }
 ";
 
-    rule().assert_replacement_contains(bad_code, "5");
+    RULE.assert_replacement_contains(bad_code, "5");
 }
 
 #[test]
@@ -39,7 +39,7 @@ def get_data [] {
 }
 ";
 
-    rule().assert_replacement_contains(bad_code, "ls | where size > 100kb");
+    RULE.assert_replacement_contains(bad_code, "ls | where size > 100kb");
 }
 
 #[test]
@@ -51,7 +51,7 @@ def message [] {
 }
 "#;
 
-    rule().assert_replacement_contains(bad_code, r#""hello""#);
+    RULE.assert_replacement_contains(bad_code, r#""hello""#);
 }
 
 #[test]
@@ -63,7 +63,7 @@ def foo [] {
 }
 ";
 
-    rule().assert_fix_explanation_contains(bad_code, "Return expression directly");
+    RULE.assert_fix_explanation_contains(bad_code, "Return expression directly");
 }
 
 #[test]
@@ -75,7 +75,7 @@ def config [] {
 }
 ";
 
-    rule().assert_replacement_contains(bad_code, "{name: 'app', version: '1.0'}");
+    RULE.assert_replacement_contains(bad_code, "{name: 'app', version: '1.0'}");
 }
 
 #[test]
@@ -87,5 +87,5 @@ def items [] {
 }
 ";
 
-    rule().assert_replacement_contains(bad_code, "[1, 2, 3]");
+    RULE.assert_replacement_contains(bad_code, "[1, 2, 3]");
 }

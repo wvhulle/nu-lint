@@ -199,15 +199,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     detect_external_commands(context, "fd", NOTE, Some(build_fix))
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "use_builtin_fd",
-        "Use Nu's 'ls' with glob patterns instead of 'fd' command",
-        check,
-        LintLevel::Hint,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/glob.html")
-}
+pub const RULE: Rule = Rule::new(
+    "use_builtin_fd",
+    "Use Nu's 'ls' with glob patterns instead of 'fd' command",
+    check,
+    LintLevel::Hint,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/glob.html");
 
 #[cfg(test)]
 mod detect_bad;

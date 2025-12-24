@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn main_named_flag_with_documentation() {
@@ -9,7 +9,7 @@ def main [
     if $verbose { print "Verbose mode" }
 }
 "#;
-    rule().assert_count(source, 0);
+    RULE.assert_count(source, 0);
 }
 
 #[test]
@@ -21,7 +21,7 @@ def main [
     if $verbose { print "Verbose mode" }
 }
 "#;
-    rule().assert_count(source, 0);
+    RULE.assert_count(source, 0);
 }
 
 #[test]
@@ -37,7 +37,7 @@ def main [
     print $output
 }
 "#;
-    rule().assert_count(source, 0);
+    RULE.assert_count(source, 0);
 }
 
 #[test]
@@ -49,7 +49,7 @@ def main [
     1..$count
 }
 ";
-    rule().assert_count(source, 0);
+    RULE.assert_count(source, 0);
 }
 
 #[test]
@@ -59,7 +59,7 @@ def helper [--verbose] {
     if $verbose { print "Verbose" }
 }
 "#;
-    rule().assert_count(source, 0);
+    RULE.assert_count(source, 0);
 }
 
 #[test]
@@ -69,7 +69,7 @@ def main [] {
     echo "Hello"
 }
 "#;
-    rule().assert_count(source, 0);
+    RULE.assert_count(source, 0);
 }
 
 #[test]
@@ -82,5 +82,5 @@ def main [
     if $verbose { print "Processing" $input }
 }
 "#;
-    rule().assert_count(source, 0);
+    RULE.assert_count(source, 0);
 }

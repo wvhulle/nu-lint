@@ -1,8 +1,8 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn five_levels_of_nesting() {
-    rule().assert_detects(
+    RULE.assert_detects(
         r#"
 def deeply-nested [] {
   if true {
@@ -23,7 +23,7 @@ def deeply-nested [] {
 
 #[test]
 fn nested_loops_and_conditions() {
-    rule().assert_detects(
+    RULE.assert_detects(
         r#"
 def process-data [] {
   for item in $items {
@@ -44,7 +44,7 @@ def process-data [] {
 
 #[test]
 fn nested_try_blocks() {
-    rule().assert_detects(
+    RULE.assert_detects(
         r#"
 def handle-errors [] {
   try {
@@ -65,7 +65,7 @@ def handle-errors [] {
 
 #[test]
 fn mixed_control_structures() {
-    rule().assert_detects(
+    RULE.assert_detects(
         r#"
 def complex-function [] {
   while true {

@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 use crate::log::instrument;
 
 #[test]
@@ -14,7 +14,7 @@ for x in $input {
 }
 ";
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -30,5 +30,5 @@ for user in $users {
 }
 ";
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }

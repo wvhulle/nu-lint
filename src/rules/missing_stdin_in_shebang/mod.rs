@@ -211,15 +211,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "missing_stdin_in_shebang",
-        "Scripts with main functions that expect pipeline input must have --stdin in shebang",
-        check,
-        LintLevel::Error,
-    )
-    .with_doc_url("https://www.nushell.sh/book/scripts.html")
-}
+pub const RULE: Rule = Rule::new(
+    "missing_stdin_in_shebang",
+    "Scripts with main functions that expect pipeline input must have --stdin in shebang",
+    check,
+    LintLevel::Error,
+)
+.with_doc_url("https://www.nushell.sh/book/scripts.html");
 
 #[cfg(test)]
 mod detect_bad;

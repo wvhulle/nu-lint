@@ -53,15 +53,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "exit_only_in_main",
-        "Avoid using 'exit' in functions other than 'main'",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/exit.html")
-}
+pub const RULE: Rule = Rule::new(
+    "exit_only_in_main",
+    "Avoid using 'exit' in functions other than 'main'",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/exit.html");
 
 #[cfg(test)]
 mod detect_bad;

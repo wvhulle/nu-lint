@@ -84,14 +84,12 @@ fn check(context: &LintContext) -> Vec<Violation> {
     check_block(context.ast, context)
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "avoid_nu_subprocess",
-        "Spawning `nu -c` from within a Nu script is redundant; call functions directly instead",
-        check,
-        LintLevel::Error,
-    )
-}
+pub const RULE: Rule = Rule::new(
+    "avoid_nu_subprocess",
+    "Spawning `nu -c` from within a Nu script is redundant; call functions directly instead",
+    check,
+    LintLevel::Error,
+);
 
 #[cfg(test)]
 mod detect_bad;

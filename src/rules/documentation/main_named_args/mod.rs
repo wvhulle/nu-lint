@@ -70,15 +70,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "main_named_args_docs",
-        "Named parameters (flags) in main functions should have documentation comments",
-        check,
-        LintLevel::Hint,
-    )
-    .with_doc_url("https://www.nushell.sh/book/custom_commands.html#flags")
-}
+pub const RULE: Rule = Rule::new(
+    "main_named_args_docs",
+    "Named parameters (flags) in main functions should have documentation comments",
+    check,
+    LintLevel::Hint,
+)
+.with_doc_url("https://www.nushell.sh/book/custom_commands.html#flags");
 
 #[cfg(test)]
 mod detect_bad;

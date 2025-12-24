@@ -322,15 +322,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "typed_pipeline_io",
-        "Custom commands that use pipeline input or produce output should have type annotations",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/book/custom_commands.html#input-output-types")
-}
+pub const RULE: Rule = Rule::new(
+    "typed_pipeline_io",
+    "Custom commands that use pipeline input or produce output should have type annotations",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/book/custom_commands.html#input-output-types");
 
 #[cfg(test)]
 mod detect_bad;

@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn exported_function_missing_documentation() {
@@ -7,7 +7,7 @@ export def my-command [] {
     echo "hello"
 }
 "#;
-    rule().assert_count(source, 1);
+    RULE.assert_count(source, 1);
 }
 
 #[test]
@@ -17,7 +17,7 @@ export def process-data [input: string, output: string] {
     echo $input | save $output
 }
 ";
-    rule().assert_count(source, 1);
+    RULE.assert_count(source, 1);
 }
 
 #[test]
@@ -28,7 +28,7 @@ export def my-command [] {
     echo "hello"
 }
 "#;
-    rule().assert_count(source, 1);
+    RULE.assert_count(source, 1);
 }
 
 #[test]
@@ -40,7 +40,7 @@ export def process-data [input: string] {
     echo $input
 }
 "#;
-    rule().assert_count(source, 1);
+    RULE.assert_count(source, 1);
 }
 
 #[test]
@@ -51,5 +51,5 @@ export def my-command [] {
     echo "hello"
 }
 "#;
-    rule().assert_count(source, 1);
+    RULE.assert_count(source, 1);
 }

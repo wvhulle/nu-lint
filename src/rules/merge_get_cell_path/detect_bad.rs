@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn test_detect_simple_chained_get() {
@@ -6,7 +6,7 @@ fn test_detect_simple_chained_get() {
 [[name value]; [foo 1] [bar 2]] | get name | get 0
 "#;
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -15,7 +15,7 @@ fn test_detect_triple_chained_get() {
 [[a]; [[1 2 3]]] | get a | get 0 | get 1
 "#;
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -24,7 +24,7 @@ fn test_detect_record_chained_get() {
 {foo: {bar: {baz: 42}}} | get foo | get bar
 "#;
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -33,7 +33,7 @@ fn test_detect_nested_list_access() {
 {data: [[1 2] [3 4]]} | get data | get 0 | get 1
 "#;
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -42,5 +42,5 @@ fn test_detect_string_and_int_mixed() {
 [[items]; [[{x: 1}]]] | get items | get 0
 "#;
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }

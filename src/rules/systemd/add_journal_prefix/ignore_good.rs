@@ -1,18 +1,18 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn test_ignore_keyword_log_levels() {
     for keyword in [
         "emerg", "alert", "crit", "err", "warning", "notice", "info", "debug",
     ] {
-        rule().assert_ignores(&format!(r#"print "<{keyword}>Test message""#));
+        RULE.assert_ignores(&format!(r#"print "<{keyword}>Test message""#));
     }
 }
 
 #[test]
 fn test_ignore_numeric_prefixes() {
     for level in 0..=7 {
-        rule().assert_ignores(&format!(r#"print "<{level}>Test message""#));
+        RULE.assert_ignores(&format!(r#"print "<{level}>Test message""#));
     }
 }
 
@@ -23,7 +23,7 @@ print "<info>Starting"
 print "<warning>Warning detected"
 print "<err>Error occurred"
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -35,13 +35,13 @@ Subcommands:
   help - Show help
   version - Show version"
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
 fn test_ignore_interpolated_strings_with_keyword_prefix() {
     let good_code = r#"print $"<info>Monitoring ($keyboard) for ($desc)""#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -53,7 +53,7 @@ print "Subcommands:"
 print "  help - Show help"
 print "  version - Show version"
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -65,7 +65,7 @@ def show_help [] {
     print "  stop - Stop the service"
 }
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -76,5 +76,5 @@ def list_items [] {
     get_items | print
 }
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }

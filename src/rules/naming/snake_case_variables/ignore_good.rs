@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn ignore_snake_case_let_variables() {
@@ -10,7 +10,7 @@ def good-func [] {
 }
 "#;
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -23,7 +23,7 @@ def good-func [] {
 }
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -37,7 +37,7 @@ def good-func [] {
 }
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -50,5 +50,5 @@ def good-func [] {
 }
 "#;
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }

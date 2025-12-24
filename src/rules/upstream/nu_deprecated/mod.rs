@@ -25,15 +25,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .collect()
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "nu_deprecated",
-        "Nushell parser detected deprecated command or flag usage",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/book/")
-}
+pub const RULE: Rule = Rule::new(
+    "nu_deprecated",
+    "Nushell parser detected deprecated command or flag usage",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/book/");
 
 #[cfg(test)]
 mod detect_bad;

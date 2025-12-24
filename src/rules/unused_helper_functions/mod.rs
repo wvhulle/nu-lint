@@ -86,15 +86,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .collect()
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "unused_helper_functions",
-        "Detect helper functions that are never called in files with a 'main' function",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/book/custom_commands.html")
-}
+pub const RULE: Rule = Rule::new(
+    "unused_helper_functions",
+    "Detect helper functions that are never called in files with a 'main' function",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/book/custom_commands.html");
 
 #[cfg(test)]
 mod detect_bad;

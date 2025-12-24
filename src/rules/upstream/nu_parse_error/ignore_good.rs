@@ -1,9 +1,9 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn ignore_valid_let_statement() {
     let code = "let x = 5";
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }
 
 #[test]
@@ -13,37 +13,37 @@ def greet [name: string] {
     print $"Hello, ($name)!"
 }
 "#;
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }
 
 #[test]
 fn ignore_valid_pipeline() {
     let code = "ls | where size > 100 | sort-by name";
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }
 
 #[test]
 fn ignore_valid_list() {
     let code = "let items = [1, 2, 3, 4, 5]";
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }
 
 #[test]
 fn ignore_valid_record() {
     let code = "let person = {name: 'John', age: 30}";
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }
 
 #[test]
 fn ignore_valid_string() {
     let code = r#"let greeting = "Hello, world!""#;
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }
 
 #[test]
 fn ignore_valid_closure() {
     let code = "let adder = {|x, y| $x + $y}";
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }
 
 #[test]
@@ -56,7 +56,7 @@ if $x > 5 {
     print "lesser"
 }
 "#;
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }
 
 #[test]
@@ -80,5 +80,5 @@ export def refresh-theme [] {
     }
 }
 "#;
-    rule().assert_ignores(code);
+    RULE.assert_ignores(code);
 }

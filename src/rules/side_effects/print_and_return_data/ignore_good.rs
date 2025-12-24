@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 use crate::log::instrument;
 
 #[test]
@@ -10,7 +10,7 @@ def log-message [msg: string] {
     print "Done"
 }
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -22,7 +22,7 @@ def process-data [] {
     mkdir /tmp/output
 }
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -35,7 +35,7 @@ def setup [] {
     print "Setup complete"
 }
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -52,7 +52,7 @@ def show-data-status [] {
     print "Fetching data..."
 }
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -63,7 +63,7 @@ def notify []: nothing -> nothing {
     print "Notification sent"
 }
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -75,5 +75,5 @@ def main [] {
     [1 2 3]
 }
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }

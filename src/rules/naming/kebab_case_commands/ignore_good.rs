@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn ignore_simple_kebab_case() {
@@ -8,7 +8,7 @@ def my-command [] {
 }
 "#;
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -19,7 +19,7 @@ def test [] {
 }
 "#;
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -30,7 +30,7 @@ def my-long-command-name [] {
 }
 "#;
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -41,7 +41,7 @@ export def my-exported-command [] {
 }
 "#;
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -52,7 +52,7 @@ def command-v2 [] {
 }
 "#;
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -71,7 +71,7 @@ def third [] {
 }
 "#;
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -82,7 +82,7 @@ def "tests calculate-brightness" [] {
 }
 "#;
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -93,5 +93,5 @@ def "my-module my-subcommand do-action" [] {
 }
 "#;
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }

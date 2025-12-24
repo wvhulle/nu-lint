@@ -76,15 +76,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     main_violations.chain(nested_violations).collect()
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "combine_print_stderr_exit",
-        "Use 'error make' instead of 'print stderr' + 'exit' for structured error handling",
-        check,
-        LintLevel::Hint,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/error_make.html")
-}
+pub const RULE: Rule = Rule::new(
+    "combine_print_stderr_exit",
+    "Use 'error make' instead of 'print stderr' + 'exit' for structured error handling",
+    check,
+    LintLevel::Hint,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/error_make.html");
 
 #[cfg(test)]
 mod detect_bad;

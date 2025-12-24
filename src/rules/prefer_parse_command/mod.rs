@@ -427,15 +427,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     violations
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "prefer_parse_over_split",
-        "Prefer 'parse' command over manual string splitting patterns",
-        check,
-        LintLevel::Hint,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/parse.html")
-}
+pub const RULE: Rule = Rule::new(
+    "prefer_parse_over_split",
+    "Prefer 'parse' command over manual string splitting patterns",
+    check,
+    LintLevel::Hint,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/parse.html");
 
 #[cfg(test)]
 mod detect_bad;

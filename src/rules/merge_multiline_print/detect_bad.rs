@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn test_detect_three_consecutive_prints() {
@@ -7,7 +7,7 @@ print "line 1"
 print "line 2"
 print "line 3"
 "#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -18,7 +18,7 @@ print ""
 print "Subcommands:"
 print "  help - Show help"
 "#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -30,7 +30,7 @@ def show_help [] {
     print "Commands:"
 }
 "#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -40,7 +40,7 @@ print -e "Error occurred"
 print -e "Please check input"
 print -e "Exiting..."
 "#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -57,5 +57,5 @@ def main [cmd: string] {
     }
 }
 "#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }

@@ -1,13 +1,13 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn ignore_builtin_open() {
-    rule().assert_ignores("open file.txt");
+    RULE.assert_ignores("open file.txt");
 }
 
 #[test]
 fn ignore_open_raw() {
-    rule().assert_ignores("open --raw file.txt");
+    RULE.assert_ignores("open --raw file.txt");
 }
 
 #[test]
@@ -20,18 +20,18 @@ fn ignore_open_structured() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
 #[test]
 fn ignore_open_with_lines() {
-    rule().assert_ignores("open file.txt | lines");
+    RULE.assert_ignores("open file.txt | lines");
 }
 
 #[test]
 fn ignore_open_enumerate() {
-    rule().assert_ignores("open --raw file.txt | lines | enumerate");
+    RULE.assert_ignores("open --raw file.txt | lines | enumerate");
 }
 
 #[test]
@@ -43,7 +43,7 @@ fn ignore_open_with_processing() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
@@ -57,16 +57,16 @@ fn ignore_other_commands() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
 #[test]
 fn ignore_variable_references() {
-    rule().assert_ignores("$content | lines");
+    RULE.assert_ignores("$content | lines");
 }
 
 #[test]
 fn ignore_string_operations() {
-    rule().assert_ignores(r#""file content" | lines"#);
+    RULE.assert_ignores(r#""file content" | lines"#);
 }

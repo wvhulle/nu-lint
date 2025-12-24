@@ -108,15 +108,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     violations
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "unnecessary_mut",
-        "Variables should only be marked 'mut' when they are actually reassigned",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/book/variables.html#mutable-variables")
-}
+pub const RULE: Rule = Rule::new(
+    "unnecessary_mut",
+    "Variables should only be marked 'mut' when they are actually reassigned",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/book/variables.html#mutable-variables");
 
 #[cfg(test)]
 mod detect_bad;

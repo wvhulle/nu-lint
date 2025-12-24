@@ -207,16 +207,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "add_metadata_to_error",
-        "error make calls should include metadata fields like label and help for better error \
-         context",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/book/creating_errors.html")
-}
+pub const RULE: Rule = Rule::new(
+    "add_metadata_to_error",
+    "error make calls should include metadata fields like label and help for better error context",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/book/creating_errors.html");
 
 #[cfg(test)]
 mod detect_bad;

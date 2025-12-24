@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn test_necessary_mut_not_flagged() {
@@ -15,7 +15,7 @@ def fibonacci [n: int] {
 }
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -27,7 +27,7 @@ def process [] {
     echo $x
 }
 ";
-    rule().assert_ignores(bad_code);
+    RULE.assert_ignores(bad_code);
 }
 
 #[test]
@@ -39,7 +39,7 @@ def process [] {
 }
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -52,7 +52,7 @@ def increment [] {
 }
 ";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -64,5 +64,5 @@ def process [] {
 }
 "#;
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }

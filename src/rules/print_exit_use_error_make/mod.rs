@@ -194,15 +194,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .collect()
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "print_exit_use_error_make",
-        "Replace 'print' + 'exit' patterns with 'error make' for proper error handling",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/error_make.html")
-}
+pub const RULE: Rule = Rule::new(
+    "print_exit_use_error_make",
+    "Replace 'print' + 'exit' patterns with 'error make' for proper error handling",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/error_make.html");
 
 #[cfg(test)]
 mod detect_bad;

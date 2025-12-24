@@ -1,8 +1,8 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn no_nesting() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"
 def simple [] {
   print "hello"
@@ -14,7 +14,7 @@ def simple [] {
 
 #[test]
 fn single_level_nesting() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"
 def with-if [] {
   if true {
@@ -27,7 +27,7 @@ def with-if [] {
 
 #[test]
 fn two_levels_nesting() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r"
 def nested-twice [] {
   if true {
@@ -42,7 +42,7 @@ def nested-twice [] {
 
 #[test]
 fn three_levels_nesting() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r"
 def nested-three-times [] {
   if true {
@@ -59,7 +59,7 @@ def nested-three-times [] {
 
 #[test]
 fn four_levels_is_max_allowed() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"
 def at-max-nesting [] {
   if true {
@@ -76,7 +76,7 @@ def at-max-nesting [] {
 
 #[test]
 fn empty_lines_ignored() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"
 def with-empty-lines [] {
   if true {
@@ -91,7 +91,7 @@ def with-empty-lines [] {
 
 #[test]
 fn script_level_code() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"
 print "hello"
 let x = 42

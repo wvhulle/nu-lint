@@ -372,15 +372,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .collect()
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "prefer_nushell_over_jq",
-        "Prefer Nushell built-ins over jq for data operations that have direct equivalents",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/from_json.html")
-}
+pub const RULE: Rule = Rule::new(
+    "prefer_nushell_over_jq",
+    "Prefer Nushell built-ins over jq for data operations that have direct equivalents",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/from_json.html");
 
 #[cfg(test)]
 mod detect_bad;

@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn detect_missing_type_annotation_single_param() {
@@ -7,8 +7,8 @@ def greet [name] {
     print $"Hello ($name)"
 }
 "#;
-    rule().assert_detects(bad_code);
-    rule().assert_count(bad_code, 1);
+    RULE.assert_detects(bad_code);
+    RULE.assert_count(bad_code, 1);
 }
 
 #[test]
@@ -18,8 +18,8 @@ def add [x, y] {
     $x + $y
 }
 ";
-    rule().assert_detects(bad_code);
-    rule().assert_count(bad_code, 2);
+    RULE.assert_detects(bad_code);
+    RULE.assert_count(bad_code, 2);
 }
 
 #[test]
@@ -29,8 +29,8 @@ def process [data, format: string] {
     print $data
 }
 ";
-    rule().assert_detects(bad_code);
-    rule().assert_count(bad_code, 1);
+    RULE.assert_detects(bad_code);
+    RULE.assert_count(bad_code, 1);
 }
 
 #[test]
@@ -43,6 +43,6 @@ def outer [] {
 }
 ";
 
-    rule().assert_detects(bad_code);
-    rule().assert_count(bad_code, 1);
+    RULE.assert_detects(bad_code);
+    RULE.assert_count(bad_code, 1);
 }

@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn test_fix_all_log_levels() {
@@ -19,19 +19,19 @@ fn test_fix_all_log_levels() {
         (r#"print "Starting process""#, "<info>"), // default
     ];
     for (code, expected_prefix) in cases {
-        rule().assert_detects(code);
-        rule().assert_replacement_contains(code, expected_prefix);
+        RULE.assert_detects(code);
+        RULE.assert_replacement_contains(code, expected_prefix);
     }
 }
 
 #[test]
 fn test_fix_strips_redundant_prefix() {
-    rule().assert_replacement_contains(
+    RULE.assert_replacement_contains(
         r#"print "Error: connection failed""#,
         "\"<err>connection failed\"",
     );
-    rule().assert_replacement_contains(r#"print "Warning: disk low""#, "\"<warning>disk low\"");
-    rule().assert_replacement_contains(
+    RULE.assert_replacement_contains(r#"print "Warning: disk low""#, "\"<warning>disk low\"");
+    RULE.assert_replacement_contains(
         r#"print "Debug: entering function""#,
         "\"<debug>entering function\"",
     );
@@ -40,22 +40,22 @@ fn test_fix_strips_redundant_prefix() {
 #[test]
 fn test_fix_echo_command() {
     let bad_code = r#"echo "Error: timeout""#;
-    rule().assert_detects(bad_code);
-    rule().assert_replacement_contains(bad_code, "<err>");
+    RULE.assert_detects(bad_code);
+    RULE.assert_replacement_contains(bad_code, "<err>");
 }
 
 #[test]
 fn test_fix_single_quoted_string() {
     let bad_code = r"print 'Error: failed operation'";
-    rule().assert_detects(bad_code);
-    rule().assert_replacement_contains(bad_code, "'<err>failed operation'");
+    RULE.assert_detects(bad_code);
+    RULE.assert_replacement_contains(bad_code, "'<err>failed operation'");
 }
 
 #[test]
 fn test_fix_interpolated_string() {
     let bad_code = r#"print $"Error: ($details)""#;
-    rule().assert_detects(bad_code);
-    rule().assert_replacement_contains(bad_code, "$\"<err>($details)\"");
+    RULE.assert_detects(bad_code);
+    RULE.assert_replacement_contains(bad_code, "$\"<err>($details)\"");
 }
 
 #[test]
@@ -65,8 +65,8 @@ def deploy [] {
     print "Error: deployment failed"
 }
 "#;
-    rule().assert_detects(bad_code);
-    rule().assert_replacement_contains(bad_code, "<err>");
+    RULE.assert_detects(bad_code);
+    RULE.assert_replacement_contains(bad_code, "<err>");
 }
 
 #[test]
@@ -76,5 +76,5 @@ let x = 1
 print "Error: first issue"
 let y = 2
 "#;
-    rule().assert_replacement_contains(bad_code, "<err>");
+    RULE.assert_replacement_contains(bad_code, "<err>");
 }

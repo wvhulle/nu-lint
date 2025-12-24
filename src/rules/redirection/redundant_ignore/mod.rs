@@ -101,15 +101,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .collect()
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "redundant_ignore",
-        "Commands producing output that is discarded with '| ignore'",
-        check,
-        LintLevel::Hint,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/ignore.html")
-}
+pub const RULE: Rule = Rule::new(
+    "redundant_ignore",
+    "Commands producing output that is discarded with '| ignore'",
+    check,
+    LintLevel::Hint,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/ignore.html");
 
 #[cfg(test)]
 mod detect_bad;

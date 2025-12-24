@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn test_detect_error_keyword_in_msg() {
@@ -10,8 +10,8 @@ def process-file [file: string] {
 }
 "#;
 
-    rule().assert_detects(bad_code);
-    rule().assert_count(bad_code, 1);
+    RULE.assert_detects(bad_code);
+    RULE.assert_count(bad_code, 1);
 }
 
 #[test]
@@ -24,8 +24,8 @@ def convert-data [input] {
 }
 "#;
 
-    rule().assert_detects(bad_code);
-    rule().assert_count(bad_code, 1);
+    RULE.assert_detects(bad_code);
+    RULE.assert_count(bad_code, 1);
 }
 
 #[test]
@@ -36,6 +36,6 @@ def validate [data] {
 }
 "#;
 
-    rule().assert_detects(bad_code);
-    rule().assert_count(bad_code, 1);
+    RULE.assert_detects(bad_code);
+    RULE.assert_count(bad_code, 1);
 }

@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 use crate::log::instrument;
 
 #[test]
@@ -7,7 +7,7 @@ fn ignore_conditional_length_in() {
 
     let good_code = "def check-length [] { if ($in | length) > 5 { \"big\" } else { \"small\" } }";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -17,7 +17,7 @@ fn ignore_conditional_in_empty() {
     let good_code =
         "def conditional-process [] { if ($in | is-empty) { [] } else { $in | first 10 } }";
 
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -30,7 +30,7 @@ fn ignore_no_in_usage() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
@@ -43,7 +43,7 @@ fn ignore_in_not_at_start() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
@@ -56,7 +56,7 @@ fn ignore_positional_parameter_usage() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }
 
@@ -69,6 +69,6 @@ fn ignore_commands_without_pipelines() {
     ];
 
     for code in good_codes {
-        rule().assert_ignores(code);
+        RULE.assert_ignores(code);
     }
 }

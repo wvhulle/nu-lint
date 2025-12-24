@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 use crate::log::instrument;
 
 #[test]
@@ -9,7 +9,7 @@ def bad-error [] {
     exit 1
 }
 "#;
-    rule().assert_count(bad_code, 1);
+    RULE.assert_count(bad_code, 1);
 }
 
 #[test]
@@ -24,7 +24,7 @@ fn test_detect_various_error_messages() {
         "Connection timeout",
     ] {
         let bad_code = format!(r#"print "{msg}"; exit 1"#);
-        rule().assert_detects(&bad_code);
+        RULE.assert_detects(&bad_code);
     }
 }
 
@@ -37,7 +37,7 @@ if ($args | is-empty) {
     exit 1
 }
 "#;
-    rule().assert_count(bad_code, 1);
+    RULE.assert_count(bad_code, 1);
 }
 
 #[test]
@@ -51,7 +51,7 @@ def main [] {
     helper
 }
 "#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -63,13 +63,13 @@ let checker = { ||
 }
 do $checker
 "#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
 fn test_detect_same_pipeline_variations() {
-    rule().assert_detects(r#"def validate [] { print "Validation failed"; exit 1 }"#);
-    rule().assert_detects(r#"let result = some_command; print "Command failed"; exit 2"#);
+    RULE.assert_detects(r#"def validate [] { print "Validation failed"; exit 1 }"#);
+    RULE.assert_detects(r#"let result = some_command; print "Command failed"; exit 2"#);
     let bad_code = r#"
 def check [value: int] {
     if $value < 0 {
@@ -77,5 +77,5 @@ def check [value: int] {
     }
 }
 "#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }

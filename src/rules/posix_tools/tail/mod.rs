@@ -41,15 +41,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     detect_external_commands(context, "tail", NOTE, Some(build_fix))
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "use_builtin_tail",
-        "Use Nu's 'last' command instead of 'tail' for cleaner syntax",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/last.html")
-}
+pub const RULE: Rule = Rule::new(
+    "use_builtin_tail",
+    "Use Nu's 'last' command instead of 'tail' for cleaner syntax",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/last.html");
 
 #[cfg(test)]
 mod tests;

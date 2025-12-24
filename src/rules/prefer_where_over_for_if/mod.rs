@@ -359,15 +359,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     violations
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "prefer_where_over_for_if",
-        "Prefer 'where' filter over for loop with if statement",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/where.html")
-}
+pub const RULE: Rule = Rule::new(
+    "prefer_where_over_for_if",
+    "Prefer 'where' filter over for loop with if statement",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/where.html");
 
 #[cfg(test)]
 mod detect_bad;

@@ -127,14 +127,12 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "print_and_return_data",
-        "Functions should not both print to stdout and return data. This is confusing.",
-        check,
-        LintLevel::Hint,
-    )
-}
+pub const RULE: Rule = Rule::new(
+    "print_and_return_data",
+    "Functions should not both print to stdout and return data. This is confusing.",
+    check,
+    LintLevel::Hint,
+);
 
 #[cfg(test)]
 mod detect_bad;

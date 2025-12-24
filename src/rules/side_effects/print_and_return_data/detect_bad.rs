@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 use crate::log::instrument;
 
 #[test]
@@ -10,7 +10,7 @@ def fetch-data [] {
     http get https://api.example.com/data
 }
 "#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -24,7 +24,7 @@ def conditional-fetch [verbose: bool] {
     http get https://api.example.com/data
 }
 "#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -36,5 +36,5 @@ def list-items [] {
     [1, 2, 3, 4, 5]
 }
 "#;
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }

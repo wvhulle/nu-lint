@@ -237,15 +237,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     violations
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "use_builtin_awk",
-        "Use Nushell pipelines (where/split column/select/each) instead of awk",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/book/coming_from_bash.html")
-}
+pub const RULE: Rule = Rule::new(
+    "use_builtin_awk",
+    "Use Nushell pipelines (where/split column/select/each) instead of awk",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/book/coming_from_bash.html");
 
 #[cfg(test)]
 mod detect_bad;

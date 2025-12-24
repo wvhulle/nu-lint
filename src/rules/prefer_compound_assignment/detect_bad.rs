@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn test_detect_addition_assignment() {
@@ -7,7 +7,7 @@ mut count = 0
 $count = $count + 1
 ";
 
-    rule().assert_count(bad_code, 1);
+    RULE.assert_count(bad_code, 1);
 }
 
 #[test]
@@ -17,7 +17,7 @@ mut count = 0
 $count = $count - 5
 ";
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -27,5 +27,5 @@ mut count = 0
 $count = $count * 2
 ";
 
-    rule().assert_count(bad_code, 1);
+    RULE.assert_count(bad_code, 1);
 }

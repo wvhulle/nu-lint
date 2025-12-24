@@ -154,15 +154,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     violations
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "merge_get_cell_path",
-        "Prefer combined cell paths over chained 'get' commands",
-        check,
-        LintLevel::Hint,
-    )
-    .with_doc_url("https://www.nushell.sh/book/navigating_structured_data.html")
-}
+pub const RULE: Rule = Rule::new(
+    "merge_get_cell_path",
+    "Prefer combined cell paths over chained 'get' commands",
+    check,
+    LintLevel::Hint,
+)
+.with_doc_url("https://www.nushell.sh/book/navigating_structured_data.html");
 
 #[cfg(test)]
 mod detect_bad;

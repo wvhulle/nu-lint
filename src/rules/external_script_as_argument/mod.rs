@@ -74,16 +74,14 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .collect()
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "external_script_as_argument",
-        "Avoid passing external scripts as arguments to custom commands; define them as functions \
-         instead",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/book/modules.html")
-}
+pub const RULE: Rule = Rule::new(
+    "external_script_as_argument",
+    "Avoid passing external scripts as arguments to custom commands; define them as functions \
+     instead",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/book/modules.html");
 
 #[cfg(test)]
 mod detect_bad;

@@ -120,15 +120,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "shorten_with_compound_assignment",
-        "Compound assignment operators simplify simple arithmetic.",
-        check,
-        LintLevel::Hint,
-    )
-    .with_doc_url("https://www.nushell.sh/book/operators.html")
-}
+pub const RULE: Rule = Rule::new(
+    "shorten_with_compound_assignment",
+    "Compound assignment operators simplify simple arithmetic.",
+    check,
+    LintLevel::Hint,
+)
+.with_doc_url("https://www.nushell.sh/book/operators.html");
 
 #[cfg(test)]
 mod detect_bad;

@@ -109,16 +109,14 @@ fn check(context: &LintContext) -> Vec<Violation> {
         _ => vec![],
     })
 }
-pub const fn rule() -> Rule {
-    Rule::new(
-        "brace_spacing",
-        "Enforces Nushell style guide: records use {key: value}, blocks/closures without params \
-         use { body }, and closures with params use {|x| body}",
-        check,
-        LintLevel::Hint,
-    )
-    .with_doc_url("https://www.nushell.sh/book/style_guide.html#one-line-format")
-}
+pub const RULE: Rule = Rule::new(
+    "brace_spacing",
+    "Enforces Nushell style guide: records use {key: value}, blocks/closures without params use { \
+     body }, and closures with params use {|x| body}",
+    check,
+    LintLevel::Hint,
+)
+.with_doc_url("https://www.nushell.sh/book/style_guide.html#one-line-format");
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]

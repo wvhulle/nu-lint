@@ -112,15 +112,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
         }
     })
 }
-pub const fn rule() -> Rule {
-    Rule::new(
-        "use_builtin_is_not_empty",
-        "Use 'is-not-empty' instead of 'not ... is-empty' for better readability",
-        check,
-        LintLevel::Hint,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/is-not-empty.html")
-}
+pub const RULE: Rule = Rule::new(
+    "use_builtin_is_not_empty",
+    "Use 'is-not-empty' instead of 'not ... is-empty' for better readability",
+    check,
+    LintLevel::Hint,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/is-not-empty.html");
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]

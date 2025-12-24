@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn fix_removes_unused_function() {
@@ -11,7 +11,7 @@ def helper [] {
   print "unused"
 }
 "#;
-    rule().assert_fix_explanation_contains(bad_code, "Remove unused function");
+    RULE.assert_fix_explanation_contains(bad_code, "Remove unused function");
 }
 
 #[test]
@@ -25,7 +25,7 @@ def unused [] {
   print "never called"
 }
 "#;
-    rule().assert_replacement_erases(bad_code, "def unused");
+    RULE.assert_replacement_erases(bad_code, "def unused");
 }
 
 #[test]
@@ -39,7 +39,7 @@ def unused [] {
   print "never called"
 }
 "#;
-    rule().assert_replacement_erases(bad_code, "print \"never called\"");
+    RULE.assert_replacement_erases(bad_code, "print \"never called\"");
 }
 
 #[test]
@@ -59,9 +59,9 @@ def unused-helper [] {
   print $"Result: ($x + $y)"
 }
 "#;
-    rule().assert_replacement_erases(bad_code, "def unused-helper");
-    rule().assert_replacement_erases(bad_code, "let x = 1");
-    rule().assert_replacement_erases(bad_code, "let y = 2");
+    RULE.assert_replacement_erases(bad_code, "def unused-helper");
+    RULE.assert_replacement_erases(bad_code, "let x = 1");
+    RULE.assert_replacement_erases(bad_code, "let y = 2");
 }
 
 #[test]
@@ -77,9 +77,9 @@ def unused-with-params [name: string, count: int] {
   }
 }
 "#;
-    rule().assert_replacement_erases(bad_code, "def unused-with-params");
-    rule().assert_replacement_erases(bad_code, "name: string");
-    rule().assert_replacement_erases(bad_code, "for i in");
+    RULE.assert_replacement_erases(bad_code, "def unused-with-params");
+    RULE.assert_replacement_erases(bad_code, "name: string");
+    RULE.assert_replacement_erases(bad_code, "for i in");
 }
 
 #[test]
@@ -93,6 +93,6 @@ export def unused-exported [] {
   print "exported but unused"
 }
 "#;
-    rule().assert_replacement_erases(bad_code, "export def unused-exported");
-    rule().assert_replacement_erases(bad_code, "exported but unused");
+    RULE.assert_replacement_erases(bad_code, "export def unused-exported");
+    RULE.assert_replacement_erases(bad_code, "exported but unused");
 }

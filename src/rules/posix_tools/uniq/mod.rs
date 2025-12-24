@@ -154,15 +154,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     detect_external_commands(context, "uniq", NOTE, Some(build_fix))
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "use_builtin_uniq",
-        "Use Nu's 'uniq' command for structured data support",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/uniq.html")
-}
+pub const RULE: Rule = Rule::new(
+    "use_builtin_uniq",
+    "Use Nu's 'uniq' command for structured data support",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/uniq.html");
 
 #[cfg(test)]
 mod basic_conversion;

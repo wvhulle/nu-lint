@@ -83,15 +83,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "try_instead_of_do",
-        "Use 'try' blocks instead of 'do' blocks for error-prone operations",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/try.html")
-}
+pub const RULE: Rule = Rule::new(
+    "try_instead_of_do",
+    "Use 'try' blocks instead of 'do' blocks for error-prone operations",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/try.html");
 
 #[cfg(test)]
 mod detect_bad;

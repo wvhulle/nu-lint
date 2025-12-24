@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 use crate::log::instrument;
 
 #[test]
@@ -12,7 +12,7 @@ def save-files [data] {
     cp output.json backup.json
 }
 ";
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -27,7 +27,7 @@ def fetch-multiple [] {
     [$data1, $data2]
 }
 ";
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -42,7 +42,7 @@ def log-messages [] {
     print "Done"
 }
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -55,7 +55,7 @@ def calculate [x: int, y: int] {
     $x + $y
 }
 ";
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -67,7 +67,7 @@ def main [] {
     http get https://api.example.com/data | save output.json
 }
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -81,7 +81,7 @@ export def sync [] {
     http get https://api.example.com/data | save output.json
 }
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -93,7 +93,7 @@ def helper [] {
     http get https://api.example.com/data | save output.json
 }
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -107,7 +107,7 @@ def save-with-debug [data] {
     $data | save output.json
 }
 "#;
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }
 
 #[test]
@@ -120,5 +120,5 @@ def batch-operations [files] {
     $files | each { |f| save $f }
 }
 ";
-    rule().assert_ignores(good_code);
+    RULE.assert_ignores(good_code);
 }

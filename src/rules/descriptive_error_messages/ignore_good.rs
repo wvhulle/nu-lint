@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn test_descriptive_error_message_not_flagged() {
@@ -9,7 +9,7 @@ def process [input: int] {
     }
 }
 "#;
-    rule().assert_ignores(source);
+    RULE.assert_ignores(source);
 }
 
 #[test]
@@ -21,5 +21,5 @@ def validate_file [path: string] {
     }
 }
 "#;
-    rule().assert_ignores(source);
+    RULE.assert_ignores(source);
 }

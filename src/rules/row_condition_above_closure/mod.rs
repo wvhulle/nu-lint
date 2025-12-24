@@ -140,15 +140,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     violations
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "row_condition_above_closure",
-        "Prefer row conditions over closures in 'where' for conciseness",
-        check,
-        LintLevel::Hint,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/where.html")
-}
+pub const RULE: Rule = Rule::new(
+    "row_condition_above_closure",
+    "Prefer row conditions over closures in 'where' for conciseness",
+    check,
+    LintLevel::Hint,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/where.html");
 
 #[cfg(test)]
 mod detect_bad;

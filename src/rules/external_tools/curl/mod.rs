@@ -220,15 +220,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     detect_external_commands(context, "curl", NOTE, Some(build_fix))
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "use_builtin_curl",
-        "Use Nushell's http commands instead of curl for better data handling",
-        check,
-        LintLevel::Hint,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/http_get.html")
-}
+pub const RULE: Rule = Rule::new(
+    "use_builtin_curl",
+    "Use Nushell's http commands instead of curl for better data handling",
+    check,
+    LintLevel::Hint,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/http_get.html");
 
 #[cfg(test)]
 mod detect_bad;

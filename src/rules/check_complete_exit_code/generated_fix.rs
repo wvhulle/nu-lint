@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 // Note: This rule provides custom suggestions but does not provide automatic
 // fixes. The suggestions are context-aware and include the specific variable
@@ -10,9 +10,9 @@ fn test_suggestion_includes_actual_variable_name() {
 let my_result = (^sed -i 's/foo/bar/g' file.txt | complete)
 ";
 
-    rule().assert_detects(bad_code);
-    rule().assert_help_contains(bad_code, "my_result");
-    rule().assert_help_contains(bad_code, "exit_code");
+    RULE.assert_detects(bad_code);
+    RULE.assert_help_contains(bad_code, "my_result");
+    RULE.assert_help_contains(bad_code, "exit_code");
 }
 
 #[test]
@@ -21,9 +21,9 @@ fn test_suggestion_includes_external_command_name() {
 let result = (^rm -rf /tmp/build | complete)
 ";
 
-    rule().assert_detects(bad_code);
-    rule().assert_help_contains(bad_code, "rm");
-    rule().assert_help_contains(bad_code, "result");
+    RULE.assert_detects(bad_code);
+    RULE.assert_help_contains(bad_code, "rm");
+    RULE.assert_help_contains(bad_code, "result");
 }
 
 #[test]
@@ -32,10 +32,10 @@ fn test_suggestion_adapts_to_different_variable_names() {
 mut fetch_output = (^sed -i '' config.txt | complete)
 ";
 
-    rule().assert_detects(bad_code);
-    rule().assert_help_contains(bad_code, "fetch_output");
-    rule().assert_help_contains(bad_code, "sed");
-    rule().assert_help_contains(bad_code, "exit_code");
+    RULE.assert_detects(bad_code);
+    RULE.assert_help_contains(bad_code, "fetch_output");
+    RULE.assert_help_contains(bad_code, "sed");
+    RULE.assert_help_contains(bad_code, "exit_code");
 }
 
 #[test]
@@ -44,8 +44,8 @@ fn test_suggestion_provides_inline_and_separate_check_examples() {
 let result = (^rm -rf /tmp/build | complete)
 ";
 
-    rule().assert_help_contains(bad_code, "if $result.exit_code");
-    rule().assert_help_contains(bad_code, "inline");
+    RULE.assert_help_contains(bad_code, "if $result.exit_code");
+    RULE.assert_help_contains(bad_code, "inline");
 }
 
 #[test]
@@ -54,6 +54,6 @@ fn test_violation_message_mentions_specific_external_command() {
 let status = (^sed -i 's/x/y/g' service.txt | complete)
 ";
 
-    rule().assert_detects(bad_code);
-    rule().assert_help_contains(bad_code, "sed");
+    RULE.assert_detects(bad_code);
+    RULE.assert_help_contains(bad_code, "sed");
 }

@@ -149,15 +149,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     violations
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "unnecessary_variable_before_return",
-        "Variable assigned and immediately returned adds unnecessary verbosity",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/book/thinking_in_nu.html#implicit-return")
-}
+pub const RULE: Rule = Rule::new(
+    "unnecessary_variable_before_return",
+    "Variable assigned and immediately returned adds unnecessary verbosity",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/book/thinking_in_nu.html#implicit-return");
 
 #[cfg(test)]
 mod detect_bad;

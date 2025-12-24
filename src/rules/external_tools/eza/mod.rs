@@ -253,15 +253,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     detect_external_commands(context, "eza", NOTE, Some(build_fix))
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "use_builtin_eza",
-        "Use Nu's built-in 'ls' instead of eza",
-        check,
-        LintLevel::Hint,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/ls.html")
-}
+pub const RULE: Rule = Rule::new(
+    "use_builtin_eza",
+    "Use Nu's built-in 'ls' instead of eza",
+    check,
+    LintLevel::Hint,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/ls.html");
 
 #[cfg(test)]
 mod detect_bad;

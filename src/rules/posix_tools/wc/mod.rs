@@ -34,24 +34,22 @@ fn check(context: &LintContext) -> Vec<Violation> {
     detect_external_commands(context, "wc", NOTE, Some(build_fix))
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "use_builtin_wc",
-        "Prefer 'length' over external wc",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/length.html")
-}
+pub const RULE: Rule = Rule::new(
+    "use_builtin_wc",
+    "Prefer 'length' over external wc",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/length.html");
 
 #[cfg(test)]
 mod tests {
-    use super::rule;
+    use super::RULE;
 
     #[test]
     fn converts_wc_lines_to_lines_length() {
         let source = "^wc -l";
-        rule().assert_replacement_contains(source, "lines | length");
-        rule().assert_fix_explanation_contains(source, "count");
+        RULE.assert_replacement_contains(source, "lines | length");
+        RULE.assert_fix_explanation_contains(source, "count");
     }
 }

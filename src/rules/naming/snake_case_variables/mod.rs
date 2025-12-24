@@ -98,15 +98,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "snake_case_variables",
-        "Variables should use snake_case naming convention",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/book/style_guide.html#variables-and-command-parameters")
-}
+pub const RULE: Rule = Rule::new(
+    "snake_case_variables",
+    "Variables should use snake_case naming convention",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/book/style_guide.html#variables-and-command-parameters");
 
 #[cfg(test)]
 mod detect_bad;

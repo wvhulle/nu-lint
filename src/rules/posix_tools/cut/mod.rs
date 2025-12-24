@@ -26,24 +26,22 @@ fn check(context: &LintContext) -> Vec<Violation> {
     detect_external_commands(context, "cut", NOTE, Some(build_fix))
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "use_builtin_cut",
-        "Use 'select' instead of external cut",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/commands/docs/select.html")
-}
+pub const RULE: Rule = Rule::new(
+    "use_builtin_cut",
+    "Use 'select' instead of external cut",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/commands/docs/select.html");
 
 #[cfg(test)]
 mod tests {
-    use super::rule;
+    use super::RULE;
 
     #[test]
     fn converts_cut_to_select() {
         let source = "^cut";
-        rule().assert_replacement_contains(source, "select");
-        rule().assert_fix_explanation_contains(source, "columns");
+        RULE.assert_replacement_contains(source, "select");
+        RULE.assert_fix_explanation_contains(source, "columns");
     }
 }

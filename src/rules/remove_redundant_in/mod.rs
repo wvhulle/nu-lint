@@ -203,15 +203,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
         })
         .collect()
 }
-pub const fn rule() -> Rule {
-    Rule::new(
-        "remove_redundant_in",
-        "Remove redundant $in at the start of pipelines - it's implicit in Nushell",
-        check,
-        LintLevel::Hint,
-    )
-    .with_doc_url("https://www.nushell.sh/book/special_variables.html")
-}
+pub const RULE: Rule = Rule::new(
+    "remove_redundant_in",
+    "Remove redundant $in at the start of pipelines - it's implicit in Nushell",
+    check,
+    LintLevel::Hint,
+)
+.with_doc_url("https://www.nushell.sh/book/special_variables.html");
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]

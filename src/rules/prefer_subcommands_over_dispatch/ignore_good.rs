@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn test_ignore_native_subcommands() {
@@ -16,7 +16,7 @@ def "main adjust" [] {
 }
 "#;
 
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }
 
 #[test]
@@ -29,7 +29,7 @@ def main [
 }
 "#;
 
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }
 
 #[test]
@@ -47,7 +47,7 @@ def main [
 }
 "#;
 
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }
 
 #[test]
@@ -62,7 +62,7 @@ def main [
 }
 "#;
 
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }
 
 #[test]
@@ -84,7 +84,7 @@ def main [] {
 }
 "#;
 
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }
 
 #[test]
@@ -104,7 +104,7 @@ def main [
 }
 "#;
 
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }
 
 #[test]
@@ -123,7 +123,7 @@ export def "main sub2" [] {
 }
 "#;
 
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }
 
 #[test]
@@ -142,5 +142,5 @@ def main [
 }
 "#;
 
-    rule().assert_ignores(good);
+    RULE.assert_ignores(good);
 }

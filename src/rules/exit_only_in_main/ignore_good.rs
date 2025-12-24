@@ -1,8 +1,8 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn exit_in_main_is_allowed() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         "
 def main [] {
   exit 0
@@ -13,7 +13,7 @@ def main [] {
 
 #[test]
 fn exit_at_script_level() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"
 print "done"
 exit 0
@@ -23,7 +23,7 @@ exit 0
 
 #[test]
 fn return_in_function() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         "
 def helper [] {
   return
@@ -34,7 +34,7 @@ def helper [] {
 
 #[test]
 fn error_make_in_function() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"
 def helper [] {
   error make { msg: "error" }
@@ -45,7 +45,7 @@ def helper [] {
 
 #[test]
 fn function_without_exit() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         r#"
 def helper [] {
   print "hello"
@@ -57,7 +57,7 @@ def helper [] {
 
 #[test]
 fn main_with_other_commands() {
-    rule().assert_ignores(
+    RULE.assert_ignores(
         "
 def main [] {
   let result = run-checks

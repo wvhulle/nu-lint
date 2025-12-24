@@ -491,16 +491,14 @@ fn analyze_parameter_usage_in_block(
     analyze_pipelines(&block.pipelines, param_var_id, context)
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "turn_positional_into_stream_input",
-        "Custom commands with a single positional parameter may be rewritten as a command \
-         receiving pipeline input.",
-        check,
-        LintLevel::Hint,
-    )
-    .with_doc_url("https://www.nushell.sh/book/pipelines.html")
-}
+pub const RULE: Rule = Rule::new(
+    "turn_positional_into_stream_input",
+    "Custom commands with a single positional parameter may be rewritten as a command receiving \
+     pipeline input.",
+    check,
+    LintLevel::Hint,
+)
+.with_doc_url("https://www.nushell.sh/book/pipelines.html");
 
 #[cfg(test)]
 mod detect_bad;

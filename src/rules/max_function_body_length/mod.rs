@@ -35,15 +35,13 @@ fn function_violation(
             .with_help(suggestion)
     })
 }
-pub const fn rule() -> Rule {
-    Rule::new(
-        "max_function_body_length",
-        "Function bodies should not exceed 80 lines to maintain readability",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/book/custom_commands.html")
-}
+pub const RULE: Rule = Rule::new(
+    "max_function_body_length",
+    "Function bodies should not exceed 80 lines to maintain readability",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/book/custom_commands.html");
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]

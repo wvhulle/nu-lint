@@ -1,8 +1,8 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn test_detect_simple_single_use_function() {
-    rule().assert_detects(
+    RULE.assert_detects(
         r"
 def helper [] {
     42
@@ -17,7 +17,7 @@ def main [] {
 
 #[test]
 fn test_detect_single_use_function_with_parameter() {
-    rule().assert_detects(
+    RULE.assert_detects(
         r"
 def double [x: int] {
     $x * 2
@@ -32,7 +32,7 @@ def main [] {
 
 #[test]
 fn test_detect_single_use_function_with_pipeline() {
-    rule().assert_detects(
+    RULE.assert_detects(
         r"
 def get_first [] {
     $in | first
@@ -47,7 +47,7 @@ def main [] {
 
 #[test]
 fn test_detect_multiple_single_use_functions() {
-    rule().assert_count(
+    RULE.assert_count(
         r"
 def add_one [x] {
     $x + 1
@@ -69,7 +69,7 @@ def main [] {
 
 #[test]
 fn test_detect_single_use_function_in_closure() {
-    rule().assert_detects(
+    RULE.assert_detects(
         r"
 def increment [] {
     $in + 1
@@ -84,7 +84,7 @@ def main [] {
 
 #[test]
 fn test_detect_single_use_function_with_string_processing() {
-    rule().assert_detects(
+    RULE.assert_detects(
         r"
 def uppercase_name [name: string] {
     str upcase $name
@@ -99,7 +99,7 @@ def main [] {
 
 #[test]
 fn test_detect_single_use_function_with_return_value() {
-    rule().assert_detects(
+    RULE.assert_detects(
         r"
 def calculate [] {
     5 + 3

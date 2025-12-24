@@ -1,4 +1,4 @@
-use super::rule;
+use super::RULE;
 
 #[test]
 fn test_error_make_missing_label_and_help() {
@@ -10,7 +10,7 @@ def validate [input: string] {
 }
 "#;
 
-    rule().assert_count(bad_code, 1);
+    RULE.assert_count(bad_code, 1);
 }
 
 #[test]
@@ -24,8 +24,8 @@ def process [data] {
 }
 "#;
 
-    rule().assert_detects(bad_code);
-    rule().assert_count(bad_code, 1);
+    RULE.assert_detects(bad_code);
+    RULE.assert_count(bad_code, 1);
 }
 
 #[test]
@@ -41,8 +41,8 @@ def check [value: int] {
 }
 "#;
 
-    rule().assert_detects(bad_code);
-    rule().assert_count(bad_code, 1);
+    RULE.assert_detects(bad_code);
+    RULE.assert_count(bad_code, 1);
 }
 
 #[test]
@@ -58,8 +58,8 @@ def validate-all [a: int, b: int] {
 }
 "#;
 
-    rule().assert_detects(bad_code);
-    rule().assert_count(bad_code, 2);
+    RULE.assert_detects(bad_code);
+    RULE.assert_count(bad_code, 2);
 }
 
 #[test]
@@ -74,5 +74,5 @@ def process-items [items: list] {
 }
 "#;
 
-    rule().assert_detects(bad_code);
+    RULE.assert_detects(bad_code);
 }

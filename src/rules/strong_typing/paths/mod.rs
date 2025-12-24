@@ -193,15 +193,13 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub const fn rule() -> Rule {
-    Rule::new(
-        "prefer_path_type",
-        "Use Nushell's path type instead of string for parameters with 'path' in the name",
-        check,
-        LintLevel::Warning,
-    )
-    .with_doc_url("https://www.nushell.sh/book/types_of_data.html#paths")
-}
+pub const RULE: Rule = Rule::new(
+    "prefer_path_type",
+    "Use Nushell's path type instead of string for parameters with 'path' in the name",
+    check,
+    LintLevel::Warning,
+)
+.with_doc_url("https://www.nushell.sh/book/types_of_data.html#paths");
 
 #[cfg(test)]
 mod detect_bad;

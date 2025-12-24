@@ -428,7 +428,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
 }
 
 pub const RULE: Rule = Rule::new(
-    "prefer_parse_over_split",
+    "parse_instead_of_split",
     "Prefer 'parse' command over manual string splitting patterns",
     check,
     LintLevel::Hint,

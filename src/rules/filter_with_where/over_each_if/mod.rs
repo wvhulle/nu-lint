@@ -8,7 +8,6 @@ use crate::{
     violation::Violation,
 };
 
-/// Extract the then-block expression from an if call
 fn get_if_then_block(call: &Call) -> Option<&Expression> {
     call.arguments.get(1).and_then(|arg| match arg {
         Argument::Positional(expr) | Argument::Unknown(expr) => Some(expr),
@@ -16,7 +15,6 @@ fn get_if_then_block(call: &Call) -> Option<&Expression> {
     })
 }
 
-/// Check if then-block returns only the loop variable
 fn then_block_returns_loop_var(
     block_id: nu_protocol::BlockId,
     context: &LintContext,
@@ -24,7 +22,6 @@ fn then_block_returns_loop_var(
 ) -> bool {
     let block = context.working_set.get_block(block_id);
 
-    // Should have exactly one pipeline with one element that is the loop var
     block.pipelines.len() == 1
         && block.pipelines[0].elements.len() == 1
         && block.pipelines[0].elements[0]
@@ -32,7 +29,6 @@ fn then_block_returns_loop_var(
             .refers_to_variable(context, loop_var_name)
 }
 
-/// Check if block is a filtering pattern: `{ if <condition> { $loopvar } }`
 fn is_filtering_pattern(
     block_id: nu_protocol::BlockId,
     context: &LintContext,
@@ -40,14 +36,12 @@ fn is_filtering_pattern(
 ) -> bool {
     let block = context.working_set.get_block(block_id);
 
-    // Must have exactly one pipeline with one element (the if statement)
     if block.pipelines.len() != 1 || block.pipelines[0].elements.len() != 1 {
         return false;
     }
 
     let elem = &block.pipelines[0].elements[0];
 
-    // Element must be an if call
     let Expr::Call(call) = &elem.expr.expr else {
         return false;
     };
@@ -56,7 +50,6 @@ fn is_filtering_pattern(
         return false;
     }
 
-    // Get the then-block and verify it has no side effects
     let Some(then_block_expr) = get_if_then_block(call) else {
         return false;
     };
@@ -65,13 +58,11 @@ fn is_filtering_pattern(
         return false;
     };
 
-    // Then-block must have no side effects and return only the loop variable
     let then_block = context.working_set.get_block(*then_block_id);
     !then_block.has_side_effects()
         && then_block_returns_loop_var(*then_block_id, context, loop_var_name)
 }
 
-/// Extract block ID from each call's first argument
 fn extract_each_block_id(call: &Call) -> Option<nu_protocol::BlockId> {
     call.arguments.first().and_then(|arg| match arg {
         Argument::Positional(expr) | Argument::Unknown(expr) => match &expr.expr {
@@ -82,7 +73,6 @@ fn extract_each_block_id(call: &Call) -> Option<nu_protocol::BlockId> {
     })
 }
 
-/// Check expression for the each-if pattern
 fn check_expression(expr: &Expression, context: &LintContext) -> Vec<Violation> {
     let Expr::Call(call) = &expr.expr else {
         return vec![];

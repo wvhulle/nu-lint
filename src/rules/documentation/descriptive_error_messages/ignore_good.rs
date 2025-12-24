@@ -23,3 +23,23 @@ def validate_file [path: string] {
 "#;
     RULE.assert_ignores(source);
 }
+
+#[test]
+fn test_print_stdout_not_flagged() {
+    let source = r#"
+def process [] {
+    print "error"
+}
+"#;
+    RULE.assert_ignores(source);
+}
+
+#[test]
+fn test_print_stderr_descriptive_not_flagged() {
+    let source = r#"
+def process [] {
+    print -e "Configuration file not found at ~/.config/app.toml"
+}
+"#;
+    RULE.assert_ignores(source);
+}

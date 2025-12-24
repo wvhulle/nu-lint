@@ -253,9 +253,8 @@ pub const RULE: Rule = Rule::new(
     "dangerous_file_operations",
     "Detect dangerous file operations that could cause data loss",
     check,
-    LintLevel::Hint,
-)
-.with_doc_url("https://www.nushell.sh/book/running_externals.html");
+    LintLevel::Warning,
+);
 
 #[cfg(test)]
 mod detect_bad;

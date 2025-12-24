@@ -1,14 +1,13 @@
-use nu_protocol::ast::{Assignment, Call, Comparison, Expr, Expression, Math, Operator};
+use nu_protocol::ast::{Assignment, Expr, Expression, Math, Operator};
 
 use crate::{
     LintLevel,
-    ast::{call::CallExt, expression::ExpressionExt},
+    ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::Rule,
     violation::Violation,
 };
 
-/// Extract an integer value from an expression, unwrapping blocks if needed
 fn extract_int_value(expr: &Expression, context: &LintContext) -> Option<i64> {
     match &expr.expr {
         Expr::Int(n) => Some(*n),
@@ -24,7 +23,6 @@ fn extract_int_value(expr: &Expression, context: &LintContext) -> Option<i64> {
     }
 }
 
-/// Extract expression from block wrapper if present
 fn unwrap_block_expr<'a>(expr: &'a Expression, context: &'a LintContext) -> &'a Expression {
     match &expr.expr {
         Expr::Block(block_id) | Expr::Subexpression(block_id) => {
@@ -39,25 +37,6 @@ fn unwrap_block_expr<'a>(expr: &'a Expression, context: &'a LintContext) -> &'a 
     }
 }
 
-/// Check if this is a counter comparison: `$counter < max`
-fn is_counter_comparison(expr: &Expression, counter_name: &str, context: &LintContext) -> bool {
-    matches!(
-        &expr.expr,
-        Expr::BinaryOp(left, op, _)
-            if left.extract_variable_name(context).as_deref() == Some(counter_name)
-                && matches!(
-                    &op.expr,
-                    Expr::Operator(Operator::Comparison(
-                        Comparison::LessThan
-                            | Comparison::LessThanOrEqual
-                            | Comparison::GreaterThan
-                            | Comparison::GreaterThanOrEqual
-                    ))
-                )
-    )
-}
-
-/// Check if binary operation is `$counter + 1`
 fn is_add_one_binop(
     left: &Expression,
     op: &Expression,
@@ -70,8 +49,6 @@ fn is_add_one_binop(
         && matches!(&right.expr, Expr::Int(1))
 }
 
-/// Check if this is a counter increment: `$counter = $counter + 1` or `$counter
-/// += 1`
 fn is_counter_increment(expr: &Expression, counter_name: &str, context: &LintContext) -> bool {
     let Expr::BinaryOp(lhs, op, rhs) = &expr.expr else {
         return false;
@@ -99,22 +76,66 @@ fn is_counter_increment(expr: &Expression, counter_name: &str, context: &LintCon
     }
 }
 
-/// Check if block contains a counter increment
-fn has_increment_in_block(
+/// Check if an if statement has a break condition comparing counter to a limit
+fn has_break_with_counter_check(
+    expr: &Expression,
+    counter_name: &str,
+    context: &LintContext,
+) -> bool {
+    let Expr::Call(call) = &expr.expr else {
+        return false;
+    };
+
+    if call.get_call_name(context) != "if" {
+        return false;
+    }
+
+    let Some(condition) = call.get_positional_arg(0) else {
+        return false;
+    };
+
+    let Some(then_block_expr) = call.get_positional_arg(1) else {
+        return false;
+    };
+
+    let Some(then_block_id) = then_block_expr.extract_block_id() else {
+        return false;
+    };
+
+    let then_block = context.working_set.get_block(then_block_id);
+
+    let has_counter_in_condition = condition.extract_variable_name(context).as_deref()
+        == Some(counter_name)
+        || matches!(&condition.expr, Expr::BinaryOp(left, _, _)
+            if left.extract_variable_name(context).as_deref() == Some(counter_name));
+
+    let has_break = then_block.all_elements().iter().any(|elem| {
+        matches!(&elem.expr.expr, Expr::Call(call) if call.get_call_name(context) == "break")
+    });
+
+    has_counter_in_condition && has_break
+}
+
+fn has_counter_pattern_in_loop_block(
     block_id: nu_protocol::BlockId,
     counter_name: &str,
     context: &LintContext,
 ) -> bool {
-    context
-        .working_set
-        .get_block(block_id)
-        .pipelines
+    let block = context.working_set.get_block(block_id);
+    let all_elements = block.all_elements();
+    let elements: Vec<_> = all_elements.iter().collect();
+
+    let has_break_check = elements
         .iter()
-        .flat_map(|pipeline| &pipeline.elements)
-        .any(|element| is_counter_increment(&element.expr, counter_name, context))
+        .any(|elem| has_break_with_counter_check(&elem.expr, counter_name, context));
+
+    let has_increment = elements
+        .iter()
+        .any(|elem| is_counter_increment(&elem.expr, counter_name, context));
+
+    has_break_check && has_increment
 }
 
-/// Extract counter declaration from `mut counter = 0`
 fn extract_counter_from_mut(
     expr: &Expression,
     context: &LintContext,
@@ -133,34 +154,7 @@ fn extract_counter_from_mut(
         .flatten()
 }
 
-/// Check if while loop uses counter pattern and create violation
-fn check_while_loop_for_counter(
-    call: &Call,
-    counter_name: &str,
-    counter_span: nu_protocol::Span,
-    context: &LintContext,
-) -> Option<Violation> {
-    let condition = call.get_positional_arg(0)?;
-    let body_expr = call.get_positional_arg(1)?;
-    let block_id = body_expr.extract_block_id()?;
-
-    (is_counter_comparison(condition, counter_name, context)
-        && has_increment_in_block(block_id, counter_name, context))
-    .then(|| {
-        Violation::new(
-            format!("While loop with counter '{counter_name}' - consider using range iteration"),
-            counter_span,
-        )
-        .with_primary_label("counter initialization")
-        .with_extra_label("while loop using counter", call.span())
-        .with_help("Use '1..$max | each { |i| ... }' instead of while loop with counter")
-    })
-}
-
 fn check(context: &LintContext) -> Vec<Violation> {
-    // Find all `mut counter = 0` declarations
-
-    // Find while loops that use these counters
     context
         .ast
         .pipelines
@@ -173,19 +167,44 @@ fn check(context: &LintContext) -> Vec<Violation> {
                     return vec![];
                 };
 
-                (call.get_call_name(ctx) == "while")
-                    .then(|| check_while_loop_for_counter(call, &counter_name, counter_span, ctx))
-                    .flatten()
-                    .into_iter()
-                    .collect()
+                if call.get_call_name(ctx) != "loop" {
+                    return vec![];
+                }
+
+                let Some(body_expr) = call.get_positional_arg(0) else {
+                    return vec![];
+                };
+
+                let Some(block_id) = body_expr.extract_block_id() else {
+                    return vec![];
+                };
+
+                if !has_counter_pattern_in_loop_block(block_id, &counter_name, ctx) {
+                    return vec![];
+                }
+
+                vec![
+                    Violation::new(
+                        format!(
+                            "Infinite loop with counter '{counter_name}' can be replaced with \
+                             range iteration"
+                        ),
+                        counter_span,
+                    )
+                    .with_primary_label("counter initialization")
+                    .with_extra_label("loop using counter with break", call.span())
+                    .with_help(
+                        "Use '0..$max | each { |i| ... }' instead of loop with counter and break",
+                    ),
+                ]
             })
         })
         .collect()
 }
 
 pub const RULE: Rule = Rule::new(
-    "range_instead_of_for",
-    "Prefer range iteration over while loops with counters",
+    "loop_counter",
+    "Replace infinite loop with counter and break with range iteration",
     check,
     LintLevel::Warning,
 )

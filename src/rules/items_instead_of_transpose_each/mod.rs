@@ -327,7 +327,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
 }
 
 pub const RULE: Rule = Rule::new(
-    "prefer_items_over_transpose",
+    "items_instead_of_transpose_each",
     "Use 'items' instead of 'transpose | each' when iterating over record entries",
     check,
     LintLevel::Hint,

@@ -14,7 +14,6 @@ fn test_direct_assignment() {
 
 #[test]
 fn test_copy_from_variable() {
-    // Should not flag when copying from a variable, not a literal
     let good = r"
 mut data = []
 for x in $input {
@@ -26,7 +25,6 @@ for x in $input {
 
 #[test]
 fn test_transformation_in_loop() {
-    // Should not flag when there's transformation
     let good = r"
 mut data = []
 for x in [1 2 3] {
@@ -38,7 +36,6 @@ for x in [1 2 3] {
 
 #[test]
 fn test_filtering_in_loop() {
-    // Should not flag when there's filtering
     let good = r"
 mut data = []
 for x in [1 2 3] {

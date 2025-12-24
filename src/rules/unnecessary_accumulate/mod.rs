@@ -13,15 +13,10 @@ use crate::{
     violation::Violation,
 };
 
-/// Information about an empty list variable declaration
 type EmptyListVar = (VarId, String, Span);
-/// Collection of variables that perform direct copying
 type DirectCopyVars = Vec<VarId>;
-/// Analysis result containing both empty list variables and direct copy
-/// patterns
 type AnalysisPattern = (Vec<EmptyListVar>, DirectCopyVars);
 
-/// Check if an element matches a transformation pattern
 fn matches_transformation_pattern(
     expr: &Expression,
     context: &LintContext,
@@ -37,8 +32,6 @@ fn matches_transformation_pattern(
     }
 }
 
-/// Check if an expression contains any transformation or filtering beyond
-/// direct copying
 fn has_transformation_or_filter(
     block_id: nu_protocol::BlockId,
     context: &LintContext,
@@ -92,10 +85,8 @@ fn has_transformation_in_append(
     }
 }
 
-/// Type alias for the empty list variables map
 type EmptyListVarsMap = HashMap<VarId, (String, Span)>;
 
-/// Create violations for variables that match the direct copy pattern
 fn create_violations(
     empty_list_vars_map: &EmptyListVarsMap,
     direct_copy_set: &HashSet<VarId>,
@@ -117,7 +108,6 @@ fn create_violations(
         .collect()
 }
 
-/// Extract empty list variable declarations from mut statements
 fn extract_empty_list_vars(expr: &Expression, context: &LintContext) -> Vec<EmptyListVar> {
     let Expr::Call(call) = &expr.expr else {
         return vec![];
@@ -162,7 +152,6 @@ fn extract_empty_list_vars(expr: &Expression, context: &LintContext) -> Vec<Empt
     }
 }
 
-/// Check if a for loop performs direct copying without transformation
 fn is_direct_copy_for_loop(
     call: &Call,
     context: &LintContext,
@@ -171,13 +160,11 @@ fn is_direct_copy_for_loop(
     let iter_expr = call.get_for_loop_iterator()?;
     let block_id = call.get_for_loop_body()?;
 
-    // Must iterate over a literal list and have no transformations
     (iter_expr.is_literal_list()
         && !has_transformation_or_filter(block_id, context, &loop_var_name))
     .then_some((loop_var_name, block_id))
 }
 
-/// Extract direct copy patterns from for loops
 fn extract_direct_copy_patterns(expr: &Expression, context: &LintContext) -> DirectCopyVars {
     let Expr::Call(call) = &expr.expr else {
         return vec![];
@@ -197,7 +184,6 @@ fn extract_direct_copy_patterns(expr: &Expression, context: &LintContext) -> Dir
     }
 }
 
-/// Extract both patterns in a single pass
 fn extract_patterns(expr: &Expression, context: &LintContext) -> AnalysisPattern {
     (
         extract_empty_list_vars(expr, context),
@@ -214,7 +200,6 @@ fn check(context: &LintContext) -> Vec<Violation> {
         &mut patterns,
     );
 
-    // Flatten the results from the single traversal
     let empty_list_vars: EmptyListVarsMap = patterns
         .iter()
         .flat_map(|(empty_vars, _)| empty_vars.iter())
@@ -231,12 +216,12 @@ fn check(context: &LintContext) -> Vec<Violation> {
 }
 
 pub const RULE: Rule = Rule::new(
-    "prefer_direct_use",
-    "Prefer direct list use over copying items into a mutable list",
+    "unnecessary_accumulate",
+    "No need to initialize an empty list and fill it by copying items. Use the list directly \
+     instead.",
     check,
-    LintLevel::Warning,
-)
-.with_doc_url("https://www.nushell.sh/book/thinking_in_nu.html#variables-are-immutable-by-default");
+    LintLevel::Hint,
+);
 
 #[cfg(test)]
 mod detect_bad;

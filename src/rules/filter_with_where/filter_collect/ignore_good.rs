@@ -13,7 +13,6 @@ fn test_ignore_functional_where_usage() {
 fn test_ignore_for_loop_with_transformation() {
     instrument();
 
-    // Should not flag when there's transformation applied
     let good = r"
 mut results = []
 for x in $input {
@@ -29,7 +28,6 @@ for x in $input {
 fn test_ignore_for_loop_with_multiple_statements() {
     instrument();
 
-    // Should not flag when there are multiple statements
     let good = r"
 mut filtered = []
 for x in $input {
@@ -46,7 +44,6 @@ for x in $input {
 fn test_ignore_for_loop_without_filtering() {
     instrument();
 
-    // Should not flag when there's no if statement
     let good = r"
 mut output = []
 for x in $input {
@@ -60,7 +57,6 @@ for x in $input {
 fn test_ignore_for_loop_simple_copying() {
     instrument();
 
-    // Should not flag simple copying
     let good = r"
 mut data = []
 for x in [1 2 3] {
@@ -74,7 +70,6 @@ for x in [1 2 3] {
 fn test_ignore_for_loop_complex_if_else_structure() {
     instrument();
 
-    // Should not flag complex if-else structures
     let good = r"
 mut switches = []
 mut named = []

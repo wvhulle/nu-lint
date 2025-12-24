@@ -52,7 +52,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 pub const RULE: Rule = Rule::new(
-    "prefer_lines_over_split",
+    "lines_instead_of_split",
     "Use 'lines' instead of 'split row \"\\n\"' for better performance and clarity",
     check,
     LintLevel::Warning,

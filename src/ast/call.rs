@@ -194,10 +194,13 @@ impl CallExt for Call {
     }
 
     fn get_positional_arg(&self, index: usize) -> Option<&Expression> {
-        self.arguments.get(index).and_then(|arg| match arg {
-            Argument::Positional(expr) | Argument::Unknown(expr) => Some(expr),
-            _ => None,
-        })
+        self.arguments
+            .iter()
+            .filter_map(|arg| match arg {
+                Argument::Positional(expr) | Argument::Unknown(expr) => Some(expr),
+                _ => None,
+            })
+            .nth(index)
     }
 
     fn loop_var_from_each(&self, context: &LintContext) -> Option<String> {

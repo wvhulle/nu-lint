@@ -38,126 +38,131 @@ nu-lint --help
 
 More than 90 rules are available on The CLI. Some of them need further testing and improvement. Please make an issue on the issue tracker to report any bugs.
 
-Here is a snapshots of the rules (may be slightly out-of-date, see git for latest):
+`documentation` - Improve relevance of actionability of user-facing messages.
 
-- Documentation quality rules
-  - add_doc_comment_exported_fn
-  - descriptive_error_messages
-  - add_label_to_error
-  - add_help_to_error
-  - add_span_to_label
-  - add_url_to_error
-  - main_positional_args_docs
-  - main_named_args_docs
-  - max_positional_params
+- `add_doc_comment_exported_fn`
+- `descriptive_error_messages`
+- `add_label_to_error`
+- `add_help_to_error`
+- `add_span_to_label`
+- `add_url_to_error`
+- `main_positional_args_docs`
+- `main_named_args_docs`
+- `max_positional_params`
 
-- Error handling best practices
-  - add_label_to_error
-  - add_help_to_error
-  - add_span_to_label
-  - add_url_to_error
-  - check_complete_exit_code
-  - descriptive_error_messages
-  - escape_string_interpolation_operators
-  - exit_only_in_main
-  - missing_stdin_in_shebang
-  - non_final_failure_check
-  - make_error_from_exit
-  - try_instead_of_do
-  - errors_to_stderr
-  - unsafe_dynamic_record_access
+`error-handling` - Error handling best practices
 
-- Replace modern CLI tools with native Nushell equivalents
-  - use_builtin_curl
-  - use_builtin_eza
-  - use_builtin_fd
-  - replace_jq_with_nu_get
-  - use_builtin_rg
-  - unnecessary_hat
-  - use_builtin_wget
-  - use_builtin_which
+- `check_complete_exit_code`
+- `descriptive_error_messages`
+- `escape_string_interpolation_operators`
+- `exit_only_in_main`
+- `missing_stdin_in_shebang` (auto-fix)
+- `non_final_failure_check`
+- `use_error_make_for_catch` (auto-fix)
+- `try_instead_of_do`
+- `errors_to_stderr`
+- `unsafe_dynamic_record_access` (auto-fix)
 
-- Check that code is formatted according to the official Nushell guidelines.
-  - collapsible_if
-  - forbid_excessive_nesting
-  - max_function_body_length
-  - replace_if_else_chain_with_match
-  - brace_spacing
-  - no_trailing_spaces
-  - omit_list_commas
-  - pipe_spacing
-  - reflow_wide_pipelines
-  - reflow_wide_lists
-  - wrap_wide_records
+`external-tools` - Replace common external CLI tools.
 
-- Linting rules for naming conventions
-  - kebab_case_commands
-  - screaming_snake_constants
-  - snake_case_variables
+- `use_builtin_curl` (auto-fix)
+- `use_builtin_eza` (auto-fix)
+- `use_builtin_fd` (auto-fix)
+- `replace_jq_with_nu_get` (auto-fix)
+- `use_builtin_rg` (auto-fix)
+- `unnecessary_hat` (auto-fix)
+- `use_builtin_wget` (auto-fix)
+- `use_builtin_which` (auto-fix)
 
-- Performance optimization hints
-  - avoid_self_import
-  - avoid_nu_subprocess
-  - use_builtin_is_not_empty
-  - dispatch_with_subcommands
-  - shorten_with_compound_assignment
-  - unnecessary_accumulate
-  - lines_instead_of_split
-  - parse_instead_of_split
-  - turn_positional_into_stream_input
-  - while_counter
-  - loop_counter
-  - where_instead_each_then_if
-  - filter_collect_with_where
-  - remove_redundant_in
-  - row_condition_above_closure
-  - unnecessary_variable_before_return
-  - inline_single_use_function
-  - items_instead_of_transpose_each
-  - merge_get_cell_path
-  - merge_multiline_print
-  - redundant_ignore
-  - unnecessary_mut
-  - unused_helper_functions
+`formatting` - Formatting according to Nushell guidelines.
 
-- Replace common bash/POSIX commands with native Nushell equivalents
-  - ignore_over_dev_null
-  - use_builtin_awk
-  - use_builtin_cat
-  - use_builtin_cut
-  - use_builtin_date
-  - use_builtin_echo
-  - use_builtin_find
-  - use_builtin_grep
-  - use_builtin_head
-  - use_builtin_cd
-  - use_builtin_ls
-  - use_builtin_read
-  - use_builtin_sed
-  - use_builtin_sort
-  - use_builtin_tail
-  - use_builtin_uniq
-  - use_builtin_wc
+- `collapsible_if` (auto-fix)
+- `forbid_excessive_nesting`
+- `max_function_body_length`
+- `replace_if_else_chain_with_match` (auto-fix)
+- `brace_spacing`
+- `no_trailing_spaces`
+- `omit_list_commas`
+- `pipe_spacing` (auto-fix)
+- `reflow_wide_pipelines` (auto-fix)
+- `reflow_wide_lists`
+- `wrap_wide_records`
 
-- Commands that escape the type system
-  - dangerous_file_operations
-  - mixed_io_types
-  - print_and_return_data
+`naming` - Follow official naming conventions
 
-- Rules for systemd service scripts
-  - add_journal_prefix
-  - attach_loglevel_to_log_statement
+- `kebab_case_commands`
+- `screaming_snake_constants`
+- `snake_case_variables` (auto-fix)
 
-- Enforce explicit typing of variables and pipelines.
-  - external_script_as_argument
-  - missing_type_annotation
-  - prefer_path_type
-  - typed_pipeline_io
-  - avoid_nu_subprocess
+`performance` - May yield performance improvements
 
-- Rules that detect issues also flagged by the Nushell parser.
-  - nu_deprecated
-  - nu_parse_error
+- `avoid_self_import`
+- `avoid_nu_subprocess`
+- `use_builtin_is_not_empty` (auto-fix)
+- `dispatch_with_subcommands`
+- `shorten_with_compound_assignment` (auto-fix)
+- `unnecessary_accumulate`
+- `lines_instead_of_split` (auto-fix)
+- `parse_instead_of_split` (auto-fix)
+- `turn_positional_into_stream_input` (auto-fix)
+- `while_counter`
+- `loop_counter`
+- `where_instead_each_then_if`
+- `filter_collect_with_where`
+- `remove_redundant_in` (auto-fix)
+- `row_condition_above_closure` (auto-fix)
+- `unnecessary_variable_before_return` (auto-fix)
+- `inline_single_use_function`
+- `items_instead_of_transpose_each` (auto-fix)
+- `merge_get_cell_path` (auto-fix)
+- `merge_multiline_print` (auto-fix)
+- `redundant_ignore` (auto-fix)
+- `unnecessary_mut` (auto-fix)
+- `unused_helper_functions` (auto-fix)
+
+`posix-tools` - Replace common bash/POSIX commands.
+
+- `ignore_over_dev_null` (auto-fix)
+- `use_builtin_awk` (auto-fix)
+- `use_builtin_cat` (auto-fix)
+- `use_builtin_cut` (auto-fix)
+- `use_builtin_date` (auto-fix)
+- `use_builtin_echo` (auto-fix)
+- `use_builtin_find` (auto-fix)
+- `use_builtin_grep` (auto-fix)
+- `use_builtin_head` (auto-fix)
+- `use_builtin_cd` (auto-fix)
+- `use_builtin_ls` (auto-fix)
+- `use_builtin_read` (auto-fix)
+- `use_builtin_sed` (auto-fix)
+- `use_builtin_sort` (auto-fix)
+- `use_builtin_tail` (auto-fix)
+- `use_builtin_uniq` (auto-fix)
+- `use_builtin_wc` (auto-fix)
+
+`side-effects` - Handle risky and unpredictable commands.
+
+- `dangerous_file_operations`
+- `separate_local_remote_io`
+- `print_and_return_data`
+
+`systemd` - When used in combination with systemd services
+
+- `add_journal_prefix` (auto-fix)
+- `attach_loglevel_to_log_statement` (auto-fix)
+
+`type-safety` - Encourage annotations with type hints.
+
+- `external_script_as_argument`
+- `missing_type_annotation` (auto-fix)
+- `prefer_path_type` (auto-fix)
+- `typed_pipeline_io` (auto-fix)
+- `avoid_nu_subprocess`
+
+`upstream` - Forward warnings and errors of the upstream Nushell parser.
+
+- `nu_deprecated`
+- `nu_parse_error`
 
 ## Installation
 

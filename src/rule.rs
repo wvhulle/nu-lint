@@ -12,6 +12,8 @@ pub struct Rule {
     pub doc_url: Option<&'static str>,
     pub level: LintLevel,
     pub(crate) check: for<'a> fn(&LintContext<'a>) -> Vec<Violation>,
+    /// Whether this rule can generate automatic fixes
+    pub has_auto_fix: bool,
 }
 
 impl Hash for Rule {
@@ -41,12 +43,20 @@ impl Rule {
             doc_url: None,
             check,
             level,
+            has_auto_fix: false,
         }
     }
 
     #[must_use]
     pub const fn with_doc_url(mut self, url: &'static str) -> Self {
         self.doc_url = Some(url);
+        self
+    }
+
+    /// Mark this rule as having auto-fix capability
+    #[must_use]
+    pub const fn with_auto_fix(mut self) -> Self {
+        self.has_auto_fix = true;
         self
     }
 }

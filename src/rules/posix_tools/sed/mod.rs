@@ -31,6 +31,7 @@ pub const RULE: Rule = Rule::new(
     check,
     LintLevel::Warning,
 )
+.with_auto_fix()
 .with_doc_url("https://www.nushell.sh/commands/docs/str_replace.html");
 
 fn build_fix(

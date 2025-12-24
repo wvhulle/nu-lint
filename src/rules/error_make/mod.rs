@@ -9,6 +9,7 @@ pub mod add_help;
 pub mod add_label;
 pub mod add_span_to_label;
 pub mod add_url;
+pub mod use_error_make_for_catch;
 
 pub fn extract_field_name(key: &Expression, context: &LintContext) -> String {
     match &key.expr {

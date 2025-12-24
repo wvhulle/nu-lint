@@ -260,8 +260,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
 pub const RULE: Rule = Rule::new(
     "escape_string_interpolation_operators",
-    "Detect reliably identifiable AST patterns in string interpolations that will cause runtime \
-     errors (standalone operators, external boolean operator calls, literal boolean operations)",
+    "Escape braces in string interpolations to avoid runtime errors",
     check,
     LintLevel::Error,
 )

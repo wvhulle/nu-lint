@@ -133,7 +133,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
 }
 
 pub const RULE: Rule = Rule::new(
-    "mixed_io_types",
+    "separate_local_remote_io",
     "Functions should not mix different types of I/O operations.",
     check,
     LintLevel::Hint,

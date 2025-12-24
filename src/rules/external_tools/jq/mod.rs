@@ -378,6 +378,7 @@ pub const RULE: Rule = Rule::new(
     check,
     LintLevel::Warning,
 )
+.with_auto_fix()
 .with_doc_url("https://www.nushell.sh/commands/docs/from_json.html");
 
 #[cfg(test)]

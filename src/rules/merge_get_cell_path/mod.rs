@@ -160,6 +160,7 @@ pub const RULE: Rule = Rule::new(
     check,
     LintLevel::Hint,
 )
+.with_auto_fix()
 .with_doc_url("https://www.nushell.sh/book/navigating_structured_data.html");
 
 #[cfg(test)]

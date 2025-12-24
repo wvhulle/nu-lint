@@ -22,7 +22,6 @@ mod ignore_over_dev_null;
 mod inline_single_use_function;
 mod items_instead_of_transpose_each;
 mod lines_instead_of_split;
-mod make_error_from_exit;
 mod max_function_body_length;
 mod max_positional_params;
 mod merge_get_cell_path;
@@ -83,7 +82,7 @@ pub const ALL_RULES: &[Rule] = &[
     inline_single_use_function::RULE,
     items_instead_of_transpose_each::RULE,
     lines_instead_of_split::RULE,
-    make_error_from_exit::RULE,
+    error_make::use_error_make_for_catch::RULE,
     max_function_body_length::RULE,
     max_positional_params::RULE,
     merge_get_cell_path::RULE,

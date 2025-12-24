@@ -111,8 +111,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
 }
 pub const RULE: Rule = Rule::new(
     "brace_spacing",
-    "Enforces Nushell style guide: records use {key: value}, blocks/closures without params use { \
-     body }, and closures with params use {|x| body}",
+    "Enforce consistent brace spacing per Nushell style guide",
     check,
     LintLevel::Hint,
 )

@@ -104,6 +104,7 @@ pub const RULE: Rule = Rule::new(
     check,
     LintLevel::Warning,
 )
+.with_auto_fix()
 .with_doc_url("https://www.nushell.sh/book/style_guide.html#variables-and-command-parameters");
 
 #[cfg(test)]

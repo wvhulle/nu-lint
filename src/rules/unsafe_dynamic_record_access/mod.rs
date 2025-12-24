@@ -64,11 +64,11 @@ fn check(context: &LintContext) -> Vec<Violation> {
 
 pub const RULE: Rule = Rule::new(
     "unsafe_dynamic_record_access",
-    "Detect 'get' calls with dynamic keys that don't use the -o/--optional flag, which can cause \
-     silent failures when the key doesn't exist",
+    "Use 'get -o' for dynamic keys to handle missing keys safely",
     check,
     LintLevel::Warning,
 )
+.with_auto_fix()
 .with_doc_url("https://www.nushell.sh/commands/docs/get.html");
 
 #[cfg(test)]

@@ -217,6 +217,7 @@ pub const RULE: Rule = Rule::new(
     check,
     LintLevel::Error,
 )
+.with_auto_fix()
 .with_doc_url("https://www.nushell.sh/book/scripts.html");
 
 #[cfg(test)]

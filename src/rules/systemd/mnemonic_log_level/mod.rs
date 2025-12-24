@@ -115,6 +115,7 @@ pub const RULE: Rule = Rule::new(
     check,
     LintLevel::Hint,
 )
+.with_auto_fix()
 .with_doc_url(
     "https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html#SyslogLevelPrefix=",
 );

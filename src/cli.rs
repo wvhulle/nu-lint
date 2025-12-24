@@ -14,6 +14,7 @@ use crate::{
     log::instrument,
     lsp,
     output::{Format, Summary, format_output},
+    rule::Rule,
     rules::{ALL_RULES, groups::ALL_GROUPS},
 };
 
@@ -156,26 +157,74 @@ impl Cli {
     }
 
     fn list_rules() {
-        println!("Available lint rules ({n}):\n", n = ALL_RULES.len());
+        println!("## Available Lint Rules\n");
         let mut sorted_rules = ALL_RULES.to_vec();
         sorted_rules.sort_by_key(|rule| rule.id);
 
-        for rule in sorted_rules {
-            println!("  {} - {}", rule.id, rule.explanation);
+        let max_id_len = sorted_rules.iter().map(|r| r.id.len()).max().unwrap_or(0) + 2; // +2 for backticks
+        let max_desc_len = sorted_rules
+            .iter()
+            .map(|r| r.explanation.len())
+            .max()
+            .unwrap_or(0);
+
+        println!(
+            "| {:<width_id$} | {:<width_desc$} | {:<7} | {:<8} |",
+            "Rule",
+            "Description",
+            "Level",
+            "Auto-fix",
+            width_id = max_id_len,
+            width_desc = max_desc_len
+        );
+        println!(
+            "| {:-<width_id$} | {:-<width_desc$} | {:-<7} | {:-<8} |",
+            "",
+            "",
+            "",
+            "",
+            width_id = max_id_len,
+            width_desc = max_desc_len
+        );
+        for rule in &sorted_rules {
+            let level = match rule.level {
+                LintLevel::Hint => "hint",
+                LintLevel::Warning => "warning",
+                LintLevel::Error => "error",
+            };
+            let auto_fix = if rule.has_auto_fix { "Yes" } else { "" };
+            let id_formatted = format!("`{}`", rule.id);
+            println!(
+                "| {:<width_id$} | {:<width_desc$} | {:<7} | {:<8} |",
+                id_formatted,
+                rule.explanation,
+                level,
+                auto_fix,
+                width_id = max_id_len,
+                width_desc = max_desc_len
+            );
         }
-        println!("\n{n} rules available.", n = ALL_RULES.len());
+        let fixable_count = sorted_rules.iter().filter(|r| r.has_auto_fix).count();
+        println!(
+            "\n*{n} rules available, {f} with auto-fix.*",
+            n = sorted_rules.len(),
+            f = fixable_count
+        );
     }
 
     fn list_groups() {
-        println!("Available rule groups ({n}):\n", n = ALL_GROUPS.len());
+        const fn auto_fix_suffix(rule: &Rule) -> &'static str {
+            if rule.has_auto_fix { " (auto-fix)" } else { "" }
+        }
+        println!("Rule Groups\n");
         for set in ALL_GROUPS {
-            println!("  {} - {}", set.name, set.description);
+            println!("`{}` - {}\n", set.name, set.description);
             for rule in set.rules {
-                println!("    - {}", rule.id);
+                println!("- `{}`{}", rule.id, auto_fix_suffix(rule));
             }
             println!();
         }
-        println!("\n{n} groups available.", n = ALL_GROUPS.len());
+        println!("*{n} groups available.*", n = ALL_GROUPS.len());
     }
 
     fn explain_rule(rule_id: &str) {

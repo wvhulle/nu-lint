@@ -13,17 +13,13 @@ const ERROR_HANDLING: Group = Group {
     name: "error-handling",
     description: "Error handling best practices",
     rules: &[
-        super::error_make::add_label::RULE,
-        super::error_make::add_help::RULE,
-        super::error_make::add_span_to_label::RULE,
-        super::error_make::add_url::RULE,
         super::check_complete_exit_code::RULE,
         super::documentation::descriptive_error_messages::RULE,
         super::escape_string_interpolation_operators::RULE,
         super::exit_only_in_main::RULE,
         super::missing_stdin_in_shebang::RULE,
         super::non_final_failure_check::RULE,
-        super::make_error_from_exit::RULE,
+        super::error_make::use_error_make_for_catch::RULE,
         super::try_instead_of_do::RULE,
         super::errors_to_stderr::RULE,
         super::unsafe_dynamic_record_access::RULE,
@@ -32,7 +28,7 @@ const ERROR_HANDLING: Group = Group {
 
 const TYPE_SAFETY: Group = Group {
     name: "type-safety",
-    description: "Enforce explicit typing of variables and pipelines.",
+    description: "Encourage annotations with type hints.",
     rules: &[
         super::external_script_as_argument::RULE,
         super::strong_typing::argument::RULE,
@@ -44,7 +40,7 @@ const TYPE_SAFETY: Group = Group {
 
 const PERFORMANCE: Group = Group {
     name: "performance",
-    description: "Performance optimization hints",
+    description: "May yield performance improvements",
     rules: &[
         super::avoid_self_import::RULE,
         super::avoid_nu_subprocess::RULE,
@@ -74,7 +70,7 @@ const PERFORMANCE: Group = Group {
 
 const SYSTEMD: Group = Group {
     name: "systemd",
-    description: "Rules for systemd service scripts",
+    description: "When used in combination with systemd services",
     rules: &[
         super::systemd::add_journal_prefix::RULE,
         super::systemd::mnemonic_log_level::RULE,
@@ -83,7 +79,7 @@ const SYSTEMD: Group = Group {
 
 const POSIX_TOOLS: Group = Group {
     name: "posix-tools",
-    description: "Replace common bash/POSIX commands with native Nushell equivalents",
+    description: "Replace common bash/POSIX commands.",
     rules: &[
         super::ignore_over_dev_null::RULE,
         super::posix_tools::awk::RULE,
@@ -107,7 +103,7 @@ const POSIX_TOOLS: Group = Group {
 
 const DOCUMENTATION: Group = Group {
     name: "documentation",
-    description: "Documentation quality rules",
+    description: "Improve relevance of actionability of user-facing messages.",
     rules: &[
         super::documentation::exported_function::RULE,
         super::documentation::descriptive_error_messages::RULE,
@@ -123,7 +119,7 @@ const DOCUMENTATION: Group = Group {
 
 const EXTERNAL_TOOLS: Group = Group {
     name: "external-tools",
-    description: "Replace modern CLI tools with native Nushell equivalents",
+    description: "Replace common external CLI tools.",
     rules: &[
         super::external_tools::curl::RULE,
         super::external_tools::eza::RULE,
@@ -138,7 +134,7 @@ const EXTERNAL_TOOLS: Group = Group {
 
 const FORMATTING: Group = Group {
     name: "formatting",
-    description: "Check that code is formatted according to the official Nushell guidelines.",
+    description: "Formatting according to Nushell guidelines.",
     rules: &[
         super::collapsible_if::RULE,
         super::forbid_excessive_nesting::RULE,
@@ -156,7 +152,7 @@ const FORMATTING: Group = Group {
 
 const NAMING: Group = Group {
     name: "naming",
-    description: "Linting rules for naming conventions",
+    description: "Follow official naming conventions",
     rules: &[
         super::naming::kebab_case_commands::RULE,
         super::naming::screaming_snake_constants::RULE,
@@ -166,7 +162,7 @@ const NAMING: Group = Group {
 
 const SIDE_EFFECTS: Group = Group {
     name: "side-effects",
-    description: "Commands that escape the type system",
+    description: "Handle risky and unpredictable commands.",
     rules: &[
         super::dangerous_file_operations::RULE,
         super::side_effects::mixed_io_types::RULE,
@@ -176,7 +172,7 @@ const SIDE_EFFECTS: Group = Group {
 
 const UPSTREAM: Group = Group {
     name: "upstream",
-    description: "Rules that detect issues also flagged by the Nushell parser.",
+    description: "Forward warnings and errors of the upstream Nushell parser.",
     rules: &[
         super::upstream::nu_deprecated::RULE,
         super::upstream::nu_parse_error::RULE,

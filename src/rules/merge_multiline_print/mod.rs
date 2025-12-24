@@ -304,6 +304,7 @@ pub const RULE: Rule = Rule::new(
     check,
     LintLevel::Hint,
 )
+.with_auto_fix()
 .with_doc_url("https://www.nushell.sh/book/working_with_strings.html#string-formats-at-a-glance");
 
 #[cfg(test)]

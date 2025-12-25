@@ -1,12 +1,18 @@
-use nu_protocol::ast::{Call, Expr, Expression};
+use nu_protocol::ast::{Call, Expr, Expression, Traverse};
 
 use crate::{
     LintLevel,
     ast::{call::CallExt, span::SpanExt},
     context::LintContext,
-    rule::Rule,
-    violation::{Fix, Replacement, Violation},
+    rule::{DetectFix, Rule},
+    violation::{Detection, Fix, Replacement},
 };
+
+struct RowConditionFixData {
+    closure_span: nu_protocol::Span,
+    fixed_text: Option<String>,
+    param_name: String,
+}
 
 const fn is_stored_closure(expr: &Expression) -> bool {
     matches!(&expr.expr, Expr::Var(_) | Expr::FullCellPath(_))
@@ -68,7 +74,11 @@ fn generate_fix(
     ))
 }
 
-fn check_where_call(call: &Call, _expr: &Expression, context: &LintContext) -> Vec<Violation> {
+fn check_where_call(
+    call: &Call,
+    _expr: &Expression,
+    context: &LintContext,
+) -> Vec<(Detection, RowConditionFixData)> {
     if call.get_call_name(context) != "where" {
         return vec![];
     }
@@ -99,9 +109,13 @@ fn check_where_call(call: &Call, _expr: &Expression, context: &LintContext) -> V
         return vec![];
     }
 
-    let fix = generate_fix(arg_expr, *block_id, &param_name, context);
+    let fixed_text = generate_fix(arg_expr, *block_id, &param_name, context).and_then(|f| {
+        f.replacements
+            .first()
+            .map(|r| r.replacement_text.to_string())
+    });
 
-    let violation = Violation::new(
+    let violation = Detection::from_global_span(
         "Use row condition with `$it` instead of closure for more concise code",
         arg_expr.span,
     )
@@ -113,13 +127,19 @@ fn check_where_call(call: &Call, _expr: &Expression, context: &LintContext) -> V
          a variable.",
     );
 
-    vec![match fix {
-        Some(f) => violation.with_fix(f),
-        None => violation,
-    }]
+    let fix_data = RowConditionFixData {
+        closure_span: arg_expr.span,
+        fixed_text,
+        param_name,
+    };
+
+    vec![(violation, fix_data)]
 }
 
-fn check_expression(expr: &Expression, context: &LintContext) -> Vec<Violation> {
+fn check_expression(
+    expr: &Expression,
+    context: &LintContext,
+) -> Vec<(Detection, RowConditionFixData)> {
     let Expr::Call(call) = &expr.expr else {
         return vec![];
     };
@@ -127,27 +147,52 @@ fn check_expression(expr: &Expression, context: &LintContext) -> Vec<Violation> 
     check_where_call(call, expr, context)
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    use nu_protocol::ast::Traverse;
+struct RowConditionAboveClosure;
 
-    let mut violations = Vec::new();
-    context.ast.flat_map(
-        context.working_set,
-        &|expr| check_expression(expr, context),
-        &mut violations,
-    );
+impl DetectFix for RowConditionAboveClosure {
+    type FixInput = RowConditionFixData;
 
-    violations
+    fn id(&self) -> &'static str {
+        "row_condition_above_closure"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Prefer row conditions over closures in 'where' for conciseness"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/commands/docs/where.html")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        let mut violations = Vec::new();
+        context.ast.flat_map(
+            context.working_set,
+            &|expr| check_expression(expr, context),
+            &mut violations,
+        );
+
+        violations
+    }
+
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        fix_data.fixed_text.as_ref().map(|text| {
+            Fix::with_explanation(
+                format!(
+                    "Replace closure parameter ${} with row condition using $it",
+                    fix_data.param_name
+                ),
+                vec![Replacement::new(fix_data.closure_span, text.clone())],
+            )
+        })
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "row_condition_above_closure",
-    "Prefer row conditions over closures in 'where' for conciseness",
-    check,
-    LintLevel::Hint,
-)
-.with_auto_fix()
-.with_doc_url("https://www.nushell.sh/commands/docs/where.html");
+pub static RULE: &dyn Rule = &RowConditionAboveClosure;
 
 #[cfg(test)]
 mod detect_bad;

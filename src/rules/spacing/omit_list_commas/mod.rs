@@ -3,9 +3,14 @@ use nu_protocol::{
     ast::{Expr, ListItem},
 };
 
-use crate::{LintLevel, context::LintContext, rule::Rule, violation::Violation};
+use crate::{
+    LintLevel,
+    context::LintContext,
+    rule::{DetectFix, Rule},
+    violation::Detection,
+};
 
-fn check_list_commas(context: &LintContext, span: Span, items: &[ListItem]) -> Vec<Violation> {
+fn check_list_commas(context: &LintContext, span: Span, items: &[ListItem]) -> Vec<Detection> {
     let mut violations = Vec::new();
     if items.len() < 2 {
         return violations;
@@ -37,7 +42,7 @@ fn check_list_commas(context: &LintContext, span: Span, items: &[ListItem]) -> V
                     between_span.start + comma_pos + 1,
                 );
                 violations.push(
-                    Violation::new("Omit commas between list items", comma_span)
+                    Detection::from_global_span("Omit commas between list items", comma_span)
                         .with_help("Remove the comma - Nushell lists don't need commas"),
                 );
             }
@@ -45,19 +50,38 @@ fn check_list_commas(context: &LintContext, span: Span, items: &[ListItem]) -> V
     }
     violations
 }
-fn check(context: &LintContext) -> Vec<Violation> {
-    context.collect_rule_violations(|expr, ctx| match &expr.expr {
-        Expr::List(items) => check_list_commas(ctx, expr.span, items),
-        _ => vec![],
-    })
+
+struct OmitListCommas;
+
+impl DetectFix for OmitListCommas {
+    type FixInput = ();
+
+    fn id(&self) -> &'static str {
+        "omit_list_commas"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Omit commas between list items."
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/book/style_guide.html#basic")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        let violations = context.detect(|expr, ctx| match &expr.expr {
+            Expr::List(items) => check_list_commas(ctx, expr.span, items),
+            _ => vec![],
+        });
+        Self::no_fix(violations)
+    }
 }
-pub const RULE: Rule = Rule::new(
-    "omit_list_commas",
-    "Omit commas between list items.",
-    check,
-    LintLevel::Hint,
-)
-.with_doc_url("https://www.nushell.sh/book/style_guide.html#basic");
+
+pub static RULE: &dyn Rule = &OmitListCommas;
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]

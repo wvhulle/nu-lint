@@ -11,8 +11,8 @@ use crate::{
         builtin::{BuiltinEffect, has_builtin_side_effect},
         external::{ExternEffect, has_external_side_effect},
     },
-    rule::Rule,
-    violation::Violation,
+    rule::{DetectFix, Rule},
+    violation::Detection,
 };
 
 fn collect_stdout_print_spans(block: &Block, context: &LintContext) -> Vec<Span> {
@@ -81,31 +81,30 @@ fn returns_data(block: &Block, context: &LintContext) -> bool {
     }
 }
 
-fn check_function_definition(call: &Call, context: &LintContext) -> Option<Violation> {
-    let (block_id, func_name) = call.extract_function_definition(context)?;
+fn check_function_definition(call: &Call, context: &LintContext) -> Option<Detection> {
+    let def = call.extract_function_definition(context)?;
 
-    if func_name == "main" {
+    if def.name == "main" {
         return None;
     }
 
-    let block = context.working_set.get_block(block_id);
+    let block = context.working_set.get_block(def.body);
     let print_spans = collect_stdout_print_spans(block, context);
 
     if print_spans.is_empty() || !returns_data(block, context) {
         return None;
     }
 
-    let name_span = call.get_positional_arg(0)?.span;
-
     let message = format!(
-        "Function `{func_name}` both prints to stdout and returns data, which pollutes pipelines"
+        "Function `{}` both prints to stdout and returns data, which pollutes pipelines",
+        def.name
     );
 
     let suggestion = "Use `print -e` for stderr, separate into data/logging functions, or \
                       document the intentional mixing"
         .to_string();
 
-    let mut violation = Violation::new(message, name_span)
+    let mut violation = Detection::from_global_span(message, def.name_span)
         .with_primary_label("function with mixed output")
         .with_help(suggestion);
 
@@ -116,23 +115,37 @@ fn check_function_definition(call: &Call, context: &LintContext) -> Option<Viola
     Some(violation)
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    context.collect_rule_violations(|expr, ctx| {
-        if let Expr::Call(call) = &expr.expr
-            && call.extract_function_definition(ctx).is_some()
-        {
-            return check_function_definition(call, ctx).into_iter().collect();
-        }
-        vec![]
-    })
+struct PrintAndReturnData;
+
+impl DetectFix for PrintAndReturnData {
+    type FixInput = ();
+
+    fn id(&self) -> &'static str {
+        "print_and_return_data"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Functions should not both print to stdout and return data. This is confusing."
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        let violations = context.detect(|expr, ctx| {
+            if let Expr::Call(call) = &expr.expr
+                && call.extract_function_definition(ctx).is_some()
+            {
+                return check_function_definition(call, ctx).into_iter().collect();
+            }
+            vec![]
+        });
+        Self::no_fix(violations)
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "print_and_return_data",
-    "Functions should not both print to stdout and return data. This is confusing.",
-    check,
-    LintLevel::Hint,
-);
+pub static RULE: &dyn Rule = &PrintAndReturnData;
 
 #[cfg(test)]
 mod detect_bad;

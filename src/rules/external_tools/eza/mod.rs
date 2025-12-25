@@ -1,13 +1,11 @@
 use std::iter::Peekable;
 
-use nu_protocol::ast::ExternalArgument;
-
 use crate::{
-    LintLevel, Violation,
-    alternatives::{detect_external_commands, external_args_slices},
+    LintLevel,
+    alternatives::{ExternalCmdFixData, detect_external_commands, external_args_slices},
     context::LintContext,
-    rule::Rule,
-    violation::{Fix, Replacement},
+    rule::{DetectFix, Rule},
+    violation::{Detection, Fix, Replacement},
 };
 
 const NOTE: &str = "Use Nu's built-in 'ls' which returns structured data. Nushell's ls provides \
@@ -231,36 +229,46 @@ impl EzaOptions {
     }
 }
 
-fn build_fix(
-    _cmd_text: &str,
-    args: &[ExternalArgument],
-    expr_span: nu_protocol::Span,
-    context: &LintContext,
-) -> Fix {
-    let opts = EzaOptions::parse(external_args_slices(args, context));
-    let (replacement, description) = opts.to_nushell();
+struct UseBuiltinEza;
 
-    Fix {
-        explanation: description.into(),
-        replacements: vec![Replacement {
-            span: expr_span.into(),
-            replacement_text: replacement.into(),
-        }],
+impl DetectFix for UseBuiltinEza {
+    type FixInput = ExternalCmdFixData;
+
+    fn id(&self) -> &'static str {
+        "use_builtin_eza"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Use Nu's built-in 'ls' instead of eza"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/commands/docs/ls.html")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        detect_external_commands(context, "eza", NOTE)
+    }
+
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        let opts = EzaOptions::parse(external_args_slices(&fix_data.args, context));
+        let (replacement, description) = opts.to_nushell();
+
+        Some(Fix {
+            explanation: description.into(),
+            replacements: vec![Replacement {
+                span: fix_data.expr_span.into(),
+                replacement_text: replacement.into(),
+            }],
+        })
     }
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    detect_external_commands(context, "eza", NOTE, Some(build_fix))
-}
-
-pub const RULE: Rule = Rule::new(
-    "use_builtin_eza",
-    "Use Nu's built-in 'ls' instead of eza",
-    check,
-    LintLevel::Hint,
-)
-.with_auto_fix()
-.with_doc_url("https://www.nushell.sh/commands/docs/ls.html");
+pub static RULE: &dyn Rule = &UseBuiltinEza;
 
 #[cfg(test)]
 mod detect_bad;

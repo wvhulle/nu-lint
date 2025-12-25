@@ -1,7 +1,11 @@
 use nu_protocol::ast::Expr;
 
 use crate::{
-    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation,
+    LintLevel,
+    ast::call::CallExt,
+    context::LintContext,
+    rule::{DetectFix, Rule},
+    violation::Detection,
 };
 
 fn strip_quotes(name: &str) -> &str {
@@ -17,8 +21,8 @@ fn to_kebab_case_preserving_spaces(name: &str) -> String {
         .join(" ")
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    context.collect_rule_violations(|expr, ctx| {
+fn check(context: &LintContext) -> Vec<Detection> {
+    context.detect(|expr, ctx| {
         let Expr::Call(call) = &expr.expr else {
             return vec![];
         };
@@ -40,7 +44,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
         }
 
         vec![
-            Violation::new(
+            Detection::from_global_span(
                 format!("Command '{cmd_name}' should follow naming convention"),
                 name_span,
             )
@@ -50,13 +54,33 @@ fn check(context: &LintContext) -> Vec<Violation> {
     })
 }
 
-pub const RULE: Rule = Rule::new(
-    "kebab_case_commands",
-    "Custom commands should use kebab-case naming convention",
-    check,
-    LintLevel::Hint,
-)
-.with_doc_url("https://www.nushell.sh/book/style_guide.html#commands");
+struct KebabCaseCommands;
+
+impl DetectFix for KebabCaseCommands {
+    type FixInput = ();
+
+    fn id(&self) -> &'static str {
+        "kebab_case_commands"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Custom commands should use kebab-case naming convention"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/book/style_guide.html#commands")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        Self::no_fix(check(context))
+    }
+}
+
+pub static RULE: &dyn Rule = &KebabCaseCommands;
 
 #[cfg(test)]
 mod detect_bad;

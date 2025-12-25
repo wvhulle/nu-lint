@@ -1,11 +1,9 @@
-use nu_protocol::ast::ExternalArgument;
-
 use crate::{
-    LintLevel, Violation,
-    alternatives::{detect_external_commands, external_args_slices},
+    LintLevel,
+    alternatives::{ExternalCmdFixData, detect_external_commands, external_args_slices},
     context::LintContext,
-    rule::Rule,
-    violation::{Fix, Replacement},
+    rule::{DetectFix, Rule},
+    violation::{Detection, Fix, Replacement},
 };
 
 const NOTE: &str = "Use 'http get', 'http post', etc. for HTTP requests. Nushell's http commands \
@@ -198,36 +196,46 @@ fn parse_header(header: &str) -> Option<(String, String)> {
         .map(|(key, value)| (key.trim().to_string(), value.trim().to_string()))
 }
 
-fn build_fix(
-    _cmd_text: &str,
-    args: &[ExternalArgument],
-    expr_span: nu_protocol::Span,
-    context: &LintContext,
-) -> Fix {
-    let opts = HttpOptions::parse_curl(external_args_slices(args, context));
-    let (replacement, description) = opts.to_nushell();
+struct UseBuiltinCurl;
 
-    Fix {
-        explanation: description.into(),
-        replacements: vec![Replacement {
-            span: expr_span.into(),
-            replacement_text: replacement.into(),
-        }],
+impl DetectFix for UseBuiltinCurl {
+    type FixInput = ExternalCmdFixData;
+
+    fn id(&self) -> &'static str {
+        "use_builtin_curl"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Use Nushell's http commands instead of curl for better data handling"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/commands/docs/http_get.html")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        detect_external_commands(context, "curl", NOTE)
+    }
+
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        let opts = HttpOptions::parse_curl(external_args_slices(&fix_data.args, context));
+        let (replacement, description) = opts.to_nushell();
+
+        Some(Fix {
+            explanation: description.into(),
+            replacements: vec![Replacement {
+                span: fix_data.expr_span.into(),
+                replacement_text: replacement.into(),
+            }],
+        })
     }
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    detect_external_commands(context, "curl", NOTE, Some(build_fix))
-}
-
-pub const RULE: Rule = Rule::new(
-    "use_builtin_curl",
-    "Use Nushell's http commands instead of curl for better data handling",
-    check,
-    LintLevel::Hint,
-)
-.with_auto_fix()
-.with_doc_url("https://www.nushell.sh/commands/docs/http_get.html");
+pub static RULE: &dyn Rule = &UseBuiltinCurl;
 
 #[cfg(test)]
 mod detect_bad;

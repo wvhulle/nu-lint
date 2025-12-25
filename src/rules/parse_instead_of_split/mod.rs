@@ -7,9 +7,22 @@ use crate::{
     Fix, LintLevel, Replacement,
     ast::{block::BlockExt, call::CallExt, pipeline::PipelineExt, span::SpanExt},
     context::LintContext,
-    rule::Rule,
-    violation::Violation,
+    rule::{DetectFix, Rule},
+    violation::Detection,
 };
+
+/// Some patterns can be auto-fixed, others cannot
+pub enum FixData {
+    /// Split row | get/skip pattern with known delimiter and index - can be
+    /// fixed
+    SplitGetWithDelimiter {
+        span: Span,
+        delimiter: String,
+        index: usize,
+    },
+    /// Pattern without enough info for auto-fix
+    NoFix,
+}
 
 const REGEX_SPECIAL_CHARS: &[char] = &[
     '\\', '.', '+', '*', '?', '(', ')', '[', ']', '{', '}', '|', '^', '$',
@@ -115,7 +128,7 @@ fn contains_split_in_expression(expr: &Expression, ctx: &LintContext) -> bool {
     }
 }
 
-fn check_each_with_split(expr: &Expression, ctx: &LintContext) -> Option<Violation> {
+fn check_each_with_split(expr: &Expression, ctx: &LintContext) -> Option<(Detection, FixData)> {
     let Expr::Call(call) = &expr.expr else {
         return None;
     };
@@ -129,15 +142,18 @@ fn check_each_with_split(expr: &Expression, ctx: &LintContext) -> Option<Violati
         .any(|arg| matches!(arg, Argument::Positional(e) if contains_split_in_expression(e, ctx)));
 
     has_split.then(|| {
-        Violation::new(
-            "Manual splitting with 'each' and 'split row' - consider using 'parse'",
-            call.span(),
-        )
-        .with_primary_label("manual split pattern")
-        .with_help(
-            "Use 'parse \"{field0} {field1}\"' for structured text extraction instead of 'each' \
-             with 'split row'. For complex delimiters, use 'parse --regex' with named capture \
-             groups like '(?P<field0>.*)delimiter(?P<field1>.*)'",
+        (
+            Detection::from_global_span(
+                "Manual splitting with 'each' and 'split row' - consider using 'parse'",
+                call.span(),
+            )
+            .with_primary_label("manual split pattern")
+            .with_help(
+                "Use 'parse \"{field0} {field1}\"' for structured text extraction instead of \
+                 'each' with 'split row'. For complex delimiters, use 'parse --regex' with named \
+                 capture groups like '(?P<field0>.*)delimiter(?P<field1>.*)'",
+            ),
+            FixData::NoFix,
         )
     })
 }
@@ -151,7 +167,10 @@ fn extract_index_from_call(call: &Call, context: &LintContext) -> Option<usize> 
         .and_then(|arg| arg.span.source_code(context).parse().ok())
 }
 
-fn check_pipeline_for_split_get(pipeline: &Pipeline, context: &LintContext) -> Option<Violation> {
+fn check_pipeline_for_split_get(
+    pipeline: &Pipeline,
+    context: &LintContext,
+) -> Option<(Detection, FixData)> {
     if pipeline.elements.len() < 2 {
         return None;
     }
@@ -175,30 +194,42 @@ fn check_pipeline_for_split_get(pipeline: &Pipeline, context: &LintContext) -> O
         let span = Span::new(current.expr.span.start, next.expr.span.end);
 
         let delimiter = extract_delimiter_from_split_call(split_call, context);
-        let violation = Violation::new(
-            "Manual string splitting with indexed access - consider using 'parse'",
-            span,
-        )
-        .with_primary_label("split + index pattern");
 
-        Some(if let Some(delim) = delimiter {
-            let replacement = generate_parse_replacement(&delim, &[index]);
-            violation
+        delimiter.map_or_else(
+            || {
+                let violation = Detection::from_global_span(
+                    "Manual string splitting with indexed access - consider using 'parse'",
+                    span,
+                )
+                .with_primary_label("split + index pattern")
+                .with_help(
+                    "Use 'parse \"{field0} {field1}\"' for structured text extraction. For \
+                     complex delimiters containing regex special characters, use 'parse --regex' \
+                     with named capture groups like '(?P<field0>.*)delimiter(?P<field1>.*)'",
+                );
+                Some((violation, FixData::NoFix))
+            },
+            |delim| {
+                let replacement = generate_parse_replacement(&delim, &[index]);
+                let violation = Detection::from_global_span(
+                    "Manual string splitting with indexed access - consider using 'parse'",
+                    span,
+                )
+                .with_primary_label("split + index pattern")
                 .with_help(format!(
                     "Use '{replacement}' for structured text extraction. Access fields by name \
                      (e.g., $result.field{index}) instead of index."
+                ));
+                Some((
+                    violation,
+                    FixData::SplitGetWithDelimiter {
+                        span,
+                        delimiter: delim,
+                        index,
+                    },
                 ))
-                .with_fix(Fix::with_explanation(
-                    format!("Replace 'split row | get/skip' with '{replacement}'"),
-                    vec![Replacement::new(span, replacement)],
-                ))
-        } else {
-            violation.with_help(
-                "Use 'parse \"{field0} {field1}\"' for structured text extraction. For complex \
-                 delimiters containing regex special characters, use 'parse --regex' with named \
-                 capture groups like '(?P<field0>.*)delimiter(?P<field1>.*)'",
-            )
-        })
+            },
+        )
     })
 }
 
@@ -257,19 +288,22 @@ fn is_var_used_in_indexed_access(var_id: VarId, call: &Call, context: &LintConte
     })
 }
 
-fn create_indexed_access_violation(var_name: &str, decl_span: Span) -> Violation {
-    Violation::new(
-        format!(
-            "Variable '{var_name}' from split row with indexed access - consider using 'parse'"
+fn create_indexed_access_violation(var_name: &str, decl_span: Span) -> (Detection, FixData) {
+    (
+        Detection::from_global_span(
+            format!(
+                "Variable '{var_name}' from split row with indexed access - consider using 'parse'"
+            ),
+            decl_span,
+        )
+        .with_primary_label("split result with indexed access")
+        .with_help(
+            "Use 'parse' command to extract named fields instead of indexed access. For simple \
+             delimiters like space or colon, use 'parse \"{field0} {field1}\"'. For complex \
+             delimiters or variable patterns, use 'parse --regex \
+             \"(?P<field0>.*)delimiter(?P<field1>.*)\"'",
         ),
-        decl_span,
-    )
-    .with_primary_label("split result with indexed access")
-    .with_help(
-        "Use 'parse' command to extract named fields instead of indexed access. For simple \
-         delimiters like space or colon, use 'parse \"{field0} {field1}\"'. For complex \
-         delimiters or variable patterns, use 'parse --regex \
-         \"(?P<field0>.*)delimiter(?P<field1>.*)\"'",
+        FixData::NoFix,
     )
 }
 
@@ -279,7 +313,7 @@ fn check_call_arguments_for_violation(
     var_name: &str,
     decl_span: Span,
     context: &LintContext,
-) -> Option<Violation> {
+) -> Option<(Detection, FixData)> {
     call.arguments.iter().find_map(|arg| {
         let (Argument::Positional(arg_expr) | Argument::Unknown(arg_expr)) = arg else {
             return None;
@@ -301,7 +335,7 @@ fn check_element_for_indexed_access(
     decl_span: Span,
     pipeline: &Pipeline,
     context: &LintContext,
-) -> Option<Violation> {
+) -> Option<(Detection, FixData)> {
     match &element.expr.expr {
         Expr::FullCellPath(cp) => {
             if let Expr::Subexpression(block_id) = &cp.head.expr {
@@ -341,7 +375,7 @@ fn check_for_indexed_variable_access(
     decl_span: Span,
     block: &Block,
     context: &LintContext,
-) -> Option<Violation> {
+) -> Option<(Detection, FixData)> {
     log::debug!("Checking for indexed access of variable: {var_name}");
 
     block.pipelines.iter().find_map(|pipeline| {
@@ -361,7 +395,9 @@ fn check_for_indexed_variable_access(
     })
 }
 
-fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<Violation>) {
+type ViolationPair = (Detection, FixData);
+
+fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<ViolationPair>) {
     // Check for inline split row | get/skip patterns
     for pipeline in &block.pipelines {
         if let Some(violation) = check_pipeline_for_split_get(pipeline, context) {
@@ -404,37 +440,69 @@ fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<Violat
     }
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    let mut violations = Vec::new();
+struct ParseInsteadOfSplit;
 
-    check_block(context.ast, context, &mut violations);
+impl DetectFix for ParseInsteadOfSplit {
+    type FixInput = FixData;
 
-    violations.extend(context.collect_rule_violations(|expr, ctx| {
-        let mut expr_violations = Vec::new();
+    fn id(&self) -> &'static str {
+        "parse_instead_of_split"
+    }
 
-        // Check for 'each' with 'split row' pattern
-        expr_violations.extend(check_each_with_split(expr, ctx));
+    fn explanation(&self) -> &'static str {
+        "Prefer 'parse' command over manual string splitting patterns"
+    }
 
-        // Check nested blocks/closures for split row | get patterns
-        if let Expr::Closure(block_id) | Expr::Block(block_id) = &expr.expr {
-            let block = ctx.working_set.get_block(*block_id);
-            check_block(block, ctx, &mut expr_violations);
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/commands/docs/parse.html")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        let mut violations = Vec::new();
+
+        check_block(context.ast, context, &mut violations);
+
+        violations.extend(context.detect_with_fix_data(|expr, ctx| {
+            let mut expr_violations = Vec::new();
+
+            // Check for 'each' with 'split row' pattern
+            expr_violations.extend(check_each_with_split(expr, ctx));
+
+            // Check nested blocks/closures for split row | get patterns
+            if let Expr::Closure(block_id) | Expr::Block(block_id) = &expr.expr {
+                let block = ctx.working_set.get_block(*block_id);
+                check_block(block, ctx, &mut expr_violations);
+            }
+
+            expr_violations
+        }));
+
+        violations
+    }
+
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        match fix_data {
+            FixData::SplitGetWithDelimiter {
+                span,
+                delimiter,
+                index,
+            } => {
+                let replacement = generate_parse_replacement(delimiter, &[*index]);
+                Some(Fix::with_explanation(
+                    format!("Replace 'split row | get/skip' with '{replacement}'"),
+                    vec![Replacement::new(*span, replacement)],
+                ))
+            }
+            FixData::NoFix => None,
         }
-
-        expr_violations
-    }));
-
-    violations
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "parse_instead_of_split",
-    "Prefer 'parse' command over manual string splitting patterns",
-    check,
-    LintLevel::Hint,
-)
-.with_auto_fix()
-.with_doc_url("https://www.nushell.sh/commands/docs/parse.html");
+pub static RULE: &dyn Rule = &ParseInsteadOfSplit;
 
 #[cfg(test)]
 mod detect_bad;

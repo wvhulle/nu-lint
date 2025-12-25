@@ -4,8 +4,8 @@ use crate::{
     LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
-    rule::Rule,
-    violation::Violation,
+    rule::{DetectFix, Rule},
+    violation::Detection,
 };
 
 fn extract_optional_string_param(call: &Call, context: &LintContext) -> Option<String> {
@@ -82,14 +82,14 @@ fn extract_branch_names(call: &Call) -> impl Iterator<Item = String> + '_ {
         })
 }
 
-fn build_violation(param_name: &str, match_call: &Call) -> Violation {
+fn build_violation(param_name: &str, match_call: &Call) -> Detection {
     let subcommand_examples = extract_branch_names(match_call)
         .take(3)
         .map(|name| format!("def \"main {name}\" [] {{ ... }}"))
         .collect::<Vec<_>>()
         .join("\n");
 
-    Violation::new(
+    Detection::from_global_span(
         format!(
             "Main function uses match dispatch on '{param_name}' - use native subcommands instead"
         ),
@@ -103,39 +103,57 @@ fn build_violation(param_name: &str, match_call: &Call) -> Violation {
     ))
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    context.collect_rule_violations(|expr, ctx| {
-        let Expr::Call(def_call) = &expr.expr else {
-            return vec![];
-        };
+struct DispatchWithSubcommands;
 
-        let is_def = matches!(def_call.get_call_name(ctx).as_str(), "def" | "export def");
-        let is_main = def_call
-            .extract_function_definition(ctx)
-            .is_some_and(|(_, name)| name == "main");
+impl DetectFix for DispatchWithSubcommands {
+    type FixInput = ();
 
-        if !is_def || !is_main {
-            return vec![];
-        }
+    fn id(&self) -> &'static str {
+        "dispatch_with_subcommands"
+    }
 
-        let Some((block_id, _)) = def_call.extract_function_definition(ctx) else {
-            return vec![];
-        };
+    fn explanation(&self) -> &'static str {
+        "Use native 'def \"main subcommand\"' instead of match-based command dispatch in main"
+    }
 
-        extract_optional_string_param(def_call, ctx)
-            .and_then(|param| find_match_dispatch(block_id, &param, ctx).map(|call| (param, call)))
-            .map(|(param, call)| vec![build_violation(&param, call)])
-            .unwrap_or_default()
-    })
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/book/custom_commands.html#subcommands")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        Self::no_fix(context.detect(|expr, ctx| {
+            let Expr::Call(def_call) = &expr.expr else {
+                return vec![];
+            };
+
+            let is_def = matches!(def_call.get_call_name(ctx).as_str(), "def" | "export def");
+            let is_main = def_call
+                .extract_function_definition(ctx)
+                .is_some_and(|def| def.name == "main");
+
+            if !is_def || !is_main {
+                return vec![];
+            }
+
+            let Some(def) = def_call.extract_function_definition(ctx) else {
+                return vec![];
+            };
+
+            extract_optional_string_param(def_call, ctx)
+                .and_then(|param| {
+                    find_match_dispatch(def.body, &param, ctx).map(|call| (param, call))
+                })
+                .map(|(param, call)| vec![build_violation(&param, call)])
+                .unwrap_or_default()
+        }))
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "dispatch_with_subcommands",
-    "Use native 'def \"main subcommand\"' instead of match-based command dispatch in main",
-    check,
-    LintLevel::Warning,
-)
-.with_doc_url("https://www.nushell.sh/book/custom_commands.html#subcommands");
+pub static RULE: &dyn Rule = &DispatchWithSubcommands;
 
 #[cfg(test)]
 mod detect_bad;

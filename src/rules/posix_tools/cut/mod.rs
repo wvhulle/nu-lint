@@ -1,39 +1,47 @@
-use nu_protocol::ast::ExternalArgument;
-
 use crate::{
-    LintLevel, Violation,
-    alternatives::detect_external_commands,
+    LintLevel,
+    alternatives::{ExternalCmdFixData, detect_external_commands},
     context::LintContext,
-    rule::Rule,
-    violation::{Fix, Replacement},
+    rule::{DetectFix, Rule},
+    violation::{Detection, Fix, Replacement},
 };
 
 const NOTE: &str = "Use 'select' to choose specific columns.";
 
-fn build_fix(
-    _cmd_text: &str,
-    _args: &[ExternalArgument],
-    expr_span: nu_protocol::Span,
-    _context: &LintContext,
-) -> Fix {
-    Fix::with_explanation(
-        "Use 'select' for columns",
-        vec![Replacement::new(expr_span, "select".to_string())],
-    )
+struct UseBuiltinCut;
+
+impl DetectFix for UseBuiltinCut {
+    type FixInput = ExternalCmdFixData;
+
+    fn id(&self) -> &'static str {
+        "use_builtin_cut"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Use 'select' instead of external cut"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/commands/docs/select.html")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        detect_external_commands(context, "cut", NOTE)
+    }
+
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        Some(Fix::with_explanation(
+            "Use 'select' for columns",
+            vec![Replacement::new(fix_data.expr_span, "select".to_string())],
+        ))
+    }
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    detect_external_commands(context, "cut", NOTE, Some(build_fix))
-}
-
-pub const RULE: Rule = Rule::new(
-    "use_builtin_cut",
-    "Use 'select' instead of external cut",
-    check,
-    LintLevel::Warning,
-)
-.with_auto_fix()
-.with_doc_url("https://www.nushell.sh/commands/docs/select.html");
+pub static RULE: &dyn Rule = &UseBuiltinCut;
 
 #[cfg(test)]
 mod tests {

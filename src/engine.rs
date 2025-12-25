@@ -230,7 +230,7 @@ impl LintEngine {
         let context =
             LintContext::new(source, &block, self.engine_state, &working_set, file_offset);
 
-        let mut violations = self.collect_violations(&context);
+        let mut violations = self.detect_with_fix_data(&context);
 
         // Normalize all spans in violations to be file-relative
         for violation in &mut violations {
@@ -241,17 +241,17 @@ impl LintEngine {
     }
 
     /// Collect violations from all enabled rules
-    fn collect_violations(&self, context: &LintContext) -> Vec<Violation> {
+    fn detect_with_fix_data(&self, context: &LintContext) -> Vec<Violation> {
         ALL_RULES
             .iter()
             .filter_map(|rule| {
-                let lint_level = self.config.get_lint_level(rule)?;
+                let lint_level = self.config.get_lint_level(*rule)?;
 
-                let mut violations = (rule.check)(context);
+                let mut violations = rule.check(context);
                 for violation in &mut violations {
-                    violation.set_rule_id(rule.id);
+                    violation.set_rule_id(rule.id());
                     violation.set_lint_level(lint_level);
-                    violation.set_doc_url(rule.doc_url);
+                    violation.set_doc_url(rule.doc_url());
                 }
 
                 (!violations.is_empty()).then_some(violations)

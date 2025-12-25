@@ -1,5 +1,5 @@
 use nu_protocol::{
-    Type, VarId,
+    BlockId, Span, Type, VarId,
     ast::{Call, Expr},
 };
 
@@ -10,9 +10,16 @@ use crate::{
         span::SpanExt, syntax_shape::SyntaxShapeExt,
     },
     context::LintContext,
-    rule::Rule,
-    violation::{Fix, Replacement, Violation},
+    rule::{DetectFix, Rule},
+    violation::{Detection, Fix, Replacement},
 };
+
+/// Semantic fix data: stores signature span and body block ID for regenerating
+/// the fix
+pub struct FixData {
+    signature_span: Span,
+    body_block_id: BlockId,
+}
 
 fn infer_param_type(
     param_var_id: VarId,
@@ -109,12 +116,12 @@ fn generate_typed_signature(
     format!("[{params}]")
 }
 
-fn check_signature(
+fn detect_signature(
     sig: &nu_protocol::Signature,
-    signature_span: nu_protocol::Span,
-    body_block_id: nu_protocol::BlockId,
+    signature_span: Span,
+    body_block_id: BlockId,
     ctx: &LintContext,
-) -> Vec<Violation> {
+) -> Vec<(Detection, FixData)> {
     log::debug!("Checking signature for missing type annotations: {sig:?}");
     let block = ctx.working_set.get_block(body_block_id);
 
@@ -137,34 +144,32 @@ fn check_signature(
         return vec![];
     }
 
-    let new_sig = generate_typed_signature(sig, body_block_id, ctx);
-    let fix = Fix::with_explanation(
-        "Add type annotations to parameters",
-        vec![Replacement::new(signature_span, new_sig)],
-    );
-
     params_needing_types
         .into_iter()
         .map(|(param, usage_span)| {
             let param_span = signature_span.find_substring_span(&param.name, ctx);
-            let mut violation = Violation::new(
+            let mut violation = Detection::from_global_span(
                 format!("Parameter `{}` is missing type annotation", param.name),
                 param_span,
             )
             .with_primary_label("add type annotation")
-            .with_help("Add type annotation like 'param: string' or 'param: int'")
-            .with_fix(fix.clone());
+            .with_help("Add type annotation like 'param: string' or 'param: int'");
 
             if let Some(usage_span) = usage_span {
                 violation = violation.with_extra_label("used here", usage_span);
             }
 
-            violation
+            let fix_data = FixData {
+                signature_span,
+                body_block_id,
+            };
+
+            (violation, fix_data)
         })
         .collect()
 }
 
-fn check_def_call(call: &Call, ctx: &LintContext) -> Vec<Violation> {
+fn detect_def_call(call: &Call, ctx: &LintContext) -> Vec<(Detection, FixData)> {
     let decl = ctx.working_set.get_decl(call.decl_id);
 
     (decl.name() == "def" || decl.name() == "export def")
@@ -176,7 +181,7 @@ fn check_def_call(call: &Call, ctx: &LintContext) -> Vec<Violation> {
                         .extract_block_id()
                         .and_then(|body_block_id| match &sig_arg.expr {
                             Expr::Signature(sig) => {
-                                Some(check_signature(sig, sig_arg.span, body_block_id, ctx))
+                                Some(detect_signature(sig, sig_arg.span, body_block_id, ctx))
                             }
                             _ => None,
                         })
@@ -186,21 +191,45 @@ fn check_def_call(call: &Call, ctx: &LintContext) -> Vec<Violation> {
         .unwrap_or_default()
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    context.collect_rule_violations(|expr, ctx| match &expr.expr {
-        Expr::Call(call) => check_def_call(call, ctx),
-        _ => vec![],
-    })
+struct MissingTypeAnnotation;
+
+impl DetectFix for MissingTypeAnnotation {
+    type FixInput = FixData;
+
+    fn id(&self) -> &'static str {
+        "missing_type_annotation"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Parameters should have type annotations"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/book/custom_commands.html#parameter-types")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        context.detect_with_fix_data(|expr, ctx| match &expr.expr {
+            Expr::Call(call) => detect_def_call(call, ctx),
+            _ => vec![],
+        })
+    }
+
+    fn fix(&self, ctx: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        let block = ctx.working_set.get_block(fix_data.body_block_id);
+        let new_sig = generate_typed_signature(&block.signature, fix_data.body_block_id, ctx);
+        Some(Fix::with_explanation(
+            "Add type annotations to parameters",
+            vec![Replacement::new(fix_data.signature_span, new_sig)],
+        ))
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "missing_type_annotation",
-    "Parameters should have type annotations",
-    check,
-    LintLevel::Warning,
-)
-.with_auto_fix()
-.with_doc_url("https://www.nushell.sh/book/custom_commands.html#parameter-types");
+pub static RULE: &dyn Rule = &MissingTypeAnnotation;
 
 #[cfg(test)]
 mod detect_bad;

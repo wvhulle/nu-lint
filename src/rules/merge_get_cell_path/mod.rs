@@ -1,12 +1,22 @@
-use nu_protocol::ast::{Expr, Expression, PathMember, Pipeline};
+use nu_protocol::{
+    Span,
+    ast::{Expr, Expression, PathMember, Pipeline},
+};
 
 use crate::{
     LintLevel,
     ast::call::CallExt,
     context::LintContext,
-    rule::Rule,
-    violation::{Fix, Replacement, Violation},
+    rule::{DetectFix, Rule},
+    violation::{Detection, Fix, Replacement},
 };
+
+/// Semantic fix data: stores the spans and cell path members for generating fix
+pub struct FixData {
+    full_span: Span,
+    /// Combined cell path members from all get commands
+    combined_members: Vec<PathMember>,
+}
 
 fn extract_cell_path_members(expr: &Expression) -> Option<Vec<PathMember>> {
     if let Expr::CellPath(cell_path) = &expr.expr {
@@ -20,22 +30,30 @@ fn is_get_call(expr: &Expression, context: &LintContext) -> bool {
     matches!(&expr.expr, Expr::Call(call) if call.is_call_to_command("get", context))
 }
 
-fn combine_cell_path_members(members: &[Vec<PathMember>]) -> Vec<PathMember> {
-    members.iter().flatten().cloned().collect()
+fn combine_cell_path_members(member_groups: &[Vec<PathMember>]) -> Vec<PathMember> {
+    member_groups.iter().flatten().cloned().collect()
+}
+
+fn needs_quotes(string_value: &str) -> bool {
+    string_value.contains(' ') || string_value.parse::<i64>().is_ok()
+}
+
+const fn format_optional_prefix(optional: bool) -> &'static str {
+    if optional { "?." } else { "" }
 }
 
 fn format_path_member(member: &PathMember) -> String {
     match member {
         PathMember::String { val, optional, .. } => {
-            let prefix = if *optional { "?." } else { "" };
-            if val.contains(' ') || val.parse::<i64>().is_ok() {
+            let prefix = format_optional_prefix(*optional);
+            if needs_quotes(val) {
                 format!("{prefix}\"{val}\"")
             } else {
                 format!("{prefix}{val}")
             }
         }
         PathMember::Int { val, optional, .. } => {
-            let prefix = if *optional { "?." } else { "" };
+            let prefix = format_optional_prefix(*optional);
             format!("{prefix}{val}")
         }
     }
@@ -59,31 +77,35 @@ const fn get_command_label(idx: usize, start_idx: usize, end_idx: usize) -> &'st
     }
 }
 
+const MIN_CONSECUTIVE_GETS: usize = 2;
+
 fn find_consecutive_gets(pipeline: &Pipeline, context: &LintContext) -> Vec<(usize, usize)> {
     let mut ranges = Vec::new();
-    let mut start_idx = None;
+    let mut current_range_start = None;
 
     for (idx, element) in pipeline.elements.iter().enumerate() {
         if is_get_call(&element.expr, context) {
-            start_idx.get_or_insert(idx);
-        } else if let Some(start) = start_idx.take()
-            && idx - start >= 2
-        {
-            ranges.push((start, idx - 1));
+            current_range_start.get_or_insert(idx);
+        } else if let Some(start) = current_range_start.take() {
+            let range_length = idx - start;
+            if range_length >= MIN_CONSECUTIVE_GETS {
+                ranges.push((start, idx - 1));
+            }
         }
     }
 
-    if let Some(start) = start_idx {
-        let end = pipeline.elements.len() - 1;
-        if end > start {
-            ranges.push((start, end));
+    if let Some(start) = current_range_start {
+        let last_idx = pipeline.elements.len() - 1;
+        let range_length = last_idx - start + 1;
+        if range_length >= MIN_CONSECUTIVE_GETS {
+            ranges.push((start, last_idx));
         }
     }
 
     ranges
 }
 
-fn collect_cell_path_members(
+fn collect_cell_path_members_from_pipeline(
     pipeline: &Pipeline,
     start_idx: usize,
     end_idx: usize,
@@ -100,68 +122,88 @@ fn collect_cell_path_members(
         .collect()
 }
 
-fn generate_fix(pipeline: &Pipeline, start_idx: usize, end_idx: usize) -> Option<Fix> {
-    let all_members = collect_cell_path_members(pipeline, start_idx, end_idx)?;
-    let combined_members = combine_cell_path_members(&all_members);
-    let combined_path = format_cell_path(&combined_members);
-
+fn calculate_full_span(pipeline: &Pipeline, start_idx: usize, end_idx: usize) -> Span {
     let start_span = pipeline.elements[start_idx].expr.span;
     let end_span = pipeline.elements[end_idx].expr.span;
-    let full_span = nu_protocol::Span::new(start_span.start, end_span.end);
-
-    let replacement_text = format!("get {combined_path}");
-
-    Some(Fix::with_explanation(
-        format!("Combine into single cell path: {replacement_text}"),
-        vec![Replacement::new(full_span, replacement_text)],
-    ))
+    Span::new(start_span.start, end_span.end)
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    let mut violations = Vec::new();
+fn create_violation_for_range(pipeline: &Pipeline, start_idx: usize, end_idx: usize) -> Detection {
+    let full_span = calculate_full_span(pipeline, start_idx, end_idx);
+    let num_gets = end_idx - start_idx + 1;
+    let message = format!("Use combined cell path instead of {num_gets} chained 'get' commands");
 
-    for pipeline in &context.ast.pipelines {
-        let consecutive_ranges = find_consecutive_gets(pipeline, context);
+    let mut violation = Detection::from_global_span(message, full_span)
+        .with_help("Combine into single 'get' with dot-separated cell path");
 
-        for (start_idx, end_idx) in consecutive_ranges {
-            let start_span = pipeline.elements[start_idx].expr.span;
-            let end_span = pipeline.elements[end_idx].expr.span;
-            let full_span = nu_protocol::Span::new(start_span.start, end_span.end);
-
-            let num_gets = end_idx - start_idx + 1;
-            let message =
-                format!("Use combined cell path instead of {num_gets} chained 'get' commands");
-
-            let fix = generate_fix(pipeline, start_idx, end_idx);
-
-            let mut violation = Violation::new(message, full_span)
-                .with_help("Combine into single 'get' with dot-separated cell path");
-
-            for idx in start_idx..=end_idx {
-                let span = pipeline.elements[idx].expr.span;
-                let label = get_command_label(idx, start_idx, end_idx);
-                violation = violation.with_extra_label(label, span);
-            }
-
-            if let Some(f) = fix {
-                violation = violation.with_fix(f);
-            }
-
-            violations.push(violation);
-        }
+    for idx in start_idx..=end_idx {
+        let span = pipeline.elements[idx].expr.span;
+        let label = get_command_label(idx, start_idx, end_idx);
+        violation = violation.with_extra_label(label, span);
     }
 
-    violations
+    violation
 }
 
-pub const RULE: Rule = Rule::new(
-    "merge_get_cell_path",
-    "Prefer combined cell paths over chained 'get' commands",
-    check,
-    LintLevel::Hint,
-)
-.with_auto_fix()
-.with_doc_url("https://www.nushell.sh/book/navigating_structured_data.html");
+struct MergeGetCellPath;
+
+impl DetectFix for MergeGetCellPath {
+    type FixInput = FixData;
+
+    fn id(&self) -> &'static str {
+        "merge_get_cell_path"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Prefer combined cell paths over chained 'get' commands"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/book/navigating_structured_data.html")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        context
+            .ast
+            .pipelines
+            .iter()
+            .flat_map(|pipeline| {
+                find_consecutive_gets(pipeline, context)
+                    .into_iter()
+                    .filter_map(|(start_idx, end_idx)| {
+                        let violation = create_violation_for_range(pipeline, start_idx, end_idx);
+
+                        let member_groups =
+                            collect_cell_path_members_from_pipeline(pipeline, start_idx, end_idx)?;
+                        let combined_members = combine_cell_path_members(&member_groups);
+
+                        let fix_data = FixData {
+                            full_span: calculate_full_span(pipeline, start_idx, end_idx),
+                            combined_members,
+                        };
+
+                        Some((violation, fix_data))
+                    })
+            })
+            .collect()
+    }
+
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        let combined_path = format_cell_path(&fix_data.combined_members);
+        let replacement_text = format!("get {combined_path}");
+
+        Some(Fix::with_explanation(
+            format!("Combine into single cell path: {replacement_text}"),
+            vec![Replacement::new(fix_data.full_span, replacement_text)],
+        ))
+    }
+}
+
+pub static RULE: &dyn Rule = &MergeGetCellPath;
 
 #[cfg(test)]
 mod detect_bad;

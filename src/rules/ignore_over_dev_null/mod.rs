@@ -4,9 +4,17 @@ use nu_protocol::ast::{
 };
 
 use crate::{
-    Fix, LintLevel, Replacement, ast::span::SpanExt, context::LintContext, rule::Rule,
-    violation::Violation,
+    Fix, LintLevel, Replacement,
+    ast::span::SpanExt,
+    context::LintContext,
+    rule::{DetectFix, Rule},
+    violation::Detection,
 };
+
+struct IgnoreFixData {
+    replace_span: nu_protocol::Span,
+    replacement_text: String,
+}
 
 enum DevNullRedirect {
     StderrOnly,
@@ -53,7 +61,10 @@ const fn is_external_call(expr: &Expression) -> bool {
     matches!(&expr.expr, Expr::ExternalCall(..))
 }
 
-fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violation> {
+fn check_pipeline(
+    pipeline: &Pipeline,
+    context: &LintContext,
+) -> Option<(Detection, IgnoreFixData)> {
     let first_element = &pipeline.elements[0];
 
     if !is_external_call(&first_element.expr) {
@@ -115,19 +126,22 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
          replace_text='{replacement_text}'"
     );
 
-    let fix = Fix::with_explanation(
-        "Use pipe to ignore",
-        vec![Replacement::new(replace_span, replacement_text)],
-    );
+    let violation =
+        Detection::from_global_span(message, violation_span).with_primary_label("redirect");
 
-    Some(
-        Violation::new(message, violation_span)
-            .with_primary_label("redirect")
-            .with_fix(fix),
-    )
+    let fix_data = IgnoreFixData {
+        replace_span,
+        replacement_text,
+    };
+
+    Some((violation, fix_data))
 }
 
-fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<Violation>) {
+fn check_block(
+    block: &Block,
+    context: &LintContext,
+    violations: &mut Vec<(Detection, IgnoreFixData)>,
+) {
     for pipeline in &block.pipelines {
         if let Some(violation) = check_pipeline(pipeline, context) {
             violations.push(violation);
@@ -156,20 +170,45 @@ fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<Violat
     }
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    let mut violations = Vec::new();
-    check_block(context.ast, context, &mut violations);
-    violations
+struct IgnoreOverDevNull;
+
+impl DetectFix for IgnoreOverDevNull {
+    type FixInput = IgnoreFixData;
+
+    fn id(&self) -> &'static str {
+        "ignore_over_dev_null"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Use '| ignore' instead of redirecting to /dev/null"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/commands/docs/ignore.html")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        let mut violations = Vec::new();
+        check_block(context.ast, context, &mut violations);
+        violations
+    }
+
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        Some(Fix::with_explanation(
+            "Use pipe to ignore",
+            vec![Replacement::new(
+                fix_data.replace_span,
+                fix_data.replacement_text.clone(),
+            )],
+        ))
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "ignore_over_dev_null",
-    "Use '| ignore' instead of redirecting to /dev/null",
-    check,
-    LintLevel::Warning,
-)
-.with_auto_fix()
-.with_doc_url("https://www.nushell.sh/commands/docs/ignore.html");
+pub static RULE: &dyn Rule = &IgnoreOverDevNull;
 
 #[cfg(test)]
 mod detect_bad;

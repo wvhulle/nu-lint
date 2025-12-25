@@ -4,8 +4,8 @@ use crate::{
     LintLevel,
     ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
     context::LintContext,
-    rule::Rule,
-    violation::Violation,
+    rule::{DetectFix, Rule},
+    violation::Detection,
 };
 
 fn extract_int_value(expr: &Expression, context: &LintContext) -> Option<i64> {
@@ -154,61 +154,79 @@ fn extract_counter_from_mut(
         .flatten()
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    context
-        .ast
-        .pipelines
-        .iter()
-        .flat_map(|pipeline| &pipeline.elements)
-        .filter_map(|element| extract_counter_from_mut(&element.expr, context))
-        .flat_map(|(counter_name, counter_span)| {
-            context.collect_rule_violations(|expr, ctx| {
-                let Expr::Call(call) = &expr.expr else {
-                    return vec![];
-                };
+struct LoopCounter;
 
-                if call.get_call_name(ctx) != "loop" {
-                    return vec![];
-                }
+impl DetectFix for LoopCounter {
+    type FixInput = ();
 
-                let Some(body_expr) = call.get_positional_arg(0) else {
-                    return vec![];
-                };
+    fn id(&self) -> &'static str {
+        "loop_counter"
+    }
 
-                let Some(block_id) = body_expr.extract_block_id() else {
-                    return vec![];
-                };
+    fn explanation(&self) -> &'static str {
+        "Replace infinite loop with counter and break with range iteration"
+    }
 
-                if !has_counter_pattern_in_loop_block(block_id, &counter_name, ctx) {
-                    return vec![];
-                }
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/commands/docs/each.html")
+    }
 
-                vec![
-                    Violation::new(
-                        format!(
-                            "Infinite loop with counter '{counter_name}' can be replaced with \
-                             range iteration"
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        let violations = context
+            .ast
+            .pipelines
+            .iter()
+            .flat_map(|pipeline| &pipeline.elements)
+            .filter_map(|element| extract_counter_from_mut(&element.expr, context))
+            .flat_map(|(counter_name, counter_span)| {
+                context.detect(|expr, ctx| {
+                    let Expr::Call(call) = &expr.expr else {
+                        return vec![];
+                    };
+
+                    if call.get_call_name(ctx) != "loop" {
+                        return vec![];
+                    }
+
+                    let Some(body_expr) = call.get_positional_arg(0) else {
+                        return vec![];
+                    };
+
+                    let Some(block_id) = body_expr.extract_block_id() else {
+                        return vec![];
+                    };
+
+                    if !has_counter_pattern_in_loop_block(block_id, &counter_name, ctx) {
+                        return vec![];
+                    }
+
+                    vec![
+                        Detection::from_global_span(
+                            format!(
+                                "Infinite loop with counter '{counter_name}' can be replaced with \
+                                 range iteration"
+                            ),
+                            counter_span,
+                        )
+                        .with_primary_label("counter initialization")
+                        .with_extra_label("loop using counter with break", call.span())
+                        .with_help(
+                            "Use '0..$max | each { |i| ... }' instead of loop with counter and \
+                             break",
                         ),
-                        counter_span,
-                    )
-                    .with_primary_label("counter initialization")
-                    .with_extra_label("loop using counter with break", call.span())
-                    .with_help(
-                        "Use '0..$max | each { |i| ... }' instead of loop with counter and break",
-                    ),
-                ]
+                    ]
+                })
             })
-        })
-        .collect()
+            .collect();
+        Self::no_fix(violations)
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "loop_counter",
-    "Replace infinite loop with counter and break with range iteration",
-    check,
-    LintLevel::Warning,
-)
-.with_doc_url("https://www.nushell.sh/commands/docs/each.html");
+pub static RULE: &dyn Rule = &LoopCounter;
 
 #[cfg(test)]
 mod detect_bad;

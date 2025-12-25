@@ -12,8 +12,8 @@ use crate::{
         builtin::can_error,
         external::{ExternEffect, has_external_side_effect},
     },
-    rule::Rule,
-    violation::Violation,
+    rule::{DetectFix, Rule},
+    violation::Detection,
 };
 
 enum ErrorSource {
@@ -47,49 +47,66 @@ fn find_error_prone_command(expr: &Expression, context: &LintContext) -> Option<
     })
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    context.collect_rule_violations(|expr, ctx| {
-        let Expr::Call(call) = &expr.expr else {
-            return vec![];
-        };
+struct TryInsteadOfDo;
 
-        if !call.is_call_to_command("do", ctx) {
-            return vec![];
-        }
+impl DetectFix for TryInsteadOfDo {
+    type FixInput = ();
 
-        let Some(block_arg) = call.get_positional_arg(0) else {
-            return vec![];
-        };
+    fn id(&self) -> &'static str {
+        "try_instead_of_do"
+    }
 
-        let Some(error_source) = find_error_prone_command(block_arg, ctx) else {
-            return vec![];
-        };
+    fn explanation(&self) -> &'static str {
+        "Use 'try' blocks instead of 'do' blocks for error-prone operations"
+    }
 
-        let do_span = Span::new(expr.span.start, expr.span.start + 2);
-        let (error_span, error_label) = match &error_source {
-            ErrorSource::External(span) => (*span, "external command can fail".to_string()),
-            ErrorSource::Builtin(span, name) => (*span, format!("`{name}` can error")),
-        };
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/commands/docs/try.html")
+    }
 
-        vec![
-            Violation::new(
-                "Use 'try' instead of 'do' for error-prone operations",
-                do_span,
-            )
-            .with_primary_label("do keyword")
-            .with_extra_label(error_label, error_span)
-            .with_help("Replace 'do { ... }' with 'try { ... }' for proper error handling"),
-        ]
-    })
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        let violations = context.detect(|expr, ctx| {
+            let Expr::Call(call) = &expr.expr else {
+                return vec![];
+            };
+
+            if !call.is_call_to_command("do", ctx) {
+                return vec![];
+            }
+
+            let Some(block_arg) = call.get_positional_arg(0) else {
+                return vec![];
+            };
+
+            let Some(error_source) = find_error_prone_command(block_arg, ctx) else {
+                return vec![];
+            };
+
+            let do_span = Span::new(expr.span.start, expr.span.start + 2);
+            let (error_span, error_label) = match &error_source {
+                ErrorSource::External(span) => (*span, "external command can fail".to_string()),
+                ErrorSource::Builtin(span, name) => (*span, format!("`{name}` can error")),
+            };
+
+            vec![
+                Detection::from_global_span(
+                    "Use 'try' instead of 'do' for error-prone operations",
+                    do_span,
+                )
+                .with_primary_label("do keyword")
+                .with_extra_label(error_label, error_span)
+                .with_help("Replace 'do { ... }' with 'try { ... }' for proper error handling"),
+            ]
+        });
+        Self::no_fix(violations)
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "try_instead_of_do",
-    "Use 'try' blocks instead of 'do' blocks for error-prone operations",
-    check,
-    LintLevel::Warning,
-)
-.with_doc_url("https://www.nushell.sh/commands/docs/try.html");
+pub static RULE: &dyn Rule = &TryInsteadOfDo;
 
 #[cfg(test)]
 mod detect_bad;

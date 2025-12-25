@@ -1,12 +1,20 @@
-use nu_protocol::ast::{Block, Expr, Pipeline, PipelineElement};
+use nu_protocol::{
+    Span,
+    ast::{Block, Expr, Pipeline, PipelineElement},
+};
 
 use crate::{
     LintLevel,
     ast::call::CallExt,
     context::LintContext,
-    rule::Rule,
-    violation::{Fix, Replacement, Violation},
+    rule::{DetectFix, Rule},
+    violation::{Detection, Fix, Replacement},
 };
+
+/// Semantic fix data: stores the span of the echo call
+pub struct FixData {
+    element_span: Span,
+}
 
 fn uses_echo(element: &PipelineElement, context: &LintContext) -> bool {
     match &element.expr.expr {
@@ -22,49 +30,6 @@ fn extract_echo_args(code_snippet: &str) -> &str {
         .or_else(|| code_snippet.strip_prefix("echo"))
         .unwrap_or("")
         .trim()
-}
-
-fn generate_fix(code_snippet: &str, span: nu_protocol::Span) -> Option<Fix> {
-    let args = extract_echo_args(code_snippet);
-
-    if args.is_empty() {
-        None
-    } else {
-        Some(Fix::with_explanation(
-            format!("Replace '{code_snippet}' with '{args}'"),
-            vec![Replacement::new(span, args.to_string())],
-        ))
-    }
-}
-
-fn get_pipeline_continuation<'a>(
-    pipeline: &Pipeline,
-    element_idx: usize,
-    context: &'a LintContext,
-) -> Option<&'a str> {
-    pipeline.elements.get(element_idx + 1).map(|next_element| {
-        let start = next_element.expr.span.start;
-        let end = pipeline.elements.last().unwrap().expr.span.end;
-        context.get_span_text(nu_protocol::Span::new(start, end))
-    })
-}
-
-fn create_violation(
-    element: &PipelineElement,
-    _pipeline_continuation: Option<&str>,
-    context: &LintContext,
-) -> Violation {
-    let message = "Avoid 'echo' - it's just an identity function. Use the value directly, or \
-                   'print' for debugging";
-    let code_snippet = context.get_span_text(element.expr.span);
-    let fix = generate_fix(code_snippet, element.expr.span);
-
-    let violation = Violation::new(message, element.expr.span);
-
-    match fix {
-        Some(f) => violation.with_fix(f),
-        None => violation,
-    }
 }
 
 fn extract_nested_block_ids(
@@ -87,24 +52,29 @@ fn extract_nested_block_ids(
     blocks
 }
 
-fn check_element(
+fn detect_element(
     element: &PipelineElement,
-    idx: usize,
-    pipeline: &Pipeline,
+    _idx: usize,
+    _pipeline: &Pipeline,
     context: &LintContext,
-) -> Vec<Violation> {
+) -> Vec<(Detection, FixData)> {
     let mut violations = Vec::new();
 
     if uses_echo(element, context) {
-        let pipeline_continuation = get_pipeline_continuation(pipeline, idx, context);
-        violations.push(create_violation(element, pipeline_continuation, context));
+        let message = "Avoid 'echo' - it's just an identity function. Use the value directly, or \
+                       'print' for debugging";
+        let violation = Detection::from_global_span(message, element.expr.span);
+        let fix_data = FixData {
+            element_span: element.expr.span,
+        };
+        violations.push((violation, fix_data));
     }
 
     let nested_violations = extract_nested_block_ids(element, context)
         .iter()
         .flat_map(|&block_id| {
             let block = context.working_set.get_block(block_id);
-            check_block(block, context)
+            detect_block(block, context)
         })
         .collect::<Vec<_>>();
 
@@ -112,35 +82,69 @@ fn check_element(
     violations
 }
 
-fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<Violation> {
+fn detect_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection, FixData)> {
     pipeline
         .elements
         .iter()
         .enumerate()
-        .flat_map(|(idx, element)| check_element(element, idx, pipeline, context))
+        .flat_map(|(idx, element)| detect_element(element, idx, pipeline, context))
         .collect()
 }
 
-fn check_block(block: &Block, context: &LintContext) -> Vec<Violation> {
+fn detect_block(block: &Block, context: &LintContext) -> Vec<(Detection, FixData)> {
     block
         .pipelines
         .iter()
-        .flat_map(|pipeline| check_pipeline(pipeline, context))
+        .flat_map(|pipeline| detect_pipeline(pipeline, context))
         .collect()
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    check_block(context.ast, context)
+struct UseBuiltinEcho;
+
+impl DetectFix for UseBuiltinEcho {
+    type FixInput = FixData;
+
+    fn id(&self) -> &'static str {
+        "use_builtin_echo"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "D not use builtin 'echo' as it's just an identity function"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/book/thinking_in_nu.html")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        let block: &Block = context.ast;
+        block
+            .pipelines
+            .iter()
+            .flat_map(|pipeline| detect_pipeline(pipeline, context))
+            .collect()
+    }
+
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        let code_snippet = context.get_span_text(fix_data.element_span);
+        let args = extract_echo_args(code_snippet);
+
+        if args.is_empty() {
+            None
+        } else {
+            Some(Fix::with_explanation(
+                format!("Replace '{code_snippet}' with '{args}'"),
+                vec![Replacement::new(fix_data.element_span, args.to_string())],
+            ))
+        }
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "use_builtin_echo",
-    "D not use builtin 'echo' as it's just an identity function",
-    check,
-    LintLevel::Warning,
-)
-.with_auto_fix()
-.with_doc_url("https://www.nushell.sh/book/thinking_in_nu.html");
+pub static RULE: &dyn Rule = &UseBuiltinEcho;
 
 #[cfg(test)]
 mod detect_bad;

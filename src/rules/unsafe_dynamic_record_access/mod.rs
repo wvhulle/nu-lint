@@ -4,9 +4,13 @@ use crate::{
     LintLevel,
     ast::call::CallExt,
     context::LintContext,
-    rule::Rule,
-    violation::{Fix, Replacement, Violation},
+    rule::{DetectFix, Rule},
+    violation::{Detection, Fix, Replacement},
 };
+
+struct DynamicAccessFixData {
+    insert_span: nu_protocol::Span,
+}
 
 const fn is_dynamic_key(expr: &Expression) -> bool {
     matches!(
@@ -18,7 +22,10 @@ const fn is_dynamic_key(expr: &Expression) -> bool {
     )
 }
 
-fn check_get_call(expr: &Expression, ctx: &LintContext) -> Option<Violation> {
+fn check_get_call(
+    expr: &Expression,
+    ctx: &LintContext,
+) -> Option<(Detection, DynamicAccessFixData)> {
     let Expr::Call(call) = &expr.expr else {
         return None;
     };
@@ -38,38 +45,55 @@ fn check_get_call(expr: &Expression, ctx: &LintContext) -> Option<Violation> {
     }
 
     let get_keyword_end = call.head.end;
-    let fix = Fix::with_explanation(
-        "Add -o flag for safe optional access",
-        vec![Replacement::new(
-            nu_protocol::Span::new(get_keyword_end, get_keyword_end),
-            " -o",
-        )],
-    );
+    let insert_span = nu_protocol::Span::new(get_keyword_end, get_keyword_end);
 
-    Some(
-        Violation::new(
-            "Dynamic record access without -o flag may silently fail",
-            call.head,
-        )
-        .with_primary_label("add -o flag for safe access")
-        .with_extra_label("dynamic key", key_arg.span)
-        .with_help("Use 'get -o $key' to return null for missing keys instead of causing errors")
-        .with_fix(fix),
+    let violation = Detection::from_global_span(
+        "Dynamic record access without -o flag may silently fail",
+        call.head,
     )
+    .with_primary_label("add -o flag for safe access")
+    .with_extra_label("dynamic key", key_arg.span)
+    .with_help("Use 'get -o $key' to return null for missing keys instead of causing errors");
+
+    let fix_data = DynamicAccessFixData { insert_span };
+
+    Some((violation, fix_data))
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    context.collect_rule_violations(|expr, ctx| check_get_call(expr, ctx).into_iter().collect())
+struct UnsafeDynamicRecordAccess;
+
+impl DetectFix for UnsafeDynamicRecordAccess {
+    type FixInput = DynamicAccessFixData;
+
+    fn id(&self) -> &'static str {
+        "unsafe_dynamic_record_access"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Use 'get -o' for dynamic keys to handle missing keys safely"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/commands/docs/get.html")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        context.detect_with_fix_data(|expr, ctx| check_get_call(expr, ctx).into_iter().collect())
+    }
+
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        Some(Fix::with_explanation(
+            "Add -o flag for safe optional access",
+            vec![Replacement::new(fix_data.insert_span, " -o")],
+        ))
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "unsafe_dynamic_record_access",
-    "Use 'get -o' for dynamic keys to handle missing keys safely",
-    check,
-    LintLevel::Warning,
-)
-.with_auto_fix()
-.with_doc_url("https://www.nushell.sh/commands/docs/get.html");
+pub static RULE: &dyn Rule = &UnsafeDynamicRecordAccess;
 
 #[cfg(test)]
 mod detect_bad;

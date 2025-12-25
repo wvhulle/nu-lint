@@ -1,11 +1,9 @@
-use nu_protocol::ast::ExternalArgument;
-
 use crate::{
-    LintLevel, Violation,
-    alternatives::{detect_external_commands, external_args_slices},
+    LintLevel,
+    alternatives::{ExternalCmdFixData, detect_external_commands, external_args_slices},
     context::LintContext,
-    rule::Rule,
-    violation::{Fix, Replacement},
+    rule::{DetectFix, Rule},
+    violation::{Detection, Fix, Replacement},
 };
 
 const NOTE: &str = "Use Nu's built-in 'ls' which returns structured table data (name, type, size, \
@@ -155,56 +153,51 @@ impl LsOptions {
     }
 }
 
-fn build_fix(
-    _cmd_text: &str,
-    args: &[ExternalArgument],
-    expr_span: nu_protocol::Span,
-    context: &LintContext,
-) -> Fix {
-    let opts = LsOptions::parse(external_args_slices(args, context));
-    let (replacement, description) = opts.to_nushell();
+struct UseBuiltinLs;
 
-    Fix {
-        explanation: description.into(),
-        replacements: vec![Replacement {
-            span: expr_span.into(),
-            replacement_text: replacement.into(),
-        }],
+impl DetectFix for UseBuiltinLs {
+    type FixInput = ExternalCmdFixData;
+
+    fn id(&self) -> &'static str {
+        "use_builtin_ls"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Use Nu's built-in 'ls' instead of external ls command for structured data"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/commands/docs/ls.html")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        let mut violations = detect_external_commands(context, "ls", NOTE);
+        // exa/eza alternatives commonly used
+        for cmd in ["exa", "eza"] {
+            violations.extend(detect_external_commands(context, cmd, NOTE));
+        }
+        violations
+    }
+
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        let opts = LsOptions::parse(external_args_slices(&fix_data.args, context));
+        let (replacement, description) = opts.to_nushell();
+
+        Some(Fix {
+            explanation: description.into(),
+            replacements: vec![Replacement {
+                span: fix_data.expr_span.into(),
+                replacement_text: replacement.into(),
+            }],
+        })
     }
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    let mut violations = Vec::new();
-
-    // External ls
-    violations.extend(detect_external_commands(
-        context,
-        "ls",
-        NOTE,
-        Some(build_fix),
-    ));
-
-    // exa/eza alternatives commonly used
-    for cmd in ["exa", "eza"] {
-        violations.extend(detect_external_commands(
-            context,
-            cmd,
-            NOTE,
-            Some(build_fix),
-        ));
-    }
-
-    violations
-}
-
-pub const RULE: Rule = Rule::new(
-    "use_builtin_ls",
-    "Use Nu's built-in 'ls' instead of external ls command for structured data",
-    check,
-    LintLevel::Warning,
-)
-.with_auto_fix()
-.with_doc_url("https://www.nushell.sh/commands/docs/ls.html");
+pub static RULE: &dyn Rule = &UseBuiltinLs;
 
 #[cfg(test)]
 mod detect_bad;

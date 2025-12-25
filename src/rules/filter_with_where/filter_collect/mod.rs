@@ -1,13 +1,13 @@
 use std::collections::{HashMap, HashSet};
 
-use nu_protocol::ast::{Argument, Block, Call, Expr, Expression, Operator};
+use nu_protocol::ast::{Argument, Block, Call, Expr, Expression, Operator, Traverse};
 
 use crate::{
     LintLevel,
     ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
     context::LintContext,
-    rule::Rule,
-    violation::Violation,
+    rule::{DetectFix, Rule},
+    violation::Detection,
 };
 
 fn contains_loop_var_append(expr: &Expression, context: &LintContext, loop_var_name: &str) -> bool {
@@ -287,62 +287,77 @@ fn extract_var_ids_from_if_statements(
     var_ids
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    use nu_protocol::ast::Traverse;
+struct FilterCollectWithWhere;
 
-    let mut empty_list_vars = Vec::new();
-    context.ast.flat_map(
-        context.working_set,
-        &|expr| extract_empty_list_vars(expr, context),
-        &mut empty_list_vars,
-    );
+impl DetectFix for FilterCollectWithWhere {
+    type FixInput = ();
 
-    log::debug!("Found {} empty list vars", empty_list_vars.len());
-
-    let empty_list_vars_map: HashMap<nu_protocol::VarId, (String, nu_protocol::Span)> =
-        empty_list_vars
-            .into_iter()
-            .map(|(id, name, span)| (id, (name, span)))
-            .collect();
-
-    let mut filtering_vars = Vec::new();
-    context.ast.flat_map(
-        context.working_set,
-        &|expr| extract_filtering_vars(expr, context),
-        &mut filtering_vars,
-    );
-
-    log::debug!("Found {} filtering vars", filtering_vars.len());
-
-    let filtering_set: HashSet<nu_protocol::VarId> = filtering_vars.into_iter().collect();
-
-    let mut violations = Vec::new();
-    for (var_id, (var_name, span)) in &empty_list_vars_map {
-        if filtering_set.contains(var_id) {
-            log::debug!("Creating violation for var '{var_name}'");
-            let violation = Violation::new(
-                format!("Variable '{var_name}' accumulates filtered items - use 'where' instead"),
-                *span,
-            )
-            .with_primary_label("accumulator variable")
-            .with_help(
-                "Use '$input | where <condition>' for simple filtering without transformation",
-            );
-            violations.push(violation);
-        }
+    fn id(&self) -> &'static str {
+        "filter_collect_with_where"
     }
 
-    log::debug!("Total violations: {}", violations.len());
-    violations
+    fn explanation(&self) -> &'static str {
+        "Prefer 'where' filter over for loop with if statement and append"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/commands/docs/where.html")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        let mut empty_list_vars = Vec::new();
+        context.ast.flat_map(
+            context.working_set,
+            &|expr| extract_empty_list_vars(expr, context),
+            &mut empty_list_vars,
+        );
+
+        log::debug!("Found {} empty list vars", empty_list_vars.len());
+
+        let empty_list_vars_map: HashMap<nu_protocol::VarId, (String, nu_protocol::Span)> =
+            empty_list_vars
+                .into_iter()
+                .map(|(id, name, span)| (id, (name, span)))
+                .collect();
+
+        let mut filtering_vars = Vec::new();
+        context.ast.flat_map(
+            context.working_set,
+            &|expr| extract_filtering_vars(expr, context),
+            &mut filtering_vars,
+        );
+
+        log::debug!("Found {} filtering vars", filtering_vars.len());
+
+        let filtering_set: HashSet<nu_protocol::VarId> = filtering_vars.into_iter().collect();
+
+        let mut violations = Vec::new();
+        for (var_id, (var_name, span)) in &empty_list_vars_map {
+            if filtering_set.contains(var_id) {
+                log::debug!("Creating violation for var '{var_name}'");
+                let violation = Detection::from_global_span(
+                    format!(
+                        "Variable '{var_name}' accumulates filtered items - use 'where' instead"
+                    ),
+                    *span,
+                )
+                .with_primary_label("accumulator variable")
+                .with_help(
+                    "Use '$input | where <condition>' for simple filtering without transformation",
+                );
+                violations.push(violation);
+            }
+        }
+
+        Self::no_fix(violations)
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "filter_collect_with_where",
-    "Prefer 'where' filter over for loop with if statement and append",
-    check,
-    LintLevel::Warning,
-)
-.with_doc_url("https://www.nushell.sh/commands/docs/where.html");
+pub static RULE: &dyn Rule = &FilterCollectWithWhere;
 
 #[cfg(test)]
 mod detect_bad;

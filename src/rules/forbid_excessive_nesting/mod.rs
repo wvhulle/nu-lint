@@ -3,12 +3,16 @@ use nu_protocol::ast::{
 };
 
 use crate::{
-    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation,
+    LintLevel,
+    ast::call::CallExt,
+    context::LintContext,
+    rule::{DetectFix, Rule},
+    violation::Detection,
 };
 
 const MAX_NESTING_DEPTH: usize = 4;
 
-fn check(context: &LintContext) -> Vec<Violation> {
+fn check(context: &LintContext) -> Vec<Detection> {
     let mut violations = Vec::new();
 
     for block_idx in 0..context.working_set.num_blocks() {
@@ -23,7 +27,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
 fn check_block_nesting(
     block: &Block,
     current_depth: usize,
-    violations: &mut Vec<Violation>,
+    violations: &mut Vec<Detection>,
     context: &LintContext,
 ) {
     for pipeline in &block.pipelines {
@@ -34,7 +38,7 @@ fn check_block_nesting(
 fn check_pipeline_nesting(
     pipeline: &Pipeline,
     current_depth: usize,
-    violations: &mut Vec<Violation>,
+    violations: &mut Vec<Detection>,
     context: &LintContext,
 ) {
     for element in &pipeline.elements {
@@ -46,7 +50,7 @@ fn check_control_flow_call(
     call: &Call,
     command_name: &str,
     current_depth: usize,
-    violations: &mut Vec<Violation>,
+    violations: &mut Vec<Detection>,
     context: &LintContext,
 ) {
     let new_depth = current_depth + 1;
@@ -112,7 +116,7 @@ fn check_control_flow_call(
 fn check_match_arms(
     call: &Call,
     depth: usize,
-    violations: &mut Vec<Violation>,
+    violations: &mut Vec<Detection>,
     context: &LintContext,
 ) {
     if let Some(arms_expr) = call.get_positional_arg(1)
@@ -128,7 +132,7 @@ fn check_match_arms(
 fn check_call_arguments(
     call: &Call,
     depth: usize,
-    violations: &mut Vec<Violation>,
+    violations: &mut Vec<Detection>,
     context: &LintContext,
 ) {
     for expr in call.all_arg_expressions() {
@@ -139,7 +143,7 @@ fn check_call_arguments(
 fn check_expr_nesting(
     expr: &Expression,
     current_depth: usize,
-    violations: &mut Vec<Violation>,
+    violations: &mut Vec<Detection>,
     context: &LintContext,
 ) {
     match &expr.expr {
@@ -224,7 +228,7 @@ fn check_expr_nesting(
 fn check_pattern_nesting(
     pattern: &MatchPattern,
     current_depth: usize,
-    violations: &mut Vec<Violation>,
+    violations: &mut Vec<Detection>,
     context: &LintContext,
 ) {
     match &pattern.pattern {
@@ -250,8 +254,8 @@ fn check_pattern_nesting(
     }
 }
 
-fn create_violation(span: nu_protocol::Span, depth: usize) -> Violation {
-    Violation::new(
+fn create_violation(span: nu_protocol::Span, depth: usize) -> Detection {
+    Detection::from_global_span(
         format!(
             "Code has nesting depth of {depth}, which exceeds the maximum of {MAX_NESTING_DEPTH}"
         ),
@@ -261,13 +265,33 @@ fn create_violation(span: nu_protocol::Span, depth: usize) -> Violation {
     .with_help("Consider refactoring this code into smaller functions to reduce nesting depth")
 }
 
-pub const RULE: Rule = Rule::new(
-    "forbid_excessive_nesting",
-    "Avoid excessive nesting (more than 4 levels deep)",
-    check,
-    LintLevel::Warning,
-)
-.with_doc_url("https://www.nushell.sh/book/thinking_in_nu.html");
+struct ForbidExcessiveNesting;
+
+impl DetectFix for ForbidExcessiveNesting {
+    type FixInput = ();
+
+    fn id(&self) -> &'static str {
+        "forbid_excessive_nesting"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Avoid excessive nesting (more than 4 levels deep)"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/book/thinking_in_nu.html")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        Self::no_fix(check(context))
+    }
+}
+
+pub static RULE: &dyn Rule = &ForbidExcessiveNesting;
 
 #[cfg(test)]
 mod detect_bad;

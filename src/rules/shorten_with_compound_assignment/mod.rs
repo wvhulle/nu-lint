@@ -1,32 +1,22 @@
-use nu_protocol::ast::{Assignment, Expr, Expression, Math, Operator, PipelineElement};
+use nu_protocol::{
+    Span,
+    ast::{Assignment, Expr, Expression, Math, Operator},
+};
 
 use crate::{
     LintLevel,
     ast::expression::ExpressionExt,
     context::LintContext,
-    rule::Rule,
-    violation::{Fix, Replacement, Violation},
+    rule::{DetectFix, Rule},
+    violation::{Detection, Fix, Replacement},
 };
 
-fn build_fix(
-    var_text: &str,
-    compound_op: &str,
-    element: &PipelineElement,
-    full_span: nu_protocol::Span,
-    context: &LintContext,
-) -> Option<Fix> {
-    // Extract the right operand from the binary operation
-    if let Expr::BinaryOp(_left, _op, right) = &element.expr.expr {
-        let right_text = right.span_text(context);
-        let new_text = format!("{var_text} {compound_op} {right_text}");
-
-        Some(Fix::with_explanation(
-            format!("Replace with compound assignment: {new_text}"),
-            vec![Replacement::new(full_span, new_text)],
-        ))
-    } else {
-        None
-    }
+/// Semantic fix data: stores spans and operator needed to generate fix
+pub struct FixData {
+    full_span: Span,
+    var_span: Span,
+    right_operand_span: Span,
+    compound_op: &'static str,
 }
 
 const fn get_compound_operator(operator: Operator) -> Option<&'static str> {
@@ -55,7 +45,10 @@ const fn get_operator_symbol(operator: Operator) -> &'static str {
     }
 }
 
-fn check_for_compound_assignment(expr: &Expression, ctx: &LintContext) -> Option<Violation> {
+fn detect_compound_assignment(
+    expr: &Expression,
+    ctx: &LintContext,
+) -> Option<(Detection, FixData)> {
     let Expr::BinaryOp(left, op_expr, right) = &expr.expr else {
         return None;
     };
@@ -90,9 +83,7 @@ fn check_for_compound_assignment(expr: &Expression, ctx: &LintContext) -> Option
     let var_text = left.span_text(ctx);
     let op_symbol = get_operator_symbol(*operator);
 
-    let fix = build_fix(var_text, compound_op, element, expr.span, ctx);
-
-    let violation = Violation::new(
+    let violation = Detection::from_global_span(
         format!(
             "Use compound assignment: {var_text} {compound_op} instead of {var_text} = {var_text} \
              {op_symbol} ..."
@@ -104,30 +95,56 @@ fn check_for_compound_assignment(expr: &Expression, ctx: &LintContext) -> Option
     .with_extra_label("operand could be compound-assigned", sub_right.span)
     .with_help(format!("Replace with: {var_text} {compound_op}"));
 
-    let violation = match fix {
-        Some(f) => violation.with_fix(f),
-        None => violation,
+    let fix_data = FixData {
+        full_span: expr.span,
+        var_span: left.span,
+        right_operand_span: sub_right.span,
+        compound_op,
     };
 
-    Some(violation)
+    Some((violation, fix_data))
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    context.collect_rule_violations(|expr, ctx| {
-        check_for_compound_assignment(expr, ctx)
-            .into_iter()
-            .collect()
-    })
+struct ShortenWithCompoundAssignment;
+
+impl DetectFix for ShortenWithCompoundAssignment {
+    type FixInput = FixData;
+
+    fn id(&self) -> &'static str {
+        "shorten_with_compound_assignment"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Compound assignment operators simplify simple arithmetic."
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/book/operators.html")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        context.detect_with_fix_data(|expr, ctx| {
+            detect_compound_assignment(expr, ctx).into_iter().collect()
+        })
+    }
+
+    fn fix(&self, ctx: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        let var_text = ctx.get_span_text(fix_data.var_span);
+        let right_text = ctx.get_span_text(fix_data.right_operand_span);
+        let new_text = format!("{var_text} {} {right_text}", fix_data.compound_op);
+
+        Some(Fix::with_explanation(
+            format!("Replace with compound assignment: {new_text}"),
+            vec![Replacement::new(fix_data.full_span, new_text)],
+        ))
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "shorten_with_compound_assignment",
-    "Compound assignment operators simplify simple arithmetic.",
-    check,
-    LintLevel::Hint,
-)
-.with_auto_fix()
-.with_doc_url("https://www.nushell.sh/book/operators.html");
+pub static RULE: &dyn Rule = &ShortenWithCompoundAssignment;
 
 #[cfg(test)]
 mod detect_bad;

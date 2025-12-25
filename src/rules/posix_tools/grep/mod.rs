@@ -1,11 +1,9 @@
-use nu_protocol::ast::ExternalArgument;
-
 use crate::{
-    LintLevel, Violation,
-    alternatives::{detect_external_commands, external_args_slices},
+    LintLevel,
+    alternatives::{ExternalCmdFixData, detect_external_commands, external_args_slices},
     context::LintContext,
-    rule::Rule,
-    violation::{Fix, Replacement},
+    rule::{DetectFix, Rule},
+    violation::{Detection, Fix, Replacement},
 };
 
 const NOTE: &str = "Use 'find' for simple text search (case-insensitive by default), 'where $it \
@@ -208,54 +206,49 @@ impl GrepOptions {
     }
 }
 
-fn build_fix(
-    _cmd_text: &str,
-    args: &[ExternalArgument],
-    expr_span: nu_protocol::Span,
-    context: &LintContext,
-) -> Fix {
-    let opts = GrepOptions::parse(external_args_slices(args, context));
-    let (replacement, description) = opts.to_nushell();
+struct UseBuiltinGrep;
 
-    Fix {
-        explanation: description.into(),
-        replacements: vec![Replacement {
-            span: expr_span.into(),
-            replacement_text: replacement.into(),
-        }],
+impl DetectFix for UseBuiltinGrep {
+    type FixInput = ExternalCmdFixData;
+
+    fn id(&self) -> &'static str {
+        "use_builtin_grep"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Use Nu's 'find' or 'where' instead of 'grep' for better data handling"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/commands/docs/find.html")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        let mut violations = detect_external_commands(context, "grep", NOTE);
+        // ripgrep
+        violations.extend(detect_external_commands(context, "rg", NOTE));
+        violations
+    }
+
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        let opts = GrepOptions::parse(external_args_slices(&fix_data.args, context));
+        let (replacement, description) = opts.to_nushell();
+
+        Some(Fix {
+            explanation: description.into(),
+            replacements: vec![Replacement {
+                span: fix_data.expr_span.into(),
+                replacement_text: replacement.into(),
+            }],
+        })
     }
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    let mut violations = Vec::new();
-
-    // grep
-    violations.extend(detect_external_commands(
-        context,
-        "grep",
-        NOTE,
-        Some(build_fix),
-    ));
-
-    // ripgrep
-    violations.extend(detect_external_commands(
-        context,
-        "rg",
-        NOTE,
-        Some(build_fix),
-    ));
-
-    violations
-}
-
-pub const RULE: Rule = Rule::new(
-    "use_builtin_grep",
-    "Use Nu's 'find' or 'where' instead of 'grep' for better data handling",
-    check,
-    LintLevel::Warning,
-)
-.with_auto_fix()
-.with_doc_url("https://www.nushell.sh/commands/docs/find.html");
+pub static RULE: &dyn Rule = &UseBuiltinGrep;
 
 #[cfg(test)]
 mod detect_bad;

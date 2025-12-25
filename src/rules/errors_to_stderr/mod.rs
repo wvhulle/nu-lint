@@ -4,8 +4,8 @@ use crate::{
     LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
-    rule::Rule,
-    violation::Violation,
+    rule::{DetectFix, Rule},
+    violation::Detection,
 };
 
 struct ErrorToStdout {
@@ -73,10 +73,10 @@ fn truncate_message(msg: &str, max_len: usize) -> String {
     }
 }
 
-fn create_violation(pattern: &ErrorToStdout) -> Violation {
+fn create_violation(pattern: &ErrorToStdout) -> Detection {
     let truncated_msg = truncate_message(&pattern.print_message, 60);
 
-    Violation::new(
+    Detection::from_global_span(
         "Error message printed to stdout instead of stderr",
         pattern.span,
     )
@@ -116,37 +116,55 @@ fn check_same_pipeline_patterns<'a>(
         .filter_map(move |pipeline| check_same_pipeline_print_exit(pipeline, context))
 }
 
-fn check_block_patterns(block: &Block, context: &LintContext) -> Vec<Violation> {
+fn check_block_patterns(block: &Block, context: &LintContext) -> Vec<Detection> {
     check_same_pipeline_patterns(block, context)
         .chain(check_sequential_patterns(block, context))
         .map(|pattern| create_violation(&pattern))
         .collect()
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    let main_violations = check_block_patterns(context.ast, context);
+struct ErrorsToStderr;
 
-    let nested_violations: Vec<_> = context.collect_rule_violations(|expr, ctx| match &expr.expr {
-        Expr::Closure(block_id) | Expr::Block(block_id) | Expr::Subexpression(block_id) => {
-            let block = ctx.working_set.get_block(*block_id);
-            check_block_patterns(block, ctx)
-        }
-        _ => vec![],
-    });
+impl DetectFix for ErrorsToStderr {
+    type FixInput = ();
 
-    main_violations
-        .into_iter()
-        .chain(nested_violations)
-        .collect()
+    fn id(&self) -> &'static str {
+        "errors_to_stderr"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Error messages should go to stderr, not stdout"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/commands/docs/print.html")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        let main_violations = check_block_patterns(context.ast, context);
+
+        let nested_violations: Vec<_> = context.detect(|expr, ctx| match &expr.expr {
+            Expr::Closure(block_id) | Expr::Block(block_id) | Expr::Subexpression(block_id) => {
+                let block = ctx.working_set.get_block(*block_id);
+                check_block_patterns(block, ctx)
+            }
+            _ => vec![],
+        });
+
+        Self::no_fix(
+            main_violations
+                .into_iter()
+                .chain(nested_violations)
+                .collect(),
+        )
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "errors_to_stderr",
-    "Error messages should go to stderr, not stdout",
-    check,
-    LintLevel::Warning,
-)
-.with_doc_url("https://www.nushell.sh/commands/docs/print.html");
+pub static RULE: &dyn Rule = &ErrorsToStderr;
 
 #[cfg(test)]
 mod detect_bad;

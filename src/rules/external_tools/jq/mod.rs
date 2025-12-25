@@ -6,15 +6,14 @@ use jaq_core::{
     },
     path::{self, Opt, Part},
 };
-use nu_protocol::ast::ExternalArgument;
 
 use crate::{
-    LintLevel, Violation,
-    alternatives::{detect_external_commands, external_args_slices},
+    LintLevel, LintSpan,
+    alternatives::{ExternalCmdFixData, detect_external_commands, external_args_slices},
     ast::span::SpanExt,
     context::LintContext,
-    rule::Rule,
-    violation::{Fix, Replacement},
+    rule::{DetectFix, Rule},
+    violation::{Detection, Fix, Replacement},
 };
 
 /// Extract field name from a path like .field
@@ -303,83 +302,82 @@ fn format_jq_replacement(filter: &str, file_arg: Option<&str>) -> String {
     }
 }
 
-fn build_fix(
-    _cmd_text: &str,
-    args: &[ExternalArgument],
-    expr_span: nu_protocol::Span,
-    context: &LintContext,
-) -> Fix {
-    let args_text: Vec<&str> = external_args_slices(args, context).collect();
-
-    let new_text = if args_text.is_empty() {
-        // Without explicit filter or file, suggest decoding JSON from input
-        "from json".to_string()
-    } else {
-        let filter = args_text[0];
-        let file_arg = args_text.get(1).copied();
-        format_jq_replacement(filter, file_arg)
-    };
-
-    Fix::with_explanation(
-        "Replace simple jq operation with built-in Nushell command",
-        vec![Replacement::new(expr_span, new_text)],
-    )
-}
-
 /// Check if a jq command contains simple operations
 fn contains_simple_jq_op(source_text: &str) -> bool {
-    // Extract the filter argument from the jq command
-    // Handle both single-line and multi-line jq filters
-    // Skip "jq" or "^jq", skip flags (starting with -), then extract the quoted
-    // filter
-
-    // Find the start of the filter (first quote after jq and any flags)
     let quote_start = source_text.find(['\'', '"']);
 
     if let Some(start_pos) = quote_start {
         let quote_char = source_text.chars().nth(start_pos).unwrap();
-        // Find the matching closing quote
         if let Some(end_pos) = source_text[start_pos + 1..].rfind(quote_char) {
             let filter_str = &source_text[start_pos..=start_pos + 1 + end_pos];
 
-            // Try to parse and see if we can convert it
             if let Some(term) = parse_jq_filter(filter_str) {
                 return jq_term_to_nushell(&term, false).is_some();
             }
         }
     }
 
-    // Fallback to string-based matching
     SIMPLE_JQ_OPS.iter().any(|op| source_text.contains(op))
         || (source_text.contains("'.[") && source_text.contains("]'"))
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    // Detect jq commands that have direct Nushell equivalents
-    let violations = detect_external_commands(context, "jq", NOTE, Some(build_fix));
+struct ReplaceJqWithNuGet;
 
-    // Filter to only show violations for jq operations we can convert
-    violations
-        .into_iter()
-        .filter(|violation| {
-            let span: nu_protocol::Span = match violation.span {
-                crate::LintSpan::Global(s) => s,
-                crate::LintSpan::File(f) => f.into(),
+impl DetectFix for ReplaceJqWithNuGet {
+    type FixInput = ExternalCmdFixData;
+
+    fn id(&self) -> &'static str {
+        "replace_jq_with_nu_get"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Prefer Nushell built-ins over jq for data operations that have direct equivalents"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/commands/docs/from_json.html")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        detect_external_commands(context, "jq", NOTE)
+            .into_iter()
+            .filter(|(violation, _fix_data)| {
+                let span: nu_protocol::Span = match violation.span {
+                    LintSpan::Global(s) => s,
+                    LintSpan::File(f) => f.into(),
+                };
+                let source_text = span.source_code(context);
+                contains_simple_jq_op(source_text)
+            })
+            .collect()
+    }
+
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        Some({
+            let fix_data: &ExternalCmdFixData = fix_data;
+            let args_text: Vec<&str> = external_args_slices(&fix_data.args, context).collect();
+
+            let new_text = if args_text.is_empty() {
+                "from json".to_string()
+            } else {
+                let filter = args_text[0];
+                let file_arg = args_text.get(1).copied();
+                format_jq_replacement(filter, file_arg)
             };
-            let source_text = span.source_code(context);
-            contains_simple_jq_op(source_text)
+
+            Fix::with_explanation(
+                "Replace simple jq operation with built-in Nushell command",
+                vec![Replacement::new(fix_data.expr_span, new_text)],
+            )
         })
-        .collect()
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "replace_jq_with_nu_get",
-    "Prefer Nushell built-ins over jq for data operations that have direct equivalents",
-    check,
-    LintLevel::Warning,
-)
-.with_auto_fix()
-.with_doc_url("https://www.nushell.sh/commands/docs/from_json.html");
+pub static RULE: &dyn Rule = &ReplaceJqWithNuGet;
 
 #[cfg(test)]
 mod detect_bad;

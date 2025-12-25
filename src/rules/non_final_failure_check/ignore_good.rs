@@ -11,6 +11,16 @@ $result.stdout | from json";
 }
 
 #[test]
+fn safe_git() {
+    instrument();
+    let good_code = r#"git config get remote.origin.url
+    | str replace "git@ssh.gitgud.io:" "https://gitgud.io/"
+"#;
+
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
 fn test_single_external_command() {
     let good_code = r"^git status";
     RULE.assert_ignores(good_code);

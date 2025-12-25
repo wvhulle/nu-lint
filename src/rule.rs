@@ -1,70 +1,131 @@
 #[cfg(test)]
 use std::borrow::Cow;
-use std::hash::{Hash, Hasher};
+use std::{
+    any::TypeId,
+    fmt::{Debug, Formatter, Result as FmtResult},
+    hash::{Hash, Hasher},
+};
 
-use crate::{LintLevel, context::LintContext, violation::Violation};
+use crate::{
+    Fix, LintLevel,
+    context::LintContext,
+    violation::{Detection, Violation},
+};
 
-/// A concrete rule struct that wraps the check function
-#[derive(Debug, Clone, Copy)]
-pub struct Rule {
-    pub id: &'static str,
-    pub explanation: &'static str,
-    pub doc_url: Option<&'static str>,
-    pub level: LintLevel,
-    pub(crate) check: for<'a> fn(&LintContext<'a>) -> Vec<Violation>,
-    /// Whether this rule can generate automatic fixes
-    pub has_auto_fix: bool,
+/// Trait for implementing lint rules with typed fix data.
+///
+/// # Example
+/// ```ignore
+/// struct MyRule;
+/// impl DetectFix for MyRule {
+///     type FixInput = ();
+///     fn id(&self) -> &'static str { "my_rule" }
+///     fn explanation(&self) -> &'static str { "Checks for..." }
+///     fn level(&self) -> LintLevel { LintLevel::Warning }
+///     fn detect(&self, ctx: &LintContext) -> Vec<(Detection, ())> { vec![] }
+/// }
+/// pub static RULE: &dyn Rule = &MyRule;
+/// ```
+pub trait DetectFix: Send + Sync + 'static {
+    type FixInput: Send + Sync;
+
+    fn id(&self) -> &'static str;
+    fn explanation(&self) -> &'static str;
+    fn doc_url(&self) -> Option<&'static str> {
+        None
+    }
+    fn level(&self) -> LintLevel;
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)>;
+    fn fix(&self, _context: &LintContext, _fix_data: &Self::FixInput) -> Option<Fix> {
+        None
+    }
+
+    /// Pairs violations with default fix input (for rules with `FixInput =
+    /// ()`).
+    fn no_fix(violations: Vec<Detection>) -> Vec<(Detection, Self::FixInput)>
+    where
+        Self::FixInput: Default,
+    {
+        violations
+            .into_iter()
+            .map(|v| (v, Self::FixInput::default()))
+            .collect()
+    }
 }
 
-impl Hash for Rule {
+/// Type-erased interface for storing and executing rules.
+///
+/// All `DetectFix` implementations automatically implement this via a blanket
+/// impl.
+pub trait Rule: Send + Sync {
+    fn id(&self) -> &'static str;
+    fn explanation(&self) -> &'static str;
+    fn doc_url(&self) -> Option<&'static str>;
+    fn level(&self) -> LintLevel;
+    fn has_auto_fix(&self) -> bool;
+    fn check(&self, context: &LintContext) -> Vec<Violation>;
+}
+
+impl<T: DetectFix> Rule for T {
+    fn id(&self) -> &'static str {
+        DetectFix::id(self)
+    }
+
+    fn explanation(&self) -> &'static str {
+        DetectFix::explanation(self)
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        DetectFix::doc_url(self)
+    }
+
+    fn level(&self) -> LintLevel {
+        DetectFix::level(self)
+    }
+
+    fn has_auto_fix(&self) -> bool {
+        TypeId::of::<T::FixInput>() != TypeId::of::<()>()
+    }
+
+    fn check(&self, context: &LintContext) -> Vec<Violation> {
+        self.detect(context)
+            .into_iter()
+            .map(|(detected, fix_data)| {
+                let fix = self.fix(context, &fix_data);
+                Violation::from_detected(detected, fix)
+            })
+            .collect()
+    }
+}
+
+impl Debug for dyn Rule {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        f.debug_struct("Rule")
+            .field("id", &self.id())
+            .field("level", &self.level())
+            .field("has_auto_fix", &self.has_auto_fix())
+            .finish()
+    }
+}
+
+impl Hash for dyn Rule {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.id.hash(state);
+        self.id().hash(state);
     }
 }
 
-impl PartialEq for Rule {
+impl PartialEq for dyn Rule {
     fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
+        self.id() == other.id()
     }
 }
 
-impl Eq for Rule {}
-
-impl Rule {
-    pub(crate) const fn new(
-        id: &'static str,
-        explanation: &'static str,
-        check: fn(&LintContext) -> Vec<Violation>,
-        level: LintLevel,
-    ) -> Self {
-        Self {
-            id,
-            explanation,
-            doc_url: None,
-            check,
-            level,
-            has_auto_fix: false,
-        }
-    }
-
-    #[must_use]
-    pub const fn with_doc_url(mut self, url: &'static str) -> Self {
-        self.doc_url = Some(url);
-        self
-    }
-
-    /// Mark this rule as having auto-fix capability
-    #[must_use]
-    pub const fn with_auto_fix(mut self) -> Self {
-        self.has_auto_fix = true;
-        self
-    }
-}
+impl Eq for dyn Rule {}
 
 #[cfg(test)]
-impl Rule {
+impl dyn Rule {
     fn run_check(&self, code: &str) -> Vec<Violation> {
-        LintContext::test_get_violations(code, |context| (self.check)(context))
+        LintContext::test_get_violations(code, |context| self.check(context))
     }
 
     fn first_violation(&self, code: &str) -> Violation {
@@ -72,7 +133,7 @@ impl Rule {
         assert!(
             !violations.is_empty(),
             "Expected rule '{}' to detect violations, but found none",
-            self.id
+            self.id()
         );
         violations.into_iter().next().unwrap()
     }
@@ -99,7 +160,7 @@ impl Rule {
         assert!(
             !violations.is_empty(),
             "Expected rule '{}' to detect violations in code, but found none",
-            self.id
+            self.id()
         );
     }
 
@@ -109,7 +170,7 @@ impl Rule {
         assert!(
             violations.is_empty(),
             "Expected rule '{}' to ignore code, but found {} violations",
-            self.id,
+            self.id(),
             violations.len()
         );
     }
@@ -121,7 +182,7 @@ impl Rule {
             violations.len(),
             expected,
             "Expected rule '{}' to find exactly {} violation(s), but found {}",
-            self.id,
+            self.id(),
             expected,
             violations.len()
         );

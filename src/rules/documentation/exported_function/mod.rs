@@ -1,7 +1,11 @@
 use nu_protocol::ast::{Call, Expr};
 
 use crate::{
-    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation,
+    LintLevel,
+    ast::call::CallExt,
+    context::LintContext,
+    rule::{DetectFix, Rule},
+    violation::Detection,
 };
 
 /// Check if there's a documentation comment before the given span
@@ -34,7 +38,7 @@ fn has_doc_comment_before(context: &LintContext, span: nu_protocol::Span) -> boo
     false
 }
 
-fn check_exported_function(call: &Call, context: &LintContext) -> Option<Violation> {
+fn check_exported_function(call: &Call, context: &LintContext) -> Option<Detection> {
     let decl_name = call.get_call_name(context);
 
     if decl_name != "export def" {
@@ -49,7 +53,7 @@ fn check_exported_function(call: &Call, context: &LintContext) -> Option<Violati
         None
     } else {
         Some(
-            Violation::new(
+            Detection::from_global_span(
                 format!("Exported function '{func_name}' lacks documentation comment"),
                 call.head,
             )
@@ -63,23 +67,39 @@ fn check_exported_function(call: &Call, context: &LintContext) -> Option<Violati
     }
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    context.collect_rule_violations(|expr, ctx| {
-        if let Expr::Call(call) = &expr.expr {
-            check_exported_function(call, ctx).into_iter().collect()
-        } else {
-            vec![]
-        }
-    })
+struct AddDocCommentExportedFn;
+
+impl DetectFix for AddDocCommentExportedFn {
+    type FixInput = ();
+
+    fn id(&self) -> &'static str {
+        "add_doc_comment_exported_fn"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Exported functions should have documentation comments"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/book/custom_commands.html#documenting-your-command")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        Self::no_fix(context.detect(|expr, ctx| {
+            if let Expr::Call(call) = &expr.expr {
+                check_exported_function(call, ctx).into_iter().collect()
+            } else {
+                vec![]
+            }
+        }))
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "add_doc_comment_exported_fn",
-    "Exported functions should have documentation comments",
-    check,
-    LintLevel::Hint,
-)
-.with_doc_url("https://www.nushell.sh/book/custom_commands.html#documenting-your-command");
+pub static RULE: &dyn Rule = &AddDocCommentExportedFn;
 
 #[cfg(test)]
 mod detect_bad;

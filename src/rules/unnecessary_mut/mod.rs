@@ -9,9 +9,14 @@ use crate::{
     LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
-    rule::Rule,
-    violation::{Fix, Replacement, Violation},
+    rule::{DetectFix, Rule},
+    violation::{Detection, Fix, Replacement},
 };
+
+struct UnnecessaryMutFixData {
+    var_name: String,
+    mut_span: Span,
+}
 
 /// Find the span of 'mut ' keyword before the variable name
 /// Returns a global span (will be normalized later by the engine)
@@ -57,65 +62,83 @@ fn extract_mut_declaration(
     Some((var_id, var_name, var_span, mut_span))
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    use nu_protocol::ast::Traverse;
+struct UnnecessaryMut;
 
-    let mut mut_declarations: Vec<(VarId, String, Span, Span)> = Vec::new();
+impl DetectFix for UnnecessaryMut {
+    type FixInput = UnnecessaryMutFixData;
 
-    context.ast.flat_map(
-        context.working_set,
-        &|expr| extract_mut_declaration(expr, context).into_iter().collect(),
-        &mut mut_declarations,
-    );
+    fn id(&self) -> &'static str {
+        "unnecessary_mut"
+    }
 
-    let mut_variables: HashMap<VarId, (String, Span, Span)> = mut_declarations
-        .into_iter()
-        .map(|(id, name, decl_span, mut_span)| (id, (name, decl_span, mut_span)))
-        .collect();
+    fn explanation(&self) -> &'static str {
+        "Variables should only be marked 'mut' when they are actually reassigned"
+    }
 
-    let mut reassigned: Vec<VarId> = Vec::new();
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/book/variables.html#mutable-variables")
+    }
 
-    context.ast.flat_map(
-        context.working_set,
-        &|expr| expr.extract_assigned_variable().into_iter().collect(),
-        &mut reassigned,
-    );
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
 
-    let reassigned_vars: HashSet<VarId> = reassigned.into_iter().collect();
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        use nu_protocol::ast::Traverse;
 
-    // Generate violations for mut variables that were never reassigned
-    let mut violations = Vec::new();
-    for (var_id, (var_name, decl_span, mut_span)) in mut_variables {
-        if !reassigned_vars.contains(&var_id) {
-            let fix = Fix::with_explanation(
-                format!("Remove 'mut' keyword from variable '{var_name}'"),
-                vec![Replacement::new(mut_span, "")],
-            );
+        let mut mut_declarations: Vec<(VarId, String, Span, Span)> = Vec::new();
 
-            violations.push(
-                Violation::new(
+        context.ast.flat_map(
+            context.working_set,
+            &|expr| extract_mut_declaration(expr, context).into_iter().collect(),
+            &mut mut_declarations,
+        );
+
+        let mut_variables: HashMap<VarId, (String, Span, Span)> = mut_declarations
+            .into_iter()
+            .map(|(id, name, decl_span, mut_span)| (id, (name, decl_span, mut_span)))
+            .collect();
+
+        let mut reassigned: Vec<VarId> = Vec::new();
+
+        context.ast.flat_map(
+            context.working_set,
+            &|expr| expr.extract_assigned_variable().into_iter().collect(),
+            &mut reassigned,
+        );
+
+        let reassigned_vars: HashSet<VarId> = reassigned.into_iter().collect();
+
+        // Generate violations for mut variables that were never reassigned
+        let mut violations = Vec::new();
+        for (var_id, (var_name, decl_span, mut_span)) in mut_variables {
+            if !reassigned_vars.contains(&var_id) {
+                let violation = Detection::from_global_span(
                     format!("Variable '{var_name}' is declared as 'mut' but never reassigned"),
                     mut_span,
                 )
                 .with_primary_label("unnecessary mut keyword")
                 .with_extra_label("variable never reassigned", decl_span)
-                .with_help(format!("Remove 'mut' keyword:\nlet {var_name} = ..."))
-                .with_fix(fix),
-            );
+                .with_help(format!("Remove 'mut' keyword:\nlet {var_name} = ..."));
+
+                let fix_data = UnnecessaryMutFixData { var_name, mut_span };
+
+                violations.push((violation, fix_data));
+            }
         }
+
+        violations
     }
 
-    violations
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        Some(Fix::with_explanation(
+            format!("Remove 'mut' keyword from variable '{}'", fix_data.var_name),
+            vec![Replacement::new(fix_data.mut_span, "")],
+        ))
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "unnecessary_mut",
-    "Variables should only be marked 'mut' when they are actually reassigned",
-    check,
-    LintLevel::Warning,
-)
-.with_auto_fix()
-.with_doc_url("https://www.nushell.sh/book/variables.html#mutable-variables");
+pub static RULE: &dyn Rule = &UnnecessaryMut;
 
 #[cfg(test)]
 mod detect_bad;

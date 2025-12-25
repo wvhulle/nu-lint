@@ -6,6 +6,23 @@ use nu_protocol::{
 use super::{block::BlockExt, expression::ExpressionExt};
 use crate::{ast::span::SpanExt, context::LintContext};
 
+#[derive(Debug, Clone)]
+pub struct FunctionDefinition {
+    pub body: BlockId,
+    pub name: String,
+    pub name_span: Span,
+}
+
+impl FunctionDefinition {
+    const fn new(body: BlockId, name: String, name_span: Span) -> Self {
+        Self {
+            body,
+            name,
+            name_span,
+        }
+    }
+}
+
 /// Checks if `actual_type` is compatible with `expected_type` for command
 /// signature matching
 fn is_type_compatible(expected: &nu_protocol::Type, actual: &nu_protocol::Type) -> bool {
@@ -45,9 +62,9 @@ pub trait CallExt {
     /// ("foo", span)
     fn extract_declaration_name(&self, context: &LintContext) -> Option<(String, Span)>;
     #[must_use]
-    /// Extracts function definition block and name. Example: `def process [] {
-    /// ls }` returns block and "process"
-    fn extract_function_definition(&self, context: &LintContext) -> Option<(BlockId, String)>;
+    /// Extracts function definition. Example: `def process [] { ls }` returns
+    /// `FunctionDefinition` with body block, name "process", and name span
+    fn extract_function_definition(&self, context: &LintContext) -> Option<FunctionDefinition>;
     #[must_use]
     /// Extracts variable declaration. Example: `let x = 5` returns `(var_id,
     /// "x", span)`
@@ -61,9 +78,7 @@ pub trait CallExt {
     /// Gets nested single if call from then branch. Example: `if $x { if $y { }
     /// }`
     fn get_nested_single_if<'a>(&self, context: &'a LintContext<'a>) -> Option<&'a Call>;
-    /// Generates collapsed if condition text. Example: `if $x { if $y { } }`
-    /// becomes `if $x and $y { }`
-    fn generate_collapsed_if(&self, context: &LintContext) -> Option<String>;
+
     /// Checks if call uses a variable. Example: `print $msg` uses `$msg`
     fn uses_variable(&self, var_id: nu_protocol::VarId) -> bool;
     /// Checks if call is a filesystem command. Example: `mkdir`, `cd`, or `rm`
@@ -225,7 +240,7 @@ impl CallExt for Call {
         Some((name.to_string(), name_arg.span))
     }
 
-    fn extract_function_definition(&self, context: &LintContext) -> Option<(BlockId, String)> {
+    fn extract_function_definition(&self, context: &LintContext) -> Option<FunctionDefinition> {
         let decl_name = self.get_call_name(context);
         if !matches!(decl_name.as_str(), "def" | "export def") {
             return None;
@@ -240,7 +255,7 @@ impl CallExt for Call {
         let body_expr = self.get_positional_arg(2)?;
         let block_id = body_expr.extract_block_id()?;
 
-        Some((block_id, name))
+        Some(FunctionDefinition::new(block_id, name, name_arg.span))
     }
 
     fn extract_variable_declaration(
@@ -283,24 +298,6 @@ impl CallExt for Call {
             .working_set
             .get_block(then_block_id)
             .get_single_if_call(context)
-    }
-
-    fn generate_collapsed_if(&self, context: &LintContext) -> Option<String> {
-        self.get_else_branch().is_none().then_some(())?;
-
-        let inner_call = self.get_nested_single_if(context)?;
-
-        inner_call.get_else_branch().is_none().then_some(())?;
-
-        let outer_condition = self.get_first_positional_arg()?;
-        let inner_condition = inner_call.get_first_positional_arg()?;
-        let inner_body = inner_call.get_positional_arg(1)?;
-
-        let outer_cond = outer_condition.span_text(context).trim();
-        let inner_cond = inner_condition.span_text(context).trim();
-        let body = inner_body.span_text(context).trim();
-
-        Some(format!("if {outer_cond} and {inner_cond} {body}"))
     }
 
     fn uses_variable(&self, var_id: nu_protocol::VarId) -> bool {

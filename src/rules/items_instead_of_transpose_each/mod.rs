@@ -4,8 +4,8 @@ use crate::{
     Fix, LintLevel, Replacement,
     ast::{call::CallExt, span::SpanExt},
     context::LintContext,
-    rule::Rule,
-    violation::Violation,
+    rule::{DetectFix, Rule},
+    violation::Detection,
 };
 
 struct TransposeEachPattern {
@@ -232,80 +232,54 @@ fn detect_pattern(expr: &Expression, context: &LintContext) -> Vec<TransposeEach
     }
 }
 
-fn generate_fix(pattern: &TransposeEachPattern, context: &LintContext) -> Option<Fix> {
-    let closure_arg = pattern.each_call.arguments.first()?;
-    let (Argument::Positional(closure_expr) | Argument::Unknown(closure_expr)) = closure_arg else {
-        return None;
-    };
+struct ItemsInsteadOfTransposeEach;
 
-    let Expr::Closure(block_id) = &closure_expr.expr else {
-        return None;
-    };
+impl DetectFix for ItemsInsteadOfTransposeEach {
+    type FixInput = TransposeEachPattern;
 
-    let block = context.working_set.get_block(*block_id);
-    let param = &block.signature.required_positional[0];
-
-    let closure_body_text = block.span?.source_code(context);
-    let mut closure_body_trimmed = closure_body_text
-        .trim()
-        .strip_prefix('{')
-        .and_then(|s| s.strip_suffix('}'))
-        .map_or(closure_body_text.trim(), |s| s.trim());
-
-    if let Some(pipe_pos) = closure_body_trimmed.find('|')
-        && let Some(second_pipe) = closure_body_trimmed[pipe_pos + 1..].find('|')
-    {
-        closure_body_trimmed = closure_body_trimmed[pipe_pos + second_pipe + 2..].trim();
+    fn id(&self) -> &'static str {
+        "items_instead_of_transpose_each"
     }
 
-    let param_name = &param.name;
-    let new_body = closure_body_trimmed
-        .replace(
-            &format!("${param_name}.{}", pattern.col1),
-            &format!("${}", pattern.col1),
-        )
-        .replace(
-            &format!("${param_name}.{}", pattern.col2),
-            &format!("${}", pattern.col2),
+    fn explanation(&self) -> &'static str {
+        "Use 'items' instead of 'transpose | each' when iterating over record entries"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/commands/docs/items.html")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        let context: &LintContext = context;
+        let mut patterns = Vec::new();
+
+        log::debug!(
+            "Checking {} top-level pipelines",
+            context.ast.pipelines.len()
         );
 
-    let fix_text = format!("items {{|{}, {}| {new_body} }}", pattern.col1, pattern.col2);
+        for pipeline in &context.ast.pipelines {
+            patterns.extend(detect_pattern_in_pipeline(pipeline, context));
+        }
 
-    Some(Fix::with_explanation(
-        "Replace 'transpose ... | each' with 'items' for cleaner iteration over record entries",
-        vec![Replacement::new(pattern.combined_span, fix_text)],
-    ))
-}
+        log::debug!("Found {} patterns in top-level pipelines", patterns.len());
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    let mut patterns = Vec::new();
+        context.ast.flat_map(
+            context.working_set,
+            &|expr| detect_pattern(expr, context),
+            &mut patterns,
+        );
 
-    log::debug!(
-        "Checking {} top-level pipelines",
-        context.ast.pipelines.len()
-    );
+        log::debug!("Found {} total patterns after traversal", patterns.len());
 
-    for pipeline in &context.ast.pipelines {
-        patterns.extend(detect_pattern_in_pipeline(pipeline, context));
-    }
-
-    log::debug!("Found {} patterns in top-level pipelines", patterns.len());
-
-    context.ast.flat_map(
-        context.working_set,
-        &|expr| detect_pattern(expr, context),
-        &mut patterns,
-    );
-
-    log::debug!("Found {} total patterns after traversal", patterns.len());
-
-    patterns
-        .into_iter()
-        .filter_map(|pattern| {
-            let fix = generate_fix(&pattern, context)?;
-
-            Some(
-                Violation::new(
+        patterns
+            .into_iter()
+            .map(|pattern| {
+                let violation = Detection::from_global_span(
                     "Use 'items' instead of 'transpose | each' when iterating over record entries",
                     pattern.combined_span,
                 )
@@ -319,21 +293,61 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 .with_help(
                     "The 'items' command directly iterates over key-value pairs without needing \
                      transpose",
-                )
-                .with_fix(fix),
+                );
+                (violation, pattern)
+            })
+            .collect()
+    }
+
+    fn fix(&self, context: &LintContext, pattern: &Self::FixInput) -> Option<Fix> {
+        let pattern: &TransposeEachPattern = pattern;
+        let closure_arg = pattern.each_call.arguments.first()?;
+        let (Argument::Positional(closure_expr) | Argument::Unknown(closure_expr)) = closure_arg
+        else {
+            return None;
+        };
+
+        let Expr::Closure(block_id) = &closure_expr.expr else {
+            return None;
+        };
+
+        let block = context.working_set.get_block(*block_id);
+        let param = &block.signature.required_positional[0];
+
+        let closure_body_text = block.span?.source_code(context);
+        let mut closure_body_trimmed = closure_body_text
+            .trim()
+            .strip_prefix('{')
+            .and_then(|s| s.strip_suffix('}'))
+            .map_or(closure_body_text.trim(), |s| s.trim());
+
+        if let Some(pipe_pos) = closure_body_trimmed.find('|')
+            && let Some(second_pipe) = closure_body_trimmed[pipe_pos + 1..].find('|')
+        {
+            closure_body_trimmed = closure_body_trimmed[pipe_pos + second_pipe + 2..].trim();
+        }
+
+        let param_name = &param.name;
+        let new_body = closure_body_trimmed
+            .replace(
+                &format!("${param_name}.{}", pattern.col1),
+                &format!("${}", pattern.col1),
             )
-        })
-        .collect()
+            .replace(
+                &format!("${param_name}.{}", pattern.col2),
+                &format!("${}", pattern.col2),
+            );
+
+        let fix_text = format!("items {{|{}, {}| {new_body} }}", pattern.col1, pattern.col2);
+
+        Some(Fix::with_explanation(
+            "Replace 'transpose ... | each' with 'items' for cleaner iteration over record entries",
+            vec![Replacement::new(pattern.combined_span, fix_text)],
+        ))
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "items_instead_of_transpose_each",
-    "Use 'items' instead of 'transpose | each' when iterating over record entries",
-    check,
-    LintLevel::Hint,
-)
-.with_auto_fix()
-.with_doc_url("https://www.nushell.sh/commands/docs/items.html");
+pub static RULE: &dyn Rule = &ItemsInsteadOfTransposeEach;
 
 #[cfg(test)]
 mod detect_bad;

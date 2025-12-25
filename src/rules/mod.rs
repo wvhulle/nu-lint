@@ -52,7 +52,7 @@ mod unsafe_dynamic_record_access;
 mod unused_helper_functions;
 mod upstream;
 
-pub const ALL_RULES: &[Rule] = &[
+pub const ALL_RULES: &[&dyn Rule] = &[
     avoid_nu_subprocess::RULE,
     avoid_self_import::RULE,
     check_complete_exit_code::RULE,
@@ -79,6 +79,7 @@ pub const ALL_RULES: &[Rule] = &[
     external_tools::wget::RULE,
     external_tools::which::RULE,
     forbid_excessive_nesting::RULE,
+    side_effects::for_over_each::RULE,
     inline_single_use_function::RULE,
     items_instead_of_transpose_each::RULE,
     lines_instead_of_split::RULE,

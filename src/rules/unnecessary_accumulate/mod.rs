@@ -9,8 +9,8 @@ use crate::{
     LintLevel,
     ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
     context::LintContext,
-    rule::Rule,
-    violation::Violation,
+    rule::{DetectFix, Rule},
+    violation::Detection,
 };
 
 type EmptyListVar = (VarId, String, Span);
@@ -90,12 +90,12 @@ type EmptyListVarsMap = HashMap<VarId, (String, Span)>;
 fn create_violations(
     empty_list_vars_map: &EmptyListVarsMap,
     direct_copy_set: &HashSet<VarId>,
-) -> Vec<Violation> {
+) -> Vec<Detection> {
     empty_list_vars_map
         .iter()
         .filter(|&(var_id, _)| direct_copy_set.contains(var_id))
         .map(|(_, (var_name, span))| {
-            Violation::new(
+            Detection::from_global_span(
                 format!(
                     "Variable '{var_name}' is initialized as empty list and filled by copying \
                      items unchanged"
@@ -191,37 +191,52 @@ fn extract_patterns(expr: &Expression, context: &LintContext) -> AnalysisPattern
     )
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    let mut patterns: Vec<AnalysisPattern> = Vec::new();
+struct UnnecessaryAccumulate;
 
-    context.ast.flat_map(
-        context.working_set,
-        &|expr| vec![extract_patterns(expr, context)],
-        &mut patterns,
-    );
+impl DetectFix for UnnecessaryAccumulate {
+    type FixInput = ();
 
-    let empty_list_vars: EmptyListVarsMap = patterns
-        .iter()
-        .flat_map(|(empty_vars, _)| empty_vars.iter())
-        .map(|(id, name, span)| (*id, (name.clone(), *span)))
-        .collect();
+    fn id(&self) -> &'static str {
+        "unnecessary_accumulate"
+    }
 
-    let direct_copy_set: HashSet<VarId> = patterns
-        .iter()
-        .flat_map(|(_, direct_copies)| direct_copies.iter())
-        .copied()
-        .collect();
+    fn explanation(&self) -> &'static str {
+        "No need to initialize an empty list and fill it by copying items. Use the list directly \
+         instead."
+    }
 
-    create_violations(&empty_list_vars, &direct_copy_set)
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        let mut patterns: Vec<AnalysisPattern> = Vec::new();
+
+        context.ast.flat_map(
+            context.working_set,
+            &|expr| vec![extract_patterns(expr, context)],
+            &mut patterns,
+        );
+
+        let empty_list_vars: EmptyListVarsMap = patterns
+            .iter()
+            .flat_map(|(empty_vars, _)| empty_vars.iter())
+            .map(|(id, name, span)| (*id, (name.clone(), *span)))
+            .collect();
+
+        let direct_copy_set: HashSet<VarId> = patterns
+            .iter()
+            .flat_map(|(_, direct_copies)| direct_copies.iter())
+            .copied()
+            .collect();
+
+        let violations = create_violations(&empty_list_vars, &direct_copy_set);
+
+        Self::no_fix(violations)
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "unnecessary_accumulate",
-    "No need to initialize an empty list and fill it by copying items. Use the list directly \
-     instead.",
-    check,
-    LintLevel::Hint,
-);
+pub static RULE: &dyn Rule = &UnnecessaryAccumulate;
 
 #[cfg(test)]
 mod detect_bad;

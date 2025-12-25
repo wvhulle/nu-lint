@@ -59,7 +59,8 @@ pub struct Cli {
     #[arg(long)]
     stdin: bool,
 
-    /// Verbose output
+    /// Verbose output (requires a level set by environment variable
+    /// `RUST_LOG=debug`)
     #[arg(long, short = 'v')]
     verbose: bool,
 }
@@ -159,12 +160,12 @@ impl Cli {
     fn list_rules() {
         println!("## Available Lint Rules\n");
         let mut sorted_rules = ALL_RULES.to_vec();
-        sorted_rules.sort_by_key(|rule| rule.id);
+        sorted_rules.sort_by_key(|r| r.id());
 
-        let max_id_len = sorted_rules.iter().map(|r| r.id.len()).max().unwrap_or(0) + 2; // +2 for backticks
+        let max_id_len = sorted_rules.iter().map(|r| r.id().len()).max().unwrap_or(0) + 2; // +2 for backticks
         let max_desc_len = sorted_rules
             .iter()
-            .map(|r| r.explanation.len())
+            .map(|r| r.explanation().len())
             .max()
             .unwrap_or(0);
 
@@ -187,24 +188,24 @@ impl Cli {
             width_desc = max_desc_len
         );
         for rule in &sorted_rules {
-            let level = match rule.level {
+            let level = match rule.level() {
                 LintLevel::Hint => "hint",
                 LintLevel::Warning => "warning",
                 LintLevel::Error => "error",
             };
-            let auto_fix = if rule.has_auto_fix { "Yes" } else { "" };
-            let id_formatted = format!("`{}`", rule.id);
+            let auto_fix = if rule.has_auto_fix() { "Yes" } else { "" };
+            let id_formatted = format!("`{}`", rule.id());
             println!(
                 "| {:<width_id$} | {:<width_desc$} | {:<7} | {:<8} |",
                 id_formatted,
-                rule.explanation,
+                rule.explanation(),
                 level,
                 auto_fix,
                 width_id = max_id_len,
                 width_desc = max_desc_len
             );
         }
-        let fixable_count = sorted_rules.iter().filter(|r| r.has_auto_fix).count();
+        let fixable_count = sorted_rules.iter().filter(|r| r.has_auto_fix()).count();
         println!(
             "\n*{n} rules available, {f} with auto-fix.*",
             n = sorted_rules.len(),
@@ -213,14 +214,18 @@ impl Cli {
     }
 
     fn list_groups() {
-        const fn auto_fix_suffix(rule: &Rule) -> &'static str {
-            if rule.has_auto_fix { " (auto-fix)" } else { "" }
+        fn auto_fix_suffix(rule: &dyn Rule) -> &'static str {
+            if rule.has_auto_fix() {
+                " (auto-fix)"
+            } else {
+                ""
+            }
         }
         println!("Rule Groups\n");
         for set in ALL_GROUPS {
             println!("`{}` - {}\n", set.name, set.description);
             for rule in set.rules {
-                println!("- `{}`{}", rule.id, auto_fix_suffix(rule));
+                println!("- `{}`{}", rule.id(), auto_fix_suffix(*rule));
             }
             println!();
         }
@@ -228,12 +233,12 @@ impl Cli {
     }
 
     fn explain_rule(rule_id: &str) {
-        let rule = ALL_RULES.iter().find(|r| r.id == rule_id);
+        let rule = ALL_RULES.iter().find(|r| r.id() == rule_id);
 
         if let Some(rule) = rule {
-            println!("Rule: {}", rule.id);
-            println!("Explanation: {}", rule.explanation);
-            if let Some(url) = rule.doc_url {
+            println!("Rule: {}", rule.id());
+            println!("Explanation: {}", rule.explanation());
+            if let Some(url) = rule.doc_url() {
                 println!("Documentation: {url}");
             }
         } else {

@@ -1,7 +1,11 @@
 use nu_protocol::SyntaxShape;
 
 use crate::{
-    LintLevel, ast::block::BlockExt, context::LintContext, rule::Rule, violation::Violation,
+    LintLevel,
+    ast::block::BlockExt,
+    context::LintContext,
+    rule::{DetectFix, Rule},
+    violation::Detection,
 };
 
 /// Check if a parameter is a string-like type that could be used as a script
@@ -32,8 +36,8 @@ fn create_suggestion_message(param_name: &str, function_name: &str) -> String {
 }
 
 /// Create a violation for a parameter that's used as an external command
-fn create_violation(param_name: &str, function_name: &str, context: &LintContext) -> Violation {
-    Violation::with_file_span(
+fn create_violation(param_name: &str, function_name: &str, context: &LintContext) -> Detection {
+    Detection::from_file_span(
         format!(
             "Function '{function_name}' parameter '{param_name}' is used as an external command."
         ),
@@ -43,7 +47,7 @@ fn create_violation(param_name: &str, function_name: &str, context: &LintContext
     .with_help(create_suggestion_message(param_name, function_name))
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
+fn check(context: &LintContext) -> Vec<Detection> {
     let function_bodies = context.collect_function_definitions();
 
     context
@@ -74,14 +78,34 @@ fn check(context: &LintContext) -> Vec<Violation> {
         .collect()
 }
 
-pub const RULE: Rule = Rule::new(
-    "external_script_as_argument",
-    "Avoid passing external scripts as arguments to custom commands; define them as functions \
-     instead",
-    check,
-    LintLevel::Warning,
-)
-.with_doc_url("https://www.nushell.sh/book/modules.html");
+struct ExternalScriptAsArgument;
+
+impl DetectFix for ExternalScriptAsArgument {
+    type FixInput = ();
+
+    fn id(&self) -> &'static str {
+        "external_script_as_argument"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Avoid passing external scripts as arguments to custom commands; define them as functions \
+         instead"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/book/modules.html")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        Self::no_fix(check(context))
+    }
+}
+
+pub static RULE: &dyn Rule = &ExternalScriptAsArgument;
 
 #[cfg(test)]
 mod detect_bad;

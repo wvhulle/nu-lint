@@ -16,8 +16,8 @@ use crate::{
         },
         is_dangerous_path,
     },
-    rule::Rule,
-    violation::Violation,
+    rule::{DetectFix, Rule},
+    violation::Detection,
 };
 
 fn is_if_block_containing(expr: &Expression, command_span: Span, context: &LintContext) -> bool {
@@ -113,14 +113,14 @@ fn create_dangerous_path_violation(
     path_str: &str,
     command_span: Span,
     is_recursive: bool,
-) -> Violation {
+) -> Detection {
     let severity = if is_recursive { "CRITICAL" } else { "WARNING" };
     let label = if is_recursive {
         "recursive operation on dangerous path"
     } else {
         "dangerous path"
     };
-    Violation::new(
+    Detection::from_global_span(
         format!(
             "{severity}: Dangerous file operation '{cmd_name} {path_str}' - could cause data loss"
         ),
@@ -136,8 +136,8 @@ fn create_variable_validation_violation(
     cmd_name: &str,
     path_str: &str,
     command_span: Span,
-) -> Violation {
-    Violation::new(
+) -> Detection {
+    Detection::from_global_span(
         format!("Variable '{path_str}' used in '{cmd_name}' command without visible validation"),
         command_span,
     )
@@ -162,7 +162,7 @@ fn check_external_command(
     args: &[ExternalArgument],
     command_span: Span,
     context: &LintContext,
-    violations: &mut Vec<Violation>,
+    violations: &mut Vec<Detection>,
 ) {
     let is_recursive = cmd_name == "rm" && has_external_recursive_flag(args, context);
 
@@ -193,7 +193,7 @@ fn check_builtin_command(
     call: &Call,
     command_span: Span,
     context: &LintContext,
-    violations: &mut Vec<Violation>,
+    violations: &mut Vec<Detection>,
 ) {
     let is_recursive = cmd_name == "rm" && has_recursive_flag(call, context);
 
@@ -219,42 +219,55 @@ fn check_builtin_command(
     }
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    use nu_protocol::ast::Traverse;
+struct DangerousFileOperations;
 
-    let mut violations = Vec::new();
-    let mut dangerous_commands = Vec::new();
+impl DetectFix for DangerousFileOperations {
+    type FixInput = ();
 
-    context.ast.flat_map(
-        context.working_set,
-        &|expr| {
-            extract_dangerous_command(expr, context)
-                .into_iter()
-                .collect()
-        },
-        &mut dangerous_commands,
-    );
-
-    for cmd in dangerous_commands {
-        match cmd {
-            DangerousCommand::External { span, name, args } => {
-                check_external_command(name, args, span, context, &mut violations);
-            }
-            DangerousCommand::Builtin { span, name, call } => {
-                check_builtin_command(&name, call, span, context, &mut violations);
-            }
-        }
+    fn id(&self) -> &'static str {
+        "dangerous_file_operations"
     }
 
-    violations
+    fn explanation(&self) -> &'static str {
+        "Detect dangerous file operations that could cause data loss"
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        use nu_protocol::ast::Traverse;
+
+        let mut violations = Vec::new();
+        let mut dangerous_commands = Vec::new();
+
+        context.ast.flat_map(
+            context.working_set,
+            &|expr| {
+                extract_dangerous_command(expr, context)
+                    .into_iter()
+                    .collect()
+            },
+            &mut dangerous_commands,
+        );
+
+        for cmd in dangerous_commands {
+            match cmd {
+                DangerousCommand::External { span, name, args } => {
+                    check_external_command(name, args, span, context, &mut violations);
+                }
+                DangerousCommand::Builtin { span, name, call } => {
+                    check_builtin_command(&name, call, span, context, &mut violations);
+                }
+            }
+        }
+
+        Self::no_fix(violations)
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "dangerous_file_operations",
-    "Detect dangerous file operations that could cause data loss",
-    check,
-    LintLevel::Warning,
-);
+pub static RULE: &dyn Rule = &DangerousFileOperations;
 
 #[cfg(test)]
 mod detect_bad;

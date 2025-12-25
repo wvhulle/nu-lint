@@ -4,8 +4,8 @@ use crate::{
     LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
-    rule::Rule,
-    violation::Violation,
+    rule::{DetectFix, Rule},
+    violation::Detection,
 };
 
 fn extract_int_value(expr: &Expression, context: &LintContext) -> Option<i64> {
@@ -130,7 +130,7 @@ fn check_while_loop_for_counter(
     counter_name: &str,
     counter_span: nu_protocol::Span,
     context: &LintContext,
-) -> Option<Violation> {
+) -> Option<Detection> {
     let condition = call.get_positional_arg(0)?;
     let body_expr = call.get_positional_arg(1)?;
     let block_id = body_expr.extract_block_id()?;
@@ -138,7 +138,7 @@ fn check_while_loop_for_counter(
     (is_counter_comparison(condition, counter_name, context)
         && has_increment_in_block(block_id, counter_name, context))
     .then(|| {
-        Violation::new(
+        Detection::from_global_span(
             format!(
                 "While loop with counter '{counter_name}' can be replaced with range iteration"
             ),
@@ -150,36 +150,55 @@ fn check_while_loop_for_counter(
     })
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    context
-        .ast
-        .pipelines
-        .iter()
-        .flat_map(|pipeline| &pipeline.elements)
-        .filter_map(|element| extract_counter_from_mut(&element.expr, context))
-        .flat_map(|(counter_name, counter_span)| {
-            context.collect_rule_violations(|expr, ctx| {
-                let Expr::Call(call) = &expr.expr else {
-                    return vec![];
-                };
+struct WhileCounter;
 
-                (call.get_call_name(ctx) == "while")
-                    .then(|| check_while_loop_for_counter(call, &counter_name, counter_span, ctx))
-                    .flatten()
-                    .into_iter()
-                    .collect()
+impl DetectFix for WhileCounter {
+    type FixInput = ();
+
+    fn id(&self) -> &'static str {
+        "while_counter"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Replace while loop with counter with range iteration"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/commands/docs/each.html")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        let violations = context
+            .ast
+            .pipelines
+            .iter()
+            .flat_map(|pipeline| &pipeline.elements)
+            .filter_map(|element| extract_counter_from_mut(&element.expr, context))
+            .flat_map(|(counter_name, counter_span)| {
+                context.detect(|expr, ctx| {
+                    let Expr::Call(call) = &expr.expr else {
+                        return vec![];
+                    };
+
+                    (call.get_call_name(ctx) == "while")
+                        .then(|| {
+                            check_while_loop_for_counter(call, &counter_name, counter_span, ctx)
+                        })
+                        .flatten()
+                        .into_iter()
+                        .collect()
+                })
             })
-        })
-        .collect()
+            .collect();
+        Self::no_fix(violations)
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "while_counter",
-    "Replace while loop with counter with range iteration",
-    check,
-    LintLevel::Warning,
-)
-.with_doc_url("https://www.nushell.sh/commands/docs/each.html");
+pub static RULE: &dyn Rule = &WhileCounter;
 
 #[cfg(test)]
 mod detect_bad;

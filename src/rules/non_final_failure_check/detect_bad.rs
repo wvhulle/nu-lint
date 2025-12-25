@@ -8,20 +8,8 @@ fn test_external_with_from_json() {
 }
 
 #[test]
-fn test_external_with_parse() {
-    let bad_code = r#"^ps aux | lines | parse "{pid} {user}""#;
-    RULE.assert_detects(bad_code);
-}
-
-#[test]
 fn test_external_with_where() {
     let bad_code = r"^curl https://example.com | lines | where $it =~ 'pattern'";
-    RULE.assert_detects(bad_code);
-}
-
-#[test]
-fn test_external_with_select() {
-    let bad_code = r"^ps aux | from ssv | select user pid";
     RULE.assert_detects(bad_code);
 }
 
@@ -39,13 +27,8 @@ fn test_external_with_from_yaml() {
 
 #[test]
 fn test_curl_with_from_toml() {
+    instrument();
     let bad_code = r"^curl https://api.example.com/config.toml | from toml";
-    RULE.assert_detects(bad_code);
-}
-
-#[test]
-fn test_external_with_group_by() {
-    let bad_code = r"^ps aux | from ssv | group-by user";
     RULE.assert_detects(bad_code);
 }
 

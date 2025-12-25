@@ -1,6 +1,11 @@
 use nu_protocol::{Span, ast::Expr};
 
-use crate::{LintLevel, context::LintContext, rule::Rule, violation::Violation};
+use crate::{
+    LintLevel,
+    context::LintContext,
+    rule::{DetectFix, Rule},
+    violation::Detection,
+};
 enum BraceType {
     ClosureWithParams,
     BlockWithoutParams,
@@ -11,7 +16,7 @@ fn check_brace_spacing(
     context: &LintContext,
     span: Span,
     brace_type: &BraceType,
-) -> Vec<Violation> {
+) -> Vec<Detection> {
     let text = context.get_span_text(span);
     if text.is_empty() || !text.starts_with('{') || !text.ends_with('}') {
         return vec![];
@@ -30,7 +35,7 @@ fn check_brace_spacing(
             {
                 let opening_brace_span = Span::new(span.start, span.start + 1);
                 vec![
-                    Violation::new(
+                    Detection::from_global_span(
                         "No space allowed after opening brace before closure parameters"
                             .to_string(),
                         opening_brace_span,
@@ -50,7 +55,7 @@ fn check_brace_spacing(
                 let opening_span = Span::new(span.start, span.start + 1);
                 let closing_span = Span::new(span.end - 1, span.end);
                 vec![
-                    Violation::new(
+                    Detection::from_global_span(
                         "Blocks and closures without parameters should have spaces inside braces"
                             .to_string(),
                         span,
@@ -73,7 +78,7 @@ fn check_brace_spacing(
                 let opening_span = Span::new(span.start, span.start + 1);
                 let closing_span = Span::new(span.end - 1, span.end);
                 vec![
-                    Violation::new(
+                    Detection::from_global_span(
                         "Records should not have spaces inside braces".to_string(),
                         span,
                     )
@@ -93,8 +98,8 @@ fn has_block_params(context: &LintContext, block_id: nu_protocol::BlockId) -> bo
         || !block.signature.optional_positional.is_empty()
         || block.signature.rest_positional.is_some()
 }
-fn check(context: &LintContext) -> Vec<Violation> {
-    context.collect_rule_violations(|expr, ctx| match &expr.expr {
+fn check(context: &LintContext) -> Vec<Detection> {
+    context.detect(|expr, ctx| match &expr.expr {
         Expr::Closure(block_id) | Expr::Block(block_id) => {
             let brace_type = if has_block_params(ctx, *block_id) {
                 BraceType::ClosureWithParams
@@ -109,13 +114,33 @@ fn check(context: &LintContext) -> Vec<Violation> {
         _ => vec![],
     })
 }
-pub const RULE: Rule = Rule::new(
-    "brace_spacing",
-    "Enforce consistent brace spacing per Nushell style guide",
-    check,
-    LintLevel::Hint,
-)
-.with_doc_url("https://www.nushell.sh/book/style_guide.html#one-line-format");
+struct BraceSpacing;
+
+impl DetectFix for BraceSpacing {
+    type FixInput = ();
+
+    fn id(&self) -> &'static str {
+        "brace_spacing"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Enforce consistent brace spacing per Nushell style guide"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/book/style_guide.html#one-line-format")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        Self::no_fix(check(context))
+    }
+}
+
+pub static RULE: &dyn Rule = &BraceSpacing;
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]

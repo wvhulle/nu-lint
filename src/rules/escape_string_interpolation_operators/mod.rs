@@ -4,8 +4,11 @@ use nu_protocol::ast::{
 };
 
 use crate::{
-    LintLevel, ast::expression::ExpressionExt, context::LintContext, rule::Rule,
-    violation::Violation,
+    LintLevel,
+    ast::expression::ExpressionExt,
+    context::LintContext,
+    rule::{DetectFix, Rule},
+    violation::Detection,
 };
 
 /// Detection categories for problematic AST patterns in string interpolations
@@ -191,7 +194,7 @@ fn is_valid_interpolation(expr: &Expression, context: &LintContext) -> bool {
     }
 }
 
-fn create_violation(span: nu_protocol::Span, pattern: ProblematicPattern) -> Violation {
+fn create_violation(span: nu_protocol::Span, pattern: ProblematicPattern) -> Detection {
     let (message, suggestion, label) = match pattern {
         ProblematicPattern::StandaloneOperator(op) => (
             format!(
@@ -222,7 +225,7 @@ fn create_violation(span: nu_protocol::Span, pattern: ProblematicPattern) -> Vio
         ),
     };
 
-    Violation::new(message, span)
+    Detection::from_global_span(message, span)
         .with_primary_label(label)
         .with_help(suggestion)
 }
@@ -231,7 +234,7 @@ fn check_string_interpolation(
     exprs: &[Expression],
     span: nu_protocol::Span,
     context: &LintContext,
-) -> Option<Violation> {
+) -> Option<Detection> {
     // Only check non-string expressions (i.e., interpolated expressions)
     exprs
         .iter()
@@ -246,25 +249,41 @@ fn check_string_interpolation(
         })
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    context.collect_rule_violations(|expr, ctx| {
-        if let Expr::StringInterpolation(exprs) = &expr.expr
-            && let Some(violation) = check_string_interpolation(exprs, expr.span, ctx)
-        {
-            vec![violation]
-        } else {
-            vec![]
-        }
-    })
+struct EscapeStringInterpolationOperators;
+
+impl DetectFix for EscapeStringInterpolationOperators {
+    type FixInput = ();
+
+    fn id(&self) -> &'static str {
+        "escape_string_interpolation_operators"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Escape braces in string interpolations to avoid runtime errors"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/book/working_with_strings.html#string-interpolation")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Error
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        Self::no_fix(context.detect(|expr, ctx| {
+            if let Expr::StringInterpolation(exprs) = &expr.expr
+                && let Some(violation) = check_string_interpolation(exprs, expr.span, ctx)
+            {
+                vec![violation]
+            } else {
+                vec![]
+            }
+        }))
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "escape_string_interpolation_operators",
-    "Escape braces in string interpolations to avoid runtime errors",
-    check,
-    LintLevel::Error,
-)
-.with_doc_url("https://www.nushell.sh/book/working_with_strings.html#string-interpolation");
+pub static RULE: &dyn Rule = &EscapeStringInterpolationOperators;
 
 #[cfg(test)]
 mod detect_bad;

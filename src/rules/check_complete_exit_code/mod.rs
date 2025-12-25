@@ -13,8 +13,8 @@ use crate::{
         CommonEffect,
         external::{ExternEffect, has_external_side_effect},
     },
-    rule::Rule,
-    violation::Violation,
+    rule::{DetectFix, Rule},
+    violation::Detection,
 };
 
 struct CompleteAssignment {
@@ -186,13 +186,13 @@ fn is_exit_code_unchecked(
     true
 }
 
-fn create_violation(assignment: &CompleteAssignment) -> Violation {
+fn create_violation(assignment: &CompleteAssignment) -> Detection {
     let cmd_desc = assignment
         .command_name
         .as_ref()
         .map_or(String::new(), |c| format!("'{c}' "));
 
-    Violation::new(
+    Detection::from_global_span(
         format!(
             "External command {cmd_desc}result '{}' stored but exit code not checked",
             assignment.var_name
@@ -208,24 +208,42 @@ fn create_violation(assignment: &CompleteAssignment) -> Violation {
     ))
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    let assignments = collect_complete_assignments(context);
-    let exit_code_checks = collect_exit_code_checks(context);
+struct CheckCompleteExitCode;
 
-    assignments
-        .values()
-        .filter(|a| is_exit_code_unchecked(a, &exit_code_checks))
-        .map(create_violation)
-        .collect()
+impl DetectFix for CheckCompleteExitCode {
+    type FixInput = ();
+
+    fn id(&self) -> &'static str {
+        "check_complete_exit_code"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Check exit codes when using 'complete' to capture dangerous external command results"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/commands/docs/complete.html")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        let assignments = collect_complete_assignments(context);
+        let exit_code_checks = collect_exit_code_checks(context);
+
+        Self::no_fix(
+            assignments
+                .values()
+                .filter(|a| is_exit_code_unchecked(a, &exit_code_checks))
+                .map(create_violation)
+                .collect(),
+        )
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "check_complete_exit_code",
-    "Check exit codes when using 'complete' to capture dangerous external command results",
-    check,
-    LintLevel::Warning,
-)
-.with_doc_url("https://www.nushell.sh/commands/docs/complete.html");
+pub static RULE: &dyn Rule = &CheckCompleteExitCode;
 
 #[cfg(test)]
 mod detect_bad;

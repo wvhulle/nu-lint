@@ -8,9 +8,15 @@ use crate::{
     LintLevel,
     ast::span::SpanExt,
     context::LintContext,
-    rule::Rule,
-    violation::{Fix, Replacement, Violation},
+    rule::{DetectFix, Rule},
+    violation::{Detection, Fix, Replacement},
 };
+
+struct SnakeCaseFixData {
+    var_name: String,
+    snake_case_name: String,
+    replacements: Vec<(Span, String)>,
+}
 
 /// Find all usages of a variable in the AST
 fn find_variable_usages(var_id: VarId, context: &LintContext) -> Vec<Span> {
@@ -31,7 +37,7 @@ fn find_variable_usages(var_id: VarId, context: &LintContext) -> Vec<Span> {
     usages
 }
 
-fn check_call(call: &Call, ctx: &LintContext) -> Option<Violation> {
+fn check_call(call: &Call, ctx: &LintContext) -> Option<(Detection, SnakeCaseFixData)> {
     let decl_name = ctx.working_set.get_decl(call.decl_id).name();
     let is_mutable = matches!(decl_name, "mut");
     if !matches!(decl_name, "let" | "mut") {
@@ -53,18 +59,12 @@ fn check_call(call: &Call, ctx: &LintContext) -> Option<Violation> {
         return None;
     }
 
-    // Create replacements for declaration and all usages
-    let mut replacements = vec![Replacement {
-        span: name_expr.span.into(),
-        replacement_text: snake_case_name.clone().into(),
-    }];
+    // Collect replacement spans and texts
+    let mut replacements = vec![(name_expr.span, snake_case_name.clone())];
 
     for usage_span in find_variable_usages(*var_id, ctx) {
         if usage_span.source_code(ctx).starts_with('$') {
-            replacements.push(Replacement {
-                span: usage_span.into(),
-                replacement_text: format!("${snake_case_name}").into(),
-            });
+            replacements.push((usage_span, format!("${snake_case_name}")));
         }
     }
 
@@ -74,38 +74,70 @@ fn check_call(call: &Call, ctx: &LintContext) -> Option<Violation> {
         "Variable"
     };
 
-    Some(
-        Violation::new(
-            format!("{var_type} '{var_name}' should use snake_case naming convention"),
-            name_expr.span,
-        )
-        .with_primary_label("non-snake_case name")
-        .with_help(format!("Consider renaming to: {snake_case_name}"))
-        .with_fix(Fix::with_explanation(
-            format!("Rename variable '{var_name}' to '{snake_case_name}'"),
-            replacements,
-        )),
+    let violation = Detection::from_global_span(
+        format!("{var_type} '{var_name}' should use snake_case naming convention"),
+        name_expr.span,
     )
+    .with_primary_label("non-snake_case name")
+    .with_help(format!("Consider renaming to: {snake_case_name}"));
+
+    let fix_data = SnakeCaseFixData {
+        var_name: var_name.to_string(),
+        snake_case_name,
+        replacements,
+    };
+
+    Some((violation, fix_data))
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    context.collect_rule_violations(|expr, ctx| {
-        let Expr::Call(call) = &expr.expr else {
-            return vec![];
-        };
+struct SnakeCaseVariables;
 
-        check_call(call, ctx).into_iter().collect()
-    })
+impl DetectFix for SnakeCaseVariables {
+    type FixInput = SnakeCaseFixData;
+
+    fn id(&self) -> &'static str {
+        "snake_case_variables"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Variables should use snake_case naming convention"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/book/style_guide.html#variables-and-command-parameters")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        context.detect_with_fix_data(|expr, ctx| {
+            let Expr::Call(call) = &expr.expr else {
+                return vec![];
+            };
+
+            check_call(call, ctx).into_iter().collect()
+        })
+    }
+
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        let replacements = fix_data
+            .replacements
+            .iter()
+            .map(|(span, text)| Replacement::new(*span, text.clone()))
+            .collect();
+        Some(Fix::with_explanation(
+            format!(
+                "Rename variable '{}' to '{}'",
+                fix_data.var_name, fix_data.snake_case_name
+            ),
+            replacements,
+        ))
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "snake_case_variables",
-    "Variables should use snake_case naming convention",
-    check,
-    LintLevel::Warning,
-)
-.with_auto_fix()
-.with_doc_url("https://www.nushell.sh/book/style_guide.html#variables-and-command-parameters");
+pub static RULE: &dyn Rule = &SnakeCaseVariables;
 
 #[cfg(test)]
 mod detect_bad;

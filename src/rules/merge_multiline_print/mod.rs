@@ -9,8 +9,8 @@ use crate::{
     ast::call::CallExt,
     config::LintLevel,
     context::LintContext,
-    rule::Rule,
-    violation::{Fix, Replacement, Violation},
+    rule::{DetectFix, Rule},
+    violation::{Detection, Fix, Replacement},
 };
 
 const MIN_CONSECUTIVE_PRINTS: usize = 3;
@@ -72,6 +72,12 @@ struct PrintInfo {
     span: Span,
     string_type: StringFormat,
     to_stderr: bool,
+}
+
+/// Semantic fix data: stores the print group info needed for fix generation
+pub struct FixData {
+    prints: Vec<PrintInfo>,
+    combined_span: Span,
 }
 
 impl PrintInfo {
@@ -189,71 +195,13 @@ fn flush_group(groups: &mut Vec<Vec<PrintInfo>>, current: &mut Vec<PrintInfo>) {
 }
 
 /// Creates a violation for a group of consecutive print statements.
-fn create_violation(prints: &[PrintInfo]) -> Violation {
+fn create_violation(prints: Vec<PrintInfo>) -> (Detection, FixData) {
     let combined_span = Span::new(
         prints.first().map_or(0, |p| p.span.start),
         prints.last().map_or(0, |p| p.span.end),
     );
 
-    let (merged_content, quote_style) = {
-        let first_type = prints.first().map(|p| &p.string_type);
-
-        let content = prints
-            .iter()
-            .map(|p| {
-                match &p.string_type {
-                    StringFormat::InterpolationDouble(_) | StringFormat::InterpolationSingle(_) => {
-                        // Interpolations don't need escaping - they're already in the right format
-                        p.string_type.content().to_string()
-                    }
-                    StringFormat::Double(_)
-                    | StringFormat::Single(_)
-                    | StringFormat::Raw(_)
-                    | StringFormat::BareWord(_) => {
-                        // Escape backslashes first, then double quotes for output as double-quoted
-                        // string
-                        p.string_type
-                            .content()
-                            .replace('\\', r"\\")
-                            .replace('"', r#"\""#)
-                    }
-                    StringFormat::Backtick(_) => {
-                        // Backtick strings should not be in a group (is_compatible prevents this)
-                        // But handle it defensively
-                        p.string_type.content().to_string()
-                    }
-                }
-            })
-            .collect::<Vec<_>>()
-            .join("\n");
-
-        let style = match first_type {
-            Some(StringFormat::InterpolationDouble(_)) => "$\"",
-            Some(StringFormat::InterpolationSingle(_)) => "$'",
-            _ => "\"",
-        };
-
-        (content, style)
-    };
-
-    log::debug!("Merged content is: '{merged_content}'");
-    let stderr_flag = prints.first().filter(|p| p.to_stderr).map_or("", |_| " -e");
-
-    let replacement_text = match quote_style {
-        "$\"" => format!("print{stderr_flag} $\"{merged_content}\""),
-        "$'" => format!("print{stderr_flag} $'{merged_content}'"),
-        _ => format!("print{stderr_flag} \"{merged_content}\""),
-    };
-
-    let fix = Fix::with_explanation(
-        format!(
-            "Merge {} consecutive print statements into a single multiline print",
-            prints.len()
-        ),
-        vec![Replacement::new(combined_span, replacement_text)],
-    );
-
-    Violation::new(
+    let violation = Detection::from_global_span(
         format!(
             "Found {} consecutive `print` statements with string literals that could be merged",
             prints.len()
@@ -264,48 +212,148 @@ fn create_violation(prints: &[PrintInfo]) -> Violation {
     .with_help(
         "Merge consecutive print statements into a single print with a multiline string for \
          cleaner code. Use `print \"line1\\nline2\\nline3\"` instead of multiple print calls.",
-    )
-    .with_fix(fix)
+    );
+
+    let fix_data = FixData {
+        prints,
+        combined_span,
+    };
+
+    (violation, fix_data)
 }
 
 /// Recursively checks a block and all nested blocks for violations.
-fn check_block(block: &Block, context: &LintContext) -> Vec<Violation> {
-    let mut violations: Vec<_> = find_print_groups(block, context)
-        .iter()
-        .map(|group| create_violation(group))
-        .collect();
+const fn extract_nested_block_id(expr: &Expr) -> Option<nu_protocol::BlockId> {
+    match expr {
+        Expr::Block(id) | Expr::Closure(id) | Expr::Subexpression(id) => Some(*id),
+        _ => None,
+    }
+}
 
-    // Check nested blocks (closures, subexpressions, etc.)
+fn detect_with_fix_data_from_nested_blocks(
+    block: &Block,
+    context: &LintContext,
+    violations: &mut Vec<(Detection, FixData)>,
+) {
     for pipeline in &block.pipelines {
         for element in &pipeline.elements {
             element.expr.flat_map(
                 context.working_set,
-                &|expr| match &expr.expr {
-                    Expr::Block(id) | Expr::Closure(id) | Expr::Subexpression(id) => {
-                        check_block(context.working_set.get_block(*id), context)
-                    }
-                    _ => vec![],
+                &|expr| {
+                    extract_nested_block_id(&expr.expr)
+                        .map(|id| detect_block(context.working_set.get_block(id), context))
+                        .unwrap_or_default()
                 },
-                &mut violations,
+                violations,
             );
         }
     }
+}
+
+fn detect_block(block: &Block, context: &LintContext) -> Vec<(Detection, FixData)> {
+    let mut violations: Vec<_> = find_print_groups(block, context)
+        .into_iter()
+        .map(create_violation)
+        .collect();
+
+    detect_with_fix_data_from_nested_blocks(block, context, &mut violations);
 
     violations
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    check_block(context.ast, context)
+fn escape_content_for_double_quotes(content: &str) -> String {
+    content.replace('\\', r"\\").replace('"', r#"\""#)
 }
 
-pub const RULE: Rule = Rule::new(
-    "merge_multiline_print",
-    "Consecutive print statements can be merged into a single print with a multiline string",
-    check,
-    LintLevel::Hint,
-)
-.with_auto_fix()
-.with_doc_url("https://www.nushell.sh/book/working_with_strings.html#string-formats-at-a-glance");
+fn process_string_for_merging(string_type: &StringFormat) -> String {
+    match string_type {
+        StringFormat::InterpolationDouble(_) | StringFormat::InterpolationSingle(_) => {
+            string_type.content().to_string()
+        }
+        StringFormat::Double(_)
+        | StringFormat::Single(_)
+        | StringFormat::Raw(_)
+        | StringFormat::BareWord(_) => escape_content_for_double_quotes(string_type.content()),
+        StringFormat::Backtick(_) => string_type.content().to_string(),
+    }
+}
+
+const fn determine_quote_style(first_string_type: Option<&StringFormat>) -> &'static str {
+    match first_string_type {
+        Some(StringFormat::InterpolationDouble(_)) => "$\"",
+        Some(StringFormat::InterpolationSingle(_)) => "$'",
+        _ => "\"",
+    }
+}
+
+fn merge_print_contents(prints: &[PrintInfo]) -> String {
+    prints
+        .iter()
+        .map(|p| process_string_for_merging(&p.string_type))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn has_stderr_flag(prints: &[PrintInfo]) -> bool {
+    prints.first().is_some_and(|p| p.to_stderr)
+}
+
+fn build_replacement_text(merged_content: &str, quote_style: &str, stderr_flag: &str) -> String {
+    match quote_style {
+        "$\"" => format!("print{stderr_flag} $\"{merged_content}\""),
+        "$'" => format!("print{stderr_flag} $'{merged_content}'"),
+        _ => format!("print{stderr_flag} \"{merged_content}\""),
+    }
+}
+
+struct MergeMultilinePrint;
+
+impl DetectFix for MergeMultilinePrint {
+    type FixInput = FixData;
+
+    fn id(&self) -> &'static str {
+        "merge_multiline_print"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Consecutive print statements can be merged into a single print with a multiline string"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/book/working_with_strings.html#string-formats-at-a-glance")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        detect_block(context.ast, context)
+    }
+
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        let prints = &fix_data.prints;
+        let first_type = prints.first().map(|p| &p.string_type);
+
+        let merged_content = merge_print_contents(prints);
+        let quote_style = determine_quote_style(first_type);
+        let stderr_flag = if has_stderr_flag(prints) { " -e" } else { "" };
+
+        log::debug!("Merged content is: '{merged_content}'");
+
+        let replacement_text = build_replacement_text(&merged_content, quote_style, stderr_flag);
+
+        Some(Fix::with_explanation(
+            format!(
+                "Merge {} consecutive print statements into a single multiline print",
+                prints.len()
+            ),
+            vec![Replacement::new(fix_data.combined_span, replacement_text)],
+        ))
+    }
+}
+
+pub static RULE: &dyn Rule = &MergeMultilinePrint;
 
 #[cfg(test)]
 mod detect_bad;

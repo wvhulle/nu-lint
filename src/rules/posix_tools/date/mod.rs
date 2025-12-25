@@ -1,112 +1,140 @@
-use nu_protocol::ast::ExternalArgument;
+use std::iter::Peekable;
 
 use crate::{
-    LintLevel, Violation,
-    alternatives::{detect_external_commands, external_args_slices},
+    LintLevel,
+    alternatives::{ExternalCmdFixData, detect_external_commands, external_args_slices},
     context::LintContext,
-    rule::Rule,
-    violation::{Fix, Replacement},
+    rule::{DetectFix, Rule},
+    violation::{Detection, Fix, Replacement},
 };
 
 const NOTE: &str = "Use 'date now' for current time, '| date to-timezone <TZ>' for timezone \
                     conversion, and '| format date \"%Y-%m-%d\"' to format. Use '... | into \
                     datetime' to parse strings.";
 
-fn build_fix(
-    _cmd_text: &str,
-    args: &[ExternalArgument],
-    expr_span: nu_protocol::Span,
-    context: &LintContext,
-) -> Fix {
-    let args_text: Vec<&str> = external_args_slices(args, context).collect();
+struct DateOptions {
+    fmt: Option<String>,
+    utc: bool,
+    date_str: Option<String>,
+}
 
-    // Parse external `date` flags
-    let mut fmt: Option<String> = None; // +%Y-%m-%d
-    let mut utc = false; // -u / --utc
-    let mut date_str: Option<String> = None; // -d "..." / --date=...
+impl DateOptions {
+    fn parse<'a>(args: impl IntoIterator<Item = &'a str>) -> Self {
+        let mut opts = Self {
+            fmt: None,
+            utc: false,
+            date_str: None,
+        };
 
-    let mut iter = args_text.iter().copied().peekable();
-    while let Some(arg) = iter.next() {
-        if arg == "-u" || arg == "--utc" {
-            utc = true;
-        } else if let Some(rest) = arg.strip_prefix("--date=") {
-            date_str = Some(rest.to_string());
-        } else if arg == "-d" || arg == "--date" {
-            if let Some(val) = iter.next() {
-                date_str = Some(val.to_string());
+        let args_vec: Vec<&str> = args.into_iter().collect();
+        let mut iter = args_vec.iter().copied().peekable();
+        while let Some(arg) = iter.next() {
+            Self::parse_arg(&mut opts, arg, &mut iter);
+        }
+
+        opts
+    }
+
+    fn parse_arg<'a>(
+        opts: &mut Self,
+        arg: &'a str,
+        iter: &mut Peekable<impl Iterator<Item = &'a str>>,
+    ) {
+        match arg {
+            "-u" | "--utc" => opts.utc = true,
+            s if s.starts_with("--date=") => {
+                opts.date_str = s.strip_prefix("--date=").map(String::from);
             }
-        } else if let Some(rest) = arg.strip_prefix('+') {
-            // Keep original format; ensure it's quoted in Nu replacement
-            let needs_quotes = !(rest.starts_with('"') || rest.starts_with('\''));
-            let f = if needs_quotes {
-                format!("'{rest}'")
-            } else {
-                rest.to_string()
-            };
-            fmt = Some(f);
+            "-d" | "--date" => {
+                opts.date_str = iter.next().map(String::from);
+            }
+            s if s.starts_with('+') => {
+                let rest = &s[1..];
+                let needs_quotes = !(rest.starts_with('"') || rest.starts_with('\''));
+                opts.fmt = Some(if needs_quotes {
+                    format!("'{rest}'")
+                } else {
+                    rest.to_string()
+                });
+            }
+            _ => {}
         }
     }
 
-    // Build Nushell pipeline
-    let mut parts: Vec<String> = Vec::new();
+    fn to_nushell(&self) -> (String, String) {
+        let mut parts: Vec<String> = Vec::new();
+        let mut explanation = vec!["Replace external 'date' with Nushell date pipeline".into()];
 
-    let had_date_str = date_str.is_some();
-    if let Some(ds) = date_str {
-        // Ensure quoted string literal for into datetime
-        let trimmed = ds.trim();
-        let ds_quoted = if trimmed.starts_with('\'') || trimmed.starts_with('"') {
-            trimmed.to_string()
+        explanation.push("returns a datetime value".to_string());
+
+        if let Some(ds) = &self.date_str {
+            let trimmed = ds.trim();
+            let ds_quoted = if trimmed.starts_with('\'') || trimmed.starts_with('"') {
+                trimmed.to_string()
+            } else {
+                format!("'{trimmed}'")
+            };
+            parts.push(format!("{ds_quoted} | into datetime"));
+            explanation.push("parse string with 'into datetime'".to_string());
         } else {
-            format!("'{trimmed}'")
-        };
-        parts.push(format!("{ds_quoted} | into datetime"));
-    } else {
-        parts.push("date now".to_string());
-    }
+            parts.push("date now".to_string());
+        }
 
-    if utc {
-        parts.push("date to-timezone UTC".to_string());
-    }
-    let had_fmt = fmt.is_some();
-    if let Some(f) = fmt {
-        parts.push(format!("format date {f}"));
-    }
+        if self.utc {
+            parts.push("date to-timezone UTC".to_string());
+            explanation.push("convert to UTC with 'date to-timezone'".to_string());
+        }
 
-    let replacement = parts.join(" | ");
-    let mut explanation = Vec::new();
-    explanation.push("Replace external 'date' with Nushell date pipeline".to_string());
-    explanation.push("returns a datetime value".to_string());
-    if had_date_str {
-        explanation.push("parse string with 'into datetime'".to_string());
-    }
-    if utc {
-        explanation.push("convert to UTC with 'date to-timezone'".to_string());
-    }
-    if had_fmt {
-        explanation.push("format output with 'format date'".to_string());
-    }
-    if explanation.len() == 1 {
-        explanation.push("use 'date now' for current date/time".to_string());
-    }
+        if let Some(f) = &self.fmt {
+            parts.push(format!("format date {f}"));
+            explanation.push("format output with 'format date'".to_string());
+        }
 
-    Fix::with_explanation(
-        explanation.join("; "),
-        vec![Replacement::new(expr_span, replacement)],
-    )
+        if explanation.len() == 2 {
+            explanation.push("use 'date now' for current date/time".to_string());
+        }
+
+        (parts.join(" | "), explanation.join("; "))
+    }
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    detect_external_commands(context, "date", NOTE, Some(build_fix))
+struct UseBuiltinDate;
+
+impl DetectFix for UseBuiltinDate {
+    type FixInput = ExternalCmdFixData;
+
+    fn id(&self) -> &'static str {
+        "use_builtin_date"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Use 'date now' instead of external date"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/commands/docs/date_now.html")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        detect_external_commands(context, "date", NOTE)
+    }
+
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        let opts = DateOptions::parse(external_args_slices(&fix_data.args, context));
+        let (replacement, explanation) = opts.to_nushell();
+
+        Some(Fix::with_explanation(
+            explanation,
+            vec![Replacement::new(fix_data.expr_span, replacement)],
+        ))
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "use_builtin_date",
-    "Use 'date now' instead of external date",
-    check,
-    LintLevel::Warning,
-)
-.with_auto_fix()
-.with_doc_url("https://www.nushell.sh/commands/docs/date_now.html");
+pub static RULE: &dyn Rule = &UseBuiltinDate;
 
 #[cfg(test)]
 mod tests {

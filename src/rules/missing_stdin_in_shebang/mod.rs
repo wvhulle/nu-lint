@@ -4,9 +4,14 @@ use crate::{
     LintLevel,
     ast::{call::CallExt, expression::is_pipeline_input_var, span::SpanExt},
     context::LintContext,
-    rule::Rule,
-    violation::Violation,
+    rule::{DetectFix, Rule},
+    violation::{Detection, Fix, Replacement},
 };
+
+struct ShebangFixData {
+    fix_span: nu_protocol::Span,
+    new_shebang: String,
+}
 
 fn uses_pipeline_input_directly(expr: &Expression, context: &LintContext) -> bool {
     match &expr.expr {
@@ -96,7 +101,7 @@ fn has_stdin_flag_in_shebang(first_line: &str) -> bool {
     first_line.starts_with("#!") && first_line.contains("--stdin")
 }
 
-fn create_fix_for_shebang(context: &LintContext) -> Option<crate::Fix> {
+fn create_fix_data_for_shebang(context: &LintContext) -> Option<ShebangFixData> {
     let source = unsafe { context.source() };
     let file_offset = context.file_offset();
     let first_line = source.lines().next()?;
@@ -107,7 +112,7 @@ fn create_fix_for_shebang(context: &LintContext) -> Option<crate::Fix> {
 
     // Find the end of the first line including the newline
     let first_line_end = source.find('\n').map_or(source.len(), |pos| pos);
-    let span = nu_protocol::Span::new(file_offset, first_line_end + file_offset);
+    let fix_span = nu_protocol::Span::new(file_offset, first_line_end + file_offset);
 
     let new_shebang = if first_line.contains("-S ") {
         first_line.replace("-S nu", "-S nu --stdin")
@@ -117,10 +122,10 @@ fn create_fix_for_shebang(context: &LintContext) -> Option<crate::Fix> {
         format!("{first_line} --stdin")
     };
 
-    Some(crate::Fix::with_explanation(
-        "Add --stdin flag to shebang",
-        vec![crate::Replacement::new(span, new_shebang)],
-    ))
+    Some(ShebangFixData {
+        fix_span,
+        new_shebang,
+    })
 }
 
 fn has_explicit_type_annotation(
@@ -135,17 +140,20 @@ fn find_signature_span(call: &Call, _ctx: &LintContext) -> Option<nu_protocol::S
     Some(sig_arg.span)
 }
 
-fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
+fn check_main_function(
+    call: &Call,
+    context: &LintContext,
+) -> Vec<(Detection, Option<ShebangFixData>)> {
     let (_func_name, name_span) = match call.extract_declaration_name(context) {
         Some((name, span)) if name == "main" => (name, span),
         _ => return vec![],
     };
 
-    let Some((block_id, _)) = call.extract_function_definition(context) else {
+    let Some(def) = call.extract_function_definition(context) else {
         return vec![];
     };
 
-    let block = context.working_set.get_block(block_id);
+    let block = context.working_set.get_block(def.body);
     let signature = &block.signature;
     let sig_span = find_signature_span(call, context);
 
@@ -188,37 +196,57 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
         "Main function declares pipeline input type but shebang is missing --stdin flag"
     };
 
-    let fix = create_fix_for_shebang(context);
+    let fix_data = create_fix_data_for_shebang(context);
 
-    let mut violation = Violation::new(message, name_span)
+    let violation = Detection::from_global_span(message, name_span)
         .with_primary_label("main function expecting stdin")
         .with_help(
             "Add --stdin flag to shebang: #!/usr/bin/env -S nu --stdin or #!/usr/bin/env nu \
              --stdin (if env supports multiple args)",
         );
 
-    if let Some(fix) = fix {
-        violation = violation.with_fix(fix);
+    vec![(violation, fix_data)]
+}
+
+struct MissingStdinInShebang;
+
+impl DetectFix for MissingStdinInShebang {
+    type FixInput = Option<ShebangFixData>;
+
+    fn id(&self) -> &'static str {
+        "missing_stdin_in_shebang"
     }
 
-    vec![violation]
+    fn explanation(&self) -> &'static str {
+        "Scripts with main functions that expect pipeline input must have --stdin in shebang"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/book/scripts.html")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Error
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        context.detect_with_fix_data(|expr, ctx| match &expr.expr {
+            Expr::Call(call) => check_main_function(call, ctx),
+            _ => vec![],
+        })
+    }
+
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        fix_data.as_ref().map(|data| {
+            Fix::with_explanation(
+                "Add --stdin flag to shebang",
+                vec![Replacement::new(data.fix_span, data.new_shebang.clone())],
+            )
+        })
+    }
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    context.collect_rule_violations(|expr, ctx| match &expr.expr {
-        Expr::Call(call) => check_main_function(call, ctx),
-        _ => vec![],
-    })
-}
-
-pub const RULE: Rule = Rule::new(
-    "missing_stdin_in_shebang",
-    "Scripts with main functions that expect pipeline input must have --stdin in shebang",
-    check,
-    LintLevel::Error,
-)
-.with_auto_fix()
-.with_doc_url("https://www.nushell.sh/book/scripts.html");
+pub static RULE: &dyn Rule = &MissingStdinInShebang;
 
 #[cfg(test)]
 mod detect_bad;

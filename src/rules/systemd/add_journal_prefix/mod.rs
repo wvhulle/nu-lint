@@ -2,37 +2,32 @@
 //!
 //! Adds systemd journal log level prefixes to print/echo statements.
 
-use nu_protocol::ast::{Block, Expr, Expression, Traverse};
+use nu_protocol::{
+    Span,
+    ast::{Block, Expr, Expression, Traverse},
+};
 
 use super::{
-    FixGenerator, LogLevel, PrefixStatus, extract_first_string_part, is_print_or_echo,
-    pipeline_contains_print,
+    LogLevel, PrefixStatus, extract_first_string_part, is_print_or_echo, pipeline_contains_print,
 };
 use crate::{
     LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
-    rule::Rule,
-    violation::{Fix, Replacement, Violation},
+    rule::{DetectFix, Rule},
+    rules::systemd::strip_keyword_prefix,
+    violation::{Detection, Fix, Replacement},
 };
 
-fn create_violation(
-    span: nu_protocol::Span,
-    message_text: &str,
-    arg_expr: &Expression,
-    ctx: &LintContext,
-) -> Violation {
-    let level = LogLevel::detect_from_message(message_text);
-    let fix_gen = FixGenerator::new(level, arg_expr, ctx);
-    let fixed_string = fix_gen.generate(message_text);
-
-    Violation::new("Missing systemd journal prefix", span).with_fix(Fix::with_explanation(
-        "Add prefix",
-        vec![Replacement::new(arg_expr.span, fixed_string)],
-    ))
+/// Semantic fix data: stores the argument span and detected log level
+pub struct FixData {
+    /// Span of the argument expression to replace
+    arg_span: Span,
+    /// Detected log level from message content
+    level: LogLevel,
 }
 
-fn check_print_or_echo_call(expr: &Expression, ctx: &LintContext) -> Option<Violation> {
+fn check_print_or_echo_call(expr: &Expression, ctx: &LintContext) -> Option<(Detection, FixData)> {
     let Expr::Call(call) = &expr.expr else {
         return None;
     };
@@ -46,13 +41,28 @@ fn check_print_or_echo_call(expr: &Expression, ctx: &LintContext) -> Option<Viol
     let message_content = extract_first_string_part(arg_expr, ctx)?;
 
     match PrefixStatus::check(&message_content) {
-        PrefixStatus::Missing => Some(create_violation(expr.span, &message_content, arg_expr, ctx)),
+        PrefixStatus::Missing => {
+            let level = LogLevel::detect_from_message(&message_content);
+            let detected = Detection::from_global_span("Missing systemd journal prefix", expr.span)
+                .with_primary_label("print/echo without journal prefix")
+                .with_help(format!(
+                    "Add <{}> prefix for systemd journal logging",
+                    level.keyword()
+                ));
+
+            let fix_data = FixData {
+                arg_span: arg_expr.span,
+                level,
+            };
+
+            Some((detected, fix_data))
+        }
         PrefixStatus::Numeric(_) | PrefixStatus::Valid => None,
     }
 }
 
-fn check_block(block: &Block, ctx: &LintContext) -> Vec<Violation> {
-    let mut violations = Vec::new();
+fn check_block(block: &Block, ctx: &LintContext) -> Vec<(Detection, FixData)> {
+    let mut results = Vec::new();
 
     for (i, pipeline) in block.pipelines.iter().enumerate() {
         let Some(first_element) = pipeline.elements.first() else {
@@ -80,42 +90,83 @@ fn check_block(block: &Block, ctx: &LintContext) -> Vec<Violation> {
             continue;
         }
 
-        if let Some(v) = check_print_or_echo_call(&first_element.expr, ctx) {
-            violations.push(v);
+        if let Some(result) = check_print_or_echo_call(&first_element.expr, ctx) {
+            results.push(result);
         }
     }
 
-    violations
+    results
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    let mut violations = check_block(context.ast, context);
+struct AddJournalPrefix;
 
-    context.ast.flat_map(
-        context.working_set,
-        &|expr| {
-            if let Some(block_id) = expr.extract_block_id() {
-                let block = context.working_set.get_block(block_id);
-                return check_block(block, context);
-            }
-            vec![]
-        },
-        &mut violations,
-    );
+impl DetectFix for AddJournalPrefix {
+    type FixInput = FixData;
 
-    violations
+    fn id(&self) -> &'static str {
+        "add_journal_prefix"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Add systemd journal log level prefixes to print/echo statements."
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        let mut results = check_block(context.ast, context);
+
+        context.ast.flat_map(
+            context.working_set,
+            &|expr| {
+                if let Some(block_id) = expr.extract_block_id() {
+                    let block = context.working_set.get_block(block_id);
+                    return check_block(block, context);
+                }
+                vec![]
+            },
+            &mut results,
+        );
+
+        results
+    }
+
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        // Get the original argument text to build fix
+        let arg_text = context.get_span_text(fix_data.arg_span);
+
+        // Determine string delimiter used
+        let (prefix, suffix) = if arg_text.starts_with("$\"") {
+            ("$\"", "\"")
+        } else if arg_text.starts_with('"') {
+            ("\"", "\"")
+        } else if arg_text.starts_with('\'') {
+            ("'", "'")
+        } else {
+            ("\"", "\"")
+        };
+
+        // Build the fixed string with prefix, stripping any existing keyword prefix
+        let inner = arg_text
+            .strip_prefix(prefix)
+            .and_then(|s| s.strip_suffix(suffix))
+            .unwrap_or(arg_text);
+
+        // Strip existing keyword prefixes like "Error:", "Warning:", etc.
+        let cleaned = strip_keyword_prefix(inner);
+
+        let fixed = format!("{prefix}<{}>{cleaned}{suffix}", fix_data.level.keyword());
+
+        Some(Fix::with_explanation(
+            format!("Add <{}> prefix", fix_data.level.keyword()),
+            vec![Replacement::new(fix_data.arg_span, fixed)],
+        ))
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "add_journal_prefix",
-    "Add systemd journal log level prefixes to print/echo statements.",
-    check,
-    LintLevel::Hint,
-)
-.with_auto_fix()
-.with_doc_url(
-    "https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html#SyslogLevelPrefix=",
-);
+pub static RULE: &dyn Rule = &AddJournalPrefix;
 
 #[cfg(test)]
 mod detect_bad;

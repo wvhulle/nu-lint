@@ -1,14 +1,30 @@
 use core::iter;
 
-use nu_protocol::ast::{Call, Expr};
+use nu_protocol::{
+    Span,
+    ast::{Call, Expr},
+};
 
 use crate::{
     LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
-    rule::Rule,
-    violation::{Fix, Replacement, Violation},
+    rule::{DetectFix, Rule},
+    violation::{Detection, Fix, Replacement},
 };
+
+/// Semantic fix data: stores all information needed to generate the match
+/// expression
+pub struct FixData {
+    /// Span of the entire if-else-if chain to replace
+    call_span: Span,
+    /// Variable name being compared
+    compared_var: String,
+    /// Collected branches with pattern and body text
+    branches: Vec<MatchBranch>,
+    /// Optional final else body
+    final_else: Option<String>,
+}
 
 /// Properties of an if-else-if chain
 struct ChainAnalysis {
@@ -116,26 +132,6 @@ fn collect_chain_branches(
     (branches, final_else)
 }
 
-/// Build a fix that converts an if-else-if chain to a match expression
-fn build_match_fix(call: &Call, var_name: &str, context: &LintContext) -> Fix {
-    let (branches, final_else) = collect_chain_branches(call, context);
-
-    // Build match arms declaratively
-    let match_arms = branches
-        .iter()
-        .map(|branch| format!("    {} => {},", branch.pattern, branch.body))
-        .chain(final_else.iter().map(|body| format!("    _ => {body}")))
-        .collect::<Vec<_>>()
-        .join("\n");
-
-    let match_text = format!("match {var_name} {{\n{match_arms}\n}}");
-
-    Fix::with_explanation(
-        format!("Convert to match expression on {var_name}"),
-        vec![Replacement::new(call.span(), match_text)],
-    )
-}
-
 /// Walks the else-if chain and analyzes its properties
 fn walk_if_else_chain(
     first_call: &Call,
@@ -178,7 +174,7 @@ fn walk_if_else_chain(
 }
 
 /// Analyze an if-call and its else branch to detect if-else-if chains
-fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<Violation> {
+fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<(Detection, FixData)> {
     // Get the condition expression and check if it compares a variable
     let compared_var = call
         .get_first_positional_arg()?
@@ -205,15 +201,10 @@ fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<Violation> {
     // Only flag chains with 3+ branches (at least 2 else-if)
     (analysis.length >= 3).then_some(())?;
 
-    // Build fix if all branches compare the same variable
-    let fix = analysis
-        .consistent_variable
-        .then(|| build_match_fix(call, &compared_var, context));
-
     // Create appropriate violation message
     let first_branch_span = call.get_first_positional_arg().map(|arg| arg.span);
     let violation = if analysis.consistent_variable {
-        let mut v = Violation::new(
+        let mut v = Detection::from_global_span(
             format!(
                 "If-else-if chain comparing '{compared_var}' to different values - consider using \
                  'match'"
@@ -230,7 +221,7 @@ fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<Violation> {
                 .to_string(),
         )
     } else {
-        Violation::new(
+        Detection::from_global_span(
             "Long if-else-if chain - consider using 'match' for clearer branching",
             call.head,
         )
@@ -238,28 +229,85 @@ fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<Violation> {
         .with_help("For multiple related conditions, 'match' provides clearer pattern matching")
     };
 
-    Some(fix.map_or(violation.clone(), |f| violation.with_fix(f)))
+    // Collect branch data for fix generation (only if consistent variable)
+    let (branches, final_else) = if analysis.consistent_variable {
+        collect_chain_branches(call, context)
+    } else {
+        (vec![], None)
+    };
+
+    let fix_data = FixData {
+        call_span: call.span(),
+        compared_var,
+        branches,
+        final_else,
+    };
+
+    Some((violation, fix_data))
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    context.collect_rule_violations(|expr, ctx| {
-        if let Expr::Call(call) = &expr.expr
-            && call.is_call_to_command("if", ctx)
-        {
-            return analyze_if_chain(call, ctx).into_iter().collect();
+struct ReplaceIfElseChainWithMatch;
+
+impl DetectFix for ReplaceIfElseChainWithMatch {
+    type FixInput = FixData;
+
+    fn id(&self) -> &'static str {
+        "replace_if_else_chain_with_match"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Use 'match' for value-based branching instead of if-else-if chains"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/commands/docs/match.html")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        context.detect_with_fix_data(|expr, ctx| {
+            if let Expr::Call(call) = &expr.expr
+                && call.is_call_to_command("if", ctx)
+            {
+                return analyze_if_chain(call, ctx).into_iter().collect();
+            }
+            vec![]
+        })
+    }
+
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        // Only generate fix if we have branch data (consistent variable case)
+        if fix_data.branches.is_empty() {
+            return None;
         }
-        vec![]
-    })
+
+        // Build match arms from stored branch data
+        let match_arms = fix_data
+            .branches
+            .iter()
+            .map(|branch| format!("    {} => {},", branch.pattern, branch.body))
+            .chain(
+                fix_data
+                    .final_else
+                    .iter()
+                    .map(|body| format!("    _ => {body}")),
+            )
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        let match_text = format!("match {} {{\n{match_arms}\n}}", fix_data.compared_var);
+
+        Some(Fix::with_explanation(
+            format!("Convert to match expression on {}", fix_data.compared_var),
+            vec![Replacement::new(fix_data.call_span, match_text)],
+        ))
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "replace_if_else_chain_with_match",
-    "Use 'match' for value-based branching instead of if-else-if chains",
-    check,
-    LintLevel::Warning,
-)
-.with_auto_fix()
-.with_doc_url("https://www.nushell.sh/commands/docs/match.html");
+pub static RULE: &dyn Rule = &ReplaceIfElseChainWithMatch;
 
 #[cfg(test)]
 mod detect_bad;

@@ -52,7 +52,7 @@ pub fn extract_first_function_parameter(
             _ => None,
         })
         .find_map(|call| {
-            let (_, _) = call.extract_function_definition(context)?;
+            call.extract_function_definition(context)?;
             let block_id = call.get_positional_arg(2)?.extract_block_id()?;
             let func_block = context.working_set.get_block(block_id);
 

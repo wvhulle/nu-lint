@@ -4,21 +4,21 @@ use crate::{
     LintLevel,
     ast::{call::CallExt, span::SpanExt},
     context::LintContext,
-    rule::Rule,
-    violation::Violation,
+    rule::{DetectFix, Rule},
+    violation::Detection,
 };
 
-fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
+fn check_main_function(call: &Call, context: &LintContext) -> Vec<Detection> {
     let (_func_name, _name_span) = match call.extract_declaration_name(context) {
         Some((name, span)) if name == "main" => (name, span),
         _ => return vec![],
     };
 
-    let Some((block_id, _)) = call.extract_function_definition(context) else {
+    let Some(def) = call.extract_function_definition(context) else {
         return vec![];
     };
 
-    let block = context.working_set.get_block(block_id);
+    let block = context.working_set.get_block(def.body);
     let signature = &block.signature;
 
     let mut violations = Vec::new();
@@ -38,7 +38,7 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
             );
 
             violations.push(
-                Violation::new(
+                Detection::from_global_span(
                     format!(
                         "Named parameter '{flag_name}' in main function is missing documentation \
                          comment"
@@ -58,25 +58,41 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Violation> {
     violations
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    context.collect_rule_violations(|expr, ctx| {
-        if let Expr::Call(call) = &expr.expr {
-            let decl_name = call.get_call_name(ctx);
-            if decl_name == "def" {
-                return check_main_function(call, ctx);
+struct MainNamedArgsDocs;
+
+impl DetectFix for MainNamedArgsDocs {
+    type FixInput = ();
+
+    fn id(&self) -> &'static str {
+        "main_named_args_docs"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Named parameters (flags) in main functions should have documentation comments"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/book/custom_commands.html#flags")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        Self::no_fix(context.detect(|expr, ctx| {
+            if let Expr::Call(call) = &expr.expr {
+                let decl_name = call.get_call_name(ctx);
+                if decl_name == "def" {
+                    return check_main_function(call, ctx);
+                }
             }
-        }
-        vec![]
-    })
+            vec![]
+        }))
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "main_named_args_docs",
-    "Named parameters (flags) in main functions should have documentation comments",
-    check,
-    LintLevel::Hint,
-)
-.with_doc_url("https://www.nushell.sh/book/custom_commands.html#flags");
+pub static RULE: &dyn Rule = &MainNamedArgsDocs;
 
 #[cfg(test)]
 mod detect_bad;

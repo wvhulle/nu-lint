@@ -7,9 +7,18 @@ use crate::{
     LintLevel,
     ast::{block::BlockExt, call::CallExt, span::SpanExt, syntax_shape::SyntaxShapeExt},
     context::LintContext,
-    rule::Rule,
-    violation::{Fix, Replacement, Violation},
+    rule::{DetectFix, Rule},
+    violation::{Detection, Fix, Replacement},
 };
+
+/// Semantic fix data: stores information needed to regenerate the fix
+pub struct FixData {
+    sig_span: Span,
+    body_block_id: BlockId,
+    uses_in: bool,
+    needs_input_type: bool,
+    needs_output_type: bool,
+}
 
 fn find_return_span(block: &Block) -> Option<Span> {
     block
@@ -56,8 +65,8 @@ fn create_violations_for_untyped_io(
     needs_output_type: bool,
     in_usage_span: Option<Span>,
     return_span: Option<Span>,
-    fix: &Fix,
-) -> Vec<Violation> {
+    fix_data: FixData,
+) -> Vec<(Detection, FixData)> {
     if !needs_input_type && !needs_output_type {
         return vec![];
     }
@@ -78,9 +87,7 @@ fn create_violations_for_untyped_io(
         (false, false) => unreachable!(),
     };
 
-    let mut violation = Violation::new(message, name_span)
-        .with_primary_label(label)
-        .with_fix(fix.clone());
+    let mut violation = Detection::from_global_span(message, name_span).with_primary_label(label);
 
     if needs_input_type && let Some(span) = in_usage_span {
         violation = violation.with_extra_label("$in used here", span);
@@ -90,7 +97,7 @@ fn create_violations_for_untyped_io(
         violation = violation.with_extra_label("returned here", span);
     }
 
-    vec![violation]
+    vec![(violation, fix_data)]
 }
 
 fn generate_typed_signature(
@@ -230,17 +237,16 @@ fn shape_to_string(shape: &nu_protocol::SyntaxShape) -> String {
     shape.to_type_string()
 }
 
-fn check_def_call(call: &Call, ctx: &LintContext) -> Vec<Violation> {
-    let Some((block_id, func_name)) = call.extract_function_definition(ctx) else {
+fn detect_def_call(call: &Call, ctx: &LintContext) -> Vec<(Detection, FixData)> {
+    let Some(def) = call.extract_function_definition(ctx) else {
         return vec![];
     };
-    log::debug!("Checking function definition for typed_pipeline_io: {func_name}");
+    log::debug!(
+        "Checking function definition for typed_pipeline_io: {}",
+        def.name
+    );
 
-    let Some((_, name_span)) = call.extract_declaration_name(ctx) else {
-        return vec![];
-    };
-
-    let block = ctx.working_set.get_block(block_id);
+    let block = ctx.working_set.get_block(def.body);
     let signature = &block.signature;
     let sig_span = find_signature_span(call, ctx);
 
@@ -275,48 +281,76 @@ fn check_def_call(call: &Call, ctx: &LintContext) -> Vec<Violation> {
         None
     };
 
-    let new_signature = generate_typed_signature(
-        signature,
-        ctx,
-        block_id,
+    let fix_data = FixData {
+        sig_span,
+        body_block_id: def.body,
         uses_in,
         needs_input_type,
         needs_output_type,
-        sig_span,
-    );
-
-    let fix = Fix::with_explanation(
-        format!("Add type annotations: {new_signature}"),
-        vec![Replacement::new(sig_span, new_signature)],
-    );
+    };
 
     create_violations_for_untyped_io(
-        &func_name,
-        name_span,
+        &def.name,
+        def.name_span,
         uses_in,
         needs_input_type,
         needs_output_type,
         in_usage_span,
         return_span,
-        &fix,
+        fix_data,
     )
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    context.collect_rule_violations(|expr, ctx| match &expr.expr {
-        Expr::Call(call) => check_def_call(call, ctx),
-        _ => vec![],
-    })
+struct TypedPipelineIo;
+
+impl DetectFix for TypedPipelineIo {
+    type FixInput = FixData;
+
+    fn id(&self) -> &'static str {
+        "typed_pipeline_io"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Custom commands that use pipeline input or produce output should have type annotations"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/book/custom_commands.html#input-output-types")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        context.detect_with_fix_data(|expr, ctx| match &expr.expr {
+            Expr::Call(call) => detect_def_call(call, ctx),
+            _ => vec![],
+        })
+    }
+
+    fn fix(&self, ctx: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        let block = ctx.working_set.get_block(fix_data.body_block_id);
+        let signature = &block.signature;
+
+        let new_signature = generate_typed_signature(
+            signature,
+            ctx,
+            fix_data.body_block_id,
+            fix_data.uses_in,
+            fix_data.needs_input_type,
+            fix_data.needs_output_type,
+            fix_data.sig_span,
+        );
+
+        Some(Fix::with_explanation(
+            format!("Add type annotations: {new_signature}"),
+            vec![Replacement::new(fix_data.sig_span, new_signature)],
+        ))
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "typed_pipeline_io",
-    "Custom commands that use pipeline input or produce output should have type annotations",
-    check,
-    LintLevel::Warning,
-)
-.with_auto_fix()
-.with_doc_url("https://www.nushell.sh/book/custom_commands.html#input-output-types");
+pub static RULE: &dyn Rule = &TypedPipelineIo;
 
 #[cfg(test)]
 mod detect_bad;

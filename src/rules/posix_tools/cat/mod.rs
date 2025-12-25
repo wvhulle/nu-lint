@@ -1,11 +1,9 @@
-use nu_protocol::ast::ExternalArgument;
-
 use crate::{
-    LintLevel, Violation,
-    alternatives::{detect_external_commands, external_args_slices},
+    LintLevel,
+    alternatives::{ExternalCmdFixData, detect_external_commands, external_args_slices},
     context::LintContext,
-    rule::Rule,
-    violation::{Fix, Replacement},
+    rule::{DetectFix, Rule},
+    violation::{Detection, Fix, Replacement},
 };
 
 const NOTE: &str = "Use 'open' to read files as structured data, or 'open --raw' for plain text. \
@@ -150,55 +148,51 @@ impl CatOptions {
     }
 }
 
-fn build_fix(
-    _cmd_text: &str,
-    args: &[ExternalArgument],
-    expr_span: nu_protocol::Span,
-    context: &LintContext,
-) -> Fix {
-    let opts = CatOptions::parse(external_args_slices(args, context));
-    let (replacement, description) = opts.to_nushell();
+struct UseBuiltinCat;
 
-    Fix {
-        explanation: description.into(),
-        replacements: vec![Replacement {
-            span: expr_span.into(),
-            replacement_text: replacement.into(),
-        }],
+impl DetectFix for UseBuiltinCat {
+    type FixInput = ExternalCmdFixData;
+
+    fn id(&self) -> &'static str {
+        "use_builtin_cat"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Use Nu's 'open' command instead of 'cat' for better file handling"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/commands/docs/open.html")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        let mut violations = detect_external_commands(context, "cat", NOTE);
+        // Related commands commonly used like cat
+        for cmd in ["tac", "more", "less"] {
+            violations.extend(detect_external_commands(context, cmd, NOTE));
+        }
+        violations
+    }
+
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        let opts = CatOptions::parse(external_args_slices(&fix_data.args, context));
+        let (replacement, description) = opts.to_nushell();
+
+        Some(Fix {
+            explanation: description.into(),
+            replacements: vec![Replacement {
+                span: fix_data.expr_span.into(),
+                replacement_text: replacement.into(),
+            }],
+        })
     }
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    let mut violations = Vec::new();
-
-    violations.extend(detect_external_commands(
-        context,
-        "cat",
-        NOTE,
-        Some(build_fix),
-    ));
-
-    // Related commands commonly used like cat
-    for cmd in ["tac", "more", "less"] {
-        violations.extend(detect_external_commands(
-            context,
-            cmd,
-            NOTE,
-            Some(build_fix),
-        ));
-    }
-
-    violations
-}
-
-pub const RULE: Rule = Rule::new(
-    "use_builtin_cat",
-    "Use Nu's 'open' command instead of 'cat' for better file handling",
-    check,
-    LintLevel::Warning,
-)
-.with_auto_fix()
-.with_doc_url("https://www.nushell.sh/commands/docs/open.html");
+pub static RULE: &dyn Rule = &UseBuiltinCat;
 
 #[cfg(test)]
 mod detect_bad;

@@ -1,7 +1,11 @@
 use nu_protocol::ast::{Call, Expr, RecordItem};
 
 use crate::{
-    LintLevel, ast::call::CallExt, context::LintContext, rule::Rule, violation::Violation,
+    LintLevel,
+    ast::call::CallExt,
+    context::LintContext,
+    rule::{DetectFix, Rule},
+    violation::Detection,
 };
 
 const VAGUE_PATTERNS: &[&str] = &[
@@ -34,7 +38,7 @@ fn is_vague_message(text: &str) -> bool {
         .any(|&pattern| trimmed == pattern || trimmed.starts_with(&format!("{pattern}:")))
 }
 
-fn check_record_msg_field(record: &[RecordItem]) -> Option<Violation> {
+fn check_record_msg_field(record: &[RecordItem]) -> Option<Detection> {
     record.iter().find_map(|item| {
         let RecordItem::Pair(key, value) = item else {
             return None;
@@ -46,7 +50,7 @@ fn check_record_msg_field(record: &[RecordItem]) -> Option<Violation> {
 
         let msg = value.as_string()?;
         is_vague_message(&msg).then(|| {
-            Violation::new("Error message is too vague or generic", value.span)
+            Detection::from_global_span("Error message is too vague or generic", value.span)
                 .with_primary_label("vague message")
                 .with_help(
                     "Use a descriptive message explaining what went wrong and how to fix it.",
@@ -55,7 +59,7 @@ fn check_record_msg_field(record: &[RecordItem]) -> Option<Violation> {
     })
 }
 
-fn check_print_stderr(call: &Call) -> Option<Violation> {
+fn check_print_stderr(call: &Call) -> Option<Detection> {
     if !call.has_named_flag("stderr") && !call.has_named_flag("e") {
         return None;
     }
@@ -64,7 +68,7 @@ fn check_print_stderr(call: &Call) -> Option<Violation> {
     let msg = first_arg.as_string()?;
 
     is_vague_message(&msg).then(|| {
-        Violation::new(
+        Detection::from_global_span(
             "Error message printed to stderr is too vague",
             first_arg.span,
         )
@@ -73,44 +77,58 @@ fn check_print_stderr(call: &Call) -> Option<Violation> {
     })
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    context.collect_rule_violations(|expr, ctx| {
-        let Expr::Call(call) = &expr.expr else {
-            return vec![];
-        };
+fn check_error_make(call: &Call) -> Option<Detection> {
+    let first_arg = call.get_first_positional_arg()?;
 
-        let name = call.get_call_name(ctx);
+    let record = match &first_arg.expr {
+        Expr::Record(r) => r,
+        Expr::FullCellPath(cp) => match &cp.head.expr {
+            Expr::Record(r) => r,
+            _ => return None,
+        },
+        _ => return None,
+    };
 
-        match name.as_str() {
-            "error make" => {
-                let Some(first_arg) = call.get_first_positional_arg() else {
-                    return vec![];
-                };
-
-                let record = match &first_arg.expr {
-                    Expr::Record(r) => r,
-                    Expr::FullCellPath(cp) => match &cp.head.expr {
-                        Expr::Record(r) => r,
-                        _ => return vec![],
-                    },
-                    _ => return vec![],
-                };
-
-                check_record_msg_field(record).into_iter().collect()
-            }
-            "print" => check_print_stderr(call).into_iter().collect(),
-            _ => vec![],
-        }
-    })
+    check_record_msg_field(record)
 }
 
-pub const RULE: Rule = Rule::new(
-    "descriptive_error_messages",
-    "Error messages should be descriptive and actionable",
-    check,
-    LintLevel::Hint,
-)
-.with_doc_url("https://www.nushell.sh/book/creating_errors.html");
+struct DescriptiveErrorMessages;
+
+impl DetectFix for DescriptiveErrorMessages {
+    type FixInput = ();
+
+    fn id(&self) -> &'static str {
+        "descriptive_error_messages"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Error messages should be descriptive and actionable"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/book/creating_errors.html")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        Self::no_fix(context.detect(|expr, ctx| {
+            let Expr::Call(call) = &expr.expr else {
+                return vec![];
+            };
+
+            match call.get_call_name(ctx).as_str() {
+                "error make" => check_error_make(call).into_iter().collect(),
+                "print" => check_print_stderr(call).into_iter().collect(),
+                _ => vec![],
+            }
+        }))
+    }
+}
+
+pub static RULE: &dyn Rule = &DescriptiveErrorMessages;
 
 #[cfg(test)]
 mod detect_bad;

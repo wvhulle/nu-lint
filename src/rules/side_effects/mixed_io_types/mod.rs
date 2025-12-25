@@ -10,8 +10,8 @@ use crate::{
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     effect::builtin::{BuiltinEffect, has_builtin_side_effect},
-    rule::Rule,
-    violation::Violation,
+    rule::{DetectFix, Rule},
+    violation::Detection,
 };
 
 #[derive(Debug, PartialEq, Eq, Hash)]
@@ -81,7 +81,7 @@ fn analyze_function_body(
     block_id: BlockId,
     function_name: &str,
     context: &LintContext,
-) -> Option<Violation> {
+) -> Option<Detection> {
     let block = context.working_set.get_block(block_id);
 
     let mut io_types = HashSet::new();
@@ -106,7 +106,7 @@ fn analyze_function_body(
     );
 
     Some(
-        Violation::with_file_span(message, context.find_declaration_span(function_name))
+        Detection::from_file_span(message, context.find_declaration_span(function_name))
             .with_primary_label("function with mixed I/O")
             .with_help(
                 "Consider separating different I/O operations into focused functions. This makes \
@@ -116,28 +116,43 @@ fn analyze_function_body(
     )
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    let function_definitions = context.collect_function_definitions();
+struct SeparateLocalRemoteIo;
 
-    let has_main = function_definitions.values().any(|name| name == "main");
-    if !has_main {
-        return vec![];
+impl DetectFix for SeparateLocalRemoteIo {
+    type FixInput = ();
+
+    fn id(&self) -> &'static str {
+        "separate_local_remote_io"
     }
 
-    function_definitions
-        .iter()
-        .filter(|(_, name)| *name != "main")
-        .filter(|(_, name)| !context.is_exported_function(name))
-        .filter_map(|(block_id, name)| analyze_function_body(*block_id, name, context))
-        .collect()
+    fn explanation(&self) -> &'static str {
+        "Functions should not mix different types of I/O operations."
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        let function_definitions = context.collect_function_definitions();
+
+        let has_main = function_definitions.values().any(|name| name == "main");
+        if !has_main {
+            return vec![];
+        }
+
+        let violations = function_definitions
+            .iter()
+            .filter(|(_, name)| *name != "main")
+            .filter(|(_, name)| !context.is_exported_function(name))
+            .filter_map(|(block_id, name)| analyze_function_body(*block_id, name, context))
+            .collect();
+
+        Self::no_fix(violations)
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "separate_local_remote_io",
-    "Functions should not mix different types of I/O operations.",
-    check,
-    LintLevel::Hint,
-);
+pub static RULE: &dyn Rule = &SeparateLocalRemoteIo;
 
 #[cfg(test)]
 mod detect_bad;

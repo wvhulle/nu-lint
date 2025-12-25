@@ -4,7 +4,7 @@ use crate::{context::LintContext, fix::apply_fixes_to_stdin, violation};
 /// Helper function to apply fixes and get the fixed code
 fn apply_fix(code: &str) -> String {
     let violations = LintContext::test_get_violations(code, |context| {
-        let mut violations = (RULE.check)(context);
+        let mut violations = RULE.check(context);
         for v in &mut violations {
             v.file = Some(violation::SourceFile::Stdin);
             v.source = Some(code.to_string().into());

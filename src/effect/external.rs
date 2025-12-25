@@ -66,17 +66,6 @@ pub fn has_external_recursive_flag(args: &[ExternalArgument], context: &LintCont
     })
 }
 
-pub fn is_external_command_safe(command_name: &str) -> bool {
-    EXTERNAL_COMMAND_SIDE_EFFECTS
-        .iter()
-        .find(|(name, _)| *name == command_name)
-        .is_some_and(|(_, effects)| {
-            !effects.iter().any(|(effect, _)| {
-                *effect == ExternEffect::CommonEffect(CommonEffect::LikelyErrors)
-            })
-        })
-}
-
 pub fn external_command_has_no_output(command_name: &str) -> bool {
     EXTERNAL_COMMAND_SIDE_EFFECTS
         .iter()
@@ -96,7 +85,7 @@ pub fn extract_external_arg_text<'a>(arg: &ExternalArgument, context: &'a LintCo
     }
 }
 
-pub type ExternalSideEffectPredicate = fn(&LintContext, &[ExternalArgument]) -> bool;
+pub type ExternalSideEffectPredicate = fn(&LintContext<'_>, &[ExternalArgument]) -> bool;
 
 const fn always(_context: &LintContext, _args: &[ExternalArgument]) -> bool {
     true
@@ -150,6 +139,80 @@ fn tar_modifies_fs(context: &LintContext, args: &[ExternalArgument]) -> bool {
 
 fn sed_has_inplace(context: &LintContext, args: &[ExternalArgument]) -> bool {
     has_flag(args, context, &["-i", "--in-place"])
+}
+
+fn git_likely_errors(context: &LintContext, args: &[ExternalArgument]) -> bool {
+    let subcommand = args
+        .first()
+        .map_or("", |arg| extract_external_arg_text(arg, context));
+
+    matches!(
+        subcommand,
+        "clone"
+            | "pull"
+            | "push"
+            | "fetch"
+            | "checkout"
+            | "switch"
+            | "merge"
+            | "rebase"
+            | "cherry-pick"
+            | "apply"
+            | "commit"
+            | "add"
+            | "rm"
+            | "mv"
+            | "stash"
+            | "restore"
+            | "revert"
+            | "remote"
+            | "submodule"
+            | "bisect"
+            | "filter-branch"
+            | "filter-repo"
+    )
+}
+
+fn git_is_dangerous(context: &LintContext, args: &[ExternalArgument]) -> bool {
+    let has_force = has_flag(args, context, &["-f", "--force"]);
+    let has_hard = has_flag(args, context, &["--hard"]);
+    let has_force_delete = has_flag(args, context, &["-D"]);
+    let has_force_with_lease = has_flag(args, context, &["--force-with-lease"]);
+
+    let subcommand = args
+        .first()
+        .map_or("", |arg| extract_external_arg_text(arg, context));
+    log::debug!("Git called with subcommand {subcommand}");
+    match subcommand {
+        "push" => has_force || has_force_with_lease,
+        "reset" => has_hard,
+        "clean" => has_flag(args, context, &["-f", "-d", "-x"]),
+        "branch" => has_force_delete,
+        "filter-branch" | "filter-repo" => true,
+        _ => false,
+    }
+}
+
+fn git_modifies_filesystem(context: &LintContext, args: &[ExternalArgument]) -> bool {
+    let subcommand = args
+        .first()
+        .map_or("", |arg| extract_external_arg_text(arg, context));
+
+    match subcommand {
+        "clone" | "pull" | "checkout" | "switch" | "reset" | "clean" | "merge" | "rebase"
+        | "cherry-pick" | "apply" | "stash" | "restore" | "revert" | "commit" | "add" | "rm"
+        | "mv" => true,
+        "config" => {
+            let second_arg = args
+                .get(1)
+                .map_or("", |arg| extract_external_arg_text(arg, context));
+            !matches!(
+                second_arg,
+                "get" | "list" | "--list" | "-l" | "--get" | "--get-all" | "--get-regexp"
+            ) && !has_flag(args, context, &["--list", "-l", "--get", "--get-all"])
+        }
+        _ => false,
+    }
 }
 
 pub const EXTERNAL_COMMAND_SIDE_EFFECTS: &[(
@@ -287,6 +350,20 @@ pub const EXTERNAL_COMMAND_SIDE_EFFECTS: &[(
             ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
             always,
         )],
+    ),
+    (
+        "git",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                git_likely_errors,
+            ),
+            (ExternEffect::ModifiesFileSystem, git_modifies_filesystem),
+            (
+                ExternEffect::CommonEffect(CommonEffect::Dangerous),
+                git_is_dangerous,
+            ),
+        ],
     ),
     (
         "grep",
@@ -533,6 +610,324 @@ mod tests {
                     args
                 ),
                 "sed with -i should be dangerous"
+            );
+        });
+    }
+
+    #[test]
+    fn test_git_push_force_is_dangerous() {
+        with_external_args("git push --force origin main", |context, args| {
+            assert!(
+                has_external_side_effect(
+                    "git",
+                    ExternEffect::CommonEffect(CommonEffect::Dangerous),
+                    context,
+                    args
+                ),
+                "git push --force should be dangerous"
+            );
+        });
+    }
+
+    #[test]
+    fn test_git_push_force_short_flag_is_dangerous() {
+        with_external_args("git push -f origin main", |context, args| {
+            assert!(
+                has_external_side_effect(
+                    "git",
+                    ExternEffect::CommonEffect(CommonEffect::Dangerous),
+                    context,
+                    args
+                ),
+                "git push -f should be dangerous"
+            );
+        });
+    }
+
+    #[test]
+    fn test_git_reset_hard_is_dangerous() {
+        with_external_args("git reset --hard HEAD~1", |context, args| {
+            assert!(
+                has_external_side_effect(
+                    "git",
+                    ExternEffect::CommonEffect(CommonEffect::Dangerous),
+                    context,
+                    args
+                ),
+                "git reset --hard should be dangerous"
+            );
+        });
+    }
+
+    #[test]
+    fn test_git_clean_force_is_dangerous() {
+        with_external_args("git clean -fd", |context, args| {
+            assert!(
+                has_external_side_effect(
+                    "git",
+                    ExternEffect::CommonEffect(CommonEffect::Dangerous),
+                    context,
+                    args
+                ),
+                "git clean -fd should be dangerous"
+            );
+        });
+    }
+
+    #[test]
+    fn test_git_branch_force_delete_is_dangerous() {
+        with_external_args("git branch -D feature-branch", |context, args| {
+            assert!(
+                has_external_side_effect(
+                    "git",
+                    ExternEffect::CommonEffect(CommonEffect::Dangerous),
+                    context,
+                    args
+                ),
+                "git branch -D should be dangerous"
+            );
+        });
+    }
+
+    #[test]
+    fn test_git_clone_modifies_filesystem() {
+        with_external_args("git clone https://github.com/user/repo", |context, args| {
+            assert!(
+                has_external_side_effect("git", ExternEffect::ModifiesFileSystem, context, args),
+                "git clone should modify filesystem"
+            );
+        });
+    }
+
+    #[test]
+    fn test_git_pull_modifies_filesystem() {
+        with_external_args("git pull origin main", |context, args| {
+            assert!(
+                has_external_side_effect("git", ExternEffect::ModifiesFileSystem, context, args),
+                "git pull should modify filesystem"
+            );
+        });
+    }
+
+    #[test]
+    fn test_git_checkout_modifies_filesystem() {
+        with_external_args("git checkout develop", |context, args| {
+            assert!(
+                has_external_side_effect("git", ExternEffect::ModifiesFileSystem, context, args),
+                "git checkout should modify filesystem"
+            );
+        });
+    }
+
+    #[test]
+    fn test_git_status_does_not_modify_filesystem() {
+        with_external_args("git status", |context, args| {
+            assert!(
+                !has_external_side_effect("git", ExternEffect::ModifiesFileSystem, context, args),
+                "git status should not modify filesystem"
+            );
+        });
+    }
+
+    #[test]
+    fn test_git_log_does_not_modify_filesystem() {
+        with_external_args("git log --oneline", |context, args| {
+            assert!(
+                !has_external_side_effect("git", ExternEffect::ModifiesFileSystem, context, args),
+                "git log should not modify filesystem"
+            );
+        });
+    }
+
+    #[test]
+    fn test_git_diff_does_not_modify_filesystem() {
+        with_external_args("git diff HEAD~1", |context, args| {
+            assert!(
+                !has_external_side_effect("git", ExternEffect::ModifiesFileSystem, context, args),
+                "git diff should not modify filesystem"
+            );
+        });
+    }
+
+    #[test]
+    fn test_git_push_without_force_is_not_dangerous() {
+        with_external_args("git push origin main", |context, args| {
+            assert!(
+                !has_external_side_effect(
+                    "git",
+                    ExternEffect::CommonEffect(CommonEffect::Dangerous),
+                    context,
+                    args
+                ),
+                "git push without --force should not be dangerous"
+            );
+        });
+    }
+
+    #[test]
+    fn test_git_reset_without_hard_is_not_dangerous() {
+        with_external_args("git reset HEAD~1", |context, args| {
+            assert!(
+                !has_external_side_effect(
+                    "git",
+                    ExternEffect::CommonEffect(CommonEffect::Dangerous),
+                    context,
+                    args
+                ),
+                "git reset without --hard should not be dangerous"
+            );
+        });
+    }
+
+    #[test]
+    fn test_git_config_get_does_not_modify_filesystem() {
+        with_external_args("git config get user.name", |context, args| {
+            assert!(
+                !has_external_side_effect("git", ExternEffect::ModifiesFileSystem, context, args),
+                "git config get should not modify filesystem"
+            );
+        });
+    }
+
+    #[test]
+    fn test_git_config_list_does_not_modify_filesystem() {
+        with_external_args("git config --list", |context, args| {
+            assert!(
+                !has_external_side_effect("git", ExternEffect::ModifiesFileSystem, context, args),
+                "git config --list should not modify filesystem"
+            );
+        });
+    }
+
+    #[test]
+    fn test_git_config_set_modifies_filesystem() {
+        with_external_args("git config user.name \"John Doe\"", |context, args| {
+            assert!(
+                has_external_side_effect("git", ExternEffect::ModifiesFileSystem, context, args),
+                "git config set should modify filesystem"
+            );
+        });
+    }
+
+    #[test]
+    fn test_git_config_global_modifies_filesystem() {
+        with_external_args(
+            "git config --global user.email \"john@example.com\"",
+            |context, args| {
+                assert!(
+                    has_external_side_effect(
+                        "git",
+                        ExternEffect::ModifiesFileSystem,
+                        context,
+                        args
+                    ),
+                    "git config --global should modify filesystem"
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn test_git_status_does_not_likely_error() {
+        with_external_args("git status", |context, args| {
+            assert!(
+                !has_external_side_effect(
+                    "git",
+                    ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                    context,
+                    args
+                ),
+                "git status should not be likely to error"
+            );
+        });
+    }
+
+    #[test]
+    fn test_git_log_does_not_likely_error() {
+        with_external_args("git log --oneline", |context, args| {
+            assert!(
+                !has_external_side_effect(
+                    "git",
+                    ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                    context,
+                    args
+                ),
+                "git log should not be likely to error"
+            );
+        });
+    }
+
+    #[test]
+    fn test_git_diff_does_not_likely_error() {
+        with_external_args("git diff HEAD~1", |context, args| {
+            assert!(
+                !has_external_side_effect(
+                    "git",
+                    ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                    context,
+                    args
+                ),
+                "git diff should not be likely to error"
+            );
+        });
+    }
+
+    #[test]
+    fn test_git_clone_likely_errors() {
+        with_external_args("git clone https://github.com/user/repo", |context, args| {
+            assert!(
+                has_external_side_effect(
+                    "git",
+                    ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                    context,
+                    args
+                ),
+                "git clone should be likely to error"
+            );
+        });
+    }
+
+    #[test]
+    fn test_git_pull_likely_errors() {
+        with_external_args("git pull origin main", |context, args| {
+            assert!(
+                has_external_side_effect(
+                    "git",
+                    ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                    context,
+                    args
+                ),
+                "git pull should be likely to error"
+            );
+        });
+    }
+
+    #[test]
+    fn test_git_push_likely_errors() {
+        with_external_args("git push origin main", |context, args| {
+            assert!(
+                has_external_side_effect(
+                    "git",
+                    ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                    context,
+                    args
+                ),
+                "git push should be likely to error"
+            );
+        });
+    }
+
+    #[test]
+    fn test_git_merge_likely_errors() {
+        with_external_args("git merge feature-branch", |context, args| {
+            assert!(
+                has_external_side_effect(
+                    "git",
+                    ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                    context,
+                    args
+                ),
+                "git merge should be likely to error"
             );
         });
     }

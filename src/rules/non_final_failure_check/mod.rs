@@ -4,12 +4,15 @@ use crate::{
     LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
-    effect::external::is_external_command_safe,
-    rule::Rule,
-    violation::Violation,
+    effect::{
+        CommonEffect,
+        external::{ExternEffect, has_external_side_effect},
+    },
+    rule::{DetectFix, Rule},
+    violation::Detection,
 };
 
-fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violation> {
+fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Detection> {
     if pipeline.elements.len() == 1 {
         return None;
     }
@@ -18,12 +21,17 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
         .iter()
         .enumerate()
     {
-        if let Expr::ExternalCall(command, _) = &element.expr.expr {
+        if let Expr::ExternalCall(command, external_arguments) = &element.expr.expr {
             let external_command = command.span_text(context);
             log::debug!(
                 "Found an external call to {external_command} in the pipeline at position {i}."
             );
-            if is_external_command_safe(external_command) {
+            if !has_external_side_effect(
+                external_command,
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                context,
+                external_arguments,
+            ) {
                 continue;
             }
             log::debug!("External call to {external_command} is not safe");
@@ -35,7 +43,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
             {
                 continue;
             }
-            let violation = create_violation(pipeline, element, external_command);
+            let violation = create_violation(pipeline, element);
             return Some(violation);
         }
     }
@@ -43,23 +51,16 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Violatio
     None
 }
 
-fn create_violation(
-    pipeline: &Pipeline,
-    element: &ast::PipelineElement,
-    external_command: &str,
-) -> Violation {
-    let message = format!(
-        "External command '{external_command}' in pipeline without error handling: Nushell only \
-         checks the last command's exit code. If this command fails, the error will be silently \
-         ignored."
-    );
+fn create_violation(pipeline: &Pipeline, element: &ast::PipelineElement) -> Detection {
+    let message =
+        "Nushell only checks the final external command's exit code in pipelines. ".to_string();
 
     let help = "Wrap the external command in 'complete' to capture its exit code.";
 
     let last_element_span = pipeline.elements.last().map(|e| e.expr.span);
 
-    let mut violation = Violation::new(message, element.expr.span)
-        .with_primary_label("external command without error handling");
+    let mut violation = Detection::from_global_span(message, element.expr.span)
+        .with_primary_label("If this command fails, the error will be silently ignored.");
 
     if let Some(last_span) = last_element_span {
         violation =
@@ -69,7 +70,7 @@ fn create_violation(
     violation.with_help(help)
 }
 
-fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<Violation>) {
+fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<Detection>) {
     for pipeline in &block.pipelines {
         violations.extend(check_pipeline(pipeline, context));
 
@@ -96,19 +97,35 @@ fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<Violat
     }
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    let mut violations = Vec::new();
-    check_block(context.ast, context, &mut violations);
-    violations
+struct NonFinalFailureCheck;
+
+impl DetectFix for NonFinalFailureCheck {
+    type FixInput = ();
+
+    fn id(&self) -> &'static str {
+        "non_final_failure_check"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Only the exit code of the last external command in a pipeline is reported."
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/blog/2025-10-15-nushell_v0_108_0.html#pipefail-16449-toc")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        let mut violations = Vec::new();
+        check_block(context.ast, context, &mut violations);
+        Self::no_fix(violations)
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "non_final_failure_check",
-    "Only the exit code of the last external command in a pipeline is reported.",
-    check,
-    LintLevel::Warning,
-)
-.with_doc_url("https://www.nushell.sh/blog/2025-10-15-nushell_v0_108_0.html#pipefail-16449-toc");
+pub static RULE: &dyn Rule = &NonFinalFailureCheck;
 
 #[cfg(test)]
 mod detect_bad;

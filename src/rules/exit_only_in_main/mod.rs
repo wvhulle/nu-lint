@@ -4,8 +4,8 @@ use crate::{
     LintLevel,
     ast::{call::CallExt, span::SpanExt},
     context::LintContext,
-    rule::Rule,
-    violation::Violation,
+    rule::{DetectFix, Rule},
+    violation::Detection,
 };
 
 /// Check if a call is to the 'exit' command
@@ -13,53 +13,73 @@ fn is_exit_call(call: &Call, ctx: &LintContext) -> bool {
     call.get_call_name(ctx) == "exit"
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    // First, collect all function definitions
-    let functions = context.collect_function_definitions();
+struct ExitOnlyInMain;
 
-    // Then, find all exit calls and check if they're in non-main functions
-    context.collect_rule_violations(|expr, ctx| {
-        if let Expr::Call(call) = &expr.expr {
-            if !is_exit_call(call, ctx) {
-                return vec![];
-            }
+impl DetectFix for ExitOnlyInMain {
+    type FixInput = ();
 
-            // Check if this exit is inside a function
-            let Some(function_name) = call.head.find_containing_function(&functions, ctx) else {
-                return vec![];
-            };
+    fn id(&self) -> &'static str {
+        "exit_only_in_main"
+    }
 
-            // Allow exit in main function
-            if function_name == "main" {
-                return vec![];
-            }
+    fn explanation(&self) -> &'static str {
+        "Avoid using 'exit' in functions other than 'main'"
+    }
 
-            return vec![
-                Violation::new(
-                    format!(
-                        "Function '{function_name}' uses 'exit' which terminates the entire script"
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/commands/docs/exit.html")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        // First, collect all function definitions
+        let functions = context.collect_function_definitions();
+
+        // Then, find all exit calls and check if they're in non-main functions
+        let violations = context.detect(|expr, ctx| {
+            if let Expr::Call(call) = &expr.expr {
+                if !is_exit_call(call, ctx) {
+                    return vec![];
+                }
+
+                // Check if this exit is inside a function
+                let Some(function_name) = call.head.find_containing_function(&functions, ctx)
+                else {
+                    return vec![];
+                };
+
+                // Allow exit in main function
+                if function_name == "main" {
+                    return vec![];
+                }
+
+                return vec![
+                    Detection::from_global_span(
+                        format!(
+                            "Function '{function_name}' uses 'exit' which terminates the entire \
+                             script"
+                        ),
+                        call.head,
+                    )
+                    .with_primary_label("exit call")
+                    .with_extra_label(format!("inside '{function_name}'"), expr.span)
+                    .with_help(
+                        "Use 'return' to exit the function, or 'error make' to signal an error. \
+                         Only 'main' should use 'exit'.",
                     ),
-                    call.head,
-                )
-                .with_primary_label("exit call")
-                .with_extra_label(format!("inside '{function_name}'"), expr.span)
-                .with_help(
-                    "Use 'return' to exit the function, or 'error make' to signal an error. Only \
-                     'main' should use 'exit'.",
-                ),
-            ];
-        }
-        vec![]
-    })
+                ];
+            }
+            vec![]
+        });
+
+        Self::no_fix(violations)
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "exit_only_in_main",
-    "Avoid using 'exit' in functions other than 'main'",
-    check,
-    LintLevel::Warning,
-)
-.with_doc_url("https://www.nushell.sh/commands/docs/exit.html");
+pub static RULE: &dyn Rule = &ExitOnlyInMain;
 
 #[cfg(test)]
 mod detect_bad;

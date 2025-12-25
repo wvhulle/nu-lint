@@ -1,5 +1,5 @@
 use nu_protocol::{
-    Category, SyntaxShape, VarId,
+    Category, Span, SyntaxShape, VarId,
     ast::{Argument, Block, Call, Expr, Pipeline},
 };
 
@@ -7,9 +7,18 @@ use crate::{
     LintLevel,
     ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
     context::LintContext,
-    rule::Rule,
-    violation::{self, Violation},
+    rule::{DetectFix, Rule},
+    violation::{Detection, Fix, Replacement},
 };
+
+pub struct FixData {
+    /// Span of the function definition to replace
+    def_span: Span,
+    /// Generated fix code
+    fix_code: String,
+    /// Parameter name for explanation
+    param_name: String,
+}
 
 /// Check if a parameter is a data type that would benefit from pipeline input
 fn is_data_type_parameter(param: &nu_protocol::PositionalArg) -> bool {
@@ -265,12 +274,12 @@ fn extract_function_body(
         .flat_map(|pipeline| &pipeline.elements)
         .filter_map(|element| element.expr.extract_call())
         .find_map(|call| {
-            let (block_id, name) = call.extract_function_definition(context)?;
-            if name != decl_name {
+            let def = call.extract_function_definition(context)?;
+            if def.name != decl_name {
                 return None;
             }
 
-            let block = context.working_set.get_block(block_id);
+            let block = context.working_set.get_block(def.body);
             let body_text = block.span?.source_code(context);
             let trimmed = body_text.trim();
 
@@ -286,28 +295,7 @@ fn extract_function_body(
         })
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    log::debug!("prefer_pipeline_input: Starting rule check");
-
-    let user_functions: Vec<_> = context.new_user_functions().collect();
-    log::debug!("Found {} registered user functions", user_functions.len());
-
-    let function_definitions = context.collect_function_definitions();
-    log::debug!(
-        "Found {} function definitions in AST",
-        function_definitions.len()
-    );
-
-    user_functions
-        .iter()
-        .filter_map(|(_, decl)| analyze_function_from_signature(&decl.signature(), context))
-        .chain(
-            function_definitions
-                .iter()
-                .filter_map(|(block_id, name)| analyze_function_from_ast(*block_id, name, context)),
-        )
-        .collect()
-}
+type ViolationPair = (Detection, FixData);
 
 /// Common validation logic for function parameters
 fn should_analyze_function<'a>(
@@ -340,7 +328,7 @@ fn should_analyze_function<'a>(
 fn analyze_function_from_signature(
     signature: &nu_protocol::Signature,
     context: &LintContext,
-) -> Option<Violation> {
+) -> Option<ViolationPair> {
     let param = should_analyze_function(signature, &signature.name)?;
     let param_var_id = param.var_id?;
 
@@ -362,7 +350,7 @@ fn analyze_function_from_ast(
     block_id: nu_protocol::BlockId,
     function_name: &str,
     context: &LintContext,
-) -> Option<Violation> {
+) -> Option<ViolationPair> {
     let block = context.working_set.get_block(block_id);
     let param = should_analyze_function(&block.signature, function_name)?;
     let param_var_id = param.var_id?;
@@ -414,15 +402,6 @@ fn generate_fix_code_full(
     )
 }
 
-fn create_fix(full_code: String, param_name: &str, span: nu_protocol::Span) -> violation::Fix {
-    let explanation =
-        format!("Use pipeline input ($in) instead of parameter (${param_name}):\n  {full_code}");
-    violation::Fix::with_explanation(
-        explanation,
-        vec![violation::Replacement::new(span, full_code)],
-    )
-}
-
 fn find_function_definition_span(
     function_name: &str,
     context: &LintContext,
@@ -437,8 +416,8 @@ fn find_function_definition_span(
             _ => None,
         })
         .find_map(|call| {
-            let (_block_id, name) = call.extract_function_definition(context)?;
-            if name != function_name {
+            let def = call.extract_function_definition(context)?;
+            if def.name != function_name {
                 return None;
             }
             Some(call.span())
@@ -449,17 +428,23 @@ fn create_violation(
     signature: &nu_protocol::Signature,
     param: &nu_protocol::PositionalArg,
     context: &LintContext,
-) -> violation::Violation {
+) -> ViolationPair {
     let name_span = context.find_declaration_span(&signature.name);
     let full_code = generate_fix_code_full(signature, param, context);
     let def_span =
         find_function_definition_span(&signature.name, context).unwrap_or(name_span.into());
-    let fix = create_fix(full_code, &param.name, def_span);
 
-    Violation::with_file_span("Use pipeline input instead of parameter", name_span)
+    let violation = Detection::from_file_span("Use pipeline input instead of parameter", name_span)
         .with_primary_label("function with single data parameter")
-        .with_help("Pipeline input enables better composability and streaming performance")
-        .with_fix(fix)
+        .with_help("Pipeline input enables better composability and streaming performance");
+
+    let fix_data = FixData {
+        def_span,
+        fix_code: full_code,
+        param_name: param.name.clone(),
+    };
+
+    (violation, fix_data)
 }
 
 fn create_violation_with_span(
@@ -467,15 +452,21 @@ fn create_violation_with_span(
     param: &nu_protocol::PositionalArg,
     def_span: nu_protocol::Span,
     context: &LintContext,
-) -> violation::Violation {
+) -> ViolationPair {
     let name_span = context.find_declaration_span(&signature.name);
     let full_code = generate_fix_code_full(signature, param, context);
-    let fix = create_fix(full_code, &param.name, def_span);
 
-    Violation::with_file_span("Use pipeline input instead of parameter", name_span)
+    let violation = Detection::from_file_span("Use pipeline input instead of parameter", name_span)
         .with_primary_label("function with single data parameter")
-        .with_help("Pipeline input enables better composability and streaming performance")
-        .with_fix(fix)
+        .with_help("Pipeline input enables better composability and streaming performance");
+
+    let fix_data = FixData {
+        def_span,
+        fix_code: full_code,
+        param_name: param.name.clone(),
+    };
+
+    (violation, fix_data)
 }
 
 /// Analyze parameter usage in a specific block
@@ -491,15 +482,67 @@ fn analyze_parameter_usage_in_block(
     analyze_pipelines(&block.pipelines, param_var_id, context)
 }
 
-pub const RULE: Rule = Rule::new(
-    "turn_positional_into_stream_input",
-    "Custom commands with a single positional parameter may be rewritten as a command receiving \
-     pipeline input.",
-    check,
-    LintLevel::Hint,
-)
-.with_auto_fix()
-.with_doc_url("https://www.nushell.sh/book/pipelines.html");
+struct TurnPositionalIntoStreamInput;
+
+impl DetectFix for TurnPositionalIntoStreamInput {
+    type FixInput = FixData;
+
+    fn id(&self) -> &'static str {
+        "turn_positional_into_stream_input"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Custom commands with a single positional parameter may be rewritten as a command \
+         receiving pipeline input."
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/book/pipelines.html")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        log::debug!("prefer_pipeline_input: Starting rule check");
+
+        let user_functions: Vec<_> = context.new_user_functions().collect();
+        log::debug!("Found {} registered user functions", user_functions.len());
+
+        let function_definitions = context.collect_function_definitions();
+        log::debug!(
+            "Found {} function definitions in AST",
+            function_definitions.len()
+        );
+
+        user_functions
+            .iter()
+            .filter_map(|(_, decl)| analyze_function_from_signature(&decl.signature(), context))
+            .chain(
+                function_definitions.iter().filter_map(|(block_id, name)| {
+                    analyze_function_from_ast(*block_id, name, context)
+                }),
+            )
+            .collect()
+    }
+
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        let explanation = format!(
+            "Use pipeline input ($in) instead of parameter (${})",
+            fix_data.param_name
+        );
+        Some(Fix::with_explanation(
+            explanation,
+            vec![Replacement::new(
+                fix_data.def_span,
+                fix_data.fix_code.clone(),
+            )],
+        ))
+    }
+}
+
+pub static RULE: &dyn Rule = &TurnPositionalIntoStreamInput;
 
 #[cfg(test)]
 mod detect_bad;

@@ -8,7 +8,7 @@ use nu_protocol::{
 
 #[cfg(test)]
 use crate::violation;
-use crate::{ast::call::CallExt, span::FileSpan, violation::Violation};
+use crate::{ast::call::CallExt, span::FileSpan, violation::Detection};
 
 /// Context containing all lint information (source, AST, and engine state)
 ///
@@ -141,13 +141,26 @@ impl<'a> LintContext<'a> {
         Span::new(start + self.file_offset, end + self.file_offset)
     }
 
-    /// Collect all rule violations using a closure over expressions
-    pub(crate) fn collect_rule_violations<F>(&self, collector: F) -> Vec<Violation>
+    /// Collect detected violations with associated fix data using a closure
+    /// over expressions
+    pub(crate) fn detect_with_fix_data<F, D>(&self, collector: F) -> Vec<(Detection, D)>
     where
-        F: Fn(&Expression, &Self) -> Vec<Violation>,
+        F: Fn(&Expression, &Self) -> Vec<(Detection, D)>,
+    {
+        let mut results = Vec::new();
+        let f = |expr: &Expression| collector(expr, self);
+        self.ast.flat_map(self.working_set, &f, &mut results);
+        results
+    }
+
+    /// Collect detected violations without fix data (convenience for rules with
+    /// `FixData = ()`)
+    pub(crate) fn detect<F>(&self, fix_data_collector: F) -> Vec<Detection>
+    where
+        F: Fn(&Expression, &Self) -> Vec<Detection>,
     {
         let mut violations = Vec::new();
-        let f = |expr: &Expression| collector(expr, self);
+        let f = |expr: &Expression| fix_data_collector(expr, self);
         self.ast.flat_map(self.working_set, &f, &mut violations);
         violations
     }
@@ -206,7 +219,10 @@ impl<'a> LintContext<'a> {
                 let Expr::Call(call) = &expr.expr else {
                     return vec![];
                 };
-                call.extract_function_definition(self).into_iter().collect()
+                call.extract_function_definition(self)
+                    .map(|def| (def.body, def.name))
+                    .into_iter()
+                    .collect()
             },
             &mut functions,
         );

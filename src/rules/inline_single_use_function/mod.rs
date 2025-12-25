@@ -1,7 +1,11 @@
 use nu_protocol::ast::{Expr, Pipeline, Traverse};
 
 use crate::{
-    LintLevel, ast::span::SpanExt, context::LintContext, rule::Rule, violation::Violation,
+    LintLevel,
+    ast::span::SpanExt,
+    context::LintContext,
+    rule::{DetectFix, Rule},
+    violation::Detection,
 };
 fn is_non_comment_statement(pipeline: &Pipeline) -> bool {
     pipeline
@@ -53,44 +57,66 @@ fn count_function_calls(function_name: &str, context: &LintContext) -> usize {
 fn is_exported_function(function_name: &str, context: &LintContext) -> bool {
     context.source_contains(&format!("export def {function_name}"))
 }
-fn check(context: &LintContext) -> Vec<Violation> {
-    let function_definitions = context.collect_function_definitions();
-    let has_main = function_definitions.values().any(|name| name == "main");
-    if !has_main {
-        return vec![];
+
+struct InlineSingleUseFunction;
+
+impl DetectFix for InlineSingleUseFunction {
+    type FixInput = ();
+
+    fn id(&self) -> &'static str {
+        "inline_single_use_function"
     }
-    function_definitions
-        .iter()
-        .filter(|(_, name)| *name != "main")
-        .filter(|(_, name)| !is_exported_function(name, context))
-        .filter(|(block_id, _)| has_single_statement_body(**block_id, context))
-        .filter(|(_, name)| count_function_calls(name, context) == 1)
-        .map(|(block_id, function_name)| {
-            let name_span = context.find_declaration_span(function_name);
-            let block = context.working_set.get_block(*block_id);
-            // body_span is global (AST), name_span is file-relative - use AST span or
-            // convert
-            let body_span = block.span.unwrap_or_else(|| name_span.into());
-            Violation::with_file_span(
-                format!("Function `{function_name}` has a single-line body and is only used once"),
-                name_span,
-            )
-            .with_primary_label("single-use function")
-            .with_extra_label("could be inlined", body_span)
-            .with_help(
-                "Consider inlining this function at its call site. Single-line helper functions \
-                 used only once may add unnecessary indirection and reduce code clarity.",
-            )
-        })
-        .collect()
+
+    fn explanation(&self) -> &'static str {
+        "Detect single-line custom commands used only once that could be inlined"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/book/custom_commands.html")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        let function_definitions = context.collect_function_definitions();
+        let has_main = function_definitions.values().any(|name| name == "main");
+        if !has_main {
+            return vec![];
+        }
+        let violations = function_definitions
+            .iter()
+            .filter(|(_, name)| *name != "main")
+            .filter(|(_, name)| !is_exported_function(name, context))
+            .filter(|(block_id, _)| has_single_statement_body(**block_id, context))
+            .filter(|(_, name)| count_function_calls(name, context) == 1)
+            .map(|(block_id, function_name)| {
+                let name_span = context.find_declaration_span(function_name);
+                let block = context.working_set.get_block(*block_id);
+                // body_span is global (AST), name_span is file-relative - use AST span or
+                // convert
+                let body_span = block.span.unwrap_or_else(|| name_span.into());
+                Detection::from_file_span(
+                    format!(
+                        "Function `{function_name}` has a single-line body and is only used once"
+                    ),
+                    name_span,
+                )
+                .with_primary_label("single-use function")
+                .with_extra_label("could be inlined", body_span)
+                .with_help(
+                    "Consider inlining this function at its call site. Single-line helper \
+                     functions used only once may add unnecessary indirection and reduce code \
+                     clarity.",
+                )
+            })
+            .collect();
+        Self::no_fix(violations)
+    }
 }
-pub const RULE: Rule = Rule::new(
-    "inline_single_use_function",
-    "Detect single-line custom commands used only once that could be inlined",
-    check,
-    LintLevel::Hint,
-)
-.with_doc_url("https://www.nushell.sh/book/custom_commands.html");
+
+pub static RULE: &dyn Rule = &InlineSingleUseFunction;
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]

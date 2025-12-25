@@ -1,33 +1,14 @@
 use nu_protocol::ast::{Expr, Expression, ListItem, Traverse};
 
 use crate::{
-    LintLevel, ast::expression::ExpressionExt, context::LintContext, rule::Rule,
-    violation::Violation,
+    LintLevel,
+    ast::expression::ExpressionExt,
+    context::LintContext,
+    rule::{DetectFix, Rule},
+    violation::Detection,
 };
 
 const MAX_LIST_LINE_LENGTH: usize = 80;
-
-fn check(context: &LintContext) -> Vec<Violation> {
-    let mut violations = Vec::new();
-
-    context.ast.flat_map(
-        context.working_set,
-        &|expr| {
-            if let Expr::List(items) = &expr.expr {
-                if should_be_multiline(expr, items, context) {
-                    vec![create_violation(expr.span)]
-                } else {
-                    vec![]
-                }
-            } else {
-                vec![]
-            }
-        },
-        &mut violations,
-    );
-
-    violations
-}
 
 fn should_be_multiline(expr: &Expression, items: &[ListItem], context: &LintContext) -> bool {
     let text = expr.span_text(context);
@@ -58,8 +39,8 @@ fn has_nested_structures(items: &[ListItem]) -> bool {
     })
 }
 
-fn create_violation(span: nu_protocol::Span) -> Violation {
-    Violation::new(
+fn create_violation(span: nu_protocol::Span) -> Detection {
+    Detection::from_global_span(
         "Long lists should use multiline format with each item on a separate line",
         span,
     )
@@ -69,13 +50,51 @@ fn create_violation(span: nu_protocol::Span) -> Violation {
 /// This rule uses AST-based detection and is compatible with topiary-nushell
 /// tree-sitter formatting. It analyzes actual list structures rather than regex
 /// patterns.
-pub const RULE: Rule = Rule::new(
-    "reflow_wide_lists",
-    "Wrap wide lists vertically across multiple lines.",
-    check,
-    LintLevel::Hint,
-)
-.with_doc_url("https://www.nushell.sh/book/style_guide.html#multi-line-format");
+struct ReflowWideLists;
+
+impl DetectFix for ReflowWideLists {
+    type FixInput = ();
+
+    fn id(&self) -> &'static str {
+        "reflow_wide_lists"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Wrap wide lists vertically across multiple lines."
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/book/style_guide.html#multi-line-format")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        let mut violations = Vec::new();
+
+        context.ast.flat_map(
+            context.working_set,
+            &|expr| {
+                if let Expr::List(items) = &expr.expr {
+                    if should_be_multiline(expr, items, context) {
+                        vec![create_violation(expr.span)]
+                    } else {
+                        vec![]
+                    }
+                } else {
+                    vec![]
+                }
+            },
+            &mut violations,
+        );
+
+        Self::no_fix(violations)
+    }
+}
+
+pub static RULE: &dyn Rule = &ReflowWideLists;
 
 #[cfg(test)]
 mod detect_bad;

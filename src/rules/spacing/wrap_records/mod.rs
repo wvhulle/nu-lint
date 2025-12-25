@@ -1,33 +1,14 @@
 use nu_protocol::ast::{Expr, Expression, RecordItem, Traverse};
 
 use crate::{
-    LintLevel, ast::expression::ExpressionExt, context::LintContext, rule::Rule,
-    violation::Violation,
+    LintLevel,
+    ast::expression::ExpressionExt,
+    context::LintContext,
+    rule::{DetectFix, Rule},
+    violation::Detection,
 };
 
 const MAX_RECORD_LINE_LENGTH: usize = 80;
-
-fn check(context: &LintContext) -> Vec<Violation> {
-    let mut violations = Vec::new();
-
-    context.ast.flat_map(
-        context.working_set,
-        &|expr| {
-            if let Expr::Record(fields) = &expr.expr {
-                if should_be_multiline(expr, fields, context) {
-                    vec![create_violation(expr.span)]
-                } else {
-                    vec![]
-                }
-            } else {
-                vec![]
-            }
-        },
-        &mut violations,
-    );
-
-    violations
-}
 
 fn should_be_multiline(expr: &Expression, fields: &[RecordItem], context: &LintContext) -> bool {
     let text = expr.span_text(context);
@@ -59,8 +40,8 @@ fn has_nested_structures(fields: &[RecordItem]) -> bool {
     })
 }
 
-fn create_violation(span: nu_protocol::Span) -> Violation {
-    Violation::new(
+fn create_violation(span: nu_protocol::Span) -> Detection {
+    Detection::from_global_span(
         "Long records should use multiline format with each field on a separate line",
         span,
     )
@@ -70,13 +51,51 @@ fn create_violation(span: nu_protocol::Span) -> Violation {
 /// This rule uses AST-based detection and is compatible with topiary-nushell
 /// tree-sitter formatting. It analyzes actual record structures rather than
 /// regex patterns.
-pub const RULE: Rule = Rule::new(
-    "wrap_wide_records",
-    "Prefer multiline format for long or complex records",
-    check,
-    LintLevel::Hint,
-)
-.with_doc_url("https://www.nushell.sh/book/style_guide.html#multi-line-format");
+struct WrapWideRecords;
+
+impl DetectFix for WrapWideRecords {
+    type FixInput = ();
+
+    fn id(&self) -> &'static str {
+        "wrap_wide_records"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Prefer multiline format for long or complex records"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/book/style_guide.html#multi-line-format")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        let mut violations = Vec::new();
+
+        context.ast.flat_map(
+            context.working_set,
+            &|expr| {
+                if let Expr::Record(fields) = &expr.expr {
+                    if should_be_multiline(expr, fields, context) {
+                        vec![create_violation(expr.span)]
+                    } else {
+                        vec![]
+                    }
+                } else {
+                    vec![]
+                }
+            },
+            &mut violations,
+        );
+
+        Self::no_fix(violations)
+    }
+}
+
+pub static RULE: &dyn Rule = &WrapWideRecords;
 
 #[cfg(test)]
 mod detect_bad;

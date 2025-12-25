@@ -6,14 +6,19 @@ use nu_protocol::{
 use crate::{
     LintLevel,
     context::LintContext,
-    rule::Rule,
-    violation::{Fix, Replacement, Violation},
+    rule::{DetectFix, Rule},
+    violation::{Detection, Fix, Replacement},
 };
+
+/// Semantic fix data: stores the span to replace with " | "
+pub struct FixData {
+    fix_span: Span,
+}
 
 /// AST visitor that checks for pipe spacing issues
 struct PipeSpacingVisitor<'a> {
     context: &'a LintContext<'a>,
-    violations: Vec<Violation>,
+    violations: Vec<(Detection, FixData)>,
 }
 
 impl<'a> PipeSpacingVisitor<'a> {
@@ -87,17 +92,13 @@ impl<'a> PipeSpacingVisitor<'a> {
 
             let fix_span = Span::new(start, end);
 
-            let fix = Fix::with_explanation(
-                "Fix pipe spacing to ' | '",
-                vec![Replacement::new(fix_span, " | ")],
-            );
+            let violation = Detection::from_global_span(message.to_string(), violation_span)
+                .with_primary_label("spacing issue")
+                .with_help("Use ' | ' with single spaces");
 
-            self.violations.push(
-                Violation::new(message.to_string(), violation_span)
-                    .with_primary_label("spacing issue")
-                    .with_help("Use ' | ' with single spaces")
-                    .with_fix(fix),
-            );
+            let fix_data = FixData { fix_span };
+
+            self.violations.push((violation, fix_data));
         }
     }
 
@@ -126,8 +127,10 @@ impl<'a> PipeSpacingVisitor<'a> {
     }
 }
 
-fn check_pipeline_spacing(pipeline: &Pipeline, context: &LintContext) -> Vec<Violation> {
-    let mut violations = Vec::new();
+fn detect_pipeline_spacing(
+    pipeline: &Pipeline,
+    context: &LintContext,
+) -> Vec<(Detection, FixData)> {
     let mut visitor = PipeSpacingVisitor::new(context);
 
     // Check spacing between consecutive pipeline elements
@@ -137,13 +140,16 @@ fn check_pipeline_spacing(pipeline: &Pipeline, context: &LintContext) -> Vec<Vio
         visitor.check_pipe_spacing(prev.expr.span, curr.expr.span);
     }
 
-    violations.extend(visitor.violations);
-    violations
+    visitor.violations
 }
 
-fn walk_block_for_pipelines(block: &Block, context: &LintContext, violations: &mut Vec<Violation>) {
+fn walk_block_for_pipelines(
+    block: &Block,
+    context: &LintContext,
+    violations: &mut Vec<(Detection, FixData)>,
+) {
     for pipeline in &block.pipelines {
-        violations.extend(check_pipeline_spacing(pipeline, context));
+        violations.extend(detect_pipeline_spacing(pipeline, context));
 
         // Also check nested blocks
         for element in &pipeline.elements {
@@ -155,7 +161,7 @@ fn walk_block_for_pipelines(block: &Block, context: &LintContext, violations: &m
 fn walk_expr_for_pipelines(
     expr: &Expression,
     context: &LintContext,
-    violations: &mut Vec<Violation>,
+    violations: &mut Vec<(Detection, FixData)>,
 ) {
     match &expr.expr {
         Expr::Block(block_id)
@@ -176,20 +182,52 @@ fn walk_expr_for_pipelines(
     }
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    let mut violations = Vec::new();
-    walk_block_for_pipelines(context.ast, context, &mut violations);
-    violations
+struct PipeSpacing;
+
+impl DetectFix for PipeSpacing {
+    type FixInput = FixData;
+
+    fn id(&self) -> &'static str {
+        "pipe_spacing"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Pipes should have exactly one space before and after when on the same line"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/book/style_guide.html#basic")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        let mut violations = Vec::new();
+
+        let block: &Block = context.ast;
+        for pipeline in &block.pipelines {
+            violations.extend(detect_pipeline_spacing(pipeline, context));
+
+            // Also check nested blocks
+            for element in &pipeline.elements {
+                walk_expr_for_pipelines(&element.expr, context, &mut violations);
+            }
+        }
+
+        violations
+    }
+
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        Some(Fix::with_explanation(
+            "Fix pipe spacing to ' | '",
+            vec![Replacement::new(fix_data.fix_span, " | ")],
+        ))
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "pipe_spacing",
-    "Pipes should have exactly one space before and after when on the same line",
-    check,
-    LintLevel::Warning,
-)
-.with_auto_fix()
-.with_doc_url("https://www.nushell.sh/book/style_guide.html#basic");
+pub static RULE: &dyn Rule = &PipeSpacing;
 
 #[cfg(test)]
 mod detect_bad;

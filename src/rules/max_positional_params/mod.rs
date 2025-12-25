@@ -1,6 +1,11 @@
-use crate::{LintLevel, context::LintContext, rule::Rule, violation::Violation};
+use crate::{
+    LintLevel,
+    context::LintContext,
+    rule::{DetectFix, Rule},
+    violation::Detection,
+};
 const MAX_POSITIONAL: usize = 2;
-fn check(context: &LintContext) -> Vec<Violation> {
+fn check(context: &LintContext) -> Vec<Detection> {
     context
         .new_user_functions()
         .filter_map(|(_, decl)| {
@@ -12,7 +17,7 @@ fn check(context: &LintContext) -> Vec<Violation> {
             // Only create violation if count exceeds threshold
             (positional_count > MAX_POSITIONAL).then(|| {
                 let name_span = context.find_declaration_span(&signature.name);
-                Violation::with_file_span(
+                Detection::from_file_span(
                     format!(
                         "Command has {positional_count} positional parameters, should have ≤ \
                          {MAX_POSITIONAL}"
@@ -25,15 +30,29 @@ fn check(context: &LintContext) -> Vec<Violation> {
         })
         .collect()
 }
-pub const RULE: Rule = Rule::new(
-    "max_positional_params",
-    "Custom commands should have ≤ 2 positional parameters",
-    check,
-    LintLevel::Warning,
-)
-.with_doc_url(
-    "https://www.nushell.sh/book/style_guide.html#options-and-parameters-of-custom-commands",
-);
+struct MaxPositionalParams;
+
+impl DetectFix for MaxPositionalParams {
+    type FixInput = ();
+
+    fn id(&self) -> &'static str {
+        "max_positional_params"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Custom commands should have ≤ 2 positional parameters"
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        Self::no_fix(check(context))
+    }
+}
+
+pub static RULE: &dyn Rule = &MaxPositionalParams;
 #[cfg(test)]
 mod detect_bad;
 #[cfg(test)]

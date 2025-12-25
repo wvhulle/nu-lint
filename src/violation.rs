@@ -8,7 +8,7 @@ use crate::{
     span::{FileSpan, LintSpan},
 };
 
-/// Represents the source of a lint violation (either stdin or a file path)
+/// Represents the source file of a lint violation
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SourceFile {
     Stdin,
@@ -16,7 +16,6 @@ pub enum SourceFile {
 }
 
 impl SourceFile {
-    /// Get the file path as a string slice (for display and file operations)
     #[must_use]
     pub const fn as_str(&self) -> &str {
         match self {
@@ -25,7 +24,6 @@ impl SourceFile {
         }
     }
 
-    /// Convert to Path for file operations
     #[must_use]
     pub fn as_path(&self) -> Option<&Path> {
         match self {
@@ -34,7 +32,6 @@ impl SourceFile {
         }
     }
 
-    /// Check if this is stdin
     #[must_use]
     pub const fn is_stdin(&self) -> bool {
         matches!(self, Self::Stdin)
@@ -65,7 +62,6 @@ impl From<&Path> for SourceFile {
     }
 }
 
-/// Convert `LintLevel` to miette's `Severity`
 impl From<LintLevel> for Severity {
     fn from(level: LintLevel) -> Self {
         match level {
@@ -76,81 +72,124 @@ impl From<LintLevel> for Severity {
     }
 }
 
-/// A lint violation with its diagnostic information
-
+/// A detected violation from a lint rule (before fix is attached).
+///
+/// This type is returned by `LintRule::detect()` and deliberately has no `fix`
+/// field. The engine is responsible for calling `LintRule::fix()` separately
+/// and combining the results into a full `Violation`.
 #[derive(Debug, Clone)]
-pub struct Violation {
-    pub rule_id: Option<Cow<'static, str>>,
-    pub lint_level: LintLevel,
-
-    /// Short message shown in the warning header
+pub struct Detection {
     pub message: Cow<'static, str>,
-
-    /// Primary span in source code where the violation occurs
     pub span: LintSpan,
-
-    /// Optional label text displayed on the primary span underline
     pub primary_label: Option<Cow<'static, str>>,
-
-    /// Additional labeled spans for context
     pub extra_labels: Vec<(LintSpan, Option<String>)>,
-
-    /// Optional detailed explanation shown in the "help:" section
     pub help: Option<Cow<'static, str>>,
-
-    /// Additional informational notes shown after help
     pub notes: Vec<Cow<'static, str>>,
-
-    /// Optional automated fix that can be applied
-    pub fix: Option<Fix>,
-
-    pub(crate) file: Option<SourceFile>,
-
-    /// Optional source code content
-    pub(crate) source: Option<Cow<'static, str>>,
-
-    /// Optional URL to official Nushell documentation
-    pub doc_url: Option<&'static str>,
 }
 
-impl Violation {
+impl Detection {
     /// Create a new violation with an AST span (global coordinates)
-    ///
-    /// The span will be normalized to file-relative coordinates by the engine.
     #[must_use]
-    pub fn new(message: impl Into<Cow<'static, str>>, span: Span) -> Self {
+    pub fn from_global_span(message: impl Into<Cow<'static, str>>, global_span: Span) -> Self {
         Self {
-            rule_id: None,
-            lint_level: LintLevel::default(),
             message: message.into(),
-            span: LintSpan::from(span),
+            span: LintSpan::from(global_span),
             primary_label: None,
             extra_labels: Vec::new(),
             help: None,
             notes: Vec::new(),
-            fix: None,
-            file: None,
-            source: None,
-            doc_url: None,
         }
     }
 
     /// Create a new violation with a file-relative span
-    ///
-    /// Use this when the span was computed from the source string directly
-    /// (e.g., regex matches, manual line counting).
     #[must_use]
-    pub fn with_file_span(message: impl Into<Cow<'static, str>>, span: FileSpan) -> Self {
+    pub fn from_file_span(message: impl Into<Cow<'static, str>>, span: FileSpan) -> Self {
         Self {
-            rule_id: None,
-            lint_level: LintLevel::default(),
             message: message.into(),
             span: LintSpan::File(span),
             primary_label: None,
             extra_labels: Vec::new(),
             help: None,
             notes: Vec::new(),
-            fix: None,
+        }
+    }
+
+    #[must_use]
+    pub fn with_help(mut self, help: impl Into<Cow<'static, str>>) -> Self {
+        self.help = Some(help.into());
+        self
+    }
+
+    #[must_use]
+    pub fn with_primary_label(mut self, label: impl Into<Cow<'static, str>>) -> Self {
+        self.primary_label = Some(label.into());
+        self
+    }
+
+    #[must_use]
+    pub fn with_extra_label(mut self, label: impl Into<Cow<'static, str>>, span: Span) -> Self {
+        self.extra_labels
+            .push((LintSpan::from(span), Some(label.into().to_string())));
+        self
+    }
+
+    #[must_use]
+    pub fn with_extra_span(mut self, span: Span) -> Self {
+        self.extra_labels.push((LintSpan::from(span), None));
+        self
+    }
+
+    #[must_use]
+    pub fn with_notes<I, S>(mut self, notes: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<Cow<'static, str>>,
+    {
+        self.notes = notes.into_iter().map(Into::into).collect();
+        self
+    }
+
+    #[must_use]
+    pub fn with_note(mut self, note: impl Into<Cow<'static, str>>) -> Self {
+        self.notes.push(note.into());
+        self
+    }
+}
+
+/// A lint violation with its full diagnostic information (after fix is
+/// attached).
+///
+/// This is the final form of a violation, constructed by the engine from a
+/// `Detection` plus an optional `Fix`. Rules cannot construct this
+/// type directly - they return `Detection` from `detect()`.
+#[derive(Debug, Clone)]
+pub struct Violation {
+    pub rule_id: Option<Cow<'static, str>>,
+    pub lint_level: LintLevel,
+    pub message: Cow<'static, str>,
+    pub span: LintSpan,
+    pub primary_label: Option<Cow<'static, str>>,
+    pub extra_labels: Vec<(LintSpan, Option<String>)>,
+    pub help: Option<Cow<'static, str>>,
+    pub notes: Vec<Cow<'static, str>>,
+    pub fix: Option<Fix>,
+    pub(crate) file: Option<SourceFile>,
+    pub(crate) source: Option<Cow<'static, str>>,
+    pub doc_url: Option<&'static str>,
+}
+
+impl Violation {
+    pub(crate) fn from_detected(detected: Detection, fix: Option<Fix>) -> Self {
+        Self {
+            rule_id: None,
+            lint_level: LintLevel::default(),
+            message: detected.message,
+            span: detected.span,
+            primary_label: detected.primary_label,
+            extra_labels: detected.extra_labels,
+            help: detected.help,
+            notes: detected.notes,
+            fix,
             file: None,
             source: None,
             doc_url: None,
@@ -162,20 +201,6 @@ impl Violation {
         self.rule_id = Some(Cow::Borrowed(rule_id));
     }
 
-    /// Add detailed help text explaining why this change should be made
-    #[must_use]
-    pub fn with_help(mut self, help: impl Into<Cow<'static, str>>) -> Self {
-        self.help = Some(help.into());
-        self
-    }
-
-    /// Add an automated fix to this violation
-    #[must_use]
-    pub fn with_fix(mut self, fix: Fix) -> Self {
-        self.fix = Some(fix);
-        self
-    }
-
     /// Set the lint level for this violation (used by the engine)
     pub(crate) const fn set_lint_level(&mut self, level: LintLevel) {
         self.lint_level = level;
@@ -184,46 +209,6 @@ impl Violation {
     /// Set the documentation URL for this violation (used by the engine)
     pub(crate) const fn set_doc_url(&mut self, url: Option<&'static str>) {
         self.doc_url = url;
-    }
-
-    /// Set the label text displayed on the primary span
-    #[must_use]
-    pub fn with_primary_label(mut self, label: impl Into<Cow<'static, str>>) -> Self {
-        self.primary_label = Some(label.into());
-        self
-    }
-
-    /// Add a secondary label for context with an AST span
-    #[must_use]
-    pub fn with_extra_label(mut self, label: impl Into<Cow<'static, str>>, span: Span) -> Self {
-        self.extra_labels
-            .push((LintSpan::from(span), Some(label.into().to_string())));
-        self
-    }
-
-    /// Add an unlabeled secondary span for context
-    #[must_use]
-    pub fn with_extra_span(mut self, span: Span) -> Self {
-        self.extra_labels.push((LintSpan::from(span), None));
-        self
-    }
-
-    /// Notes appear after help text and provide supplementary context.
-    #[must_use]
-    pub fn with_notes<I, S>(mut self, notes: I) -> Self
-    where
-        I: IntoIterator<Item = S>,
-        S: Into<Cow<'static, str>>,
-    {
-        self.notes = notes.into_iter().map(Into::into).collect();
-        self
-    }
-
-    /// Add a single note to this violation
-    #[must_use]
-    pub fn with_note(mut self, note: impl Into<Cow<'static, str>>) -> Self {
-        self.notes.push(note.into());
-        self
     }
 
     /// Get the span as file-relative. Panics if not normalized.

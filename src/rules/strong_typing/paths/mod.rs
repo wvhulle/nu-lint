@@ -7,9 +7,17 @@ use crate::{
     LintLevel,
     ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
     context::LintContext,
-    rule::Rule,
-    violation::{Fix, Replacement, Violation},
+    rule::{DetectFix, Rule},
+    violation::{Detection, Fix, Replacement},
 };
+
+/// Semantic fix data: stores the parameter name, span, and whether it's
+/// optional
+pub struct FixData {
+    param_name: String,
+    replace_span: Span,
+    is_optional: bool,
+}
 
 const PATH_KEYWORDS: &[&str] = &["path", "file", "dir", "directory", "folder", "location"];
 
@@ -61,7 +69,8 @@ fn parameter_used_as_path(
         })
         .is_some()
 }
-fn check_parameter(
+
+fn detect_parameter(
     param: &nu_protocol::PositionalArg,
     param_var_id: VarId,
     block: &Block,
@@ -69,7 +78,7 @@ fn check_parameter(
     signature_span: Span,
     is_optional: bool,
     context: &LintContext,
-) -> Option<Violation> {
+) -> Option<(Detection, FixData)> {
     use nu_protocol::SyntaxShape::{Any, String as StringShape};
 
     if !matches!(param.shape, StringShape | Any) {
@@ -94,23 +103,22 @@ fn check_parameter(
     );
 
     let optional_marker = if is_optional { "?" } else { "" };
-    let new_param_text = format!("{}{optional_marker}: path", param.name);
 
     let param_in_sig_span = signature_span.find_substring_span(&param.name, context);
     let param_end = find_param_type_end(param_in_sig_span, signature_span, context);
     let replace_span = Span::new(param_in_sig_span.start, param_end);
 
-    let fix = Fix::with_explanation(
-        format!("Change `{}` type to `path`", param.name),
-        vec![Replacement::new(replace_span, new_param_text)],
-    );
+    let violation = Detection::from_global_span(message, param_span)
+        .with_primary_label("used as path")
+        .with_help(format!("Use `{}{optional_marker}: path`", param.name));
 
-    Some(
-        Violation::new(message, param_span)
-            .with_primary_label("used as path")
-            .with_help(format!("Use `{}{optional_marker}: path`", param.name))
-            .with_fix(fix),
-    )
+    let fix_data = FixData {
+        param_name: param.name.clone(),
+        replace_span,
+        is_optional,
+    };
+
+    Some((violation, fix_data))
 }
 
 fn find_param_type_end(param_start: Span, signature_span: Span, context: &LintContext) -> usize {
@@ -127,15 +135,15 @@ fn find_param_type_end(param_start: Span, signature_span: Span, context: &LintCo
     signature_span.end
 }
 
-fn check_function_parameters(
+fn detect_function_parameters(
     block: &Block,
     function_name: &str,
     signature_span: Span,
     context: &LintContext,
-) -> Vec<Violation> {
+) -> Vec<(Detection, FixData)> {
     let check_param = |param: &nu_protocol::PositionalArg, is_optional: bool| {
         param.var_id.and_then(|var_id| {
-            check_parameter(
+            detect_parameter(
                 param,
                 var_id,
                 block,
@@ -169,38 +177,62 @@ fn check_function_parameters(
         .collect()
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    context.collect_rule_violations(|expr, ctx| {
-        let Expr::Call(call) = &expr.expr else {
-            return vec![];
-        };
+struct PreferPathType;
 
-        let decl = ctx.working_set.get_decl(call.decl_id);
-        if !matches!(decl.name(), "def" | "export def") {
-            return vec![];
-        }
+impl DetectFix for PreferPathType {
+    type FixInput = FixData;
 
-        let Some((block_id, function_name)) = call.extract_function_definition(ctx) else {
-            return vec![];
-        };
+    fn id(&self) -> &'static str {
+        "prefer_path_type"
+    }
 
-        let Some(sig_arg) = call.get_positional_arg(1) else {
-            return vec![];
-        };
+    fn explanation(&self) -> &'static str {
+        "Use Nushell's path type instead of string for parameters with 'path' in the name"
+    }
 
-        let block = ctx.working_set.get_block(block_id);
-        check_function_parameters(block, &function_name, sig_arg.span, ctx)
-    })
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/book/types_of_data.html#paths")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        context.detect_with_fix_data(|expr, ctx| {
+            let Expr::Call(call) = &expr.expr else {
+                return vec![];
+            };
+
+            let decl = ctx.working_set.get_decl(call.decl_id);
+            if !matches!(decl.name(), "def" | "export def") {
+                return vec![];
+            }
+
+            let Some(def) = call.extract_function_definition(ctx) else {
+                return vec![];
+            };
+
+            let Some(sig_arg) = call.get_positional_arg(1) else {
+                return vec![];
+            };
+
+            let block = ctx.working_set.get_block(def.body);
+            detect_function_parameters(block, &def.name, sig_arg.span, ctx)
+        })
+    }
+
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        let optional_marker = if fix_data.is_optional { "?" } else { "" };
+        let new_param_text = format!("{}{optional_marker}: path", fix_data.param_name);
+        Some(Fix::with_explanation(
+            format!("Change `{}` type to `path`", fix_data.param_name),
+            vec![Replacement::new(fix_data.replace_span, new_param_text)],
+        ))
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "prefer_path_type",
-    "Use Nushell's path type instead of string for parameters with 'path' in the name",
-    check,
-    LintLevel::Warning,
-)
-.with_auto_fix()
-.with_doc_url("https://www.nushell.sh/book/types_of_data.html#paths");
+pub static RULE: &dyn Rule = &PreferPathType;
 
 #[cfg(test)]
 mod detect_bad;

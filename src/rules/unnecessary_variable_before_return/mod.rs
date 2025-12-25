@@ -5,11 +5,19 @@ use nu_protocol::{
 
 use crate::{
     LintLevel,
-    ast::{call::CallExt, expression::ExpressionExt},
+    ast::call::CallExt,
     context::LintContext,
-    rule::Rule,
-    violation::{Fix, Replacement, Violation},
+    rule::{DetectFix, Rule},
+    violation::{Detection, Fix, Replacement},
 };
+
+/// Fix data: spans needed to reconstruct the fix
+pub struct FixData {
+    /// The span covering both the let statement and the return reference
+    combined_span: Span,
+    /// The span of the value expression in the let statement
+    value_span: Span,
+}
 
 struct LetDeclaration<'a> {
     var_id: VarId,
@@ -71,7 +79,7 @@ fn is_simple_var_reference(pipeline: &Pipeline, var_id: VarId) -> Option<Span> {
 }
 
 /// Check a block for the unnecessary variable pattern
-fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<Violation>) {
+fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<(Detection, FixData)>) {
     let pipelines = &block.pipelines;
 
     for i in 0..pipelines.len().saturating_sub(1) {
@@ -97,45 +105,61 @@ fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<Violat
             );
             let combined_span = Span::new(let_decl.span.start, ref_span.end);
 
-            let value_expr = extract_value_from_let(let_decl.call);
-            let replacement_text = value_expr
-                .map(|expr| expr.span_text(context).to_string())
-                .unwrap_or_default();
+            let Some(value_expr) = extract_value_from_let(let_decl.call) else {
+                continue;
+            };
 
-            let fix = Fix::with_explanation(
-                format!("Return expression directly: {replacement_text}"),
-                vec![Replacement::new(combined_span, replacement_text)],
-            );
+            let violation = Detection::from_global_span(
+                format!(
+                    "Variable '{}' is assigned and immediately returned - consider returning the \
+                     expression directly",
+                    let_decl.var_name
+                ),
+                let_decl.span,
+            )
+            .with_primary_label("variable declared here")
+            .with_extra_label("immediately returned here", ref_span)
+            .with_help("Return the expression directly instead of assigning to a variable first");
 
-            violations.push(
-                Violation::new(
-                    format!(
-                        "Variable '{}' is assigned and immediately returned - consider returning \
-                         the expression directly",
-                        let_decl.var_name
-                    ),
-                    let_decl.span,
-                )
-                .with_primary_label("variable declared here")
-                .with_extra_label("immediately returned here", ref_span)
-                .with_help(
-                    "Return the expression directly instead of assigning to a variable first",
-                )
-                .with_fix(fix),
-            );
+            let fix_data = FixData {
+                combined_span,
+                value_span: value_expr.span,
+            };
+
+            violations.push((violation, fix_data));
         }
     }
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    let mut violations = Vec::new();
+struct UnnecessaryVariableBeforeReturn;
 
-    // Check the main block
-    check_block(context.ast, context, &mut violations);
+impl DetectFix for UnnecessaryVariableBeforeReturn {
+    type FixInput = FixData;
 
-    // Recursively check all nested blocks (closures, functions, etc.)
-    violations.extend(
-        context.collect_rule_violations(|expr, ctx| match &expr.expr {
+    fn id(&self) -> &'static str {
+        "unnecessary_variable_before_return"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Variable assigned and immediately returned adds unnecessary verbosity"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/book/thinking_in_nu.html#implicit-return")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        let mut violations = Vec::new();
+
+        // Check the main block
+        check_block(context.ast, context, &mut violations);
+
+        // Recursively check all nested blocks (closures, functions, etc.)
+        violations.extend(context.detect_with_fix_data(|expr, ctx| match &expr.expr {
             Expr::Closure(block_id) | Expr::Block(block_id) => {
                 let mut nested_violations = Vec::new();
                 let block = ctx.working_set.get_block(*block_id);
@@ -143,20 +167,21 @@ fn check(context: &LintContext) -> Vec<Violation> {
                 nested_violations
             }
             _ => vec![],
-        }),
-    );
+        }));
 
-    violations
+        violations
+    }
+
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        let replacement_text = context.get_span_text(fix_data.value_span).to_string();
+        Some(Fix::with_explanation(
+            format!("Return expression directly: {replacement_text}"),
+            vec![Replacement::new(fix_data.combined_span, replacement_text)],
+        ))
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "unnecessary_variable_before_return",
-    "Variable assigned and immediately returned adds unnecessary verbosity",
-    check,
-    LintLevel::Warning,
-)
-.with_auto_fix()
-.with_doc_url("https://www.nushell.sh/book/thinking_in_nu.html#implicit-return");
+pub static RULE: &dyn Rule = &UnnecessaryVariableBeforeReturn;
 
 #[cfg(test)]
 mod detect_bad;

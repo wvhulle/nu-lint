@@ -100,6 +100,7 @@ mod tests {
     use lsp_types::{Position, Range};
 
     use super::ranges_overlap;
+    use crate::violation::Detection;
 
     #[test]
     fn ranges_overlap_same_line() {
@@ -188,12 +189,15 @@ mod tests {
         let file_uri: Uri = "file:///test.nu".parse().unwrap();
 
         let mut violation =
-            Violation::with_file_span("Nested if can be collapsed", FileSpan::new(0, 39))
+            Detection::from_file_span("Nested if can be collapsed", FileSpan::new(0, 39))
                 .with_primary_label("outer if")
                 .with_help("Combine with 'and'");
         violation
             .extra_labels
             .push((FileSpan::new(12, 35).into(), Some("inner if".to_string())));
+
+        let mut violation = Violation::from_detected(violation, None);
+
         violation.lint_level = LintLevel::Warning;
 
         let diagnostic = violation_to_diagnostic(&violation, source, &line_index, &file_uri);

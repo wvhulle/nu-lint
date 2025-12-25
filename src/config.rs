@@ -67,8 +67,8 @@ impl Config {
 
     /// Get the effective lint level for a specific rule
     #[must_use]
-    pub fn get_lint_level(&self, rule: &Rule) -> Option<LintLevel> {
-        let rule_id = rule.id;
+    pub fn get_lint_level(&self, rule: &dyn Rule) -> Option<LintLevel> {
+        let rule_id = rule.id();
 
         if self.ignored.contains(rule_id) {
             return None;
@@ -87,7 +87,7 @@ impl Config {
                 continue;
             };
 
-            if !lint_set.rules.iter().any(|rule| rule.id == rule_id) {
+            if !lint_set.rules.iter().any(|r| r.id() == rule_id) {
                 continue;
             }
 
@@ -95,7 +95,7 @@ impl Config {
             return Some(*level);
         }
 
-        Some(rule.level)
+        Some(rule.level())
     }
 }
 
@@ -159,8 +159,8 @@ mod tests {
         assert!(matches!(found_set_level, Some((_, LintLevel::Error))));
         let ignored_rule = ALL_RULES
             .iter()
-            .find(|r| r.id == "snake_case_variables")
+            .find(|r| r.id() == "snake_case_variables")
             .unwrap();
-        assert_eq!(config.get_lint_level(ignored_rule), None);
+        assert_eq!(config.get_lint_level(*ignored_rule), None);
     }
 }

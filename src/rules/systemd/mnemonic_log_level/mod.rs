@@ -2,40 +2,40 @@
 //!
 //! Replaces numeric systemd journal prefixes with keyword prefixes.
 
-use nu_protocol::ast::{Block, Expr, Expression, Traverse};
+use nu_protocol::{
+    Span,
+    ast::{Block, Expr, Expression, Traverse},
+};
 
 use super::{
-    FixGenerator, LogLevel, PrefixStatus, extract_first_string_part, is_print_or_echo,
-    pipeline_contains_print,
+    LogLevel, PrefixStatus, extract_first_string_part, is_print_or_echo, pipeline_contains_print,
 };
 use crate::{
     LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
-    rule::Rule,
-    violation::{Fix, Replacement, Violation},
+    rule::{DetectFix, Rule},
+    violation::{Detection, Fix, Replacement},
 };
-
-fn create_violation(
-    span: nu_protocol::Span,
+pub struct FixData {
+    arg_span: Span,
     level: LogLevel,
-    arg_expr: &Expression,
-    ctx: &LintContext,
-) -> Violation {
-    let fix_gen = FixGenerator::new(level, arg_expr, ctx);
-    let fixed_string = fix_gen.replace_numeric_prefix(level.numeric_str());
-
-    Violation::new("Numeric journal prefix", span).with_fix(Fix::with_explanation(
-        format!(
-            "Replace <{}> with <{}>",
-            level.numeric_str(),
-            level.keyword()
-        ),
-        vec![Replacement::new(arg_expr.span, fixed_string)],
-    ))
 }
 
-fn check_print_or_echo_call(expr: &Expression, ctx: &LintContext) -> Option<Violation> {
+fn detect_violation(
+    violation_span: nu_protocol::Span,
+    level: LogLevel,
+    arg_expr: &Expression,
+) -> (Detection, FixData) {
+    let violation = Detection::from_global_span("Numeric journal prefix", violation_span);
+    let fix_data = FixData {
+        arg_span: arg_expr.span,
+        level,
+    };
+    (violation, fix_data)
+}
+
+fn check_print_or_echo_call(expr: &Expression, ctx: &LintContext) -> Option<(Detection, FixData)> {
     let Expr::Call(call) = &expr.expr else {
         return None;
     };
@@ -49,12 +49,12 @@ fn check_print_or_echo_call(expr: &Expression, ctx: &LintContext) -> Option<Viol
     let message_content = extract_first_string_part(arg_expr, ctx)?;
 
     match PrefixStatus::check(&message_content) {
-        PrefixStatus::Numeric(level) => Some(create_violation(expr.span, level, arg_expr, ctx)),
+        PrefixStatus::Numeric(level) => Some(detect_violation(expr.span, level, arg_expr)),
         PrefixStatus::Missing | PrefixStatus::Valid => None,
     }
 }
 
-fn check_block(block: &Block, ctx: &LintContext) -> Vec<Violation> {
+fn check_block(block: &Block, ctx: &LintContext) -> Vec<(Detection, FixData)> {
     let mut violations = Vec::new();
 
     for (i, pipeline) in block.pipelines.iter().enumerate() {
@@ -91,34 +91,62 @@ fn check_block(block: &Block, ctx: &LintContext) -> Vec<Violation> {
     violations
 }
 
-fn check(context: &LintContext) -> Vec<Violation> {
-    let mut violations = check_block(context.ast, context);
+struct AttachLoglevelToLogStatement;
 
-    context.ast.flat_map(
-        context.working_set,
-        &|expr| {
-            if let Some(block_id) = expr.extract_block_id() {
-                let block = context.working_set.get_block(block_id);
-                return check_block(block, context);
-            }
-            vec![]
-        },
-        &mut violations,
-    );
+impl DetectFix for AttachLoglevelToLogStatement {
+    type FixInput = FixData;
 
-    violations
+    fn id(&self) -> &'static str {
+        "attach_loglevel_to_log_statement"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Use mnemonic log levels instead of numeric ones for systemd journal log levels."
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        let mut violations = check_block(context.ast, context);
+
+        context.ast.flat_map(
+            context.working_set,
+            &|expr| {
+                if let Some(block_id) = expr.extract_block_id() {
+                    let block = context.working_set.get_block(block_id);
+                    return check_block(block, context);
+                }
+                vec![]
+            },
+            &mut violations,
+        );
+
+        violations
+    }
+
+    fn fix(&self, ctx: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        // Get the original argument text and replace the numeric prefix with keyword
+        let arg_text = ctx.get_span_text(fix_data.arg_span);
+        let fixed_string = arg_text.replacen(
+            &format!("<{}>", fix_data.level.numeric_str()),
+            &format!("<{}>", fix_data.level.keyword()),
+            1,
+        );
+
+        Some(Fix::with_explanation(
+            format!(
+                "Replace <{}> with <{}>",
+                fix_data.level.numeric_str(),
+                fix_data.level.keyword()
+            ),
+            vec![Replacement::new(fix_data.arg_span, fixed_string)],
+        ))
+    }
 }
 
-pub const RULE: Rule = Rule::new(
-    "attach_loglevel_to_log_statement",
-    "Use mnemonic log levels instead of numeric ones for systemd journal log levels.",
-    check,
-    LintLevel::Hint,
-)
-.with_auto_fix()
-.with_doc_url(
-    "https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html#SyslogLevelPrefix=",
-);
+pub static RULE: &dyn Rule = &AttachLoglevelToLogStatement;
 
 #[cfg(test)]
 mod detect_bad;

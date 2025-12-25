@@ -1,9 +1,22 @@
 use nu_protocol::ast::{Expr, Expression, Pipeline};
 
 use crate::{
-    Fix, LintLevel, Replacement, ast::span::SpanExt, context::LintContext, rule::Rule,
-    violation::Violation,
+    Fix, LintLevel, Replacement,
+    ast::span::SpanExt,
+    context::LintContext,
+    rule::{DetectFix, Rule},
+    violation::Detection,
 };
+
+enum InnerExprKind {
+    Subexpression(nu_protocol::BlockId),
+    FullCellPath { block_id: nu_protocol::BlockId },
+}
+
+struct IsNotEmptyFixData {
+    span: nu_protocol::Span,
+    inner: InnerExprKind,
+}
 fn check_subexpression_for_is_empty(block_id: nu_protocol::BlockId, context: &LintContext) -> bool {
     let block = context.working_set.get_block(block_id);
     let Some(pipeline) = block.pipelines.first() else {
@@ -63,63 +76,88 @@ fn generate_fix_from_subexpression(
     let pipeline = block.pipelines.first()?;
     extract_pipeline_text(pipeline, context)
 }
-/// Generate the fix text for "not (expr | is-empty)" -> "expr | is-not-empty"
-fn generate_fix_text(expr: &Expression, context: &LintContext) -> Option<String> {
+
+fn check_not_is_empty(expr: &Expression, ctx: &LintContext) -> Vec<(Detection, IsNotEmptyFixData)> {
+    if !is_not_is_empty_pattern(expr, ctx) {
+        return vec![];
+    }
+
     let Expr::UnaryNot(inner_expr) = &expr.expr else {
-        return None;
+        return vec![];
     };
-    match &inner_expr.expr {
-        Expr::Subexpression(block_id) => generate_fix_from_subexpression(*block_id, context),
+
+    let inner = match &inner_expr.expr {
+        Expr::Subexpression(block_id) => InnerExprKind::Subexpression(*block_id),
         Expr::FullCellPath(path) => {
             if let Expr::Subexpression(block_id) = &path.head.expr {
-                generate_fix_from_subexpression(*block_id, context)
+                InnerExprKind::FullCellPath {
+                    block_id: *block_id,
+                }
             } else {
-                None
+                return vec![];
             }
         }
-        _ => None,
+        _ => return vec![],
+    };
+
+    let not_span = nu_protocol::Span::new(expr.span.start, expr.span.start + 3);
+
+    let violation = Detection::from_global_span(
+        "Use 'is-not-empty' instead of 'not ... is-empty' for better readability",
+        not_span,
+    )
+    .with_primary_label("negation operator")
+    .with_extra_label("is-empty check", inner_expr.span)
+    .with_help("Replace with 'is-not-empty'");
+
+    let fix_data = IsNotEmptyFixData {
+        span: expr.span,
+        inner,
+    };
+
+    vec![(violation, fix_data)]
+}
+
+struct UseBuiltinIsNotEmpty;
+
+impl DetectFix for UseBuiltinIsNotEmpty {
+    type FixInput = IsNotEmptyFixData;
+
+    fn id(&self) -> &'static str {
+        "use_builtin_is_not_empty"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Use 'is-not-empty' instead of 'not ... is-empty' for better readability"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/commands/docs/is-not-empty.html")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
+    }
+
+    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+        context.detect_with_fix_data(check_not_is_empty)
+    }
+
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        let block_id = match fix_data.inner {
+            InnerExprKind::Subexpression(id) | InnerExprKind::FullCellPath { block_id: id } => id,
+        };
+
+        let fix_text = generate_fix_from_subexpression(block_id, context)?;
+
+        Some(Fix::with_explanation(
+            "Replace 'not ... is-empty' with 'is-not-empty'",
+            vec![Replacement::new(fix_data.span, fix_text)],
+        ))
     }
 }
-fn check(context: &LintContext) -> Vec<Violation> {
-    context.collect_rule_violations(|expr, ctx| {
-        // Check for "not ... is-empty" pattern
-        if is_not_is_empty_pattern(expr, ctx)
-            && let Some(fix_text) = generate_fix_text(expr, ctx)
-        {
-            let fix = Fix::with_explanation(
-                "Replace 'not ... is-empty' with 'is-not-empty'",
-                vec![Replacement::new(expr.span, fix_text)],
-            );
 
-            let Expr::UnaryNot(inner_expr) = &expr.expr else {
-                return vec![];
-            };
-
-            let not_span = nu_protocol::Span::new(expr.span.start, expr.span.start + 3);
-
-            vec![
-                Violation::new(
-                    "Use 'is-not-empty' instead of 'not ... is-empty' for better readability",
-                    not_span,
-                )
-                .with_primary_label("negation operator")
-                .with_extra_label("is-empty check", inner_expr.span)
-                .with_help("Replace with 'is-not-empty'")
-                .with_fix(fix),
-            ]
-        } else {
-            vec![]
-        }
-    })
-}
-pub const RULE: Rule = Rule::new(
-    "use_builtin_is_not_empty",
-    "Use 'is-not-empty' instead of 'not ... is-empty' for better readability",
-    check,
-    LintLevel::Hint,
-)
-.with_auto_fix()
-.with_doc_url("https://www.nushell.sh/commands/docs/is-not-empty.html");
+pub static RULE: &dyn Rule = &UseBuiltinIsNotEmpty;
 
 #[cfg(test)]
 mod detect_bad;

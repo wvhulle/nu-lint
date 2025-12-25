@@ -6,7 +6,7 @@ use crate::rule::Rule;
 pub struct Group {
     pub name: &'static str,
     pub description: &'static str,
-    pub rules: &'static [Rule],
+    pub rules: &'static [&'static dyn Rule],
 }
 
 const ERROR_HANDLING: Group = Group {

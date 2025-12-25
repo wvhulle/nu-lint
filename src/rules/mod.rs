@@ -79,7 +79,7 @@ pub const ALL_RULES: &[&dyn Rule] = &[
     external_tools::wget::RULE,
     external_tools::which::RULE,
     forbid_excessive_nesting::RULE,
-    side_effects::for_over_each::RULE,
+    side_effects::silence_side_effect_only_each::RULE,
     inline_single_use_function::RULE,
     items_instead_of_transpose_each::RULE,
     lines_instead_of_split::RULE,

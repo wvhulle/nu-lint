@@ -259,7 +259,8 @@ impl DetectFix for TypedPipelineIo {
     }
 
     fn explanation(&self) -> &'static str {
-        "Custom commands that use pipeline input or produce output should have type annotations"
+        "Custom commands that use pipeline input or produce output should have pipeline type \
+         annotations"
     }
 
     fn doc_url(&self) -> Option<&'static str> {

@@ -1,6 +1,6 @@
 use nu_protocol::{
     Span,
-    ast::{Expr, Expression},
+    ast::{Block, Expr, Expression},
 };
 
 use crate::{
@@ -16,6 +16,7 @@ pub struct FixData {
     list_span: Span,
     param_name: String,
     body_span: Span,
+    pipeline_elements_before_each: usize,
 }
 
 /// Checks if an expression returns Nothing (only side effects, no data)
@@ -61,19 +62,35 @@ fn block_has_only_side_effects(block_id: nu_protocol::BlockId, ctx: &LintContext
     false
 }
 
-fn extract_pipeline_before_each(expr: &Expression, ctx: &LintContext) -> Option<Span> {
-    // Find the pipeline that contains the each call
+fn extract_pipeline_info(expr: &Expression, ctx: &LintContext) -> Option<(Span, usize)> {
     for pipeline in &ctx.ast.pipelines {
         for (i, elem) in pipeline.elements.iter().enumerate() {
             if elem.expr.span.contains_span(expr.span) && i > 0 {
-                // Get all elements before the each call
                 let first = &pipeline.elements[0];
                 let last_before = &pipeline.elements[i - 1];
-                return Some(Span::new(first.expr.span.start, last_before.expr.span.end));
+                let span = Span::new(first.expr.span.start, last_before.expr.span.end);
+                return Some((span, i));
             }
         }
     }
     None
+}
+
+fn get_closure_body_span(block: &Block) -> Option<Span> {
+    if block.pipelines.is_empty() {
+        return None;
+    }
+
+    let first_pipeline = block.pipelines.first()?;
+    let last_pipeline = block.pipelines.last()?;
+
+    let first_elem = first_pipeline.elements.first()?;
+    let last_elem = last_pipeline.elements.last()?;
+
+    Some(Span::new(
+        first_elem.expr.span.start,
+        last_elem.expr.span.end,
+    ))
 }
 
 struct UseForOverEach;
@@ -82,11 +99,11 @@ impl DetectFix for UseForOverEach {
     type FixInput = FixData;
 
     fn id(&self) -> &'static str {
-        "for_over_each_side_effects"
+        "silence_side_effect_only_each"
     }
 
     fn explanation(&self) -> &'static str {
-        "Use 'for' loop instead of 'each' for side effects only"
+        "Silence loops that only have side effects and no pipeline output."
     }
 
     fn doc_url(&self) -> Option<&'static str> {
@@ -114,37 +131,40 @@ impl DetectFix for UseForOverEach {
 
                 let block = ctx.working_set.get_block(*block_id);
 
-                // Extract parameter name from closure signature
                 let param_name = block
                     .signature
                     .required_positional
                     .first()
                     .map_or_else(|| "item".to_string(), |p| p.name.clone());
 
-                // Get the body span from the block - it should always exist
-                let Some(body_span) = block.span else {
+                let Some(body_span) = get_closure_body_span(block) else {
                     return vec![];
                 };
 
-                // Try to find the list being piped to each
-                let list_span = extract_pipeline_before_each(expr, ctx)
-                    .unwrap_or_else(|| Span::new(call.span().start, call.span().start));
+                let (list_span, pipeline_elements_before_each) = extract_pipeline_info(expr, ctx)
+                    .unwrap_or_else(|| (Span::new(call.span().start, call.span().start), 0));
+
+                let help_message = if pipeline_elements_before_each == 1 {
+                    "Each iteration returns nothing, producing an empty table. Use 'for' loop \
+                     instead"
+                } else {
+                    "Each iteration returns nothing, producing an empty table. Add '| ignore' to \
+                     suppress the output, or refactor to use 'for' loop"
+                };
 
                 let violation = Detection::from_global_span(
-                    "Use 'for' loop instead of 'each' for side effects only",
+                    "Use 'for' loop or '| ignore' for side effects only",
                     call.span(),
                 )
                 .with_primary_label("closure returns nothing")
-                .with_help(
-                    "Each iteration returns nothing, producing an empty table. Use 'for' loop or \
-                     pipe to 'ignore'",
-                );
+                .with_help(help_message);
 
                 let fix_data = FixData {
                     replace_span: call.span(),
                     list_span,
                     param_name,
                     body_span,
+                    pipeline_elements_before_each,
                 };
 
                 vec![(violation, fix_data)]
@@ -154,20 +174,33 @@ impl DetectFix for UseForOverEach {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
-        let list = if fix_data.list_span.is_empty() {
-            return None;
+        if fix_data.pipeline_elements_before_each == 1 {
+            let list = if fix_data.list_span.is_empty() {
+                return None;
+            } else {
+                fix_data.list_span.source_code(context).trim()
+            };
+
+            let body = fix_data.body_span.source_code(context).trim();
+            let fix_text = format!("for {} in {} {{ {} }}", fix_data.param_name, list, body);
+
+            Some(Fix::with_explanation(
+                "Convert each to for loop",
+                vec![Replacement::new(fix_data.replace_span, fix_text)],
+            ))
         } else {
-            fix_data.list_span.source_code(context).trim()
-        };
-
-        let body = fix_data.body_span.source_code(context).trim();
-
-        let fix_text = format!("for {} in {} {}", fix_data.param_name, list, body);
-
-        Some(Fix::with_explanation(
-            "Convert each to for loop",
-            vec![Replacement::new(fix_data.replace_span, fix_text)],
-        ))
+            Some(Fix::with_explanation(
+                "Add ignore to suppress empty output",
+                vec![Replacement::new(
+                    fix_data.replace_span,
+                    format!(
+                        "each {{|{}| {} }} | ignore",
+                        fix_data.param_name,
+                        fix_data.body_span.source_code(context).trim()
+                    ),
+                )],
+            ))
+        }
     }
 }
 

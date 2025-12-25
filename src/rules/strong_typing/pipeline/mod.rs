@@ -100,58 +100,6 @@ fn create_violations_for_untyped_io(
     vec![(violation, fix_data)]
 }
 
-fn generate_typed_signature(
-    signature: &nu_protocol::Signature,
-    ctx: &LintContext,
-    block_id: BlockId,
-    uses_in: bool,
-    needs_input_type: bool,
-    needs_output_type: bool,
-    original_sig_span: Span,
-) -> String {
-    let has_no_params = signature.required_positional.is_empty()
-        && signature.optional_positional.is_empty()
-        && signature.rest_positional.is_none()
-        && signature.named.is_empty();
-    log::debug!(
-        "Generating typed signature for block {block_id:?}: has_no_params={has_no_params}, \
-         uses_in={uses_in}, needs_input_type={needs_input_type}, \
-         needs_output_type={needs_output_type}"
-    );
-
-    let original_sig_text = original_sig_span.source_code(ctx);
-    let is_multiline = has_multiline_parameters(original_sig_text);
-
-    let params_text = if has_no_params {
-        String::new()
-    } else if is_multiline {
-        // Preserve multiline formatting - extract parameters from original text
-        extract_parameters_from_original(original_sig_text)
-    } else {
-        extract_parameters_text(signature)
-    };
-
-    let block = ctx.working_set.get_block(block_id);
-
-    let input_type = if uses_in || needs_input_type {
-        block.infer_input_type(ctx)
-    } else {
-        Type::Nothing
-    };
-
-    let output_type = if needs_output_type {
-        block.infer_output_type(ctx)
-    } else {
-        Type::Any
-    };
-
-    if needs_input_type || needs_output_type {
-        format!("[{params_text}]: {input_type} -> {output_type}")
-    } else {
-        format!("[{params_text}]")
-    }
-}
-
 fn extract_parameters_from_original(sig_text: &str) -> String {
     if let Some(start) = sig_text.find('[')
         && let Some(end) = sig_text.rfind(']')
@@ -331,17 +279,44 @@ impl DetectFix for TypedPipelineIo {
 
     fn fix(&self, ctx: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
         let block = ctx.working_set.get_block(fix_data.body_block_id);
-        let signature = &block.signature;
+        let has_no_params = block.signature.required_positional.is_empty()
+            && block.signature.optional_positional.is_empty()
+            && block.signature.rest_positional.is_none()
+            && block.signature.named.is_empty();
 
-        let new_signature = generate_typed_signature(
-            signature,
-            ctx,
-            fix_data.body_block_id,
-            fix_data.uses_in,
-            fix_data.needs_input_type,
-            fix_data.needs_output_type,
-            fix_data.sig_span,
-        );
+        let original_sig_text = fix_data.sig_span.source_code(ctx);
+        let is_multiline = has_multiline_parameters(original_sig_text);
+
+        let params_text = if has_no_params {
+            String::new()
+        } else if is_multiline {
+            // Preserve multiline formatting - extract parameters from original text
+            extract_parameters_from_original(original_sig_text)
+        } else {
+            extract_parameters_text(&block.signature)
+        };
+
+        let block = ctx.working_set.get_block(fix_data.body_block_id);
+
+        let input_type = if fix_data.uses_in || fix_data.needs_input_type {
+            block.infer_input_type(ctx)
+        } else {
+            Type::Nothing
+        };
+
+        let output_type = if fix_data.needs_output_type {
+            block.infer_output_type(ctx)
+        } else {
+            Type::Any
+        };
+
+        let new_signature = {
+            if fix_data.needs_input_type || fix_data.needs_output_type {
+                format!("[{params_text}]: {input_type} -> {output_type}")
+            } else {
+                format!("[{params_text}]")
+            }
+        };
 
         Some(Fix::with_explanation(
             format!("Add type annotations: {new_signature}"),

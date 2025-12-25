@@ -80,42 +80,6 @@ fn get_param_type_str(
     }
 }
 
-fn generate_typed_signature(
-    signature: &nu_protocol::Signature,
-    body_block_id: nu_protocol::BlockId,
-    ctx: &LintContext,
-) -> String {
-    log::debug!("Generating typed signature for: {signature:?}");
-    let params = signature
-        .required_positional
-        .iter()
-        .map(|p| {
-            format!(
-                "{}: {}",
-                p.name,
-                get_param_type_str(&p.shape, p.var_id, body_block_id, ctx)
-            )
-        })
-        .chain(signature.optional_positional.iter().map(|p| {
-            format!(
-                "{}?: {}",
-                p.name,
-                get_param_type_str(&p.shape, p.var_id, body_block_id, ctx)
-            )
-        }))
-        .chain(signature.rest_positional.iter().map(|p| {
-            format!(
-                "...{}: {}",
-                p.name,
-                get_param_type_str(&p.shape, p.var_id, body_block_id, ctx)
-            )
-        }))
-        .collect::<Vec<_>>()
-        .join(", ");
-
-    format!("[{params}]")
-}
-
 fn detect_signature(
     sig: &nu_protocol::Signature,
     signature_span: Span,
@@ -197,11 +161,11 @@ impl DetectFix for MissingTypeAnnotation {
     type FixInput = FixData;
 
     fn id(&self) -> &'static str {
-        "missing_type_annotation"
+        "add_type_hints_arguments"
     }
 
     fn explanation(&self) -> &'static str {
-        "Parameters should have type annotations"
+        "Arguments of custom commands should have type annotations"
     }
 
     fn doc_url(&self) -> Option<&'static str> {
@@ -221,7 +185,36 @@ impl DetectFix for MissingTypeAnnotation {
 
     fn fix(&self, ctx: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
         let block = ctx.working_set.get_block(fix_data.body_block_id);
-        let new_sig = generate_typed_signature(&block.signature, fix_data.body_block_id, ctx);
+        let body_block_id = fix_data.body_block_id;
+        let ctx: &LintContext = ctx;
+        let params = (&block.signature)
+            .required_positional
+            .iter()
+            .map(|p| {
+                format!(
+                    "{}: {}",
+                    p.name,
+                    get_param_type_str(&p.shape, p.var_id, body_block_id, ctx)
+                )
+            })
+            .chain((&block.signature).optional_positional.iter().map(|p| {
+                format!(
+                    "{}?: {}",
+                    p.name,
+                    get_param_type_str(&p.shape, p.var_id, body_block_id, ctx)
+                )
+            }))
+            .chain((&block.signature).rest_positional.iter().map(|p| {
+                format!(
+                    "...{}: {}",
+                    p.name,
+                    get_param_type_str(&p.shape, p.var_id, body_block_id, ctx)
+                )
+            }))
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        let new_sig = { format!("[{params}]") };
         Some(Fix::with_explanation(
             "Add type annotations to parameters",
             vec![Replacement::new(fix_data.signature_span, new_sig)],

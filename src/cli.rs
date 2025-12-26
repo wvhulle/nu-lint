@@ -88,9 +88,9 @@ impl Cli {
         let config = Self::load_config(self.config.clone());
         let engine = LintEngine::new(config);
 
-        let (violations, has_errors) = if self.stdin {
+        let violations  = if self.stdin {
             let source = Self::read_stdin();
-            (engine.lint_stdin(&source), false)
+            engine.lint_stdin(&source) 
         } else {
             let files = collect_nu_files(&self.paths);
             if files.is_empty() {
@@ -108,9 +108,10 @@ impl Cli {
         let summary = Summary::from_violations(&violations);
         eprintln!("{}", summary.format_compact());
 
-        let has_deny = violations.iter().any(|v| v.lint_level == LintLevel::Error);
-        if has_errors || has_deny {
+        if violations.iter().any(|v| v.lint_level > LintLevel::Hint) {
             process::exit(1);
+        } else {
+            process::exit(0);
         }
     }
 
@@ -143,7 +144,7 @@ impl Cli {
             return;
         }
 
-        let (violations, _) = engine.lint_files(&files);
+        let violations = engine.lint_files(&files);
 
         match apply_fixes(&violations, false, engine) {
             Ok(results) => {
@@ -339,7 +340,7 @@ mod tests {
         let files = collect_nu_files(&[test_file]);
 
         assert_eq!(files.len(), 1);
-        let (violations, _) = engine.lint_files(&files);
+        let violations = engine.lint_files(&files);
         assert!(violations.is_empty() || !violations.is_empty()); // Just ensure it runs
     }
 }

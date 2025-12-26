@@ -2,10 +2,7 @@ use std::{
     fs,
     io::{self, BufRead},
     path::{Path, PathBuf},
-    sync::{
-        Mutex, OnceLock,
-        atomic::{AtomicBool, Ordering},
-    },
+    sync::{Mutex, OnceLock},
 };
 
 use ignore::WalkBuilder;
@@ -177,9 +174,8 @@ impl LintEngine {
     /// Returns a tuple of (violations, `has_errors`) where `has_errors`
     /// indicates if any files failed to be read/parsed.
     #[must_use]
-    pub fn lint_files(&self, files: &[PathBuf]) -> (Vec<Violation>, bool) {
+    pub fn lint_files(&self, files: &[PathBuf]) -> Vec<Violation> {
         let violations_mutex = Mutex::new(Vec::new());
-        let has_errors = AtomicBool::new(false);
 
         let process_file = |path: &PathBuf| match self.lint_file(path) {
             Ok(violations) => {
@@ -190,7 +186,6 @@ impl LintEngine {
             }
             Err(e) => {
                 log::error!("Error linting {}: {}", path.display(), e);
-                has_errors.store(true, Ordering::Relaxed);
             }
         };
 
@@ -203,10 +198,10 @@ impl LintEngine {
             files.par_iter().for_each(process_file);
         }
 
-        let violations = violations_mutex
+        
+        violations_mutex
             .into_inner()
-            .expect("Failed to unwrap violations mutex");
-        (violations, has_errors.load(Ordering::Relaxed))
+            .expect("Failed to unwrap violations mutex")
     }
 
     /// Lint content from stdin

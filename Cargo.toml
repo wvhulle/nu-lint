@@ -14,7 +14,7 @@ keywords = ["nushell", "linter", "static-analysis", "code-quality", "shell"]
 license = "MIT"
 name = "nu-lint"
 repository = "https://codeberg.org/wvhulle/nu-lint"
-version = "0.0.80"
+version = "0.0.81"
 
 
 [lints.clippy]

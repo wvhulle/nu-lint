@@ -104,7 +104,8 @@ fn apply_fix_to_file(
 }
 
 /// Apply fixes iteratively, re-linting after each fix to get fresh spans
-fn apply_fixes_iteratively(content: &str, lint_engine: &LintEngine) -> (String, usize) {
+#[must_use]
+pub fn apply_fixes_iteratively(content: &str, lint_engine: &LintEngine) -> (String, usize) {
     let mut current_content = content.to_string();
     let mut total_fixes_applied = 0;
     let max_iterations = 100; // Prevent infinite loops

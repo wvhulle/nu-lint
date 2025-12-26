@@ -3,7 +3,7 @@ use std::iter::Peekable;
 use crate::{
     LintLevel,
     context::LintContext,
-    external_commands::{ExternalCmdFixData},
+    external_commands::ExternalCmdFixData,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };

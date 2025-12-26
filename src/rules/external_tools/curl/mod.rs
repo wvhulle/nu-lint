@@ -224,7 +224,8 @@ impl DetectFix for UseBuiltinCurl {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.external_invocations("curl", NOTE)
+        context
+            .external_invocations("curl", NOTE)
             .into_iter()
             .map(|(detection, fix_data)| {
                 let options = HttpOptions::parse_curl(fix_data.arg_strings.iter().copied());

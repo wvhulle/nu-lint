@@ -1,6 +1,4 @@
-mod diagnostics;
 mod document;
-mod handlers;
 mod line_index;
 mod server;
 

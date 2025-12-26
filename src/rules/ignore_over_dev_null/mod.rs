@@ -173,7 +173,7 @@ fn check_block(
 struct IgnoreOverDevNull;
 
 impl DetectFix for IgnoreOverDevNull {
-    type FixInput = IgnoreFixData;
+    type FixInput<'a> = IgnoreFixData;
 
     fn id(&self) -> &'static str {
         "ignore_over_dev_null"
@@ -191,13 +191,13 @@ impl DetectFix for IgnoreOverDevNull {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let mut violations = Vec::new();
         check_block(context.ast, context, &mut violations);
         violations
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         Some(Fix::with_explanation(
             "Use pipe to ignore",
             vec![Replacement::new(

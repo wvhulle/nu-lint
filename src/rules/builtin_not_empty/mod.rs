@@ -121,7 +121,7 @@ fn check_not_is_empty(expr: &Expression, ctx: &LintContext) -> Vec<(Detection, I
 struct UseBuiltinIsNotEmpty;
 
 impl DetectFix for UseBuiltinIsNotEmpty {
-    type FixInput = IsNotEmptyFixData;
+    type FixInput<'a> = IsNotEmptyFixData;
 
     fn id(&self) -> &'static str {
         "use_builtin_is_not_empty"
@@ -139,11 +139,11 @@ impl DetectFix for UseBuiltinIsNotEmpty {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context.detect_with_fix_data(check_not_is_empty)
     }
 
-    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let block_id = match fix_data.inner {
             InnerExprKind::Subexpression(id) | InnerExprKind::FullCellPath { block_id: id } => id,
         };

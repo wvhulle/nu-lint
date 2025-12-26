@@ -65,7 +65,7 @@ fn extract_mut_declaration(
 struct UnnecessaryMut;
 
 impl DetectFix for UnnecessaryMut {
-    type FixInput = UnnecessaryMutFixData;
+    type FixInput<'a> = UnnecessaryMutFixData;
 
     fn id(&self) -> &'static str {
         "unnecessary_mut"
@@ -83,7 +83,7 @@ impl DetectFix for UnnecessaryMut {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         use nu_protocol::ast::Traverse;
 
         let mut mut_declarations: Vec<(VarId, String, Span, Span)> = Vec::new();
@@ -130,7 +130,7 @@ impl DetectFix for UnnecessaryMut {
         violations
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         Some(Fix::with_explanation(
             format!("Remove 'mut' keyword from variable '{}'", fix_data.var_name),
             vec![Replacement::new(fix_data.mut_span, "")],

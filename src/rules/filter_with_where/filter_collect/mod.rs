@@ -290,7 +290,7 @@ fn extract_var_ids_from_if_statements(
 struct FilterCollectWithWhere;
 
 impl DetectFix for FilterCollectWithWhere {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "filter_collect_with_where"
@@ -308,7 +308,7 @@ impl DetectFix for FilterCollectWithWhere {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let mut empty_list_vars = Vec::new();
         context.ast.flat_map(
             context.working_set,

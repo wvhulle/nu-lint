@@ -25,7 +25,7 @@ fn is_newline_string(expr: &Expression, context: &LintContext) -> bool {
 struct LinesInsteadOfSplit;
 
 impl DetectFix for LinesInsteadOfSplit {
-    type FixInput = FixData;
+    type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
         "lines_instead_of_split"
@@ -43,7 +43,7 @@ impl DetectFix for LinesInsteadOfSplit {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context.detect_with_fix_data(|expr, ctx| {
             let Expr::Call(call) = &expr.expr else {
                 return vec![];
@@ -78,7 +78,7 @@ impl DetectFix for LinesInsteadOfSplit {
         })
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         Some(Fix::with_explanation(
             "Replace with 'lines'",
             vec![Replacement::new(fix_data.replace_span, "lines")],

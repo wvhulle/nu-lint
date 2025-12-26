@@ -33,7 +33,7 @@ fn check(context: &LintContext) -> Vec<Detection> {
 struct MaxPositionalParams;
 
 impl DetectFix for MaxPositionalParams {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "max_positional_params"
@@ -47,7 +47,7 @@ impl DetectFix for MaxPositionalParams {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         Self::no_fix(check(context))
     }
 }

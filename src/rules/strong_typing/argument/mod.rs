@@ -158,7 +158,7 @@ fn detect_def_call(call: &Call, ctx: &LintContext) -> Vec<(Detection, FixData)> 
 struct MissingTypeAnnotation;
 
 impl DetectFix for MissingTypeAnnotation {
-    type FixInput = FixData;
+    type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
         "add_type_hints_arguments"
@@ -176,18 +176,19 @@ impl DetectFix for MissingTypeAnnotation {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context.detect_with_fix_data(|expr, ctx| match &expr.expr {
             Expr::Call(call) => detect_def_call(call, ctx),
             _ => vec![],
         })
     }
 
-    fn fix(&self, ctx: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, ctx: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let block = ctx.working_set.get_block(fix_data.body_block_id);
         let body_block_id = fix_data.body_block_id;
         let ctx: &LintContext = ctx;
-        let params = (&block.signature)
+        let params = block
+            .signature
             .required_positional
             .iter()
             .map(|p| {
@@ -197,14 +198,14 @@ impl DetectFix for MissingTypeAnnotation {
                     get_param_type_str(&p.shape, p.var_id, body_block_id, ctx)
                 )
             })
-            .chain((&block.signature).optional_positional.iter().map(|p| {
+            .chain(block.signature.optional_positional.iter().map(|p| {
                 format!(
                     "{}?: {}",
                     p.name,
                     get_param_type_str(&p.shape, p.var_id, body_block_id, ctx)
                 )
             }))
-            .chain((&block.signature).rest_positional.iter().map(|p| {
+            .chain(block.signature.rest_positional.iter().map(|p| {
                 format!(
                     "...{}: {}",
                     p.name,

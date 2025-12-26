@@ -68,7 +68,7 @@ fn pipeline_span(pipeline: &Pipeline) -> Option<nu_protocol::Span> {
 struct ReflowWidePipelines;
 
 impl DetectFix for ReflowWidePipelines {
-    type FixInput = FixData;
+    type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
         "reflow_wide_pipelines"
@@ -86,7 +86,7 @@ impl DetectFix for ReflowWidePipelines {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context
             .ast
             .pipelines
@@ -95,7 +95,7 @@ impl DetectFix for ReflowWidePipelines {
             .collect()
     }
 
-    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let fixed = generate_multiline_pipeline(&fix_data.element_spans, context);
         Some(Fix::with_explanation(
             "Format as multiline",

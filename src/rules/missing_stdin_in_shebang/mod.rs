@@ -211,7 +211,7 @@ fn check_main_function(
 struct MissingStdinInShebang;
 
 impl DetectFix for MissingStdinInShebang {
-    type FixInput = Option<ShebangFixData>;
+    type FixInput<'a> = Option<ShebangFixData>;
 
     fn id(&self) -> &'static str {
         "missing_stdin_in_shebang"
@@ -229,14 +229,14 @@ impl DetectFix for MissingStdinInShebang {
         LintLevel::Error
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context.detect_with_fix_data(|expr, ctx| match &expr.expr {
             Expr::Call(call) => check_main_function(call, ctx),
             _ => vec![],
         })
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         fix_data.as_ref().map(|data| {
             Fix::with_explanation(
                 "Add --stdin flag to shebang",

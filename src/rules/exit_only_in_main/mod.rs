@@ -16,7 +16,7 @@ fn is_exit_call(call: &Call, ctx: &LintContext) -> bool {
 struct ExitOnlyInMain;
 
 impl DetectFix for ExitOnlyInMain {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "exit_only_in_main"
@@ -34,7 +34,7 @@ impl DetectFix for ExitOnlyInMain {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         // First, collect all function definitions
         let functions = context.collect_function_definitions();
 

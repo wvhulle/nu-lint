@@ -153,7 +153,7 @@ fn check_while_loop_for_counter(
 struct WhileCounter;
 
 impl DetectFix for WhileCounter {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "while_counter"
@@ -171,7 +171,7 @@ impl DetectFix for WhileCounter {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let violations = context
             .ast
             .pipelines

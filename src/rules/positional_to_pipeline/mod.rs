@@ -485,7 +485,7 @@ fn analyze_parameter_usage_in_block(
 struct TurnPositionalIntoStreamInput;
 
 impl DetectFix for TurnPositionalIntoStreamInput {
-    type FixInput = FixData;
+    type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
         "turn_positional_into_stream_input"
@@ -504,7 +504,7 @@ impl DetectFix for TurnPositionalIntoStreamInput {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         log::debug!("prefer_pipeline_input: Starting rule check");
 
         let user_functions: Vec<_> = context.new_user_functions().collect();
@@ -527,7 +527,7 @@ impl DetectFix for TurnPositionalIntoStreamInput {
             .collect()
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let explanation = format!(
             "Use pipeline input ($in) instead of parameter (${})",
             fix_data.param_name

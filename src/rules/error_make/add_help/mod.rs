@@ -45,7 +45,7 @@ fn check_error_make_call(expr: &Expression, ctx: &LintContext) -> Vec<Detection>
 struct AddHelpToError;
 
 impl DetectFix for AddHelpToError {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "add_help_to_error"
@@ -63,7 +63,7 @@ impl DetectFix for AddHelpToError {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         Self::no_fix(context.detect(check_error_make_call))
     }
 }

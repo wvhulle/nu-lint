@@ -50,7 +50,7 @@ fn find_error_prone_command(expr: &Expression, context: &LintContext) -> Option<
 struct TryInsteadOfDo;
 
 impl DetectFix for TryInsteadOfDo {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "try_instead_of_do"
@@ -68,7 +68,7 @@ impl DetectFix for TryInsteadOfDo {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let violations = context.detect(|expr, ctx| {
             let Expr::Call(call) = &expr.expr else {
                 return vec![];

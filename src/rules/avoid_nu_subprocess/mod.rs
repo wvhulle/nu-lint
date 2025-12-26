@@ -10,7 +10,7 @@ use crate::{
 struct AvoidNuSubprocess;
 
 impl DetectFix for AvoidNuSubprocess {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "avoid_nu_subprocess"
@@ -24,7 +24,7 @@ impl DetectFix for AvoidNuSubprocess {
         LintLevel::Error
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         Self::no_fix(context.detect(|expr, ctx| Self::check_expression(expr, ctx)))
     }
 }

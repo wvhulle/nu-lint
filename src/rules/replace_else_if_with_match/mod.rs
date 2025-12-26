@@ -249,7 +249,7 @@ fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<(Detection, Fi
 struct ReplaceIfElseChainWithMatch;
 
 impl DetectFix for ReplaceIfElseChainWithMatch {
-    type FixInput = FixData;
+    type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
         "replace_if_else_chain_with_match"
@@ -267,7 +267,7 @@ impl DetectFix for ReplaceIfElseChainWithMatch {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context.detect_with_fix_data(|expr, ctx| {
             if let Expr::Call(call) = &expr.expr
                 && call.is_call_to_command("if", ctx)
@@ -278,7 +278,7 @@ impl DetectFix for ReplaceIfElseChainWithMatch {
         })
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         // Only generate fix if we have branch data (consistent variable case)
         if fix_data.branches.is_empty() {
             return None;

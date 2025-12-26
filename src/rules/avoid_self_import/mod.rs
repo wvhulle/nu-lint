@@ -11,7 +11,7 @@ use crate::{
 struct AvoidSelfImport;
 
 impl DetectFix for AvoidSelfImport {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "avoid_self_import"
@@ -25,7 +25,7 @@ impl DetectFix for AvoidSelfImport {
         LintLevel::Error
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         Self::no_fix(context.detect(|expr, ctx| Self::check_expression(expr, ctx)))
     }
 }

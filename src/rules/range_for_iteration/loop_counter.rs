@@ -157,7 +157,7 @@ fn extract_counter_from_mut(
 struct LoopCounter;
 
 impl DetectFix for LoopCounter {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "loop_counter"
@@ -175,8 +175,8 @@ impl DetectFix for LoopCounter {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
-        let violations = context
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
+        let detections = context
             .ast
             .pipelines
             .iter()
@@ -222,7 +222,7 @@ impl DetectFix for LoopCounter {
                 })
             })
             .collect();
-        Self::no_fix(violations)
+        Self::no_fix(detections)
     }
 }
 

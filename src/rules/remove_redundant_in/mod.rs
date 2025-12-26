@@ -87,7 +87,7 @@ fn extract_signature_params(signature: &nu_protocol::Signature) -> Vec<String> {
 struct RemoveRedundantIn;
 
 impl DetectFix for RemoveRedundantIn {
-    type FixInput = FixData;
+    type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
         "remove_redundant_in"
@@ -105,7 +105,7 @@ impl DetectFix for RemoveRedundantIn {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context
             .new_user_functions()
             .filter_map(|(_, decl)| {
@@ -148,7 +148,7 @@ impl DetectFix for RemoveRedundantIn {
             .collect()
     }
 
-    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let body = extract_function_body(fix_data.block_span, &fix_data.function_name, context)?;
         let transformed = remove_redundant_in_from_body(&body);
         let params = fix_data.signature_params.join(", ");

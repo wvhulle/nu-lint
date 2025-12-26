@@ -13,7 +13,7 @@ use nu_protocol::Span;
 use crate::{
     LintLevel,
     context::LintContext,
-    external_commands::{detect_external_commands, external_args_slices},
+    external_commands::detect_external_commands,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -282,7 +282,7 @@ fn is_convertible_jq_filter(filter: &str) -> bool {
 struct ReplaceJqWithNuGet;
 
 impl DetectFix for ReplaceJqWithNuGet {
-    type FixInput = JqFixData;
+    type FixInput<'a> = JqFixData;
 
     fn id(&self) -> &'static str {
         "replace_jq_with_nu_get"
@@ -300,20 +300,22 @@ impl DetectFix for ReplaceJqWithNuGet {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         detect_external_commands(context, "jq", NOTE)
             .into_iter()
             .filter_map(|(violation, fix_data)| {
-                let args_text: Vec<&str> = external_args_slices(&fix_data.args, context).collect();
-
-                let filter_index = args_text
+                let filter_index = fix_data
+                    .arg_strings
                     .iter()
                     .position(|arg| !arg.starts_with('-'))
                     .unwrap_or(0);
 
-                let (filter, file_arg) = if filter_index < args_text.len() {
-                    let filter = args_text[filter_index].to_string();
-                    let file_arg = args_text.get(filter_index + 1).map(ToString::to_string);
+                let (filter, file_arg) = if filter_index < fix_data.arg_strings.len() {
+                    let filter = fix_data.arg_strings[filter_index].to_string();
+                    let file_arg = fix_data
+                        .arg_strings
+                        .get(filter_index + 1)
+                        .map(ToString::to_string);
                     (filter, file_arg)
                 } else {
                     (String::new(), None)
@@ -335,7 +337,7 @@ impl DetectFix for ReplaceJqWithNuGet {
             .collect()
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let filter = &fix_data.filter;
         let file_arg = fix_data.file_arg.as_deref();
 

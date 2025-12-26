@@ -118,7 +118,7 @@ fn check_function_definition(call: &Call, context: &LintContext) -> Option<Detec
 struct PrintAndReturnData;
 
 impl DetectFix for PrintAndReturnData {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "print_and_return_data"
@@ -132,7 +132,7 @@ impl DetectFix for PrintAndReturnData {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let violations = context.detect(|expr, ctx| {
             if let Expr::Call(call) = &expr.expr
                 && call.extract_function_definition(ctx).is_some()

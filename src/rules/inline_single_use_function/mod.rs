@@ -61,7 +61,7 @@ fn is_exported_function(function_name: &str, context: &LintContext) -> bool {
 struct InlineSingleUseFunction;
 
 impl DetectFix for InlineSingleUseFunction {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "inline_single_use_function"
@@ -79,7 +79,7 @@ impl DetectFix for InlineSingleUseFunction {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let function_definitions = context.collect_function_definitions();
         let has_main = function_definitions.values().any(|name| name == "main");
         if !has_main {

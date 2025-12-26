@@ -235,7 +235,7 @@ fn detect_pattern(expr: &Expression, context: &LintContext) -> Vec<TransposeEach
 struct ItemsInsteadOfTransposeEach;
 
 impl DetectFix for ItemsInsteadOfTransposeEach {
-    type FixInput = TransposeEachPattern;
+    type FixInput<'a> = TransposeEachPattern;
 
     fn id(&self) -> &'static str {
         "items_instead_of_transpose_each"
@@ -253,7 +253,7 @@ impl DetectFix for ItemsInsteadOfTransposeEach {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let context: &LintContext = context;
         let mut patterns = Vec::new();
 
@@ -299,7 +299,7 @@ impl DetectFix for ItemsInsteadOfTransposeEach {
             .collect()
     }
 
-    fn fix(&self, context: &LintContext, pattern: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, pattern: &Self::FixInput<'_>) -> Option<Fix> {
         let pattern: &TransposeEachPattern = pattern;
         let closure_arg = pattern.each_call.arguments.first()?;
         let (Argument::Positional(closure_expr) | Argument::Unknown(closure_expr)) = closure_arg

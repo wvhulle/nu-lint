@@ -91,7 +91,7 @@ fn check_pipeline(
 struct RedundantIgnore;
 
 impl DetectFix for RedundantIgnore {
-    type FixInput = RedundantIgnoreFixData;
+    type FixInput<'a> = RedundantIgnoreFixData;
 
     fn id(&self) -> &'static str {
         "redundant_ignore"
@@ -109,7 +109,7 @@ impl DetectFix for RedundantIgnore {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let mut violations: Vec<_> = context
             .ast
             .pipelines
@@ -134,7 +134,7 @@ impl DetectFix for RedundantIgnore {
         violations
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         Some(Fix::with_explanation(
             "Remove unnecessary '| ignore'",
             vec![Replacement::new(

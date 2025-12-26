@@ -109,7 +109,7 @@ fn check_expression(expr: &Expression, context: &LintContext) -> Vec<Detection> 
 struct WhereInsteadEachThenIf;
 
 impl DetectFix for WhereInsteadEachThenIf {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "where_instead_each_then_if"
@@ -127,7 +127,7 @@ impl DetectFix for WhereInsteadEachThenIf {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let mut violations = Vec::new();
         context.ast.flat_map(
             context.working_set,

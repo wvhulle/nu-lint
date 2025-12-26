@@ -42,7 +42,7 @@ fn check(context: &LintContext) -> Vec<Detection> {
 struct NoTrailingSpaces;
 
 impl DetectFix for NoTrailingSpaces {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "no_trailing_spaces"
@@ -60,7 +60,7 @@ impl DetectFix for NoTrailingSpaces {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         Self::no_fix(check(context))
     }
 }

@@ -1,7 +1,7 @@
 use crate::{
     LintLevel,
     context::LintContext,
-    external_commands::{ExternalCmdFixData, detect_external_commands, external_args_slices},
+    external_commands::{ExternalCmdFixData, detect_external_commands},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -99,7 +99,7 @@ impl CdOptions {
 struct UseBuiltinCd;
 
 impl DetectFix for UseBuiltinCd {
-    type FixInput = ExternalCmdFixData;
+    type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
         "use_builtin_cd"
@@ -117,12 +117,12 @@ impl DetectFix for UseBuiltinCd {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         detect_external_commands(context, "cd", NOTE)
     }
 
-    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
-        let opts = CdOptions::parse(external_args_slices(&fix_data.args, context));
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let opts = CdOptions::parse(fix_data.arg_strings.iter().copied());
         let (replacement, description) = opts.to_nushell();
 
         Some(Fix {

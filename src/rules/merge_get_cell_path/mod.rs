@@ -148,7 +148,7 @@ fn create_violation_for_range(pipeline: &Pipeline, start_idx: usize, end_idx: us
 struct MergeGetCellPath;
 
 impl DetectFix for MergeGetCellPath {
-    type FixInput = FixData;
+    type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
         "merge_get_cell_path"
@@ -166,7 +166,7 @@ impl DetectFix for MergeGetCellPath {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context
             .ast
             .pipelines
@@ -192,7 +192,7 @@ impl DetectFix for MergeGetCellPath {
             .collect()
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let combined_path = format_cell_path(&fix_data.combined_members);
         let replacement_text = format!("get {combined_path}");
 

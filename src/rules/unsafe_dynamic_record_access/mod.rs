@@ -63,7 +63,7 @@ fn check_get_call(
 struct UnsafeDynamicRecordAccess;
 
 impl DetectFix for UnsafeDynamicRecordAccess {
-    type FixInput = DynamicAccessFixData;
+    type FixInput<'a> = DynamicAccessFixData;
 
     fn id(&self) -> &'static str {
         "unsafe_dynamic_record_access"
@@ -81,11 +81,11 @@ impl DetectFix for UnsafeDynamicRecordAccess {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context.detect_with_fix_data(|expr, ctx| check_get_call(expr, ctx).into_iter().collect())
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         Some(Fix::with_explanation(
             "Add -o flag for safe optional access",
             vec![Replacement::new(fix_data.insert_span, " -o")],

@@ -81,7 +81,7 @@ fn check(context: &LintContext) -> Vec<Detection> {
 struct ExternalScriptAsArgument;
 
 impl DetectFix for ExternalScriptAsArgument {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "external_script_as_argument"
@@ -100,7 +100,7 @@ impl DetectFix for ExternalScriptAsArgument {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         Self::no_fix(check(context))
     }
 }

@@ -22,7 +22,7 @@ fn is_valid_screaming_snake(name: &str) -> bool {
 struct ScreamingSnakeConstants;
 
 impl DetectFix for ScreamingSnakeConstants {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "screaming_snake_constants"
@@ -40,7 +40,7 @@ impl DetectFix for ScreamingSnakeConstants {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let violations = context.detect(|expr, ctx| {
             let Expr::Call(call) = &expr.expr else {
                 return vec![];

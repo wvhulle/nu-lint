@@ -101,7 +101,7 @@ fn check_block(block: &Block, ctx: &LintContext) -> Vec<(Detection, FixData)> {
 struct AddJournalPrefix;
 
 impl DetectFix for AddJournalPrefix {
-    type FixInput = FixData;
+    type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
         "add_journal_prefix"
@@ -115,7 +115,7 @@ impl DetectFix for AddJournalPrefix {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let mut results = check_block(context.ast, context);
 
         context.ast.flat_map(
@@ -133,7 +133,7 @@ impl DetectFix for AddJournalPrefix {
         results
     }
 
-    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         // Get the original argument text to build fix
         let arg_text = context.get_span_text(fix_data.arg_span);
 

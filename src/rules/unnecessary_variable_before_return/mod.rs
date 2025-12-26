@@ -134,7 +134,7 @@ fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<(Detec
 struct UnnecessaryVariableBeforeReturn;
 
 impl DetectFix for UnnecessaryVariableBeforeReturn {
-    type FixInput = FixData;
+    type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
         "unnecessary_variable_before_return"
@@ -152,7 +152,7 @@ impl DetectFix for UnnecessaryVariableBeforeReturn {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let mut violations = Vec::new();
 
         // Check the main block
@@ -172,7 +172,7 @@ impl DetectFix for UnnecessaryVariableBeforeReturn {
         violations
     }
 
-    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let replacement_text = context.get_span_text(fix_data.value_span).to_string();
         Some(Fix::with_explanation(
             format!("Return expression directly: {replacement_text}"),

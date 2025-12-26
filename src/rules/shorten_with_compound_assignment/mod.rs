@@ -108,7 +108,7 @@ fn detect_compound_assignment(
 struct ShortenWithCompoundAssignment;
 
 impl DetectFix for ShortenWithCompoundAssignment {
-    type FixInput = FixData;
+    type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
         "shorten_with_compound_assignment"
@@ -126,13 +126,13 @@ impl DetectFix for ShortenWithCompoundAssignment {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context.detect_with_fix_data(|expr, ctx| {
             detect_compound_assignment(expr, ctx).into_iter().collect()
         })
     }
 
-    fn fix(&self, ctx: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, ctx: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let var_text = ctx.get_span_text(fix_data.var_span);
         let right_text = ctx.get_span_text(fix_data.right_operand_span);
         let new_text = format!("{var_text} {} {right_text}", fix_data.compound_op);

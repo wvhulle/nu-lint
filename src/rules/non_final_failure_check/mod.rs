@@ -100,7 +100,7 @@ fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<Detect
 struct NonFinalFailureCheck;
 
 impl DetectFix for NonFinalFailureCheck {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "non_final_failure_check"
@@ -118,7 +118,7 @@ impl DetectFix for NonFinalFailureCheck {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let mut violations = Vec::new();
         check_block(context.ast, context, &mut violations);
         Self::no_fix(violations)

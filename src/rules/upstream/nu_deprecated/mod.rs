@@ -10,7 +10,7 @@ use crate::{
 struct NuDeprecated;
 
 impl DetectFix for NuDeprecated {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "nu_deprecated"
@@ -28,7 +28,7 @@ impl DetectFix for NuDeprecated {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         Self::no_fix(
             context
                 .working_set

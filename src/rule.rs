@@ -27,7 +27,7 @@ use crate::{
 /// pub static RULE: &dyn Rule = &MyRule;
 /// ```
 pub trait DetectFix: Send + Sync + 'static {
-    type FixInput: Send + Sync;
+    type FixInput<'a>: Send + Sync;
 
     fn id(&self) -> &'static str;
     fn explanation(&self) -> &'static str;
@@ -35,16 +35,16 @@ pub trait DetectFix: Send + Sync + 'static {
         None
     }
     fn level(&self) -> LintLevel;
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)>;
-    fn fix(&self, _context: &LintContext, _fix_data: &Self::FixInput) -> Option<Fix> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)>;
+    fn fix(&self, _context: &LintContext, _fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         None
     }
 
     /// Pairs violations with default fix input (for rules with `FixInput =
     /// ()`).
-    fn no_fix(violations: Vec<Detection>) -> Vec<(Detection, Self::FixInput)>
+    fn no_fix<'a>(violations: Vec<Detection>) -> Vec<(Detection, Self::FixInput<'a>)>
     where
-        Self::FixInput: Default,
+        Self::FixInput<'a>: Default,
     {
         violations
             .into_iter()
@@ -84,7 +84,7 @@ impl<T: DetectFix> Rule for T {
     }
 
     fn has_auto_fix(&self) -> bool {
-        TypeId::of::<T::FixInput>() != TypeId::of::<()>()
+        TypeId::of::<T::FixInput<'static>>() != TypeId::of::<()>()
     }
 
     fn check(&self, context: &LintContext) -> Vec<Violation> {

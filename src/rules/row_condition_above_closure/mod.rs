@@ -150,7 +150,7 @@ fn check_expression(
 struct RowConditionAboveClosure;
 
 impl DetectFix for RowConditionAboveClosure {
-    type FixInput = RowConditionFixData;
+    type FixInput<'a> = RowConditionFixData;
 
     fn id(&self) -> &'static str {
         "row_condition_above_closure"
@@ -168,7 +168,7 @@ impl DetectFix for RowConditionAboveClosure {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let mut violations = Vec::new();
         context.ast.flat_map(
             context.working_set,
@@ -179,7 +179,7 @@ impl DetectFix for RowConditionAboveClosure {
         violations
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         fix_data.fixed_text.as_ref().map(|text| {
             Fix::with_explanation(
                 format!(

@@ -185,7 +185,7 @@ fn walk_expr_for_pipelines(
 struct PipeSpacing;
 
 impl DetectFix for PipeSpacing {
-    type FixInput = FixData;
+    type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
         "pipe_spacing"
@@ -203,7 +203,7 @@ impl DetectFix for PipeSpacing {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let mut violations = Vec::new();
 
         let block: &Block = context.ast;
@@ -219,7 +219,7 @@ impl DetectFix for PipeSpacing {
         violations
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         Some(Fix::with_explanation(
             "Fix pipe spacing to ' | '",
             vec![Replacement::new(fix_data.fix_span, " | ")],

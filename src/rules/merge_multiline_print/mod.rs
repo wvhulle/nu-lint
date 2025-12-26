@@ -309,7 +309,7 @@ fn build_replacement_text(merged_content: &str, quote_style: &str, stderr_flag: 
 struct MergeMultilinePrint;
 
 impl DetectFix for MergeMultilinePrint {
-    type FixInput = FixData;
+    type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
         "merge_multiline_print"
@@ -327,11 +327,11 @@ impl DetectFix for MergeMultilinePrint {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         detect_block(context.ast, context)
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let prints = &fix_data.prints;
         let first_type = prints.first().map(|p| &p.string_type);
 

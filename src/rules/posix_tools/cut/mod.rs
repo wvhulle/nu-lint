@@ -11,7 +11,7 @@ const NOTE: &str = "Use 'select' to choose specific columns.";
 struct UseBuiltinCut;
 
 impl DetectFix for UseBuiltinCut {
-    type FixInput = ExternalCmdFixData;
+    type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
         "use_builtin_cut"
@@ -29,11 +29,11 @@ impl DetectFix for UseBuiltinCut {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         detect_external_commands(context, "cut", NOTE)
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         Some(Fix::with_explanation(
             "Use 'select' for columns",
             vec![Replacement::new(fix_data.expr_span, "select".to_string())],

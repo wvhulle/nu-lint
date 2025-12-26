@@ -194,7 +194,7 @@ fn extract_patterns(expr: &Expression, context: &LintContext) -> AnalysisPattern
 struct UnnecessaryAccumulate;
 
 impl DetectFix for UnnecessaryAccumulate {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "unnecessary_accumulate"
@@ -209,7 +209,7 @@ impl DetectFix for UnnecessaryAccumulate {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let mut patterns: Vec<AnalysisPattern> = Vec::new();
 
         context.ast.flat_map(

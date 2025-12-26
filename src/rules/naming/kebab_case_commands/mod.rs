@@ -57,7 +57,7 @@ fn check(context: &LintContext) -> Vec<Detection> {
 struct KebabCaseCommands;
 
 impl DetectFix for KebabCaseCommands {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "kebab_case_commands"
@@ -75,7 +75,7 @@ impl DetectFix for KebabCaseCommands {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         Self::no_fix(check(context))
     }
 }

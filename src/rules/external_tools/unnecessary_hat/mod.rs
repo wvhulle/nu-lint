@@ -21,7 +21,7 @@ fn has_builtin(name: &str, ctx: &LintContext) -> bool {
 struct UnnecessaryHat;
 
 impl DetectFix for UnnecessaryHat {
-    type FixInput = UnnecessaryHatFixData;
+    type FixInput<'a> = UnnecessaryHatFixData;
 
     fn id(&self) -> &'static str {
         "unnecessary_hat"
@@ -39,7 +39,7 @@ impl DetectFix for UnnecessaryHat {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context.detect_with_fix_data(|expr, ctx| {
             let Expr::ExternalCall(head, args) = &expr.expr else {
                 return vec![];
@@ -78,7 +78,7 @@ impl DetectFix for UnnecessaryHat {
         })
     }
 
-    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let args_text: String = fix_data
             .args
             .iter()

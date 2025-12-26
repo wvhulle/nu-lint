@@ -252,7 +252,7 @@ fn detect_def_call(call: &Call, ctx: &LintContext) -> Vec<(Detection, FixData)> 
 struct TypedPipelineIo;
 
 impl DetectFix for TypedPipelineIo {
-    type FixInput = FixData;
+    type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
         "typed_pipeline_io"
@@ -271,14 +271,14 @@ impl DetectFix for TypedPipelineIo {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context.detect_with_fix_data(|expr, ctx| match &expr.expr {
             Expr::Call(call) => detect_def_call(call, ctx),
             _ => vec![],
         })
     }
 
-    fn fix(&self, ctx: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, ctx: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let block = ctx.working_set.get_block(fix_data.body_block_id);
         let has_no_params = block.signature.required_positional.is_empty()
             && block.signature.optional_positional.is_empty()

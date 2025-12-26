@@ -180,7 +180,7 @@ fn detect_function_parameters(
 struct PreferPathType;
 
 impl DetectFix for PreferPathType {
-    type FixInput = FixData;
+    type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
         "prefer_path_type"
@@ -198,7 +198,7 @@ impl DetectFix for PreferPathType {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context.detect_with_fix_data(|expr, ctx| {
             let Expr::Call(call) = &expr.expr else {
                 return vec![];
@@ -222,7 +222,7 @@ impl DetectFix for PreferPathType {
         })
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let optional_marker = if fix_data.is_optional { "?" } else { "" };
         let new_param_text = format!("{}{optional_marker}: path", fix_data.param_name);
         Some(Fix::with_explanation(

@@ -106,7 +106,7 @@ fn build_violation(param_name: &str, match_call: &Call) -> Detection {
 struct DispatchWithSubcommands;
 
 impl DetectFix for DispatchWithSubcommands {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "dispatch_with_subcommands"
@@ -124,7 +124,7 @@ impl DetectFix for DispatchWithSubcommands {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         Self::no_fix(context.detect(|expr, ctx| {
             let Expr::Call(def_call) = &expr.expr else {
                 return vec![];

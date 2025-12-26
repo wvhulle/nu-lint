@@ -45,7 +45,7 @@ fn collect_function_definitions_with_spans(
 struct UnusedHelperFunctions;
 
 impl DetectFix for UnusedHelperFunctions {
-    type FixInput = UnusedFunctionFixData;
+    type FixInput<'a> = UnusedFunctionFixData;
 
     fn id(&self) -> &'static str {
         "unused_helper_functions"
@@ -63,7 +63,7 @@ impl DetectFix for UnusedHelperFunctions {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let function_definitions = collect_function_definitions_with_spans(context);
 
         let function_map: HashMap<String, BlockId> = function_definitions
@@ -115,7 +115,7 @@ impl DetectFix for UnusedHelperFunctions {
             .collect()
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         Some(Fix::with_explanation(
             format!("Remove unused function '{}'", fix_data.name),
             vec![Replacement::new(fix_data.removal_span, String::new())],

@@ -117,7 +117,7 @@ fn check(context: &LintContext) -> Vec<Detection> {
 struct BraceSpacing;
 
 impl DetectFix for BraceSpacing {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "brace_spacing"
@@ -135,7 +135,7 @@ impl DetectFix for BraceSpacing {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         Self::no_fix(check(context))
     }
 }

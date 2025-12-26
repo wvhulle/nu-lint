@@ -102,7 +102,7 @@ fn detect_block(block: &Block, context: &LintContext) -> Vec<(Detection, FixData
 struct UseBuiltinEcho;
 
 impl DetectFix for UseBuiltinEcho {
-    type FixInput = FixData;
+    type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
         "use_builtin_echo"
@@ -120,7 +120,7 @@ impl DetectFix for UseBuiltinEcho {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let block: &Block = context.ast;
         block
             .pipelines
@@ -129,7 +129,7 @@ impl DetectFix for UseBuiltinEcho {
             .collect()
     }
 
-    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let code_snippet = context.get_span_text(fix_data.element_span);
         let args = extract_echo_args(code_snippet);
 

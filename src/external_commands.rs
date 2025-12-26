@@ -5,23 +5,9 @@ use nu_protocol::{
 
 use crate::{context::LintContext, violation::Detection};
 
-/// Return an iterator of borrowed slices for each external arg's inner text.
-/// This avoids any allocation and does not prepend the spread prefix.
-pub fn external_args_slices<'a>(
-    args: &'a [ExternalArgument],
-    context: &'a LintContext,
-) -> impl Iterator<Item = &'a str> + 'a {
-    args.iter().map(move |arg| match arg {
-        ExternalArgument::Regular(expr) | ExternalArgument::Spread(expr) => {
-            context.get_span_text(expr.span)
-        }
-    })
-}
-
 /// Fix data for external command alternatives
-pub struct ExternalCmdFixData {
-    pub args: Box<[ExternalArgument]>,
-    pub arg_strings: Vec<String>,
+pub struct ExternalCmdFixData<'a> {
+    pub arg_strings: Vec<&'a str>,
     pub expr_span: Span,
 }
 
@@ -29,27 +15,47 @@ pub struct ExternalCmdFixData {
 /// Returns detected violations with fix data that can be used to generate
 /// fixes.
 #[must_use]
-pub fn detect_external_commands(
-    context: &LintContext,
+pub fn detect_external_commands<'context>(
+    context: &'context LintContext,
     external_cmd: &'static str,
     note: &'static str,
-) -> Vec<(Detection, ExternalCmdFixData)> {
-    context.detect_with_fix_data(|expr, ctx| {
-        if let Expr::ExternalCall(head, args) = &expr.expr {
-            let cmd_text = ctx.get_span_text(head.span);
+) -> Vec<(Detection, ExternalCmdFixData<'context>)> {
+    use nu_protocol::ast::Traverse;
 
-            if cmd_text == external_cmd {
-                let detected = create_detected_violation(expr, cmd_text, note);
-                let fix_data = ExternalCmdFixData {
-                    args: args.clone(),
-                    expr_span: expr.span,
-                };
+    let mut results = Vec::new();
 
-                return vec![(detected, fix_data)];
+    context.ast.flat_map(
+        context.working_set,
+        &|expr| {
+            if let Expr::ExternalCall(head, args) = &expr.expr {
+                let cmd_text = context.get_span_text(head.span);
+
+                if cmd_text == external_cmd {
+                    let detected = create_detected_violation(expr, cmd_text, note);
+
+                    let arg_strings: Vec<&str> = args
+                        .iter()
+                        .map(|arg| match arg {
+                            ExternalArgument::Regular(expr) | ExternalArgument::Spread(expr) => {
+                                context.get_span_text(expr.span)
+                            }
+                        })
+                        .collect();
+
+                    let fix_data = ExternalCmdFixData {
+                        arg_strings,
+                        expr_span: expr.span,
+                    };
+
+                    return vec![(detected, fix_data)];
+                }
             }
-        }
-        vec![]
-    })
+            vec![]
+        },
+        &mut results,
+    );
+
+    results
 }
 
 fn create_detected_violation(expr: &Expression, cmd_text: &str, note: &'static str) -> Detection {

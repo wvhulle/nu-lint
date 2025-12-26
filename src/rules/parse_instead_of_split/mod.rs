@@ -443,7 +443,7 @@ fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<Violat
 struct ParseInsteadOfSplit;
 
 impl DetectFix for ParseInsteadOfSplit {
-    type FixInput = FixData;
+    type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
         "parse_instead_of_split"
@@ -461,7 +461,7 @@ impl DetectFix for ParseInsteadOfSplit {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let mut violations = Vec::new();
 
         check_block(context.ast, context, &mut violations);
@@ -484,7 +484,7 @@ impl DetectFix for ParseInsteadOfSplit {
         violations
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         match fix_data {
             FixData::SplitGetWithDelimiter {
                 span,

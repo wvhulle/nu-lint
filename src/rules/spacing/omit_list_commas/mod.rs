@@ -54,7 +54,7 @@ fn check_list_commas(context: &LintContext, span: Span, items: &[ListItem]) -> V
 struct OmitListCommas;
 
 impl DetectFix for OmitListCommas {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "omit_list_commas"
@@ -72,7 +72,7 @@ impl DetectFix for OmitListCommas {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let violations = context.detect(|expr, ctx| match &expr.expr {
             Expr::List(items) => check_list_commas(ctx, expr.span, items),
             _ => vec![],

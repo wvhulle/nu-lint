@@ -1,7 +1,7 @@
 use crate::{
     LintLevel,
     context::LintContext,
-    external_commands::{ExternalCmdFixData, detect_external_commands, external_args_slices},
+    external_commands::{ExternalCmdFixData, detect_external_commands},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -11,7 +11,7 @@ const NOTE: &str = "Use 'str replace' for text substitution";
 struct UseBuiltinSed;
 
 impl DetectFix for UseBuiltinSed {
-    type FixInput = ExternalCmdFixData;
+    type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
         "use_builtin_sed"
@@ -29,14 +29,14 @@ impl DetectFix for UseBuiltinSed {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let mut violations = detect_external_commands(context, "sed", NOTE);
         violations.extend(detect_external_commands(context, "gsed", NOTE));
         violations
     }
 
-    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
-        let replacement = parse_sed_args(external_args_slices(&fix_data.args, context));
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let replacement = parse_sed_args(fix_data.arg_strings.iter().copied());
 
         Some(Fix {
             explanation: "Replace with str replace".into(),

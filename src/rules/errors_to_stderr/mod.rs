@@ -126,7 +126,7 @@ fn check_block_patterns(block: &Block, context: &LintContext) -> Vec<Detection> 
 struct ErrorsToStderr;
 
 impl DetectFix for ErrorsToStderr {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "errors_to_stderr"
@@ -144,7 +144,7 @@ impl DetectFix for ErrorsToStderr {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let main_violations = check_block_patterns(context.ast, context);
 
         let nested_violations: Vec<_> = context.detect(|expr, ctx| match &expr.expr {

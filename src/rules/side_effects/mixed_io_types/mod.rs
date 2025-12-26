@@ -119,7 +119,7 @@ fn analyze_function_body(
 struct SeparateLocalRemoteIo;
 
 impl DetectFix for SeparateLocalRemoteIo {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "separate_local_remote_io"
@@ -133,7 +133,7 @@ impl DetectFix for SeparateLocalRemoteIo {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let function_definitions = context.collect_function_definitions();
 
         let has_main = function_definitions.values().any(|name| name == "main");

@@ -252,7 +252,7 @@ fn check_string_interpolation(
 struct EscapeStringInterpolationOperators;
 
 impl DetectFix for EscapeStringInterpolationOperators {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "escape_string_interpolation_operators"
@@ -270,7 +270,7 @@ impl DetectFix for EscapeStringInterpolationOperators {
         LintLevel::Error
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         Self::no_fix(context.detect(|expr, ctx| {
             if let Expr::StringInterpolation(exprs) = &expr.expr
                 && let Some(violation) = check_string_interpolation(exprs, expr.span, ctx)

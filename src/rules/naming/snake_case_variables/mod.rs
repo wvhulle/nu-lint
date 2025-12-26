@@ -93,7 +93,7 @@ fn check_call(call: &Call, ctx: &LintContext) -> Option<(Detection, SnakeCaseFix
 struct SnakeCaseVariables;
 
 impl DetectFix for SnakeCaseVariables {
-    type FixInput = SnakeCaseFixData;
+    type FixInput<'a> = SnakeCaseFixData;
 
     fn id(&self) -> &'static str {
         "snake_case_variables"
@@ -111,7 +111,7 @@ impl DetectFix for SnakeCaseVariables {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context.detect_with_fix_data(|expr, ctx| {
             let Expr::Call(call) = &expr.expr else {
                 return vec![];
@@ -121,7 +121,7 @@ impl DetectFix for SnakeCaseVariables {
         })
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let replacements = fix_data
             .replacements
             .iter()

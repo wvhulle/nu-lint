@@ -70,7 +70,7 @@ fn check_exported_function(call: &Call, context: &LintContext) -> Option<Detecti
 struct AddDocCommentExportedFn;
 
 impl DetectFix for AddDocCommentExportedFn {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "add_doc_comment_exported_fn"
@@ -88,7 +88,7 @@ impl DetectFix for AddDocCommentExportedFn {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         Self::no_fix(context.detect(|expr, ctx| {
             if let Expr::Call(call) = &expr.expr {
                 check_exported_function(call, ctx).into_iter().collect()

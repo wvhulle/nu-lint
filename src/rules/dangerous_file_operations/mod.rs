@@ -222,7 +222,7 @@ fn check_builtin_command(
 struct DangerousFileOperations;
 
 impl DetectFix for DangerousFileOperations {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "dangerous_file_operations"
@@ -236,7 +236,7 @@ impl DetectFix for DangerousFileOperations {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         use nu_protocol::ast::Traverse;
 
         let mut violations = Vec::new();

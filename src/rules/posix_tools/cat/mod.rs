@@ -1,7 +1,7 @@
 use crate::{
     LintLevel,
     context::LintContext,
-    external_commands::{ExternalCmdFixData, detect_external_commands, external_args_slices},
+    external_commands::{ExternalCmdFixData, detect_external_commands},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -151,7 +151,7 @@ impl CatOptions {
 struct UseBuiltinCat;
 
 impl DetectFix for UseBuiltinCat {
-    type FixInput = ExternalCmdFixData;
+    type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
         "use_builtin_cat"
@@ -169,7 +169,7 @@ impl DetectFix for UseBuiltinCat {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let mut violations = detect_external_commands(context, "cat", NOTE);
         // Related commands commonly used like cat
         for cmd in ["tac", "more", "less"] {
@@ -178,8 +178,8 @@ impl DetectFix for UseBuiltinCat {
         violations
     }
 
-    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
-        let opts = CatOptions::parse(external_args_slices(&fix_data.args, context));
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let opts = CatOptions::parse(fix_data.arg_strings.iter().copied());
         let (replacement, description) = opts.to_nushell();
 
         Some(Fix {

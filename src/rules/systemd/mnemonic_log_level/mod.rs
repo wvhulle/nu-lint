@@ -94,7 +94,7 @@ fn check_block(block: &Block, ctx: &LintContext) -> Vec<(Detection, FixData)> {
 struct AttachLoglevelToLogStatement;
 
 impl DetectFix for AttachLoglevelToLogStatement {
-    type FixInput = FixData;
+    type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
         "attach_loglevel_to_log_statement"
@@ -108,7 +108,7 @@ impl DetectFix for AttachLoglevelToLogStatement {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let mut violations = check_block(context.ast, context);
 
         context.ast.flat_map(
@@ -126,7 +126,7 @@ impl DetectFix for AttachLoglevelToLogStatement {
         violations
     }
 
-    fn fix(&self, ctx: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, ctx: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         // Get the original argument text and replace the numeric prefix with keyword
         let arg_text = ctx.get_span_text(fix_data.arg_span);
         let fixed_string = arg_text.replacen(

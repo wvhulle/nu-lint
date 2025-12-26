@@ -95,7 +95,7 @@ fn check_error_make(call: &Call) -> Option<Detection> {
 struct DescriptiveErrorMessages;
 
 impl DetectFix for DescriptiveErrorMessages {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "descriptive_error_messages"
@@ -113,7 +113,7 @@ impl DetectFix for DescriptiveErrorMessages {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         Self::no_fix(context.detect(|expr, ctx| {
             let Expr::Call(call) = &expr.expr else {
                 return vec![];

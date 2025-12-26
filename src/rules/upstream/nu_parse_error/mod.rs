@@ -26,7 +26,7 @@ fn build_help_text(parse_error: &ParseError) -> String {
 struct NuParseError;
 
 impl DetectFix for NuParseError {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "nu_parse_error"
@@ -44,7 +44,7 @@ impl DetectFix for NuParseError {
         LintLevel::Error
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let mut seen = HashSet::new();
         Self::no_fix(
             context

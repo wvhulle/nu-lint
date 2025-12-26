@@ -22,7 +22,7 @@ pub struct FixData {
 struct CollapsibleIf;
 
 impl DetectFix for CollapsibleIf {
-    type FixInput = FixData;
+    type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
         "collapsible_if"
@@ -41,7 +41,7 @@ impl DetectFix for CollapsibleIf {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context.detect_with_fix_data(|expr, ctx| match &expr.expr {
             Expr::Call(call) if call.is_call_to_command("if", ctx) => {
                 if call.get_else_branch().is_some() {
@@ -90,7 +90,7 @@ impl DetectFix for CollapsibleIf {
         })
     }
 
-    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let outer_cond = fix_data.outer_condition_span.source_code(context).trim();
         let inner_cond = fix_data.inner_condition_span.source_code(context).trim();
         let body = fix_data.inner_body_span.source_code(context).trim();

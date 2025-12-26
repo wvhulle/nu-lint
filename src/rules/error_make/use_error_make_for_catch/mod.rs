@@ -50,7 +50,7 @@ fn collect_try_blocks(context: &LintContext) -> HashSet<BlockId> {
 struct UseErrorMakeForCatch;
 
 impl DetectFix for UseErrorMakeForCatch {
-    type FixInput = FixData;
+    type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
         "use_error_make_for_catch"
@@ -68,7 +68,7 @@ impl DetectFix for UseErrorMakeForCatch {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let functions = context.collect_function_definitions();
         let try_blocks = collect_try_blocks(context);
 
@@ -144,7 +144,7 @@ impl DetectFix for UseErrorMakeForCatch {
         })
     }
 
-    fn fix(&self, ctx: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, ctx: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let msg_span = fix_data.msg_expr_span?;
         let text = ctx.get_span_text(msg_span);
 

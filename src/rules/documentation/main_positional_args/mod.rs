@@ -104,7 +104,7 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Detection> {
 struct MainPositionalArgsDocs;
 
 impl DetectFix for MainPositionalArgsDocs {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "main_positional_args_docs"
@@ -122,7 +122,7 @@ impl DetectFix for MainPositionalArgsDocs {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         Self::no_fix(context.detect(|expr, ctx| {
             if let Expr::Call(call) = &expr.expr {
                 let decl_name = call.get_call_name(ctx);

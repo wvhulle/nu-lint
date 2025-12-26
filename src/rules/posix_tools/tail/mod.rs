@@ -1,7 +1,7 @@
 use crate::{
     LintLevel,
     context::LintContext,
-    external_commands::{ExternalCmdFixData, detect_external_commands, external_args_slices},
+    external_commands::{ExternalCmdFixData, detect_external_commands},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -11,7 +11,7 @@ const NOTE: &str = "Use 'last N' to get the last N items";
 struct UseBuiltinTail;
 
 impl DetectFix for UseBuiltinTail {
-    type FixInput = ExternalCmdFixData;
+    type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
         "use_builtin_tail"
@@ -29,12 +29,15 @@ impl DetectFix for UseBuiltinTail {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         detect_external_commands(context, "tail", NOTE)
     }
 
-    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
-        let replacement = external_args_slices(&fix_data.args, context)
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let replacement = fix_data
+            .arg_strings
+            .iter()
+            .copied()
             .find(|a| a.starts_with('-') && a.len() > 1)
             .map_or_else(
                 || "last 10".to_string(),

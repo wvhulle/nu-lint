@@ -42,7 +42,7 @@ fn function_violation(
 struct TooManyLines;
 
 impl DetectFix for TooManyLines {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "too_many_lines"
@@ -60,7 +60,7 @@ impl DetectFix for TooManyLines {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         Self::no_fix(check(context))
     }
 }

@@ -1,7 +1,7 @@
 use crate::{
     LintLevel,
     context::LintContext,
-    external_commands::{ExternalCmdFixData, detect_external_commands, external_args_slices},
+    external_commands::{ExternalCmdFixData, detect_external_commands},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -11,7 +11,7 @@ const NOTE: &str = "Use 'which' to find command locations.";
 struct UseBuiltinWhich;
 
 impl DetectFix for UseBuiltinWhich {
-    type FixInput = ExternalCmdFixData;
+    type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
         "use_builtin_which"
@@ -29,12 +29,12 @@ impl DetectFix for UseBuiltinWhich {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         detect_external_commands(context, "which", NOTE)
     }
 
-    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
-        let args_text: Vec<&str> = external_args_slices(&fix_data.args, context).collect();
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let args_text: Vec<&str> = fix_data.arg_strings.clone();
         let repl = args_text
             .first()
             .map_or_else(|| "which".to_string(), |cmd| format!("which {cmd}"));

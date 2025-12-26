@@ -76,7 +76,7 @@ fn extract_labels_missing_span<'a>(
 struct AddSpanToLabel;
 
 impl DetectFix for AddSpanToLabel {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "add_span_to_label"
@@ -94,7 +94,7 @@ impl DetectFix for AddSpanToLabel {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         log::debug!("add_span_to_label detect() called");
         Self::no_fix(context.detect(|expr, ctx| {
             let Expr::Call(call) = &expr.expr else {

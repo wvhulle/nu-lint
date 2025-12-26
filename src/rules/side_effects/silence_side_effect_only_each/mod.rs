@@ -96,7 +96,7 @@ fn get_closure_body_span(block: &Block) -> Option<Span> {
 struct UseForOverEach;
 
 impl DetectFix for UseForOverEach {
-    type FixInput = FixData;
+    type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
         "silence_side_effect_only_each"
@@ -114,7 +114,7 @@ impl DetectFix for UseForOverEach {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context.detect_with_fix_data(|expr, ctx| match &expr.expr {
             Expr::Call(call) if call.is_call_to_command("each", ctx) => {
                 let Some(closure_arg) = call.get_first_positional_arg() else {
@@ -173,7 +173,7 @@ impl DetectFix for UseForOverEach {
         })
     }
 
-    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         if fix_data.pipeline_elements_before_each == 1 {
             let list = if fix_data.list_span.is_empty() {
                 return None;

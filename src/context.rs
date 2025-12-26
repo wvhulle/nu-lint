@@ -146,6 +146,7 @@ impl<'a> LintContext<'a> {
     pub(crate) fn detect_with_fix_data<F, D>(&self, collector: F) -> Vec<(Detection, D)>
     where
         F: Fn(&Expression, &Self) -> Vec<(Detection, D)>,
+        D: 'a,
     {
         let mut results = Vec::new();
         let f = |expr: &Expression| collector(expr, self);

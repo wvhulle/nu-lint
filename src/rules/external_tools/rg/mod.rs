@@ -1,7 +1,7 @@
 use crate::{
     LintLevel,
     context::LintContext,
-    external_commands::{ExternalCmdFixData, detect_external_commands, external_args_slices},
+    external_commands::{ExternalCmdFixData, detect_external_commands},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -291,7 +291,7 @@ impl RipgrepOptions {
 struct UseBuiltinRg;
 
 impl DetectFix for UseBuiltinRg {
-    type FixInput = ExternalCmdFixData;
+    type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
         "use_builtin_rg"
@@ -309,12 +309,12 @@ impl DetectFix for UseBuiltinRg {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         detect_external_commands(context, "rg", NOTE)
     }
 
-    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
-        let options = RipgrepOptions::parse(external_args_slices(&fix_data.args, context));
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let options = RipgrepOptions::parse(fix_data.arg_strings.iter().copied());
         let (replacement, explanation) = options.to_nushell();
         log::debug!(
             "rg.fix: replacement={replacement} explanation_len={}",

@@ -3,7 +3,7 @@ use nu_protocol::Span;
 use crate::{
     LintLevel,
     context::LintContext,
-    external_commands::{detect_external_commands, external_args_slices},
+    external_commands::detect_external_commands,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -206,7 +206,7 @@ struct CurlFixData {
 struct UseBuiltinCurl;
 
 impl DetectFix for UseBuiltinCurl {
-    type FixInput = CurlFixData;
+    type FixInput<'a> = CurlFixData;
 
     fn id(&self) -> &'static str {
         "use_builtin_curl"
@@ -224,12 +224,11 @@ impl DetectFix for UseBuiltinCurl {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         detect_external_commands(context, "curl", NOTE)
             .into_iter()
             .map(|(detection, fix_data)| {
-                let options =
-                    HttpOptions::parse_curl(external_args_slices(&fix_data.args, context));
+                let options = HttpOptions::parse_curl(fix_data.arg_strings.iter().copied());
                 (
                     detection,
                     CurlFixData {
@@ -241,7 +240,7 @@ impl DetectFix for UseBuiltinCurl {
             .collect()
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let (replacement, description) = fix_data.options.to_nushell();
 
         Some(Fix::with_explanation(

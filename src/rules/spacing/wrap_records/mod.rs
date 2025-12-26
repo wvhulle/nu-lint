@@ -54,7 +54,7 @@ fn create_violation(span: nu_protocol::Span) -> Detection {
 struct WrapWideRecords;
 
 impl DetectFix for WrapWideRecords {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "wrap_wide_records"
@@ -72,7 +72,7 @@ impl DetectFix for WrapWideRecords {
         LintLevel::Hint
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let mut violations = Vec::new();
 
         context.ast.flat_map(

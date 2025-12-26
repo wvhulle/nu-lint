@@ -211,7 +211,7 @@ fn create_violation(assignment: &CompleteAssignment) -> Detection {
 struct CheckCompleteExitCode;
 
 impl DetectFix for CheckCompleteExitCode {
-    type FixInput = ();
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "check_complete_exit_code"
@@ -229,7 +229,7 @@ impl DetectFix for CheckCompleteExitCode {
         LintLevel::Warning
     }
 
-    fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let assignments = collect_complete_assignments(context);
         let exit_code_checks = collect_exit_code_checks(context);
 

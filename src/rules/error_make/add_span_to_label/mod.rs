@@ -83,11 +83,11 @@ impl DetectFix for AddSpanToLabel {
     }
 
     fn explanation(&self) -> &'static str {
-        "labels field should include 'span' to highlight error location in user code"
+        "labels should include 'span' to highlight error location in user code"
     }
 
     fn doc_url(&self) -> Option<&'static str> {
-        Some("https://www.nushell.sh/commands/docs/error_make.html")
+        Some("https://www.nushell.sh/book/creating_errors.html")
     }
 
     fn level(&self) -> LintLevel {

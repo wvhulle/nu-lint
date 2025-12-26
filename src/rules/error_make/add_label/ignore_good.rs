@@ -7,21 +7,8 @@ def validate [input: string] {
     if ($input | is-empty) {
         error make {
             msg: "Input cannot be empty"
-            labels: { text: "empty input", span: (metadata $input).span }
+            labels: [{ text: "empty input", span: (metadata $input).span }]
         }
-    }
-}
-"#;
-    RULE.assert_ignores(good_code);
-}
-
-#[test]
-fn test_error_with_labels_no_span() {
-    let good_code = r#"
-def process [data: record] {
-    error make {
-        msg: "Invalid data format"
-        labels: { text: "problematic field" }
     }
 }
 "#;
@@ -35,7 +22,7 @@ def check-file [path: string] {
     if not ($path | path exists) {
         error make {
             msg: $"File not found: ($path)"
-            labels: { text: "file does not exist", span: (metadata $path).span }
+            label: { text: "file does not exist", span: (metadata $path).span }
             help: "Check the file path and try again"
         }
     }

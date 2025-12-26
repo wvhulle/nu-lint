@@ -47,7 +47,10 @@ impl DetectFix for AddLabelToError {
                 return vec![];
             };
 
-            if !has_field(record, "msg", ctx) || has_field(record, "labels", ctx) {
+            if !has_field(record, "msg", ctx)
+                || has_field(record, "labels", ctx)
+                || has_field(record, "label", ctx)
+            {
                 return vec![];
             }
 
@@ -58,12 +61,12 @@ impl DetectFix for AddLabelToError {
 
             vec![
                 Detection::from_global_span(
-                    "error make is missing 'labels' field for error location",
+                    "error make is missing 'label' (or 'labels') field for error location",
                     call.span(),
                 )
-                .with_primary_label("missing labels")
+                .with_primary_label("error missing label")
                 .with_help(format!(
-                    "Add a 'labels' field to pinpoint where the error occurred:\nlabels: {{ text: \
+                    "Add a 'label' field to pinpoint where the error occurred:\nlabel: {{ text: \
                      \"describe the problem\", span: {example_span} }}"
                 )),
             ]

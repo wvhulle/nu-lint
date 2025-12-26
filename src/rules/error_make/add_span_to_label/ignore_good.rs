@@ -32,7 +32,7 @@ def check-file [path: string] {
     if not ($path | path exists) {
         error make {
             msg: $"File not found: ($path)"
-            labels: { text: "file does not exist", span: (metadata $path).span }
+            labels: [{ text: "file does not exist", span: (metadata $path).span }]
             help: "Check the file path and try again"
         }
     }

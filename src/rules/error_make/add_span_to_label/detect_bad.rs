@@ -6,7 +6,7 @@ fn test_labels_missing_span() {
 def process [data: record] {
     error make {
         msg: "Invalid data format"
-        labels: { text: "problematic field" }
+        labels: [{ text: "problematic field" }]
     }
 }
 "#;
@@ -19,7 +19,7 @@ fn test_labels_missing_span_with_help() {
 def validate [input] {
     error make {
         msg: "Validation failed"
-        labels: { text: "invalid value" }
+        label: { text: "invalid value" }
         help: "Check the input format"
     }
 }

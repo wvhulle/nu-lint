@@ -2,8 +2,8 @@ use std::iter::Peekable;
 
 use crate::{
     LintLevel,
-    alternatives::{ExternalCmdFixData, detect_external_commands, external_args_slices},
     context::LintContext,
+    external_commands::{ExternalCmdFixData, detect_external_commands, external_args_slices},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };

@@ -1,3 +1,5 @@
+use std::string::ToString;
+
 use jaq_core::{
     load::{
         self,
@@ -6,12 +8,12 @@ use jaq_core::{
     },
     path::{self, Opt, Part},
 };
+use nu_protocol::Span;
 
 use crate::{
-    LintLevel, LintSpan,
-    alternatives::{ExternalCmdFixData, detect_external_commands, external_args_slices},
-    ast::span::SpanExt,
+    LintLevel,
     context::LintContext,
+    external_commands::{detect_external_commands, external_args_slices},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -263,68 +265,24 @@ const SIMPLE_JQ_OPS: &[&str] = &[
 const NOTE: &str =
     "Use built-in Nushell commands for simple operations - they're faster and more idiomatic";
 
-fn format_jq_replacement(filter: &str, file_arg: Option<&str>) -> String {
-    // Try to parse the jq filter using jaq-syn
-    if let Some(term) = parse_jq_filter(filter)
-        && let Some(nu_cmd) = jq_term_to_nushell(&term, file_arg.is_some())
-    {
-        return nu_cmd;
-    }
-
-    // Fallback to string-based matching for backward compatibility
-    let with_file = |cmd: &str| {
-        file_arg.map_or_else(
-            || cmd.to_string(),
-            |file| format!("open {file} | from json | {cmd}"),
-        )
-    };
-
-    match filter {
-        "'length'" => with_file("length"),
-        "'keys'" => with_file("columns"),
-        "'type'" => with_file("describe"),
-        "'empty'" => "null".to_string(),
-        "'not'" => "not".to_string(),
-        "'flatten'" => "flatten".to_string(),
-        "'add'" => "math sum".to_string(),
-        "'min'" => "math min".to_string(),
-        "'max'" => "math max".to_string(),
-        "'sort'" => "sort".to_string(),
-        "'unique'" => "uniq".to_string(),
-        _ if filter.starts_with("'.[") && filter.ends_with("]'") => {
-            let index = &filter[3..filter.len() - 2];
-            format!("get {index}")
-        }
-        _ => file_arg.map_or_else(
-            || "from json".to_string(),
-            |file| format!("open {file} | from json"),
-        ),
-    }
+struct JqFixData {
+    expr_span: Span,
+    filter: String,
+    file_arg: Option<String>,
 }
 
-/// Check if a jq command contains simple operations
-fn contains_simple_jq_op(source_text: &str) -> bool {
-    let quote_start = source_text.find(['\'', '"']);
-
-    if let Some(start_pos) = quote_start {
-        let quote_char = source_text.chars().nth(start_pos).unwrap();
-        if let Some(end_pos) = source_text[start_pos + 1..].rfind(quote_char) {
-            let filter_str = &source_text[start_pos..=start_pos + 1 + end_pos];
-
-            if let Some(term) = parse_jq_filter(filter_str) {
-                return jq_term_to_nushell(&term, false).is_some();
-            }
-        }
+fn is_convertible_jq_filter(filter: &str) -> bool {
+    if let Some(term) = parse_jq_filter(filter) {
+        return jq_term_to_nushell(&term, false).is_some();
     }
 
-    SIMPLE_JQ_OPS.iter().any(|op| source_text.contains(op))
-        || (source_text.contains("'.[") && source_text.contains("]'"))
+    SIMPLE_JQ_OPS.contains(&filter) || (filter.starts_with("'.[") && filter.ends_with("]'"))
 }
 
 struct ReplaceJqWithNuGet;
 
 impl DetectFix for ReplaceJqWithNuGet {
-    type FixInput = ExternalCmdFixData;
+    type FixInput = JqFixData;
 
     fn id(&self) -> &'static str {
         "replace_jq_with_nu_get"
@@ -345,35 +303,131 @@ impl DetectFix for ReplaceJqWithNuGet {
     fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
         detect_external_commands(context, "jq", NOTE)
             .into_iter()
-            .filter(|(violation, _fix_data)| {
-                let span: nu_protocol::Span = match violation.span {
-                    LintSpan::Global(s) => s,
-                    LintSpan::File(f) => f.into(),
+            .filter_map(|(violation, fix_data)| {
+                let args_text: Vec<&str> = external_args_slices(&fix_data.args, context).collect();
+
+                let filter_index = args_text
+                    .iter()
+                    .position(|arg| !arg.starts_with('-'))
+                    .unwrap_or(0);
+
+                let (filter, file_arg) = if filter_index < args_text.len() {
+                    let filter = args_text[filter_index].to_string();
+                    let file_arg = args_text.get(filter_index + 1).map(ToString::to_string);
+                    (filter, file_arg)
+                } else {
+                    (String::new(), None)
                 };
-                let source_text = span.source_code(context);
-                contains_simple_jq_op(source_text)
+
+                if filter.is_empty() || !is_convertible_jq_filter(&filter) {
+                    return None;
+                }
+
+                Some((
+                    violation,
+                    JqFixData {
+                        expr_span: fix_data.expr_span,
+                        filter,
+                        file_arg,
+                    },
+                ))
             })
             .collect()
     }
 
-    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
-        Some({
-            let fix_data: &ExternalCmdFixData = fix_data;
-            let args_text: Vec<&str> = external_args_slices(&fix_data.args, context).collect();
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        let filter = &fix_data.filter;
+        let file_arg = fix_data.file_arg.as_deref();
 
-            let new_text = if args_text.is_empty() {
-                "from json".to_string()
-            } else {
-                let filter = args_text[0];
-                let file_arg = args_text.get(1).copied();
-                format_jq_replacement(filter, file_arg)
-            };
+        if filter.is_empty() {
+            return Some(Fix::with_explanation(
+                "Use 'from json' to parse JSON data instead of bare jq",
+                vec![Replacement::new(fix_data.expr_span, "from json")],
+            ));
+        }
 
-            Fix::with_explanation(
-                "Replace simple jq operation with built-in Nushell command",
-                vec![Replacement::new(fix_data.expr_span, new_text)],
+        if let Some(term) = parse_jq_filter(filter)
+            && let Some(nu_cmd) = jq_term_to_nushell(&term, file_arg.is_some())
+        {
+            return Some(Fix::with_explanation(
+                "Replace jq filter with equivalent Nushell pipeline for better performance and \
+                 integration",
+                vec![Replacement::new(fix_data.expr_span, nu_cmd)],
+            ));
+        }
+
+        let with_file = |cmd: &str| {
+            file_arg.map_or_else(
+                || cmd.to_string(),
+                |file| format!("open {file} | from json | {cmd}"),
             )
-        })
+        };
+
+        let (new_text, explanation) = match filter.as_str() {
+            "'length'" => (
+                with_file("length"),
+                "Use 'length' command instead of jq for counting elements",
+            ),
+            "'keys'" => (
+                with_file("columns"),
+                "Use 'columns' command instead of jq to get object keys",
+            ),
+            "'type'" => (
+                with_file("describe"),
+                "Use 'describe' command instead of jq to inspect data types",
+            ),
+            "'empty'" => (
+                "null".to_string(),
+                "Use 'null' instead of jq empty for null values",
+            ),
+            "'not'" => (
+                "not".to_string(),
+                "Use 'not' operator instead of jq for boolean negation",
+            ),
+            "'flatten'" => (
+                "flatten".to_string(),
+                "Use 'flatten' command instead of jq to flatten nested lists",
+            ),
+            "'add'" => (
+                "math sum".to_string(),
+                "Use 'math sum' instead of jq add for summing values",
+            ),
+            "'min'" => (
+                "math min".to_string(),
+                "Use 'math min' instead of jq for finding minimum values",
+            ),
+            "'max'" => (
+                "math max".to_string(),
+                "Use 'math max' instead of jq for finding maximum values",
+            ),
+            "'sort'" => (
+                "sort".to_string(),
+                "Use 'sort' command instead of jq for sorting data",
+            ),
+            "'unique'" => (
+                "uniq".to_string(),
+                "Use 'uniq' command instead of jq unique for deduplication",
+            ),
+            _ if filter.starts_with("'.[") && filter.ends_with("]'") => {
+                let index = &filter[3..filter.len() - 2];
+                (
+                    format!("get {index}"),
+                    "Use 'get' command instead of jq for array indexing",
+                )
+            }
+            _ => {
+                let text = file_arg.map_or_else(
+                    || "from json".to_string(),
+                    |file| format!("open {file} | from json"),
+                );
+                (text, "Use 'from json' to parse JSON instead of jq")
+            }
+        };
+
+        Some(Fix::with_explanation(
+            explanation,
+            vec![Replacement::new(fix_data.expr_span, new_text)],
+        ))
     }
 }
 

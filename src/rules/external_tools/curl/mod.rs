@@ -1,7 +1,9 @@
+use nu_protocol::Span;
+
 use crate::{
     LintLevel,
-    alternatives::{ExternalCmdFixData, detect_external_commands, external_args_slices},
     context::LintContext,
+    external_commands::{detect_external_commands, external_args_slices},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -196,10 +198,15 @@ fn parse_header(header: &str) -> Option<(String, String)> {
         .map(|(key, value)| (key.trim().to_string(), value.trim().to_string()))
 }
 
+struct CurlFixData {
+    expr_span: Span,
+    options: HttpOptions,
+}
+
 struct UseBuiltinCurl;
 
 impl DetectFix for UseBuiltinCurl {
-    type FixInput = ExternalCmdFixData;
+    type FixInput = CurlFixData;
 
     fn id(&self) -> &'static str {
         "use_builtin_curl"
@@ -219,19 +226,28 @@ impl DetectFix for UseBuiltinCurl {
 
     fn detect(&self, context: &LintContext) -> Vec<(Detection, Self::FixInput)> {
         detect_external_commands(context, "curl", NOTE)
+            .into_iter()
+            .map(|(detection, fix_data)| {
+                let options =
+                    HttpOptions::parse_curl(external_args_slices(&fix_data.args, context));
+                (
+                    detection,
+                    CurlFixData {
+                        expr_span: fix_data.expr_span,
+                        options,
+                    },
+                )
+            })
+            .collect()
     }
 
-    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
-        let opts = HttpOptions::parse_curl(external_args_slices(&fix_data.args, context));
-        let (replacement, description) = opts.to_nushell();
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput) -> Option<Fix> {
+        let (replacement, description) = fix_data.options.to_nushell();
 
-        Some(Fix {
-            explanation: description.into(),
-            replacements: vec![Replacement {
-                span: fix_data.expr_span.into(),
-                replacement_text: replacement.into(),
-            }],
-        })
+        Some(Fix::with_explanation(
+            description,
+            vec![Replacement::new(fix_data.expr_span, replacement)],
+        ))
     }
 }
 

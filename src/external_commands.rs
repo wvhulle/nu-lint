@@ -21,6 +21,7 @@ pub fn external_args_slices<'a>(
 /// Fix data for external command alternatives
 pub struct ExternalCmdFixData {
     pub args: Box<[ExternalArgument]>,
+    pub arg_strings: Vec<String>,
     pub expr_span: Span,
 }
 

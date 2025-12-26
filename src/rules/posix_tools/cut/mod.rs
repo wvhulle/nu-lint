@@ -1,7 +1,7 @@
 use crate::{
     LintLevel,
-    alternatives::{ExternalCmdFixData, detect_external_commands},
     context::LintContext,
+    external_commands::{ExternalCmdFixData, detect_external_commands},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };

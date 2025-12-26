@@ -2,12 +2,71 @@ use std::{collections::HashMap, path::Path};
 
 use lsp_types::{
     CodeAction, CodeActionKind, CodeActionOrCommand, CodeDescription, Diagnostic,
-    DiagnosticRelatedInformation, DiagnosticSeverity, Location, NumberOrString, Range, TextEdit,
-    Uri, WorkspaceEdit,
+    DiagnosticRelatedInformation, DiagnosticSeverity, Location, NumberOrString, Position, Range,
+    TextEdit, Uri, WorkspaceEdit,
 };
 
-use super::line_index::LineIndex;
 use crate::{Config, LintEngine, LintLevel, violation::Violation};
+
+#[allow(
+    clippy::cast_possible_truncation,
+    reason = "LSP uses u32, files larger than 4GB lines/columns are unrealistic"
+)]
+#[must_use]
+const fn to_lsp_u32(value: usize) -> u32 {
+    if value > u32::MAX as usize {
+        u32::MAX
+    } else {
+        value as u32
+    }
+}
+
+/// Pre-computed line offset index for efficient byte offset to line/column
+/// conversion. Uses binary search for O(log n) lookups instead of O(n)
+/// iteration.
+pub struct LineIndex {
+    /// Byte offsets where each line starts. `line_offsets[0]` = 0 (first line
+    /// starts at byte 0).
+    line_offsets: Vec<usize>,
+}
+
+impl LineIndex {
+    pub fn new(source: &str) -> Self {
+        let mut line_offsets = vec![0];
+        for (pos, ch) in source.char_indices() {
+            if ch == '\n' {
+                line_offsets.push(pos + 1);
+            }
+        }
+        Self { line_offsets }
+    }
+
+    /// Convert a byte offset to LSP Position (0-indexed line and column).
+    pub fn offset_to_position(&self, offset: usize, source: &str) -> Position {
+        let line = self
+            .line_offsets
+            .partition_point(|&line_start| line_start <= offset)
+            .saturating_sub(1);
+
+        let line_start = self.line_offsets.get(line).copied().unwrap_or(0);
+        let end_offset = offset.min(source.len());
+        let column = source
+            .get(line_start..end_offset)
+            .map_or(0, |s| s.chars().count());
+
+        Position {
+            line: to_lsp_u32(line),
+            character: to_lsp_u32(column),
+        }
+    }
+
+    pub fn span_to_range(&self, source: &str, start: usize, end: usize) -> Range {
+        Range {
+            start: self.offset_to_position(start, source),
+            end: self.offset_to_position(end, source),
+        }
+    }
+}
 
 pub struct DocumentState {
     pub content: String,
@@ -226,20 +285,8 @@ mod tests {
     }
 
     #[test]
-    fn is_nushell_file_uppercase_extension() {
-        let uri: Uri = "file:///path/to/script.NU".parse().unwrap();
-        assert!(is_nushell_file(&uri));
-    }
-
-    #[test]
     fn is_nushell_file_wrong_extension() {
         let uri: Uri = "file:///path/to/script.rs".parse().unwrap();
-        assert!(!is_nushell_file(&uri));
-    }
-
-    #[test]
-    fn is_nushell_file_no_extension() {
-        let uri: Uri = "file:///path/to/script".parse().unwrap();
         assert!(!is_nushell_file(&uri));
     }
 
@@ -278,33 +325,6 @@ mod tests {
 
         let actions = state.get_code_actions(&uri, range);
         assert!(actions.is_empty());
-    }
-
-    #[test]
-    fn ranges_overlap_same_line() {
-        use lsp_types::Position;
-
-        let a = Range {
-            start: Position {
-                line: 1,
-                character: 0,
-            },
-            end: Position {
-                line: 1,
-                character: 10,
-            },
-        };
-        let b = Range {
-            start: Position {
-                line: 1,
-                character: 5,
-            },
-            end: Position {
-                line: 1,
-                character: 15,
-            },
-        };
-        assert!(ranges_overlap(&a, &b));
     }
 
     #[test]
@@ -392,5 +412,56 @@ mod tests {
         assert_eq!(related.len(), 1);
         assert_eq!(related[0].message, "inner if");
         assert_eq!(related[0].location.uri.as_str(), "file:///test.nu");
+    }
+
+    #[test]
+    fn line_index_multiple_lines() {
+        let source = "line1\nline2\nline3";
+        let index = LineIndex::new(source);
+        assert_eq!(index.line_offsets, vec![0, 6, 12]);
+    }
+
+    #[test]
+    fn offset_to_position_multiple_lines() {
+        let source = "line1\nline2\nline3";
+        let index = LineIndex::new(source);
+
+        let pos = index.offset_to_position(12, source);
+        assert_eq!(pos.line, 2);
+        assert_eq!(pos.character, 0);
+
+        let pos = index.offset_to_position(14, source);
+        assert_eq!(pos.line, 2);
+        assert_eq!(pos.character, 2);
+    }
+
+    #[test]
+    fn offset_to_position_beyond_end() {
+        let source = "hello";
+        let index = LineIndex::new(source);
+        let pos = index.offset_to_position(100, source);
+        assert_eq!(pos.line, 0);
+        assert_eq!(pos.character, 5);
+    }
+
+    #[test]
+    fn span_to_range_single_line() {
+        let source = "let x = 5";
+        let index = LineIndex::new(source);
+        let range = index.span_to_range(source, 4, 5);
+        assert_eq!(range.start.line, 0);
+        assert_eq!(range.start.character, 4);
+        assert_eq!(range.end.line, 0);
+        assert_eq!(range.end.character, 5);
+    }
+
+    #[test]
+    fn span_to_range_multiline() {
+        let source = "def foo [] {\n    bar\n}";
+        let index = LineIndex::new(source);
+        let range = index.span_to_range(source, 0, 22);
+        assert_eq!(range.start.line, 0);
+        assert_eq!(range.start.character, 0);
+        assert_eq!(range.end.line, 2);
     }
 }

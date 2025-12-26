@@ -78,7 +78,7 @@ More than 90 rules are available on The CLI. Some of them need further testing a
 
 - `collapsible_if` (auto-fix)
 - `forbid_excessive_nesting`
-- `max_function_body_length`
+- `too_many_lines`
 - `replace_if_else_chain_with_match` (auto-fix)
 - `brace_spacing`
 - `no_trailing_spaces`
@@ -145,6 +145,7 @@ More than 90 rules are available on The CLI. Some of them need further testing a
 - `dangerous_file_operations`
 - `separate_local_remote_io`
 - `print_and_return_data`
+- `silence_side_effect_only_each` (auto-fix)
 
 `systemd` - When used in combination with systemd services
 
@@ -154,7 +155,7 @@ More than 90 rules are available on The CLI. Some of them need further testing a
 `type-safety` - Encourage annotations with type hints.
 
 - `external_script_as_argument`
-- `missing_type_annotation` (auto-fix)
+- `add_type_hints_arguments` (auto-fix)
 - `prefer_path_type` (auto-fix)
 - `typed_pipeline_io` (auto-fix)
 - `avoid_nu_subprocess`
@@ -178,7 +179,6 @@ Build from source:
 
 ```bash
 cargo install --path .
-cargo install --git "$THIS_GIT_URL"
 ```
 
 ### Nix
@@ -266,9 +266,5 @@ type-safety = "error"
 
 # Override a single rule lievel
 [rules]
-prefer_pipeline_input = "hint"
+dispatch_with_subcommands = "hint"
 ```
-
-## License
-
-MIT

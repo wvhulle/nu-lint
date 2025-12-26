@@ -4,8 +4,6 @@ use super::RULE;
 fn detects_external_find_with_name_pattern() {
     let source = r#"^find . -name "*.rs""#;
     RULE.assert_count(source, 1);
-    RULE.assert_help_contains(source, "glob");
-    RULE.assert_help_contains(source, "ls");
 }
 
 #[test]

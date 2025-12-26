@@ -1,7 +1,7 @@
 use crate::{
     LintLevel,
     context::LintContext,
-    external_commands::{ExternalCmdFixData, detect_external_commands},
+    external_commands::{ExternalCmdFixData},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -168,7 +168,7 @@ impl DetectFix for UseBuiltinSort {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        detect_external_commands(context, "sort", NOTE)
+        context.external_invocations("sort", NOTE)
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {

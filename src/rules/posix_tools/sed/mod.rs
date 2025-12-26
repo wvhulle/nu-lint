@@ -1,7 +1,7 @@
 use crate::{
     LintLevel,
     context::LintContext,
-    external_commands::{ExternalCmdFixData, detect_external_commands},
+    external_commands::{ExternalCmdFixData},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -30,8 +30,8 @@ impl DetectFix for UseBuiltinSed {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let mut violations = detect_external_commands(context, "sed", NOTE);
-        violations.extend(detect_external_commands(context, "gsed", NOTE));
+        let mut violations = context.external_invocations("sed", NOTE);
+        violations.extend(context.external_invocations("gsed", NOTE));
         violations
     }
 

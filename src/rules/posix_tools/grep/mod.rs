@@ -1,7 +1,7 @@
 use crate::{
     LintLevel,
     context::LintContext,
-    external_commands::{ExternalCmdFixData, detect_external_commands},
+    external_commands::{ExternalCmdFixData},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -228,9 +228,9 @@ impl DetectFix for UseBuiltinGrep {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let mut violations = detect_external_commands(context, "grep", NOTE);
+        let mut violations = context.external_invocations("grep", NOTE);
         // ripgrep
-        violations.extend(detect_external_commands(context, "rg", NOTE));
+        violations.extend(context.external_invocations("rg", NOTE));
         violations
     }
 

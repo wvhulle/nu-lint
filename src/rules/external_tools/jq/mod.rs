@@ -13,7 +13,6 @@ use nu_protocol::Span;
 use crate::{
     LintLevel,
     context::LintContext,
-    external_commands::detect_external_commands,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -301,7 +300,8 @@ impl DetectFix for ReplaceJqWithNuGet {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        detect_external_commands(context, "jq", NOTE)
+        context
+            .external_invocations("jq", NOTE)
             .into_iter()
             .filter_map(|(violation, fix_data)| {
                 let filter_index = fix_data

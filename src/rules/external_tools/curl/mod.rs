@@ -3,7 +3,6 @@ use nu_protocol::Span;
 use crate::{
     LintLevel,
     context::LintContext,
-    external_commands::detect_external_commands,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -225,7 +224,7 @@ impl DetectFix for UseBuiltinCurl {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        detect_external_commands(context, "curl", NOTE)
+        context.external_invocations("curl", NOTE)
             .into_iter()
             .map(|(detection, fix_data)| {
                 let options = HttpOptions::parse_curl(fix_data.arg_strings.iter().copied());

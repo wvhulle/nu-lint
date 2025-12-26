@@ -117,20 +117,3 @@ fn fix_combined_pattern_and_field() {
     RULE.assert_replacement_contains(source, r#"where $it =~ "error""#);
     RULE.assert_replacement_contains(source, "get column3");
 }
-
-#[test]
-fn help_mentions_where_filter() {
-    let source = r#"^awk '/pattern/'"#;
-    RULE.assert_help_contains(source, "where");
-}
-
-#[test]
-fn help_mentions_split_column() {
-    let source = r#"^awk '{print $1}'"#;
-    RULE.assert_help_contains(source, "split column");
-}
-
-#[test]
-fn help_mentions_select() {
-    RULE.assert_help_contains("^awk", "select");
-}

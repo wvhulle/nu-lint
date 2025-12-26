@@ -1,7 +1,7 @@
 use crate::{
     LintLevel,
     context::LintContext,
-    external_commands::{ExternalCmdFixData, detect_external_commands},
+    external_commands::{ExternalCmdFixData},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -212,9 +212,9 @@ impl DetectFix for UseBuiltinAwk {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let mut violations = detect_external_commands(context, "awk", NOTE);
-        violations.extend(detect_external_commands(context, "gawk", NOTE));
-        violations.extend(detect_external_commands(context, "mawk", NOTE));
+        let mut violations = context.external_invocations("awk", NOTE);
+        violations.extend(context.external_invocations("gawk", NOTE));
+        violations.extend(context.external_invocations("mawk", NOTE));
         violations
     }
 

@@ -1,3 +1,8 @@
+#![allow(
+    clippy::excessive_nesting,
+    reason = "AST traversal naturally requires nested pattern matching"
+)]
+
 mod ast;
 pub mod cli;
 pub mod config;

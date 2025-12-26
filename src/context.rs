@@ -8,7 +8,12 @@ use nu_protocol::{
 
 #[cfg(test)]
 use crate::violation;
-use crate::{ast::call::CallExt, span::FileSpan, violation::Detection};
+use crate::{
+    ast::call::CallExt,
+    external_commands::{self, ExternalCmdFixData},
+    span::FileSpan,
+    violation::Detection,
+};
 
 /// Context containing all lint information (source, AST, and engine state)
 ///
@@ -234,6 +239,56 @@ impl<'a> LintContext<'a> {
     #[must_use]
     pub fn is_exported_function(&self, function_name: &str) -> bool {
         self.source.contains(&format!("export def {function_name}"))
+    }
+
+    /// Detect a specific external command and suggest a builtin alternative.
+    /// Returns detected violations with fix data that can be used to generate
+    /// fixes.
+    #[must_use]
+    pub fn external_invocations<'context>(
+        &'context self,
+        external_cmd: &'static str,
+        note: &'static str,
+    ) -> Vec<(Detection, ExternalCmdFixData<'context>)> {
+        use nu_protocol::ast::{Expr, ExternalArgument, Traverse};
+
+        let mut results = Vec::new();
+
+        self.ast.flat_map(
+            self.working_set,
+            &|expr| {
+                let Expr::ExternalCall(head, args) = &expr.expr else {
+                    return vec![];
+                };
+
+                let cmd_text = self.get_span_text(head.span);
+                if cmd_text != external_cmd {
+                    return vec![];
+                }
+
+                let detected = Detection::from_global_span(note, expr.span)
+                    .with_primary_label(format!("external '{cmd_text}'"));
+
+                let arg_strings: Vec<&str> = args
+                    .iter()
+                    .map(|arg| match arg {
+                        ExternalArgument::Regular(expr) | ExternalArgument::Spread(expr) => {
+                            self.get_span_text(expr.span)
+                        }
+                    })
+                    .collect();
+
+                let fix_data = external_commands::ExternalCmdFixData {
+                    arg_strings,
+                    expr_span: expr.span,
+                };
+
+                vec![(detected, fix_data)]
+            },
+            &mut results,
+        );
+
+        results
     }
 }
 

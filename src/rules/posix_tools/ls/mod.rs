@@ -1,7 +1,7 @@
 use crate::{
     LintLevel,
     context::LintContext,
-    external_commands::{ExternalCmdFixData, detect_external_commands},
+    external_commands::{ExternalCmdFixData},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -175,10 +175,10 @@ impl DetectFix for UseBuiltinLs {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let mut violations = detect_external_commands(context, "ls", NOTE);
+        let mut violations = context.external_invocations("ls", NOTE);
         // exa/eza alternatives commonly used
         for cmd in ["exa", "eza"] {
-            violations.extend(detect_external_commands(context, cmd, NOTE));
+            violations.extend(context.external_invocations(cmd, NOTE));
         }
         violations
     }

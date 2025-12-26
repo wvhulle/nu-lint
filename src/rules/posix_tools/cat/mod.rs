@@ -1,7 +1,7 @@
 use crate::{
     LintLevel,
     context::LintContext,
-    external_commands::{ExternalCmdFixData, detect_external_commands},
+    external_commands::{ExternalCmdFixData},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -170,10 +170,10 @@ impl DetectFix for UseBuiltinCat {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let mut violations = detect_external_commands(context, "cat", NOTE);
+        let mut violations = context.external_invocations("cat", NOTE);
         // Related commands commonly used like cat
         for cmd in ["tac", "more", "less"] {
-            violations.extend(detect_external_commands(context, cmd, NOTE));
+            violations.extend(context.external_invocations(cmd, NOTE));
         }
         violations
     }

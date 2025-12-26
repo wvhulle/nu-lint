@@ -167,6 +167,7 @@ const SIDE_EFFECTS: Group = Group {
         super::dangerous_file_operations::RULE,
         super::side_effects::mixed_io_types::RULE,
         super::side_effects::print_and_return_data::RULE,
+        super::side_effects::silence_side_effect_only_each::RULE,
     ],
 };
 

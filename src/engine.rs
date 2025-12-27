@@ -198,7 +198,6 @@ impl LintEngine {
             files.par_iter().for_each(process_file);
         }
 
-        
         violations_mutex
             .into_inner()
             .expect("Failed to unwrap violations mutex")

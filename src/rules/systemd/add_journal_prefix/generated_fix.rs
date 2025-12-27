@@ -3,20 +3,20 @@ use super::RULE;
 #[test]
 fn test_fix_all_log_levels() {
     let cases = [
-        (r#"print "Error: failed""#, "<err>"),
-        (r#"print "ERROR: failed""#, "<err>"),
-        (r#"print "err: failed""#, "<err>"),
-        (r#"print "Failed to load""#, "<err>"),
-        (r#"print "Warning: low""#, "<warning>"),
-        (r#"print "WARNING: low""#, "<warning>"),
-        (r#"print "warn: low""#, "<warning>"),
-        (r#"print "Critical: failure""#, "<crit>"),
-        (r#"print "Debug: entering""#, "<debug>"),
-        (r#"print "Info: started""#, "<info>"),
-        (r#"print "Alert: action required""#, "<alert>"),
-        (r#"print "Emergency: unusable""#, "<emerg>"),
-        (r#"print "Notice: updated""#, "<notice>"),
-        (r#"print "Starting process""#, "<info>"), // default
+        (r#"print "Error: failed""#, "<3>"),
+        (r#"print "ERROR: failed""#, "<3>"),
+        (r#"print "err: failed""#, "<3>"),
+        (r#"print "Failed to load""#, "<3>"),
+        (r#"print "Warning: low""#, "<4>"),
+        (r#"print "WARNING: low""#, "<4>"),
+        (r#"print "warn: low""#, "<4>"),
+        (r#"print "Critical: failure""#, "<2>"),
+        (r#"print "Debug: entering""#, "<7>"),
+        (r#"print "Info: started""#, "<6>"),
+        (r#"print "Alert: action required""#, "<1>"),
+        (r#"print "Emergency: unusable""#, "<0>"),
+        (r#"print "Notice: updated""#, "<5>"),
+        (r#"print "Starting process""#, "<6>"), // default
     ];
     for (code, expected_prefix) in cases {
         RULE.assert_detects(code);
@@ -28,12 +28,12 @@ fn test_fix_all_log_levels() {
 fn test_fix_strips_redundant_prefix() {
     RULE.assert_replacement_contains(
         r#"print "Error: connection failed""#,
-        "\"<err>connection failed\"",
+        "\"<3>connection failed\"",
     );
-    RULE.assert_replacement_contains(r#"print "Warning: disk low""#, "\"<warning>disk low\"");
+    RULE.assert_replacement_contains(r#"print "Warning: disk low""#, "\"<4>disk low\"");
     RULE.assert_replacement_contains(
         r#"print "Debug: entering function""#,
-        "\"<debug>entering function\"",
+        "\"<7>entering function\"",
     );
 }
 
@@ -41,21 +41,21 @@ fn test_fix_strips_redundant_prefix() {
 fn test_fix_echo_command() {
     let bad_code = r#"echo "Error: timeout""#;
     RULE.assert_detects(bad_code);
-    RULE.assert_replacement_contains(bad_code, "<err>");
+    RULE.assert_replacement_contains(bad_code, "<3>");
 }
 
 #[test]
 fn test_fix_single_quoted_string() {
     let bad_code = r"print 'Error: failed operation'";
     RULE.assert_detects(bad_code);
-    RULE.assert_replacement_contains(bad_code, "'<err>failed operation'");
+    RULE.assert_replacement_contains(bad_code, "'<3>failed operation'");
 }
 
 #[test]
 fn test_fix_interpolated_string() {
     let bad_code = r#"print $"Error: ($details)""#;
     RULE.assert_detects(bad_code);
-    RULE.assert_replacement_contains(bad_code, "$\"<err>($details)\"");
+    RULE.assert_replacement_contains(bad_code, "$\"<3>($details)\"");
 }
 
 #[test]
@@ -66,7 +66,7 @@ def deploy [] {
 }
 "#;
     RULE.assert_detects(bad_code);
-    RULE.assert_replacement_contains(bad_code, "<err>");
+    RULE.assert_replacement_contains(bad_code, "<3>");
 }
 
 #[test]
@@ -76,5 +76,5 @@ let x = 1
 print "Error: first issue"
 let y = 2
 "#;
-    RULE.assert_replacement_contains(bad_code, "<err>");
+    RULE.assert_replacement_contains(bad_code, "<3>");
 }

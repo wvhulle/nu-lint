@@ -71,10 +71,7 @@ const PERFORMANCE: Group = Group {
 const SYSTEMD: Group = Group {
     name: "systemd",
     description: "When used in combination with systemd services",
-    rules: &[
-        super::systemd::add_journal_prefix::RULE,
-        super::systemd::mnemonic_log_level::RULE,
-    ],
+    rules: &[super::systemd::add_journal_prefix::RULE],
 };
 
 const POSIX_TOOLS: Group = Group {

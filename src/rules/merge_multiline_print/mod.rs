@@ -1,12 +1,12 @@
-use std::{mem, str::from_utf8};
+use std::mem;
 
 use nu_protocol::{
     Span,
-    ast::{Argument, Block, Call, Expr, Pipeline, Traverse},
+    ast::{Block, Expr, Pipeline, Traverse},
 };
 
 use crate::{
-    ast::call::CallExt,
+    ast::{call::CallExt, string::StringFormat},
     config::LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
@@ -14,57 +14,6 @@ use crate::{
 };
 
 const MIN_CONSECUTIVE_PRINTS: usize = 3;
-
-/// The type and content of a string in a print statement.
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum StringFormat {
-    /// Double-quoted string literal: `"text"`
-    Double(String),
-    /// Single-quoted string literal: `'text'`
-    Single(String),
-    /// Raw string: `r#'text'#`
-    Raw(String),
-    /// Bare word string: `text` (no quotes)
-    BareWord(String),
-    /// String interpolation with double quotes: `$"text ($var)"`
-    InterpolationDouble(String),
-    /// String interpolation with single quotes: `$'text ($var)'`
-    InterpolationSingle(String),
-    /// Backtick string: `` `text` `` (used for paths/commands, has different
-    /// semantics)
-    Backtick(String),
-}
-
-impl StringFormat {
-    fn content(&self) -> &str {
-        match self {
-            Self::Double(s)
-            | Self::Single(s)
-            | Self::Raw(s)
-            | Self::BareWord(s)
-            | Self::InterpolationDouble(s)
-            | Self::InterpolationSingle(s)
-            | Self::Backtick(s) => s,
-        }
-    }
-
-    const fn is_compatible(&self, other: &Self) -> bool {
-        use StringFormat::{
-            BareWord, Double, InterpolationDouble, InterpolationSingle, Raw, Single,
-        };
-        matches!(
-            (self, other),
-            // Plain strings (Double, Single, Raw, BareWord) can all be merged together
-            (Double(_) | Single(_) | Raw(_) | BareWord(_), Double(_) | Single(_) | Raw(_) | BareWord(_))
-                // Interpolations must match quote style
-                | (InterpolationDouble(_), InterpolationDouble(_))
-                | (InterpolationSingle(_), InterpolationSingle(_)) /* Backtick strings are never
-                                                                    * compatible for merging
-                                                                    * as they have different
-                                                                    * semantics */
-        )
-    }
-}
 
 /// Information extracted from a single `print` statement.
 #[derive(Debug, Clone)]
@@ -99,61 +48,13 @@ impl PrintInfo {
         }
 
         let to_stderr = call.has_named_flag("stderr") || call.has_named_flag("e");
-        let string_type = Self::extract_string_content(call, context)?;
+        let string_type = StringFormat::from_call_arg(call, context)?;
 
         Some(Self {
             span: element.expr.span,
             string_type,
             to_stderr,
         })
-    }
-
-    /// Extracts the string content directly from the AST.
-    fn extract_string_content(call: &Call, context: &LintContext) -> Option<StringFormat> {
-        let expr = call.arguments.iter().find_map(|arg| match arg {
-            Argument::Positional(e) | Argument::Unknown(e) => Some(e),
-            _ => None,
-        })?;
-
-        match &expr.expr {
-            Expr::String(s) => {
-                // Detect quote style from source
-                let bytes = context.working_set.get_span_contents(expr.span);
-                let source = from_utf8(bytes).unwrap_or("");
-
-                if source.starts_with('`') {
-                    Some(StringFormat::Backtick(s.clone()))
-                } else if source.starts_with('"') {
-                    Some(StringFormat::Double(s.clone()))
-                } else if source.starts_with('\'') {
-                    Some(StringFormat::Single(s.clone()))
-                } else if source.starts_with("r#") || source.starts_with("r'") {
-                    // This case should be handled by Expr::RawString, but check defensively
-                    Some(StringFormat::Raw(s.clone()))
-                } else {
-                    // Bare word (no quotes)
-                    Some(StringFormat::BareWord(s.clone()))
-                }
-            }
-            Expr::RawString(s) => Some(StringFormat::Raw(s.clone())),
-            Expr::StringInterpolation(_) => {
-                // For interpolations, extract from source and detect quote style
-                let bytes = context.working_set.get_span_contents(expr.span);
-                let source = from_utf8(bytes).unwrap_or("");
-
-                let single_quote = source
-                    .strip_prefix("$'")
-                    .and_then(|s| s.strip_suffix('\''))
-                    .map(|stripped| StringFormat::InterpolationSingle(stripped.to_string()));
-
-                source
-                    .strip_prefix("$\"")
-                    .and_then(|s| s.strip_suffix('"'))
-                    .map(|stripped| StringFormat::InterpolationDouble(stripped.to_string()))
-                    .or(single_quote)
-            }
-            _ => None,
-        }
     }
 }
 

@@ -2,27 +2,26 @@
 //!
 //! Adds systemd journal log level prefixes to print/echo statements.
 
-use nu_protocol::{
-    Span,
-    ast::{Block, Expr, Expression, Traverse},
-};
+use nu_protocol::ast::{Block, Expr, Expression, Traverse};
 
 use super::{
     LogLevel, PrefixStatus, extract_first_string_part, is_print_or_echo, pipeline_contains_print,
 };
 use crate::{
     LintLevel,
-    ast::{call::CallExt, expression::ExpressionExt},
+    ast::{call::CallExt, expression::ExpressionExt, string::StringFormat},
     context::LintContext,
     rule::{DetectFix, Rule},
     rules::systemd::strip_keyword_prefix,
     violation::{Detection, Fix, Replacement},
 };
 
-/// Semantic fix data: stores the argument span and detected log level
+/// Semantic fix data: stores the string format and detected log level
 pub struct FixData {
-    /// Span of the argument expression to replace
-    arg_span: Span,
+    /// String format of the argument
+    string_format: StringFormat,
+    /// Span of the argument to replace
+    arg_span: nu_protocol::Span,
     /// Detected log level from message content
     level: LogLevel,
 }
@@ -38,6 +37,7 @@ fn check_print_or_echo_call(expr: &Expression, ctx: &LintContext) -> Option<(Det
     }
 
     let arg_expr = call.get_first_positional_arg()?;
+    let string_format = StringFormat::from_expression(arg_expr, ctx)?;
     let message_content = extract_first_string_part(arg_expr, ctx)?;
 
     match PrefixStatus::check(&message_content) {
@@ -47,17 +47,18 @@ fn check_print_or_echo_call(expr: &Expression, ctx: &LintContext) -> Option<(Det
                 .with_primary_label("print/echo without journal prefix")
                 .with_help(format!(
                     "Add <{}> prefix for systemd journal logging",
-                    level.keyword()
+                    level.numeric_str()
                 ));
 
             let fix_data = FixData {
+                string_format,
                 arg_span: arg_expr.span,
                 level,
             };
 
             Some((detected, fix_data))
         }
-        PrefixStatus::Numeric(_) | PrefixStatus::Valid => None,
+        PrefixStatus::Valid => None,
     }
 }
 
@@ -133,34 +134,14 @@ impl DetectFix for AddJournalPrefix {
         results
     }
 
-    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        // Get the original argument text to build fix
-        let arg_text = context.get_span_text(fix_data.arg_span);
-
-        // Determine string delimiter used
-        let (prefix, suffix) = if arg_text.starts_with("$\"") {
-            ("$\"", "\"")
-        } else if arg_text.starts_with('"') {
-            ("\"", "\"")
-        } else if arg_text.starts_with('\'') {
-            ("'", "'")
-        } else {
-            ("\"", "\"")
-        };
-
-        // Build the fixed string with prefix, stripping any existing keyword prefix
-        let inner = arg_text
-            .strip_prefix(prefix)
-            .and_then(|s| s.strip_suffix(suffix))
-            .unwrap_or(arg_text);
-
-        // Strip existing keyword prefixes like "Error:", "Warning:", etc.
-        let cleaned = strip_keyword_prefix(inner);
-
-        let fixed = format!("{prefix}<{}>{cleaned}{suffix}", fix_data.level.keyword());
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let original_content = fix_data.string_format.content();
+        let cleaned = strip_keyword_prefix(original_content);
+        let new_content = format!("<{}>{cleaned}", fix_data.level.numeric_str());
+        let fixed = fix_data.string_format.reconstruct(&new_content);
 
         Some(Fix::with_explanation(
-            format!("Add <{}> prefix", fix_data.level.keyword()),
+            format!("Add <{}> prefix", fix_data.level.numeric_str()),
             vec![Replacement::new(fix_data.arg_span, fixed)],
         ))
     }

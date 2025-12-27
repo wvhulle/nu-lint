@@ -137,7 +137,6 @@ pub const ALL_RULES: &[&dyn Rule] = &[
     strong_typing::paths::RULE,
     strong_typing::pipeline::RULE,
     systemd::add_journal_prefix::RULE,
-    systemd::mnemonic_log_level::RULE,
     try_instead_of_do::RULE,
     unnecessary_mut::RULE,
     unnecessary_variable_before_return::RULE,

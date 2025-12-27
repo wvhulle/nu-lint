@@ -88,9 +88,9 @@ impl Cli {
         let config = Self::load_config(self.config.clone());
         let engine = LintEngine::new(config);
 
-        let violations  = if self.stdin {
+        let violations = if self.stdin {
             let source = Self::read_stdin();
-            engine.lint_stdin(&source) 
+            engine.lint_stdin(&source)
         } else {
             let files = collect_nu_files(&self.paths);
             if files.is_empty() {

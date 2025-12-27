@@ -3,10 +3,7 @@
 //! This module contains rules for ensuring proper systemd compatibility,
 //! particularly for journal log level prefixes.
 
-mod journal_prefix;
-
 pub mod add_journal_prefix;
-pub mod mnemonic_log_level;
 
 use nu_protocol::ast::{self, Expr, Expression};
 
@@ -60,20 +57,6 @@ impl LogLevel {
         ("trace", Self::Debug),
     ];
 
-    /// Returns the standard keyword representation for this level.
-    pub const fn keyword(self) -> &'static str {
-        match self {
-            Self::Emergency => "emerg",
-            Self::Alert => "alert",
-            Self::Critical => "crit",
-            Self::Error => "err",
-            Self::Warning => "warning",
-            Self::Notice => "notice",
-            Self::Info => "info",
-            Self::Debug => "debug",
-        }
-    }
-
     /// Returns the numeric string representation for this level.
     pub const fn numeric_str(self) -> &'static str {
         match self {
@@ -104,11 +87,6 @@ impl LogLevel {
                 .find(|(kw, _)| *kw == s)
                 .map(|(_, level)| *level),
         }
-    }
-
-    /// Returns true if the string is a numeric prefix (0-7).
-    pub fn is_numeric(s: &str) -> bool {
-        matches!(s, "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7")
     }
 
     /// Detects an appropriate log level based on message content.
@@ -143,9 +121,7 @@ impl LogLevel {
 pub enum PrefixStatus {
     /// No prefix found - needs to be added.
     Missing,
-    /// Numeric prefix found (e.g., `<3>`) - should use keyword instead.
-    Numeric(LogLevel),
-    /// Valid keyword prefix found - no action needed.
+    /// Valid numeric prefix found (e.g., `<3>`) - no action needed.
     Valid,
 }
 
@@ -162,7 +138,6 @@ impl PrefixStatus {
         };
 
         match LogLevel::parse(prefix) {
-            Some(level) if LogLevel::is_numeric(prefix) => Self::Numeric(level),
             Some(_) => Self::Valid,
             None => Self::Missing,
         }

@@ -39,13 +39,11 @@ fn has_doc_comment_before(context: &LintContext, span: nu_protocol::Span) -> boo
 }
 
 fn check_exported_function(call: &Call, context: &LintContext) -> Option<Detection> {
-    let decl_name = call.get_call_name(context);
+    let func_def = call.custom_command_def(context)?;
 
-    if decl_name != "export def" {
+    if !func_def.is_exported() {
         return None;
     }
-
-    let (func_name, name_span) = call.extract_declaration_name(context)?;
 
     let has_docs = has_doc_comment_before(context, call.head);
 
@@ -54,14 +52,18 @@ fn check_exported_function(call: &Call, context: &LintContext) -> Option<Detecti
     } else {
         Some(
             Detection::from_global_span(
-                format!("Exported function '{func_name}' lacks documentation comment"),
+                format!(
+                    "Exported function '{}' lacks documentation comment",
+                    func_def.name
+                ),
                 call.head,
             )
             .with_primary_label("missing doc comment")
-            .with_extra_label("exported function", name_span)
+            .with_extra_label("exported function", func_def.name_span)
             .with_help(format!(
                 "Add a documentation comment (starting with #) above the export.\nExample:\n  # \
-                 Description of what this function does\n  export def {func_name} [] {{ ... }}"
+                 Description of what this function does\n  export def {} [] {{ ... }}",
+                func_def.name
             )),
         )
     }

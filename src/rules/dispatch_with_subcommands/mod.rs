@@ -130,18 +130,13 @@ impl DetectFix for DispatchWithSubcommands {
                 return vec![];
             };
 
-            let is_def = matches!(def_call.get_call_name(ctx).as_str(), "def" | "export def");
-            let is_main = def_call
-                .extract_function_definition(ctx)
-                .is_some_and(|def| def.name == "main");
-
-            if !is_def || !is_main {
-                return vec![];
-            }
-
-            let Some(def) = def_call.extract_function_definition(ctx) else {
+            let Some(def) = def_call.custom_command_def(ctx) else {
                 return vec![];
             };
+
+            if !def.is_main() {
+                return vec![];
+            }
 
             extract_optional_string_param(def_call, ctx)
                 .and_then(|param| {

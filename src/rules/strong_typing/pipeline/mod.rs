@@ -186,7 +186,7 @@ fn shape_to_string(shape: &nu_protocol::SyntaxShape) -> String {
 }
 
 fn detect_def_call(call: &Call, ctx: &LintContext) -> Vec<(Detection, FixData)> {
-    let Some(def) = call.extract_function_definition(ctx) else {
+    let Some(def) = call.custom_command_def(ctx) else {
         return vec![];
     };
     log::debug!(

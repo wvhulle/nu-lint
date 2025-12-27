@@ -7,19 +7,29 @@ use super::{block::BlockExt, expression::ExpressionExt};
 use crate::{ast::span::SpanExt, context::LintContext};
 
 #[derive(Debug, Clone)]
-pub struct FunctionDefinition {
+pub struct CustomCommandDef {
     pub body: BlockId,
     pub name: String,
     pub name_span: Span,
+    pub export_span: Option<Span>,
 }
 
-impl FunctionDefinition {
-    const fn new(body: BlockId, name: String, name_span: Span) -> Self {
+impl CustomCommandDef {
+    const fn new(body: BlockId, name: String, name_span: Span, export_span: Option<Span>) -> Self {
         Self {
             body,
             name,
             name_span,
+            export_span,
         }
+    }
+
+    pub fn is_main(&self) -> bool {
+        self.name == "main" || self.name.starts_with("main ")
+    }
+
+    pub const fn is_exported(&self) -> bool {
+        self.export_span.is_some()
     }
 }
 
@@ -62,9 +72,12 @@ pub trait CallExt {
     /// ("foo", span)
     fn extract_declaration_name(&self, context: &LintContext) -> Option<(String, Span)>;
     #[must_use]
-    /// Extracts function definition. Example: `def process [] { ls }` returns
-    /// `FunctionDefinition` with body block, name "process", and name span
-    fn extract_function_definition(&self, context: &LintContext) -> Option<FunctionDefinition>;
+    /// Extracts function definition from `def` or `export def` calls.
+    /// Returns `None` for non-function calls or malformed definitions.
+    /// Example: `export def main [] { print "hello" }` returns
+    /// `FunctionDefinition` with `.is_exported()` returning `true`,
+    /// `export_span`, `name="main"`, body block, etc.
+    fn custom_command_def(&self, context: &LintContext) -> Option<CustomCommandDef>;
     #[must_use]
     /// Extracts variable declaration. Example: `let x = 5` returns `(var_id,
     /// "x", span)`
@@ -240,11 +253,14 @@ impl CallExt for Call {
         Some((name.to_string(), name_arg.span))
     }
 
-    fn extract_function_definition(&self, context: &LintContext) -> Option<FunctionDefinition> {
+    fn custom_command_def(&self, context: &LintContext) -> Option<CustomCommandDef> {
         let decl_name = self.get_call_name(context);
-        if !matches!(decl_name.as_str(), "def" | "export def") {
-            return None;
-        }
+
+        let is_exported = match decl_name.as_str() {
+            "export def" => true,
+            "def" => false,
+            _ => return None,
+        };
 
         let name_arg = self.get_first_positional_arg()?;
         let name = match &name_arg.expr {
@@ -255,7 +271,14 @@ impl CallExt for Call {
         let body_expr = self.get_positional_arg(2)?;
         let block_id = body_expr.extract_block_id()?;
 
-        Some(FunctionDefinition::new(block_id, name, name_arg.span))
+        let export_span = is_exported.then(|| Span::new(self.head.start, self.head.start + 7));
+
+        Some(CustomCommandDef::new(
+            block_id,
+            name,
+            name_arg.span,
+            export_span,
+        ))
     }
 
     fn extract_variable_declaration(

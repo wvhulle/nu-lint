@@ -274,7 +274,7 @@ fn extract_function_body(
         .flat_map(|pipeline| &pipeline.elements)
         .filter_map(|element| element.expr.extract_call())
         .find_map(|call| {
-            let def = call.extract_function_definition(context)?;
+            let def = call.custom_command_def(context)?;
             if def.name != decl_name {
                 return None;
             }
@@ -416,7 +416,7 @@ fn find_function_definition_span(
             _ => None,
         })
         .find_map(|call| {
-            let def = call.extract_function_definition(context)?;
+            let def = call.custom_command_def(context)?;
             if def.name != function_name {
                 return None;
             }

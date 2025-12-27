@@ -9,14 +9,13 @@ use crate::{
 };
 
 fn check_main_function(call: &Call, context: &LintContext) -> Vec<Detection> {
-    let (_func_name, _name_span) = match call.extract_declaration_name(context) {
-        Some((name, span)) if name == "main" => (name, span),
-        _ => return vec![],
-    };
-
-    let Some(def) = call.extract_function_definition(context) else {
+    let Some(def) = call.custom_command_def(context) else {
         return vec![];
     };
+
+    if !def.is_main() {
+        return vec![];
+    }
 
     let block = context.working_set.get_block(def.body);
     let signature = &block.signature;
@@ -124,11 +123,11 @@ impl DetectFix for MainPositionalArgsDocs {
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         Self::no_fix(context.detect(|expr, ctx| {
-            if let Expr::Call(call) = &expr.expr {
-                let decl_name = call.get_call_name(ctx);
-                if decl_name == "def" {
-                    return check_main_function(call, ctx);
-                }
+            if let Expr::Call(call) = &expr.expr
+                && let Some(func_def) = call.custom_command_def(ctx)
+                && !func_def.is_exported()
+            {
+                return check_main_function(call, ctx);
             }
             vec![]
         }))

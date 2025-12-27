@@ -1,0 +1,35 @@
+use super::RULE;
+
+#[test]
+fn test_fix_removes_export_keyword() {
+    let bad_code = r"
+export def main [] {
+    print 'Hello'
+}
+";
+    RULE.assert_detects(bad_code);
+    RULE.assert_fix_explanation_contains(bad_code, "Remove 'export'");
+    RULE.assert_replacement_erases(bad_code, "export");
+}
+
+#[test]
+fn test_fix_removes_export_from_subcommand() {
+    let bad_code = r#"
+export def "main test" [] {
+    print "Testing"
+}
+"#;
+    RULE.assert_detects(bad_code);
+    RULE.assert_fix_explanation_contains(bad_code, "main test");
+    RULE.assert_replacement_erases(bad_code, "export");
+}
+
+#[test]
+fn test_fix_explanation_contains_function_name() {
+    let bad_code = r"
+export def main [] {
+    print 'Hello'
+}
+";
+    RULE.assert_fix_explanation_contains(bad_code, "main");
+}

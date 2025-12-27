@@ -27,16 +27,14 @@ fn check(context: &LintContext) -> Vec<Detection> {
             return vec![];
         };
 
-        let decl_name = call.get_call_name(ctx);
-        if !matches!(decl_name.as_str(), "def" | "export def") {
-            return vec![];
-        }
-
-        let Some((raw_cmd_name, name_span)) = call.extract_declaration_name(ctx) else {
+        let Some(func_def) = call.custom_command_def(ctx) else {
             return vec![];
         };
 
-        let cmd_name = strip_quotes(&raw_cmd_name);
+        let raw_cmd_name = &func_def.name;
+        let name_span = func_def.name_span;
+
+        let cmd_name = strip_quotes(raw_cmd_name);
         let kebab_case_name = to_kebab_case_preserving_spaces(cmd_name);
 
         if cmd_name == kebab_case_name {

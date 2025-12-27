@@ -30,7 +30,7 @@ fn collect_function_definitions_with_spans(
         context.working_set,
         &|expr| {
             if let Expr::Call(call) = &expr.expr
-                && let Some(def) = call.extract_function_definition(context)
+                && let Some(def) = call.custom_command_def(context)
             {
                 vec![(def.name, (def.body, expr.span))]
             } else {

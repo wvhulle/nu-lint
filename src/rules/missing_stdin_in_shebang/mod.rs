@@ -149,7 +149,7 @@ fn check_main_function(
         _ => return vec![],
     };
 
-    let Some(def) = call.extract_function_definition(context) else {
+    let Some(def) = call.custom_command_def(context) else {
         return vec![];
     };
 

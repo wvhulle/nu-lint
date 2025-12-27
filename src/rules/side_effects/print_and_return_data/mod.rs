@@ -82,7 +82,7 @@ fn returns_data(block: &Block, context: &LintContext) -> bool {
 }
 
 fn check_function_definition(call: &Call, context: &LintContext) -> Option<Detection> {
-    let def = call.extract_function_definition(context)?;
+    let def = call.custom_command_def(context)?;
 
     if def.name == "main" {
         return None;
@@ -135,7 +135,7 @@ impl DetectFix for PrintAndReturnData {
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let violations = context.detect(|expr, ctx| {
             if let Expr::Call(call) = &expr.expr
-                && call.extract_function_definition(ctx).is_some()
+                && call.custom_command_def(ctx).is_some()
             {
                 return check_function_definition(call, ctx).into_iter().collect();
             }

@@ -28,6 +28,7 @@ mod merge_get_cell_path;
 mod merge_multiline_print;
 mod missing_stdin_in_shebang;
 mod naming;
+mod no_export_main;
 mod non_final_failure_check;
 mod parse_instead_of_split;
 mod positional_to_pipeline;
@@ -92,6 +93,7 @@ pub const ALL_RULES: &[&dyn Rule] = &[
     naming::kebab_case_commands::RULE,
     naming::screaming_snake_constants::RULE,
     naming::snake_case_variables::RULE,
+    no_export_main::RULE,
     non_final_failure_check::RULE,
     parse_instead_of_split::RULE,
     positional_to_pipeline::RULE,

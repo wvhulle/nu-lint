@@ -204,12 +204,7 @@ impl DetectFix for PreferPathType {
                 return vec![];
             };
 
-            let decl = ctx.working_set.get_decl(call.decl_id);
-            if !matches!(decl.name(), "def" | "export def") {
-                return vec![];
-            }
-
-            let Some(def) = call.extract_function_definition(ctx) else {
+            let Some(def) = call.custom_command_def(ctx) else {
                 return vec![];
             };
 

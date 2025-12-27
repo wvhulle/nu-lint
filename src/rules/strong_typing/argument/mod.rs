@@ -134,9 +134,8 @@ fn detect_signature(
 }
 
 fn detect_def_call(call: &Call, ctx: &LintContext) -> Vec<(Detection, FixData)> {
-    let decl = ctx.working_set.get_decl(call.decl_id);
-
-    (decl.name() == "def" || decl.name() == "export def")
+    call.custom_command_def(ctx)
+        .is_some()
         .then(|| {
             call.get_positional_arg(1)
                 .zip(call.get_positional_arg(2))

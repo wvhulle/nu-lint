@@ -225,7 +225,7 @@ impl<'a> LintContext<'a> {
                 let Expr::Call(call) = &expr.expr else {
                     return vec![];
                 };
-                call.extract_function_definition(self)
+                call.custom_command_def(self)
                     .map(|def| (def.body, def.name))
                     .into_iter()
                     .collect()

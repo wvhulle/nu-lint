@@ -73,7 +73,7 @@ impl Summary {
     }
 }
 
-pub(super) fn read_source_code(file: Option<&SourceFile>) -> String {
+pub fn read_source_code(file: Option<&SourceFile>) -> String {
     file.and_then(|f| f.as_path())
         .and_then(|path| fs::read_to_string(path).ok())
         .unwrap_or_default()

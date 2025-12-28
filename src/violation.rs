@@ -138,22 +138,6 @@ impl Detection {
         self.extra_labels.push((LintSpan::from(span), None));
         self
     }
-
-    #[must_use]
-    pub fn with_notes<I, S>(mut self, notes: I) -> Self
-    where
-        I: IntoIterator<Item = S>,
-        S: Into<Cow<'static, str>>,
-    {
-        self.notes = notes.into_iter().map(Into::into).collect();
-        self
-    }
-
-    #[must_use]
-    pub fn with_note(mut self, note: impl Into<Cow<'static, str>>) -> Self {
-        self.notes.push(note.into());
-        self
-    }
 }
 
 /// A lint violation with its full diagnostic information (after fix is
@@ -171,7 +155,6 @@ pub struct Violation {
     pub primary_label: Option<Cow<'static, str>>,
     pub extra_labels: Vec<(LintSpan, Option<String>)>,
     pub help: Option<Cow<'static, str>>,
-    pub notes: Vec<Cow<'static, str>>,
     pub fix: Option<Fix>,
     pub(crate) file: Option<SourceFile>,
     pub(crate) source: Option<Cow<'static, str>>,
@@ -188,7 +171,6 @@ impl Violation {
             primary_label: detected.primary_label,
             extra_labels: detected.extra_labels,
             help: detected.help,
-            notes: detected.notes,
             fix,
             file: None,
             source: None,
@@ -215,13 +197,6 @@ impl Violation {
     #[must_use]
     pub fn file_span(&self) -> FileSpan {
         self.span.file_span()
-    }
-
-    /// Get extra labels as file-relative spans. Panics if not normalized.
-    pub fn extra_labels_file_spans(&self) -> impl Iterator<Item = (FileSpan, Option<&String>)> {
-        self.extra_labels
-            .iter()
-            .map(|(span, label)| (span.file_span(), label.as_ref()))
     }
 
     /// Normalize all spans to be file-relative (called by engine before output)

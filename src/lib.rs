@@ -5,15 +5,15 @@
 
 mod ast;
 pub mod cli;
-pub mod config;
+mod config;
 mod context;
 mod effect;
 mod engine;
 mod external_commands;
-pub mod fix;
-pub mod log;
-pub mod lsp;
-pub mod output;
+mod fix;
+mod log;
+mod lsp;
+mod output;
 mod rule;
 mod rules;
 mod span;
@@ -23,15 +23,13 @@ use std::{error::Error, fmt, io, path::PathBuf};
 
 pub use config::{Config, LintLevel};
 pub use engine::LintEngine;
-pub use span::{FileSpan, LintSpan};
 use toml::de;
-pub use violation::Violation;
-pub(crate) use violation::{Fix, Replacement};
+use violation::{Fix, Replacement};
 
-pub const NU_PARSER_VERSION: &str = env!("NU_PARSER_VERSION");
+const NU_PARSER_VERSION: &str = env!("NU_PARSER_VERSION");
 
 #[derive(Debug)]
-pub enum LintError {
+enum LintError {
     Io { path: PathBuf, source: io::Error },
     Config { source: de::Error },
 }

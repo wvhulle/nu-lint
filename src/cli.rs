@@ -146,16 +146,9 @@ impl Cli {
 
         let violations = engine.lint_files(&files);
 
-        match apply_fixes(&violations, false, engine) {
-            Ok(results) => {
-                let output = format_fix_results(&results, false);
-                print!("{output}");
-            }
-            Err(e) => {
-                eprintln!("Error applying fixes: {e}");
-                process::exit(1);
-            }
-        }
+        let results = apply_fixes(&violations, false, engine);
+        let output = format_fix_results(&results, false);
+        print!("{output}");
     }
 
     fn list_rules() {

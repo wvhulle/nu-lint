@@ -1,9 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
-    env::current_dir,
     fs,
     path::{Path, PathBuf},
-    process,
 };
 
 use serde::{Deserialize, Serialize};
@@ -34,7 +32,7 @@ impl Config {
     /// # Errors
     ///
     /// Errors when TOML string is not a valid TOML string.
-    pub fn load_from_str(toml_str: &str) -> Result<Self, LintError> {
+    pub(crate) fn load_from_str(toml_str: &str) -> Result<Self, LintError> {
         toml::from_str(toml_str).map_err(|source| LintError::Config { source })
     }
     /// Load configuration from a TOML file.
@@ -43,26 +41,12 @@ impl Config {
     ///
     /// Returns an error if the file cannot be read or if the TOML content is
     /// invalid.
-    pub fn load_from_file(path: &Path) -> Result<Self, LintError> {
+    pub(crate) fn load_from_file(path: &Path) -> Result<Self, LintError> {
         let content = fs::read_to_string(path).map_err(|source| LintError::Io {
             path: path.to_path_buf(),
             source,
         })?;
         Self::load_from_str(&content)
-    }
-
-    /// Load configuration from file or use defaults
-    #[must_use]
-    pub fn load(config_path: Option<&PathBuf>) -> Self {
-        config_path
-            .cloned()
-            .or_else(find_config_file)
-            .map_or_else(Self::default, |path| {
-                Self::load_from_file(&path).unwrap_or_else(|e| {
-                    eprintln!("Error loading config from {}: {e}", path.display());
-                    process::exit(2);
-                })
-            })
     }
 
     /// Get the effective lint level for a specific rule
@@ -117,14 +101,6 @@ pub fn find_config_file_from(start_dir: &Path) -> Option<PathBuf> {
     }
 
     None
-}
-
-/// Search for .nu-lint.toml in current directory and parent directories
-#[must_use]
-pub fn find_config_file() -> Option<PathBuf> {
-    current_dir()
-        .ok()
-        .and_then(|dir| find_config_file_from(&dir))
 }
 
 #[cfg(test)]

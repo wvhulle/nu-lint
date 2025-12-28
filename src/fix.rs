@@ -1,9 +1,8 @@
-use std::{collections::HashMap, fmt::Write, fs, io::Error as IoError, path::PathBuf};
+use std::{collections::HashMap, fmt::Write, fs, io::Error as IoError, path::PathBuf, vec::Vec};
 
 use similar::{ChangeTag, TextDiff};
 
 use crate::{
-    LintError,
     engine::LintEngine,
     violation::{Fix, Violation},
 };
@@ -57,15 +56,13 @@ pub fn apply_fixes(
     violations: &[Violation],
     dry_run: bool,
     lint_engine: &LintEngine,
-) -> Result<Vec<FixResult>, LintError> {
-    let results = group_violations_by_file(violations)
+) -> Vec<FixResult> {
+    group_violations_by_file(violations)
         .into_iter()
         .filter_map(|(file_path, _file_violations)| {
             apply_fix_to_file(&file_path, dry_run, lint_engine).ok()
         })
-        .collect();
-
-    Ok(results)
+        .collect()
 }
 
 /// Apply fixes to a single file iteratively
@@ -399,7 +396,6 @@ mod tests {
             primary_label: None,
             extra_labels: vec![],
             help: None,
-            notes: vec![],
             fix: Some(fix),
             file: Some(SourceFile::from("test.nu")),
             source: None,
@@ -545,7 +541,6 @@ mod tests {
             primary_label: None,
             extra_labels: vec![],
             help: None,
-            notes: vec![],
             fix: Some(fix),
             file: Some(SourceFile::from("test.nu")),
             source: None,
@@ -560,7 +555,6 @@ mod tests {
             primary_label: None,
             extra_labels: vec![],
             help: None,
-            notes: vec![],
             fix: None,
             file: Some(SourceFile::from("test.nu")),
             source: None,
@@ -582,7 +576,6 @@ mod tests {
             primary_label: None,
             extra_labels: vec![],
             help: None,
-            notes: vec![],
             fix: None,
             file: Some(SourceFile::from("file1.nu")),
             source: None,
@@ -597,7 +590,6 @@ mod tests {
             primary_label: None,
             extra_labels: vec![],
             help: None,
-            notes: vec![],
             fix: None,
             file: Some(SourceFile::from("file2.nu")),
             source: None,
@@ -612,7 +604,6 @@ mod tests {
             primary_label: None,
             extra_labels: vec![],
             help: None,
-            notes: vec![],
             fix: None,
             file: Some(SourceFile::from("file1.nu")),
             source: None,

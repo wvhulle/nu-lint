@@ -23,6 +23,7 @@ use std::{error::Error, fmt, io, path::PathBuf};
 
 pub use config::{Config, LintLevel};
 pub use engine::LintEngine;
+pub use fix::apply_fixes_iteratively;
 use toml::de;
 use violation::{Fix, Replacement};
 

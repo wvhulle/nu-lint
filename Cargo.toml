@@ -115,4 +115,4 @@ toml = "0.8"
 
 [[bench]]
 harness = false
-name = "lint_performance"
+name = "speed"

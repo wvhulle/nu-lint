@@ -75,14 +75,14 @@ cargo fmt
 Quick benchmark for performance testing:
 
 ```bash
-cargo bench --bench lint_performance lint_small_file
+cargo bench --bench speed lint
 ```
 
-Comparative benchmarks
+Comparative benchmarks against a baseline:
 
 ```bash
 git checkout main
-cargo bench --bench lint_performance lint_with_violations -- --save-baseline main
-git checkout branch
-cargo bench --bench lint_performance lint_with_violations -- --baseline main
+cargo bench --bench speed -- --save-baseline main
+git checkout your-branch
+cargo bench --bench speed -- --baseline main
 ```

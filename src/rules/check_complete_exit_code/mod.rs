@@ -79,7 +79,7 @@ fn extract_command_name(cmd_expr: &Expression, context: &LintContext) -> String 
     }
 }
 
-fn has_dangerous_external_command(expr: &Expression, context: &LintContext) -> bool {
+fn has_external_command_with_likely_errors(expr: &Expression, context: &LintContext) -> bool {
     use nu_protocol::ast::Traverse;
 
     expr.find_map(context.working_set, &|inner| {
@@ -88,14 +88,12 @@ fn has_dangerous_external_command(expr: &Expression, context: &LintContext) -> b
         };
 
         let cmd_name = extract_command_name(cmd_expr, context);
-        let is_dangerous = has_external_side_effect(
+        if has_external_side_effect(
             &cmd_name,
-            ExternEffect::CommonEffect(CommonEffect::Dangerous),
+            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
             context,
             args,
-        );
-
-        if is_dangerous {
+        ) {
             FindMapResult::Found(())
         } else {
             FindMapResult::Continue
@@ -112,15 +110,19 @@ fn try_extract_complete_assignment(
         return None;
     };
 
-    matches!(call.get_call_name(context).as_str(), "let" | "mut").then_some(())?;
+    if !matches!(call.get_call_name(context).as_str(), "let" | "mut") {
+        return None;
+    }
 
     let (var_id, var_name, _) = call.extract_variable_declaration(context)?;
     let value_arg = call.get_positional_arg(1)?;
 
-    has_complete_call(value_arg, context).then_some(())?;
+    if !has_complete_call(value_arg, context) {
+        return None;
+    }
 
-    if !has_dangerous_external_command(value_arg, context) {
-        log::debug!("Skipping '{var_name}' - external command is not marked as dangerous");
+    if !has_external_command_with_likely_errors(value_arg, context) {
+        log::debug!("Skipping '{var_name}' - external command not marked as likely to error");
         return None;
     }
 
@@ -147,7 +149,10 @@ fn collect_complete_assignments(context: &LintContext) -> HashMap<VarId, Complet
         &mut assignments,
     );
 
-    assignments.into_iter().map(|a| (a.var_id, a)).collect()
+    assignments
+        .into_iter()
+        .map(|assignment| (assignment.var_id, assignment))
+        .collect()
 }
 
 fn collect_exit_code_checks(context: &LintContext) -> HashMap<VarId, Span> {
@@ -163,49 +168,52 @@ fn collect_exit_code_checks(context: &LintContext) -> HashMap<VarId, Span> {
     checks.into_iter().collect()
 }
 
+fn is_exit_code_checked(
+    assignment: &CompleteAssignment,
+    exit_code_checks: &HashMap<VarId, Span>,
+) -> bool {
+    assignment.exit_code_checked_inline || exit_code_checks.contains_key(&assignment.var_id)
+}
+
 fn is_exit_code_unchecked(
     assignment: &CompleteAssignment,
     exit_code_checks: &HashMap<VarId, Span>,
 ) -> bool {
-    if assignment.exit_code_checked_inline {
-        log::debug!(
-            "Skipping variable {:?} - exit_code checked in assignment",
-            assignment.var_id
-        );
-        return false;
+    let checked = is_exit_code_checked(assignment, exit_code_checks);
+
+    if checked {
+        let reason = if assignment.exit_code_checked_inline {
+            "exit_code checked in assignment"
+        } else {
+            "exit_code checked via variable reference"
+        };
+        log::debug!("Skipping variable {:?} - {reason}", assignment.var_id);
     }
 
-    if exit_code_checks.contains_key(&assignment.var_id) {
-        log::debug!(
-            "Skipping variable {:?} - exit_code checked via variable reference",
-            assignment.var_id
-        );
-        return false;
-    }
-
-    true
+    !checked
 }
 
 fn create_violation(assignment: &CompleteAssignment) -> Detection {
     let cmd_desc = assignment
         .command_name
-        .as_ref()
-        .map_or(String::new(), |c| format!("'{c}' "));
+        .as_deref()
+        .map_or_else(String::new, |cmd| format!("'{cmd}' "));
 
-    Detection::from_global_span(
-        format!(
-            "External command {cmd_desc}result '{}' stored but exit code not checked",
-            assignment.var_name
-        ),
-        assignment.span,
-    )
-    .with_primary_label("without exit_code check")
-    .with_help(format!(
+    let message = format!(
+        "External command {cmd_desc}result '{}' stored but exit code not checked",
+        assignment.var_name
+    );
+
+    let help_message = format!(
         "Check the exit code to handle command failures. For example:\nif ${}.exit_code != 0 \
          {{\n\x20   error make {{msg: '{cmd_desc}failed'}}\n}}\nOr use inline checking:\nlet \
          success = ({cmd_desc}| complete | get exit_code) == 0",
         assignment.var_name
-    ))
+    );
+
+    Detection::from_global_span(message, assignment.span)
+        .with_primary_label("without exit_code check")
+        .with_help(help_message)
 }
 
 struct CheckCompleteExitCode;

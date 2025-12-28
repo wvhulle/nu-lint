@@ -50,10 +50,10 @@ fn check_sequential_print_exit(
     second: &PipelineElement,
     context: &LintContext,
 ) -> Option<ErrorToStdout> {
-    let nu_protocol::ast::Expr::Call(print_call) = &first.expr.expr else {
+    let Expr::Call(print_call) = &first.expr.expr else {
         return None;
     };
-    let nu_protocol::ast::Expr::Call(exit_call) = &second.expr.expr else {
+    let Expr::Call(exit_call) = &second.expr.expr else {
         return None;
     };
     check_print_exit_calls(print_call, exit_call, context)
@@ -69,10 +69,10 @@ fn check_same_pipeline_print_exit(
                 return None;
             };
 
-            let nu_protocol::ast::Expr::Call(print_call) = &first.expr.expr else {
+            let Expr::Call(print_call) = &first.expr.expr else {
                 return None;
             };
-            let nu_protocol::ast::Expr::Call(exit_call) = &second.expr.expr else {
+            let Expr::Call(exit_call) = &second.expr.expr else {
                 return None;
             };
             check_print_exit_calls(print_call, exit_call, context)

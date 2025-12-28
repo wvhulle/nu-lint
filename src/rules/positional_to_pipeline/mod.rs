@@ -5,7 +5,7 @@ use nu_protocol::{
 
 use crate::{
     LintLevel,
-    ast::{call::CallExt, expression::ExpressionExt},
+    ast::{call::CallExt, declaration::CustomCommandDef, expression::ExpressionExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -260,42 +260,8 @@ fn argument_references_variable(arg: &Argument, var_id: VarId) -> bool {
     }
 }
 
-/// Extract the function body from its declaration span for generating specific
-/// suggestions
-fn extract_function_body(
-    decl_name: &str,
-    _param_name: &str,
-    context: &LintContext,
-) -> Option<String> {
-    context
-        .ast
-        .pipelines
-        .iter()
-        .flat_map(|pipeline| &pipeline.elements)
-        .filter_map(|element| match &element.expr.expr {
-            nu_protocol::ast::Expr::Call(call) => Some(call),
-            _ => None,
-        })
-        .find_map(|call| {
-            let def = call.custom_command_def(context)?;
-            if def.name != decl_name {
-                return None;
-            }
-
-            let block = context.working_set.get_block(def.body);
-            let body_text = context.get_span_text(block.span?);
-            let trimmed = body_text.trim();
-
-            Some(
-                trimmed
-                    .strip_prefix('{')
-                    .and_then(|s| s.strip_suffix('}'))
-                    .map_or_else(
-                        || trimmed.to_string(),
-                        |stripped| stripped.trim().to_string(),
-                    ),
-            )
-        })
+fn extract_function_body(decl_name: &str, context: &LintContext) -> Option<String> {
+    find_custom_command_def(decl_name, context).and_then(|def| def.extract_body_text(context))
 }
 
 type ViolationPair = (Detection, FixData);
@@ -396,35 +362,55 @@ fn generate_fix_code_full(
     param: &nu_protocol::PositionalArg,
     context: &LintContext,
 ) -> String {
-    extract_function_body(&signature.name, &param.name, context).map_or_else(
+    let def = find_custom_command_def(&signature.name, context);
+
+    extract_function_body(&signature.name, context).map_or_else(
         || format!("def {} [] {{ ... }}", signature.name),
         |body| {
             let transformed = transform_parameter_to_pipeline_input(&body, &param.name);
-            format!("def {} [] {{ {} }}", signature.name, transformed.trim())
+            let prefix = if def
+                .as_ref()
+                .is_some_and(super::super::ast::declaration::CustomCommandDef::is_exported)
+            {
+                "export def"
+            } else {
+                "def"
+            };
+            format!(
+                "{prefix} {} [] {{ {} }}",
+                signature.name,
+                transformed.trim()
+            )
         },
     )
 }
 
-fn find_function_definition_span(
-    function_name: &str,
-    context: &LintContext,
-) -> Option<nu_protocol::Span> {
+fn find_custom_command_def(function_name: &str, context: &LintContext) -> Option<CustomCommandDef> {
     context
         .ast
         .pipelines
         .iter()
         .flat_map(|pipeline| &pipeline.elements)
         .filter_map(|element| match &element.expr.expr {
-            Expr::Call(call) => Some(call),
+            Expr::Call(call) => call.custom_command_def(context),
             _ => None,
         })
-        .find_map(|call| {
-            let def = call.custom_command_def(context)?;
-            if def.name != function_name {
-                return None;
+        .find(|def| def.name == function_name)
+}
+
+fn find_function_definition_span(function_name: &str, context: &LintContext) -> Option<Span> {
+    context
+        .ast
+        .pipelines
+        .iter()
+        .flat_map(|pipeline| &pipeline.elements)
+        .filter_map(|element| match &element.expr.expr {
+            Expr::Call(call) if call.custom_command_def(context)?.name == function_name => {
+                Some(call.span())
             }
-            Some(call.span())
+            _ => None,
         })
+        .next()
 }
 
 fn create_violation(

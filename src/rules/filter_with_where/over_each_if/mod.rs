@@ -1,12 +1,20 @@
-use nu_protocol::ast::{Argument, Call, Expr, Expression, Traverse};
+use nu_protocol::{
+    Span,
+    ast::{Argument, Call, Expr, Expression, Traverse},
+};
 
 use crate::{
-    LintLevel,
+    Fix, LintLevel, Replacement,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
 };
+
+struct FixData {
+    each_span: Span,
+    condition_span: Span,
+}
 
 fn loop_var_from_each(call: &Call, context: &LintContext) -> Option<String> {
     let first_arg = call.get_first_positional_arg()?;
@@ -26,7 +34,7 @@ fn get_if_then_block(call: &Call) -> Option<&Expression> {
     })
 }
 
-fn if_has_no_else_clause(call: &Call) -> bool {
+const fn if_has_no_else_clause(call: &Call) -> bool {
     call.arguments.len() == 2
 }
 
@@ -45,40 +53,38 @@ fn then_block_returns_loop_var(
             .is_some_and(|name| name == loop_var_name)
 }
 
-fn is_filtering_pattern(
+fn is_filtering_pattern<'a>(
     block_id: nu_protocol::BlockId,
-    context: &LintContext,
+    context: &'a LintContext,
     loop_var_name: &str,
-) -> bool {
+) -> Option<&'a Call> {
     let block = context.working_set.get_block(block_id);
 
     if block.pipelines.len() != 1 || block.pipelines[0].elements.len() != 1 {
-        return false;
+        return None;
     }
 
     let elem = &block.pipelines[0].elements[0];
 
     let Expr::Call(call) = &elem.expr.expr else {
-        return false;
+        return None;
     };
 
     if call.get_call_name(context) != "if" {
-        return false;
+        return None;
     }
 
     if !if_has_no_else_clause(call) {
-        return false;
+        return None;
     }
 
-    let Some(then_block_expr) = get_if_then_block(call) else {
-        return false;
-    };
+    let then_block_expr = get_if_then_block(call)?;
 
     let Expr::Block(then_block_id) = &then_block_expr.expr else {
-        return false;
+        return None;
     };
 
-    then_block_returns_loop_var(*then_block_id, context, loop_var_name)
+    then_block_returns_loop_var(*then_block_id, context, loop_var_name).then_some(call)
 }
 
 fn extract_each_block_id(call: &Call) -> Option<nu_protocol::BlockId> {
@@ -91,43 +97,55 @@ fn extract_each_block_id(call: &Call) -> Option<nu_protocol::BlockId> {
     })
 }
 
-fn check_expression(expr: &Expression, context: &LintContext) -> Vec<Detection> {
-    let Expr::Call(call) = &expr.expr else {
+fn check_expression(expr: &Expression, context: &LintContext) -> Vec<(Detection, FixData)> {
+    let Expr::Call(each_call) = &expr.expr else {
         return vec![];
     };
 
-    if call.get_call_name(context) != "each" {
+    if each_call.get_call_name(context) != "each" {
         return vec![];
     }
 
-    let Some(loop_var_name) = loop_var_from_each(call, context) else {
+    let Some(loop_var_name) = loop_var_from_each(each_call, context) else {
         return vec![];
     };
 
-    let Some(block_id) = extract_each_block_id(call) else {
+    let Some(block_id) = extract_each_block_id(each_call) else {
         return vec![];
     };
 
-    is_filtering_pattern(block_id, context, &loop_var_name)
-        .then(|| {
-            let block = context.working_set.get_block(block_id);
-            let block_span = block.span.unwrap_or(expr.span);
-            Detection::from_global_span(
-                "Consider using 'where' for filtering instead of 'each' with 'if'",
-                expr.span,
-            )
-            .with_primary_label("each with if pattern")
-            .with_extra_label("filtering logic inside closure", block_span)
-            .with_help("Use '$list | where <condition>' for readability")
-        })
-        .into_iter()
-        .collect()
+    let Some(if_call) = is_filtering_pattern(block_id, context, &loop_var_name) else {
+        return vec![];
+    };
+
+    // Extract the condition from the if call (first argument)
+    let Some(condition_expr) = if_call.get_first_positional_arg() else {
+        return vec![];
+    };
+
+    let block = context.working_set.get_block(block_id);
+    let block_span = block.span.unwrap_or(expr.span);
+
+    let detection = Detection::from_global_span(
+        "Consider using 'where' for filtering instead of 'each' with 'if'",
+        expr.span,
+    )
+    .with_primary_label("each with if pattern")
+    .with_extra_label("filtering logic inside closure", block_span)
+    .with_help("Use '$list | where <condition>' for readability");
+
+    let fix_data = FixData {
+        each_span: expr.span,
+        condition_span: condition_expr.span,
+    };
+
+    vec![(detection, fix_data)]
 }
 
 struct WhereInsteadEachThenIf;
 
 impl DetectFix for WhereInsteadEachThenIf {
-    type FixInput<'a> = ();
+    type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
         "where_instead_each_then_if"
@@ -153,7 +171,17 @@ impl DetectFix for WhereInsteadEachThenIf {
             &mut violations,
         );
 
-        Self::no_fix(violations)
+        violations
+    }
+
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let condition = context.get_span_text(fix_data.condition_span);
+        let fix_text = format!("where {condition}");
+
+        Some(Fix::with_explanation(
+            "Replace 'each' with 'if' pattern with 'where' for cleaner filtering",
+            vec![Replacement::new(fix_data.each_span, fix_text)],
+        ))
     }
 }
 
@@ -161,5 +189,7 @@ pub static RULE: &dyn Rule = &WhereInsteadEachThenIf;
 
 #[cfg(test)]
 mod detect_bad;
+#[cfg(test)]
+mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

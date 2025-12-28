@@ -61,4 +61,17 @@ impl CustomCommandDef {
     pub const fn is_exported(&self) -> bool {
         self.export_span.is_some()
     }
+
+    pub fn extract_body_text(&self, context: &LintContext) -> Option<String> {
+        let block = context.working_set.get_block(self.body);
+        let body_text = context.get_span_text(block.span?);
+        let trimmed = body_text.trim();
+
+        Some(
+            trimmed
+                .strip_prefix('{')
+                .and_then(|s| s.strip_suffix('}'))
+                .map_or_else(|| trimmed.to_string(), |s| s.trim().to_string()),
+        )
+    }
 }

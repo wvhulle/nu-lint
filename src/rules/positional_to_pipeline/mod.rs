@@ -5,7 +5,7 @@ use nu_protocol::{
 
 use crate::{
     LintLevel,
-    ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
+    ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -272,7 +272,10 @@ fn extract_function_body(
         .pipelines
         .iter()
         .flat_map(|pipeline| &pipeline.elements)
-        .filter_map(|element| element.expr.extract_call())
+        .filter_map(|element| match &element.expr.expr {
+            nu_protocol::ast::Expr::Call(call) => Some(call),
+            _ => None,
+        })
         .find_map(|call| {
             let def = call.custom_command_def(context)?;
             if def.name != decl_name {
@@ -280,7 +283,7 @@ fn extract_function_body(
             }
 
             let block = context.working_set.get_block(def.body);
-            let body_text = block.span?.source_code(context);
+            let body_text = context.get_span_text(block.span?);
             let trimmed = body_text.trim();
 
             Some(

@@ -1,10 +1,10 @@
 use nu_protocol::{
     Type, VarId,
-    ast::{Expr, Expression, Pipeline, PipelineElement},
+    ast::{Expr, Pipeline, PipelineElement},
 };
 
 use crate::{
-    ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
+    ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
 };
 
@@ -12,19 +12,11 @@ pub trait PipelineExt {
     /// Checks if pipeline contains call to command. Example: `ls | where size >
     /// 1kb` contains "where"
     fn contains_call_to(&self, command_name: &str, context: &LintContext) -> bool;
-    /// Checks if pipeline contains indexed access. Example: `split row ":" |
-    /// get 0`
-    fn contains_indexed_access(&self, context: &LintContext) -> bool;
     /// Checks if variable is used in pipeline. Example: `$list | length` uses
     /// `$list`
     fn variable_is_used(&self, var_id: VarId) -> bool;
     /// Checks if variable is piped. Example: `$data | to json` pipes `$data`
     fn variable_is_piped(&self, var_id: VarId) -> bool;
-    /// Checks if pipeline ends with ignore. Example: `ls | ignore`
-    fn ends_with_ignore(&self, context: &LintContext) -> bool;
-    /// Gets element before ignore. Example: `mkdir tmp | ignore` returns `mkdir
-    /// tmp`
-    fn element_before_ignore(&self, context: &LintContext) -> Option<&Expression>;
     /// Infers parameter type from pipeline. Example: `$text | str length`
     /// infers `string`
     fn infer_param_type(&self, param_var_id: VarId, context: &LintContext) -> Option<Type>;
@@ -54,21 +46,6 @@ impl PipelineExt for Pipeline {
             .any(|element| check_expr_for_command(&element.expr.expr, command_name, context))
     }
 
-    fn contains_indexed_access(&self, context: &LintContext) -> bool {
-        self.elements.iter().any(|element| {
-            let Expr::Call(call) = &element.expr.expr else {
-                return false;
-            };
-
-            let name = call.get_call_name(context);
-            matches!(name.as_str(), "get" | "skip")
-                && call.get_first_positional_arg().is_some_and(|arg| {
-                    let arg_text = arg.span.source_code(context);
-                    arg_text.parse::<usize>().is_ok()
-                })
-        })
-    }
-
     fn variable_is_used(&self, var_id: VarId) -> bool {
         self.elements
             .iter()
@@ -79,17 +56,6 @@ impl PipelineExt for Pipeline {
         self.elements
             .first()
             .is_some_and(|elem| elem.expr.matches_var(var_id))
-    }
-
-    fn ends_with_ignore(&self, context: &LintContext) -> bool {
-        self.elements.last().is_some_and(|elem| {
-            matches!(&elem.expr.expr, Expr::Call(call) if call.is_call_to_command("ignore", context))
-        })
-    }
-
-    fn element_before_ignore(&self, context: &LintContext) -> Option<&Expression> {
-        (self.elements.len() >= 2 && self.ends_with_ignore(context))
-            .then(|| &self.elements[self.elements.len() - 2].expr)
     }
 
     fn infer_param_type(&self, param_var_id: VarId, context: &LintContext) -> Option<Type> {

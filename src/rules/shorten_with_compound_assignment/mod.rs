@@ -11,6 +11,16 @@ use crate::{
     violation::{Detection, Fix, Replacement},
 };
 
+fn refers_to_same_variable(expr1: &Expression, expr2: &Expression, context: &LintContext) -> bool {
+    match (
+        expr1.extract_variable_name(context),
+        expr2.extract_variable_name(context),
+    ) {
+        (Some(name1), Some(name2)) => name1 == name2,
+        _ => false,
+    }
+}
+
 /// Semantic fix data: stores spans and operator needed to generate fix
 pub struct FixData {
     full_span: Span,
@@ -74,13 +84,13 @@ fn detect_compound_assignment(
         return None;
     };
 
-    if !left.refers_to_same_variable(sub_left, ctx) {
+    if !refers_to_same_variable(left, sub_left, ctx) {
         return None;
     }
 
     let compound_op = get_compound_operator(*operator)?;
 
-    let var_text = left.span_text(ctx);
+    let var_text = ctx.get_span_text(left.span);
     let op_symbol = get_operator_symbol(*operator);
 
     let violation = Detection::from_global_span(

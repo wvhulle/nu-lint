@@ -1,12 +1,31 @@
-use nu_protocol::SyntaxShape;
+use nu_protocol::{
+    SyntaxShape, VarId,
+    ast::{Block, FindMapResult, Traverse},
+};
 
 use crate::{
     LintLevel,
-    ast::block::BlockExt,
+    ast::expression::ExpressionExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
 };
+
+fn contains_external_call_with_variable(
+    block: &Block,
+    var_id: VarId,
+    context: &LintContext,
+) -> bool {
+    block
+        .find_map(context.working_set, &|expr| {
+            if expr.is_external_call_with_variable(var_id) {
+                FindMapResult::Found(())
+            } else {
+                FindMapResult::Continue
+            }
+        })
+        .is_some()
+}
 
 /// Check if a parameter is a string-like type that could be used as a script
 /// path
@@ -70,7 +89,7 @@ fn check(context: &LintContext) -> Vec<Detection> {
                 .filter(|param| is_string_parameter(param))
                 .filter_map(|param| param.var_id.map(|var_id| (param, var_id)))
                 .filter(|(_, var_id)| {
-                    function_block.contains_external_call_with_variable(*var_id, context)
+                    contains_external_call_with_variable(function_block, *var_id, context)
                 })
                 .map(|(param, _)| create_violation(&param.name, &signature.name, context))
                 .collect::<Vec<_>>()

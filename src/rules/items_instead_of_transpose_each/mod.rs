@@ -2,7 +2,7 @@ use nu_protocol::ast::{Argument, Call, Expr, Expression, Pipeline, Traverse};
 
 use crate::{
     Fix, LintLevel, Replacement,
-    ast::{call::CallExt, span::SpanExt},
+    ast::call::CallExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
@@ -91,7 +91,7 @@ fn closure_only_uses_fields(
         if let Expr::FullCellPath(cell_path) = &expr.expr
             && cell_path.tail.len() == 1
         {
-            let field_name = cell_path.tail[0].span().source_code(context);
+            let field_name = context.get_span_text(cell_path.tail[0].span());
             log::debug!("Field access: {field_name} (expecting {field1} or {field2})");
             field_name == field1 || field_name == field2
         } else {
@@ -314,7 +314,7 @@ impl DetectFix for ItemsInsteadOfTransposeEach {
         let block = context.working_set.get_block(*block_id);
         let param = &block.signature.required_positional[0];
 
-        let closure_body_text = block.span?.source_code(context);
+        let closure_body_text = context.get_span_text(block.span?);
         let mut closure_body_trimmed = closure_body_text
             .trim()
             .strip_prefix('{')

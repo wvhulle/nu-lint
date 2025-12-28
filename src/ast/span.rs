@@ -6,10 +6,6 @@ use crate::{ast::block::BlockExt, context::LintContext};
 
 pub trait SpanExt {
     #[must_use]
-    /// Returns source text for this span. Example: span of `$x + 1` returns "$x
-    /// + 1"
-    fn source_code<'a>(&self, context: &'a LintContext) -> &'a str;
-    #[must_use]
     /// Finds function containing this span. Example: statement span inside `def
     /// process [] { ... }`
     fn find_containing_function(
@@ -28,10 +24,6 @@ pub trait SpanExt {
 }
 
 impl SpanExt for Span {
-    fn source_code<'a>(&self, context: &'a LintContext) -> &'a str {
-        context.get_span_text(*self)
-    }
-
     fn find_containing_function(
         &self,
         functions: &HashMap<BlockId, String>,
@@ -53,7 +45,8 @@ impl SpanExt for Span {
     }
 
     fn find_substring_span(&self, substring: &str, context: &LintContext) -> Span {
-        self.source_code(context)
+        context
+            .get_span_text(*self)
             .as_bytes()
             .windows(substring.len())
             .position(|window| window == substring.as_bytes())

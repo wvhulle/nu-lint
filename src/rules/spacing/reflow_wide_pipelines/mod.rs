@@ -2,7 +2,6 @@ use nu_protocol::{Span, ast::Pipeline};
 
 use crate::{
     LintLevel,
-    ast::span::SpanExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -24,7 +23,7 @@ fn detect_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<(Detect
     }
 
     let span = pipeline_span(pipeline)?;
-    let text = span.source_code(context);
+    let text = context.get_span_text(span);
 
     if text.contains('\n') || text.len() <= MAX_PIPELINE_LENGTH {
         return None;
@@ -45,7 +44,7 @@ fn generate_multiline_pipeline(element_spans: &[Span], context: &LintContext) ->
     let mut parts = Vec::new();
 
     for (i, span) in element_spans.iter().enumerate() {
-        let element_text = span.source_code(context);
+        let element_text = context.get_span_text(*span);
         if i == 0 {
             parts.push(element_text.to_string());
         } else {

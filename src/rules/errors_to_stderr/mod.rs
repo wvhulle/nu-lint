@@ -8,6 +8,19 @@ use crate::{
     violation::Detection,
 };
 
+fn extract_print_message(call: &Call, context: &LintContext) -> Option<String> {
+    call.get_first_positional_arg()
+        .map(|expr| expr.span_text(context).to_string())
+}
+
+fn extract_exit_code(call: &Call) -> Option<i64> {
+    call.get_first_positional_arg()
+        .and_then(|code_expr| match &code_expr.expr {
+            Expr::Int(code) => Some(*code),
+            _ => None,
+        })
+}
+
 struct ErrorToStdout {
     print_message: String,
     span: nu_protocol::Span,
@@ -22,8 +35,8 @@ fn check_print_exit_calls(
         .then(|| exit_call.is_call_to_command("exit", context))
         .filter(|&is_exit| is_exit)
         .and_then(|_| {
-            let print_message = print_call.extract_print_message(context)?;
-            let exit_code = exit_call.extract_exit_code()?;
+            let print_message = extract_print_message(print_call, context)?;
+            let exit_code = extract_exit_code(exit_call)?;
             (exit_code != 0).then_some(print_message)
         })
         .map(|print_message| ErrorToStdout {
@@ -37,11 +50,13 @@ fn check_sequential_print_exit(
     second: &PipelineElement,
     context: &LintContext,
 ) -> Option<ErrorToStdout> {
-    first
-        .expr
-        .extract_call()
-        .zip(second.expr.extract_call())
-        .and_then(|(print_call, exit_call)| check_print_exit_calls(print_call, exit_call, context))
+    let nu_protocol::ast::Expr::Call(print_call) = &first.expr.expr else {
+        return None;
+    };
+    let nu_protocol::ast::Expr::Call(exit_call) = &second.expr.expr else {
+        return None;
+    };
+    check_print_exit_calls(print_call, exit_call, context)
 }
 
 fn check_same_pipeline_print_exit(
@@ -54,13 +69,13 @@ fn check_same_pipeline_print_exit(
                 return None;
             };
 
-            first
-                .expr
-                .extract_call()
-                .zip(second.expr.extract_call())
-                .and_then(|(print_call, exit_call)| {
-                    check_print_exit_calls(print_call, exit_call, context)
-                })
+            let nu_protocol::ast::Expr::Call(print_call) = &first.expr.expr else {
+                return None;
+            };
+            let nu_protocol::ast::Expr::Call(exit_call) = &second.expr.expr else {
+                return None;
+            };
+            check_print_exit_calls(print_call, exit_call, context)
         })
     })
 }

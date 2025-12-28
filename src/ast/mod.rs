@@ -1,5 +1,6 @@
 pub mod block;
 pub mod call;
+pub mod declaration;
 pub mod expression;
 pub mod pipeline;
 pub mod span;

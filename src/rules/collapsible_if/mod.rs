@@ -1,12 +1,32 @@
-use nu_protocol::{Span, ast::Expr};
+use nu_protocol::{
+    Span,
+    ast::{Block, Call, Expr},
+};
 
 use crate::{
     Fix, LintLevel, Replacement,
-    ast::{call::CallExt, span::SpanExt},
+    ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
 };
+
+fn get_single_if_call<'a>(block: &'a Block, context: &LintContext) -> Option<&'a Call> {
+    let pipeline = (block.pipelines.len() == 1).then(|| block.pipelines.first())??;
+
+    let element = (pipeline.elements.len() == 1).then(|| pipeline.elements.first())??;
+
+    match &element.expr.expr {
+        Expr::Call(call) if call.is_call_to_command("if", context) => Some(call),
+        _ => None,
+    }
+}
+
+fn get_nested_single_if<'a>(call: &Call, context: &'a LintContext<'a>) -> Option<&'a Call> {
+    let then_block = call.get_positional_arg(1)?;
+    let then_block_id = then_block.extract_block_id()?;
+    get_single_if_call(context.working_set.get_block(then_block_id), context)
+}
 
 #[allow(
     clippy::struct_field_names,
@@ -48,7 +68,7 @@ impl DetectFix for CollapsibleIf {
                     return vec![];
                 }
 
-                let Some(inner_call) = call.get_nested_single_if(ctx) else {
+                let Some(inner_call) = get_nested_single_if(call, ctx) else {
                     return vec![];
                 };
 
@@ -91,9 +111,9 @@ impl DetectFix for CollapsibleIf {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let outer_cond = fix_data.outer_condition_span.source_code(context).trim();
-        let inner_cond = fix_data.inner_condition_span.source_code(context).trim();
-        let body = fix_data.inner_body_span.source_code(context).trim();
+        let outer_cond = context.get_span_text(fix_data.outer_condition_span).trim();
+        let inner_cond = context.get_span_text(fix_data.inner_condition_span).trim();
+        let body = context.get_span_text(fix_data.inner_body_span).trim();
 
         let fix_text = format!("if {outer_cond} and {inner_cond} {body}");
 

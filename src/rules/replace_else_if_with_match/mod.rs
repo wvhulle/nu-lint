@@ -2,7 +2,7 @@ use core::iter;
 
 use nu_protocol::{
     Span,
-    ast::{Call, Expr},
+    ast::{Call, Comparison, Expr, Expression, Operator},
 };
 
 use crate::{
@@ -12,6 +12,48 @@ use crate::{
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
+
+fn extract_compared_variable(expr: &Expression, context: &LintContext) -> Option<String> {
+    let Expr::BinaryOp(left, op, right) = &expr.expr else {
+        return None;
+    };
+
+    let Expr::Operator(Operator::Comparison(Comparison::Equal | Comparison::NotEqual)) = &op.expr
+    else {
+        return None;
+    };
+
+    if let Some(var_name) = left.extract_variable_name(context) {
+        return Some(var_name);
+    }
+
+    if let Expr::FullCellPath(cell_path) = &left.expr {
+        return Some(context.get_span_text(cell_path.head.span).to_string());
+    }
+
+    if let Some(var_name) = right.extract_variable_name(context) {
+        return Some(var_name);
+    }
+
+    if let Expr::FullCellPath(cell_path) = &right.expr {
+        Some(context.get_span_text(cell_path.head.span).to_string())
+    } else {
+        None
+    }
+}
+
+fn extract_comparison_value(expr: &Expression, context: &LintContext) -> Option<String> {
+    let Expr::BinaryOp(left, _op, right) = &expr.expr else {
+        return None;
+    };
+
+    if left.extract_variable_name(context).is_some() || matches!(&left.expr, Expr::FullCellPath(_))
+    {
+        Some(context.get_span_text(right.span).to_string())
+    } else {
+        Some(context.get_span_text(left.span).to_string())
+    }
+}
 
 /// Semantic fix data: stores all information needed to generate the match
 /// expression
@@ -79,11 +121,11 @@ impl Iterator for ChainIterator<'_> {
         // Extract pattern and body from current branch
         let pattern = call
             .get_first_positional_arg()
-            .and_then(|arg| arg.extract_comparison_value(self.context))?;
+            .and_then(|arg| extract_comparison_value(arg, self.context))?;
 
         let body = call
             .get_positional_arg(1)
-            .map(|arg| arg.span_text(self.context).trim().to_string())?;
+            .map(|arg| self.context.get_span_text(arg.span).trim().to_string())?;
 
         let branch = MatchBranch { pattern, body };
 
@@ -101,8 +143,12 @@ impl Iterator for ChainIterator<'_> {
             Some((false, else_expr)) => {
                 // Final else: store it for next iteration, return branch now
                 self.current = None;
-                self.final_else_pending =
-                    Some(else_expr.span_text(self.context).trim().to_string());
+                self.final_else_pending = Some(
+                    self.context
+                        .get_span_text(else_expr.span)
+                        .trim()
+                        .to_string(),
+                );
                 Some(ChainIterResult::Branch(branch))
             }
             None => {
@@ -146,7 +192,7 @@ fn walk_if_else_chain(
         // Check if current branch compares the same variable
         let compares_same_var = current_call
             .get_first_positional_arg()
-            .and_then(|arg| arg.extract_compared_variable(context))
+            .and_then(|arg| extract_compared_variable(arg, context))
             .is_some_and(|var| var == compared_var);
 
         // Try to get the next else-if branch
@@ -177,8 +223,8 @@ fn walk_if_else_chain(
 fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<(Detection, FixData)> {
     // Get the condition expression and check if it compares a variable
     let compared_var = call
-        .get_first_positional_arg()?
-        .extract_compared_variable(context)?;
+        .get_first_positional_arg()
+        .and_then(|arg| extract_compared_variable(arg, context))?;
 
     // Verify this is an else-if chain (not just a final else)
     let (is_else_if, else_expr) = call.get_else_branch()?;

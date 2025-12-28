@@ -2,10 +2,10 @@ use std::collections::{HashMap, HashSet};
 
 use nu_protocol::{
     BlockId, Span, Type, VarId,
-    ast::{Block, Call, Expr, FindMapResult, PipelineElement, Traverse},
+    ast::{Block, Expr, PipelineElement, Traverse},
 };
 
-use super::{call::CallExt, pipeline::PipelineExt};
+use super::call::CallExt;
 use crate::{ast::expression::ExpressionExt, context::LintContext};
 
 const MAX_TYPE_INFERENCE_DEPTH: usize = 100;
@@ -100,9 +100,6 @@ fn infer_output_type_with_depth(block: &Block, context: &LintContext, depth: usi
 }
 
 pub trait BlockExt {
-    /// Checks if block has side effects. Example: `{ print "hello"; ls }` has
-    /// side effects
-    fn has_side_effects(&self) -> bool;
     /// Checks if block is an empty list. Example: `{ [] }`
     fn is_empty_list_block(&self) -> bool;
     #[must_use]
@@ -113,14 +110,6 @@ pub trait BlockExt {
     fn all_elements(&self) -> Vec<&PipelineElement>;
     /// Checks if block contains variable references. Example: `{ $x + 1 }`
     fn contains_variables(&self, context: &LintContext) -> bool;
-    /// Extracts single `if` call from block. Example: `{ if $x { ... } }`
-    fn get_single_if_call(&self, context: &LintContext) -> Option<&Call>;
-    /// Checks if block contains specific command in single pipeline. Example:
-    /// `{ complete }`
-    fn contains_call_in_single_pipeline(&self, command_name: &str, context: &LintContext) -> bool;
-    /// Checks if block contains external call with variable. Example: `{ ^$cmd
-    /// args }`
-    fn contains_external_call_with_variable(&self, var_id: VarId, context: &LintContext) -> bool;
     /// Collects all user function calls in block. Example: `{ foo; bar | baz }`
     /// returns `["foo", "baz"]`
     fn collect_user_function_calls(&self, context: &LintContext) -> Vec<String>;
@@ -158,12 +147,6 @@ pub trait BlockExt {
 }
 
 impl BlockExt for Block {
-    fn has_side_effects(&self) -> bool {
-        self.all_elements()
-            .iter()
-            .any(|elem| !elem.expr.is_likely_pure())
-    }
-
     fn is_empty_list_block(&self) -> bool {
         self.pipelines
             .first()
@@ -186,36 +169,6 @@ impl BlockExt for Block {
         self.all_elements()
             .iter()
             .any(|elem| elem.expr.contains_variables(context))
-    }
-
-    fn contains_call_in_single_pipeline(&self, command_name: &str, context: &LintContext) -> bool {
-        self.pipelines.len() == 1
-            && self
-                .pipelines
-                .first()
-                .is_some_and(|p| p.contains_call_to(command_name, context))
-    }
-
-    fn get_single_if_call(&self, context: &LintContext) -> Option<&Call> {
-        let pipeline = (self.pipelines.len() == 1).then(|| self.pipelines.first())??;
-
-        let element = (pipeline.elements.len() == 1).then(|| pipeline.elements.first())??;
-
-        match &element.expr.expr {
-            Expr::Call(call) if call.is_call_to_command("if", context) => Some(call),
-            _ => None,
-        }
-    }
-
-    fn contains_external_call_with_variable(&self, var_id: VarId, context: &LintContext) -> bool {
-        self.find_map(context.working_set, &|expr| {
-            if expr.is_external_call_with_variable(var_id) {
-                FindMapResult::Found(())
-            } else {
-                FindMapResult::Continue
-            }
-        })
-        .is_some()
     }
 
     fn collect_user_function_calls(&self, context: &LintContext) -> Vec<String> {

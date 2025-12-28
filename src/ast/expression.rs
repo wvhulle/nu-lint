@@ -1,28 +1,19 @@
 use nu_protocol::{
     BlockId, Span, Type, VarId,
     ast::{
-        Argument, Call, Comparison, Expr, Expression, ExternalArgument, FindMapResult,
-        FullCellPath, ListItem, Operator, PathMember, RecordItem, Traverse,
+        Argument, Call, Expr, Expression, FindMapResult, FullCellPath, ListItem, Operator,
+        PathMember, RecordItem, Traverse,
     },
     engine::Variable,
 };
 
-use super::{block::BlockExt, call::CallExt, pipeline::PipelineExt, span::SpanExt};
-use crate::{
-    context::LintContext,
-    effect::external::{ExternEffect, external_command_has_no_output, has_external_side_effect},
-};
+use super::{block::BlockExt, call::CallExt, pipeline::PipelineExt};
+use crate::{context::LintContext, effect::external::external_command_has_no_output};
 
 pub trait ExpressionExt: Traverse {
-    /// Checks if two expressions refer to the same variable. Example: `$x` and
-    /// `$x`
-    fn refers_to_same_variable(&self, other: &Expression, context: &LintContext) -> bool;
     /// Extracts the variable name from an expression. Example: `$counter`
     /// returns "counter"
     fn extract_variable_name(&self, context: &LintContext) -> Option<String>;
-    /// Checks if expression refers to a specific variable by name. Example:
-    /// `$item` matches "item"
-    fn refers_to_variable(&self, context: &LintContext, var_name: &str) -> bool;
     /// Checks if expression is an assignment operation. Example: `$x = 5` or
     /// `$x += 1`
     fn is_assignment(&self) -> bool;
@@ -31,8 +22,6 @@ pub trait ExpressionExt: Traverse {
     /// Extracts block ID from block-like expressions. Example: `{ $in | length
     /// }` or closure
     fn extract_block_id(&self) -> Option<BlockId>;
-    /// Has no side effects: `5`, `"text"`
-    fn is_likely_pure(&self) -> bool;
     /// Returns the source text of this expression's span. Example: `$in | each
     /// { ... }`
     fn span_text<'a>(&self, context: &'a LintContext) -> &'a str;
@@ -46,25 +35,11 @@ pub trait ExpressionExt: Traverse {
     /// Checks if expression contains any variable references. Example: `$x +
     /// $y` or `[$item]`
     fn contains_variables(&self, context: &LintContext) -> bool;
-    /// Extracts variable from comparison expression. Example: `$status == 0`
-    /// returns "status"
-    fn extract_compared_variable(&self, context: &LintContext) -> Option<String>;
-    /// Extracts comparison value from binary operation. Example: `$x ==
-    /// "value"` returns "value"
-    fn extract_comparison_value(&self, context: &LintContext) -> Option<String>;
     /// Checks if external call head uses a variable. Example: `^$cmd arg1 arg2`
     fn is_external_call_with_variable(&self, var_id: VarId) -> bool;
     /// Checks if expression matches a specific variable. Example: `$var` or
     /// `$var.field`
     fn matches_var(&self, var_id: VarId) -> bool;
-    /// Checks if external call arguments contain a variable. Example: `^ls
-    /// $path`
-    fn external_call_contains_variable(&self, var_id: VarId) -> bool;
-    /// Checks if external call is a filesystem command. Example: `^tar`,
-    /// `^rsync`, or `^curl`
-    fn is_external_filesystem_command(&self, context: &LintContext) -> bool;
-    /// Extracts Call from a call expression. Example: `ls | where size > 1kb`
-    fn extract_call(&self) -> Option<&Call>;
     /// Checks if expression contains a specific variable. Example: `$x + 1`
     /// contains `$x`
     fn contains_variable(&self, var_id: VarId) -> bool;
@@ -88,8 +63,6 @@ pub trait ExpressionExt: Traverse {
     /// Infers the input type expected by an expression. Example: `$in | length`
     /// expects "list"
     fn infer_input_type(&self, in_var: Option<VarId>, context: &LintContext) -> Option<Type>;
-    /// Checks if expression is a literal list. Example: `[1 2 3]` or `[]`
-    fn is_literal_list(&self) -> bool;
     /// Extracts external command name from expression. Example: `^ls` returns
     /// "ls"
     fn extract_external_command_name(&self, context: &LintContext) -> Option<String>;
@@ -129,30 +102,15 @@ const fn extract_var_from_full_cell_path(cell_path: &FullCellPath) -> Option<Var
 }
 
 impl ExpressionExt for Expression {
-    fn refers_to_same_variable(&self, other: &Expression, context: &LintContext) -> bool {
-        match (
-            self.extract_variable_name(context),
-            other.extract_variable_name(context),
-        ) {
-            (Some(name1), Some(name2)) => name1 == name2,
-            _ => false,
-        }
-    }
-
     fn extract_variable_name(&self, context: &LintContext) -> Option<String> {
         match &self.expr {
             Expr::Var(var_id) | Expr::VarDecl(var_id) => {
                 let var = context.working_set.get_variable(*var_id);
-                Some(var.declaration_span.source_code(context).to_string())
+                Some(context.get_span_text(var.declaration_span).to_string())
             }
             Expr::FullCellPath(cell_path) => cell_path.head.extract_variable_name(context),
             _ => None,
         }
-    }
-
-    fn refers_to_variable(&self, context: &LintContext, var_name: &str) -> bool {
-        self.extract_variable_name(context)
-            .is_some_and(|name| name == var_name)
     }
 
     fn is_assignment(&self) -> bool {
@@ -182,44 +140,8 @@ impl ExpressionExt for Expression {
         }
     }
 
-    fn is_likely_pure(&self) -> bool {
-        match &self.expr {
-            Expr::Bool(_)
-            | Expr::Int(_)
-            | Expr::Float(_)
-            | Expr::Binary(_)
-            | Expr::String(_)
-            | Expr::RawString(_)
-            | Expr::Filepath(_, _)
-            | Expr::Directory(_, _)
-            | Expr::GlobPattern(_, _)
-            | Expr::List(_)
-            | Expr::Record(_)
-            | Expr::Table(_)
-            | Expr::Keyword(_)
-            | Expr::Nothing
-            | Expr::ValueWithUnit(_)
-            | Expr::DateTime(_)
-            | Expr::Range(_)
-            | Expr::Var(_)
-            | Expr::VarDecl(_)
-            | Expr::FullCellPath(_) => true,
-
-            Expr::BinaryOp(left, _op, right) => {
-                if self.is_assignment() {
-                    return false;
-                }
-                left.is_likely_pure() && right.is_likely_pure()
-            }
-
-            Expr::UnaryNot(inner) => inner.is_likely_pure(),
-
-            _ => false,
-        }
-    }
-
     fn span_text<'a>(&self, context: &'a LintContext) -> &'a str {
-        self.span.source_code(context)
+        context.get_span_text(self.span)
     }
 
     fn extract_assigned_variable(&self) -> Option<VarId> {
@@ -309,36 +231,6 @@ impl ExpressionExt for Expression {
         }
     }
 
-    fn extract_compared_variable(&self, context: &LintContext) -> Option<String> {
-        let Expr::BinaryOp(left, op, _right) = &self.expr else {
-            return None;
-        };
-
-        let Expr::Operator(Operator::Comparison(Comparison::Equal | Comparison::NotEqual)) =
-            &op.expr
-        else {
-            return None;
-        };
-
-        if let Some(var_name) = left.extract_variable_name(context) {
-            return Some(var_name);
-        }
-
-        if let Expr::FullCellPath(cell_path) = &left.expr {
-            Some(cell_path.head.span.source_code(context).to_string())
-        } else {
-            None
-        }
-    }
-
-    fn extract_comparison_value(&self, context: &LintContext) -> Option<String> {
-        let Expr::BinaryOp(_left, _op, right) = &self.expr else {
-            return None;
-        };
-
-        Some(right.span_text(context).to_string())
-    }
-
     fn is_external_call_with_variable(&self, var_id: VarId) -> bool {
         let Expr::ExternalCall(head, _args) = &self.expr else {
             return false;
@@ -353,35 +245,6 @@ impl ExpressionExt for Expression {
                 extract_var_from_full_cell_path(cell_path) == Some(var_id)
             }
             _ => false,
-        }
-    }
-
-    fn external_call_contains_variable(&self, var_id: VarId) -> bool {
-        if let Expr::ExternalCall(_head, args) = &self.expr {
-            args.iter().any(|arg| {
-                let arg_expr = match arg {
-                    ExternalArgument::Regular(e) | ExternalArgument::Spread(e) => e,
-                };
-                arg_expr.matches_var(var_id)
-            })
-        } else {
-            false
-        }
-    }
-
-    fn is_external_filesystem_command(&self, context: &LintContext) -> bool {
-        if let Expr::ExternalCall(head, args) = &self.expr {
-            let cmd_name = head.span.source_code(context);
-            has_external_side_effect(cmd_name, ExternEffect::ModifiesFileSystem, context, args)
-        } else {
-            false
-        }
-    }
-
-    fn extract_call(&self) -> Option<&Call> {
-        match &self.expr {
-            Expr::Call(call) => Some(call),
-            _ => None,
         }
     }
 
@@ -614,7 +477,7 @@ impl ExpressionExt for Expression {
                 )
             }
             Expr::ExternalCall(call, _) => {
-                let cmd_name = call.span.source_code(context);
+                let cmd_name = context.get_span_text(call.span);
                 log::debug!("Encountered ExternalCall: '{cmd_name}'");
                 if external_command_has_no_output(cmd_name) {
                     Some(Type::Nothing)
@@ -747,15 +610,6 @@ impl ExpressionExt for Expression {
 
         log::debug!("infer_input_type result: {result:?}");
         result
-    }
-
-    fn is_literal_list(&self) -> bool {
-        match &self.expr {
-            Expr::List(_) => true,
-            Expr::FullCellPath(cell_path) => matches!(&cell_path.head.expr, Expr::List(_)),
-            Expr::Keyword(keyword) => keyword.expr.is_literal_list(),
-            _ => false,
-        }
     }
 
     fn extract_external_command_name(&self, context: &LintContext) -> Option<String> {

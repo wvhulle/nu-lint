@@ -19,7 +19,9 @@ fn contains_loop_var_append(expr: &Expression, context: &LintContext, loop_var_n
             if decl_name == "append"
                 && let Some(arg_expr) = call.get_first_positional_arg()
             {
-                let is_loop_var = arg_expr.refers_to_variable(context, loop_var_name);
+                let is_loop_var = arg_expr
+                    .extract_variable_name(context)
+                    .is_some_and(|name| name == loop_var_name);
                 log::debug!("Append argument is loop var: {is_loop_var}");
                 return is_loop_var;
             }

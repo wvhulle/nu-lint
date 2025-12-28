@@ -5,7 +5,7 @@ use nu_protocol::{
 
 use crate::{
     Fix, LintLevel, Replacement,
-    ast::{block::BlockExt, call::CallExt, pipeline::PipelineExt, span::SpanExt},
+    ast::{call::CallExt, pipeline::PipelineExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
@@ -28,6 +28,33 @@ const REGEX_SPECIAL_CHARS: &[char] = &[
     '\\', '.', '+', '*', '?', '(', ')', '[', ']', '{', '}', '|', '^', '$',
 ];
 
+fn contains_call_in_single_pipeline(
+    block: &Block,
+    command_name: &str,
+    context: &LintContext,
+) -> bool {
+    block.pipelines.len() == 1
+        && block
+            .pipelines
+            .first()
+            .is_some_and(|p| p.contains_call_to(command_name, context))
+}
+
+fn contains_indexed_access(pipeline: &Pipeline, context: &LintContext) -> bool {
+    pipeline.elements.iter().any(|element| {
+        let Expr::Call(call) = &element.expr.expr else {
+            return false;
+        };
+
+        let name = call.get_call_name(context);
+        matches!(name.as_str(), "get" | "skip")
+            && call.get_first_positional_arg().is_some_and(|arg| {
+                let arg_text = context.get_span_text(arg.span);
+                arg_text.parse::<usize>().is_ok()
+            })
+    })
+}
+
 fn is_split_row_call(call: &Call, context: &LintContext) -> bool {
     call.is_call_to_command("split row", context)
 }
@@ -41,7 +68,7 @@ fn extract_delimiter_from_split_call(call: &Call, context: &LintContext) -> Opti
         return None;
     }
     let arg = call.get_first_positional_arg()?;
-    let text = arg.span.source_code(context);
+    let text = context.get_span_text(arg.span);
     match &arg.expr {
         Expr::String(s) | Expr::RawString(s) => Some(s.clone()),
         _ => {
@@ -164,7 +191,7 @@ fn is_indexed_access_call(call: &Call, context: &LintContext) -> bool {
 
 fn extract_index_from_call(call: &Call, context: &LintContext) -> Option<usize> {
     call.get_first_positional_arg()
-        .and_then(|arg| arg.span.source_code(context).parse().ok())
+        .and_then(|arg| context.get_span_text(arg.span).parse().ok())
 }
 
 fn check_pipeline_for_split_get(
@@ -254,16 +281,18 @@ fn extract_split_row_assignment(
         Expr::Call(value_call) => is_split_row_call(value_call, context),
         Expr::FullCellPath(cell_path) => match &cell_path.head.expr {
             Expr::Call(head_call) => is_split_row_call(head_call, context),
-            Expr::Subexpression(block_id) => context
-                .working_set
-                .get_block(*block_id)
-                .contains_call_in_single_pipeline("split row", context),
+            Expr::Subexpression(block_id) => contains_call_in_single_pipeline(
+                context.working_set.get_block(*block_id),
+                "split row",
+                context,
+            ),
             _ => false,
         },
-        Expr::Subexpression(block_id) | Expr::Block(block_id) => context
-            .working_set
-            .get_block(*block_id)
-            .contains_call_in_single_pipeline("split row", context),
+        Expr::Subexpression(block_id) | Expr::Block(block_id) => contains_call_in_single_pipeline(
+            context.working_set.get_block(*block_id),
+            "split row",
+            context,
+        ),
         _ => false,
     };
 
@@ -381,7 +410,7 @@ fn check_for_indexed_variable_access(
     block.pipelines.iter().find_map(|pipeline| {
         // If variable is used in this pipeline and there's an indexed access call,
         // report violation
-        if pipeline.variable_is_used(var_id) && pipeline.contains_indexed_access(context) {
+        if pipeline.variable_is_used(var_id) && contains_indexed_access(pipeline, context) {
             log::debug!("Found indexed access for variable {var_name} in pipeline");
             return Some(create_indexed_access_violation(var_name, decl_span));
         }

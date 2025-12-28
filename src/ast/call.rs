@@ -1,37 +1,10 @@
 use nu_protocol::{
-    BlockId, Span,
+    Span,
     ast::{Argument, Call, Expr, Expression},
 };
 
-use super::{block::BlockExt, expression::ExpressionExt};
-use crate::{ast::span::SpanExt, context::LintContext};
-
-#[derive(Debug, Clone)]
-pub struct CustomCommandDef {
-    pub body: BlockId,
-    pub name: String,
-    pub name_span: Span,
-    pub export_span: Option<Span>,
-}
-
-impl CustomCommandDef {
-    const fn new(body: BlockId, name: String, name_span: Span, export_span: Option<Span>) -> Self {
-        Self {
-            body,
-            name,
-            name_span,
-            export_span,
-        }
-    }
-
-    pub fn is_main(&self) -> bool {
-        self.name == "main" || self.name.starts_with("main ")
-    }
-
-    pub const fn is_exported(&self) -> bool {
-        self.export_span.is_some()
-    }
-}
+use super::{block::BlockExt, declaration::CustomCommandDef, expression::ExpressionExt};
+use crate::context::LintContext;
 
 /// Checks if `actual_type` is compatible with `expected_type` for command
 /// signature matching
@@ -60,17 +33,9 @@ pub trait CallExt {
     /// returns pattern
     fn get_positional_arg(&self, index: usize) -> Option<&Expression>;
     #[must_use]
-    /// Extracts loop variable from each closure. Example: `each { |item| ... }`
-    /// returns "item"
-    fn loop_var_from_each(&self, context: &LintContext) -> Option<String>;
-    #[must_use]
     /// Extracts loop variable from for loop. Example: `for item in $list { }`
     /// returns "item"
     fn loop_var_from_for(&self, context: &LintContext) -> Option<String>;
-    #[must_use]
-    /// Extracts declaration name and span. Example: `def foo [] { }` returns
-    /// ("foo", span)
-    fn extract_declaration_name(&self, context: &LintContext) -> Option<(String, Span)>;
     #[must_use]
     /// Extracts function definition from `def` or `export def` calls.
     /// Returns `None` for non-function calls or malformed definitions.
@@ -88,19 +53,11 @@ pub trait CallExt {
     /// Gets else branch from if call. Example: `if $x { } else { }` returns
     /// else block
     fn get_else_branch(&self) -> Option<(bool, &Expression)>;
-    /// Gets nested single if call from then branch. Example: `if $x { if $y { }
-    /// }`
-    fn get_nested_single_if<'a>(&self, context: &'a LintContext<'a>) -> Option<&'a Call>;
 
     /// Checks if call uses a variable. Example: `print $msg` uses `$msg`
     fn uses_variable(&self, var_id: nu_protocol::VarId) -> bool;
     /// Checks if call is a filesystem command. Example: `mkdir`, `cd`, or `rm`
     fn is_filesystem_command(&self, context: &LintContext) -> bool;
-    /// Extracts message from print call. Example: `print "Error: failed"`
-    /// returns "Error: failed"
-    fn extract_print_message(&self, context: &LintContext) -> Option<String>;
-    /// Extracts exit code from exit call. Example: `exit 1` returns 1
-    fn extract_exit_code(&self) -> Option<i64>;
     /// Checks if call has a named flag. Example: `ls --all` has flag "all"
     fn has_named_flag(&self, flag_name: &str) -> bool;
     /// Extracts iterator expression from for loop call. Example: `for x in
@@ -231,54 +188,13 @@ impl CallExt for Call {
             .nth(index)
     }
 
-    fn loop_var_from_each(&self, context: &LintContext) -> Option<String> {
-        let first_arg = self.get_first_positional_arg()?;
-        let block_id = first_arg.extract_block_id()?;
-
-        let block = context.working_set.get_block(block_id);
-        let var_id = block.signature.required_positional.first()?.var_id?;
-
-        let var = context.working_set.get_variable(var_id);
-        Some(var.declaration_span.source_code(context).to_string())
-    }
-
     fn loop_var_from_for(&self, context: &LintContext) -> Option<String> {
         let var_arg = self.get_first_positional_arg()?;
         var_arg.extract_variable_name(context)
     }
 
-    fn extract_declaration_name(&self, context: &LintContext) -> Option<(String, Span)> {
-        let name_arg = self.get_first_positional_arg()?;
-        let name = name_arg.span.source_code(context);
-        Some((name.to_string(), name_arg.span))
-    }
-
     fn custom_command_def(&self, context: &LintContext) -> Option<CustomCommandDef> {
-        let decl_name = self.get_call_name(context);
-
-        let is_exported = match decl_name.as_str() {
-            "export def" => true,
-            "def" => false,
-            _ => return None,
-        };
-
-        let name_arg = self.get_first_positional_arg()?;
-        let name = match &name_arg.expr {
-            Expr::String(s) | Expr::RawString(s) => s.clone(),
-            _ => name_arg.span.source_code(context).to_string(),
-        };
-
-        let body_expr = self.get_positional_arg(2)?;
-        let block_id = body_expr.extract_block_id()?;
-
-        let export_span = is_exported.then(|| Span::new(self.head.start, self.head.start + 7));
-
-        Some(CustomCommandDef::new(
-            block_id,
-            name,
-            name_arg.span,
-            export_span,
-        ))
+        CustomCommandDef::try_from_call(self, context)
     }
 
     fn extract_variable_declaration(
@@ -293,7 +209,7 @@ impl CallExt for Call {
         let var_arg = self.get_first_positional_arg()?;
 
         if let Expr::VarDecl(var_id) = &var_arg.expr {
-            let var_name = var_arg.span.source_code(context);
+            let var_name = context.get_span_text(var_arg.span);
             Some((*var_id, var_name.to_string(), var_arg.span))
         } else {
             None
@@ -314,15 +230,6 @@ impl CallExt for Call {
         }
     }
 
-    fn get_nested_single_if<'a>(&self, context: &'a LintContext<'a>) -> Option<&'a Call> {
-        let then_block = self.get_positional_arg(1)?;
-        let then_block_id = then_block.extract_block_id()?;
-        context
-            .working_set
-            .get_block(then_block_id)
-            .get_single_if_call(context)
-    }
-
     fn uses_variable(&self, var_id: nu_protocol::VarId) -> bool {
         self.arguments.iter().any(|arg| match arg {
             Argument::Positional(expr)
@@ -338,19 +245,6 @@ impl CallExt for Call {
         let decl = context.working_set.get_decl(self.decl_id);
         let signature = decl.signature();
         matches!(signature.category, Category::FileSystem | Category::Path)
-    }
-
-    fn extract_print_message(&self, context: &LintContext) -> Option<String> {
-        self.get_first_positional_arg()
-            .map(|expr| expr.span_text(context).to_string())
-    }
-
-    fn extract_exit_code(&self) -> Option<i64> {
-        self.get_first_positional_arg()
-            .and_then(|code_expr| match &code_expr.expr {
-                Expr::Int(code) => Some(*code),
-                _ => None,
-            })
     }
 
     fn has_named_flag(&self, flag_name: &str) -> bool {

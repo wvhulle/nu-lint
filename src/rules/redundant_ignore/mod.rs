@@ -2,12 +2,26 @@ use nu_protocol::ast::{Expr, Expression, Pipeline};
 
 use crate::{
     Fix, LintLevel, Replacement,
-    ast::{call::CallExt, pipeline::PipelineExt, span::SpanExt},
+    ast::call::CallExt,
     context::LintContext,
     effect::external::external_command_has_no_output,
     rule::{DetectFix, Rule},
     violation::Detection,
 };
+
+fn ends_with_ignore(pipeline: &Pipeline, context: &LintContext) -> bool {
+    pipeline.elements.last().is_some_and(|elem| {
+        matches!(&elem.expr.expr, Expr::Call(call) if call.is_call_to_command("ignore", context))
+    })
+}
+
+fn element_before_ignore<'a>(
+    pipeline: &'a Pipeline,
+    context: &LintContext,
+) -> Option<&'a Expression> {
+    (pipeline.elements.len() >= 2 && ends_with_ignore(pipeline, context))
+        .then(|| &pipeline.elements[pipeline.elements.len() - 2].expr)
+}
 
 struct RedundantIgnoreFixData {
     pipeline_span: nu_protocol::Span,
@@ -17,7 +31,7 @@ struct RedundantIgnoreFixData {
 fn command_produces_output(expr: &Expression, context: &LintContext) -> bool {
     match &expr.expr {
         Expr::ExternalCall(call, _) => {
-            let cmd_name = call.span.source_code(context);
+            let cmd_name = context.get_span_text(call.span);
             !external_command_has_no_output(cmd_name)
         }
         Expr::Call(call) => {
@@ -44,7 +58,7 @@ fn check_pipeline(
     pipeline: &Pipeline,
     context: &LintContext,
 ) -> Option<(Detection, RedundantIgnoreFixData)> {
-    let expr_before_ignore = pipeline.element_before_ignore(context)?;
+    let expr_before_ignore = element_before_ignore(pipeline, context)?;
 
     if !command_produces_output(expr_before_ignore, context) {
         return None;
@@ -52,7 +66,7 @@ fn check_pipeline(
 
     let command_name = match &expr_before_ignore.expr {
         Expr::Call(call) => call.get_call_name(context),
-        Expr::ExternalCall(head, _) => head.span.source_code(context).to_string(),
+        Expr::ExternalCall(head, _) => context.get_span_text(head.span).to_string(),
         _ => "pipeline".to_string(),
     };
 
@@ -62,7 +76,7 @@ fn check_pipeline(
     let start_span = elements_without_ignore.first()?.expr.span;
     let end_span = elements_without_ignore.last()?.expr.span;
     let combined_span = nu_protocol::Span::new(start_span.start, end_span.end);
-    let pipeline_text = combined_span.source_code(context);
+    let pipeline_text = context.get_span_text(combined_span);
 
     let violation =
         Detection::from_global_span("Discarding command output with '| ignore'", ignore_span)

@@ -44,3 +44,14 @@ ls | each { |f| if $f.size > 100kb { mut name = $f.name; $name } }
 
     RULE.assert_ignores(good_code);
 }
+
+#[test]
+fn test_ignore_each_if_with_else_clause() {
+    instrument();
+
+    let good_code = r"
+ls | each { |f| if $f.size > 100kb { $f } else { null } }
+";
+
+    RULE.assert_ignores(good_code);
+}

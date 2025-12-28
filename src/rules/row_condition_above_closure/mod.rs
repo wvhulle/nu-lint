@@ -2,7 +2,7 @@ use nu_protocol::ast::{Call, Expr, Expression, Traverse};
 
 use crate::{
     LintLevel,
-    ast::{call::CallExt, span::SpanExt},
+    ast::call::CallExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -32,7 +32,7 @@ fn extract_closure_parameter_name(
     let var_id = param.var_id?;
 
     let var = context.working_set.get_variable(var_id);
-    Some(var.declaration_span.source_code(context).to_string())
+    Some(context.get_span_text(var.declaration_span).to_string())
 }
 
 fn generate_fix(
@@ -48,7 +48,7 @@ fn generate_fix(
     }
 
     let block_span = block.span?;
-    let block_text = block_span.source_code(context);
+    let block_text = context.get_span_text(block_span);
 
     let body_text = block_text
         .strip_prefix('{')
@@ -103,7 +103,7 @@ fn check_where_call(
         return vec![];
     }
 
-    let arg_text = arg_expr.span.source_code(context);
+    let arg_text = context.get_span_text(arg_expr.span);
     let closure_param_syntax = format!("|{param_name}|");
     if !arg_text.contains(&closure_param_syntax) {
         return vec![];

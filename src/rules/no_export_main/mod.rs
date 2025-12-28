@@ -2,7 +2,7 @@ use nu_protocol::ast::{Call, Expr};
 
 use crate::{
     Fix, LintLevel, Replacement,
-    ast::call::{CallExt, CustomCommandDef},
+    ast::{call::CallExt, declaration::CustomCommandDef},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,

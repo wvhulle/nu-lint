@@ -1,7 +1,7 @@
 use nu_protocol::ast::{Expr, Expression, RecordItem};
 
 use crate::{
-    ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
+    ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
 };
 
@@ -66,12 +66,9 @@ pub fn extract_first_function_parameter(
                         .first()
                         .and_then(|param| param.var_id)
                         .map(|var_id| {
-                            context
-                                .working_set
-                                .get_variable(var_id)
-                                .declaration_span
-                                .source_code(context)
-                                .to_string()
+                            let var_span =
+                                context.working_set.get_variable(var_id).declaration_span;
+                            context.get_span_text(var_span).to_string()
                         })
                 })
         })

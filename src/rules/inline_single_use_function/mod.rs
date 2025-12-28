@@ -2,7 +2,6 @@ use nu_protocol::ast::{Expr, Pipeline, Traverse};
 
 use crate::{
     LintLevel,
-    ast::span::SpanExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
@@ -14,7 +13,7 @@ fn is_non_comment_statement(pipeline: &Pipeline) -> bool {
         .any(|elem| !matches!(&elem.expr.expr, Expr::Nothing))
 }
 fn is_single_line_in_source(block_span: nu_protocol::Span, context: &LintContext) -> bool {
-    let source_text = block_span.source_code(context);
+    let source_text = context.get_span_text(block_span);
     source_text.lines().count() <= 3
 }
 fn has_single_statement_body(block_id: nu_protocol::BlockId, context: &LintContext) -> bool {

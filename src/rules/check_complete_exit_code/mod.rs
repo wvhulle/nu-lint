@@ -7,7 +7,7 @@ use nu_protocol::{
 
 use crate::{
     LintLevel,
-    ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
+    ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     effect::{
         CommonEffect,
@@ -75,7 +75,7 @@ fn extract_command_name(cmd_expr: &Expression, context: &LintContext) -> String 
     match &cmd_expr.expr {
         Expr::String(s) => s.clone(),
         Expr::GlobPattern(pattern, _) => pattern.clone(),
-        _ => cmd_expr.span.source_code(context).to_string(),
+        _ => context.get_span_text(cmd_expr.span).to_string(),
     }
 }
 

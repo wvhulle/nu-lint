@@ -17,6 +17,15 @@ type EmptyListVar = (VarId, String, Span);
 type DirectCopyVars = Vec<VarId>;
 type AnalysisPattern = (Vec<EmptyListVar>, DirectCopyVars);
 
+fn is_literal_list(expr: &Expression) -> bool {
+    match &expr.expr {
+        Expr::List(_) => true,
+        Expr::FullCellPath(cell_path) => matches!(&cell_path.head.expr, Expr::List(_)),
+        Expr::Keyword(keyword) => is_literal_list(&keyword.expr),
+        _ => false,
+    }
+}
+
 fn matches_transformation_pattern(
     expr: &Expression,
     context: &LintContext,
@@ -160,9 +169,8 @@ fn is_direct_copy_for_loop(
     let iter_expr = call.get_for_loop_iterator()?;
     let block_id = call.get_for_loop_body()?;
 
-    (iter_expr.is_literal_list()
-        && !has_transformation_or_filter(block_id, context, &loop_var_name))
-    .then_some((loop_var_name, block_id))
+    (is_literal_list(iter_expr) && !has_transformation_or_filter(block_id, context, &loop_var_name))
+        .then_some((loop_var_name, block_id))
 }
 
 fn extract_direct_copy_patterns(expr: &Expression, context: &LintContext) -> DirectCopyVars {

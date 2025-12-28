@@ -6,7 +6,6 @@ use nu_protocol::{
 
 use crate::{
     LintLevel,
-    ast::span::SpanExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -63,7 +62,7 @@ fn check_call(call: &Call, ctx: &LintContext) -> Option<(Detection, SnakeCaseFix
     let mut replacements = vec![(name_expr.span, snake_case_name.clone())];
 
     for usage_span in find_variable_usages(*var_id, ctx) {
-        if usage_span.source_code(ctx).starts_with('$') {
+        if ctx.get_span_text(usage_span).starts_with('$') {
             replacements.push((usage_span, format!("${snake_case_name}")));
         }
     }

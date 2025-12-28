@@ -2,7 +2,7 @@ use nu_protocol::ast::{Argument, Block, Call, Expr, Expression, Pipeline};
 
 use crate::{
     LintLevel,
-    ast::{call::CallExt, expression::is_pipeline_input_var, span::SpanExt},
+    ast::{call::CallExt, expression::is_pipeline_input_var},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -132,7 +132,7 @@ fn has_explicit_type_annotation(
     signature_span: Option<nu_protocol::Span>,
     ctx: &LintContext,
 ) -> bool {
-    signature_span.is_some_and(|span| span.source_code(ctx).contains("->"))
+    signature_span.is_some_and(|span| ctx.get_span_text(span).contains("->"))
 }
 
 fn find_signature_span(call: &Call, _ctx: &LintContext) -> Option<nu_protocol::Span> {
@@ -144,14 +144,13 @@ fn check_main_function(
     call: &Call,
     context: &LintContext,
 ) -> Vec<(Detection, Option<ShebangFixData>)> {
-    let (_func_name, name_span) = match call.extract_declaration_name(context) {
-        Some((name, span)) if name == "main" => (name, span),
-        _ => return vec![],
-    };
-
     let Some(def) = call.custom_command_def(context) else {
         return vec![];
     };
+
+    if !def.is_main() {
+        return vec![];
+    }
 
     let block = context.working_set.get_block(def.body);
     let signature = &block.signature;
@@ -198,7 +197,7 @@ fn check_main_function(
 
     let fix_data = create_fix_data_for_shebang(context);
 
-    let violation = Detection::from_global_span(message, name_span)
+    let violation = Detection::from_global_span(message, def.name_span)
         .with_primary_label("main function expecting stdin")
         .with_help(
             "Add --stdin flag to shebang: #!/usr/bin/env -S nu --stdin or #!/usr/bin/env nu \

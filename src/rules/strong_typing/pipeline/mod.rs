@@ -5,7 +5,7 @@ use nu_protocol::{
 
 use crate::{
     LintLevel,
-    ast::{block::BlockExt, call::CallExt, span::SpanExt, syntax_shape::SyntaxShapeExt},
+    ast::{block::BlockExt, call::CallExt, syntax_shape::SyntaxShapeExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -29,7 +29,7 @@ fn find_return_span(block: &Block) -> Option<Span> {
 }
 
 fn has_explicit_type_annotation(signature_span: Option<Span>, ctx: &LintContext) -> bool {
-    signature_span.is_some_and(|span| span.source_code(ctx).contains("->"))
+    signature_span.is_some_and(|span| ctx.get_span_text(span).contains("->"))
 }
 
 fn is_untyped<F>(
@@ -285,7 +285,7 @@ impl DetectFix for TypedPipelineIo {
             && block.signature.rest_positional.is_none()
             && block.signature.named.is_empty();
 
-        let original_sig_text = fix_data.sig_span.source_code(ctx);
+        let original_sig_text = ctx.get_span_text(fix_data.sig_span);
         let is_multiline = has_multiline_parameters(original_sig_text);
 
         let params_text = if has_no_params {

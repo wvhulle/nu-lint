@@ -2,7 +2,6 @@ use nu_protocol::ast::{Expr, Pipeline};
 
 use crate::{
     Fix, LintLevel, Replacement,
-    ast::span::SpanExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
@@ -50,7 +49,7 @@ fn extract_function_body(
 ) -> Option<String> {
     // Try from block span first, then fall back to source extraction
     if let Some(span) = block_span {
-        let contents = span.source_code(context).trim();
+        let contents = context.get_span_text(span).trim();
         if let Some(inner) = contents.strip_prefix('{').and_then(|s| s.strip_suffix('}')) {
             return Some(inner.trim().to_string());
         }
@@ -58,7 +57,7 @@ fn extract_function_body(
 
     // Fall back to source extraction
     let span: nu_protocol::Span = context.find_declaration_span(decl_name).into();
-    let contents = span.source_code(context);
+    let contents = context.get_span_text(span);
     let start = contents.find('{')?;
     let end = contents.rfind('}')?;
     Some(contents[start + 1..end].trim().to_string())

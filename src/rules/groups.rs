@@ -55,6 +55,7 @@ const PERFORMANCE: Group = Group {
         super::range_for_iteration::loop_counter::RULE,
         super::filtering::each_if_to_where::RULE,
         super::filtering::for_filter_to_where::RULE,
+        super::filtering::omit_it_in_row_condition::RULE,
         super::remove_redundant_in::RULE,
         super::filtering::where_closure_to_it::RULE,
         super::unnecessary_variable_before_return::RULE,

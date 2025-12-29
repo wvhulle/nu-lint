@@ -126,6 +126,7 @@ pub const ALL_RULES: &[&dyn Rule] = &[
     range_for_iteration::while_counter::RULE,
     filtering::each_if_to_where::RULE,
     filtering::for_filter_to_where::RULE,
+    filtering::omit_it_in_row_condition::RULE,
     ignore_over_dev_null::RULE,
     redundant_ignore::RULE,
     remove_redundant_in::RULE,

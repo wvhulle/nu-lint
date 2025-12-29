@@ -73,8 +73,7 @@ fn check_filter_command_call(
     }
 
     let block_id = match &arg_expr.expr {
-        Expr::RowCondition(id) => *id,
-        Expr::Closure(id) => *id,
+        Expr::RowCondition(id) | Expr::Closure(id) => *id,
         _ => return vec![],
     };
 
@@ -140,7 +139,7 @@ impl DetectFix for WhereClosureToIt {
     type FixInput<'a> = RowConditionFixData;
 
     fn id(&self) -> &'static str {
-        "where_or_filter_closure_to_it"
+        "where_or_filter_closure_to_it_row_condition"
     }
 
     fn explanation(&self) -> &'static str {

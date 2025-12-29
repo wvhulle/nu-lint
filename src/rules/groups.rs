@@ -110,6 +110,7 @@ const POSIX_TOOLS: Group = Group {
         super::posix_tools::tail::RULE,
         super::posix_tools::uniq::RULE,
         super::posix_tools::wc::RULE,
+        super::ansi_over_escape_codes::RULE,
     ],
 };
 

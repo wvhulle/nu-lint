@@ -130,6 +130,7 @@ More than 90 rules are available on The CLI. Some of them need further testing a
 - `use_builtin_tail` (auto-fix)
 - `use_builtin_uniq` (auto-fix)
 - `use_builtin_wc` (auto-fix)
+- `ansi_over_escape_codes` (auto-fix)
 
 `side-effects` - Handle risky and unpredictable commands.
 

@@ -1,4 +1,4 @@
-use nu_protocol::ast::{Expr, Expression, Pipeline};
+use nu_protocol::ast::{Expr, Expression};
 
 use crate::{
     Fix, LintLevel, Replacement,

@@ -131,7 +131,7 @@ pub const ALL_RULES: &[&dyn Rule] = &[
     redundant_ignore::RULE,
     remove_redundant_in::RULE,
     replace_else_if_with_match::RULE,
-    filtering::where_closure_to_it::RULE,
+    filtering::where_closure_to_it_condition::RULE,
     side_effects::mixed_io_types::RULE,
     side_effects::print_and_return_data::RULE,
     side_effects::silence_stderr_data::RULE,

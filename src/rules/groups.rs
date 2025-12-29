@@ -56,7 +56,7 @@ const PERFORMANCE: Group = Group {
         super::filtering::each_if_to_where::RULE,
         super::filtering::for_filter_to_where::RULE,
         super::remove_redundant_in::RULE,
-        super::filtering::where_closure_to_it::RULE,
+        super::filtering::where_closure_to_it_condition::RULE,
         super::unnecessary_variable_before_return::RULE,
         super::inline_single_use_function::RULE,
         super::items_instead_of_transpose_each::RULE,

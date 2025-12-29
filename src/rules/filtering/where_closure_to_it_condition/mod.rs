@@ -73,8 +73,7 @@ fn check_filter_command_call(
     }
 
     let block_id = match &arg_expr.expr {
-        Expr::RowCondition(id) => *id,
-        Expr::Closure(id) => *id,
+        Expr::RowCondition(id) | Expr::Closure(id) => *id,
         _ => return vec![],
     };
 

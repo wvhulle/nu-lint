@@ -300,14 +300,10 @@ impl LintContext<'_> {
     where
         F: for<'b> FnOnce(LintContext<'b>) -> R,
     {
-        use nu_parser::parse;
-
-        use crate::engine::LintEngine;
+        use crate::engine::{LintEngine, parse_source};
 
         let engine_state = LintEngine::default_engine_state();
-        let mut working_set = StateWorkingSet::new(engine_state);
-        let file_offset = working_set.next_span_start();
-        let block = parse(&mut working_set, None, source.as_bytes(), false);
+        let (block, working_set, file_offset) = parse_source(engine_state, source.as_bytes());
 
         let context = LintContext::new(source, &block, engine_state, &working_set, file_offset);
 

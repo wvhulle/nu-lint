@@ -1,5 +1,5 @@
 use std::{
-    fs,
+    env, fs,
     io::{self, BufRead},
     path::{Path, PathBuf},
     sync::{Mutex, OnceLock},
@@ -8,8 +8,9 @@ use std::{
 use ignore::WalkBuilder;
 use nu_parser::parse;
 use nu_protocol::{
+    Span, Value,
     ast::Block,
-    engine::{EngineState, StateWorkingSet},
+    engine::{EngineState, FileStack, StateWorkingSet},
 };
 use rayon::prelude::*;
 
@@ -23,7 +24,7 @@ use crate::{
 
 /// Parse Nushell source code into an AST and return both the Block and
 /// `StateWorkingSet`, along with the file's starting offset in the span space.
-fn parse_source<'a>(
+pub fn parse_source<'a>(
     engine_state: &'a EngineState,
     source: &[u8],
 ) -> (Block, StateWorkingSet<'a>, usize) {
@@ -32,6 +33,8 @@ fn parse_source<'a>(
     let file_offset = working_set.next_span_start();
     // Add the source to the working set's file stack so spans work correctly
     let _file_id = working_set.add_file("source".to_string(), source);
+    // Populate `files` to make `path self` command work
+    working_set.files = FileStack::with_file(Path::new("source").to_path_buf());
     let block = parse(&mut working_set, Some("source"), source, false);
 
     ((*block).clone(), working_set, file_offset)
@@ -119,6 +122,13 @@ impl LintEngine {
             let mut engine_state = nu_cmd_lang::create_default_context();
             engine_state = nu_command::add_shell_command_context(engine_state);
             engine_state = nu_cli::add_cli_context(engine_state);
+
+            // Required by command `path self`
+            if let Ok(cwd) = env::current_dir()
+                && let Some(cwd) = cwd.to_str()
+            {
+                engine_state.add_env_var("PWD".into(), Value::string(cwd, Span::unknown()));
+            }
 
             // Add print command (exported by nu-cli but not added by add_cli_context)
             let delta = {

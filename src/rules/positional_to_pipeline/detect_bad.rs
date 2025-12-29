@@ -88,3 +88,15 @@ fn detect_string_parameter_used_for_data_processing() {
         RULE.assert_detects(code);
     }
 }
+
+#[test]
+fn detect_data_parameter_in_multi_parameter_function() {
+    let bad_codes = vec![
+        "def filter-range [data, min, max] { $data | where $it >= $min and $it <= $max }",
+        "def process-with-config [items, config] { $items | each { |x| $x * $config.multiplier } }",
+    ];
+
+    for code in bad_codes {
+        RULE.assert_detects(code);
+    }
+}

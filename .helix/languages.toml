@@ -1,7 +1,15 @@
 [language-server.nu-lint]
-args = ["run", "--", "--lsp"]
 command = "cargo"
+args = ["run", "--", "--lsp"]
+
+[language-server.rust-analyzer.config]
+procMacro = true
+cachePriming.enable = true
+cargo = { allFeatures = true, allTargets = true }
+check.command = "clippy"
+completion.postfix.enable = false
+diagnostics.experimental.enable = true
 
 [[language]]
-language-servers = ["nu-lint"]
 name = "nu"
+language-servers = ["nu-lint"]

@@ -2,17 +2,11 @@ use nu_protocol::ast::Expr;
 
 use crate::{
     LintLevel,
-    ast::call::CallExt,
+    ast::{call::CallExt, string::strip_quotes},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
 };
-
-fn strip_quotes(name: &str) -> &str {
-    name.strip_prefix('"')
-        .and_then(|s| s.strip_suffix('"'))
-        .unwrap_or(name)
-}
 
 fn to_kebab_case_preserving_spaces(name: &str) -> String {
     name.split(' ')

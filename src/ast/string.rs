@@ -114,11 +114,10 @@ fn looks_like_number(content: &str) -> bool {
     // Duration suffixes
     let duration_suffixes = ["ns", "us", "µs", "ms", "sec", "min", "hr", "day", "wk"];
     for suffix in duration_suffixes {
-        if content.ends_with(suffix) {
-            let prefix = &content[..content.len() - suffix.len()];
-            if prefix.parse::<f64>().is_ok() {
-                return true;
-            }
+        if let Some(prefix) = content.strip_suffix(suffix)
+            && prefix.parse::<f64>().is_ok()
+        {
+            return true;
         }
     }
 
@@ -277,4 +276,45 @@ impl StringFormat {
             .map(|stripped| Self::InterpolationDouble(stripped.to_string()))
             .or(single_quote)
     }
+}
+
+/// Strips surrounding braces from block text and trims whitespace.
+///
+/// # Examples
+///
+/// ```
+/// # use nu_lint::ast::string::strip_block_braces;
+/// assert_eq!(strip_block_braces("{ code }"), "code");
+/// assert_eq!(strip_block_braces("{code}"), "code");
+/// assert_eq!(strip_block_braces("code"), "code");
+/// assert_eq!(strip_block_braces("  { code }  "), "code");
+/// ```
+pub fn strip_block_braces(text: &str) -> &str {
+    text.trim()
+        .strip_prefix('{')
+        .and_then(|s| s.strip_suffix('}'))
+        .map_or(text.trim(), str::trim)
+}
+
+/// Strips surrounding quotes from text (double quotes, single quotes, or
+/// backticks).
+///
+/// This is useful for command names which can be quoted with any of these
+/// delimiters.
+///
+/// # Examples
+///
+/// ```
+/// # use nu_lint::ast::string::strip_quotes;
+/// assert_eq!(strip_quotes("\"hello\""), "hello");
+/// assert_eq!(strip_quotes("'hello'"), "hello");
+/// assert_eq!(strip_quotes("`hello`"), "hello");
+/// assert_eq!(strip_quotes("hello"), "hello");
+/// ```
+pub fn strip_quotes(text: &str) -> &str {
+    text.strip_prefix('"')
+        .and_then(|s| s.strip_suffix('"'))
+        .or_else(|| text.strip_prefix('\'').and_then(|s| s.strip_suffix('\'')))
+        .or_else(|| text.strip_prefix('`').and_then(|s| s.strip_suffix('`')))
+        .unwrap_or(text)
 }

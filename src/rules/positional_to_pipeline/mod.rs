@@ -1,23 +1,29 @@
 use nu_protocol::{
-    Category, Span, SyntaxShape, VarId,
-    ast::{Argument, Block, Call, Expr, Pipeline},
+    Span, SyntaxShape, VarId,
+    ast::{Expr, Pipeline},
 };
 
 use crate::{
     LintLevel,
-    ast::{call::CallExt, declaration::CustomCommandDef, expression::ExpressionExt},
+    ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
 
 pub struct FixData {
-    /// Span of the function definition to replace
+    /// Function definition span
     def_span: Span,
-    /// Generated fix code
-    fix_code: String,
-    /// Parameter name for explanation
+    /// Block containing the function body
+    block_id: nu_protocol::BlockId,
+    /// Parameter name being converted to pipeline input
     param_name: String,
+    /// Function name
+    function_name: String,
+    /// Whether function is exported
+    is_exported: bool,
+    /// Names of remaining parameters (excluding the pipeline input parameter)
+    remaining_params: Vec<String>,
 }
 
 /// Check if a parameter is a data type that would benefit from pipeline input
@@ -33,285 +39,53 @@ fn is_data_type_parameter(param: &nu_protocol::PositionalArg) -> bool {
     )
 }
 
-fn is_data_processing_command(decl_name: &str, category: &Category) -> bool {
-    matches!(
-        category,
-        Category::Filters
-            | Category::Math
-            | Category::Formats
-            | Category::Strings
-            | Category::Conversions
-            | Category::Database
-    ) || matches!(
-        decl_name,
-        "each"
-            | "where"
-            | "select"
-            | "sort"
-            | "sort-by"
-            | "group-by"
-            | "reduce"
-            | "length"
-            | "first"
-            | "last"
-            | "skip"
-            | "take"
-            | "unique"
-            | "uniq"
-            | "flatten"
-            | "transpose"
-            | "reverse"
-            | "shuffle"
-            | "update"
-            | "upsert"
-            | "insert"
-            | "append"
-            | "prepend"
-            | "get"
-            | "drop"
-            | "enumerate"
-            | "chunks"
-            | "split-by"
-            | "merge"
-            | "zip"
-            | "find"
-            | "any"
-            | "all"
-            | "empty?"
-            | "is-empty"
-            | "is-not-empty"
-            | "describe"
-            | "compact"
-            | "collect"
-            | "par-each"
-            | "rotate"
-            | "roll"
-    )
-}
-
-/// Analyze parameter usage patterns to determine if it's used for data
-/// operations
-
-#[derive(Default)]
-struct ParameterUsageAnalysis {
-    /// Parameter used as pipeline input (first element in pipeline)
-    used_as_pipeline_input: bool,
-    /// Parameter used with data processing commands
-    used_with_data_commands: bool,
-    /// Parameter used for data access (field access, etc.)
-    used_for_data_access: bool,
-    /// Parameter used in generation/configuration contexts
-    used_for_generation: bool,
-    /// Parameter used with file/path operations
-    used_with_file_operations: bool,
-    /// Total usage count
-    usage_count: usize,
-}
-
-impl ParameterUsageAnalysis {
-    const fn suggests_data_operations(&self) -> bool {
-        let has_data_usage = self.used_as_pipeline_input
-            || self.used_with_data_commands
-            || self.used_for_data_access;
-        has_data_usage && !self.used_with_file_operations
-    }
-}
-
-/// Helper to analyze pipelines and collect usage information
-fn analyze_pipelines(
-    pipelines: &[Pipeline],
-    param_var_id: VarId,
-    context: &LintContext,
-) -> ParameterUsageAnalysis {
-    let mut analysis = ParameterUsageAnalysis::default();
-
-    pipelines.iter().enumerate().for_each(|(i, pipeline)| {
-        log::debug!(
-            "Analyzing pipeline {i}: {} elements",
-            pipeline.elements.len()
-        );
-        analyze_pipeline_for_parameter_usage(pipeline, param_var_id, context, &mut analysis);
-    });
-
-    log::debug!(
-        "Analysis result: used_as_pipeline_input={}, used_with_data_commands={}, \
-         used_for_data_access={}, usage_count={}",
-        analysis.used_as_pipeline_input,
-        analysis.used_with_data_commands,
-        analysis.used_for_data_access,
-        analysis.usage_count
-    );
-
-    analysis
-}
-
-/// Comprehensive analysis of how a parameter is used in a function
-fn analyze_parameter_usage(param_var_id: VarId, context: &LintContext) -> ParameterUsageAnalysis {
-    log::debug!("Starting analysis for parameter var_id: {param_var_id:?}");
-    log::debug!("Main AST has {} pipelines", context.ast.pipelines.len());
-    analyze_pipelines(&context.ast.pipelines, param_var_id, context)
-}
-
-/// Analyze a pipeline for parameter usage
-fn analyze_pipeline_for_parameter_usage(
-    pipeline: &Pipeline,
-    param_var_id: VarId,
-    ctx: &LintContext,
-    analysis: &mut ParameterUsageAnalysis,
-) {
-    let Some(first_element) = pipeline.elements.first() else {
-        return;
-    };
-
-    // Check if parameter is used as first element (pipeline input)
-    if first_element.expr.matches_var(param_var_id) {
-        analysis.used_as_pipeline_input = true;
-        analysis.usage_count += 1;
-
-        // Check if subsequent elements are data processing commands
-        pipeline.elements[1..]
-            .iter()
-            .filter_map(|element| match &element.expr.expr {
-                Expr::Call(call) => Some(call),
-                _ => None,
-            })
-            .for_each(|call| {
-                let decl = ctx.working_set.get_decl(call.decl_id);
-                let sig = decl.signature();
-                if is_data_processing_command(&sig.name, &sig.category) {
-                    analysis.used_with_data_commands = true;
-                } else if is_file_operation_command(&sig.name) {
-                    analysis.used_with_file_operations = true;
-                }
-            });
-    }
-
-    // Also check each element for parameter usage in arguments
-    pipeline
-        .elements
-        .iter()
-        .filter_map(|element| match &element.expr.expr {
-            Expr::Call(call) => Some(call),
-            _ => None,
-        })
-        .for_each(|call| analyze_call_for_parameter_usage(call, param_var_id, ctx, analysis));
-}
-
-/// Check if a command is a file operation
-fn is_file_operation_command(decl_name: &str) -> bool {
-    matches!(
-        decl_name,
-        "open" | "save" | "load" | "cp" | "mv" | "rm" | "mkdir" | "touch" | "ls"
-    )
-}
-
-/// Analyze a function call for parameter usage
-fn analyze_call_for_parameter_usage(
-    call: &Call,
-    param_var_id: VarId,
-    ctx: &LintContext,
-    analysis: &mut ParameterUsageAnalysis,
-) {
-    if !call
-        .arguments
-        .iter()
-        .any(|arg| argument_references_variable(arg, param_var_id))
-    {
-        return;
-    }
-
-    analysis.usage_count += 1;
-
-    let sig = ctx.working_set.get_decl(call.decl_id).signature();
-    if is_data_processing_command(&sig.name, &sig.category) {
-        analysis.used_with_data_commands = true;
-    } else if is_file_operation_command(&sig.name) {
-        analysis.used_with_file_operations = true;
-    } else if is_generation_command(&sig.name) {
-        analysis.used_for_generation = true;
-    }
-}
-
-/// Check if a command is primarily for generation/creation
-fn is_generation_command(decl_name: &str) -> bool {
-    matches!(
-        decl_name,
-        "range"
-            | "seq"
-            | "random"
-            | "date"
-            | "now"
-            | "create"
-            | "make"
-            | "generate"
-            | "build"
-            | "repeat"
-    )
-}
-
-/// Check if an argument references a variable
-fn argument_references_variable(arg: &Argument, var_id: VarId) -> bool {
-    match arg {
-        Argument::Positional(expr)
-        | Argument::Named((_, _, Some(expr)))
-        | Argument::Unknown(expr)
-        | Argument::Spread(expr) => expr.contains_variable(var_id),
-        Argument::Named(_) => false,
-    }
-}
-
-fn extract_function_body(decl_name: &str, context: &LintContext) -> Option<String> {
-    find_custom_command_def(decl_name, context).and_then(|def| def.extract_body_text(context))
+/// Check if a parameter is used as the first element of any pipeline
+fn parameter_used_as_pipeline_input(param_var_id: VarId, pipelines: &[Pipeline]) -> bool {
+    pipelines.iter().any(|pipeline| {
+        pipeline
+            .elements
+            .first()
+            .is_some_and(|first| first.expr.matches_var(param_var_id))
+    })
 }
 
 type ViolationPair = (Detection, FixData);
 
-/// Common validation logic for function parameters
-fn should_analyze_function<'a>(
+/// Find data parameters used as pipeline input
+fn find_pipeline_data_parameters<'a>(
     signature: &'a nu_protocol::Signature,
-    function_name: &str,
-) -> Option<&'a nu_protocol::PositionalArg> {
-    // Only consider functions with exactly one required positional parameter
-    if signature.required_positional.len() != 1
-        || !signature.optional_positional.is_empty()
-        || signature.rest_positional.is_some()
-    {
-        log::debug!("Skipping {function_name} - wrong parameter count");
-        return None;
-    }
-
-    let param = &signature.required_positional[0];
-
-    if !is_data_type_parameter(param) {
-        log::debug!(
-            "Skipping {function_name} - parameter '{}' is not a data type",
-            param.name
-        );
-        return None;
-    }
-
-    Some(param)
+    pipelines: &[Pipeline],
+) -> Vec<&'a nu_protocol::PositionalArg> {
+    signature
+        .required_positional
+        .iter()
+        .filter(|param| {
+            is_data_type_parameter(param)
+                && param
+                    .var_id
+                    .is_some_and(|var_id| parameter_used_as_pipeline_input(var_id, pipelines))
+        })
+        .collect()
 }
 
 /// Analyze a function from its signature (for registered functions)
 fn analyze_function_from_signature(
     signature: &nu_protocol::Signature,
+    block_id: nu_protocol::BlockId,
     context: &LintContext,
-) -> Option<ViolationPair> {
-    let param = should_analyze_function(signature, &signature.name)?;
-    let param_var_id = param.var_id?;
+) -> Vec<ViolationPair> {
+    // Check if block exists in working set
+    if block_id.get() >= context.working_set.num_blocks() {
+        return vec![];
+    }
 
-    log::debug!(
-        "Function {} parameter '{}' has var_id: {:?}",
-        signature.name,
-        param.name,
-        param_var_id
-    );
+    let block = context.working_set.get_block(block_id);
+    let pipeline_params = find_pipeline_data_parameters(signature, &block.pipelines);
 
-    let analysis = analyze_parameter_usage(param_var_id, context);
-    analysis
-        .suggests_data_operations()
-        .then(|| create_violation(signature, param, context))
+    pipeline_params
+        .into_iter()
+        .map(|param| create_violation(signature, param, block_id, context))
+        .collect()
 }
 
 /// Analyze a function from AST definition (for unregistered functions)
@@ -319,83 +93,34 @@ fn analyze_function_from_ast(
     block_id: nu_protocol::BlockId,
     function_name: &str,
     context: &LintContext,
-) -> Option<ViolationPair> {
+) -> Vec<ViolationPair> {
     let block = context.working_set.get_block(block_id);
-    let param = should_analyze_function(&block.signature, function_name)?;
-    let param_var_id = param.var_id?;
+    let pipeline_params = find_pipeline_data_parameters(&block.signature, &block.pipelines);
 
-    log::debug!(
-        "Function {function_name} parameter '{}' has var_id: {param_var_id:?}",
-        param.name
-    );
+    let Some(def_span) = find_function_definition_span(function_name, context) else {
+        return vec![];
+    };
 
-    let analysis = analyze_parameter_usage_in_block(param_var_id, block, context);
-    if !analysis.suggests_data_operations() {
-        return None;
-    }
+    // Check if function is exported by looking for 'export def' in the source
+    let def_text = context.get_span_text(def_span);
+    let is_exported = def_text.trim_start().starts_with("export");
 
     let mut function_signature = block.signature.clone();
     function_signature.name = function_name.to_string();
-    let def_span = find_function_definition_span(function_name, context)?;
-    Some(create_violation_with_span(
-        &function_signature,
-        param,
-        def_span,
-        context,
-    ))
-}
 
-fn transform_parameter_to_pipeline_input(function_body: &str, param_name: &str) -> String {
-    let param_var = format!("${param_name}");
-    let is_pipeline_start =
-        function_body.trim_start().starts_with(&param_var) && function_body.contains(" | ");
-
-    if is_pipeline_start {
-        function_body.replacen(&format!("{param_var} | "), "", 1)
-    } else {
-        function_body.replace(&param_var, "$in")
-    }
-}
-
-fn generate_fix_code_full(
-    signature: &nu_protocol::Signature,
-    param: &nu_protocol::PositionalArg,
-    context: &LintContext,
-) -> String {
-    let def = find_custom_command_def(&signature.name, context);
-
-    extract_function_body(&signature.name, context).map_or_else(
-        || format!("def {} [] {{ ... }}", signature.name),
-        |body| {
-            let transformed = transform_parameter_to_pipeline_input(&body, &param.name);
-            let prefix = if def
-                .as_ref()
-                .is_some_and(super::super::ast::declaration::CustomCommandDef::is_exported)
-            {
-                "export def"
-            } else {
-                "def"
-            };
-            format!(
-                "{prefix} {} [] {{ {} }}",
-                signature.name,
-                transformed.trim()
+    pipeline_params
+        .into_iter()
+        .map(|param| {
+            create_violation_with_span(
+                &function_signature,
+                param,
+                def_span,
+                block_id,
+                is_exported,
+                context,
             )
-        },
-    )
-}
-
-fn find_custom_command_def(function_name: &str, context: &LintContext) -> Option<CustomCommandDef> {
-    context
-        .ast
-        .pipelines
-        .iter()
-        .flat_map(|pipeline| &pipeline.elements)
-        .filter_map(|element| match &element.expr.expr {
-            Expr::Call(call) => call.custom_command_def(context),
-            _ => None,
         })
-        .find(|def| def.name == function_name)
+        .collect()
 }
 
 fn find_function_definition_span(function_name: &str, context: &LintContext) -> Option<Span> {
@@ -415,10 +140,10 @@ fn find_function_definition_span(function_name: &str, context: &LintContext) -> 
 fn create_violation(
     signature: &nu_protocol::Signature,
     param: &nu_protocol::PositionalArg,
+    block_id: nu_protocol::BlockId,
     context: &LintContext,
 ) -> ViolationPair {
     let name_span = context.find_declaration_span(&signature.name);
-    let full_code = generate_fix_code_full(signature, param, context);
     let def_span =
         find_function_definition_span(&signature.name, context).unwrap_or(name_span.into());
 
@@ -426,10 +151,20 @@ fn create_violation(
         .with_primary_label("function with single data parameter")
         .with_help("Pipeline input enables better composability and streaming performance");
 
+    let remaining_params: Vec<String> = signature
+        .required_positional
+        .iter()
+        .filter(|p| p.name != param.name)
+        .map(|p| p.name.clone())
+        .collect();
+
     let fix_data = FixData {
         def_span,
-        fix_code: full_code,
+        block_id,
         param_name: param.name.clone(),
+        function_name: signature.name.clone(),
+        is_exported: false,
+        remaining_params,
     };
 
     (violation, fix_data)
@@ -439,35 +174,33 @@ fn create_violation_with_span(
     signature: &nu_protocol::Signature,
     param: &nu_protocol::PositionalArg,
     def_span: nu_protocol::Span,
+    block_id: nu_protocol::BlockId,
+    is_exported: bool,
     context: &LintContext,
 ) -> ViolationPair {
     let name_span = context.find_declaration_span(&signature.name);
-    let full_code = generate_fix_code_full(signature, param, context);
 
     let violation = Detection::from_file_span("Use pipeline input instead of parameter", name_span)
         .with_primary_label("function with single data parameter")
         .with_help("Pipeline input enables better composability and streaming performance");
 
+    let remaining_params: Vec<String> = signature
+        .required_positional
+        .iter()
+        .filter(|p| p.name != param.name)
+        .map(|p| p.name.clone())
+        .collect();
+
     let fix_data = FixData {
         def_span,
-        fix_code: full_code,
+        block_id,
         param_name: param.name.clone(),
+        function_name: signature.name.clone(),
+        is_exported,
+        remaining_params,
     };
 
     (violation, fix_data)
-}
-
-/// Analyze parameter usage in a specific block
-fn analyze_parameter_usage_in_block(
-    param_var_id: VarId,
-    block: &Block,
-    context: &LintContext,
-) -> ParameterUsageAnalysis {
-    log::debug!(
-        "Analyzing block with {} pipelines for var_id: {param_var_id:?}",
-        block.pipelines.len()
-    );
-    analyze_pipelines(&block.pipelines, param_var_id, context)
 }
 
 struct TurnPositionalIntoStreamInput;
@@ -480,8 +213,8 @@ impl DetectFix for TurnPositionalIntoStreamInput {
     }
 
     fn explanation(&self) -> &'static str {
-        "Custom commands with a single positional parameter may be rewritten as a command \
-         receiving pipeline input."
+        "Custom commands with data parameters used as pipeline input should receive that data via \
+         pipeline input ($in) instead."
     }
 
     fn doc_url(&self) -> Option<&'static str> {
@@ -506,26 +239,76 @@ impl DetectFix for TurnPositionalIntoStreamInput {
 
         user_functions
             .iter()
-            .filter_map(|(_, decl)| analyze_function_from_signature(&decl.signature(), context))
+            .flat_map(|(block_id, decl)| {
+                analyze_function_from_signature(
+                    &decl.signature(),
+                    nu_protocol::BlockId::new(*block_id),
+                    context,
+                )
+            })
             .chain(
-                function_definitions.iter().filter_map(|(block_id, name)| {
+                function_definitions.iter().flat_map(|(block_id, name)| {
                     analyze_function_from_ast(*block_id, name, context)
                 }),
             )
             .collect()
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        use crate::ast::string::strip_block_braces;
+
         let explanation = format!(
             "Use pipeline input ($in) instead of parameter (${})",
             fix_data.param_name
         );
+
+        let block = context.working_set.get_block(fix_data.block_id);
+        let body_text = context.get_span_text(block.span?);
+        let body_content = strip_block_braces(body_text);
+
+        // Transform the body: replace $param with $in, and remove "$param | " if it
+        // starts a pipeline
+        let param_var = format!("${}", fix_data.param_name);
+        let pipeline_prefix = format!("{param_var} | ");
+
+        let fixed_body = if body_content.trim_start().starts_with(&pipeline_prefix) {
+            // Remove "$param | " from the start
+            body_content
+                .trim_start()
+                .strip_prefix(&pipeline_prefix)
+                .unwrap_or(body_content)
+                .to_string()
+        } else {
+            // Replace all occurrences of $param with $in
+            // Note: This uses string replace, but only after verifying via AST that the
+            // parameter is actually used
+            body_content.replace(&param_var, "$in")
+        };
+
+        let prefix = if fix_data.is_exported {
+            "export def"
+        } else {
+            "def"
+        };
+
+        // Reconstruct parameter list from remaining parameters
+        let params_str = if fix_data.remaining_params.is_empty() {
+            "[]".to_string()
+        } else {
+            format!("[{}]", fix_data.remaining_params.join(", "))
+        };
+
+        let fixed_code = format!(
+            "{} {} {} {{ {} }}",
+            prefix,
+            fix_data.function_name,
+            params_str,
+            fixed_body.trim()
+        );
+
         Some(Fix::with_explanation(
             explanation,
-            vec![Replacement::new(
-                fix_data.def_span,
-                fix_data.fix_code.clone(),
-            )],
+            vec![Replacement::new(fix_data.def_span, fixed_code)],
         ))
     }
 }

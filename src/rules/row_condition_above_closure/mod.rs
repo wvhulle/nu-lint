@@ -2,7 +2,7 @@ use nu_protocol::ast::{Call, Expr, Expression, Traverse};
 
 use crate::{
     LintLevel,
-    ast::call::CallExt,
+    ast::{call::CallExt, string::strip_block_braces},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -10,7 +10,7 @@ use crate::{
 
 struct RowConditionFixData {
     closure_span: nu_protocol::Span,
-    fixed_text: Option<String>,
+    param_decl_span: nu_protocol::Span,
     param_name: String,
 }
 
@@ -18,10 +18,10 @@ const fn is_stored_closure(expr: &Expression) -> bool {
     matches!(&expr.expr, Expr::Var(_) | Expr::FullCellPath(_))
 }
 
-fn extract_closure_parameter_name(
+fn extract_closure_parameter(
     block_id: nu_protocol::BlockId,
     context: &LintContext,
-) -> Option<String> {
+) -> Option<(String, nu_protocol::Span)> {
     let block = context.working_set.get_block(block_id);
 
     if block.signature.required_positional.len() != 1 {
@@ -32,46 +32,26 @@ fn extract_closure_parameter_name(
     let var_id = param.var_id?;
 
     let var = context.working_set.get_variable(var_id);
-    Some(context.get_span_text(var.declaration_span).to_string())
+    let param_name = context.get_span_text(var.declaration_span).to_string();
+
+    Some((param_name, var.declaration_span))
 }
 
-fn generate_fix(
-    closure_expr: &Expression,
-    block_id: nu_protocol::BlockId,
-    param_name: &str,
+fn find_param_decl_span_in_source(
+    block_span: nu_protocol::Span,
+    param_decl_span: nu_protocol::Span,
     context: &LintContext,
-) -> Option<Fix> {
-    let block = context.working_set.get_block(block_id);
-
-    if block.pipelines.is_empty() {
-        return None;
-    }
-
-    let block_span = block.span?;
+) -> Option<nu_protocol::Span> {
     let block_text = context.get_span_text(block_span);
+    let param_text = context.get_span_text(param_decl_span);
 
-    let body_text = block_text
-        .strip_prefix('{')
-        .and_then(|s| s.strip_suffix('}'))
-        .unwrap_or(block_text)
-        .trim();
+    let param_syntax = format!("|{param_text}|");
+    let offset = block_text.find(&param_syntax)?;
 
-    let closure_param_text = format!("|{param_name}|");
-    let body_without_closure = body_text
-        .strip_prefix(&closure_param_text)
-        .unwrap_or(body_text)
-        .trim();
+    let start = block_span.start + offset;
+    let end = start + param_syntax.len();
 
-    let param_pattern = format!("${param_name}");
-    let fixed_text = body_without_closure.replace(&param_pattern, "$it");
-
-    let explanation =
-        format!("Replace closure parameter `${param_name}` with `$it` to use row condition syntax");
-
-    Some(Fix::with_explanation(
-        explanation,
-        vec![Replacement::new(closure_expr.span, fixed_text)],
-    ))
+    Some(nu_protocol::Span::new(start, end))
 }
 
 fn check_where_call(
@@ -95,7 +75,12 @@ fn check_where_call(
         return vec![];
     };
 
-    let Some(param_name) = extract_closure_parameter_name(*block_id, context) else {
+    let block = context.working_set.get_block(*block_id);
+    let Some(block_span) = block.span else {
+        return vec![];
+    };
+
+    let Some((param_name, param_var_span)) = extract_closure_parameter(*block_id, context) else {
         return vec![];
     };
 
@@ -109,11 +94,10 @@ fn check_where_call(
         return vec![];
     }
 
-    let fixed_text = generate_fix(arg_expr, *block_id, &param_name, context).and_then(|f| {
-        f.replacements
-            .first()
-            .map(|r| r.replacement_text.to_string())
-    });
+    let Some(param_decl_span) = find_param_decl_span_in_source(block_span, param_var_span, context)
+    else {
+        return vec![];
+    };
 
     let violation = Detection::from_global_span(
         "Use row condition with `$it` instead of closure for more concise code",
@@ -129,7 +113,7 @@ fn check_where_call(
 
     let fix_data = RowConditionFixData {
         closure_span: arg_expr.span,
-        fixed_text,
+        param_decl_span,
         param_name,
     };
 
@@ -179,16 +163,27 @@ impl DetectFix for RowConditionAboveClosure {
         violations
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        fix_data.fixed_text.as_ref().map(|text| {
-            Fix::with_explanation(
-                format!(
-                    "Replace closure parameter ${} with row condition using $it",
-                    fix_data.param_name
-                ),
-                vec![Replacement::new(fix_data.closure_span, text.clone())],
-            )
-        })
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let closure_text = context.get_span_text(fix_data.closure_span);
+        let param_decl_text = context.get_span_text(fix_data.param_decl_span);
+
+        let body_text = strip_block_braces(closure_text);
+
+        let body_without_param = body_text
+            .strip_prefix(param_decl_text)
+            .unwrap_or(body_text)
+            .trim();
+
+        let param_pattern = format!("${}", fix_data.param_name);
+        let fixed_text = body_without_param.replace(&param_pattern, "$it");
+
+        Some(Fix::with_explanation(
+            format!(
+                "Replace closure parameter ${} with row condition using $it",
+                fix_data.param_name
+            ),
+            vec![Replacement::new(fix_data.closure_span, fixed_text)],
+        ))
     }
 }
 

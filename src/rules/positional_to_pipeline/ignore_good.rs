@@ -1,10 +1,9 @@
 use super::RULE;
 
 #[test]
-fn ignore_multiple_parameters() {
+fn ignore_multiple_parameters_without_pipeline_usage() {
     let good_codes = vec![
-        "def filter-range [data, min, max] { $data | where $it >= $min and $it <= $max }",
-        "def process-with-config [items, config] { $items | each { |x| $x * $config.multiplier } }",
+        // Multiple parameters where none are used as pipeline input
         "def backup-file [source, destination] { cp $source $destination }",
         "def greet [name, greeting] { $\"($greeting), ($name)!\" }",
     ];
@@ -30,9 +29,8 @@ fn ignore_no_parameters() {
 #[test]
 fn ignore_optional_parameters() {
     let good_codes = vec![
+        // Optional parameter not used as pipeline input
         "def greet [name?] { $\"Hello, ($name | default 'World')!\" }",
-        "def process [data, multiplier?: int] { $data | each { |x| $x * ($multiplier | default 1) \
-         } }",
     ];
 
     for code in good_codes {
@@ -97,9 +95,9 @@ fn ignore_non_pipeline_usage() {
 #[test]
 fn ignore_path_and_filename_parameters() {
     let good_codes = vec![
+        // Path/filename parameters not used as pipeline input
         "def read-config [path] { open $path | from toml }",
         "def process-file [filename] { open $filename | lines | length }",
-        "def save-data [data, path] { $data | save $path }",
     ];
 
     for code in good_codes {

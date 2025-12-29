@@ -2,7 +2,7 @@ use nu_protocol::ast::{Argument, Call, Expr, Expression, Pipeline, Traverse};
 
 use crate::{
     Fix, LintLevel, Replacement,
-    ast::call::CallExt,
+    ast::{call::CallExt, string::strip_block_braces},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
@@ -315,11 +315,7 @@ impl DetectFix for ItemsInsteadOfTransposeEach {
         let param = &block.signature.required_positional[0];
 
         let closure_body_text = context.get_span_text(block.span?);
-        let mut closure_body_trimmed = closure_body_text
-            .trim()
-            .strip_prefix('{')
-            .and_then(|s| s.strip_suffix('}'))
-            .map_or(closure_body_text.trim(), |s| s.trim());
+        let mut closure_body_trimmed = strip_block_braces(closure_body_text);
 
         if let Some(pipe_pos) = closure_body_trimmed.find('|')
             && let Some(second_pipe) = closure_body_trimmed[pipe_pos + 1..].find('|')

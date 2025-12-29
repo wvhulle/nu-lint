@@ -101,3 +101,26 @@ fn fix_string_data_processing() {
     RULE.assert_detects(source);
     RULE.assert_replacement_contains(source, "def split-lines [] { lines }");
 }
+
+#[test]
+fn fix_multi_parameter_with_data_parameter() {
+    let source = "def filter-range [data, min, max] { $data | where $it >= $min and $it <= $max }";
+
+    RULE.assert_detects(source);
+    RULE.assert_replacement_contains(
+        source,
+        "def filter-range [min, max] { where $it >= $min and $it <= $max }",
+    );
+}
+
+#[test]
+fn fix_multi_parameter_with_config() {
+    let source =
+        "def process-with-config [items, config] { $items | each { |x| $x * $config.multiplier } }";
+
+    RULE.assert_detects(source);
+    RULE.assert_replacement_contains(
+        source,
+        "def process-with-config [config] { each { |x| $x * $config.multiplier } }",
+    );
+}

@@ -13,11 +13,8 @@ struct FixData {
     unquoted_content: String,
 }
 
-fn check_string_needs_quotes(
-    expr: &Expression,
-    context: &LintContext,
-) -> Option<(Detection, FixData)> {
-    let string_format = StringFormat::from_expression(expr, context)?;
+fn check_string_needs_quotes(expr: &Expression, ctx: &LintContext) -> Option<(Detection, FixData)> {
+    let string_format = StringFormat::from_expression(expr, ctx)?;
 
     let content = match &string_format {
         StringFormat::Double(s) | StringFormat::Single(s) => s,
@@ -43,10 +40,11 @@ fn check_string_needs_quotes(
         expr.span,
     )
     .with_primary_label("unnecessary quotes")
-    .with_help(format!(
+    .with_help(
         "In Nushell, simple strings without spaces or special characters can be written as bare \
-         words.\nRemove quotes: {content}"
-    ));
+         words."
+            .to_string(),
+    );
 
     let fix_data = FixData {
         quoted_span: expr.span,

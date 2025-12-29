@@ -47,15 +47,13 @@ fn extract_function_body(
     decl_name: &str,
     context: &LintContext,
 ) -> Option<String> {
-    // Try from block span first, then fall back to source extraction
+    use crate::ast::string::strip_block_braces;
+
     if let Some(span) = block_span {
-        let contents = context.get_span_text(span).trim();
-        if let Some(inner) = contents.strip_prefix('{').and_then(|s| s.strip_suffix('}')) {
-            return Some(inner.trim().to_string());
-        }
+        let contents = context.get_span_text(span);
+        return Some(strip_block_braces(contents).to_string());
     }
 
-    // Fall back to source extraction
     let span: nu_protocol::Span = context.find_declaration_span(decl_name).into();
     let contents = context.get_span_text(span);
     let start = contents.find('{')?;

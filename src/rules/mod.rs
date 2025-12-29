@@ -2,6 +2,7 @@ use crate::rule::Rule;
 
 pub mod groups;
 
+mod ansi_over_escape_codes;
 mod avoid_nu_subprocess;
 mod avoid_self_import;
 mod bare_string_okay;
@@ -56,6 +57,7 @@ mod unused_helper_functions;
 mod upstream;
 
 pub const ALL_RULES: &[&dyn Rule] = &[
+    ansi_over_escape_codes::RULE,
     avoid_nu_subprocess::RULE,
     avoid_self_import::RULE,
     bare_string_okay::RULE,

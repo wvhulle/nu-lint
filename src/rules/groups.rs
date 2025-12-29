@@ -134,6 +134,7 @@ const FORMATTING: Group = Group {
     name: "formatting",
     description: "Formatting according to Nushell guidelines.",
     rules: &[
+        super::ansi_over_escape_codes::RULE,
         super::collapsible_if::RULE,
         super::forbid_excessive_nesting::RULE,
         super::max_function_body_length::RULE,

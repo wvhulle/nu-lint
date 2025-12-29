@@ -59,11 +59,6 @@ fn ignore_other_commands_with_closures() {
 }
 
 #[test]
-fn ignore_filter_command_with_closure() {
-    RULE.assert_ignores(r"[1, 2, 3] | filter {|x| $x > 2}");
-}
-
-#[test]
 fn ignore_row_condition_in_parens() {
     RULE.assert_ignores(r"[1, 2, 3] | where ($it > 2)");
 }
@@ -71,4 +66,28 @@ fn ignore_row_condition_in_parens() {
 #[test]
 fn ignore_where_without_arguments() {
     RULE.assert_ignores(r"def test [] { where }");
+}
+
+#[test]
+fn ignore_filter_with_it() {
+    RULE.assert_ignores(r"[1, 2, 3] | filter {|it| $it > 2}");
+}
+
+#[test]
+fn ignore_filter_stored_closure() {
+    let code = r"
+let cond = {|x| $x > 2}
+[1, 2, 3] | filter $cond
+";
+    RULE.assert_ignores(code);
+}
+
+#[test]
+fn ignore_filter_with_it_field_access() {
+    RULE.assert_ignores(r"ls | filter {|it| $it.size > 100kb}");
+}
+
+#[test]
+fn ignore_filter_without_arguments() {
+    RULE.assert_ignores(r"def test [] { filter }");
 }

@@ -54,12 +54,13 @@ fn find_param_decl_span_in_source(
     Some(nu_protocol::Span::new(start, end))
 }
 
-fn check_where_call(
+fn check_filter_command_call(
     call: &Call,
     _expr: &Expression,
     context: &LintContext,
 ) -> Vec<(Detection, RowConditionFixData)> {
-    if call.get_call_name(context) != "where" {
+    let command_name = call.get_call_name(context);
+    if command_name != "where" && command_name != "filter" {
         return vec![];
     }
 
@@ -71,16 +72,18 @@ fn check_where_call(
         return vec![];
     }
 
-    let Expr::RowCondition(block_id) = &arg_expr.expr else {
-        return vec![];
+    let block_id = match &arg_expr.expr {
+        Expr::RowCondition(id) => *id,
+        Expr::Closure(id) => *id,
+        _ => return vec![],
     };
 
-    let block = context.working_set.get_block(*block_id);
+    let block = context.working_set.get_block(block_id);
     let Some(block_span) = block.span else {
         return vec![];
     };
 
-    let Some((param_name, param_var_span)) = extract_closure_parameter(*block_id, context) else {
+    let Some((param_name, param_var_span)) = extract_closure_parameter(block_id, context) else {
         return vec![];
     };
 
@@ -100,16 +103,16 @@ fn check_where_call(
     };
 
     let violation = Detection::from_global_span(
-        "Use row condition with `$it` instead of closure for more concise code",
+        "Use `$it` instead of closure parameter for more concise code",
         arg_expr.span,
     )
-    .with_primary_label("closure syntax")
-    .with_extra_label("where command", call.span())
-    .with_help(
-        "Replace `where {|param| $param ...}` with `where $it ...` for simpler syntax. Row \
-         conditions are more concise and idiomatic when you don't need to store the condition in \
-         a variable.",
-    );
+    .with_primary_label("closure with named parameter")
+    .with_extra_label(format!("{command_name} command"), call.span())
+    .with_help(format!(
+        "Replace `{command_name} {{|param| $param ...}}` with `{command_name} {{|it| $it ...}}` \
+         or `{command_name} {{$it ...}}` for simpler syntax. Using `$it` is more concise and \
+         idiomatic when you don't need to store the closure in a variable.",
+    ));
 
     let fix_data = RowConditionFixData {
         closure_span: arg_expr.span,
@@ -128,7 +131,7 @@ fn check_expression(
         return vec![];
     };
 
-    check_where_call(call, expr, context)
+    check_filter_command_call(call, expr, context)
 }
 
 struct WhereClosureToIt;
@@ -137,11 +140,11 @@ impl DetectFix for WhereClosureToIt {
     type FixInput<'a> = RowConditionFixData;
 
     fn id(&self) -> &'static str {
-        "where_closure_to_it"
+        "where_or_filter_closure_to_it"
     }
 
     fn explanation(&self) -> &'static str {
-        "Prefer row conditions over closures in 'where' for conciseness"
+        "Prefer `$it` over named closure parameters in 'where' and 'filter' for conciseness"
     }
 
     fn doc_url(&self) -> Option<&'static str> {

@@ -86,3 +86,28 @@ fn detect_closure_with_math() {
 fn detect_closure_with_date_comparison() {
     RULE.assert_detects(r"ls | where {|f| $f.modified >= (date now) - 2wk}");
 }
+
+#[test]
+fn detect_filter_simple_closure() {
+    RULE.assert_detects(r"[1, 2, 3] | filter {|x| $x > 2}");
+}
+
+#[test]
+fn detect_filter_with_field_access() {
+    RULE.assert_detects(r"ls | filter {|f| $f.size > 100kb}");
+}
+
+#[test]
+fn detect_filter_with_different_param_name() {
+    RULE.assert_detects(r"[1, 2, 3] | filter {|num| $num > 2}");
+}
+
+#[test]
+fn detect_filter_with_complex_condition() {
+    RULE.assert_detects(r#"ls | filter {|f| $f.size > 100kb and $f.type == "file"}"#);
+}
+
+#[test]
+fn detect_filter_with_pipeline() {
+    RULE.assert_detects(r"[1, 2, 3] | filter {|x| ($x | str length) > 0}");
+}

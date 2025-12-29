@@ -194,3 +194,47 @@ fn fix_closure_with_not_operator_exact() {
     RULE.assert_count(source, 1);
     RULE.assert_replacement_is(source, expected);
 }
+
+#[test]
+fn fix_filter_simple_closure() {
+    let source = r"[1, 2, 3] | filter {|x| $x > 2}";
+    RULE.assert_count(source, 1);
+    RULE.assert_replacement_contains(source, r"$it > 2");
+}
+
+#[test]
+fn fix_filter_with_field_access() {
+    let source = r"ls | filter {|f| $f.size > 100kb}";
+    RULE.assert_count(source, 1);
+    RULE.assert_replacement_contains(source, r"$it.size > 100kb");
+}
+
+#[test]
+fn fix_filter_with_different_param() {
+    let source = r"[1, 2, 3] | filter {|num| $num > 2}";
+    RULE.assert_count(source, 1);
+    RULE.assert_replacement_contains(source, r"$it > 2");
+}
+
+#[test]
+fn fix_filter_simple_closure_exact() {
+    let source = r"[1, 2, 3] | filter {|x| $x > 2}";
+    let expected = "$it > 2";
+    RULE.assert_count(source, 1);
+    RULE.assert_replacement_is(source, expected);
+}
+
+#[test]
+fn fix_filter_with_complex_condition_exact() {
+    let source = r#"ls | filter {|f| $f.size > 100kb and $f.type == "file"}"#;
+    let expected = r#"$it.size > 100kb and $it.type == "file""#;
+    RULE.assert_count(source, 1);
+    RULE.assert_replacement_is(source, expected);
+}
+
+#[test]
+fn fix_filter_explanation_mentions_it() {
+    let source = r"[1, 2, 3] | filter {|x| $x > 2}";
+    RULE.assert_count(source, 1);
+    RULE.assert_fix_explanation_contains(source, "$it");
+}

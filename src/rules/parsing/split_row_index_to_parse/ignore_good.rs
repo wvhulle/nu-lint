@@ -32,7 +32,7 @@ fn test_good_split_column() {
 
 #[test]
 fn test_good_from_csv() {
-    let good = "'name,age\njohn,30\njane,25' | from csv";
+    let good = "'name,age\\njohn,30\\njane,25' | from csv";
     RULE.assert_ignores(good);
 }
 
@@ -78,7 +78,7 @@ fn test_good_parse_key_value() {
 
 #[test]
 fn test_good_parse_with_regex() {
-    let good = r"'foo bar baz' | parse --regex '\s+(?<word>\w+)\s+'";
+    let good = r"'foo bar baz' | parse --regex '\\s+(?<word>\\w+)\\s+'";
     RULE.assert_ignores(good);
 }
 
@@ -141,15 +141,6 @@ fn test_ignore_parse_usage() {
     let good_code = r#"
 open data.txt | parse "{name} {value}"
 "#;
-
-    RULE.assert_ignores(good_code);
-}
-
-#[test]
-fn test_ignore_each_without_split() {
-    let good_code = r"
-seq 1 10 | each { |x| $x * 2 }
-";
 
     RULE.assert_ignores(good_code);
 }

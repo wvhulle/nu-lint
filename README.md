@@ -38,6 +38,16 @@ nu-lint --help
 
 More than 90 rules are available on The CLI. Some of them need further testing and improvement. Please make an issue on the issue tracker to report any bugs.
 
+`dead-code` - Remove unused or redundant code
+
+- `avoid_self_import`
+- `unnecessary_accumulate`
+- `unnecessary_variable_before_return` (auto-fix)
+- `inline_single_use_function`
+- `redundant_ignore` (auto-fix)
+- `unnecessary_mut` (auto-fix)
+- `unused_helper_functions` (auto-fix)
+
 `documentation` - Improve relevance of actionability of user-facing messages.
 
 - `add_doc_comment_exported_fn`
@@ -94,31 +104,12 @@ More than 90 rules are available on The CLI. Some of them need further testing a
 - `screaming_snake_constants`
 - `snake_case_variables` (auto-fix)
 
-`performance` - May yield performance improvements
+`performance` - Rules with potential performance impact
 
-- `avoid_self_import`
 - `avoid_nu_subprocess`
-- `use_builtin_is_not_empty` (auto-fix)
-- `dispatch_with_subcommands`
-- `shorten_with_compound_assignment` (auto-fix)
+- `avoid_self_import`
 - `unnecessary_accumulate`
 - `lines_instead_of_split` (auto-fix)
-- `parse_instead_of_split` (auto-fix)
-- `turn_positional_into_stream_input` (auto-fix)
-- `while_counter`
-- `loop_counter`
-- `each_if_to_where`
-- `for_filter_to_where`
-- `remove_redundant_in` (auto-fix)
-- `where_closure_to_it` (auto-fix)
-- `unnecessary_variable_before_return` (auto-fix)
-- `inline_single_use_function`
-- `items_instead_of_transpose_each` (auto-fix)
-- `merge_get_cell_path` (auto-fix)
-- `merge_multiline_print` (auto-fix)
-- `redundant_ignore` (auto-fix)
-- `unnecessary_mut` (auto-fix)
-- `unused_helper_functions` (auto-fix)
 
 `posix-tools` - Replace common bash/POSIX commands.
 
@@ -147,10 +138,26 @@ More than 90 rules are available on The CLI. Some of them need further testing a
 - `print_and_return_data`
 - `silence_side_effect_only_each` (auto-fix)
 
-`systemd` - When used in combination with systemd services
+`simplification` - Simplify verbose patterns to idiomatic Nushell
 
-- `add_journal_prefix` (auto-fix)
-- `attach_loglevel_to_log_statement` (auto-fix)
+- `use_builtin_is_not_empty` (auto-fix)
+- `dispatch_with_subcommands`
+- `shorten_with_compound_assignment` (auto-fix)
+- `lines_instead_of_split` (auto-fix)
+- `lines_each_to_parse` (auto-fix)
+- `simplify_regex_parse` (auto-fix)
+- `split_row_first_last` (auto-fix)
+- `split_row_get_to_parse` (auto-fix)
+- `turn_positional_into_stream_input` (auto-fix)
+- `replace_counter_while_with_each`
+- `loop_counter`
+- `each_if_to_where` (auto-fix)
+- `for_filter_to_where`
+- `remove_redundant_in` (auto-fix)
+- `where_or_filter_closure_to_it` (auto-fix)
+- `items_instead_of_transpose_each` (auto-fix)
+- `merge_get_cell_path` (auto-fix)
+- `merge_multiline_print` (auto-fix)
 
 `type-safety` - Encourage annotations with type hints.
 

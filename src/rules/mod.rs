@@ -34,7 +34,7 @@ mod naming;
 mod never_space_split;
 mod no_export_main;
 mod non_final_failure_check;
-mod parse_instead_of_split;
+mod parsing;
 mod positional_to_pipeline;
 mod posix_tools;
 mod range_for_iteration;
@@ -46,7 +46,6 @@ mod shorten_with_compound_assignment;
 mod side_effects;
 mod spacing;
 mod strong_typing;
-mod systemd;
 
 mod try_instead_of_do;
 mod unnecessary_accumulate;
@@ -55,6 +54,7 @@ mod unnecessary_variable_before_return;
 mod unsafe_dynamic_record_access;
 mod unused_helper_functions;
 mod upstream;
+mod use_regex_operators;
 
 pub const ALL_RULES: &[&dyn Rule] = &[
     ansi_over_escape_codes::RULE,
@@ -102,7 +102,10 @@ pub const ALL_RULES: &[&dyn Rule] = &[
     never_space_split::RULE,
     no_export_main::RULE,
     non_final_failure_check::RULE,
-    parse_instead_of_split::RULE,
+    parsing::lines_each_to_parse::RULE,
+    parsing::simplify_regex::RULE,
+    parsing::split_row_first_last::RULE,
+    parsing::split_row_index_to_parse::RULE,
     positional_to_pipeline::RULE,
     posix_tools::awk::RULE,
     posix_tools::cat::RULE,
@@ -133,7 +136,7 @@ pub const ALL_RULES: &[&dyn Rule] = &[
     redundant_ignore::RULE,
     remove_redundant_in::RULE,
     replace_else_if_with_match::RULE,
-    filtering::where_closure_to_it::RULE,
+    filtering::where_closure_to_it_condition::RULE,
     side_effects::mixed_io_types::RULE,
     side_effects::print_and_return_data::RULE,
     side_effects::silence_stderr_data::RULE,
@@ -147,7 +150,6 @@ pub const ALL_RULES: &[&dyn Rule] = &[
     strong_typing::argument::RULE,
     strong_typing::paths::RULE,
     strong_typing::pipeline::RULE,
-    systemd::add_journal_prefix::RULE,
     try_instead_of_do::RULE,
     unnecessary_mut::RULE,
     unnecessary_variable_before_return::RULE,
@@ -155,4 +157,5 @@ pub const ALL_RULES: &[&dyn Rule] = &[
     unused_helper_functions::RULE,
     upstream::nu_deprecated::RULE,
     upstream::nu_parse_error::RULE,
+    use_regex_operators::RULE,
 ];

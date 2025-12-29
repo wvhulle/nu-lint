@@ -3,61 +3,15 @@ use nu_protocol::{
     ast::{Expr, Pipeline, PipelineElement},
 };
 
-use crate::{
-    ast::{call::CallExt, expression::ExpressionExt},
-    context::LintContext,
-};
+use crate::{ast::expression::ExpressionExt, context::LintContext};
 
 pub trait PipelineExt {
-    /// Checks if pipeline contains call to command. Example: `ls | where size >
-    /// 1kb` contains "where"
-    fn contains_call_to(&self, command_name: &str, context: &LintContext) -> bool;
-    /// Checks if variable is used in pipeline. Example: `$list | length` uses
-    /// `$list`
-    fn variable_is_used(&self, var_id: VarId) -> bool;
-    /// Checks if variable is piped. Example: `$data | to json` pipes `$data`
-    fn variable_is_piped(&self, var_id: VarId) -> bool;
     /// Infers parameter type from pipeline. Example: `$text | str length`
     /// infers `string`
     fn infer_param_type(&self, param_var_id: VarId, context: &LintContext) -> Option<Type>;
 }
 
 impl PipelineExt for Pipeline {
-    fn contains_call_to(&self, command_name: &str, context: &LintContext) -> bool {
-        fn check_expr_for_command(expr: &Expr, command_name: &str, context: &LintContext) -> bool {
-            match expr {
-                Expr::Call(call) if call.is_call_to_command(command_name, context) => true,
-                Expr::FullCellPath(cp) => {
-                    check_expr_for_command(&cp.head.expr, command_name, context)
-                }
-                Expr::Subexpression(block_id) => {
-                    let block = context.working_set.get_block(*block_id);
-                    block
-                        .pipelines
-                        .iter()
-                        .any(|p| p.contains_call_to(command_name, context))
-                }
-                _ => false,
-            }
-        }
-
-        self.elements
-            .iter()
-            .any(|element| check_expr_for_command(&element.expr.expr, command_name, context))
-    }
-
-    fn variable_is_used(&self, var_id: VarId) -> bool {
-        self.elements
-            .iter()
-            .any(|elem| elem.expr.matches_var(var_id))
-    }
-
-    fn variable_is_piped(&self, var_id: VarId) -> bool {
-        self.elements
-            .first()
-            .is_some_and(|elem| elem.expr.matches_var(var_id))
-    }
-
     fn infer_param_type(&self, param_var_id: VarId, context: &LintContext) -> Option<Type> {
         log::debug!(
             "infer_param_type from pipeline: param_var_id={:?}, pipeline_elements={}",

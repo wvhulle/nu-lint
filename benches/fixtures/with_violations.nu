@@ -183,11 +183,6 @@ def deeply-nested [data] {
   }
 }
 
-# prefer_parse_over_each_split: Use parse instead of each + split
-def parse-lines [text] {
-  $text | lines | each {|line| $line | split row "," }
-}
-
 # unused_output: Command output is not used
 def waste-output [] {
   ls

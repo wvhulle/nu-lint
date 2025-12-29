@@ -54,6 +54,7 @@ mod unnecessary_variable_before_return;
 mod unsafe_dynamic_record_access;
 mod unused_helper_functions;
 mod upstream;
+mod use_regex_operators;
 
 pub const ALL_RULES: &[&dyn Rule] = &[
     avoid_nu_subprocess::RULE,
@@ -152,4 +153,5 @@ pub const ALL_RULES: &[&dyn Rule] = &[
     unused_helper_functions::RULE,
     upstream::nu_deprecated::RULE,
     upstream::nu_parse_error::RULE,
+    use_regex_operators::RULE,
 ];

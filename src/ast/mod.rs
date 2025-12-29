@@ -3,6 +3,7 @@ pub mod call;
 pub mod declaration;
 pub mod expression;
 pub mod pipeline;
+pub mod regex;
 pub mod span;
 pub mod string;
 pub mod syntax_shape;

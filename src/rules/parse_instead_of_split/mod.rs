@@ -5,7 +5,11 @@ use nu_protocol::{
 
 use crate::{
     Fix, LintLevel, Replacement,
-    ast::{call::CallExt, pipeline::PipelineExt},
+    ast::{
+        call::CallExt,
+        pipeline::PipelineExt,
+        regex::{contains_regex_special_chars, escape_regex},
+    },
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
@@ -23,10 +27,6 @@ pub enum FixData {
     /// Pattern without enough info for auto-fix
     NoFix,
 }
-
-const REGEX_SPECIAL_CHARS: &[char] = &[
-    '\\', '.', '+', '*', '?', '(', ')', '[', ']', '{', '}', '|', '^', '$',
-];
 
 fn contains_call_in_single_pipeline(
     block: &Block,
@@ -81,27 +81,14 @@ fn extract_delimiter_from_split_call(call: &Call, context: &LintContext) -> Opti
 }
 
 fn needs_regex_for_delimiter(delimiter: &str) -> bool {
-    delimiter.chars().any(|c| REGEX_SPECIAL_CHARS.contains(&c))
-}
-
-fn escape_regex_delimiter(delimiter: &str) -> String {
-    delimiter.chars().fold(
-        String::with_capacity(delimiter.len() * 2),
-        |mut escaped, c| {
-            if REGEX_SPECIAL_CHARS.contains(&c) {
-                escaped.push('\\');
-            }
-            escaped.push(c);
-            escaped
-        },
-    )
+    contains_regex_special_chars(delimiter)
 }
 
 fn generate_parse_pattern(delimiter: &str, num_fields: usize) -> (String, bool) {
     let needs_regex = needs_regex_for_delimiter(delimiter);
 
     if needs_regex {
-        let escaped = escape_regex_delimiter(delimiter);
+        let escaped = escape_regex(delimiter);
         let pattern = (0..num_fields)
             .map(|i| format!("(?P<field{i}>.*)"))
             .collect::<Vec<_>>()

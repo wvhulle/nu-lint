@@ -103,3 +103,29 @@ def my-command [--output: string = "output.txt"] {
 "#;
     RULE.assert_ignores(good_code);
 }
+
+#[test]
+fn flag_checked_with_not() {
+    instrument();
+    let good_code = r#"
+def my-command [--silent] {
+    if (not $silent) {
+        print "Not silent mode"
+    }
+}
+"#;
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
+fn flag_checked_with_not_no_parens() {
+    instrument();
+    let good_code = r#"
+def my-command [--silent] {
+    if not $silent {
+        print "Not silent mode"
+    }
+}
+"#;
+    RULE.assert_ignores(good_code);
+}

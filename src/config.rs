@@ -17,7 +17,7 @@ pub enum LintLevel {
     Error,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
 #[serde(default)]
 pub struct Config {
     pub groups: HashMap<String, LintLevel>,

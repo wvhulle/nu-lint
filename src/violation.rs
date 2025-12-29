@@ -1,4 +1,4 @@
-use std::{borrow::Cow, error::Error, fmt, path::Path};
+use std::{borrow::Cow, error::Error, fmt, iter::once, path::Path};
 
 use miette::{Diagnostic, LabeledSpan, Severity};
 use nu_protocol::Span;
@@ -268,7 +268,7 @@ impl Diagnostic for Violation {
             let file_span = span.file_span();
             LabeledSpan::new_with_span(label.clone(), file_span.start..file_span.end)
         });
-        Some(Box::new([primary].into_iter().chain(extras)))
+        Some(Box::new(once(primary).chain(extras)))
     }
 }
 

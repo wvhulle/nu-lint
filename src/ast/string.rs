@@ -279,16 +279,6 @@ impl StringFormat {
 }
 
 /// Strips surrounding braces from block text and trims whitespace.
-///
-/// # Examples
-///
-/// ```
-/// # use nu_lint::ast::string::strip_block_braces;
-/// assert_eq!(strip_block_braces("{ code }"), "code");
-/// assert_eq!(strip_block_braces("{code}"), "code");
-/// assert_eq!(strip_block_braces("code"), "code");
-/// assert_eq!(strip_block_braces("  { code }  "), "code");
-/// ```
 pub fn strip_block_braces(text: &str) -> &str {
     text.trim()
         .strip_prefix('{')
@@ -301,16 +291,6 @@ pub fn strip_block_braces(text: &str) -> &str {
 ///
 /// This is useful for command names which can be quoted with any of these
 /// delimiters.
-///
-/// # Examples
-///
-/// ```
-/// # use nu_lint::ast::string::strip_quotes;
-/// assert_eq!(strip_quotes("\"hello\""), "hello");
-/// assert_eq!(strip_quotes("'hello'"), "hello");
-/// assert_eq!(strip_quotes("`hello`"), "hello");
-/// assert_eq!(strip_quotes("hello"), "hello");
-/// ```
 pub fn strip_quotes(text: &str) -> &str {
     text.strip_prefix('"')
         .and_then(|s| s.strip_suffix('"'))

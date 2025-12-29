@@ -96,6 +96,12 @@ fn check_flag_usage_in_body(call: &Call, context: &LintContext) -> Vec<(Detectio
 
 fn has_null_comparison_for_var(expr: &Expression, var_id: VarId) -> bool {
     match &expr.expr {
+        Expr::UnaryNot(inner) => {
+            if inner.matches_var(var_id) {
+                return true;
+            }
+            has_null_comparison_for_var(inner, var_id)
+        }
         Expr::BinaryOp(left, op, right) => {
             let is_null_comparison = matches!(
                 &op.expr,

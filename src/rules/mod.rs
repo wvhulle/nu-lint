@@ -33,7 +33,7 @@ mod naming;
 mod never_space_split;
 mod no_export_main;
 mod non_final_failure_check;
-mod parse_instead_of_split;
+mod parsing;
 mod positional_to_pipeline;
 mod posix_tools;
 mod range_for_iteration;
@@ -101,7 +101,9 @@ pub const ALL_RULES: &[&dyn Rule] = &[
     never_space_split::RULE,
     no_export_main::RULE,
     non_final_failure_check::RULE,
-    parse_instead_of_split::RULE,
+    parsing::parse_better_than_split::RULE,
+    parsing::split_row_index_to_parse::RULE,
+    parsing::simplify_regex::RULE,
     positional_to_pipeline::RULE,
     posix_tools::awk::RULE,
     posix_tools::cat::RULE,

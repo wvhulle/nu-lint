@@ -49,7 +49,7 @@ const PERFORMANCE: Group = Group {
         super::shorten_with_compound_assignment::RULE,
         super::unnecessary_accumulate::RULE,
         super::lines_instead_of_split::RULE,
-        super::parse_instead_of_split::RULE,
+        super::parsing::parse_better_than_split::RULE,
         super::positional_to_pipeline::RULE,
         super::range_for_iteration::while_counter::RULE,
         super::range_for_iteration::loop_counter::RULE,

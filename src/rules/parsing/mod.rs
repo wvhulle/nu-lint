@@ -9,6 +9,7 @@ use crate::{
     context::LintContext,
 };
 
+pub mod parse_better_than_split;
 pub mod simplify_regex;
 pub mod split_row_index_to_parse;
 

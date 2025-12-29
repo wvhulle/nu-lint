@@ -45,7 +45,6 @@ mod shorten_with_compound_assignment;
 mod side_effects;
 mod spacing;
 mod strong_typing;
-mod systemd;
 
 mod try_instead_of_do;
 mod unnecessary_accumulate;
@@ -101,9 +100,10 @@ pub const ALL_RULES: &[&dyn Rule] = &[
     never_space_split::RULE,
     no_export_main::RULE,
     non_final_failure_check::RULE,
-    parsing::parse_better_than_split::RULE,
-    parsing::split_row_index_to_parse::RULE,
+    parsing::lines_each_to_parse::RULE,
     parsing::simplify_regex::RULE,
+    parsing::split_row_first_last::RULE,
+    parsing::split_row_index_to_parse::RULE,
     positional_to_pipeline::RULE,
     posix_tools::awk::RULE,
     posix_tools::cat::RULE,
@@ -147,7 +147,6 @@ pub const ALL_RULES: &[&dyn Rule] = &[
     strong_typing::argument::RULE,
     strong_typing::paths::RULE,
     strong_typing::pipeline::RULE,
-    systemd::add_journal_prefix::RULE,
     try_instead_of_do::RULE,
     unnecessary_mut::RULE,
     unnecessary_variable_before_return::RULE,

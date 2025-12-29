@@ -209,6 +209,7 @@ impl StringFormat {
     }
 
     /// Reconstructs the original source text with the given content.
+    #[allow(dead_code, reason = "Useful later")]
     pub fn reconstruct(&self, new_content: &str) -> String {
         match self {
             Self::Double(_) => format!("\"{new_content}\""),

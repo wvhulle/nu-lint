@@ -38,18 +38,18 @@ const TYPE_SAFETY: Group = Group {
     ],
 };
 
-const PERFORMANCE: Group = Group {
-    name: "performance",
-    description: "May yield performance improvements",
+const SIMPLIFICATION: Group = Group {
+    name: "simplification",
+    description: "Simplify verbose patterns to idiomatic Nushell",
     rules: &[
-        super::avoid_self_import::RULE,
-        super::avoid_nu_subprocess::RULE,
         super::builtin_not_empty::RULE,
         super::dispatch_with_subcommands::RULE,
         super::shorten_with_compound_assignment::RULE,
-        super::unnecessary_accumulate::RULE,
         super::lines_instead_of_split::RULE,
-        super::parsing::parse_better_than_split::RULE,
+        super::parsing::lines_each_to_parse::RULE,
+        super::parsing::simplify_regex::RULE,
+        super::parsing::split_row_first_last::RULE,
+        super::parsing::split_row_index_to_parse::RULE,
         super::positional_to_pipeline::RULE,
         super::range_for_iteration::while_counter::RULE,
         super::range_for_iteration::loop_counter::RULE,
@@ -57,21 +57,35 @@ const PERFORMANCE: Group = Group {
         super::filtering::for_filter_to_where::RULE,
         super::remove_redundant_in::RULE,
         super::filtering::where_closure_to_it_condition::RULE,
-        super::unnecessary_variable_before_return::RULE,
-        super::inline_single_use_function::RULE,
         super::items_instead_of_transpose_each::RULE,
         super::merge_get_cell_path::RULE,
         super::merge_multiline_print::RULE,
+    ],
+};
+
+const DEAD_CODE: Group = Group {
+    name: "dead-code",
+    description: "Remove unused or redundant code",
+    rules: &[
+        super::avoid_self_import::RULE,
+        super::unnecessary_accumulate::RULE,
+        super::unnecessary_variable_before_return::RULE,
+        super::inline_single_use_function::RULE,
         super::redundant_ignore::RULE,
         super::unnecessary_mut::RULE,
         super::unused_helper_functions::RULE,
     ],
 };
 
-const SYSTEMD: Group = Group {
-    name: "systemd",
-    description: "When used in combination with systemd services",
-    rules: &[super::systemd::add_journal_prefix::RULE],
+const PERFORMANCE: Group = Group {
+    name: "performance",
+    description: "Rules with potential performance impact",
+    rules: &[
+        super::avoid_nu_subprocess::RULE,
+        super::avoid_self_import::RULE,
+        super::unnecessary_accumulate::RULE,
+        super::lines_instead_of_split::RULE,
+    ],
 };
 
 const POSIX_TOOLS: Group = Group {
@@ -178,6 +192,7 @@ const UPSTREAM: Group = Group {
 };
 
 pub const ALL_GROUPS: &[Group] = &[
+    DEAD_CODE,
     DOCUMENTATION,
     ERROR_HANDLING,
     EXTERNAL_TOOLS,
@@ -186,7 +201,7 @@ pub const ALL_GROUPS: &[Group] = &[
     PERFORMANCE,
     POSIX_TOOLS,
     SIDE_EFFECTS,
-    SYSTEMD,
+    SIMPLIFICATION,
     TYPE_SAFETY,
     UPSTREAM,
 ];

@@ -9,8 +9,9 @@ use crate::{
     context::LintContext,
 };
 
-pub mod parse_better_than_split;
+pub mod lines_each_to_parse;
 pub mod simplify_regex;
+pub mod split_row_first_last;
 pub mod split_row_index_to_parse;
 
 pub fn is_split_row_call(call: &Call, context: &LintContext) -> bool {

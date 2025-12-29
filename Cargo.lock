@@ -2654,6 +2654,7 @@ dependencies = [
  "nu-parser",
  "nu-protocol",
  "nu-std",
+ "nu-utils",
  "rayon",
  "regex",
  "serde",

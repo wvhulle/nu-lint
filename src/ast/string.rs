@@ -7,6 +7,156 @@ use nu_protocol::{
 
 use crate::context::LintContext;
 
+/// Characters that have special meaning at the start of a token in Nushell.
+/// These would cause the parser to interpret the token differently.
+const SPECIAL_START_CHARS: &[char] = &[
+    '-',  // Flag/option prefix
+    '$',  // Variable reference
+    '(',  // Subexpression/closure start
+    '[',  // List start
+    '{',  // Record/closure start
+    '`',  // Backtick string start
+    '\'', // Single quote string start
+    '"',  // Double quote string start
+    '#',  // Comment start
+];
+
+/// Characters that cannot appear in bare words (they have syntactic meaning).
+const BARE_WORD_FORBIDDEN: &[char] = &[
+    ' ', '\t', '\n', '\r', // Whitespace separates tokens
+    '|',  // Pipeline separator
+    ';',  // Statement separator
+    '(',  // Subexpression
+    ')',  // Subexpression end
+    '[',  // List/cell path
+    ']',  // List end
+    '{',  // Record/closure
+    '}',  // Record/closure end
+    '`',  // Backtick string delimiter
+    '\'', // Single quote delimiter
+    '"',  // Double quote delimiter
+];
+
+/// Reserved words that would be parsed as different types or cause errors if
+/// unquoted.
+const RESERVED_LITERALS: &[&str] = &[
+    "true", "false", "null", // Parsed as different types
+    "&&",   // Rejected by parser (suggests using ; or and)
+];
+
+/// Checks if a string can be represented as a bare word in Nushell.
+///
+/// A bare word is a string without quotes that Nushell interprets literally.
+/// This function returns `false` if the string can safely be a bare word,
+/// and `true` if quotes are needed.
+pub fn bare_word_needs_quotes(content: &str) -> bool {
+    if content.is_empty() {
+        return true;
+    }
+
+    // Check for reserved literals that would change meaning
+    if RESERVED_LITERALS.contains(&content) {
+        return true;
+    }
+
+    // Check if it would be parsed as a number
+    if looks_like_number(content) {
+        return true;
+    }
+
+    // Check first character for special meaning
+    let first_char = content.chars().next().unwrap();
+    if SPECIAL_START_CHARS.contains(&first_char) {
+        return true;
+    }
+
+    // Check for forbidden characters anywhere in the string
+    for ch in content.chars() {
+        if BARE_WORD_FORBIDDEN.contains(&ch) {
+            return true;
+        }
+    }
+
+    false
+}
+
+/// Checks if content looks like a number literal (int, float, hex, binary,
+/// octal, filesize, or duration).
+fn looks_like_number(content: &str) -> bool {
+    // Integer
+    if content.parse::<i64>().is_ok() {
+        return true;
+    }
+
+    // Float (including those starting with .)
+    if content.parse::<f64>().is_ok() {
+        return true;
+    }
+
+    // Hex (0x...), binary (0b...), octal (0o...)
+    if content.starts_with("0x") || content.starts_with("0b") || content.starts_with("0o") {
+        return true;
+    }
+
+    // Filesize suffixes
+    let filesize_suffixes = [
+        "b", "kb", "mb", "gb", "tb", "pb", "kib", "mib", "gib", "tib", "pib",
+    ];
+    for suffix in filesize_suffixes {
+        if content.to_lowercase().ends_with(suffix) {
+            let prefix = &content[..content.len() - suffix.len()];
+            if prefix.parse::<f64>().is_ok() {
+                return true;
+            }
+        }
+    }
+
+    // Duration suffixes
+    let duration_suffixes = ["ns", "us", "µs", "ms", "sec", "min", "hr", "day", "wk"];
+    for suffix in duration_suffixes {
+        if content.ends_with(suffix) {
+            let prefix = &content[..content.len() - suffix.len()];
+            if prefix.parse::<f64>().is_ok() {
+                return true;
+            }
+        }
+    }
+
+    false
+}
+
+/// Checks if a string needs quotes when used as a cell path member (record
+/// field access).
+///
+/// Cell path members have stricter requirements than general bare words:
+/// - They appear after a dot in expressions like `$record.field`
+/// - Numeric strings would be interpreted as list indices
+/// - Spaces require quotes for proper parsing
+pub fn cell_path_member_needs_quotes(content: &str) -> bool {
+    if content.is_empty() {
+        return true;
+    }
+
+    // Numeric strings would be interpreted as list indices
+    if content.parse::<i64>().is_ok() {
+        return true;
+    }
+
+    // Spaces always need quotes in cell paths
+    if content.contains(' ') {
+        return true;
+    }
+
+    // Check for characters that would break cell path parsing
+    for ch in content.chars() {
+        if matches!(ch, '.' | '[' | ']' | '(' | ')' | '"' | '\'' | '`') {
+            return true;
+        }
+    }
+
+    false
+}
+
 /// The type and content of a string in Nushell.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StringFormat {

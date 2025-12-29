@@ -99,6 +99,7 @@ nu-command = { version = "0.109.1", features = ["sqlite"] }
 nu-parser = "0.109.1"
 nu-protocol = "0.109.1"
 nu-std = "0.109.1"
+nu-utils = "0.109.1"
 rayon = "1.10"
 regex = "1.10"
 serde = { version = "1.0", features = ["derive"] }

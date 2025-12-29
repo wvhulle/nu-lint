@@ -17,6 +17,7 @@ mod exit_only_in_main;
 mod external_script_as_argument;
 mod external_tools;
 mod filter_with_where;
+mod flag_compare_null;
 mod forbid_excessive_nesting;
 mod ignore_over_dev_null;
 mod inline_single_use_function;
@@ -64,6 +65,7 @@ pub const ALL_RULES: &[&dyn Rule] = &[
     documentation::main_named_args::RULE,
     documentation::main_positional_args::RULE,
     error_make::add_help::RULE,
+    flag_compare_null::RULE,
     error_make::add_label::RULE,
     error_make::add_span_to_label::RULE,
     error_make::add_url::RULE,

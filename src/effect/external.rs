@@ -17,6 +17,8 @@ pub enum ExternEffect {
     NoDataInStdout,
     /// This command modifies the file system
     ModifiesFileSystem,
+    /// Produces useful output on `StdErr` (maybe in addition to `StdOut`)
+    WritesDataToStdErr,
 }
 
 pub fn has_external_side_effect(
@@ -449,6 +451,17 @@ pub const EXTERNAL_COMMAND_SIDE_EFFECTS: &[(
             always,
         )],
     ),
+    (
+        "ffmpeg",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::WritesDataToStdErr, always),
+        ],
+    ),
+    ("evtest", &[(ExternEffect::WritesDataToStdErr, always)]),
 ];
 
 #[cfg(test)]

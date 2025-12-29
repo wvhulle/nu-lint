@@ -128,6 +128,7 @@ pub const ALL_RULES: &[&dyn Rule] = &[
     row_condition_above_closure::RULE,
     side_effects::mixed_io_types::RULE,
     side_effects::print_and_return_data::RULE,
+    side_effects::silence_stderr_data::RULE,
     spacing::brace_spacing::RULE,
     spacing::no_trailing_spaces::RULE,
     spacing::omit_list_commas::RULE,

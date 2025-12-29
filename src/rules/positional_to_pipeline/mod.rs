@@ -404,13 +404,12 @@ fn find_function_definition_span(function_name: &str, context: &LintContext) -> 
         .pipelines
         .iter()
         .flat_map(|pipeline| &pipeline.elements)
-        .filter_map(|element| match &element.expr.expr {
+        .find_map(|element| match &element.expr.expr {
             Expr::Call(call) if call.custom_command_def(context)?.name == function_name => {
                 Some(call.span())
             }
             _ => None,
         })
-        .next()
 }
 
 fn create_violation(

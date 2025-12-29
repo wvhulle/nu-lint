@@ -47,6 +47,12 @@ fn ignore_valid_closure() {
 }
 
 #[test]
+fn ignore_valid_path_self() {
+    let code = "const SELF = path self .";
+    RULE.assert_ignores(code);
+}
+
+#[test]
 fn ignore_valid_if_expression() {
     let code = r#"
 let x = 10

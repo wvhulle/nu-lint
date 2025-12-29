@@ -4,6 +4,7 @@ pub mod groups;
 
 mod avoid_nu_subprocess;
 mod avoid_self_import;
+mod bare_string_okay;
 mod builtin_not_empty;
 pub mod check_complete_exit_code;
 mod collapsible_if;
@@ -29,6 +30,7 @@ mod merge_get_cell_path;
 mod merge_multiline_print;
 mod missing_stdin_in_shebang;
 mod naming;
+mod never_space_split;
 mod no_export_main;
 mod non_final_failure_check;
 mod parse_instead_of_split;
@@ -57,6 +59,7 @@ mod upstream;
 pub const ALL_RULES: &[&dyn Rule] = &[
     avoid_nu_subprocess::RULE,
     avoid_self_import::RULE,
+    bare_string_okay::RULE,
     check_complete_exit_code::RULE,
     collapsible_if::RULE,
     dangerous_file_operations::RULE,
@@ -95,6 +98,7 @@ pub const ALL_RULES: &[&dyn Rule] = &[
     naming::kebab_case_commands::RULE,
     naming::screaming_snake_constants::RULE,
     naming::snake_case_variables::RULE,
+    never_space_split::RULE,
     no_export_main::RULE,
     non_final_failure_check::RULE,
     parse_instead_of_split::RULE,

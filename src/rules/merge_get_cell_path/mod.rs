@@ -5,7 +5,7 @@ use nu_protocol::{
 
 use crate::{
     LintLevel,
-    ast::call::CallExt,
+    ast::{call::CallExt, string::cell_path_member_needs_quotes},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -34,10 +34,6 @@ fn combine_cell_path_members(member_groups: &[Vec<PathMember>]) -> Vec<PathMembe
     member_groups.iter().flatten().cloned().collect()
 }
 
-fn needs_quotes(string_value: &str) -> bool {
-    string_value.contains(' ') || string_value.parse::<i64>().is_ok()
-}
-
 const fn format_optional_prefix(optional: bool) -> &'static str {
     if optional { "?." } else { "" }
 }
@@ -46,7 +42,7 @@ fn format_path_member(member: &PathMember) -> String {
     match member {
         PathMember::String { val, optional, .. } => {
             let prefix = format_optional_prefix(*optional);
-            if needs_quotes(val) {
+            if cell_path_member_needs_quotes(val) {
                 format!("{prefix}\"{val}\"")
             } else {
                 format!("{prefix}{val}")

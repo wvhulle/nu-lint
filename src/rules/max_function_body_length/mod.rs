@@ -34,8 +34,10 @@ fn function_violation(
             "Consider refactoring `{function_name}` into smaller, more focused functions. Break \
              down complex logic into helper functions with clear responsibilities."
         );
-        Detection::from_global_span(message, block_span)
+        let name_span = context.find_declaration_span(function_name);
+        Detection::from_file_span(message, name_span)
             .with_primary_label(format!("{line_count} lines"))
+            .with_extra_label("function body", block_span)
             .with_help(suggestion)
     })
 }

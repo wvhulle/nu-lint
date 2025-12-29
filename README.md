@@ -107,10 +107,10 @@ More than 90 rules are available on The CLI. Some of them need further testing a
 - `turn_positional_into_stream_input` (auto-fix)
 - `while_counter`
 - `loop_counter`
-- `where_instead_each_then_if`
-- `filter_collect_with_where`
+- `each_if_to_where`
+- `for_filter_to_where`
 - `remove_redundant_in` (auto-fix)
-- `row_condition_above_closure` (auto-fix)
+- `where_closure_to_it` (auto-fix)
 - `unnecessary_variable_before_return` (auto-fix)
 - `inline_single_use_function`
 - `items_instead_of_transpose_each` (auto-fix)

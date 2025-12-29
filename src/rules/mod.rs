@@ -17,7 +17,7 @@ mod escape_string_interpolation_operators;
 mod exit_only_in_main;
 mod external_script_as_argument;
 mod external_tools;
-mod filter_with_where;
+mod filtering;
 mod flag_compare_null;
 mod forbid_excessive_nesting;
 mod ignore_over_dev_null;
@@ -41,7 +41,6 @@ mod range_for_iteration;
 pub mod redundant_ignore;
 mod remove_redundant_in;
 mod replace_else_if_with_match;
-mod row_condition_above_closure;
 mod shorten_with_compound_assignment;
 mod side_effects;
 mod spacing;
@@ -125,13 +124,13 @@ pub const ALL_RULES: &[&dyn Rule] = &[
     dispatch_with_subcommands::RULE,
     range_for_iteration::loop_counter::RULE,
     range_for_iteration::while_counter::RULE,
-    filter_with_where::over_each_if::RULE,
-    filter_with_where::filter_collect::RULE,
+    filtering::each_if_to_where::RULE,
+    filtering::for_filter_to_where::RULE,
     ignore_over_dev_null::RULE,
     redundant_ignore::RULE,
     remove_redundant_in::RULE,
     replace_else_if_with_match::RULE,
-    row_condition_above_closure::RULE,
+    filtering::where_closure_to_it::RULE,
     side_effects::mixed_io_types::RULE,
     side_effects::print_and_return_data::RULE,
     side_effects::silence_stderr_data::RULE,

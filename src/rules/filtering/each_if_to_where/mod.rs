@@ -148,7 +148,7 @@ impl DetectFix for WhereInsteadEachThenIf {
     type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
-        "where_instead_each_then_if"
+        "each_if_to_where"
     }
 
     fn explanation(&self) -> &'static str {

@@ -131,13 +131,13 @@ fn check_expression(
     check_where_call(call, expr, context)
 }
 
-struct RowConditionAboveClosure;
+struct WhereClosureToIt;
 
-impl DetectFix for RowConditionAboveClosure {
+impl DetectFix for WhereClosureToIt {
     type FixInput<'a> = RowConditionFixData;
 
     fn id(&self) -> &'static str {
-        "row_condition_above_closure"
+        "where_closure_to_it"
     }
 
     fn explanation(&self) -> &'static str {
@@ -187,7 +187,7 @@ impl DetectFix for RowConditionAboveClosure {
     }
 }
 
-pub static RULE: &dyn Rule = &RowConditionAboveClosure;
+pub static RULE: &dyn Rule = &WhereClosureToIt;
 
 #[cfg(test)]
 mod detect_bad;

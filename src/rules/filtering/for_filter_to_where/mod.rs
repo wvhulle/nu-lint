@@ -295,7 +295,7 @@ impl DetectFix for FilterCollectWithWhere {
     type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
-        "filter_collect_with_where"
+        "for_filter_to_where"
     }
 
     fn explanation(&self) -> &'static str {

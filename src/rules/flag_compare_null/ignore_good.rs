@@ -129,3 +129,54 @@ def my-command [--silent] {
 "#;
     RULE.assert_ignores(good_code);
 }
+
+#[test]
+fn flag_only_used_in_null_comparison() {
+    instrument();
+    let good_code = r#"
+def my-command [--verbose] {
+    let has_verbose = ($verbose != null)
+    print $has_verbose
+}
+"#;
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
+fn flag_used_only_in_equality_check() {
+    instrument();
+    let good_code = r#"
+def my-command [--mode: string] {
+    if $mode == null {
+        print "No mode"
+    }
+}
+"#;
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
+fn flag_in_compound_null_check() {
+    instrument();
+    let good_code = r#"
+def my-command [--value: int] {
+    if ($value != null) and ($value > 0) {
+        print $value
+    }
+}
+"#;
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
+fn flag_checked_before_string_interpolation() {
+    instrument();
+    let good_code = r#"
+def my-command [--name: string] {
+    if $name != null {
+        print $"Hello ($name)"
+    }
+}
+"#;
+    RULE.assert_ignores(good_code);
+}

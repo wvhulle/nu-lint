@@ -79,3 +79,65 @@ def my-command [--name: string] {
 "#;
     RULE.assert_detects(bad_code);
 }
+
+#[test]
+fn flag_with_null_check_but_also_used_without() {
+    instrument();
+    let bad_code = r#"
+def my-command [--verbose] {
+    if $verbose != null {
+        print "Verbose mode"
+    }
+    print $verbose
+}
+"#;
+    RULE.assert_detects(bad_code);
+}
+
+#[test]
+fn flag_used_in_condition_before_null_check() {
+    instrument();
+    let bad_code = r#"
+def my-command [--count: int] {
+    if $count > 0 {
+        print "positive"
+    }
+}
+"#;
+    RULE.assert_detects(bad_code);
+}
+
+#[test]
+fn flag_used_in_string_interpolation_without_check() {
+    instrument();
+    let bad_code = r#"
+def my-command [--name: string] {
+    print $"Hello ($name)"
+}
+"#;
+    RULE.assert_detects(bad_code);
+}
+
+#[test]
+fn flag_used_in_list_without_check() {
+    instrument();
+    let bad_code = r#"
+def my-command [--item: string] {
+    [$item "other"]
+}
+"#;
+    RULE.assert_detects(bad_code);
+}
+
+#[test]
+fn flag_in_binary_comparison_without_null_check() {
+    instrument();
+    let bad_code = r#"
+def my-command [--value: int] {
+    if $value == 42 {
+        print "found it"
+    }
+}
+"#;
+    RULE.assert_detects(bad_code);
+}

@@ -34,37 +34,39 @@ fn check_flag_usage_in_body(call: &Call, context: &LintContext) -> Vec<(Detectio
             let var = context.working_set.get_variable(var_id);
             let flag_span = var.declaration_span;
 
-            let mut null_checks = Vec::new();
+            let mut null_checked_expr_spans = Vec::new();
             body_block.flat_map(
                 context.working_set,
                 &|expr: &Expression| {
-                    if has_null_comparison_for_var(expr, var_id) {
-                        vec![()]
-                    } else {
-                        vec![]
-                    }
-                },
-                &mut null_checks,
-            );
-
-            if !null_checks.is_empty() {
-                return None;
-            }
-
-            let mut usage_spans = Vec::new();
-            body_block.flat_map(
-                context.working_set,
-                &|expr: &Expression| {
-                    if expr.matches_var(var_id) {
+                    if has_null_comparison_for_var(expr, var_id, context) {
                         vec![expr.span]
                     } else {
                         vec![]
                     }
                 },
-                &mut usage_spans,
+                &mut null_checked_expr_spans,
             );
 
-            let usage_span = *usage_spans.first()?;
+            let mut all_flag_usages = Vec::new();
+            body_block.flat_map(
+                context.working_set,
+                &|expr: &Expression| {
+                    if expr.matches_var(var_id) {
+                        vec![expr]
+                    } else {
+                        vec![]
+                    }
+                },
+                &mut all_flag_usages,
+            );
+
+            let first_unchecked_usage = all_flag_usages.iter().find(|usage_expr| {
+                !null_checked_expr_spans
+                    .iter()
+                    .any(|null_check_span| null_check_span.contains_span(usage_expr.span))
+            });
+
+            let usage_span = first_unchecked_usage?.span;
 
             let flag_name = flag.short.map_or_else(
                 || format!("--{}", flag.long),
@@ -94,13 +96,41 @@ fn check_flag_usage_in_body(call: &Call, context: &LintContext) -> Vec<(Detectio
         .collect()
 }
 
-fn has_null_comparison_for_var(expr: &Expression, var_id: VarId) -> bool {
+fn is_safe_usage_of_var(expr: &Expression, var_id: VarId) -> bool {
+    match &expr.expr {
+        Expr::BinaryOp(left, op, right) => {
+            let is_null_comparison = matches!(
+                &op.expr,
+                Expr::Operator(Operator::Comparison(
+                    Comparison::NotEqual | Comparison::Equal
+                ))
+            );
+
+            if is_null_comparison {
+                let left_is_var = left.matches_var(var_id);
+                let right_is_var = right.matches_var(var_id);
+                let left_is_null = matches!(&left.expr, Expr::Nothing);
+                let right_is_null = matches!(&right.expr, Expr::Nothing);
+
+                if (left_is_var && right_is_null) || (left_is_null && right_is_var) {
+                    return true;
+                }
+            }
+
+            false
+        }
+        Expr::UnaryNot(inner) => inner.matches_var(var_id),
+        _ => false,
+    }
+}
+
+fn has_null_comparison_for_var(expr: &Expression, var_id: VarId, context: &LintContext) -> bool {
     match &expr.expr {
         Expr::UnaryNot(inner) => {
             if inner.matches_var(var_id) {
                 return true;
             }
-            has_null_comparison_for_var(inner, var_id)
+            has_null_comparison_for_var(inner, var_id, context)
         }
         Expr::BinaryOp(left, op, right) => {
             let is_null_comparison = matches!(
@@ -121,31 +151,50 @@ fn has_null_comparison_for_var(expr: &Expression, var_id: VarId) -> bool {
                 }
             }
 
-            has_null_comparison_for_var(left, var_id) || has_null_comparison_for_var(right, var_id)
+            has_null_comparison_for_var(left, var_id, context)
+                || has_null_comparison_for_var(right, var_id, context)
         }
         Expr::Call(call) => call
             .all_arg_expressions()
             .iter()
-            .any(|arg| has_null_comparison_for_var(arg, var_id)),
-        Expr::FullCellPath(path) => has_null_comparison_for_var(&path.head, var_id),
+            .any(|arg| has_null_comparison_for_var(arg, var_id, context)),
+        Expr::FullCellPath(path) => has_null_comparison_for_var(&path.head, var_id, context),
         Expr::List(items) => items.iter().any(|item| {
             let (ListItem::Item(e) | ListItem::Spread(_, e)) = item;
-            has_null_comparison_for_var(e, var_id)
+            has_null_comparison_for_var(e, var_id, context)
         }),
         Expr::StringInterpolation(items) => items
             .iter()
-            .any(|item| has_null_comparison_for_var(item, var_id)),
+            .any(|item| has_null_comparison_for_var(item, var_id, context)),
         Expr::Table(table) => table
             .rows
             .iter()
             .flatten()
-            .any(|cell| has_null_comparison_for_var(cell, var_id)),
+            .any(|cell| has_null_comparison_for_var(cell, var_id, context)),
         Expr::Record(fields) => fields.iter().any(|field| match field {
             RecordItem::Pair(key, val) => {
-                has_null_comparison_for_var(key, var_id) || has_null_comparison_for_var(val, var_id)
+                has_null_comparison_for_var(key, var_id, context)
+                    || has_null_comparison_for_var(val, var_id, context)
             }
-            RecordItem::Spread(_, e) => has_null_comparison_for_var(e, var_id),
+            RecordItem::Spread(_, e) => has_null_comparison_for_var(e, var_id, context),
         }),
+        Expr::Subexpression(block_id) | Expr::Block(block_id) | Expr::Closure(block_id) => {
+            use nu_protocol::ast::Traverse;
+            let block = context.working_set.get_block(*block_id);
+            let mut found = Vec::new();
+            block.flat_map(
+                context.working_set,
+                &|e: &Expression| {
+                    if has_null_comparison_for_var(e, var_id, context) {
+                        vec![()]
+                    } else {
+                        vec![]
+                    }
+                },
+                &mut found,
+            );
+            !found.is_empty()
+        }
         _ => false,
     }
 }

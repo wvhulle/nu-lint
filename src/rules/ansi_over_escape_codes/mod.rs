@@ -14,41 +14,45 @@ struct AnsiEscapeSequence {
 }
 
 /// ANSI escape sequence patterns with their corresponding `ansi` command names.
-/// These mappings align with nu-ansi-term's Color enum and Nushell's ansi command.
+/// These mappings align with nu-ansi-term's Color enum and Nushell's ansi
+/// command.
 const fn get_ansi_escape_patterns() -> &'static [(&'static str, &'static str)] {
     &[
         // Standard colors (30-37) - match nu-ansi-term::Color variants
-        ("\x1b[30m", "black"),      // Color::Black foreground
-        ("\x1b[31m", "red"),        // Color::Red foreground
-        ("\x1b[32m", "green"),      // Color::Green foreground
-        ("\x1b[33m", "yellow"),     // Color::Yellow foreground
-        ("\x1b[34m", "blue"),       // Color::Blue foreground
-        ("\x1b[35m", "magenta"),    // Color::Purple/Magenta foreground
-        ("\x1b[36m", "cyan"),       // Color::Cyan foreground
-        ("\x1b[37m", "white"),      // Color::White foreground
+        ("\x1b[30m", "black"),   // Color::Black foreground
+        ("\x1b[31m", "red"),     // Color::Red foreground
+        ("\x1b[32m", "green"),   // Color::Green foreground
+        ("\x1b[33m", "yellow"),  // Color::Yellow foreground
+        ("\x1b[34m", "blue"),    // Color::Blue foreground
+        ("\x1b[35m", "magenta"), // Color::Purple/Magenta foreground
+        ("\x1b[36m", "cyan"),    // Color::Cyan foreground
+        ("\x1b[37m", "white"),   // Color::White foreground
         // Bright/light colors (90-97) - match nu-ansi-term light variants
-        ("\x1b[90m", "dark_gray"),  // Color::DarkGray foreground
-        ("\x1b[91m", "red_bold"),   // Color::LightRed foreground
-        ("\x1b[92m", "green_bold"), // Color::LightGreen foreground
-        ("\x1b[93m", "yellow_bold"), // Color::LightYellow foreground
-        ("\x1b[94m", "blue_bold"),  // Color::LightBlue foreground
+        ("\x1b[90m", "dark_gray"),    // Color::DarkGray foreground
+        ("\x1b[91m", "red_bold"),     // Color::LightRed foreground
+        ("\x1b[92m", "green_bold"),   // Color::LightGreen foreground
+        ("\x1b[93m", "yellow_bold"),  // Color::LightYellow foreground
+        ("\x1b[94m", "blue_bold"),    // Color::LightBlue foreground
         ("\x1b[95m", "magenta_bold"), // Color::LightPurple foreground
-        ("\x1b[96m", "cyan_bold"),  // Color::LightCyan foreground
-        ("\x1b[97m", "white_bold"), // Color::LightGray foreground
+        ("\x1b[96m", "cyan_bold"),    // Color::LightCyan foreground
+        ("\x1b[97m", "white_bold"),   // Color::LightGray foreground
         // Style attributes (SGR parameters)
-        ("\x1b[0m", "reset"),       // Reset all attributes
-        ("\x1b[1m", "bold"),        // Bold/increased intensity
-        ("\x1b[2m", "dimmed"),      // Dimmed/faint
-        ("\x1b[3m", "italic"),      // Italic
-        ("\x1b[4m", "underline"),   // Underline
-        ("\x1b[5m", "blink"),       // Slow blink
-        ("\x1b[7m", "reverse"),     // Reverse video
-        ("\x1b[8m", "hidden"),      // Hidden/invisible
+        ("\x1b[0m", "reset"),         // Reset all attributes
+        ("\x1b[1m", "bold"),          // Bold/increased intensity
+        ("\x1b[2m", "dimmed"),        // Dimmed/faint
+        ("\x1b[3m", "italic"),        // Italic
+        ("\x1b[4m", "underline"),     // Underline
+        ("\x1b[5m", "blink"),         // Slow blink
+        ("\x1b[7m", "reverse"),       // Reverse video
+        ("\x1b[8m", "hidden"),        // Hidden/invisible
         ("\x1b[9m", "strikethrough"), // Crossed out/strike-through
     ]
 }
 
-fn find_all_ansi_escapes(text: &str, _base_span: nu_protocol::Span) -> Vec<(usize, String, String)> {
+fn find_all_ansi_escapes(
+    text: &str,
+    _base_span: nu_protocol::Span,
+) -> Vec<(usize, String, String)> {
     let mut results = Vec::new();
     let patterns = get_ansi_escape_patterns();
 
@@ -56,7 +60,11 @@ fn find_all_ansi_escapes(text: &str, _base_span: nu_protocol::Span) -> Vec<(usiz
         let mut start = 0;
         while let Some(pos) = text[start..].find(escape_seq) {
             let absolute_pos = start + pos;
-            results.push((absolute_pos, (*escape_seq).to_string(), (*ansi_name).to_string()));
+            results.push((
+                absolute_pos,
+                (*escape_seq).to_string(),
+                (*ansi_name).to_string(),
+            ));
             start = absolute_pos + escape_seq.len();
         }
     }
@@ -165,8 +173,9 @@ fn check_string_expression(
              See: https://www.nushell.sh/commands/docs/ansi.html"
         ));
 
-        // For fixes, we need positions in the SOURCE text (with \e), not interpreted text (with ESC byte)
-        // Get the source text and search for escape patterns there
+        // For fixes, we need positions in the SOURCE text (with \e), not interpreted
+        // text (with ESC byte) Get the source text and search for escape
+        // patterns there
         let source_text = context.get_span_text(expr.span);
         let source_content = if source_text.starts_with('"') && source_text.ends_with('"') {
             &source_text[1..source_text.len() - 1]
@@ -251,7 +260,8 @@ impl DetectFix for AnsiOverEscapeCodes {
                 let (_pos2, _len2, name2) = &escapes[1];
 
                 // Common pattern: color/style at start, reset at end
-                (name2 == "reset" || name1 == "reset").then(||  { let content = if string_text.starts_with('"') && string_text.ends_with('"') {
+                (name2 == "reset" || name1 == "reset").then(|| {
+                    let content = if string_text.starts_with('"') && string_text.ends_with('"') {
                         &string_text[1..string_text.len() - 1]
                     } else {
                         string_text
@@ -276,12 +286,15 @@ impl DetectFix for AnsiOverEscapeCodes {
                     result.push_str(&content[last_end..]);
 
                     // Wrap in double quotes for interpolated string
-                    let fixed_text = format!("\"{result}\""); Fix::with_explanation(
+                    let fixed_text = format!("\"{result}\"");
+                    Fix::with_explanation(
                         format!(
-                            "Replace string with ANSI escape sequences with `ansi {color_name}` and `ansi reset` commands"
+                            "Replace string with ANSI escape sequences with `ansi {color_name}` \
+                             and `ansi reset` commands"
                         ),
                         vec![Replacement::new(fix_data.string_span, fixed_text)],
-                    ) })
+                    )
+                })
             }
             _ => {
                 // Three or more escape sequences - manual rewriting is better

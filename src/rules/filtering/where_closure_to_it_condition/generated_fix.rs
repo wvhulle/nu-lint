@@ -3,43 +3,48 @@ use super::RULE;
 #[test]
 fn fix_simple_closure() {
     let source = r"[1, 2, 3] | where {|x| $x > 2}";
+    let expected = r"[1, 2, 3] | where { $it > 2}";
     RULE.assert_count(source, 1);
-    RULE.assert_replacement_contains(source, r"$it > 2");
+    RULE.assert_fixed_is(source, expected);
 }
 
 #[test]
 fn fix_closure_with_different_param() {
     let source = r"[1, 2, 3] | where {|num| $num > 2}";
+    let expected = r"[1, 2, 3] | where { $it > 2}";
     RULE.assert_count(source, 1);
-    RULE.assert_replacement_contains(source, r"$it > 2");
+    RULE.assert_fixed_is(source, expected);
 }
 
 #[test]
 fn fix_closure_with_line_param() {
     let source = r#"open --raw file.txt | lines | where {|line| $line =~ "pattern"}"#;
     RULE.assert_count(source, 1);
-    RULE.assert_replacement_contains(source, r#"$it =~ "pattern""#);
+    RULE.assert_fixed_contains(source, r#"$it =~ "pattern""#);
 }
 
 #[test]
 fn fix_closure_with_field_access() {
     let source = r"ls | where {|f| $f.size > 100kb}";
+    let expected = r"ls | where { $it.size > 100kb}";
     RULE.assert_count(source, 1);
-    RULE.assert_replacement_contains(source, r"$it.size > 100kb");
+    RULE.assert_fixed_is(source, expected);
 }
 
 #[test]
 fn fix_closure_with_item_param() {
     let source = r#"open data.json | where {|item| $item.field == "value"}"#;
+    let expected = r#"open data.json | where { $it.field == "value"}"#;
     RULE.assert_count(source, 1);
-    RULE.assert_replacement_contains(source, r#"$it.field == "value""#);
+    RULE.assert_fixed_is(source, expected);
 }
 
 #[test]
 fn fix_closure_with_pipeline() {
     let source = r"[1, 2, 3] | where {|x| ($x | str length) > 0}";
+    let expected = r"[1, 2, 3] | where { ($it | str length) > 0}";
     RULE.assert_count(source, 1);
-    RULE.assert_replacement_contains(source, r"($it | str length) > 0");
+    RULE.assert_fixed_is(source, expected);
 }
 
 #[test]
@@ -48,193 +53,116 @@ fn fix_closure_with_external_variable() {
 let threshold = 2
 [1, 2, 3] | where {|x| $x > $threshold}
 ";
+    let expected = r"
+let threshold = 2
+[1, 2, 3] | where { $it > $threshold}
+";
     RULE.assert_count(source, 1);
-    RULE.assert_replacement_contains(source, r"$it > $threshold");
+    RULE.assert_fixed_is(source, expected);
 }
 
 #[test]
-fn fix_closure_with_complex_condition() {
+fn fix_closure_with_multiple_occurrences() {
     let source = r#"ls | where {|f| $f.size > 100kb and $f.type == "file"}"#;
+    let expected = r#"ls | where { $it.size > 100kb and $it.type == "file"}"#;
     RULE.assert_count(source, 1);
-    RULE.assert_replacement_contains(source, r#"$it.size > 100kb and $it.type == "file""#);
+    RULE.assert_fixed_is(source, expected);
 }
 
 #[test]
 fn fix_closure_with_regex() {
     let source = r#"ls | where {|f| $f.name =~ "Car"}"#;
+    let expected = r#"ls | where { $it.name =~ "Car"}"#;
     RULE.assert_count(source, 1);
-    RULE.assert_replacement_contains(source, r#"$it.name =~ "Car""#);
+    RULE.assert_fixed_is(source, expected);
 }
 
 #[test]
 fn fix_explanation_mentions_it() {
     let source = r"[1, 2, 3] | where {|x| $x > 2}";
-    RULE.assert_count(source, 1);
     RULE.assert_fix_explanation_contains(source, "$it");
 }
 
 #[test]
 fn fix_explanation_mentions_parameter_name() {
     let source = r"[1, 2, 3] | where {|num| $num > 2}";
-    RULE.assert_count(source, 1);
     RULE.assert_fix_explanation_contains(source, "$num");
 }
 
 #[test]
 fn fix_explanation_mentions_row_condition() {
     let source = r"[1, 2, 3] | where {|x| $x > 2}";
-    RULE.assert_count(source, 1);
     RULE.assert_fix_explanation_contains(source, "row condition");
 }
 
 #[test]
 fn fix_closure_with_string_operation() {
     let source = r#"ls | where {|f| ($f.name | str downcase) =~ "readme"}"#;
+    let expected = r#"ls | where { ($it.name | str downcase) =~ "readme"}"#;
     RULE.assert_count(source, 1);
-    RULE.assert_replacement_contains(source, r#"($it.name | str downcase) =~ "readme""#);
+    RULE.assert_fixed_is(source, expected);
 }
 
 #[test]
 fn fix_closure_with_math() {
     let source = r"[1, 2, 3] | where {|x| $x * 2 > 3}";
+    let expected = r"[1, 2, 3] | where { $it * 2 > 3}";
     RULE.assert_count(source, 1);
-    RULE.assert_replacement_contains(source, r"$it * 2 > 3");
+    RULE.assert_fixed_is(source, expected);
 }
 
 #[test]
 fn fix_closure_with_date_comparison() {
     let source = r"ls | where {|f| $f.modified >= (date now) - 2wk}";
+    let expected = r"ls | where { $it.modified >= (date now) - 2wk}";
     RULE.assert_count(source, 1);
-    RULE.assert_replacement_contains(source, r"$it.modified >= (date now) - 2wk");
+    RULE.assert_fixed_is(source, expected);
 }
 
 #[test]
-fn fix_multiple_occurrences_of_parameter() {
-    let source = r#"ls | where {|f| $f.size > 100kb and $f.type == "file"}"#;
-    RULE.assert_count(source, 1);
-    RULE.assert_replacement_contains(source, "$it.size");
-    RULE.assert_replacement_contains(source, "$it.type");
-}
-
-#[test]
-fn fix_simple_closure_exact() {
-    let source = r"[1, 2, 3] | where {|x| $x > 2}";
-    let expected = "$it > 2";
-    RULE.assert_count(source, 1);
-    RULE.assert_replacement_is(source, expected);
-}
-
-#[test]
-fn fix_closure_with_field_access_exact() {
-    let source = r"ls | where {|f| $f.size > 100kb}";
-    let expected = "$it.size > 100kb";
-    RULE.assert_count(source, 1);
-    RULE.assert_replacement_is(source, expected);
-}
-
-#[test]
-fn fix_closure_with_pipeline_exact() {
-    let source = r"[1, 2, 3] | where {|x| ($x | str length) > 0}";
-    let expected = "($it | str length) > 0";
-    RULE.assert_count(source, 1);
-    RULE.assert_replacement_is(source, expected);
-}
-
-#[test]
-fn fix_closure_with_complex_condition_exact() {
-    let source = r#"ls | where {|f| $f.size > 100kb and $f.type == "file"}"#;
-    let expected = r#"$it.size > 100kb and $it.type == "file""#;
-    RULE.assert_count(source, 1);
-    RULE.assert_replacement_is(source, expected);
-}
-
-#[test]
-fn fix_closure_with_external_variable_exact() {
-    let source = r"
-let threshold = 2
-[1, 2, 3] | where {|x| $x > $threshold}
-";
-    let expected = "$it > $threshold";
-    RULE.assert_count(source, 1);
-    RULE.assert_replacement_is(source, expected);
-}
-
-#[test]
-fn fix_closure_with_string_operation_exact() {
-    let source = r#"ls | where {|f| ($f.name | str downcase) =~ "readme"}"#;
-    let expected = r#"($it.name | str downcase) =~ "readme""#;
-    RULE.assert_count(source, 1);
-    RULE.assert_replacement_is(source, expected);
-}
-
-#[test]
-fn fix_multiline_closure_exact() {
+fn fix_multiline_closure() {
     let source = r"
 def filter [] {
     ls | where {|f| $f.size > 1kb}
 }
 ";
-    let expected = "$it.size > 1kb";
+    let expected = r"
+def filter [] {
+    ls | where { $it.size > 1kb}
+}
+";
     RULE.assert_count(source, 1);
-    RULE.assert_replacement_is(source, expected);
+    RULE.assert_fixed_is(source, expected);
 }
 
 #[test]
-fn fix_closure_with_regex_exact() {
-    let source = r#"ls | where {|f| $f.name =~ "Car"}"#;
-    let expected = r#"$it.name =~ "Car""#;
-    RULE.assert_count(source, 1);
-    RULE.assert_replacement_is(source, expected);
-}
-
-#[test]
-fn fix_closure_with_not_operator_exact() {
+fn fix_closure_with_not_operator() {
     let source = r"[1, 2, 3] | where {|x| not ($x == 2)}";
-    let expected = "not ($it == 2)";
+    let expected = r"[1, 2, 3] | where { not ($it == 2)}";
     RULE.assert_count(source, 1);
-    RULE.assert_replacement_is(source, expected);
+    RULE.assert_fixed_is(source, expected);
 }
 
 #[test]
 fn fix_filter_simple_closure() {
     let source = r"[1, 2, 3] | filter {|x| $x > 2}";
+    let expected = r"[1, 2, 3] | filter { $it > 2}";
     RULE.assert_count(source, 1);
-    RULE.assert_replacement_contains(source, r"$it > 2");
+    RULE.assert_fixed_is(source, expected);
 }
 
 #[test]
 fn fix_filter_with_field_access() {
     let source = r"ls | filter {|f| $f.size > 100kb}";
+    let expected = r"ls | filter { $it.size > 100kb}";
     RULE.assert_count(source, 1);
-    RULE.assert_replacement_contains(source, r"$it.size > 100kb");
+    RULE.assert_fixed_is(source, expected);
 }
 
 #[test]
-fn fix_filter_with_different_param() {
-    let source = r"[1, 2, 3] | filter {|num| $num > 2}";
+fn fix_does_not_replace_similar_variable_names() {
+    let source = r"$new_servers | where {|n| ($new_servers | get -o $n) == null }";
     RULE.assert_count(source, 1);
-    RULE.assert_replacement_contains(source, r"$it > 2");
-}
-
-#[test]
-fn fix_filter_simple_closure_exact() {
-    let source = r"[1, 2, 3] | filter {|x| $x > 2}";
-    let expected = "$it > 2";
-    RULE.assert_count(source, 1);
-    RULE.assert_replacement_is(source, expected);
-}
-
-#[test]
-fn fix_filter_with_complex_condition_exact() {
-    let source = r#"ls | filter {|f| $f.size > 100kb and $f.type == "file"}"#;
-    let expected = r#"$it.size > 100kb and $it.type == "file""#;
-    RULE.assert_count(source, 1);
-    RULE.assert_replacement_is(source, expected);
-}
-
-#[test]
-fn fix_filter_explanation_mentions_it() {
-    let source = r"[1, 2, 3] | filter {|x| $x > 2}";
-    RULE.assert_count(source, 1);
-    RULE.assert_fix_explanation_contains(source, "$it");
+    RULE.assert_fixed_contains(source, "$new_servers");
+    RULE.assert_fixed_contains(source, "get -o $it");
 }

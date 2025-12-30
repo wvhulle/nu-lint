@@ -6,7 +6,7 @@ fn test_fix_for_string_literal() {
     let expected = r#""hello world""#;
 
     RULE.assert_detects(bad_code);
-    RULE.assert_replacement_is(bad_code, expected);
+    RULE.assert_fixed_is(bad_code, expected);
 }
 
 #[test]
@@ -15,16 +15,16 @@ fn test_fix_for_variable() {
     let expected = r"$value";
 
     RULE.assert_detects(bad_code);
-    RULE.assert_replacement_is(bad_code, expected);
+    RULE.assert_fixed_is(bad_code, expected);
 }
 
 #[test]
 fn test_fix_for_pipeline() {
     let bad_code = r"echo $var | str upcase";
-    let expected = r"$var";
+    let expected = r"$var | str upcase";
 
     RULE.assert_detects(bad_code);
-    RULE.assert_replacement_is(bad_code, expected);
+    RULE.assert_fixed_is(bad_code, expected);
 }
 
 #[test]
@@ -33,7 +33,7 @@ fn test_fix_for_external_echo() {
     let expected = r#""test""#;
 
     RULE.assert_detects(bad_code);
-    RULE.assert_replacement_is(bad_code, expected);
+    RULE.assert_fixed_is(bad_code, expected);
 }
 
 #[test]
@@ -42,7 +42,7 @@ fn test_fix_for_multiple_arguments() {
     let expected = r"hello world test";
 
     RULE.assert_detects(bad_code);
-    RULE.assert_replacement_is(bad_code, expected);
+    RULE.assert_fixed_is(bad_code, expected);
 }
 
 #[test]

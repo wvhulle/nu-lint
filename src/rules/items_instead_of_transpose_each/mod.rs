@@ -1,12 +1,24 @@
-use nu_protocol::ast::{Argument, Call, Expr, Expression, Pipeline, Traverse};
+use nu_protocol::{
+    Span,
+    ast::{Argument, Call, Expr, Expression, Pipeline, Traverse},
+};
 
 use crate::{
     Fix, LintLevel, Replacement,
-    ast::{call::CallExt, string::strip_block_braces},
+    ast::call::CallExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
 };
+
+/// Represents a cell path access like `$row.col1` that needs to be replaced
+/// with `$col1`
+struct CellPathReplacement {
+    /// The full span of `$row.col1`
+    span: Span,
+    /// The field name (e.g., "col1")
+    field: String,
+}
 
 struct TransposeEachPattern {
     each_call: Call,
@@ -16,6 +28,8 @@ struct TransposeEachPattern {
     transpose_span: nu_protocol::Span,
     each_span: nu_protocol::Span,
     closure_span: nu_protocol::Span,
+    /// Cell path accesses that need replacement
+    cell_path_replacements: Vec<CellPathReplacement>,
 }
 
 fn extract_transpose_column_names(call: &Call) -> Option<(String, String)> {
@@ -57,7 +71,7 @@ fn closure_only_uses_fields(
     field1: &str,
     field2: &str,
     context: &LintContext,
-) -> bool {
+) -> Option<Vec<CellPathReplacement>> {
     let block = context.working_set.get_block(block_id);
 
     let mut field_accesses = Vec::new();
@@ -84,24 +98,34 @@ fn closure_only_uses_fields(
 
     if field_accesses.is_empty() {
         log::debug!("No field accesses found");
-        return false;
+        return None;
     }
 
-    let all_valid = field_accesses.iter().all(|expr| {
+    let mut replacements = Vec::new();
+
+    for expr in &field_accesses {
         if let Expr::FullCellPath(cell_path) = &expr.expr
             && cell_path.tail.len() == 1
         {
             let field_name = context.get_span_text(cell_path.tail[0].span());
             log::debug!("Field access: {field_name} (expecting {field1} or {field2})");
-            field_name == field1 || field_name == field2
+            if field_name == field1 || field_name == field2 {
+                replacements.push(CellPathReplacement {
+                    span: expr.span,
+                    field: field_name.to_string(),
+                });
+            } else {
+                log::debug!("Invalid field name");
+                return None;
+            }
         } else {
             log::debug!("Invalid field access pattern");
-            false
+            return None;
         }
-    });
+    }
 
-    log::debug!("All field accesses valid: {all_valid}");
-    all_valid
+    log::debug!("All {} field accesses valid", replacements.len());
+    Some(replacements)
 }
 
 fn detect_pattern_in_pipeline(
@@ -185,10 +209,12 @@ fn detect_pattern_in_pipeline(
 
         log::debug!("Checking field usage");
 
-        if !closure_only_uses_fields(*block_id, closure_var_id, &col1, &col2, context) {
+        let Some(cell_path_replacements) =
+            closure_only_uses_fields(*block_id, closure_var_id, &col1, &col2, context)
+        else {
             log::debug!("Closure doesn't only use the specified fields");
             continue;
-        }
+        };
 
         log::debug!("Pattern matched!");
 
@@ -203,6 +229,7 @@ fn detect_pattern_in_pipeline(
             transpose_span: transpose_call.head,
             each_span: each_call.head,
             closure_span: closure_arg.span,
+            cell_path_replacements,
         });
     }
 
@@ -314,31 +341,61 @@ impl DetectFix for ItemsInsteadOfTransposeEach {
         let block = context.working_set.get_block(*block_id);
         let param = &block.signature.required_positional[0];
 
-        let closure_body_text = context.get_span_text(block.span?);
-        let mut closure_body_trimmed = strip_block_braces(closure_body_text);
+        let mut replacements = Vec::new();
 
-        if let Some(pipe_pos) = closure_body_trimmed.find('|')
-            && let Some(second_pipe) = closure_body_trimmed[pipe_pos + 1..].find('|')
-        {
-            closure_body_trimmed = closure_body_trimmed[pipe_pos + second_pipe + 2..].trim();
+        // 1. Replace `transpose col1 col2 | each` with `items`
+        // The span from transpose head to just before the closure
+        let transpose_each_span = Span::new(pattern.transpose_span.start, closure_expr.span.start);
+        replacements.push(Replacement::new(transpose_each_span, "items ".to_string()));
+
+        // 2. Replace the closure parameter declaration `|row|` with `|col1, col2|`
+        // Find the parameter span in the closure - it's between the first { and the
+        // body
+        let closure_text = context.get_span_text(closure_expr.span);
+
+        // Find parameter declaration span: from after `{` to before body
+        // The parameter is at param.name with its span
+        if param.var_id.is_some() {
+            // Find where the parameter name is declared in the closure signature
+            // The signature spans from `{|` to `|` before body
+            let _body_span = block.span?;
+
+            // The param declaration is between the opening `{|` and the closing `|` before
+            // body We need to find the span of `|param_name|` and replace with
+            // `|col1, col2|`
+            let closure_start = closure_expr.span.start;
+
+            // The parameter list span is from closure_start to body_start (includes {| and
+            // |}) But we only want to replace the parameter name itself
+            // Find `|param_name|` pattern in the closure header
+            if let Some(open_pipe_offset) = closure_text.find('|') {
+                let after_open_pipe = &closure_text[open_pipe_offset + 1..];
+                if let Some(close_pipe_offset) = after_open_pipe.find('|') {
+                    // Span of the parameter list (between the pipes)
+                    let param_list_start = closure_start + open_pipe_offset + 1;
+                    let param_list_end = closure_start + open_pipe_offset + 1 + close_pipe_offset;
+                    let param_list_span = Span::new(param_list_start, param_list_end);
+
+                    replacements.push(Replacement::new(
+                        param_list_span,
+                        format!("{}, {}", pattern.col1, pattern.col2),
+                    ));
+                }
+            }
         }
 
-        let param_name = &param.name;
-        let new_body = closure_body_trimmed
-            .replace(
-                &format!("${param_name}.{}", pattern.col1),
-                &format!("${}", pattern.col1),
-            )
-            .replace(
-                &format!("${param_name}.{}", pattern.col2),
-                &format!("${}", pattern.col2),
-            );
-
-        let fix_text = format!("items {{|{}, {}| {new_body} }}", pattern.col1, pattern.col2);
+        // 3. Replace each cell path access `$row.col1` with `$col1`, `$row.col2` with
+        //    `$col2`
+        for cell_path_replacement in &pattern.cell_path_replacements {
+            replacements.push(Replacement::new(
+                cell_path_replacement.span,
+                format!("${}", cell_path_replacement.field),
+            ));
+        }
 
         Some(Fix::with_explanation(
             "Replace 'transpose ... | each' with 'items' for cleaner iteration over record entries",
-            vec![Replacement::new(pattern.combined_span, fix_text)],
+            replacements,
         ))
     }
 }

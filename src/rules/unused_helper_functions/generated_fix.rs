@@ -25,7 +25,7 @@ def unused [] {
   print "never called"
 }
 "#;
-    RULE.assert_replacement_erases(bad_code, "def unused");
+    RULE.assert_fix_erases(bad_code, "def unused");
 }
 
 #[test]
@@ -39,7 +39,7 @@ def unused [] {
   print "never called"
 }
 "#;
-    RULE.assert_replacement_erases(bad_code, "print \"never called\"");
+    RULE.assert_fix_erases(bad_code, "print \"never called\"");
 }
 
 #[test]
@@ -59,9 +59,9 @@ def unused-helper [] {
   print $"Result: ($x + $y)"
 }
 "#;
-    RULE.assert_replacement_erases(bad_code, "def unused-helper");
-    RULE.assert_replacement_erases(bad_code, "let x = 1");
-    RULE.assert_replacement_erases(bad_code, "let y = 2");
+    RULE.assert_fix_erases(bad_code, "def unused-helper");
+    RULE.assert_fix_erases(bad_code, "let x = 1");
+    RULE.assert_fix_erases(bad_code, "let y = 2");
 }
 
 #[test]
@@ -77,9 +77,9 @@ def unused-with-params [name: string, count: int] {
   }
 }
 "#;
-    RULE.assert_replacement_erases(bad_code, "def unused-with-params");
-    RULE.assert_replacement_erases(bad_code, "name: string");
-    RULE.assert_replacement_erases(bad_code, "for i in");
+    RULE.assert_fix_erases(bad_code, "def unused-with-params");
+    RULE.assert_fix_erases(bad_code, "name: string");
+    RULE.assert_fix_erases(bad_code, "for i in");
 }
 
 #[test]
@@ -93,6 +93,6 @@ export def unused-exported [] {
   print "exported but unused"
 }
 "#;
-    RULE.assert_replacement_erases(bad_code, "export def unused-exported");
-    RULE.assert_replacement_erases(bad_code, "exported but unused");
+    RULE.assert_fix_erases(bad_code, "export def unused-exported");
+    RULE.assert_fix_erases(bad_code, "exported but unused");
 }

@@ -7,8 +7,8 @@ use crate::{
 };
 
 const NOTE: &str = "Use 'open --raw | explore' for interactive file viewing, or 'watch' for \
-                    monitoring file changes (like tail -f). Nu's explore provides structured \
-                    data navigation.";
+                    monitoring file changes (like tail -f). Nu's explore provides structured data \
+                    navigation.";
 
 #[derive(Default)]
 struct PagerOptions {
@@ -66,8 +66,8 @@ impl DetectFix for UseBuiltinPager {
             let file = opts.filename.as_deref().unwrap_or("file");
             (
                 format!("watch {file} {{ open --raw {file} | lines | last 20 }}"),
-                "Use 'watch' to monitor file changes. Nu's watch executes a closure when the \
-                 file changes, similar to 'tail -f'. Note: this is event-based, not continuous \
+                "Use 'watch' to monitor file changes. Nu's watch executes a closure when the file \
+                 changes, similar to 'tail -f'. Note: this is event-based, not continuous \
                  streaming."
                     .to_string(),
             )
@@ -79,8 +79,8 @@ impl DetectFix for UseBuiltinPager {
             (
                 replacement,
                 "Use 'open --raw | explore' for interactive viewing. Nu's explore provides \
-                 keyboard navigation for data. For structured files (JSON, TOML), use \
-                 'open file | explore' without --raw."
+                 keyboard navigation for data. For structured files (JSON, TOML), use 'open file \
+                 | explore' without --raw."
                     .to_string(),
             )
         };

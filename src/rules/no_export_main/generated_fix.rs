@@ -9,7 +9,7 @@ export def main [] {
 ";
     RULE.assert_detects(bad_code);
     RULE.assert_fix_explanation_contains(bad_code, "Remove 'export'");
-    RULE.assert_replacement_erases(bad_code, "export");
+    RULE.assert_fix_erases(bad_code, "export");
 }
 
 #[test]
@@ -21,7 +21,7 @@ export def "main test" [] {
 "#;
     RULE.assert_detects(bad_code);
     RULE.assert_fix_explanation_contains(bad_code, "main test");
-    RULE.assert_replacement_erases(bad_code, "export");
+    RULE.assert_fix_erases(bad_code, "export");
 }
 
 #[test]

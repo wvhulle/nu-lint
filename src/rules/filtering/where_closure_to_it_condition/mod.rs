@@ -2,16 +2,16 @@ use nu_protocol::ast::{Call, Expr, Expression, Traverse};
 
 use crate::{
     LintLevel,
-    ast::{call::CallExt, string::strip_block_braces},
+    ast::{block::BlockExt, call::CallExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
 
 struct RowConditionFixData {
-    closure_span: nu_protocol::Span,
     param_decl_span: nu_protocol::Span,
     param_name: String,
+    var_usage_spans: Vec<nu_protocol::Span>,
 }
 
 const fn is_stored_closure(expr: &Expression) -> bool {
@@ -21,7 +21,7 @@ const fn is_stored_closure(expr: &Expression) -> bool {
 fn extract_closure_parameter(
     block_id: nu_protocol::BlockId,
     context: &LintContext,
-) -> Option<(String, nu_protocol::Span)> {
+) -> Option<(String, nu_protocol::Span, nu_protocol::VarId)> {
     let block = context.working_set.get_block(block_id);
 
     if block.signature.required_positional.len() != 1 {
@@ -34,7 +34,7 @@ fn extract_closure_parameter(
     let var = context.working_set.get_variable(var_id);
     let param_name = context.get_span_text(var.declaration_span).to_string();
 
-    Some((param_name, var.declaration_span))
+    Some((param_name, var.declaration_span, var_id))
 }
 
 fn find_param_decl_span_in_source(
@@ -82,7 +82,8 @@ fn check_filter_command_call(
         return vec![];
     };
 
-    let Some((param_name, param_var_span)) = extract_closure_parameter(block_id, context) else {
+    let Some((param_name, param_var_span, var_id)) = extract_closure_parameter(block_id, context)
+    else {
         return vec![];
     };
 
@@ -101,6 +102,8 @@ fn check_filter_command_call(
         return vec![];
     };
 
+    let var_usage_spans = block.find_var_usage_spans(var_id, context, |_, _, _| true);
+
     let violation = Detection::from_global_span(
         "Use `$it` instead of closure parameter for more concise code",
         arg_expr.span,
@@ -114,9 +117,9 @@ fn check_filter_command_call(
     ));
 
     let fix_data = RowConditionFixData {
-        closure_span: arg_expr.span,
         param_decl_span,
         param_name,
+        var_usage_spans,
     };
 
     vec![(violation, fix_data)]
@@ -166,25 +169,39 @@ impl DetectFix for WhereClosureToIt {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let closure_text = context.get_span_text(fix_data.closure_span);
-        let param_decl_text = context.get_span_text(fix_data.param_decl_span);
+        let mut replacements = Vec::new();
 
-        let body_text = strip_block_braces(closure_text);
+        replacements.push(Replacement::new(fix_data.param_decl_span, String::new()));
 
-        let body_without_param = body_text
-            .strip_prefix(param_decl_text)
-            .unwrap_or(body_text)
-            .trim();
+        let mut spans: Vec<_> = fix_data.var_usage_spans.clone();
+        spans.sort_by_key(|s| s.start);
+        spans.dedup();
 
-        let param_pattern = format!("${}", fix_data.param_name);
-        let fixed_text = body_without_param.replace(&param_pattern, "$it");
+        let filtered_spans: Vec<_> = spans
+            .iter()
+            .filter(|span| {
+                !spans
+                    .iter()
+                    .any(|other| other.start == span.start && other.end > span.end)
+            })
+            .collect();
+
+        for var_span in filtered_spans {
+            let var_text = context.get_span_text(*var_span);
+            let replacement = if var_text.starts_with('$') {
+                format!("$it{}", &var_text[1 + fix_data.param_name.len()..])
+            } else {
+                format!("it{}", &var_text[fix_data.param_name.len()..])
+            };
+            replacements.push(Replacement::new(*var_span, replacement));
+        }
 
         Some(Fix::with_explanation(
             format!(
                 "Replace closure parameter ${} with row condition using $it",
                 fix_data.param_name
             ),
-            vec![Replacement::new(fix_data.closure_span, fixed_text)],
+            replacements,
         ))
     }
 }

@@ -5,7 +5,7 @@ use nu_protocol::{
 
 use crate::{
     LintLevel,
-    ast::{call::CallExt, expression::ExpressionExt},
+    ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -18,10 +18,8 @@ pub struct FixData {
     block_id: nu_protocol::BlockId,
     /// Parameter name being converted to pipeline input
     param_name: String,
-    /// Function name
-    function_name: String,
-    /// Whether function is exported
-    is_exported: bool,
+    /// `VarId` of the parameter being converted
+    param_var_id: VarId,
     /// Names of remaining parameters (excluding the pipeline input parameter)
     remaining_params: Vec<String>,
 }
@@ -84,7 +82,7 @@ fn analyze_function_from_signature(
 
     pipeline_params
         .into_iter()
-        .map(|param| create_violation(signature, param, block_id, context))
+        .filter_map(|param| create_violation(signature, param, block_id, context))
         .collect()
 }
 
@@ -110,15 +108,8 @@ fn analyze_function_from_ast(
 
     pipeline_params
         .into_iter()
-        .map(|param| {
-            create_violation_with_span(
-                &function_signature,
-                param,
-                def_span,
-                block_id,
-                is_exported,
-                context,
-            )
+        .filter_map(|param| {
+            create_violation_with_span(&function_signature, param, def_span, block_id, is_exported)
         })
         .collect()
 }
@@ -142,7 +133,7 @@ fn create_violation(
     param: &nu_protocol::PositionalArg,
     block_id: nu_protocol::BlockId,
     context: &LintContext,
-) -> ViolationPair {
+) -> Option<ViolationPair> {
     let name_span = context.find_declaration_span(&signature.name);
     let def_span =
         find_function_definition_span(&signature.name, context).unwrap_or(name_span.into());
@@ -162,12 +153,11 @@ fn create_violation(
         def_span,
         block_id,
         param_name: param.name.clone(),
-        function_name: signature.name.clone(),
-        is_exported: false,
+        param_var_id: param.var_id?,
         remaining_params,
     };
 
-    (violation, fix_data)
+    Some((violation, fix_data))
 }
 
 fn create_violation_with_span(
@@ -175,14 +165,12 @@ fn create_violation_with_span(
     param: &nu_protocol::PositionalArg,
     def_span: nu_protocol::Span,
     block_id: nu_protocol::BlockId,
-    is_exported: bool,
-    context: &LintContext,
-) -> ViolationPair {
-    let name_span = context.find_declaration_span(&signature.name);
-
-    let violation = Detection::from_file_span("Use pipeline input instead of parameter", name_span)
-        .with_primary_label("function with single data parameter")
-        .with_help("Pipeline input enables better composability and streaming performance");
+    _is_exported: bool,
+) -> Option<ViolationPair> {
+    let violation =
+        Detection::from_global_span("Use pipeline input instead of parameter", def_span)
+            .with_primary_label("function with single data parameter")
+            .with_help("Pipeline input enables better composability and streaming performance");
 
     let remaining_params: Vec<String> = signature
         .required_positional
@@ -195,12 +183,11 @@ fn create_violation_with_span(
         def_span,
         block_id,
         param_name: param.name.clone(),
-        function_name: signature.name.clone(),
-        is_exported,
+        param_var_id: param.var_id?,
         remaining_params,
     };
 
-    (violation, fix_data)
+    Some((violation, fix_data))
 }
 
 struct TurnPositionalIntoStreamInput;
@@ -255,61 +242,104 @@ impl DetectFix for TurnPositionalIntoStreamInput {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        use crate::ast::string::strip_block_braces;
-
         let explanation = format!(
             "Use pipeline input ($in) instead of parameter (${})",
             fix_data.param_name
         );
 
         let block = context.working_set.get_block(fix_data.block_id);
-        let body_text = context.get_span_text(block.span?);
-        let body_content = strip_block_braces(body_text);
 
-        // Transform the body: replace $param with $in, and remove "$param | " if it
-        // starts a pipeline
-        let param_var = format!("${}", fix_data.param_name);
-        let pipeline_prefix = format!("{param_var} | ");
+        // Find all usages of the parameter variable in the block
+        let mut var_spans =
+            block.find_var_usage_spans(fix_data.param_var_id, context, |_, _, _| true);
 
-        let fixed_body = if body_content.trim_start().starts_with(&pipeline_prefix) {
-            // Remove "$param | " from the start
-            body_content
-                .trim_start()
-                .strip_prefix(&pipeline_prefix)
-                .unwrap_or(body_content)
-                .to_string()
+        if var_spans.is_empty() {
+            return None;
+        }
+
+        // Sort spans by start position
+        var_spans.sort_by_key(|span| span.start);
+        var_spans.dedup();
+
+        // Filter out overlapping spans (keep the largest span for each start position)
+        let filtered_spans: Vec<Span> =
+            var_spans.iter().copied().fold(Vec::new(), |mut acc, span| {
+                if let Some(last) = acc.last_mut() {
+                    // If this span starts at the same position, keep the larger one
+                    if span.start == last.start {
+                        if span.end > last.end {
+                            *last = span;
+                        }
+                    } else if span.start >= last.end {
+                        // Non-overlapping span
+                        acc.push(span);
+                    }
+                    // Skip spans that start within the previous span
+                } else {
+                    acc.push(span);
+                }
+                acc
+            });
+
+        // Check if the first usage is at the start of a pipeline (i.e., "$param | ...")
+        let first_span = filtered_spans.first()?;
+        let first_is_pipeline_start = context
+            .get_span_text(*first_span)
+            .trim()
+            .starts_with(&format!("${}", fix_data.param_name));
+
+        // Check if there's a " | " after the first usage that we should remove
+        let after_first_end = first_span.end;
+        let def_span_end = fix_data.def_span.end;
+        let pipeline_separator = " | ";
+
+        let remove_pipeline_prefix = if first_is_pipeline_start
+            && after_first_end + 3 <= def_span_end
+        {
+            // Check the text after the first var usage
+            let after_span = Span::new(after_first_end, (after_first_end + 3).min(def_span_end));
+            let after_text = context.get_span_text(after_span);
+            after_text == pipeline_separator
         } else {
-            // Replace all occurrences of $param with $in
-            // Note: This uses string replace, but only after verifying via AST that the
-            // parameter is actually used
-            body_content.replace(&param_var, "$in")
+            false
         };
 
-        let prefix = if fix_data.is_exported {
-            "export def"
-        } else {
-            "def"
-        };
+        let mut replacements = Vec::new();
+
+        // Build replacements for variable usages
+        for (i, &span) in filtered_spans.iter().enumerate() {
+            if i == 0 && remove_pipeline_prefix {
+                // For first usage followed by " | ", remove both the var and the separator
+                let extended_span = Span::new(span.start, span.end + 3);
+                replacements.push(Replacement::new(extended_span, String::new()));
+            } else {
+                // Replace $param with $in
+                replacements.push(Replacement::new(span, "$in".to_string()));
+            }
+        }
+
+        // We also need to update the function signature to remove the parameter
+        // Find the parameter list span and rebuild it
+        let def_text = context.get_span_text(fix_data.def_span);
+
+        // Find the opening [ after the function name
+        let bracket_start_idx = def_text.find('[')?;
+        let bracket_end_idx = def_text.find(']')?;
+
+        let bracket_start = fix_data.def_span.start + bracket_start_idx;
+        let bracket_end = fix_data.def_span.start + bracket_end_idx + 1;
+        let param_list_span = Span::new(bracket_start, bracket_end);
 
         // Reconstruct parameter list from remaining parameters
-        let params_str = if fix_data.remaining_params.is_empty() {
+        let new_params_str = if fix_data.remaining_params.is_empty() {
             "[]".to_string()
         } else {
             format!("[{}]", fix_data.remaining_params.join(", "))
         };
 
-        let fixed_code = format!(
-            "{} {} {} {{ {} }}",
-            prefix,
-            fix_data.function_name,
-            params_str,
-            fixed_body.trim()
-        );
+        replacements.push(Replacement::new(param_list_span, new_params_str));
 
-        Some(Fix::with_explanation(
-            explanation,
-            vec![Replacement::new(fix_data.def_span, fixed_code)],
-        ))
+        Some(Fix::with_explanation(explanation, replacements))
     }
 }
 

@@ -4,14 +4,14 @@ use super::RULE;
 fn fix_removes_from_json() {
     let source = "open data.json | from json";
     RULE.assert_count(source, 1);
-    RULE.assert_replacement_is(source, "open data.json");
+    RULE.assert_fixed_is(source, "open data.json");
 }
 
 #[test]
 fn fix_removes_from_toml() {
     let source = "open config.toml | from toml";
     RULE.assert_count(source, 1);
-    RULE.assert_replacement_is(source, "open config.toml");
+    RULE.assert_fixed_is(source, "open config.toml");
 }
 
 #[test]
@@ -24,12 +24,12 @@ fn fix_explanation_mentions_already_parses() {
 fn fix_preserves_double_quotes() {
     let source = r#"open "my file.json" | from json"#;
     RULE.assert_count(source, 1);
-    RULE.assert_replacement_is(source, r#"open "my file.json""#);
+    RULE.assert_fixed_is(source, r#"open "my file.json""#);
 }
 
 #[test]
 fn fix_preserves_single_quotes() {
     let source = "open 'my file.json' | from json";
     RULE.assert_count(source, 1);
-    RULE.assert_replacement_is(source, "open 'my file.json'");
+    RULE.assert_fixed_is(source, "open 'my file.json'");
 }

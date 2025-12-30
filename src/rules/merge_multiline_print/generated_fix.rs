@@ -7,7 +7,7 @@ print "b"
 print "c""#;
     RULE.assert_detects(code);
     // The fix merges content with actual newlines for a multiline string
-    RULE.assert_replacement_contains(code, "\"a\nb\nc\"");
+    RULE.assert_fixed_contains(code, "\"a\nb\nc\"");
 }
 
 #[test]
@@ -16,8 +16,8 @@ fn test_fix_preserves_stderr_flag() {
 print -e "error 2"
 print -e "error 3""#;
     RULE.assert_detects(code);
-    RULE.assert_replacement_contains(code, "-e");
-    RULE.assert_replacement_contains(code, "\"error 1\nerror 2\nerror 3\"");
+    RULE.assert_fixed_contains(code, "-e");
+    RULE.assert_fixed_contains(code, "\"error 1\nerror 2\nerror 3\"");
 }
 
 #[test]
@@ -26,7 +26,7 @@ fn test_fix_simple_strings() {
 print "line two"
 print "line three""#;
     RULE.assert_detects(code);
-    RULE.assert_replacement_contains(code, "\"line one\nline two\nline three\"");
+    RULE.assert_fixed_contains(code, "\"line one\nline two\nline three\"");
 }
 
 #[test]
@@ -35,7 +35,7 @@ fn test_fix_single_quoted_strings() {
 print 'line two'
 print 'line three'"#;
     RULE.assert_detects(code);
-    RULE.assert_replacement_contains(code, "\"line one\nline two\nline three\"");
+    RULE.assert_fixed_contains(code, "\"line one\nline two\nline three\"");
 }
 
 #[test]
@@ -44,8 +44,8 @@ fn test_fix_mixed_quote_styles() {
 print 'single quoted'
 print "another double""#;
     RULE.assert_detects(code);
-    RULE.assert_replacement_contains(code, "double quoted");
-    RULE.assert_replacement_contains(code, "single quoted");
+    RULE.assert_fixed_contains(code, "double quoted");
+    RULE.assert_fixed_contains(code, "single quoted");
 }
 
 #[test]
@@ -56,8 +56,8 @@ print $"Welcome ($name)"
 print $"Goodbye ($name)""#;
     RULE.assert_detects(code);
     // Should generate: print $"Hello ($name)\nWelcome ($name)\nGoodbye ($name)"
-    RULE.assert_replacement_contains(code, "$\"");
-    RULE.assert_replacement_contains(code, "Hello ($name)\nWelcome ($name)\nGoodbye ($name)");
+    RULE.assert_fixed_contains(code, "$\"");
+    RULE.assert_fixed_contains(code, "Hello ($name)\nWelcome ($name)\nGoodbye ($name)");
 }
 
 #[test]
@@ -67,8 +67,8 @@ print -e $"Error: ($err)"
 print -e $"Details: ($err)"
 print -e $"Fix: ($err)""#;
     RULE.assert_detects(code);
-    RULE.assert_replacement_contains(code, "-e");
-    RULE.assert_replacement_contains(code, r#"$""#);
+    RULE.assert_fixed_contains(code, "-e");
+    RULE.assert_fixed_contains(code, r#"$""#);
 }
 
 #[test]
@@ -77,7 +77,7 @@ fn test_fix_strings_containing_quotes() {
 print "He replied \"hi\""
 print "They shouted \"bye\"""#;
     RULE.assert_detects(code);
-    RULE.assert_replacement_contains(
+    RULE.assert_fixed_contains(
         code,
         "She said \\\"hello\\\"\nHe replied \\\"hi\\\"\nThey shouted \\\"bye\\\"",
     );
@@ -89,7 +89,7 @@ fn test_fix_strings_with_single_quotes_inside() {
 print "That's correct"
 print "We're done""#;
     RULE.assert_detects(code);
-    RULE.assert_replacement_contains(code, "It's a test\nThat's correct\nWe're done");
+    RULE.assert_fixed_contains(code, "It's a test\nThat's correct\nWe're done");
 }
 
 #[test]
@@ -98,7 +98,7 @@ fn test_fix_raw_strings() {
 print r#'line two'#
 print r#'line three'#"#;
     RULE.assert_detects(code);
-    RULE.assert_replacement_contains(code, "line one\nline two\nline three");
+    RULE.assert_fixed_contains(code, "line one\nline two\nline three");
 }
 
 #[test]
@@ -107,7 +107,7 @@ fn test_fix_raw_strings_with_quotes() {
 print r#'He replied "hi"'#
 print r#'They said "bye"'#"#;
     RULE.assert_detects(code);
-    RULE.assert_replacement_contains(
+    RULE.assert_fixed_contains(
         code,
         "She said \\\"hello\\\"\nHe replied \\\"hi\\\"\nThey said \\\"bye\\\"",
     );
@@ -119,7 +119,7 @@ fn test_fix_raw_strings_with_single_quotes() {
 print r#'That's good'#
 print r#'We're happy'#"#;
     RULE.assert_detects(code);
-    RULE.assert_replacement_contains(code, "It's working\nThat's good\nWe're happy");
+    RULE.assert_fixed_contains(code, "It's working\nThat's good\nWe're happy");
 }
 
 #[test]
@@ -130,8 +130,8 @@ print $"First: ($first)"
 print $"Last: ($last)"
 print $"Full: ($first) ($last)""#;
     RULE.assert_detects(code);
-    RULE.assert_replacement_contains(code, "$\"");
-    RULE.assert_replacement_contains(
+    RULE.assert_fixed_contains(code, "$\"");
+    RULE.assert_fixed_contains(
         code,
         "First: ($first)\nLast: ($last)\nFull: ($first) ($last)",
     );
@@ -144,8 +144,8 @@ print $"Value: ($x)"
 print $"Double: ($x * 2)"
 print $"Sum: ($x + 10)""#;
     RULE.assert_detects(code);
-    RULE.assert_replacement_contains(code, "$\"");
-    RULE.assert_replacement_contains(code, "Value: ($x)\nDouble: ($x * 2)\nSum: ($x + 10)");
+    RULE.assert_fixed_contains(code, "$\"");
+    RULE.assert_fixed_contains(code, "Value: ($x)\nDouble: ($x * 2)\nSum: ($x + 10)");
 }
 
 #[test]
@@ -155,8 +155,8 @@ print $"Name: ($record.name)"
 print $"Value: ($record.value)"
 print $"Both: ($record.name) = ($record.value)""#;
     RULE.assert_detects(code);
-    RULE.assert_replacement_contains(code, "$\"");
-    RULE.assert_replacement_contains(
+    RULE.assert_fixed_contains(code, "$\"");
+    RULE.assert_fixed_contains(
         code,
         "Name: ($record.name)\nValue: ($record.value)\nBoth: ($record.name) = ($record.value)",
     );
@@ -169,8 +169,8 @@ print $"Processing ($count) items..."
 print $"Progress: ($count)/10"
 print $"Done with ($count) files""#;
     RULE.assert_detects(code);
-    RULE.assert_replacement_contains(code, "$\"");
-    RULE.assert_replacement_contains(
+    RULE.assert_fixed_contains(code, "$\"");
+    RULE.assert_fixed_contains(
         code,
         "Processing ($count) items...\nProgress: ($count)/10\nDone with ($count) files",
     );
@@ -183,6 +183,6 @@ print $'Message: ($msg)'
 print $'Status: active'
 print $'Reply: ($msg) world'"#;
     RULE.assert_detects(code);
-    RULE.assert_replacement_contains(code, "$'");
-    RULE.assert_replacement_contains(code, "Message: ($msg)\nStatus: active\nReply: ($msg) world");
+    RULE.assert_fixed_contains(code, "$'");
+    RULE.assert_fixed_contains(code, "Message: ($msg)\nStatus: active\nReply: ($msg) world");
 }

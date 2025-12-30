@@ -30,10 +30,11 @@ pub struct OpenFromPattern<'a> {
     pub has_raw_flag: bool,
 }
 
-/// Find `open FILE | from FORMAT` patterns in a pipeline where the format matches the file extension.
+/// Find `open FILE | from FORMAT` patterns in a pipeline where the format
+/// matches the file extension.
 ///
-/// Returns patterns where the `from` format matches the file's extension according to
-/// `context.format_for_extension()`.
+/// Returns patterns where the `from` format matches the file's extension
+/// according to `context.format_for_extension()`.
 pub fn find_open_from_patterns<'a>(
     pipeline: &'a Pipeline,
     context: &'a LintContext,
@@ -74,7 +75,8 @@ pub fn find_open_from_patterns<'a>(
 
         let filename = context.get_span_text(filename_arg.span);
 
-        // Extract actual filename content for extension detection, handling all string formats
+        // Extract actual filename content for extension detection, handling all string
+        // formats
         let filename_content = match &filename_arg.expr {
             Expr::String(s) | Expr::RawString(s) | Expr::GlobPattern(s, _) => s.as_str(),
             _ => strip_quotes(filename),
@@ -104,7 +106,8 @@ pub fn find_open_from_patterns<'a>(
     patterns
 }
 
-/// Create a span covering from open to from (the entire `open FILE | from FORMAT` expression)
+/// Create a span covering from open to from (the entire `open FILE | from
+/// FORMAT` expression)
 pub fn open_from_span(pattern: &OpenFromPattern) -> Span {
     Span::new(pattern.open_expr.span.start, pattern.from_expr.span.end)
 }

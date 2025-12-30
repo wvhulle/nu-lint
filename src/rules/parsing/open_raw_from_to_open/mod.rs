@@ -1,5 +1,9 @@
-use nu_protocol::{Span, ast::{Block, Expr, Pipeline}};
+use nu_protocol::{
+    Span,
+    ast::{Block, Expr, Pipeline},
+};
 
+use super::{find_open_from_patterns, open_from_span};
 use crate::{
     LintLevel,
     context::LintContext,
@@ -7,17 +11,12 @@ use crate::{
     violation::{Detection, Fix, Replacement},
 };
 
-use super::{find_open_from_patterns, open_from_span};
-
 pub struct FixData {
     full_span: Span,
     filename: String,
 }
 
-fn check_pipeline(
-    pipeline: &Pipeline,
-    context: &LintContext,
-) -> Vec<(Detection, FixData)> {
+fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection, FixData)> {
     find_open_from_patterns(pipeline, context)
         .into_iter()
         .filter(|pattern| pattern.has_raw_flag)

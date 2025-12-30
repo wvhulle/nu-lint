@@ -62,7 +62,7 @@ mod tests {
     #[test]
     fn converts_wc_lines_to_lines_length() {
         let source = "^wc -l";
-        RULE.assert_replacement_contains(source, "lines | length");
+        RULE.assert_fixed_contains(source, "lines | length");
         RULE.assert_fix_explanation_contains(source, "count");
     }
 }

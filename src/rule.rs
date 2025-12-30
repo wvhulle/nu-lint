@@ -141,6 +141,29 @@ impl dyn Rule {
             .replacement_text
     }
 
+    /// Assumes there is only one violation and fix in the code (with zero or
+    /// more replacements)
+
+    pub fn apply_first_fix(&self, code: &str) -> String {
+        let violation = self.first_violation(code);
+        let fix = violation.fix.expect("Expected violation to have a fix");
+        assert!(
+            !fix.replacements.is_empty(),
+            "Expected fix to have replacements"
+        );
+
+        let mut replacements = fix.replacements;
+        replacements.sort_by(|a, b| b.file_span().start.cmp(&a.file_span().start));
+
+        let mut result = code.to_string();
+        for replacement in replacements {
+            let start = replacement.file_span().start;
+            let end = replacement.file_span().end;
+            result.replace_range(start..end, &replacement.replacement_text);
+        }
+        result
+    }
+
     #[track_caller]
     pub fn assert_detects(&self, code: &str) {
         let violations = self.run_check(code);
@@ -176,23 +199,18 @@ impl dyn Rule {
     }
 
     #[track_caller]
-    pub fn assert_replacement_contains(&self, code: &str, expected_text: &str) {
-        let replacement_text = self.first_replacement_text(code);
+    pub fn assert_fixed_contains(&self, code: &str, expected_text: &str) {
+        let fixed = self.apply_first_fix(code);
         assert!(
-            replacement_text.contains(expected_text),
-            "Expected fix replacement text to contain '{expected_text}', but got: \
-             {replacement_text}"
+            fixed.contains(expected_text),
+            "Expected fixed code to contain '{expected_text}', but got: {fixed}"
         );
     }
 
     #[track_caller]
-    pub fn assert_replacement_is(&self, bad_code: &str, expected_code: &str) {
-        let replacement_text = self.first_replacement_text(bad_code);
-        assert_eq!(
-            replacement_text.as_ref(),
-            expected_code,
-            "Expected fix to produce exact code"
-        );
+    pub fn assert_fixed_is(&self, bad_code: &str, expected_code: &str) {
+        let fixed = self.apply_first_fix(bad_code);
+        assert_eq!(fixed, expected_code, "Expected fix to produce exact code");
     }
 
     #[track_caller]
@@ -236,29 +254,15 @@ impl dyn Rule {
     }
 
     #[track_caller]
-    pub fn assert_replacement_erases(&self, code: &str, erased_text: &str) {
-        let fix = self
-            .first_violation(code)
-            .fix
-            .expect("Expected violation to have a fix");
+    pub fn assert_fix_erases(&self, code: &str, erased_text: &str) {
+        let fixed = self.apply_first_fix(code);
         assert!(
-            !fix.replacements.is_empty(),
-            "Expected fix to have replacements"
-        );
-
-        let replacement = &fix.replacements[0];
-        let file_span = replacement.file_span();
-        let original_text = &code[file_span.start..file_span.end];
-        let replacement_text = &replacement.replacement_text;
-
-        assert!(
-            original_text.contains(erased_text),
-            "Original text should contain '{erased_text}', but got: {original_text}"
+            code.contains(erased_text),
+            "Original code should contain '{erased_text}', but it doesn't"
         );
         assert!(
-            !replacement_text.contains(erased_text),
-            "Expected replacement text to not contain '{erased_text}', but it still appears in: \
-             {replacement_text}"
+            !fixed.contains(erased_text),
+            "Expected fixed code to not contain '{erased_text}', but it still appears in: {fixed}"
         );
     }
 }

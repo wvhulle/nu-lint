@@ -54,6 +54,6 @@ mod tests {
     #[test]
     fn converts_which_to_builtin_which() {
         let source = "^which python";
-        RULE.assert_replacement_contains(source, "which python");
+        RULE.assert_fixed_contains(source, "which python");
     }
 }

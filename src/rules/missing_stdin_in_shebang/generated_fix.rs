@@ -9,8 +9,8 @@ def main []: string -> string {
 }
 ";
 
-    RULE.assert_replacement_contains(source, "--stdin");
-    RULE.assert_replacement_contains(source, "#!/usr/bin/env -S nu --stdin");
+    RULE.assert_fixed_contains(source, "--stdin");
+    RULE.assert_fixed_contains(source, "#!/usr/bin/env -S nu --stdin");
 }
 
 #[test]
@@ -22,8 +22,8 @@ def main [] {
 }
 ";
 
-    RULE.assert_replacement_contains(source, "--stdin");
-    RULE.assert_replacement_contains(source, "#!/usr/bin/env -S nu --stdin");
+    RULE.assert_fixed_contains(source, "--stdin");
+    RULE.assert_fixed_contains(source, "#!/usr/bin/env -S nu --stdin");
 }
 
 #[test]
@@ -35,7 +35,7 @@ def main []: string -> string {
 }
 ";
 
-    RULE.assert_replacement_contains(source, "#!/usr/bin/nu --stdin");
+    RULE.assert_fixed_contains(source, "#!/usr/bin/nu --stdin");
 }
 
 #[test]
@@ -48,7 +48,7 @@ def main [] {
 }
 ";
 
-    RULE.assert_replacement_contains(source, "#!/usr/bin/env -S nu --stdin");
+    RULE.assert_fixed_contains(source, "#!/usr/bin/env -S nu --stdin");
 }
 
 #[test]
@@ -60,7 +60,7 @@ def main []: list<string> -> string {
 }
 ";
 
-    RULE.assert_replacement_contains(source, "#!/usr/bin/env -S nu --stdin");
+    RULE.assert_fixed_contains(source, "#!/usr/bin/env -S nu --stdin");
 }
 
 #[test]
@@ -84,7 +84,7 @@ def main [] {
 }
 ";
 
-    RULE.assert_replacement_contains(source, "#!/usr/bin/env -S nu --stdin --log-level debug");
+    RULE.assert_fixed_contains(source, "#!/usr/bin/env -S nu --stdin --log-level debug");
 }
 
 #[test]
@@ -124,7 +124,7 @@ def main [] {
 ";
 
     // Verify the fix contains the corrected shebang
-    RULE.assert_replacement_contains(source, "#!/usr/bin/env -S nu --stdin");
+    RULE.assert_fixed_contains(source, "#!/usr/bin/env -S nu --stdin");
 
     // Verify there's exactly one violation
     RULE.assert_count(source, 1);
@@ -138,6 +138,6 @@ def helper [] { \"test\" }
 def main [] { $in | str upcase }
 ";
 
-    RULE.assert_replacement_contains(source, "#!/usr/bin/env -S nu --stdin");
+    RULE.assert_fixed_contains(source, "#!/usr/bin/env -S nu --stdin");
     RULE.assert_count(source, 1);
 }

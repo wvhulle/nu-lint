@@ -50,7 +50,7 @@ mod tests {
     #[test]
     fn converts_cut_to_select() {
         let source = "^cut";
-        RULE.assert_replacement_contains(source, "select");
+        RULE.assert_fixed_contains(source, "select");
         RULE.assert_fix_explanation_contains(source, "columns");
     }
 }

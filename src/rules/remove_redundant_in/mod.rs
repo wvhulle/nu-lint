@@ -1,4 +1,7 @@
-use nu_protocol::ast::{Expr, Pipeline};
+use nu_protocol::{
+    Span,
+    ast::{Expr, Pipeline},
+};
 
 use crate::{
     Fix, LintLevel, Replacement,
@@ -8,76 +11,58 @@ use crate::{
 };
 
 struct FixData {
-    fix_span: nu_protocol::Span,
-    function_name: String,
-    block_span: Option<nu_protocol::Span>,
-    signature_params: Vec<String>,
+    /// Spans of `$in | ` patterns to remove (including the `$in`, space, and
+    /// `|` with trailing space)
+    redundant_in_spans: Vec<Span>,
 }
 
-/// Check if a pipeline starts with redundant `$in | ...` pattern
-fn pipeline_starts_with_redundant_in(pipeline: &Pipeline, context: &LintContext) -> bool {
+/// Find the span of `$in | ` at the start of a pipeline (if present)
+/// Returns the span from `$in` start to just after `| ` (including trailing
+/// whitespace)
+fn find_redundant_in_span(pipeline: &Pipeline, context: &LintContext) -> Option<Span> {
     let [element] = pipeline.elements.as_slice() else {
-        return false;
+        return None;
     };
 
     let Expr::Collect(_, inner_expr) = &element.expr.expr else {
-        return false;
+        return None;
     };
 
     let Expr::Subexpression(block_id) = &inner_expr.expr else {
-        return false;
+        return None;
     };
 
     let inner_block = context.working_set.get_block(*block_id);
     let [inner_pipeline] = inner_block.pipelines.as_slice() else {
-        return false;
+        return None;
     };
 
     // Need at least 2 elements: `$in | command`
-    let Some(first) = inner_pipeline.elements.first() else {
-        return false;
-    };
-
-    inner_pipeline.elements.len() >= 2
-        && matches!(&first.expr.expr, Expr::Var(_) | Expr::FullCellPath(_))
-}
-
-fn extract_function_body(
-    block_span: Option<nu_protocol::Span>,
-    decl_name: &str,
-    context: &LintContext,
-) -> Option<String> {
-    use crate::ast::string::strip_block_braces;
-
-    if let Some(span) = block_span {
-        let contents = context.get_span_text(span);
-        return Some(strip_block_braces(contents).to_string());
+    if inner_pipeline.elements.len() < 2 {
+        return None;
     }
 
-    let span: nu_protocol::Span = context.find_declaration_span(decl_name).into();
-    let contents = context.get_span_text(span);
-    let start = contents.find('{')?;
-    let end = contents.rfind('}')?;
-    Some(contents[start + 1..end].trim().to_string())
-}
+    let first = inner_pipeline.elements.first()?;
 
-fn remove_redundant_in_from_body(body: &str) -> String {
-    let trimmed = body.trim_start();
-    if trimmed.starts_with("$in | ") {
-        body.replacen("$in | ", "", 1)
-    } else if trimmed.starts_with("$in|") {
-        body.replacen("$in|", "", 1)
-    } else {
-        body.replace("$in | ", "").replace("$in|", "")
+    // Check if first element is $in variable
+    if !matches!(&first.expr.expr, Expr::Var(_) | Expr::FullCellPath(_)) {
+        return None;
     }
+
+    // Get the span from $in to just before the second element
+    let second = inner_pipeline.elements.get(1)?;
+    let in_span_start = first.expr.span.start;
+    let second_start = second.expr.span.start;
+
+    // Return span that covers `$in | ` (from $in to just before the next command)
+    Some(Span::new(in_span_start, second_start))
 }
 
-fn extract_signature_params(signature: &nu_protocol::Signature) -> Vec<String> {
-    signature
-        .required_positional
+/// Collect all redundant `$in | ` spans from a block's pipelines
+fn collect_redundant_in_spans(pipelines: &[Pipeline], context: &LintContext) -> Vec<Span> {
+    pipelines
         .iter()
-        .chain(signature.optional_positional.iter())
-        .map(|p| p.name.clone())
+        .filter_map(|p| find_redundant_in_span(p, context))
         .collect()
 }
 
@@ -110,17 +95,13 @@ impl DetectFix for RemoveRedundantIn {
                 let block_id = decl.block_id()?;
                 let block = context.working_set.get_block(block_id);
 
-                let has_redundant_in = block
-                    .pipelines
-                    .iter()
-                    .any(|p| pipeline_starts_with_redundant_in(p, context));
+                let redundant_in_spans = collect_redundant_in_spans(&block.pipelines, context);
 
-                if !has_redundant_in {
+                if redundant_in_spans.is_empty() {
                     return None;
                 }
 
                 let name_span = context.find_declaration_span(&signature.name);
-                let fix_span: nu_protocol::Span = name_span.into();
 
                 let mut violation = Detection::from_file_span(
                     format!("Redundant $in in function '{}'", signature.name),
@@ -133,32 +114,28 @@ impl DetectFix for RemoveRedundantIn {
                     violation = violation.with_extra_label("$in used at pipeline start", body_span);
                 }
 
-                let fix_data = FixData {
-                    fix_span,
-                    function_name: signature.name.clone(),
-                    block_span: block.span,
-                    signature_params: extract_signature_params(&signature),
-                };
+                let fix_data = FixData { redundant_in_spans };
 
                 Some((violation, fix_data))
             })
             .collect()
     }
 
-    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let body = extract_function_body(fix_data.block_span, &fix_data.function_name, context)?;
-        let transformed = remove_redundant_in_from_body(&body);
-        let params = fix_data.signature_params.join(", ");
-        let fix_text = format!(
-            "def {} [{}] {{ {} }}",
-            fix_data.function_name,
-            params,
-            transformed.trim()
-        );
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        if fix_data.redundant_in_spans.is_empty() {
+            return None;
+        }
+
+        // Create replacements that remove each `$in | ` pattern
+        let replacements: Vec<Replacement> = fix_data
+            .redundant_in_spans
+            .iter()
+            .map(|span| Replacement::new(*span, String::new()))
+            .collect();
 
         Some(Fix::with_explanation(
-            fix_text.clone(),
-            vec![Replacement::new(fix_data.fix_span, fix_text)],
+            "Remove redundant $in at pipeline start",
+            replacements,
         ))
     }
 }

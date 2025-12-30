@@ -112,10 +112,11 @@ impl DetectFix for UseBuiltinTail {
         if fix_data.follow {
             let file = fix_data.filename.unwrap_or("file");
             let count = fix_data.count.unwrap_or("20");
-            let replacement = format!("watch {file} {{ open --raw {file} | lines | last {count} }}");
-            let description = "Use 'watch' to monitor file changes. Nu's watch executes a \
-                               closure when the file changes, similar to 'tail -f'. Note: \
-                               this is event-based, not continuous streaming.";
+            let replacement =
+                format!("watch {file} {{ open --raw {file} | lines | last {count} }}");
+            let description = "Use 'watch' to monitor file changes. Nu's watch executes a closure \
+                               when the file changes, similar to 'tail -f'. Note: this is \
+                               event-based, not continuous streaming.";
 
             return Some(Fix {
                 explanation: description.into(),

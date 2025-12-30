@@ -279,14 +279,6 @@ impl StringFormat {
     }
 }
 
-/// Strips surrounding braces from block text and trims whitespace.
-pub fn strip_block_braces(text: &str) -> &str {
-    text.trim()
-        .strip_prefix('{')
-        .and_then(|s| s.strip_suffix('}'))
-        .map_or(text.trim(), str::trim)
-}
-
 /// Strips surrounding quotes from text (double quotes, single quotes, or
 /// backticks).
 ///

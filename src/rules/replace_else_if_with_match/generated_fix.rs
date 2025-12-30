@@ -15,13 +15,13 @@ if $status == "ok" {
     "unknown"
 }
 "#;
-    RULE.assert_replacement_contains(bad_code, "match $status");
-    RULE.assert_replacement_contains(bad_code, r#""ok" =>"#);
-    RULE.assert_replacement_contains(bad_code, r#""error" =>"#);
-    RULE.assert_replacement_contains(bad_code, r#""pending" =>"#);
-    RULE.assert_replacement_contains(bad_code, "_ =>");
-    RULE.assert_replacement_contains(bad_code, r#""success""#);
-    RULE.assert_replacement_contains(bad_code, r#""failed""#);
+    RULE.assert_fixed_contains(bad_code, "match $status");
+    RULE.assert_fixed_contains(bad_code, r#""ok" =>"#);
+    RULE.assert_fixed_contains(bad_code, r#""error" =>"#);
+    RULE.assert_fixed_contains(bad_code, r#""pending" =>"#);
+    RULE.assert_fixed_contains(bad_code, "_ =>");
+    RULE.assert_fixed_contains(bad_code, r#""success""#);
+    RULE.assert_fixed_contains(bad_code, r#""failed""#);
 }
 
 #[test]
@@ -37,9 +37,9 @@ if $code == 200 {
     "unknown"
 }
 "#;
-    RULE.assert_replacement_contains(bad_code, "match $code");
-    RULE.assert_replacement_contains(bad_code, "200 =>");
-    RULE.assert_replacement_contains(bad_code, "404 =>");
-    RULE.assert_replacement_contains(bad_code, "500 =>");
-    RULE.assert_replacement_contains(bad_code, "_ =>");
+    RULE.assert_fixed_contains(bad_code, "match $code");
+    RULE.assert_fixed_contains(bad_code, "200 =>");
+    RULE.assert_fixed_contains(bad_code, "404 =>");
+    RULE.assert_fixed_contains(bad_code, "500 =>");
+    RULE.assert_fixed_contains(bad_code, "_ =>");
 }

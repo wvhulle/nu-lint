@@ -1,6 +1,6 @@
 use nu_protocol::{
     Span,
-    ast::{Block, Expr, Pipeline, PipelineElement},
+    ast::{Argument, Block, Expr, ExternalArgument, Pipeline, PipelineElement},
 };
 
 use crate::{
@@ -11,9 +11,65 @@ use crate::{
     violation::{Detection, Fix, Replacement},
 };
 
-/// Semantic fix data: stores the span of the echo call
+/// Semantic fix data: stores the span of the echo call and its arguments
 pub struct FixData {
+    /// Full span of the echo call expression
     element_span: Span,
+    /// Span covering all arguments (None if no arguments)
+    args_span: Option<Span>,
+}
+
+const fn external_arg_span(arg: &ExternalArgument) -> Span {
+    match arg {
+        ExternalArgument::Regular(expr) | ExternalArgument::Spread(expr) => expr.span,
+    }
+}
+
+/// Extract the span of arguments from an echo call
+fn extract_echo_args_span(element: &PipelineElement, context: &LintContext) -> Option<Span> {
+    match &element.expr.expr {
+        Expr::Call(call) => {
+            if !call.is_call_to_command("echo", context) {
+                return None;
+            }
+            // Get spans of all positional arguments
+            let arg_spans: Vec<Span> = call
+                .arguments
+                .iter()
+                .filter_map(|arg| match arg {
+                    Argument::Positional(expr)
+                    | Argument::Unknown(expr)
+                    | Argument::Spread(expr) => Some(expr.span),
+                    Argument::Named(_) => None,
+                })
+                .collect();
+
+            if arg_spans.is_empty() {
+                None
+            } else {
+                // Merge all argument spans into one
+                let start = arg_spans.iter().map(|s| s.start).min()?;
+                let end = arg_spans.iter().map(|s| s.end).max()?;
+                Some(Span::new(start, end))
+            }
+        }
+        Expr::ExternalCall(head, args) => {
+            if context.get_span_text(head.span) != "echo" {
+                return None;
+            }
+            // For external calls, get the span of arguments
+            let arg_spans: Vec<Span> = args.iter().map(external_arg_span).collect();
+
+            if arg_spans.is_empty() {
+                None
+            } else {
+                let start = arg_spans.iter().map(|s| s.start).min()?;
+                let end = arg_spans.iter().map(|s| s.end).max()?;
+                Some(Span::new(start, end))
+            }
+        }
+        _ => None,
+    }
 }
 
 fn uses_echo(element: &PipelineElement, context: &LintContext) -> bool {
@@ -22,14 +78,6 @@ fn uses_echo(element: &PipelineElement, context: &LintContext) -> bool {
         Expr::ExternalCall(head, _) => context.get_span_text(head.span) == "echo",
         _ => false,
     }
-}
-
-fn extract_echo_args(code_snippet: &str) -> &str {
-    code_snippet
-        .strip_prefix("^echo")
-        .or_else(|| code_snippet.strip_prefix("echo"))
-        .unwrap_or("")
-        .trim()
 }
 
 fn extract_nested_block_ids(
@@ -64,8 +112,10 @@ fn detect_element(
         let message = "Avoid 'echo' - it's just an identity function. Use the value directly, or \
                        'print' for debugging";
         let violation = Detection::from_global_span(message, element.expr.span);
+        let args_span = extract_echo_args_span(element, context);
         let fix_data = FixData {
             element_span: element.expr.span,
+            args_span,
         };
         violations.push((violation, fix_data));
     }
@@ -105,11 +155,11 @@ impl DetectFix for UseBuiltinEcho {
     type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
-        "use_builtin_echo"
+        "echo_just_identity"
     }
 
     fn explanation(&self) -> &'static str {
-        "D not use builtin 'echo' as it's just an identity function"
+        "Do not use the built-in (or external) 'echo' as it's just an identity function in Nushell."
     }
 
     fn doc_url(&self) -> Option<&'static str> {
@@ -130,17 +180,17 @@ impl DetectFix for UseBuiltinEcho {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let code_snippet = context.get_span_text(fix_data.element_span);
-        let args = extract_echo_args(code_snippet);
+        let args_span = fix_data.args_span?;
+        let args_text = context.get_span_text(args_span);
 
-        if args.is_empty() {
-            None
-        } else {
-            Some(Fix::with_explanation(
-                format!("Replace '{code_snippet}' with '{args}'"),
-                vec![Replacement::new(fix_data.element_span, args.to_string())],
-            ))
-        }
+        let code_snippet = context.get_span_text(fix_data.element_span);
+        Some(Fix::with_explanation(
+            format!("Replace '{code_snippet}' with '{args_text}'"),
+            vec![Replacement::new(
+                fix_data.element_span,
+                args_text.to_string(),
+            )],
+        ))
     }
 }
 

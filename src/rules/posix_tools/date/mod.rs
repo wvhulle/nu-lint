@@ -143,7 +143,7 @@ mod tests {
     #[test]
     fn converts_date_command_to_date_now() {
         let source = "^date";
-        RULE.assert_replacement_contains(source, "date now");
+        RULE.assert_fixed_contains(source, "date now");
         RULE.assert_fix_explanation_contains(source, "datetime");
     }
 
@@ -151,7 +151,7 @@ mod tests {
     fn converts_date_with_format_string() {
         // External date formatting like +%Y-%m-%d should still prefer 'date now'
         let source = "^date +%Y-%m-%d";
-        RULE.assert_replacement_contains(source, "date now");
+        RULE.assert_fixed_contains(source, "date now");
         RULE.assert_fix_explanation_contains(source, "datetime");
     }
 
@@ -159,7 +159,7 @@ mod tests {
     fn converts_date_with_utc_flag() {
         // UTC flag doesn't change the recommendation to use 'date now'
         let source = "^date -u";
-        RULE.assert_replacement_contains(source, "date now");
+        RULE.assert_fixed_contains(source, "date now");
         RULE.assert_fix_explanation_contains(source, "datetime");
     }
 

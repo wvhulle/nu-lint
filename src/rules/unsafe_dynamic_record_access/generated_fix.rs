@@ -3,13 +3,13 @@ use super::RULE;
 #[test]
 fn fix_adds_optional_flag() {
     let bad = "$record | get $key";
-    RULE.assert_replacement_contains(bad, " -o");
+    RULE.assert_fixed_contains(bad, " -o");
 }
 
 #[test]
 fn fix_adds_optional_flag_in_pipeline() {
     let bad = "$servers | get $name";
-    RULE.assert_replacement_contains(bad, " -o");
+    RULE.assert_fixed_contains(bad, " -o");
 }
 
 #[test]

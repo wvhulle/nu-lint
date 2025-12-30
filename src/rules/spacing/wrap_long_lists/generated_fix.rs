@@ -15,7 +15,7 @@ fn fix_long_single_line_list() {
     "be"
     "multiline"
 ]"#;
-    RULE.assert_replacement_contains(code, expected);
+    RULE.assert_fixed_contains(code, expected);
 }
 
 #[test]
@@ -32,7 +32,7 @@ fn fix_list_exceeding_80_chars() {
     "item8"
     "item9"
 ]"#;
-    RULE.assert_replacement_contains(code, expected);
+    RULE.assert_fixed_contains(code, expected);
 }
 
 #[test]
@@ -42,5 +42,5 @@ fn fix_nested_list() {
     ["nested", "list"]
     ["second", "nested"]
 ]"#;
-    RULE.assert_replacement_contains(code, expected);
+    RULE.assert_fixed_contains(code, expected);
 }

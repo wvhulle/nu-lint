@@ -9,8 +9,8 @@ fn test_fix_simple_each_if_to_where() {
 ls | each {|f| if $f.size > 100kb { $f } }
 ";
 
-    RULE.assert_replacement_contains(bad_code, "where");
-    RULE.assert_replacement_contains(bad_code, "$f.size > 100kb");
+    RULE.assert_fixed_contains(bad_code, "where");
+    RULE.assert_fixed_contains(bad_code, "$f.size > 100kb");
 }
 
 #[test]
@@ -21,7 +21,7 @@ fn test_fix_preserves_condition() {
 open users.json | each {|u| if $u.age >= 18 { $u } }
 ";
 
-    RULE.assert_replacement_contains(bad_code, "where $u.age >= 18");
+    RULE.assert_fixed_contains(bad_code, "where $u.age >= 18");
 }
 
 #[test]
@@ -32,8 +32,8 @@ fn test_fix_complex_condition() {
 open data.json | get items | each {|item| if ($item.status == 'active' and $item.count > 0) { $item } }
 ";
 
-    RULE.assert_replacement_contains(bad_code, "where");
-    RULE.assert_replacement_contains(bad_code, "$item.status == 'active' and $item.count > 0");
+    RULE.assert_fixed_contains(bad_code, "where");
+    RULE.assert_fixed_contains(bad_code, "$item.status == 'active' and $item.count > 0");
 }
 
 #[test]
@@ -55,5 +55,5 @@ fn test_fix_removes_each_and_if() {
 [1 2 3 4 5] | each {|x| if $x > 2 { $x } }
 ";
 
-    RULE.assert_replacement_contains(bad_code, "where $x > 2");
+    RULE.assert_fixed_contains(bad_code, "where $x > 2");
 }

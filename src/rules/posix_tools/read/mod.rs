@@ -62,13 +62,13 @@ mod tests {
     #[test]
     fn converts_read_to_input() {
         let source = "^read";
-        RULE.assert_replacement_contains(source, "input");
+        RULE.assert_fixed_contains(source, "input");
     }
 
     #[test]
     fn converts_read_silent_to_input_secure() {
         let source = "^read -s";
-        RULE.assert_replacement_contains(source, "input -s");
+        RULE.assert_fixed_contains(source, "input -s");
         RULE.assert_fix_explanation_contains(source, "password");
     }
 }

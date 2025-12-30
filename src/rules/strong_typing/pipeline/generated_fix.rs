@@ -9,7 +9,7 @@ def double [] {
     $in * 2
 }
 ";
-    RULE.assert_replacement_contains(bad_code, "[]: int -> int");
+    RULE.assert_fixed_contains(bad_code, "[]: int -> int");
 }
 
 #[test]
@@ -26,7 +26,7 @@ export def "git age" [] {
 }
 "#;
     RULE.assert_count(bad_code, 1);
-    RULE.assert_replacement_contains(bad_code, "nothing -> table");
+    RULE.assert_fixed_contains(bad_code, "nothing -> table");
 }
 
 #[test]
@@ -37,7 +37,7 @@ def create-list [] {
     [1, 2, 3]
 }
 ";
-    RULE.assert_replacement_contains(bad_code, "[]: nothing -> list<int>");
+    RULE.assert_fixed_contains(bad_code, "[]: nothing -> list<int>");
 }
 
 #[test]
@@ -51,7 +51,7 @@ def time_to_hours [time_str: string] {
     # Ignore seconds for simplicity
     $hour + ($minute / 60.0)
 }"#;
-    RULE.assert_replacement_contains(bad_code, "nothing -> float");
+    RULE.assert_fixed_contains(bad_code, "nothing -> float");
 }
 
 #[test]
@@ -62,7 +62,7 @@ def transform [] {
     $in | each { |x| $x + 1 }
 }
 ";
-    RULE.assert_replacement_contains(bad_code, "list<any> -> list<any>");
+    RULE.assert_fixed_contains(bad_code, "list<any> -> list<any>");
 }
 
 #[test]
@@ -72,7 +72,7 @@ def multiply [factor: int] {
     $in * $factor
 }
 ";
-    RULE.assert_replacement_contains(bad_code, "[factor: int]: int -> int");
+    RULE.assert_fixed_contains(bad_code, "[factor: int]: int -> int");
 }
 
 #[test]
@@ -88,9 +88,9 @@ def process [data?, --verbose] {
     $in | str trim
 }
 ";
-    RULE.assert_replacement_contains(bad_code, "data?");
-    RULE.assert_replacement_contains(bad_code, "--verbose");
-    RULE.assert_replacement_contains(bad_code, "string -> string");
+    RULE.assert_fixed_contains(bad_code, "data?");
+    RULE.assert_fixed_contains(bad_code, "--verbose");
+    RULE.assert_fixed_contains(bad_code, "string -> string");
 }
 
 #[test]
@@ -100,7 +100,7 @@ export def process [] {
     $in | str trim
 }
 ";
-    RULE.assert_replacement_contains(bad_code, "string -> string");
+    RULE.assert_fixed_contains(bad_code, "string -> string");
 }
 
 #[test]
@@ -111,7 +111,7 @@ def get-value [] {
     42
 }
 ";
-    RULE.assert_replacement_contains(bad_code, "[]: nothing -> int");
+    RULE.assert_fixed_contains(bad_code, "[]: nothing -> int");
 }
 
 #[test]
@@ -121,7 +121,7 @@ def greet [] {
     "hello"
 }
 "#;
-    RULE.assert_replacement_contains(bad_code, "[]: nothing -> string");
+    RULE.assert_fixed_contains(bad_code, "[]: nothing -> string");
 }
 
 #[test]
@@ -131,7 +131,7 @@ def get_count [] {
     42
 }
 ";
-    RULE.assert_replacement_contains(bad_code, "[]: nothing -> int");
+    RULE.assert_fixed_contains(bad_code, "[]: nothing -> int");
 }
 
 #[test]
@@ -141,7 +141,7 @@ def get_pi [] {
     3.14
 }
 ";
-    RULE.assert_replacement_contains(bad_code, "[]: nothing -> float");
+    RULE.assert_fixed_contains(bad_code, "[]: nothing -> float");
 }
 
 #[test]
@@ -152,7 +152,7 @@ def is_ready [] {
     true
 }
 ";
-    RULE.assert_replacement_contains(bad_code, "[]: nothing -> bool");
+    RULE.assert_fixed_contains(bad_code, "[]: nothing -> bool");
 }
 
 #[test]
@@ -163,7 +163,7 @@ def get_items [] {
     [1, 2, 3]
 }
 ";
-    RULE.assert_replacement_contains(bad_code, "[]: nothing -> list");
+    RULE.assert_fixed_contains(bad_code, "[]: nothing -> list");
 }
 
 #[test]
@@ -173,7 +173,7 @@ def get_config [] {
     {name: "test", value: 42}
 }
 "#;
-    RULE.assert_replacement_contains(bad_code, "[]: nothing -> record");
+    RULE.assert_fixed_contains(bad_code, "[]: nothing -> record");
 }
 
 #[test]
@@ -183,7 +183,7 @@ def get_data [] {
     [[name, age]; [Alice, 30], [Bob, 25]]
 }
 ";
-    RULE.assert_replacement_contains(bad_code, "[]: nothing -> table");
+    RULE.assert_fixed_contains(bad_code, "[]: nothing -> table");
 }
 
 #[test]
@@ -193,7 +193,7 @@ def serialize [] {
     $in | to json
 }
 ";
-    RULE.assert_replacement_contains(bad_code, "[]: any -> string");
+    RULE.assert_fixed_contains(bad_code, "[]: any -> string");
 }
 
 #[test]
@@ -203,7 +203,7 @@ def split_lines [] {
     $in | lines
 }
 ";
-    RULE.assert_replacement_contains(bad_code, "any -> list<string>");
+    RULE.assert_fixed_contains(bad_code, "any -> list<string>");
 }
 
 #[test]
@@ -213,7 +213,7 @@ def filter_items [] {
     $in | where {|x| $x > 5}
 }
 ";
-    RULE.assert_replacement_contains(bad_code, "list<any> -> list<any>");
+    RULE.assert_fixed_contains(bad_code, "list<any> -> list<any>");
 }
 
 #[test]
@@ -223,7 +223,7 @@ def count_items [] {
     $in | length
 }
 ";
-    RULE.assert_replacement_contains(bad_code, "list<any> -> int");
+    RULE.assert_fixed_contains(bad_code, "list<any> -> int");
 }
 
 #[test]
@@ -233,7 +233,7 @@ def check_empty [] {
     $in | is-empty
 }
 ";
-    RULE.assert_replacement_contains(bad_code, "[]: any -> bool");
+    RULE.assert_fixed_contains(bad_code, "[]: any -> bool");
 }
 
 #[test]
@@ -243,7 +243,7 @@ def get_name [] {
     $in.name
 }
 ";
-    RULE.assert_replacement_contains(bad_code, "[]: record -> any");
+    RULE.assert_fixed_contains(bad_code, "[]: record -> any");
 }
 
 #[test]
@@ -254,7 +254,7 @@ def process_items [] {
     $in | each {|x| $x + 1}
 }
 ";
-    RULE.assert_replacement_contains(bad_code, "list<any> -> list<any>");
+    RULE.assert_fixed_contains(bad_code, "list<any> -> list<any>");
 }
 
 #[test]
@@ -264,7 +264,7 @@ def split_text [] {
     $in | lines
 }
 ";
-    RULE.assert_replacement_contains(bad_code, "[]: any -> list<string>");
+    RULE.assert_fixed_contains(bad_code, "[]: any -> list<string>");
 }
 
 #[test]
@@ -274,7 +274,7 @@ def process [] {
     $in | each {|x| $x * 2}
 }
 ";
-    RULE.assert_replacement_contains(bad_code, "[]: list<any> -> list<any>");
+    RULE.assert_fixed_contains(bad_code, "[]: list<any> -> list<any>");
 }
 
 #[test]
@@ -284,7 +284,7 @@ def multiply [factor: int] {
     $in | each {|x| $x * $factor}
 }
 ";
-    RULE.assert_replacement_contains(bad_code, "list<any> -> list<any>");
+    RULE.assert_fixed_contains(bad_code, "list<any> -> list<any>");
 }
 
 #[test]
@@ -295,7 +295,7 @@ def complex [] {
     if true { "string" } else { 42 }
 }
 "#;
-    RULE.assert_replacement_contains(bad_code, "[]: nothing -> string");
+    RULE.assert_fixed_contains(bad_code, "[]: nothing -> string");
 }
 
 #[test]
@@ -315,11 +315,11 @@ def calculate-brightness [
 }
 ";
     // Should preserve the multiline formatting with newlines and indentation
-    RULE.assert_replacement_contains(bad_code, "\n  current: float\n");
-    RULE.assert_replacement_contains(bad_code, "\n  times: record\n");
-    RULE.assert_replacement_contains(bad_code, "\n  --min: float\n");
-    RULE.assert_replacement_contains(bad_code, "\n  --max: float\n");
-    RULE.assert_replacement_contains(bad_code, "\n  --offset: int\n");
+    RULE.assert_fixed_contains(bad_code, "\n  current: float\n");
+    RULE.assert_fixed_contains(bad_code, "\n  times: record\n");
+    RULE.assert_fixed_contains(bad_code, "\n  --min: float\n");
+    RULE.assert_fixed_contains(bad_code, "\n  --max: float\n");
+    RULE.assert_fixed_contains(bad_code, "\n  --offset: int\n");
 }
 
 #[test]
@@ -336,11 +336,11 @@ export def process-data [
 }
 ";
     // Should preserve the multiline formatting
-    RULE.assert_replacement_contains(bad_code, "\n  input: string\n");
-    RULE.assert_replacement_contains(bad_code, "\n  output: string\n");
-    RULE.assert_replacement_contains(bad_code, "\n  --verbose: bool\n");
-    RULE.assert_replacement_contains(bad_code, "\n  --format: string\n");
-    RULE.assert_replacement_contains(bad_code, "nothing -> table");
+    RULE.assert_fixed_contains(bad_code, "\n  input: string\n");
+    RULE.assert_fixed_contains(bad_code, "\n  output: string\n");
+    RULE.assert_fixed_contains(bad_code, "\n  --verbose: bool\n");
+    RULE.assert_fixed_contains(bad_code, "\n  --format: string\n");
+    RULE.assert_fixed_contains(bad_code, "nothing -> table");
 }
 
 #[test]
@@ -352,6 +352,6 @@ def transform [data: string, options: record] {
 }
 ";
     // Should keep single-line format
-    RULE.assert_replacement_contains(bad_code, "[data: string, options: record]:");
-    RULE.assert_replacement_contains(bad_code, "nothing -> string");
+    RULE.assert_fixed_contains(bad_code, "[data: string, options: record]:");
+    RULE.assert_fixed_contains(bad_code, "nothing -> string");
 }

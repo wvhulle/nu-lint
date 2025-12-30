@@ -6,9 +6,9 @@ use crate::{
     violation::{Detection, Fix, Replacement},
 };
 
-const NOTE: &str = "Use 'open --raw | lines | reverse' to reverse file content in Nushell. \
-                    Unlike tac which outputs text, Nu's pipeline returns a list of lines \
-                    that can be further processed.";
+const NOTE: &str = "Use 'open --raw | lines | reverse' to reverse file content in Nushell. Unlike \
+                    tac which outputs text, Nu's pipeline returns a list of lines that can be \
+                    further processed.";
 
 struct UseBuiltinTac;
 
@@ -43,9 +43,8 @@ impl DetectFix for UseBuiltinTac {
             |file| format!("open --raw {file} | lines | reverse"),
         );
 
-        let description =
-            "Use 'open --raw | lines | reverse' to reverse lines. Add '| str join \"\\n\"' \
-             if you need text output instead of a list.";
+        let description = "Use 'open --raw | lines | reverse' to reverse lines. Add '| str join \
+                           \"\\n\"' if you need text output instead of a list.";
 
         Some(Fix {
             explanation: description.into(),

@@ -102,11 +102,8 @@ fn build_help_text(violation: &Violation, source_code: &str) -> Option<String> {
 }
 
 fn format_fix(fix: &Fix, source_code: &str, has_help: bool) -> String {
-    let diff = fix
-        .replacements
-        .first()
-        .map(|r| format_diff(source_code, r))
-        .filter(|d| !d.is_empty());
+    let diff = format_combined_diff(source_code, &fix.replacements);
+    let diff = (!diff.is_empty()).then_some(diff);
 
     match (diff, has_help) {
         (Some(diff_text), true) => diff_text,
@@ -121,12 +118,69 @@ fn format_fix(fix: &Fix, source_code: &str, has_help: bool) -> String {
     }
 }
 
-fn format_diff(source_code: &str, replacement: &Replacement) -> String {
-    let file_span = replacement.file_span();
-    let old_text = source_code
-        .get(file_span.start..file_span.end)
-        .unwrap_or("");
-    let new_text = &replacement.replacement_text;
+fn format_combined_diff(source_code: &str, replacements: &[Replacement]) -> String {
+    if replacements.is_empty() {
+        return String::new();
+    }
+
+    // Sort replacements by start position (descending) to apply from end to start
+    let mut sorted_replacements: Vec<_> = replacements.iter().collect();
+    sorted_replacements.sort_by(|a, b| b.file_span().start.cmp(&a.file_span().start));
+
+    // Find the span that encompasses all replacements
+    let min_start = replacements
+        .iter()
+        .map(|r| r.file_span().start)
+        .min()
+        .unwrap_or(0);
+    let max_end = replacements
+        .iter()
+        .map(|r| r.file_span().end)
+        .max()
+        .unwrap_or(0);
+
+    // Get the original text for the affected region
+    let old_text = source_code.get(min_start..max_end).unwrap_or("");
+
+    // Apply all replacements to get the new text
+    let mut new_source = source_code.to_string();
+    for replacement in &sorted_replacements {
+        let file_span = replacement.file_span();
+        new_source.replace_range(
+            file_span.start..file_span.end,
+            &replacement.replacement_text,
+        );
+    }
+
+    // Calculate the new end position after replacements
+    #[allow(
+        clippy::cast_possible_wrap,
+        reason = "replacement text lengths are bounded"
+    )]
+    let length_delta: isize = replacements
+        .iter()
+        .map(|r| {
+            let file_span = r.file_span();
+            r.replacement_text.len() as isize - (file_span.end - file_span.start) as isize
+        })
+        .sum();
+
+    #[allow(
+        clippy::cast_possible_wrap,
+        clippy::cast_sign_loss,
+        reason = "result is clamped to valid range"
+    )]
+    let new_end = (max_end as isize + length_delta).max(min_start as isize) as usize;
+
+    let new_text = new_source.get(min_start..new_end).unwrap_or("");
+
+    format_diff_text(old_text, new_text)
+}
+
+fn format_diff_text(old_text: &str, new_text: &str) -> String {
+    if old_text == new_text {
+        return String::new();
+    }
 
     let old_lines: Vec<&str> = old_text.lines().collect();
     let new_lines: Vec<&str> = new_text.lines().collect();

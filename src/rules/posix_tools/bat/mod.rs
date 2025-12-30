@@ -77,15 +77,15 @@ impl DetectFix for UseBuiltinBat {
                     (
                         format!("open {file}"),
                         format!(
-                            "Use 'open {file}' to auto-parse this structured file. Nu will \
-                             detect the format and return a table/record you can query directly."
+                            "Use 'open {file}' to auto-parse this structured file. Nu will detect \
+                             the format and return a table/record you can query directly."
                         ),
                     )
                 } else {
                     (
                         format!("open --raw {file}"),
-                        "Use 'open --raw' for plain text files. For structured files (JSON, \
-                         TOML, CSV), use 'open' without --raw to get parsed data."
+                        "Use 'open --raw' for plain text files. For structured files (JSON, TOML, \
+                         CSV), use 'open' without --raw to get parsed data."
                             .to_string(),
                     )
                 }

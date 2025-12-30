@@ -7,9 +7,9 @@ fn test_fix_simple_string_in_function() {
             print --stderr "Invalid input"
         }
     "#;
-    RULE.assert_replacement_contains(code, "error make");
-    RULE.assert_replacement_contains(code, "msg:");
-    RULE.assert_replacement_contains(code, "Invalid input");
+    RULE.assert_fixed_contains(code, "error make");
+    RULE.assert_fixed_contains(code, "msg:");
+    RULE.assert_fixed_contains(code, "Invalid input");
 }
 
 #[test]
@@ -19,8 +19,8 @@ fn test_fix_variable_message_in_function() {
             print --stderr $msg
         }
     "#;
-    RULE.assert_replacement_contains(code, "error make");
-    RULE.assert_replacement_contains(code, "$msg");
+    RULE.assert_fixed_contains(code, "error make");
+    RULE.assert_fixed_contains(code, "$msg");
 }
 
 #[test]
@@ -30,8 +30,8 @@ fn test_fix_interpolated_string_in_function() {
             print --stderr $"File not found: ($file)"
         }
     "#;
-    RULE.assert_replacement_contains(code, "error make");
-    RULE.assert_replacement_contains(code, "$\"File not found:");
+    RULE.assert_fixed_contains(code, "error make");
+    RULE.assert_fixed_contains(code, "$\"File not found:");
 }
 
 #[test]
@@ -41,8 +41,8 @@ fn test_fix_in_try_block() {
             print --stderr "Operation failed"
         }
     "#;
-    RULE.assert_replacement_contains(code, "error make");
-    RULE.assert_replacement_contains(code, "Operation failed");
+    RULE.assert_fixed_contains(code, "error make");
+    RULE.assert_fixed_contains(code, "Operation failed");
 }
 
 #[test]

@@ -3,14 +3,14 @@ use super::RULE;
 #[test]
 fn replaces_simple_uniq() {
     let source = "^uniq";
-    RULE.assert_replacement_contains(source, "uniq");
+    RULE.assert_fixed_contains(source, "uniq");
     RULE.assert_fix_explanation_contains(source, "structured data");
 }
 
 #[test]
 fn replaces_uniq_in_pipeline() {
     let source = "ls | ^uniq";
-    RULE.assert_replacement_contains(source, "uniq");
+    RULE.assert_fixed_contains(source, "uniq");
 }
 
 #[test]

@@ -1,20 +1,25 @@
+use nu_protocol::ast::{Expr, ExternalArgument, Traverse};
+
 use crate::{
     LintLevel,
     context::LintContext,
-    external_commands::ExternalCmdFixData,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
 
-const NOTE: &str = "Use 'first N' to get the first N items";
+struct HeadFixData<'a> {
+    count: Option<&'a str>,
+    filename: Option<&'a str>,
+    expr_span: nu_protocol::Span,
+}
 
 struct UseBuiltinHead;
 
 impl DetectFix for UseBuiltinHead {
-    type FixInput<'a> = ExternalCmdFixData<'a>;
+    type FixInput<'a> = HeadFixData<'a>;
 
     fn id(&self) -> &'static str {
-        "use_builtin_head"
+        "head_to_first"
     }
 
     fn explanation(&self) -> &'static str {
@@ -30,22 +35,77 @@ impl DetectFix for UseBuiltinHead {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.external_invocations("head", NOTE)
+        let mut results = Vec::new();
+
+        context.ast.flat_map(
+            context.working_set,
+            &|expr| {
+                let Expr::ExternalCall(head, args) = &expr.expr else {
+                    return vec![];
+                };
+
+                let cmd_text = context.get_span_text(head.span);
+                if cmd_text != "head" {
+                    return vec![];
+                }
+
+                let args_with_spans: Vec<_> =
+                    args.iter()
+                        .map(|arg| {
+                            let span = match arg {
+                                ExternalArgument::Regular(expr)
+                                | ExternalArgument::Spread(expr) => expr.span,
+                            };
+                            (context.get_span_text(span), span)
+                        })
+                        .collect();
+
+                let count = args_with_spans
+                    .iter()
+                    .find(|(text, _)| text.starts_with('-') && text.len() > 1)
+                    .map(|(text, _)| &text[1..]);
+
+                let filename = args_with_spans
+                    .iter()
+                    .find(|(text, _)| !text.starts_with('-'))
+                    .map(|(text, _)| *text);
+
+                let detection = args_with_spans.iter().fold(
+                    Detection::from_global_span(
+                        "Use 'first N' to get the first N items",
+                        head.span,
+                    )
+                    .with_primary_label("external 'head'"),
+                    |det, (text, span)| {
+                        if text.starts_with('-') && text.len() > 1 {
+                            det.with_extra_label("line count", *span)
+                        } else {
+                            det.with_extra_label("file", *span)
+                        }
+                    },
+                );
+
+                let fix_data = HeadFixData {
+                    count,
+                    filename,
+                    expr_span: expr.span,
+                };
+
+                vec![(detection, fix_data)]
+            },
+            &mut results,
+        );
+
+        results
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let replacement = fix_data
-            .arg_strings
-            .iter()
-            .copied()
-            .find(|a| a.starts_with('-') && a.len() > 1)
-            .map_or_else(
-                || "first 10".to_string(),
-                |num_arg| {
-                    let num = &num_arg[1..];
-                    format!("first {num}")
-                },
-            );
+        let count = fix_data.count.unwrap_or("10");
+
+        let replacement = fix_data.filename.map_or_else(
+            || format!("first {count}"),
+            |file| format!("open {file} | lines | first {count}"),
+        );
 
         let description = "Use 'first' with cleaner syntax: 'first N' instead of 'head -N'";
 

@@ -103,7 +103,8 @@ fn classify_external_io(
     for io_type in [IoType::Network, IoType::FileSystem] {
         if matches_external_io_type(io_type, command_name, args, context) {
             log::debug!(
-                "External command '{command_name}' matches IoType::{io_type:?}, adding span {head_span:?}"
+                "External command '{command_name}' matches IoType::{io_type:?}, adding span \
+                 {head_span:?}"
             );
             io_spans.entry(io_type).or_default().push(head_span);
         }
@@ -169,9 +170,9 @@ fn analyze_top_level_script(context: &LintContext) -> Option<Detection> {
     let mut detection = Detection::from_global_span(message, script_span)
         .with_primary_label("script with mixed I/O")
         .with_help(
-            "Consider separating different I/O operations into focused functions. This makes \
-             the code easier to test, mock, and reason about. For scripts without functions, \
-             create separate functions for network operations, file operations, and printing.",
+            "Consider separating different I/O operations into focused functions. This makes the \
+             code easier to test, mock, and reason about. For scripts without functions, create \
+             separate functions for network operations, file operations, and printing.",
         );
 
     for (io_type, spans) in &io_spans {

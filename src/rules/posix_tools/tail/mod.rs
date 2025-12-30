@@ -1,20 +1,25 @@
+use nu_protocol::ast::{Expr, ExternalArgument, Traverse};
+
 use crate::{
     LintLevel,
     context::LintContext,
-    external_commands::ExternalCmdFixData,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
 
-const NOTE: &str = "Use 'last N' to get the last N items";
+struct TailFixData<'a> {
+    count: Option<&'a str>,
+    filename: Option<&'a str>,
+    expr_span: nu_protocol::Span,
+}
 
 struct UseBuiltinTail;
 
 impl DetectFix for UseBuiltinTail {
-    type FixInput<'a> = ExternalCmdFixData<'a>;
+    type FixInput<'a> = TailFixData<'a>;
 
     fn id(&self) -> &'static str {
-        "use_builtin_tail"
+        "tail_to_last"
     }
 
     fn explanation(&self) -> &'static str {
@@ -30,22 +35,74 @@ impl DetectFix for UseBuiltinTail {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.external_invocations("tail", NOTE)
+        let mut results = Vec::new();
+
+        context.ast.flat_map(
+            context.working_set,
+            &|expr| {
+                let Expr::ExternalCall(head, args) = &expr.expr else {
+                    return vec![];
+                };
+
+                let cmd_text = context.get_span_text(head.span);
+                if cmd_text != "tail" {
+                    return vec![];
+                }
+
+                let args_with_spans: Vec<_> =
+                    args.iter()
+                        .map(|arg| {
+                            let span = match arg {
+                                ExternalArgument::Regular(expr)
+                                | ExternalArgument::Spread(expr) => expr.span,
+                            };
+                            (context.get_span_text(span), span)
+                        })
+                        .collect();
+
+                let count = args_with_spans
+                    .iter()
+                    .find(|(text, _)| text.starts_with('-') && text.len() > 1)
+                    .map(|(text, _)| &text[1..]);
+
+                let filename = args_with_spans
+                    .iter()
+                    .find(|(text, _)| !text.starts_with('-'))
+                    .map(|(text, _)| *text);
+
+                let detection = args_with_spans.iter().fold(
+                    Detection::from_global_span("Use 'last N' to get the last N items", head.span)
+                        .with_primary_label("external 'tail'"),
+                    |det, (text, span)| {
+                        if text.starts_with('-') && text.len() > 1 {
+                            det.with_extra_label("line count", *span)
+                        } else {
+                            det.with_extra_label("file", *span)
+                        }
+                    },
+                );
+
+                let fix_data = TailFixData {
+                    count,
+                    filename,
+                    expr_span: expr.span,
+                };
+
+                vec![(detection, fix_data)]
+            },
+            &mut results,
+        );
+
+        results
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let replacement = fix_data
-            .arg_strings
-            .iter()
-            .copied()
-            .find(|a| a.starts_with('-') && a.len() > 1)
-            .map_or_else(
-                || "last 10".to_string(),
-                |num_arg| {
-                    let num = &num_arg[1..];
-                    format!("last {num}")
-                },
-            );
+        let count = fix_data.count.unwrap_or("10");
+
+        let replacement = fix_data.filename.map_or_else(
+            || format!("last {count}"),
+            |file| format!("open {file} | lines | last {count}"),
+        );
 
         let description = "Use 'last' with cleaner syntax: 'last N' instead of 'tail -N'";
 

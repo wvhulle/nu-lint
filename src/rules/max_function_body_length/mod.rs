@@ -47,7 +47,7 @@ impl DetectFix for TooManyLines {
     type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
-        "too_many_lines"
+        "max_function_body_length"
     }
 
     fn explanation(&self) -> &'static str {

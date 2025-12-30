@@ -45,7 +45,8 @@ fn extract_parse_from_closure(
         return None;
     }
 
-    // First element must be the closure parameter variable (can be Var or FullCellPath with empty tail)
+    // First element must be the closure parameter variable (can be Var or
+    // FullCellPath with empty tail)
     let first = &pipeline.elements[0];
     let var_id = match &first.expr.expr {
         Expr::Var(id) => *id,

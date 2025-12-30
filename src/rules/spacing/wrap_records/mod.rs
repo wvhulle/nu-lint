@@ -5,10 +5,26 @@ use crate::{
     ast::expression::ExpressionExt,
     context::LintContext,
     rule::{DetectFix, Rule},
-    violation::Detection,
+    violation::{Detection, Fix, Replacement},
 };
 
 const MAX_RECORD_LINE_LENGTH: usize = 80;
+
+#[derive(Clone)]
+enum RecordFieldData {
+    Pair {
+        key_span: nu_protocol::Span,
+        value_span: nu_protocol::Span,
+    },
+    Spread {
+        spread_span: nu_protocol::Span,
+    },
+}
+
+struct RecordFixData {
+    span: nu_protocol::Span,
+    fields: Vec<RecordFieldData>,
+}
 
 fn should_be_multiline(expr: &Expression, fields: &[RecordItem], context: &LintContext) -> bool {
     let text = expr.span_text(context);
@@ -40,12 +56,34 @@ fn has_nested_structures(fields: &[RecordItem]) -> bool {
     })
 }
 
-fn create_violation(span: nu_protocol::Span) -> Detection {
-    Detection::from_global_span(
-        "Long records should use multiline format with each field on a separate line",
-        span,
+fn create_violation(
+    span: nu_protocol::Span,
+    fields: &[RecordItem],
+) -> (Detection, RecordFixData) {
+    let field_data = fields
+        .iter()
+        .map(|item| match item {
+            RecordItem::Pair(key, value) => RecordFieldData::Pair {
+                key_span: key.span,
+                value_span: value.span,
+            },
+            RecordItem::Spread(spread_span, expr) => RecordFieldData::Spread {
+                spread_span: nu_protocol::Span::new(spread_span.start, expr.span.end),
+            },
+        })
+        .collect();
+
+    (
+        Detection::from_global_span(
+            "Long records should use multiline format with each field on a separate line",
+            span,
+        )
+        .with_help("Put each record field on a separate line for better readability"),
+        RecordFixData {
+            span,
+            fields: field_data,
+        },
     )
-    .with_help("Put each record field on a separate line for better readability")
 }
 
 /// This rule uses AST-based detection and is compatible with topiary-nushell
@@ -54,7 +92,7 @@ fn create_violation(span: nu_protocol::Span) -> Detection {
 struct WrapWideRecords;
 
 impl DetectFix for WrapWideRecords {
-    type FixInput<'a> = ();
+    type FixInput<'a> = RecordFixData;
 
     fn id(&self) -> &'static str {
         "wrap_wide_records"
@@ -80,7 +118,7 @@ impl DetectFix for WrapWideRecords {
             &|expr| {
                 if let Expr::Record(fields) = &expr.expr {
                     if should_be_multiline(expr, fields, context) {
-                        vec![create_violation(expr.span)]
+                        vec![create_violation(expr.span, fields)]
                     } else {
                         vec![]
                     }
@@ -91,7 +129,39 @@ impl DetectFix for WrapWideRecords {
             &mut violations,
         );
 
-        Self::no_fix(violations)
+        violations
+    }
+
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let mut result = String::from("{\n");
+
+        for field in &fix_data.fields {
+            result.push_str("    ");
+            match field {
+                RecordFieldData::Pair {
+                    key_span,
+                    value_span,
+                } => {
+                    let key_text = context.get_span_text(*key_span);
+                    let value_text = context.get_span_text(*value_span);
+                    result.push_str(key_text);
+                    result.push_str(": ");
+                    result.push_str(value_text);
+                }
+                RecordFieldData::Spread { spread_span } => {
+                    let spread_text = context.get_span_text(*spread_span);
+                    result.push_str(spread_text);
+                }
+            }
+            result.push('\n');
+        }
+
+        result.push('}');
+
+        Some(Fix::with_explanation(
+            "Wrap record fields on separate lines",
+            vec![Replacement::new(fix_data.span, result)],
+        ))
     }
 }
 
@@ -99,5 +169,7 @@ pub static RULE: &dyn Rule = &WrapWideRecords;
 
 #[cfg(test)]
 mod detect_bad;
+#[cfg(test)]
+mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

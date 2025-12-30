@@ -231,8 +231,14 @@ impl LintEngine {
     pub fn lint_str(&self, source: &str) -> Vec<Violation> {
         let (block, working_set, file_offset) = parse_source(self.engine_state, source.as_bytes());
 
-        let context =
-            LintContext::new(source, &block, self.engine_state, &working_set, file_offset);
+        let context = LintContext::new(
+            source,
+            &block,
+            self.engine_state,
+            &working_set,
+            file_offset,
+            &self.config,
+        );
 
         let mut violations = self.detect_with_fix_data(&context);
 

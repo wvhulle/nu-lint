@@ -160,7 +160,7 @@ impl DetectFix for LoopCounter {
     type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
-        "loop_counter"
+        "replace_loop_counter_with_range"
     }
 
     fn explanation(&self) -> &'static str {

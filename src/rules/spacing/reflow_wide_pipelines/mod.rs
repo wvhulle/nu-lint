@@ -2,12 +2,12 @@ use nu_protocol::{Span, ast::Pipeline};
 
 use crate::{
     LintLevel,
+    config::PipelinePlacement,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
 
-const MAX_PIPELINE_LENGTH: usize = 100;
 const MIN_PIPELINE_ELEMENTS: usize = 3;
 
 /// Semantic fix data: stores the pipeline span and element spans for
@@ -24,14 +24,22 @@ fn detect_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<(Detect
 
     let span = pipeline_span(pipeline)?;
     let text = context.get_span_text(span);
+    let max_length = context.config.max_pipeline_length;
 
-    if text.contains('\n') || text.len() <= MAX_PIPELINE_LENGTH {
+    if text.contains('\n') || text.len() <= max_length {
         return None;
     }
 
     let element_spans: Vec<Span> = pipeline.elements.iter().map(|e| e.expr.span).collect();
-    let violation =
-        Detection::from_global_span("Long pipeline should be split across multiple lines", span);
+    let violation = Detection::from_global_span(
+        format!(
+            "Pipeline of {} characters exceeds {} character limit and should be split across \
+             multiple lines",
+            text.len(),
+            max_length
+        ),
+        span,
+    );
     let fix_data = FixData {
         pipeline_span: span,
         element_spans,
@@ -40,15 +48,33 @@ fn detect_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<(Detect
     Some((violation, fix_data))
 }
 
-fn generate_multiline_pipeline(element_spans: &[Span], context: &LintContext) -> String {
+fn generate_multiline_pipeline(
+    element_spans: &[Span],
+    context: &LintContext,
+    placement: PipelinePlacement,
+) -> String {
     let mut parts = Vec::new();
 
-    for (i, span) in element_spans.iter().enumerate() {
-        let element_text = context.get_span_text(*span);
-        if i == 0 {
-            parts.push(element_text.to_string());
-        } else {
-            parts.push(format!("| {element_text}"));
+    match placement {
+        PipelinePlacement::Start => {
+            for (i, span) in element_spans.iter().enumerate() {
+                let element_text = context.get_span_text(*span);
+                if i == 0 {
+                    parts.push(element_text.to_string());
+                } else {
+                    parts.push(format!("| {element_text}"));
+                }
+            }
+        }
+        PipelinePlacement::End => {
+            for (i, span) in element_spans.iter().enumerate() {
+                let element_text = context.get_span_text(*span);
+                if i == element_spans.len() - 1 {
+                    parts.push(element_text.to_string());
+                } else {
+                    parts.push(format!("{element_text} |"));
+                }
+            }
         }
     }
 
@@ -74,7 +100,8 @@ impl DetectFix for ReflowWidePipelines {
     }
 
     fn explanation(&self) -> &'static str {
-        "Wrap wide pipelines vertically across multiple lines."
+        "Pipelines exceeding the configured character limit should be split across multiple lines \
+         for readability"
     }
 
     fn doc_url(&self) -> Option<&'static str> {
@@ -95,7 +122,8 @@ impl DetectFix for ReflowWidePipelines {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let fixed = generate_multiline_pipeline(&fix_data.element_spans, context);
+        let placement = context.config.pipeline_placement;
+        let fixed = generate_multiline_pipeline(&fix_data.element_spans, context, placement);
         Some(Fix::with_explanation(
             "Format as multiline",
             vec![Replacement::new(fix_data.pipeline_span, fixed)],

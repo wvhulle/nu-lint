@@ -9,6 +9,7 @@ use nu_protocol::{
 #[cfg(test)]
 use crate::violation;
 use crate::{
+    Config,
     ast::call::CallExt,
     external_commands::{self, ExternalCmdFixData},
     span::FileSpan,
@@ -30,6 +31,7 @@ pub struct LintContext<'a> {
     pub working_set: &'a StateWorkingSet<'a>,
     /// Byte offset where this file starts in the global span space
     file_offset: usize,
+    pub config: &'a Config,
 }
 
 impl<'a> LintContext<'a> {
@@ -40,6 +42,7 @@ impl<'a> LintContext<'a> {
         engine_state: &'a EngineState,
         working_set: &'a StateWorkingSet<'a>,
         file_offset: usize,
+        config: &'a Config,
     ) -> Self {
         Self {
             source,
@@ -47,6 +50,7 @@ impl<'a> LintContext<'a> {
             engine_state,
             working_set,
             file_offset,
+            config,
         }
     }
 
@@ -304,8 +308,16 @@ impl LintContext<'_> {
 
         let engine_state = LintEngine::default_engine_state();
         let (block, working_set, file_offset) = parse_source(engine_state, source.as_bytes());
+        let config = Config::default();
 
-        let context = LintContext::new(source, &block, engine_state, &working_set, file_offset);
+        let context = LintContext::new(
+            source,
+            &block,
+            engine_state,
+            &working_set,
+            file_offset,
+            &config,
+        );
 
         f(context)
     }

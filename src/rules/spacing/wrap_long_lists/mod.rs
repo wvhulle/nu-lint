@@ -5,10 +5,15 @@ use crate::{
     ast::expression::ExpressionExt,
     context::LintContext,
     rule::{DetectFix, Rule},
-    violation::Detection,
+    violation::{Detection, Fix, Replacement},
 };
 
 const MAX_LIST_LINE_LENGTH: usize = 80;
+
+struct ListFixData {
+    span: nu_protocol::Span,
+    items: Vec<nu_protocol::Span>,
+}
 
 fn should_be_multiline(expr: &Expression, items: &[ListItem], context: &LintContext) -> bool {
     let text = expr.span_text(context);
@@ -39,12 +44,28 @@ fn has_nested_structures(items: &[ListItem]) -> bool {
     })
 }
 
-fn create_violation(span: nu_protocol::Span) -> Detection {
-    Detection::from_global_span(
-        "Long lists should use multiline format with each item on a separate line",
-        span,
+fn create_violation(
+    span: nu_protocol::Span,
+    items: &[ListItem],
+) -> (Detection, ListFixData) {
+    let item_spans = items
+        .iter()
+        .map(|item| match item {
+            ListItem::Item(e) | ListItem::Spread(_, e) => e.span,
+        })
+        .collect();
+
+    (
+        Detection::from_global_span(
+            "Long lists should use multiline format with each item on a separate line",
+            span,
+        )
+        .with_help("Put each list item on a separate line for better readability"),
+        ListFixData {
+            span,
+            items: item_spans,
+        },
     )
-    .with_help("Put each list item on a separate line for better readability")
 }
 
 /// This rule uses AST-based detection and is compatible with topiary-nushell
@@ -53,7 +74,7 @@ fn create_violation(span: nu_protocol::Span) -> Detection {
 struct ReflowWideLists;
 
 impl DetectFix for ReflowWideLists {
-    type FixInput<'a> = ();
+    type FixInput<'a> = ListFixData;
 
     fn id(&self) -> &'static str {
         "reflow_wide_lists"
@@ -79,7 +100,7 @@ impl DetectFix for ReflowWideLists {
             &|expr| {
                 if let Expr::List(items) = &expr.expr {
                     if should_be_multiline(expr, items, context) {
-                        vec![create_violation(expr.span)]
+                        vec![create_violation(expr.span, items)]
                     } else {
                         vec![]
                     }
@@ -90,7 +111,25 @@ impl DetectFix for ReflowWideLists {
             &mut violations,
         );
 
-        Self::no_fix(violations)
+        violations
+    }
+
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let mut result = String::from("[\n");
+
+        for item_span in &fix_data.items {
+            let item_text = context.get_span_text(*item_span);
+            result.push_str("    ");
+            result.push_str(item_text);
+            result.push('\n');
+        }
+
+        result.push(']');
+
+        Some(Fix::with_explanation(
+            "Wrap list items on separate lines",
+            vec![Replacement::new(fix_data.span, result)],
+        ))
     }
 }
 
@@ -98,5 +137,7 @@ pub static RULE: &dyn Rule = &ReflowWideLists;
 
 #[cfg(test)]
 mod detect_bad;
+#[cfg(test)]
+mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

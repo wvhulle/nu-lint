@@ -7,10 +7,18 @@ use crate::{
     LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
-    violation::Detection,
+    violation::{Detection, Fix, Replacement},
 };
 
-fn check_list_commas(context: &LintContext, span: Span, items: &[ListItem]) -> Vec<Detection> {
+struct CommaFixData {
+    comma_span: Span,
+}
+
+fn check_list_commas(
+    context: &LintContext,
+    span: Span,
+    items: &[ListItem],
+) -> Vec<(Detection, CommaFixData)> {
     let mut violations = Vec::new();
     if items.len() < 2 {
         return violations;
@@ -41,10 +49,11 @@ fn check_list_commas(context: &LintContext, span: Span, items: &[ListItem]) -> V
                     between_span.start + comma_pos,
                     between_span.start + comma_pos + 1,
                 );
-                violations.push(
+                violations.push((
                     Detection::from_global_span("Omit commas between list items", comma_span)
                         .with_help("Remove the comma - Nushell lists don't need commas"),
-                );
+                    CommaFixData { comma_span },
+                ));
             }
         }
     }
@@ -54,7 +63,7 @@ fn check_list_commas(context: &LintContext, span: Span, items: &[ListItem]) -> V
 struct OmitListCommas;
 
 impl DetectFix for OmitListCommas {
-    type FixInput<'a> = ();
+    type FixInput<'a> = CommaFixData;
 
     fn id(&self) -> &'static str {
         "omit_list_commas"
@@ -73,11 +82,17 @@ impl DetectFix for OmitListCommas {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let violations = context.detect(|expr, ctx| match &expr.expr {
+        context.detect_with_fix_data(|expr, ctx| match &expr.expr {
             Expr::List(items) => check_list_commas(ctx, expr.span, items),
             _ => vec![],
-        });
-        Self::no_fix(violations)
+        })
+    }
+
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        Some(Fix::with_explanation(
+            "Remove comma",
+            vec![Replacement::new(fix_data.comma_span, String::new())],
+        ))
     }
 }
 

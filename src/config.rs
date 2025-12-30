@@ -17,13 +17,36 @@ pub enum LintLevel {
     Error,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, Default, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum PipelinePlacement {
+    #[default]
+    Start,
+    End,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(default)]
 pub struct Config {
     pub groups: HashMap<String, LintLevel>,
     pub rules: HashMap<String, LintLevel>,
     pub ignored: HashSet<String>,
     pub sequential: bool,
+    pub pipeline_placement: PipelinePlacement,
+    pub max_pipeline_length: usize,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            groups: HashMap::new(),
+            rules: HashMap::new(),
+            ignored: HashSet::new(),
+            sequential: false,
+            pipeline_placement: PipelinePlacement::default(),
+            max_pipeline_length: 80,
+        }
+    }
 }
 
 impl Config {

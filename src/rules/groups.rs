@@ -21,7 +21,6 @@ const ERROR_HANDLING: Group = Group {
         super::non_final_failure_check::RULE,
         super::error_make::use_error_make_for_catch::RULE,
         super::try_instead_of_do::RULE,
-        super::errors_to_stderr::RULE,
         super::unsafe_dynamic_record_access::RULE,
     ],
 };
@@ -34,7 +33,6 @@ const TYPE_SAFETY: Group = Group {
         super::strong_typing::argument::RULE,
         super::strong_typing::paths::RULE,
         super::strong_typing::pipeline::RULE,
-        super::avoid_nu_subprocess::RULE,
     ],
 };
 
@@ -61,6 +59,7 @@ const SIMPLIFICATION: Group = Group {
         super::items_instead_of_transpose_each::RULE,
         super::merge_get_cell_path::RULE,
         super::merge_multiline_print::RULE,
+        super::inline_single_use_function::RULE,
     ],
 };
 
@@ -71,7 +70,6 @@ const DEAD_CODE: Group = Group {
         super::avoid_self_import::RULE,
         super::unnecessary_accumulate::RULE,
         super::unnecessary_variable_before_return::RULE,
-        super::inline_single_use_function::RULE,
         super::redundant_ignore::RULE,
         super::unnecessary_mut::RULE,
         super::unused_helper_functions::RULE,
@@ -83,9 +81,11 @@ const PERFORMANCE: Group = Group {
     description: "Rules with potential performance impact",
     rules: &[
         super::avoid_nu_subprocess::RULE,
+        super::dispatch_with_subcommands::RULE,
         super::avoid_self_import::RULE,
+        super::positional_to_pipeline::RULE,
         super::unnecessary_accumulate::RULE,
-        super::lines_instead_of_split::RULE,
+        super::merge_multiline_print::RULE,
     ],
 };
 
@@ -171,6 +171,7 @@ const NAMING: Group = Group {
         super::naming::kebab_case_commands::RULE,
         super::naming::screaming_snake_constants::RULE,
         super::naming::snake_case_variables::RULE,
+        super::error_make::add_label::RULE,
     ],
 };
 
@@ -179,6 +180,7 @@ const SIDE_EFFECTS: Group = Group {
     description: "Handle risky and unpredictable commands.",
     rules: &[
         super::dangerous_file_operations::RULE,
+        super::errors_to_stderr::RULE,
         super::side_effects::mixed_io_types::RULE,
         super::side_effects::print_and_return_data::RULE,
         super::side_effects::silence_side_effect_only_each::RULE,

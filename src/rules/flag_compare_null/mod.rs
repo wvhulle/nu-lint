@@ -156,7 +156,7 @@ impl DetectFix for FlagCompareNull {
     type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
-        "flag_non_null_check"
+        "check_flag_before_use"
     }
 
     fn explanation(&self) -> &'static str {

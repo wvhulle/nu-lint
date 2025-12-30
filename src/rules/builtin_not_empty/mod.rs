@@ -123,7 +123,7 @@ impl DetectFix for UseBuiltinIsNotEmpty {
     type FixInput<'a> = IsNotEmptyFixData;
 
     fn id(&self) -> &'static str {
-        "use_builtin_is_not_empty"
+        "use_is_not_empty"
     }
 
     fn explanation(&self) -> &'static str {

@@ -122,7 +122,7 @@ impl DetectFix for SeparateLocalRemoteIo {
     type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
-        "separate_local_remote_io"
+        "avoid_mixed_io_types"
     }
 
     fn explanation(&self) -> &'static str {

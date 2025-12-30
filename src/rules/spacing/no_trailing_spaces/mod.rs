@@ -6,13 +6,18 @@ use crate::{
     LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
-    violation::Detection,
+    violation::{Detection, Fix, Replacement},
 };
 fn trailing_space_pattern() -> &'static Regex {
     static PATTERN: OnceLock<Regex> = OnceLock::new();
     PATTERN.get_or_init(|| Regex::new(r"[ \t]+$").unwrap())
 }
-fn check(context: &LintContext) -> Vec<Detection> {
+
+struct TrailingSpaceFixData {
+    span: nu_protocol::Span,
+}
+
+fn check(context: &LintContext) -> Vec<(Detection, TrailingSpaceFixData)> {
     let mut violations = Vec::new();
     let source = unsafe { context.source() };
     let file_offset = context.file_offset();
@@ -25,14 +30,17 @@ fn check(context: &LintContext) -> Vec<Detection> {
             let violation_span =
                 nu_protocol::Span::new(file_start + file_offset, file_end + file_offset);
 
-            violations.push(
+            violations.push((
                 Detection::from_global_span(
                     format!("Line {} has trailing whitespace", line_num + 1),
                     violation_span,
                 )
                 .with_primary_label("trailing whitespace")
                 .with_help("Remove trailing spaces"),
-            );
+                TrailingSpaceFixData {
+                    span: violation_span,
+                },
+            ));
         }
         // Update byte offset for next line (including newline character)
         byte_offset += line.len() + 1;
@@ -42,7 +50,7 @@ fn check(context: &LintContext) -> Vec<Detection> {
 struct NoTrailingSpaces;
 
 impl DetectFix for NoTrailingSpaces {
-    type FixInput<'a> = ();
+    type FixInput<'a> = TrailingSpaceFixData;
 
     fn id(&self) -> &'static str {
         "no_trailing_spaces"
@@ -61,7 +69,14 @@ impl DetectFix for NoTrailingSpaces {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        Self::no_fix(check(context))
+        check(context)
+    }
+
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        Some(Fix::with_explanation(
+            "Remove trailing whitespace",
+            vec![Replacement::new(fix_data.span, String::new())],
+        ))
     }
 }
 

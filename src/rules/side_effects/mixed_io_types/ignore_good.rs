@@ -71,32 +71,6 @@ def main [] {
 }
 
 #[test]
-fn ignores_exported_functions() {
-    instrument();
-    let good_code = r#"
-def main [] {}
-
-export def sync [] {
-    print "Syncing..."
-    http get https://api.example.com/data | save output.json
-}
-"#;
-    RULE.assert_ignores(good_code);
-}
-
-#[test]
-fn ignores_function_without_main() {
-    instrument();
-    let good_code = r#"
-def helper [] {
-    print "Helper"
-    http get https://api.example.com/data | save output.json
-}
-"#;
-    RULE.assert_ignores(good_code);
-}
-
-#[test]
 fn ignores_print_to_stderr_with_file_ops() {
     instrument();
     let good_code = r#"
@@ -119,6 +93,71 @@ def main [] {}
 def batch-operations [files] {
     $files | each { |f| save $f }
 }
+";
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
+fn ignores_library_with_focused_functions() {
+    instrument();
+    let good_code = r#"
+export def fetch-data [] {
+    http get https://api.example.com/data
+}
+
+export def save-data [data] {
+    $data | save output.json
+}
+
+export def log-message [msg] {
+    print $msg
+}
+"#;
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
+fn ignores_pure_library_functions() {
+    instrument();
+    let good_code = r#"
+export def transform [data] {
+    $data | each { |x| $x * 2 }
+}
+
+export def calculate [x: int, y: int] {
+    $x + $y
+}
+"#;
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
+fn ignores_top_level_single_io_type() {
+    instrument();
+    let good_code = r#"
+http get https://api.example.com/data1
+http get https://api.example.com/data2
+"#;
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
+fn ignores_top_level_file_operations() {
+    instrument();
+    let good_code = r"
+ls | save files.txt
+cp input.txt output.txt
+";
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
+fn ignores_top_level_pure_script() {
+    instrument();
+    let good_code = r"
+let x = 42
+let y = $x * 2
+$x + $y
 ";
     RULE.assert_ignores(good_code);
 }

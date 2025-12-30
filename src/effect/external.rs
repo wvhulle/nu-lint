@@ -19,6 +19,8 @@ pub enum ExternEffect {
     ModifiesFileSystem,
     /// Produces useful output on `StdErr` (maybe in addition to `StdOut`)
     WritesDataToStdErr,
+    /// This command performs network I/O operations
+    ModifiesNetworkState,
 }
 
 pub fn has_external_side_effect(
@@ -296,6 +298,7 @@ pub const EXTERNAL_COMMAND_SIDE_EFFECTS: &[(
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
+            (ExternEffect::ModifiesNetworkState, always),
         ],
     ),
     (
@@ -306,14 +309,18 @@ pub const EXTERNAL_COMMAND_SIDE_EFFECTS: &[(
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
+            (ExternEffect::ModifiesNetworkState, always),
         ],
     ),
     (
         "ssh",
-        &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-            always,
-        )],
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::ModifiesNetworkState, always),
+        ],
     ),
     (
         "curl",
@@ -323,6 +330,7 @@ pub const EXTERNAL_COMMAND_SIDE_EFFECTS: &[(
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, curl_modifies_fs),
+            (ExternEffect::ModifiesNetworkState, always),
         ],
     ),
     (
@@ -333,6 +341,7 @@ pub const EXTERNAL_COMMAND_SIDE_EFFECTS: &[(
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
+            (ExternEffect::ModifiesNetworkState, always),
         ],
     ),
     (

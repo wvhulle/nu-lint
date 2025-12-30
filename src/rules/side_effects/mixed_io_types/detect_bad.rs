@@ -115,3 +115,81 @@ def setup-directories [] {
 "#;
     RULE.assert_detects(bad_code);
 }
+
+#[test]
+fn detects_exported_functions_with_mixed_io() {
+    instrument();
+    let bad_code = r#"
+def main [] {}
+
+export def sync [] {
+    print "Syncing..."
+    http get https://api.example.com/data | save output.json
+}
+"#;
+    RULE.assert_detects(bad_code);
+}
+
+#[test]
+fn detects_function_without_main() {
+    instrument();
+    let bad_code = r#"
+def helper [] {
+    print "Helper"
+    http get https://api.example.com/data | save output.json
+}
+"#;
+    RULE.assert_detects(bad_code);
+}
+
+#[test]
+fn detects_multiple_functions_without_main() {
+    instrument();
+    let bad_code = r#"
+def fetch-data [] {
+    print "Fetching..."
+    http get https://api.example.com/data
+}
+
+def save-result [data] {
+    print "Saving..."
+    $data | save output.json
+}
+"#;
+    RULE.assert_detects(bad_code);
+}
+
+#[test]
+fn detects_library_function_mixing_io() {
+    instrument();
+    let bad_code = r#"
+export def sync-data [] {
+    print "Syncing data..."
+    let data = (http get https://api.example.com/data)
+    $data | save local-cache.json
+    print "Done"
+}
+"#;
+    RULE.assert_detects(bad_code);
+}
+
+#[test]
+fn detects_top_level_script_mixing_io() {
+    instrument();
+    let bad_code = r#"
+print "Fetching data..."
+let data = (http get https://api.example.com/data)
+$data | save output.json
+print "Done"
+"#;
+    RULE.assert_detects(bad_code);
+}
+
+#[test]
+fn detects_top_level_script_network_and_file() {
+    instrument();
+    let bad_code = r"
+http get https://api.example.com/file | save download.txt
+";
+    RULE.assert_detects(bad_code);
+}

@@ -27,7 +27,7 @@ const ERROR_HANDLING: Group = Group {
 
 const TYPE_SAFETY: Group = Group {
     name: "type-safety",
-    description: "Encourage annotations with type hints.",
+    description: "Annotate with type hints where possible.",
     rules: &[
         super::external_script_as_argument::RULE,
         super::strong_typing::argument::RULE,
@@ -38,9 +38,10 @@ const TYPE_SAFETY: Group = Group {
 
 const SIMPLIFICATION: Group = Group {
     name: "simplification",
-    description: "Simplify verbose patterns to idiomatic Nushell",
+    description: "Simplify syntax of complex expressions.",
     rules: &[
         super::builtin_not_empty::RULE,
+        super::bare_string_okay::RULE,
         super::dispatch_with_subcommands::RULE,
         super::shorten_with_compound_assignment::RULE,
         super::lines_instead_of_split::RULE,
@@ -73,6 +74,7 @@ const DEAD_CODE: Group = Group {
         super::redundant_ignore::RULE,
         super::unnecessary_mut::RULE,
         super::unused_helper_functions::RULE,
+        super::no_export_main::RULE,
     ],
 };
 
@@ -91,7 +93,7 @@ const PERFORMANCE: Group = Group {
 
 const POSIX_TOOLS: Group = Group {
     name: "posix-tools",
-    description: "Replace common bash/POSIX commands.",
+    description: "Replace common bash/POSIX patterns.",
     rules: &[
         super::ignore_over_dev_null::RULE,
         super::posix_tools::awk::RULE,
@@ -110,6 +112,7 @@ const POSIX_TOOLS: Group = Group {
         super::posix_tools::tail::RULE,
         super::posix_tools::uniq::RULE,
         super::posix_tools::wc::RULE,
+        super::ansi_over_escape_codes::RULE,
         super::ansi_over_escape_codes::RULE,
     ],
 };
@@ -184,6 +187,7 @@ const SIDE_EFFECTS: Group = Group {
         super::side_effects::mixed_io_types::RULE,
         super::side_effects::print_and_return_data::RULE,
         super::side_effects::silence_side_effect_only_each::RULE,
+        super::side_effects::silence_stderr_data::RULE,
     ],
 };
 

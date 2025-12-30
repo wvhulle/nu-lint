@@ -4,11 +4,6 @@ Linter for the innovative [Nu](https://www.nushell.sh/) shell.
 
 Learning to use a new shell is a radical change that can use some assistance. This project is aimed at helping new and intermediate users of the [Nu](https://www.nushell.sh/) shell. Nu shell has a lot of useful features not found in other scripting languages. This linter will give you hints to use all of them and even offer automatic fixes.
 
-All rules are optional and can be disabled with a configuration file. The rule definitions are designed to be compatible with:
-
-- The standard Nu parser [nu-check](https://www.nushell.sh/commands/docs/nu-check.html).
-- The standard Nu formatter [topiary-nushell](https://github.com/blindFS/topiary-nushell).
-
 ## Example
 
 The rule `turn_positional_into_stream_input` recommends to use pipelines instead of positional arguments:
@@ -27,16 +22,34 @@ def filter-positive [] {
 
 This encourages lazy pipeline input: a positional list argument loads all data into memory at once, while implicit pipeline input processes elements one at a time.
 
-## CLI usage
+## Usage
 
-For all available options and usage information, run:
+_(Editor integration is available, see below)_
+
+Lint all Nu files in working directory with:
 
 ```bash
-nu-lint # Lint all Nu files in working directory
+nu-lint
+```
+
+To see all options and get help:
+
+```bash
 nu-lint --help
 ```
 
-More than 100 rules are available on The CLI. Some of them need further testing and improvement. Please make an issue on the issue tracker to report any bugs.
+## Rules
+
+All rules are optional and can be disabled with a configuration file. The rule definitions are compatible with:
+
+- The official Nu parser [nu-check](https://www.nushell.sh/commands/docs/nu-check.html).
+- The TreeSitter-based Nu formatter [topiary-nushell](https://github.com/blindFS/topiary-nushell).
+- The official Nu [style guide](https://www.nushell.sh/book/style_guide.html)
+
+Some of them need further testing and improvement. Please make an issue on the issue tracker to report any bugs. In early stages of development some rules may be replaced or renamed.
+
+More than 100 rules are defined and most have automatic fixes available (list may be out-of-date):
+
 `dead-code` - Remove unused or redundant code
 
 - `avoid_self_import`
@@ -269,8 +282,11 @@ Create `.nu-lint.toml` in your project root:
 ```toml
 # This rule is ignored
 ignored = ["snake_case_variables"]
+
+# Some rules are configurable
 max_pipeline_length = 80
 pipeline_placement = "start"
+
 # Set lint level of a set of rules at once.
 [groups]
 performance = "warning"

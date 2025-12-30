@@ -44,10 +44,7 @@ fn has_nested_structures(items: &[ListItem]) -> bool {
     })
 }
 
-fn create_violation(
-    span: nu_protocol::Span,
-    items: &[ListItem],
-) -> (Detection, ListFixData) {
+fn create_violation(span: nu_protocol::Span, items: &[ListItem]) -> (Detection, ListFixData) {
     let item_spans = items
         .iter()
         .map(|item| match item {

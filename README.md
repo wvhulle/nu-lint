@@ -11,7 +11,7 @@ All rules are optional and can be disabled with a configuration file. The rule d
 
 ## Example
 
-The rule `positional_to_pipeline` recommends to use pipelines instead of positional arguments:
+The rule `turn_positional_into_stream_input` recommends to use pipelines instead of positional arguments:
 
 ```nu
 def filter-positive [numbers] { 
@@ -36,14 +36,12 @@ nu-lint # Lint all Nu files in working directory
 nu-lint --help
 ```
 
-More than 90 rules are available on The CLI. Some of them need further testing and improvement. Please make an issue on the issue tracker to report any bugs.
-
+More than 100 rules are available on The CLI. Some of them need further testing and improvement. Please make an issue on the issue tracker to report any bugs.
 `dead-code` - Remove unused or redundant code
 
 - `avoid_self_import`
 - `unnecessary_accumulate`
 - `unnecessary_variable_before_return` (auto-fix)
-- `inline_single_use_function`
 - `redundant_ignore` (auto-fix)
 - `unnecessary_mut` (auto-fix)
 - `unused_helper_functions` (auto-fix)
@@ -70,7 +68,6 @@ More than 90 rules are available on The CLI. Some of them need further testing a
 - `non_final_failure_check`
 - `use_error_make_for_catch` (auto-fix)
 - `try_instead_of_do`
-- `errors_to_stderr`
 - `unsafe_dynamic_record_access` (auto-fix)
 
 `external-tools` - Replace common external CLI tools.
@@ -86,30 +83,34 @@ More than 90 rules are available on The CLI. Some of them need further testing a
 
 `formatting` - Formatting according to Nushell guidelines.
 
+- `ansi_over_escape_codes` (auto-fix)
 - `collapsible_if` (auto-fix)
 - `forbid_excessive_nesting`
-- `too_many_lines`
+- `max_function_body_length`
 - `replace_if_else_chain_with_match` (auto-fix)
-- `brace_spacing`
-- `no_trailing_spaces`
-- `omit_list_commas`
+- `brace_spacing` (auto-fix)
+- `no_trailing_spaces` (auto-fix)
+- `omit_list_commas` (auto-fix)
 - `pipe_spacing` (auto-fix)
 - `reflow_wide_pipelines` (auto-fix)
-- `reflow_wide_lists`
-- `wrap_wide_records`
+- `reflow_wide_lists` (auto-fix)
+- `wrap_wide_records` (auto-fix)
 
 `naming` - Follow official naming conventions
 
 - `kebab_case_commands`
 - `screaming_snake_constants`
 - `snake_case_variables` (auto-fix)
+- `add_label_to_error`
 
 `performance` - Rules with potential performance impact
 
 - `avoid_nu_subprocess`
+- `dispatch_with_subcommands`
 - `avoid_self_import`
+- `turn_positional_into_stream_input` (auto-fix)
 - `unnecessary_accumulate`
-- `lines_instead_of_split` (auto-fix)
+- `merge_multiline_print` (auto-fix)
 
 `posix-tools` - Replace common bash/POSIX commands.
 
@@ -135,13 +136,14 @@ More than 90 rules are available on The CLI. Some of them need further testing a
 `side-effects` - Handle risky and unpredictable commands.
 
 - `dangerous_file_operations`
-- `separate_local_remote_io`
+- `errors_to_stderr`
+- `avoid_mixed_io_types`
 - `print_and_return_data`
 - `silence_side_effect_only_each` (auto-fix)
 
 `simplification` - Simplify verbose patterns to idiomatic Nushell
 
-- `use_builtin_is_not_empty` (auto-fix)
+- `use_is_not_empty` (auto-fix)
 - `dispatch_with_subcommands`
 - `shorten_with_compound_assignment` (auto-fix)
 - `lines_instead_of_split` (auto-fix)
@@ -151,14 +153,16 @@ More than 90 rules are available on The CLI. Some of them need further testing a
 - `split_row_get_to_parse` (auto-fix)
 - `turn_positional_into_stream_input` (auto-fix)
 - `replace_counter_while_with_each`
-- `loop_counter`
+- `replace_loop_counter_with_range`
 - `each_if_to_where` (auto-fix)
 - `for_filter_to_where`
+- `omit_it_in_row_condition` (auto-fix)
 - `remove_redundant_in` (auto-fix)
-- `where_or_filter_closure_to_it` (auto-fix)
+- `where_or_filter_closure_to_it_row_condition` (auto-fix)
 - `items_instead_of_transpose_each` (auto-fix)
 - `merge_get_cell_path` (auto-fix)
 - `merge_multiline_print` (auto-fix)
+- `inline_single_use_function`
 
 `type-safety` - Encourage annotations with type hints.
 
@@ -166,7 +170,6 @@ More than 90 rules are available on The CLI. Some of them need further testing a
 - `add_type_hints_arguments` (auto-fix)
 - `prefer_path_type` (auto-fix)
 - `typed_pipeline_io` (auto-fix)
-- `avoid_nu_subprocess`
 
 `upstream` - Forward warnings and errors of the upstream Nushell parser.
 
@@ -266,7 +269,8 @@ Create `.nu-lint.toml` in your project root:
 ```toml
 # This rule is ignored
 ignored = ["snake_case_variables"]
-
+max_pipeline_length = 80
+pipeline_placement = "start"
 # Set lint level of a set of rules at once.
 [groups]
 performance = "warning"

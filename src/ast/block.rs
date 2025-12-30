@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use nu_protocol::{
     BlockId, Span, Type, VarId,
-    ast::{Block, Expr, PipelineElement, Traverse},
+    ast::{Block, Expr, Expression, PipelineElement, Traverse},
 };
 
 use super::call::CallExt;
@@ -144,6 +144,23 @@ pub trait BlockExt {
     /// Extracts variable IDs that are assigned to within a block. Example: `{
     /// $x = 5; $y += 1 }` returns [x, y]
     fn extract_assigned_vars(&self) -> Vec<VarId>;
+
+    /// Finds spans of variable usages matching a predicate. Example: finding
+    /// all usages of `$x` that are inside null checks
+    fn find_var_usage_spans<F>(
+        &self,
+        var_id: VarId,
+        context: &LintContext,
+        predicate: F,
+    ) -> Vec<Span>
+    where
+        F: Fn(&Expression, VarId, &LintContext) -> bool;
+
+    /// Finds spans of expressions matching a predicate. Example: finding all
+    /// expressions that contain null checks for a variable
+    fn find_expr_spans<F>(&self, context: &LintContext, predicate: F) -> Vec<Span>
+    where
+        F: Fn(&Expression, &LintContext) -> bool;
 }
 
 impl BlockExt for Block {
@@ -251,5 +268,52 @@ impl BlockExt for Block {
             .iter()
             .filter_map(|elem| elem.expr.extract_assigned_variable())
             .collect()
+    }
+
+    fn find_var_usage_spans<F>(
+        &self,
+        var_id: VarId,
+        context: &LintContext,
+        predicate: F,
+    ) -> Vec<Span>
+    where
+        F: Fn(&Expression, VarId, &LintContext) -> bool,
+    {
+        use nu_protocol::ast::Expression;
+
+        let mut matching_spans = Vec::new();
+        self.flat_map(
+            context.working_set,
+            &|expr: &Expression| {
+                if expr.matches_var(var_id) && predicate(expr, var_id, context) {
+                    vec![expr.span]
+                } else {
+                    vec![]
+                }
+            },
+            &mut matching_spans,
+        );
+        matching_spans
+    }
+
+    fn find_expr_spans<F>(&self, context: &LintContext, predicate: F) -> Vec<Span>
+    where
+        F: Fn(&Expression, &LintContext) -> bool,
+    {
+        use nu_protocol::ast::Expression;
+
+        let mut matching_spans = Vec::new();
+        self.flat_map(
+            context.working_set,
+            &|expr: &Expression| {
+                if predicate(expr, context) {
+                    vec![expr.span]
+                } else {
+                    vec![]
+                }
+            },
+            &mut matching_spans,
+        );
+        matching_spans
     }
 }

@@ -56,10 +56,7 @@ fn has_nested_structures(fields: &[RecordItem]) -> bool {
     })
 }
 
-fn create_violation(
-    span: nu_protocol::Span,
-    fields: &[RecordItem],
-) -> (Detection, RecordFixData) {
+fn create_violation(span: nu_protocol::Span, fields: &[RecordItem]) -> (Detection, RecordFixData) {
     let field_data = fields
         .iter()
         .map(|item| match item {

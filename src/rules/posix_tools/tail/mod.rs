@@ -10,6 +10,7 @@ use crate::{
 struct TailFixData<'a> {
     count: Option<&'a str>,
     filename: Option<&'a str>,
+    follow: bool,
     expr_span: nu_protocol::Span,
 }
 
@@ -60,9 +61,19 @@ impl DetectFix for UseBuiltinTail {
                         })
                         .collect();
 
+                let follow = args_with_spans
+                    .iter()
+                    .any(|(text, _)| *text == "-f" || *text == "-F" || *text == "--follow");
+
                 let count = args_with_spans
                     .iter()
-                    .find(|(text, _)| text.starts_with('-') && text.len() > 1)
+                    .find(|(text, _)| {
+                        text.starts_with('-')
+                            && text.len() > 1
+                            && *text != "-f"
+                            && *text != "-F"
+                            && *text != "--follow"
+                    })
                     .map(|(text, _)| &text[1..]);
 
                 let filename = args_with_spans
@@ -85,6 +96,7 @@ impl DetectFix for UseBuiltinTail {
                 let fix_data = TailFixData {
                     count,
                     filename,
+                    follow,
                     expr_span: expr.span,
                 };
 
@@ -97,6 +109,23 @@ impl DetectFix for UseBuiltinTail {
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        if fix_data.follow {
+            let file = fix_data.filename.unwrap_or("file");
+            let count = fix_data.count.unwrap_or("20");
+            let replacement = format!("watch {file} {{ open --raw {file} | lines | last {count} }}");
+            let description = "Use 'watch' to monitor file changes. Nu's watch executes a \
+                               closure when the file changes, similar to 'tail -f'. Note: \
+                               this is event-based, not continuous streaming.";
+
+            return Some(Fix {
+                explanation: description.into(),
+                replacements: vec![Replacement {
+                    span: fix_data.expr_span.into(),
+                    replacement_text: replacement.into(),
+                }],
+            });
+        }
+
         let count = fix_data.count.unwrap_or("10");
 
         let replacement = fix_data.filename.map_or_else(
@@ -119,4 +148,8 @@ impl DetectFix for UseBuiltinTail {
 pub static RULE: &dyn Rule = &UseBuiltinTail;
 
 #[cfg(test)]
-mod tests;
+mod detect_bad;
+#[cfg(test)]
+mod generated_fix;
+#[cfg(test)]
+mod ignore_good;

@@ -2,6 +2,7 @@
 //!  Less common commands are grouped in the 'other' subrule.
 
 pub mod awk;
+pub mod bat;
 pub mod cat;
 pub mod cd;
 pub mod cut;
@@ -11,10 +12,12 @@ pub mod find;
 pub mod grep;
 pub mod head;
 pub mod ls;
+pub mod pagers;
 
 pub mod read;
 pub mod sed;
 pub mod sort;
+pub mod tac;
 pub mod tail;
 pub mod uniq;
 pub mod wc;

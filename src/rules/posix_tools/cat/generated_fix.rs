@@ -26,27 +26,6 @@ fn fix_multiple_files_to_each_open() {
 }
 
 #[test]
-fn fix_tac_to_open_raw() {
-    let source = "^tac file.log";
-    RULE.assert_count(source, 1);
-    RULE.assert_replacement_contains(source, "open --raw file.log");
-}
-
-#[test]
-fn fix_more_to_open_raw() {
-    let source = "^more documentation.txt";
-    RULE.assert_count(source, 1);
-    RULE.assert_replacement_contains(source, "open --raw documentation.txt");
-}
-
-#[test]
-fn fix_less_to_open_raw() {
-    let source = "^less output.log";
-    RULE.assert_count(source, 1);
-    RULE.assert_replacement_contains(source, "open --raw output.log");
-}
-
-#[test]
 fn fix_number_lines_flag() {
     let source = "^cat -n file.txt";
     RULE.assert_count(source, 1);

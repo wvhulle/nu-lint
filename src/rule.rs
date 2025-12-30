@@ -13,19 +13,6 @@ use crate::{
 };
 
 /// Trait for implementing lint rules with typed fix data.
-///
-/// # Example
-/// ```ignore
-/// struct MyRule;
-/// impl DetectFix for MyRule {
-///     type FixInput = ();
-///     fn id(&self) -> &'static str { "my_rule" }
-///     fn explanation(&self) -> &'static str { "Checks for..." }
-///     fn level(&self) -> LintLevel { LintLevel::Warning }
-///     fn detect(&self, ctx: &LintContext) -> Vec<(Detection, ())> { vec![] }
-/// }
-/// pub static RULE: &dyn Rule = &MyRule;
-/// ```
 pub trait DetectFix: Send + Sync + 'static {
     type FixInput<'a>: Send + Sync;
 

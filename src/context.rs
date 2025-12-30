@@ -122,6 +122,32 @@ impl<'a> LintContext<'a> {
         self.source.contains(pattern)
     }
 
+    /// Get the format name for a file extension based on available `from`
+    /// commands.
+    ///
+    /// This dynamically queries the engine state for `from <format>` commands
+    /// and maps file extensions to their corresponding format names.
+    ///
+    /// Returns `None` if the extension doesn't have a corresponding `from`
+    /// command.
+    #[must_use]
+    pub fn format_for_extension(&self, filename: &str) -> Option<String> {
+        let lower = filename.to_lowercase();
+
+        // Extract extension from filename
+        let ext = lower.rsplit('.').next()?;
+
+        // Handle .yml -> yaml alias
+        let format = if ext == "yml" { "yaml" } else { ext };
+
+        // Check if `from <format>` command exists
+        let from_cmd_name = format!("from {format}");
+        self.working_set
+            .find_decl(from_cmd_name.as_bytes())
+            .is_some()
+            .then(|| format.to_string())
+    }
+
     /// Byte offset where this file starts in the global span space
     #[must_use]
     pub const fn file_offset(&self) -> usize {

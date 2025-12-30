@@ -41,21 +41,6 @@ fn detect_cat_long_options() {
 }
 
 #[test]
-fn detect_tac() {
-    RULE.assert_detects("^tac file.log");
-}
-
-#[test]
-fn detect_more() {
-    RULE.assert_detects("^more documentation.txt");
-}
-
-#[test]
-fn detect_less() {
-    RULE.assert_detects("^less output.log");
-}
-
-#[test]
 fn detect_cat_in_pipeline() {
     RULE.assert_detects("^cat file.txt | head -5");
 }
@@ -95,17 +80,4 @@ ls | each { |file|
 }
 ";
     RULE.assert_detects(bad_code);
-}
-
-#[test]
-fn detect_pager_commands() {
-    let bad_codes = vec![
-        ("^more readme.md", 1),
-        ("^less changelog.txt", 1),
-        ("^tac reversed.log", 1),
-    ];
-
-    for (code, expected) in bad_codes {
-        RULE.assert_count(code, expected);
-    }
 }

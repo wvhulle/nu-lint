@@ -170,12 +170,7 @@ impl DetectFix for UseBuiltinCat {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let mut violations = context.external_invocations("cat", NOTE);
-        // Related commands commonly used like cat
-        for cmd in ["tac", "more", "less"] {
-            violations.extend(context.external_invocations(cmd, NOTE));
-        }
-        violations
+        context.external_invocations("cat", NOTE)
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {

@@ -4,7 +4,7 @@ use crate::{
     Fix, LintLevel, Replacement,
     ast::call::CallExt,
     context::LintContext,
-    effect::external::external_command_has_no_output,
+    effect::external::{ExternEffect, has_external_side_effect},
     rule::{DetectFix, Rule},
     violation::Detection,
 };
@@ -30,9 +30,9 @@ struct RedundantIgnoreFixData {
 
 fn command_produces_output(expr: &Expression, context: &LintContext) -> bool {
     match &expr.expr {
-        Expr::ExternalCall(call, _) => {
+        Expr::ExternalCall(call, args) => {
             let cmd_name = context.get_span_text(call.span);
-            !external_command_has_no_output(cmd_name)
+            !has_external_side_effect(cmd_name, ExternEffect::NoDataInStdout, context, args)
         }
         Expr::Call(call) => {
             let output_type = context

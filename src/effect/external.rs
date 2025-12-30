@@ -68,17 +68,6 @@ pub fn has_external_recursive_flag(args: &[ExternalArgument], context: &LintCont
     })
 }
 
-pub fn external_command_has_no_output(command_name: &str) -> bool {
-    EXTERNAL_COMMAND_SIDE_EFFECTS
-        .iter()
-        .find(|(name, _)| *name == command_name)
-        .is_some_and(|(_, effects)| {
-            effects
-                .iter()
-                .any(|(effect, _)| *effect == ExternEffect::NoDataInStdout)
-        })
-}
-
 pub fn extract_external_arg_text<'a>(arg: &ExternalArgument, context: &'a LintContext) -> &'a str {
     match arg {
         ExternalArgument::Regular(expr) | ExternalArgument::Spread(expr) => {

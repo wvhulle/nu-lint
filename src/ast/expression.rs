@@ -8,7 +8,10 @@ use nu_protocol::{
 };
 
 use super::{block::BlockExt, call::CallExt, pipeline::PipelineExt};
-use crate::{context::LintContext, effect::external::external_command_has_no_output};
+use crate::{
+    context::LintContext,
+    effect::external::{ExternEffect, has_external_side_effect},
+};
 
 pub trait ExpressionExt: Traverse {
     /// Extracts the variable name from an expression. Example: `$counter`
@@ -476,15 +479,13 @@ impl ExpressionExt for Expression {
                         .infer_output_type(context),
                 )
             }
-            Expr::ExternalCall(call, _) => {
+            Expr::ExternalCall(call, args) => {
                 let cmd_name = context.get_span_text(call.span);
                 log::debug!("Encountered ExternalCall: '{cmd_name}'");
-                if external_command_has_no_output(cmd_name) {
+                if has_external_side_effect(cmd_name, ExternEffect::NoDataInStdout, context, args) {
                     Some(Type::Nothing)
-                } else if !external_command_has_no_output(cmd_name) {
-                    Some(Type::String)
                 } else {
-                    None
+                    Some(Type::String)
                 }
             }
             Expr::Call(call) => {

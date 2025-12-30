@@ -58,6 +58,7 @@ More than 100 rules are defined and most have automatic fixes available (list ma
 - `redundant_ignore` (auto-fix)
 - `unnecessary_mut` (auto-fix)
 - `unused_helper_functions` (auto-fix)
+- `no_export_main` (auto-fix)
 
 `documentation` - Improve relevance of actionability of user-facing messages.
 
@@ -77,6 +78,7 @@ More than 100 rules are defined and most have automatic fixes available (list ma
 - `descriptive_error_messages`
 - `escape_string_interpolation_operators`
 - `exit_only_in_main`
+- `check_flag_before_use`
 - `missing_stdin_in_shebang` (auto-fix)
 - `non_final_failure_check`
 - `use_error_make_for_catch` (auto-fix)
@@ -94,6 +96,14 @@ More than 100 rules are defined and most have automatic fixes available (list ma
 - `use_builtin_wget` (auto-fix)
 - `use_builtin_which` (auto-fix)
 
+`filtering` - Better patterns for filtering and selecting data.
+
+- `each_if_to_where` (auto-fix)
+- `for_filter_to_where`
+- `omit_it_in_row_condition` (auto-fix)
+- `where_or_filter_closure_to_it_row_condition` (auto-fix)
+- `remove_redundant_in` (auto-fix)
+
 `formatting` - Formatting according to Nushell guidelines.
 
 - `ansi_over_escape_codes` (auto-fix)
@@ -109,12 +119,41 @@ More than 100 rules are defined and most have automatic fixes available (list ma
 - `reflow_wide_lists` (auto-fix)
 - `wrap_wide_records` (auto-fix)
 
+`idiomatic` - Use Nu-native idioms instead of verbose patterns.
+
+- `bare_string_okay` (auto-fix)
+- `use_is_not_empty` (auto-fix)
+- `dispatch_with_subcommands`
+- `inline_single_use_function`
+- `items_instead_of_transpose_each` (auto-fix)
+- `merge_get_cell_path` (auto-fix)
+- `merge_multiline_print` (auto-fix)
+- `turn_positional_into_stream_input` (auto-fix)
+- `shorten_with_compound_assignment` (auto-fix)
+- `use_regex_operators` (auto-fix)
+
+`iteration` - Better patterns for loops and iteration.
+
+- `replace_loop_counter_with_range`
+- `replace_counter_while_with_each`
+
 `naming` - Follow official naming conventions
 
 - `kebab_case_commands`
 - `screaming_snake_constants`
 - `snake_case_variables` (auto-fix)
 - `add_label_to_error`
+
+`parsing` - Better ways to parse and transform text data.
+
+- `lines_instead_of_split` (auto-fix)
+- `never_space_split` (auto-fix)
+- `from_after_parsed_open` (auto-fix)
+- `lines_each_to_parse` (auto-fix)
+- `open_raw_from_to_open` (auto-fix)
+- `simplify_regex_parse` (auto-fix)
+- `split_row_first_last` (auto-fix)
+- `split_row_get_to_parse` (auto-fix)
 
 `performance` - Rules with potential performance impact
 
@@ -125,59 +164,41 @@ More than 100 rules are defined and most have automatic fixes available (list ma
 - `unnecessary_accumulate`
 - `merge_multiline_print` (auto-fix)
 
-`posix-tools` - Replace common bash/POSIX commands.
+`posix-tools` - Replace common bash/POSIX patterns.
 
 - `ignore_over_dev_null` (auto-fix)
 - `use_builtin_awk` (auto-fix)
+- `use_builtin_bat` (auto-fix)
 - `use_builtin_cat` (auto-fix)
 - `use_builtin_cut` (auto-fix)
 - `use_builtin_date` (auto-fix)
 - `use_builtin_echo` (auto-fix)
 - `use_builtin_find` (auto-fix)
 - `use_builtin_grep` (auto-fix)
-- `use_builtin_head` (auto-fix)
+- `head_to_first` (auto-fix)
 - `use_builtin_cd` (auto-fix)
 - `use_builtin_ls` (auto-fix)
+- `use_builtin_pager` (auto-fix)
 - `use_builtin_read` (auto-fix)
 - `use_builtin_sed` (auto-fix)
 - `use_builtin_sort` (auto-fix)
-- `use_builtin_tail` (auto-fix)
+- `use_builtin_tac` (auto-fix)
+- `tail_to_last` (auto-fix)
 - `use_builtin_uniq` (auto-fix)
 - `use_builtin_wc` (auto-fix)
+- `ansi_over_escape_codes` (auto-fix)
 - `ansi_over_escape_codes` (auto-fix)
 
 `side-effects` - Handle risky and unpredictable commands.
 
 - `dangerous_file_operations`
 - `errors_to_stderr`
-- `avoid_mixed_io_types`
+- `dont_mix_different_effects`
 - `print_and_return_data`
 - `silence_side_effect_only_each` (auto-fix)
+- `silence_stderr_data`
 
-`simplification` - Simplify verbose patterns to idiomatic Nushell
-
-- `use_is_not_empty` (auto-fix)
-- `dispatch_with_subcommands`
-- `shorten_with_compound_assignment` (auto-fix)
-- `lines_instead_of_split` (auto-fix)
-- `lines_each_to_parse` (auto-fix)
-- `simplify_regex_parse` (auto-fix)
-- `split_row_first_last` (auto-fix)
-- `split_row_get_to_parse` (auto-fix)
-- `turn_positional_into_stream_input` (auto-fix)
-- `replace_counter_while_with_each`
-- `replace_loop_counter_with_range`
-- `each_if_to_where` (auto-fix)
-- `for_filter_to_where`
-- `omit_it_in_row_condition` (auto-fix)
-- `remove_redundant_in` (auto-fix)
-- `where_or_filter_closure_to_it_row_condition` (auto-fix)
-- `items_instead_of_transpose_each` (auto-fix)
-- `merge_get_cell_path` (auto-fix)
-- `merge_multiline_print` (auto-fix)
-- `inline_single_use_function`
-
-`type-safety` - Encourage annotations with type hints.
+`type-safety` - Annotate with type hints where possible.
 
 - `external_script_as_argument`
 - `add_type_hints_arguments` (auto-fix)

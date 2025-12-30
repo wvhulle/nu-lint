@@ -15,7 +15,7 @@ use crate::{
     lsp,
     output::{Format, Summary, format_output},
     rule::Rule,
-    rules::{ALL_RULES, groups::ALL_GROUPS},
+    rules::{USED_RULES, groups::ALL_GROUPS},
 };
 
 #[derive(Parser)]
@@ -153,7 +153,7 @@ impl Cli {
 
     fn list_rules() {
         println!("## Available Lint Rules\n");
-        let mut sorted_rules = ALL_RULES.to_vec();
+        let mut sorted_rules = USED_RULES.to_vec();
         sorted_rules.sort_by_key(|r| r.id());
 
         let max_id_len = sorted_rules.iter().map(|r| r.id().len()).max().unwrap_or(0) + 2; // +2 for backticks
@@ -227,7 +227,7 @@ impl Cli {
     }
 
     fn explain_rule(rule_id: &str) {
-        let rule = ALL_RULES.iter().find(|r| r.id() == rule_id);
+        let rule = USED_RULES.iter().find(|r| r.id() == rule_id);
 
         if let Some(rule) = rule {
             println!("Rule: {}", rule.id());

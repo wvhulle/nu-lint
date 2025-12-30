@@ -129,7 +129,7 @@ pub fn find_config_file_from(start_dir: &Path) -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rules::ALL_RULES;
+    use crate::rules::USED_RULES;
 
     #[test]
     fn test_load_config_simple_str() {
@@ -156,7 +156,7 @@ mod tests {
         let config = Config::load_from_str(toml_str).unwrap();
         let found_set_level = config.groups.iter().find(|(k, _)| **k == "naming");
         assert!(matches!(found_set_level, Some((_, LintLevel::Error))));
-        let ignored_rule = ALL_RULES
+        let ignored_rule = USED_RULES
             .iter()
             .find(|r| r.id() == "snake_case_variables")
             .unwrap();

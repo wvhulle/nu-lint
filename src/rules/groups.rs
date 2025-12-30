@@ -17,6 +17,7 @@ const ERROR_HANDLING: Group = Group {
         super::documentation::descriptive_error_messages::RULE,
         super::escape_string_interpolation_operators::RULE,
         super::exit_only_in_main::RULE,
+        super::flag_compare_null::RULE,
         super::missing_stdin_in_shebang::RULE,
         super::non_final_failure_check::RULE,
         super::error_make::use_error_make_for_catch::RULE,
@@ -36,33 +37,56 @@ const TYPE_SAFETY: Group = Group {
     ],
 };
 
-const SIMPLIFICATION: Group = Group {
-    name: "simplification",
-    description: "Simplify syntax of complex expressions.",
+const IDIOMATIC: Group = Group {
+    name: "idiomatic",
+    description: "Use Nu-native idioms instead of verbose patterns.",
     rules: &[
-        super::builtin_not_empty::RULE,
         super::bare_string_okay::RULE,
+        super::builtin_not_empty::RULE,
         super::dispatch_with_subcommands::RULE,
+        super::inline_single_use_function::RULE,
+        super::items_instead_of_transpose_each::RULE,
+        super::merge_get_cell_path::RULE,
+        super::merge_multiline_print::RULE,
+        super::positional_to_pipeline::RULE,
         super::shorten_with_compound_assignment::RULE,
+        super::use_regex_operators::RULE,
+    ],
+};
+
+const PARSING: Group = Group {
+    name: "parsing",
+    description: "Better ways to parse and transform text data.",
+    rules: &[
         super::lines_instead_of_split::RULE,
+        super::never_space_split::RULE,
         super::parsing::from_after_parsed_open::RULE,
         super::parsing::lines_each_to_parse::RULE,
         super::parsing::open_raw_from_to_open::RULE,
         super::parsing::simplify_regex::RULE,
         super::parsing::split_row_first_last::RULE,
         super::parsing::split_row_index_to_parse::RULE,
-        super::positional_to_pipeline::RULE,
-        super::range_for_iteration::while_counter::RULE,
-        super::range_for_iteration::loop_counter::RULE,
+    ],
+};
+
+const FILTERING: Group = Group {
+    name: "filtering",
+    description: "Better patterns for filtering and selecting data.",
+    rules: &[
         super::filtering::each_if_to_where::RULE,
         super::filtering::for_filter_to_where::RULE,
         super::filtering::omit_it_in_row_condition::RULE,
-        super::remove_redundant_in::RULE,
         super::filtering::where_closure_to_it_condition::RULE,
-        super::items_instead_of_transpose_each::RULE,
-        super::merge_get_cell_path::RULE,
-        super::merge_multiline_print::RULE,
-        super::inline_single_use_function::RULE,
+        super::remove_redundant_in::RULE,
+    ],
+};
+
+const ITERATION: Group = Group {
+    name: "iteration",
+    description: "Better patterns for loops and iteration.",
+    rules: &[
+        super::range_for_iteration::loop_counter::RULE,
+        super::range_for_iteration::while_counter::RULE,
     ],
 };
 
@@ -210,12 +234,15 @@ pub const ALL_GROUPS: &[Group] = &[
     DOCUMENTATION,
     ERROR_HANDLING,
     EXTERNAL_TOOLS,
+    FILTERING,
     FORMATTING,
+    IDIOMATIC,
+    ITERATION,
     NAMING,
+    PARSING,
     PERFORMANCE,
     POSIX_TOOLS,
     SIDE_EFFECTS,
-    SIMPLIFICATION,
     TYPE_SAFETY,
     UPSTREAM,
 ];

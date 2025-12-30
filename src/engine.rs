@@ -18,7 +18,7 @@ use crate::{
     LintError,
     config::Config,
     context::LintContext,
-    rules::ALL_RULES,
+    rules::USED_RULES,
     violation::{SourceFile, Violation},
 };
 
@@ -252,7 +252,7 @@ impl LintEngine {
 
     /// Collect violations from all enabled rules
     fn detect_with_fix_data(&self, context: &LintContext) -> Vec<Violation> {
-        ALL_RULES
+        USED_RULES
             .iter()
             .filter_map(|rule| {
                 let lint_level = self.config.get_lint_level(*rule)?;

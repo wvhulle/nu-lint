@@ -1,11 +1,11 @@
 use nu_protocol::{
-    VarId,
-    ast::{Call, Comparison, Expr, Expression, ListItem, Operator, RecordItem},
+    Span, VarId,
+    ast::{Block, Call, Comparison, Expr, Expression, ListItem, Operator, RecordItem},
 };
 
 use crate::{
     LintLevel,
-    ast::{call::CallExt, expression::ExpressionExt},
+    ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
@@ -34,39 +34,21 @@ fn check_flag_usage_in_body(call: &Call, context: &LintContext) -> Vec<(Detectio
             let var = context.working_set.get_variable(var_id);
             let flag_span = var.declaration_span;
 
-            let mut null_checked_expr_spans = Vec::new();
-            body_block.flat_map(
-                context.working_set,
-                &|expr: &Expression| {
-                    if has_null_comparison_for_var(expr, var_id, context) {
-                        vec![expr.span]
-                    } else {
-                        vec![]
-                    }
-                },
-                &mut null_checked_expr_spans,
-            );
-
-            let mut all_flag_usages = Vec::new();
-            body_block.flat_map(
-                context.working_set,
-                &|expr: &Expression| {
-                    if expr.matches_var(var_id) {
-                        vec![expr]
-                    } else {
-                        vec![]
-                    }
-                },
-                &mut all_flag_usages,
-            );
-
-            let first_unchecked_usage = all_flag_usages.iter().find(|usage_expr| {
-                !null_checked_expr_spans
-                    .iter()
-                    .any(|null_check_span| null_check_span.contains_span(usage_expr.span))
+            let null_checked_expr_spans = body_block.find_expr_spans(context, |expr, ctx| {
+                has_null_comparison_for_var(expr, var_id, ctx)
             });
 
-            let usage_span = first_unchecked_usage?.span;
+            let all_usage_spans =
+                body_block.find_var_usage_spans(var_id, context, |_expr, _var_id, _ctx| true);
+
+            let usage_span = all_usage_spans
+                .iter()
+                .find(|usage_span| {
+                    !null_checked_expr_spans
+                        .iter()
+                        .any(|null_check_span| null_check_span.contains_span(**usage_span))
+                })
+                .copied()?;
 
             let flag_name = flag.short.map_or_else(
                 || format!("--{}", flag.long),

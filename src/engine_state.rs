@@ -96,7 +96,8 @@ pub fn create_engine_state() -> EngineState {
 /// This function is currently unused but available for future enhancements
 /// where the standard library might be beneficial for linting.
 #[must_use]
-#[allow(dead_code, reason = "Reserved for future use when standard library is needed")]
+// Reserved for future use when standard library is needed
+#[allow(dead_code)]
 pub fn create_engine_state_with_stdlib() -> EngineState {
     let mut engine_state = create_engine_state();
 

@@ -117,7 +117,13 @@ impl LintEngine {
     /// Get or initialize the default engine state.
     ///
     /// This uses the shared engine state initialization from the `engine_state`
-    /// module, which follows the same pattern as nu-lsp in the main nushell binary.
+    /// module, which follows the same pattern as nu-lsp in the main nushell
+    /// binary. See the `engine_state` module documentation for details on how
+    /// this relates to nushell's LSP server initialization.
+    ///
+    /// By using the shared initialization, we ensure consistency between the
+    /// lint engine and the LSP server, and make it easier to stay in sync with
+    /// how nushell itself initializes its engine state.
     #[must_use]
     pub fn new_state() -> EngineState {
         engine_state::create_engine_state()

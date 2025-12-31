@@ -32,12 +32,12 @@ mod merge_multiline_print;
 mod missing_stdin_in_shebang;
 mod naming;
 mod never_space_split;
-mod no_export_main;
 mod non_final_failure_check;
 mod parsing;
 mod positional_to_pipeline;
 mod posix_tools;
 mod range_for_iteration;
+mod script_export_main;
 
 pub mod redundant_ignore;
 mod remove_redundant_in;
@@ -107,7 +107,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     naming::screaming_snake_constants::RULE,
     naming::snake_case_variables::RULE,
     never_space_split::RULE,
-    no_export_main::RULE,
+    script_export_main::RULE,
     non_final_failure_check::RULE,
     parsing::from_after_parsed_open::RULE,
     parsing::lines_each_to_parse::RULE,

@@ -100,7 +100,7 @@ const DEAD_CODE: Group = Group {
         super::redundant_ignore::RULE,
         super::unnecessary_mut::RULE,
         super::unused_helper_functions::RULE,
-        super::no_export_main::RULE,
+        super::script_export_main::RULE,
     ],
 };
 

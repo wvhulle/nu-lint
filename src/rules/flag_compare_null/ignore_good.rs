@@ -2,6 +2,31 @@ use super::RULE;
 use crate::log::instrument;
 
 #[test]
+fn boolean_switch_without_null_check() {
+    instrument();
+    // Boolean switches (flags without a type) are never null - they are true when
+    // present, false when absent
+    let good_code = r#"
+def opt_flag [--opt] {
+    $opt
+}
+"#;
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
+fn boolean_switch_used_in_if() {
+    instrument();
+    // Boolean switches can be used directly in conditionals without null check
+    let good_code = r#"
+def my-command [--verbose] {
+    if $verbose { print "Verbose mode" }
+}
+"#;
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
 fn flag_checked_with_not_equal_null() {
     instrument();
     let good_code = r#"

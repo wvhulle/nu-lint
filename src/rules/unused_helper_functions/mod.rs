@@ -1,7 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use nu_protocol::{
-    BlockId, Span,
+    BlockId, Completion, Span,
     ast::{Expr, Traverse},
 };
 
@@ -13,6 +13,13 @@ use crate::{
     violation::{Detection, Fix, Replacement},
 };
 
+struct FunctionDef {
+    name: String,
+    block_id: BlockId,
+    def_span: Span,
+    is_exported: bool,
+}
+
 struct UnusedFunctionFixData {
     name: String,
     removal_span: Span,
@@ -22,9 +29,7 @@ fn is_main_entry_point(name: &str) -> bool {
     name == "main" || name.starts_with("main ")
 }
 
-fn collect_function_definitions_with_spans(
-    context: &LintContext,
-) -> HashMap<String, (BlockId, Span)> {
+fn collect_function_definitions(context: &LintContext) -> Vec<FunctionDef> {
     let mut functions = Vec::new();
     context.ast.flat_map(
         context.working_set,
@@ -32,14 +37,72 @@ fn collect_function_definitions_with_spans(
             if let Expr::Call(call) = &expr.expr
                 && let Some(def) = call.custom_command_def(context)
             {
-                vec![(def.name, (def.body, expr.span))]
+                let is_exported = def.is_exported();
+                vec![FunctionDef {
+                    name: def.name,
+                    block_id: def.body,
+                    def_span: expr.span,
+                    is_exported,
+                }]
             } else {
                 vec![]
             }
         },
         &mut functions,
     );
-    functions.into_iter().collect()
+    functions
+}
+
+fn collect_completer_block_ids(context: &LintContext) -> HashSet<BlockId> {
+    let mut block_ids = Vec::new();
+    context.ast.flat_map(
+        context.working_set,
+        &|expr| {
+            let mut ids = Vec::new();
+            if let Expr::Call(call) = &expr.expr
+                && let Some(def) = call.custom_command_def(context)
+            {
+                let block = context.working_set.get_block(def.body);
+                let sig = &block.signature;
+
+                for param in &sig.required_positional {
+                    if let Some(Completion::Command(decl_id)) = &param.completion {
+                        let decl = context.working_set.get_decl(*decl_id);
+                        if let Some(block_id) = decl.block_id() {
+                            ids.push(block_id);
+                        }
+                    }
+                }
+                for param in &sig.optional_positional {
+                    if let Some(Completion::Command(decl_id)) = &param.completion {
+                        let decl = context.working_set.get_decl(*decl_id);
+                        if let Some(block_id) = decl.block_id() {
+                            ids.push(block_id);
+                        }
+                    }
+                }
+                if let Some(param) = &sig.rest_positional
+                    && let Some(Completion::Command(decl_id)) = &param.completion
+                {
+                    let decl = context.working_set.get_decl(*decl_id);
+                    if let Some(block_id) = decl.block_id() {
+                        ids.push(block_id);
+                    }
+                }
+                for flag in &sig.named {
+                    if let Some(Completion::Command(decl_id)) = &flag.completion {
+                        let decl = context.working_set.get_decl(*decl_id);
+                        if let Some(block_id) = decl.block_id() {
+                            ids.push(block_id);
+                        }
+                    }
+                }
+            }
+            ids
+        },
+        &mut block_ids,
+    );
+    block_ids.into_iter().collect()
 }
 
 struct UnusedHelperFunctions;
@@ -64,39 +127,51 @@ impl DetectFix for UnusedHelperFunctions {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let function_definitions = collect_function_definitions_with_spans(context);
+        let function_definitions = collect_function_definitions(context);
 
-        let function_map: HashMap<String, BlockId> = function_definitions
-            .iter()
-            .map(|(name, (block_id, _))| (name.clone(), *block_id))
-            .collect();
+        // Build set of all function block IDs for transitive call analysis
+        let all_function_block_ids: HashSet<BlockId> =
+            function_definitions.iter().map(|f| f.block_id).collect();
 
+        // Find entry points (main functions)
         let entry_points: Vec<_> = function_definitions
             .iter()
-            .filter(|(name, _)| is_main_entry_point(name))
+            .filter(|f| is_main_entry_point(&f.name))
             .collect();
 
         if entry_points.is_empty() {
             return vec![];
         }
 
-        let mut called_functions = HashSet::new();
-        for (_, (block_id, _)) in &entry_points {
-            let block = context.working_set.get_block(*block_id);
+        // Collect block IDs of functions used as completers
+        let completer_block_ids = collect_completer_block_ids(context);
+
+        // Trace all transitively called functions from entry points
+        let mut called_block_ids = HashSet::new();
+        for entry in &entry_points {
+            let block = context.working_set.get_block(entry.block_id);
             let transitively_called =
-                block.find_transitively_called_functions(context, &function_map);
-            called_functions.extend(transitively_called);
+                block.find_transitively_called_functions(context, &all_function_block_ids);
+            called_block_ids.extend(transitively_called);
         }
 
         function_definitions
             .iter()
-            .filter(|(name, _)| !is_main_entry_point(name) && !called_functions.contains(*name))
-            .map(|(name, (_, def_span))| {
-                let name_span = context.find_declaration_span(name);
-                let removal_span = context.expand_span_to_full_lines(*def_span);
+            .filter(|f| {
+                !is_main_entry_point(&f.name)
+                    && !f.is_exported
+                    && !called_block_ids.contains(&f.block_id)
+                    && !completer_block_ids.contains(&f.block_id)
+            })
+            .map(|f| {
+                let name_span = context.find_declaration_span(&f.name);
+                let removal_span = context.expand_span_to_full_lines(f.def_span);
 
                 let violation = Detection::from_file_span(
-                    format!("Function '{name}' is defined but never called from 'main'"),
+                    format!(
+                        "Function '{}' is defined but never called from 'main'",
+                        f.name
+                    ),
                     name_span,
                 )
                 .with_primary_label("unused function")
@@ -106,7 +181,7 @@ impl DetectFix for UnusedHelperFunctions {
                 );
 
                 let fix_data = UnusedFunctionFixData {
-                    name: name.clone(),
+                    name: f.name.clone(),
                     removal_span,
                 };
 

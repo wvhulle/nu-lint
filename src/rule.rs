@@ -143,7 +143,6 @@ impl dyn Rule {
 
     /// Assumes there is only one violation and fix in the code (with zero or
     /// more replacements)
-
     pub fn apply_first_fix(&self, code: &str) -> String {
         let violation = self.first_violation(code);
         let fix = violation.fix.expect("Expected violation to have a fix");

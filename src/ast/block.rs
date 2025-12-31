@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use nu_protocol::{
     BlockId, Span, Type, VarId,
@@ -13,40 +13,30 @@ const MAX_TYPE_INFERENCE_DEPTH: usize = 100;
 fn find_transitively_called_functions_impl(
     block: &Block,
     context: &LintContext,
-    available_functions: &HashMap<String, BlockId>,
-    visited: &mut HashSet<usize>,
-) -> HashSet<String> {
-    // Prevent infinite recursion on recursive/mutually recursive functions
-    // We track visited blocks by comparing their memory addresses
-    #[allow(
-        clippy::ref_as_ptr,
-        reason = "Need pointer address as unique identifier for cycle detection"
-    )]
-    let block_ptr = block as *const Block as usize;
+    available_functions: &HashSet<BlockId>,
+    visited: &mut HashSet<BlockId>,
+) -> HashSet<BlockId> {
+    let mut result = HashSet::new();
 
-    if !visited.insert(block_ptr) {
-        log::debug!("Cycle detected in function calls");
-        return HashSet::new();
+    for callee_block_id in block.collect_user_function_call_block_ids(context) {
+        if !available_functions.contains(&callee_block_id) {
+            continue;
+        }
+
+        if !visited.insert(callee_block_id) {
+            log::debug!("Cycle detected in function calls");
+            continue;
+        }
+
+        result.insert(callee_block_id);
+
+        let callee_block = context.working_set.get_block(callee_block_id);
+        let transitive =
+            find_transitively_called_functions_impl(callee_block, context, available_functions, visited);
+        result.extend(transitive);
     }
 
-    block
-        .collect_user_function_calls(context)
-        .into_iter()
-        .filter_map(|func_name| {
-            available_functions.get(&func_name).map(|&callee_block_id| {
-                let callee_block = context.working_set.get_block(callee_block_id);
-                let mut transitive = find_transitively_called_functions_impl(
-                    callee_block,
-                    context,
-                    available_functions,
-                    visited,
-                );
-                transitive.insert(func_name);
-                transitive
-            })
-        })
-        .flatten()
-        .collect()
+    result
 }
 
 fn infer_output_type_with_depth(block: &Block, context: &LintContext, depth: usize) -> Type {
@@ -110,16 +100,16 @@ pub trait BlockExt {
     fn all_elements(&self) -> Vec<&PipelineElement>;
     /// Checks if block contains variable references. Example: `{ $x + 1 }`
     fn contains_variables(&self, context: &LintContext) -> bool;
-    /// Collects all user function calls in block. Example: `{ foo; bar | baz }`
-    /// returns `["foo", "baz"]`
-    fn collect_user_function_calls(&self, context: &LintContext) -> Vec<String>;
-    /// Finds all transitively called functions. Example: main calls foo, foo
-    /// calls bar
+    /// Collects all user function call block IDs in block. Returns the `BlockId` of each
+    /// called custom command's body.
+    fn collect_user_function_call_block_ids(&self, context: &LintContext) -> Vec<BlockId>;
+    /// Finds all transitively called functions by `BlockId`. Example: main calls foo, foo
+    /// calls bar - returns `BlockId`s of foo and bar
     fn find_transitively_called_functions(
         &self,
         context: &LintContext,
-        available_functions: &HashMap<String, BlockId>,
-    ) -> HashSet<String>;
+        available_functions: &HashSet<BlockId>,
+    ) -> HashSet<BlockId>;
     /// Checks if block uses pipeline input variable. Example: `{ $in | length
     /// }`
     fn uses_pipeline_input(&self, context: &LintContext) -> bool;
@@ -188,30 +178,31 @@ impl BlockExt for Block {
             .any(|elem| elem.expr.contains_variables(context))
     }
 
-    fn collect_user_function_calls(&self, context: &LintContext) -> Vec<String> {
-        let mut function_calls = Vec::new();
+    fn collect_user_function_call_block_ids(&self, context: &LintContext) -> Vec<BlockId> {
+        let mut block_ids = Vec::new();
 
         self.flat_map(
             context.working_set,
             &|expr| {
                 if let Expr::Call(call) = &expr.expr {
-                    vec![call.get_call_name(context)]
+                    let decl = context.working_set.get_decl(call.decl_id);
+                    decl.block_id().into_iter().collect()
                 } else {
                     vec![]
                 }
             },
-            &mut function_calls,
+            &mut block_ids,
         );
 
-        function_calls
+        block_ids
     }
 
     fn find_transitively_called_functions(
         &self,
         context: &LintContext,
-        available_functions: &HashMap<String, BlockId>,
-    ) -> HashSet<String> {
-        let mut visited: HashSet<usize> = HashSet::new();
+        available_functions: &HashSet<BlockId>,
+    ) -> HashSet<BlockId> {
+        let mut visited: HashSet<BlockId> = HashSet::new();
         find_transitively_called_functions_impl(self, context, available_functions, &mut visited)
     }
 

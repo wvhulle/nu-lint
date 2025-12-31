@@ -25,6 +25,10 @@ fn check_flag_usage_in_body(call: &Call, context: &LintContext) -> Vec<(Detectio
         .filter_map(|flag| {
             let var_id = flag.var_id?;
 
+            // Boolean switches (flags without a type annotation) are never null.
+            // They are `true` when present and `false` when absent.
+            flag.arg.as_ref()?;
+
             if flag.default_value.is_some() {
                 return None;
             }
@@ -55,19 +59,19 @@ fn check_flag_usage_in_body(call: &Call, context: &LintContext) -> Vec<(Detectio
 
             let detection = Detection::from_global_span(
                 format!(
-                    "Flag '{flag_name}' is used without checking if it is null. Flags are always \
-                     optional and may be null"
+                    "Typed flag '{flag_name}' is used without checking if it is null. Typed flags \
+                     (flags with `: type`) are optional and may be null when not provided"
                 ),
                 usage_span,
             )
-            .with_primary_label("flag used without null check")
+            .with_primary_label("typed flag used without null check")
             .with_extra_label("flag declared here", flag_span)
             .with_help(format!(
                 "Check if the flag value is not null before using it: 'if ${} != null {{ ... }}'",
                 flag.long
             ))
             .with_help(
-                "Alternative: provide a default value in the function signature: '--{}: type = \
+                "Alternative: provide a default value in the function signature: '--flag: type = \
                  default-value'",
             );
 
@@ -157,11 +161,13 @@ impl DetectFix for FlagCompareNull {
     type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
-        "check_flag_before_use"
+        "check_typed_flag_before_use"
     }
 
     fn explanation(&self) -> &'static str {
-        "Flags in custom commands are always optional and should be checked for null before use"
+        "Typed flags (--flag: type) in custom commands are optional and should be checked for null \
+         before use. Boolean switches (--flag without type) are always true/false and don't need \
+         null checks."
     }
 
     fn doc_url(&self) -> Option<&'static str> {

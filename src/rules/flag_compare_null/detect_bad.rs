@@ -4,8 +4,9 @@ use crate::log::instrument;
 #[test]
 fn flag_used_without_null_check() {
     instrument();
+    // Typed flags (with : type) can be null and require null checks
     let bad_code = r#"
-def my-command [--verbose] {
+def my-command [--verbose: string] {
     if $verbose { print "Verbose mode" }
 }
 "#;
@@ -26,8 +27,9 @@ def my-command [--count: int] {
 #[test]
 fn multiple_flags_used_without_null_check() {
     instrument();
+    // Typed flags can be null
     let bad_code = r#"
-def my-command [--verbose --debug] {
+def my-command [--verbose: string --debug: string] {
     if $verbose { print "Verbose" }
     if $debug { print "Debug" }
 }
@@ -38,8 +40,9 @@ def my-command [--verbose --debug] {
 #[test]
 fn flag_with_short_form_used_without_null_check() {
     instrument();
+    // Typed flags with short form can be null
     let bad_code = r#"
-def my-command [--verbose (-v)] {
+def my-command [--verbose (-v): string] {
     if $verbose { print "Verbose mode" }
 }
 "#;
@@ -83,8 +86,9 @@ def my-command [--name: string] {
 #[test]
 fn flag_with_null_check_but_also_used_without() {
     instrument();
+    // Typed flags can be null
     let bad_code = r#"
-def my-command [--verbose] {
+def my-command [--verbose: string] {
     if $verbose != null {
         print "Verbose mode"
     }

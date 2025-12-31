@@ -168,3 +168,51 @@ def main [n: int] {
 "#,
     );
 }
+
+#[test]
+fn exported_function_not_called_from_main() {
+    // Exported functions are part of the module's public API and may be used externally
+    RULE.assert_ignores(
+        r#"
+def main [] {
+  print "main"
+}
+
+export def helper [] {
+  print "exported helper"
+}
+"#,
+    );
+}
+
+#[test]
+fn completer_function_not_called_from_main() {
+    // Functions used as argument completers are referenced via @completer annotation
+    RULE.assert_ignores(
+        r#"
+def main [arg: string@my-completer] {
+  print $arg
+}
+
+def my-completer [] {
+  ["option1", "option2"]
+}
+"#,
+    );
+}
+
+#[test]
+fn completer_for_flag() {
+    // Completer for a flag parameter
+    RULE.assert_ignores(
+        r#"
+def main [--format: string@format-completer] {
+  print $format
+}
+
+def format-completer [] {
+  ["json", "yaml", "toml"]
+}
+"#,
+    );
+}

@@ -83,16 +83,22 @@ def unused-with-params [name: string, count: int] {
 }
 
 #[test]
-fn fix_erases_exported_unused_function() {
+fn fix_erases_non_exported_unused_function() {
+    // Exported functions are NOT flagged as unused (they may be used by external importers)
+    // This test verifies only non-exported functions are removed
     let bad_code = r#"
 def main [] {
   print "main"
 }
 
-export def unused-exported [] {
-  print "exported but unused"
+def unused-helper [] {
+  print "not exported, not called"
+}
+
+export def exported-helper [] {
+  print "exported, should be kept"
 }
 "#;
-    RULE.assert_fix_erases(bad_code, "export def unused-exported");
-    RULE.assert_fix_erases(bad_code, "exported but unused");
+    RULE.assert_fix_erases(bad_code, "def unused-helper");
+    RULE.assert_fix_erases(bad_code, "not exported, not called");
 }

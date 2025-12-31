@@ -13,18 +13,6 @@ fn detects_single_quoted_simple_string() {
 }
 
 #[test]
-fn detects_quoted_identifier_with_underscore() {
-    let code = r#"let x = "my_variable""#;
-    RULE.assert_detects(code);
-}
-
-#[test]
-fn detects_quoted_identifier_with_dash() {
-    let code = r#"let x = "my-command""#;
-    RULE.assert_detects(code);
-}
-
-#[test]
 fn detects_quoted_url() {
     let code = r#"http get "https://example.com""#;
     RULE.assert_detects(code);

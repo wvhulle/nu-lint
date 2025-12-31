@@ -18,13 +18,13 @@ fn has_builtin(name: &str, ctx: &LintContext) -> bool {
     ctx.engine_state.find_decl(name.as_bytes(), &[]).is_some()
 }
 
-struct UnnecessaryHat;
+struct RemoveHatNotBuiltin;
 
-impl DetectFix for UnnecessaryHat {
+impl DetectFix for RemoveHatNotBuiltin {
     type FixInput<'a> = UnnecessaryHatFixData;
 
     fn id(&self) -> &'static str {
-        "unnecessary_hat"
+        "remove_hat_not_builtin"
     }
 
     fn explanation(&self) -> &'static str {
@@ -36,7 +36,7 @@ impl DetectFix for UnnecessaryHat {
     }
 
     fn level(&self) -> LintLevel {
-        LintLevel::Warning
+        LintLevel::Hint
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
@@ -115,7 +115,7 @@ impl DetectFix for UnnecessaryHat {
     }
 }
 
-pub static RULE: &dyn Rule = &UnnecessaryHat;
+pub static RULE: &dyn Rule = &RemoveHatNotBuiltin;
 
 #[cfg(test)]
 mod detect_bad;

@@ -1,5 +1,5 @@
 use super::RULE;
-use crate::log::instrument;
+use crate::log::init_env_log;
 
 #[test]
 fn ignore_properly_typed_input() {
@@ -23,7 +23,7 @@ def create-list []: nothing -> list<int> {
 
 #[test]
 fn ignore_only_side_effect_pipeline_io() {
-    instrument();
+    init_env_log();
     let good_code = r#"
 def "main postpone" [] {
   if (stop-timer) {
@@ -40,7 +40,7 @@ def "main postpone" [] {
 
 #[test]
 fn ignore_assert() {
-    instrument();
+    init_env_log();
     let good_code = r#"
 def "tests extract-time" [] {
   assert equal ("Sunrise is at: 2025-11-20 08:21:51 +01:00" | extract-time) "08:21:51"

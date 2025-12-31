@@ -2,59 +2,59 @@ use crate::rule::Rule;
 
 pub mod groups;
 
-mod ansi_over_escape_codes;
-mod avoid_nu_subprocess;
-mod avoid_self_import;
-mod bare_string_okay;
-mod builtin_not_empty;
+pub mod always_annotate_ext_hat;
+pub mod ansi_over_escape_codes;
+pub mod avoid_nu_subprocess;
+pub mod avoid_self_import;
+pub mod bare_string_okay;
+pub mod builtin_not_empty;
 pub mod check_complete_exit_code;
-mod collapsible_if;
-mod dangerous_file_operations;
-mod dispatch_with_subcommands;
-mod documentation;
-mod error_make;
-mod errors_to_stderr;
-mod escape_string_interpolation_operators;
-mod exit_only_in_main;
-mod external_script_as_argument;
-mod external_tools;
-mod filtering;
-mod flag_compare_null;
-mod forbid_excessive_nesting;
-mod ignore_over_dev_null;
-mod inline_single_use_function;
-mod items_instead_of_transpose_each;
-mod lines_instead_of_split;
-mod max_function_body_length;
-mod max_positional_params;
-mod merge_get_cell_path;
-mod merge_multiline_print;
-mod missing_stdin_in_shebang;
-mod naming;
-mod never_space_split;
-mod non_final_failure_check;
-mod parsing;
-mod positional_to_pipeline;
-mod posix_tools;
-mod range_for_iteration;
-mod script_export_main;
-
+pub mod collapsible_if;
+pub mod dangerous_file_operations;
+pub mod dispatch_with_subcommands;
+pub mod documentation;
+pub mod error_make;
+pub mod errors_to_stderr;
+pub mod escape_string_interpolation_operators;
+pub mod exit_only_in_main;
+pub mod external_script_as_argument;
+pub mod external_tools;
+pub mod filtering;
+pub mod flag_compare_null;
+pub mod forbid_excessive_nesting;
+pub mod ignore_over_dev_null;
+pub mod inline_single_use_function;
+pub mod items_instead_of_transpose_each;
+pub mod lines_instead_of_split;
+pub mod max_function_body_length;
+pub mod max_positional_params;
+pub mod merge_get_cell_path;
+pub mod merge_multiline_print;
+pub mod missing_stdin_in_shebang;
+pub mod naming;
+pub mod never_space_split;
+pub mod non_final_failure_check;
+pub mod parsing;
+pub mod positional_to_pipeline;
+pub mod posix_tools;
+pub mod range_for_iteration;
 pub mod redundant_ignore;
-mod remove_redundant_in;
-mod replace_else_if_with_match;
-mod shorten_with_compound_assignment;
-mod side_effects;
-mod spacing;
-mod strong_typing;
-
-mod try_instead_of_do;
-mod unnecessary_accumulate;
-mod unnecessary_mut;
-mod unnecessary_variable_before_return;
-mod unsafe_dynamic_record_access;
-mod unused_helper_functions;
-mod upstream;
-mod use_regex_operators;
+pub mod remove_hat_not_builtin;
+pub mod remove_redundant_in;
+pub mod replace_else_if_with_match;
+pub mod script_export_main;
+pub mod shorten_with_compound_assignment;
+pub mod side_effects;
+pub mod spacing;
+pub mod strong_typing;
+pub mod try_instead_of_do;
+pub mod unnecessary_accumulate;
+pub mod unnecessary_mut;
+pub mod unnecessary_variable_before_return;
+pub mod unsafe_dynamic_record_access;
+pub mod unused_helper_functions;
+pub mod upstream;
+pub mod use_regex_operators;
 
 /// All rules that are used by default when linting.
 pub const USED_RULES: &[&dyn Rule] = &[
@@ -85,7 +85,8 @@ pub const USED_RULES: &[&dyn Rule] = &[
     external_tools::fd::RULE,
     external_tools::jq::RULE,
     external_tools::rg::RULE,
-    external_tools::unnecessary_hat::RULE,
+    remove_hat_not_builtin::RULE,
+    always_annotate_ext_hat::RULE,
     external_tools::wget::RULE,
     external_tools::which::RULE,
     filtering::each_if_to_where::RULE,

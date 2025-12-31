@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::instrument;
+use crate::log::init_env_log;
 
 #[test]
 fn ignores_only_file_operations() {
-    instrument();
+    init_env_log();
     let good_code = r"
 def main [] {}
 
@@ -17,7 +17,7 @@ def save-files [data] {
 
 #[test]
 fn ignores_only_network_operations() {
-    instrument();
+    init_env_log();
     let good_code = r"
 def main [] {}
 
@@ -32,7 +32,7 @@ def fetch-multiple [] {
 
 #[test]
 fn ignores_only_print_operations() {
-    instrument();
+    init_env_log();
     let good_code = r#"
 def main [] {}
 
@@ -47,7 +47,7 @@ def log-messages [] {
 
 #[test]
 fn ignores_pure_functions() {
-    instrument();
+    init_env_log();
     let good_code = r"
 def main [] {}
 
@@ -60,7 +60,7 @@ def calculate [x: int, y: int] {
 
 #[test]
 fn ignores_main_function() {
-    instrument();
+    init_env_log();
     let good_code = r#"
 def main [] {
     print "Starting..."
@@ -72,7 +72,7 @@ def main [] {
 
 #[test]
 fn ignores_print_to_stderr_with_file_ops() {
-    instrument();
+    init_env_log();
     let good_code = r#"
 def main [] {}
 
@@ -86,7 +86,7 @@ def save-with-debug [data] {
 
 #[test]
 fn ignores_file_operations_in_closure() {
-    instrument();
+    init_env_log();
     let good_code = r"
 def main [] {}
 
@@ -99,7 +99,7 @@ def batch-operations [files] {
 
 #[test]
 fn ignores_library_with_focused_functions() {
-    instrument();
+    init_env_log();
     let good_code = r#"
 export def fetch-data [] {
     http get https://api.example.com/data
@@ -118,7 +118,7 @@ export def log-message [msg] {
 
 #[test]
 fn ignores_pure_library_functions() {
-    instrument();
+    init_env_log();
     let good_code = r#"
 export def transform [data] {
     $data | each { |x| $x * 2 }
@@ -133,7 +133,7 @@ export def calculate [x: int, y: int] {
 
 #[test]
 fn ignores_top_level_single_io_type() {
-    instrument();
+    init_env_log();
     let good_code = r#"
 http get https://api.example.com/data1
 http get https://api.example.com/data2
@@ -143,7 +143,7 @@ http get https://api.example.com/data2
 
 #[test]
 fn ignores_top_level_file_operations() {
-    instrument();
+    init_env_log();
     let good_code = r"
 ls | save files.txt
 cp input.txt output.txt
@@ -153,7 +153,7 @@ cp input.txt output.txt
 
 #[test]
 fn ignores_top_level_pure_script() {
-    instrument();
+    init_env_log();
     let good_code = r"
 let x = 42
 let y = $x * 2

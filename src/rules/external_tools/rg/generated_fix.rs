@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::instrument;
+use crate::log::init_env_log;
 
 #[test]
 fn fix_simple_rg_to_find() {
-    instrument();
+    init_env_log();
     let source = r#"^rg \"todo\""#;
     RULE.assert_count(source, 1);
     RULE.assert_fixed_contains(source, r#"find \"todo\""#);
@@ -12,7 +12,7 @@ fn fix_simple_rg_to_find() {
 
 #[test]
 fn fix_rg_with_file_to_where() {
-    instrument();
+    init_env_log();
     let source = r#"^rg \"error\" logs.txt"#;
     RULE.assert_count(source, 1);
     RULE.assert_fixed_contains(source, r#"open logs.txt | lines | where $it =~ \"error\""#);
@@ -20,7 +20,7 @@ fn fix_rg_with_file_to_where() {
 
 #[test]
 fn fix_rg_case_insensitive_flag() {
-    instrument();
+    init_env_log();
     let source = r#"^rg -i \"warning\" logs.txt"#;
     RULE.assert_count(source, 1);
     RULE.assert_fixed_contains(
@@ -32,7 +32,7 @@ fn fix_rg_case_insensitive_flag() {
 
 #[test]
 fn fix_rg_invert_match() {
-    instrument();
+    init_env_log();
     let source = r#"^rg -v \"debug\" app.log"#;
     RULE.assert_count(source, 1);
     RULE.assert_fixed_contains(source, r#"open app.log | lines | where $it !~ \"debug\""#);
@@ -41,7 +41,7 @@ fn fix_rg_invert_match() {
 
 #[test]
 fn fix_rg_line_numbers() {
-    instrument();
+    init_env_log();
     let source = r#"^rg -n \"TODO\" source.rs"#;
     RULE.assert_count(source, 1);
     RULE.assert_fixed_contains(
@@ -53,7 +53,7 @@ fn fix_rg_line_numbers() {
 
 #[test]
 fn fix_rg_count() {
-    instrument();
+    init_env_log();
     let source = r#"^rg -c \"error\" logs.txt"#;
     RULE.assert_count(source, 1);
     RULE.assert_fixed_contains(
@@ -65,7 +65,7 @@ fn fix_rg_count() {
 
 #[test]
 fn fix_rg_line_numbers_and_count() {
-    instrument();
+    init_env_log();
     let source = r#"^rg -nc \"panic\" src/main.rs"#;
     RULE.assert_count(source, 1);
     RULE.assert_fixed_contains(source, "enumerate");
@@ -75,7 +75,7 @@ fn fix_rg_line_numbers_and_count() {
 
 #[test]
 fn fix_rg_fixed_strings() {
-    instrument();
+    init_env_log();
     let source = r#"^rg -F \"literal\" README.md"#;
     RULE.assert_count(source, 1);
     RULE.assert_fixed_contains(
@@ -87,7 +87,7 @@ fn fix_rg_fixed_strings() {
 
 #[test]
 fn fix_rg_multiple_files() {
-    instrument();
+    init_env_log();
     let source = r#"^rg \"expr\" file1.nu file2.nu"#;
     RULE.assert_count(source, 1);
     RULE.assert_fixed_contains(
@@ -98,7 +98,7 @@ fn fix_rg_multiple_files() {
 
 #[test]
 fn fix_explanation_mentions_find() {
-    instrument();
+    init_env_log();
     let source = r#"^rg \"pattern\""#;
     RULE.assert_count(source, 1);
     RULE.assert_fix_explanation_contains(source, "find");
@@ -107,7 +107,7 @@ fn fix_explanation_mentions_find() {
 
 #[test]
 fn fix_explanation_mentions_where() {
-    instrument();
+    init_env_log();
     let source = r#"^rg \"pattern\" file.txt"#;
     RULE.assert_count(source, 1);
     RULE.assert_fix_explanation_contains(source, "where");
@@ -115,7 +115,7 @@ fn fix_explanation_mentions_where() {
 
 #[test]
 fn fix_explanation_mentions_structured_data() {
-    instrument();
+    init_env_log();
     let source = r#"^rg \"error\" logs.txt"#;
     RULE.assert_count(source, 1);
     RULE.assert_fix_explanation_contains(source, "structured");
@@ -123,7 +123,7 @@ fn fix_explanation_mentions_structured_data() {
 
 #[test]
 fn fix_no_file_uses_find() {
-    instrument();
+    init_env_log();
     let source = r#"^rg \"test\""#;
     RULE.assert_count(source, 1);
     RULE.assert_fixed_contains(source, r#"find \"test\""#);
@@ -132,7 +132,7 @@ fn fix_no_file_uses_find() {
 
 #[test]
 fn fix_preserves_pattern() {
-    instrument();
+    init_env_log();
     let source = r#"^rg \"complex[0-9]+\" file.txt"#;
     RULE.assert_count(source, 1);
     RULE.assert_fixed_contains(source, r#"where $it =~ \"complex[0-9]+\""#);

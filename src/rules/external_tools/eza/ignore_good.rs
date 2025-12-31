@@ -1,56 +1,56 @@
 use super::RULE;
-use crate::log::instrument;
+use crate::log::init_env_log;
 
 #[test]
 fn ignores_nushell_ls() {
-    instrument();
+    init_env_log();
     RULE.assert_ignores(r"ls");
 }
 
 #[test]
 fn ignores_nushell_ls_with_all() {
-    instrument();
+    init_env_log();
     RULE.assert_ignores(r"ls -a");
 }
 
 #[test]
 fn ignores_nushell_ls_with_long() {
-    instrument();
+    init_env_log();
     RULE.assert_ignores(r"ls -l");
 }
 
 #[test]
 fn ignores_nushell_ls_with_glob() {
-    instrument();
+    init_env_log();
     RULE.assert_ignores(r"ls **/*.rs");
 }
 
 #[test]
 fn ignores_nushell_ls_with_where() {
-    instrument();
+    init_env_log();
     RULE.assert_ignores(r"ls | where type == dir");
 }
 
 #[test]
 fn ignores_nushell_ls_with_sort() {
-    instrument();
+    init_env_log();
     RULE.assert_ignores(r"ls | sort-by size");
 }
 
 #[test]
 fn ignores_nushell_ls_with_reverse() {
-    instrument();
+    init_env_log();
     RULE.assert_ignores(r"ls | sort-by modified --reverse");
 }
 
 #[test]
 fn ignores_variable_command() {
-    instrument();
+    init_env_log();
     RULE.assert_ignores(r"let cmd = 'eza'; ^$cmd");
 }
 
 #[test]
 fn ignores_glob_command() {
-    instrument();
+    init_env_log();
     RULE.assert_ignores(r"glob **/*.rs");
 }

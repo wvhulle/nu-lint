@@ -4,10 +4,19 @@ use env_logger::fmt::Formatter;
 
 /// Initialize the logger with an easy to read format for stdout terminal
 /// output. Use it to debug tests with print debugging.
-pub fn instrument() {
+#[cfg(test)]
+pub fn init_env_log() {
     env_logger::builder()
         .format(format_log_record)
         .is_test(true)
+        .try_init()
+        .ok();
+}
+
+pub fn init_log() {
+    env_logger::builder()
+        .format(format_log_record)
+        .filter_level(log::LevelFilter::Debug)
         .try_init()
         .ok();
 }

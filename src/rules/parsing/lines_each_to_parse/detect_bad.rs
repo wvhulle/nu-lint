@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::instrument;
+use crate::log::init_env_log;
 
 #[test]
 fn test_detect_lines_each_parse() {
-    instrument();
+    init_env_log();
     let bad_code = r#"$text | lines | each {|l| $l | parse "{key}:{value}" }"#;
     RULE.assert_detects(bad_code);
 }

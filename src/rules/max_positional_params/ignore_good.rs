@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::instrument;
+use crate::log::init_log;
 
 #[test]
 fn issue_64() {
-    instrument();
+    init_log();
     RULE.assert_ignores("use std/log");
 }
 

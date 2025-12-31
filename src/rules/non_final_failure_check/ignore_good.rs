@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::instrument;
+use crate::log::init_env_log;
 
 #[test]
 fn test_already_using_complete() {
-    instrument();
+    init_env_log();
     let good_code = r"let result = (^curl https://api.example.com | complete)
 if $result.exit_code != 0 { error make { msg: 'Failed' } }
 $result.stdout | from json";
@@ -12,7 +12,7 @@ $result.stdout | from json";
 
 #[test]
 fn safe_git() {
-    instrument();
+    init_env_log();
     let good_code = r#"git config get remote.origin.url
     | str replace "git@ssh.gitgud.io:" "https://gitgud.io/"
 "#;
@@ -48,6 +48,6 @@ fn test_complete_in_subexpression() {
 
 #[test]
 fn complete_stor() {
-    instrument();
+    init_env_log();
     RULE.assert_ignores("stor open | query db 'select'");
 }

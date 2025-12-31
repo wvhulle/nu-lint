@@ -11,7 +11,7 @@ use crate::{
     config::Config,
     engine::{LintEngine, collect_nu_files},
     fix::{apply_fixes, apply_fixes_to_stdin, format_fix_results},
-    log::instrument,
+    log::init_log,
     lsp,
     output::{Format, Summary, format_output},
     rule::Rule,
@@ -246,7 +246,7 @@ pub fn run() {
     let cli = Cli::parse();
 
     if cli.verbose {
-        instrument();
+        init_log();
     }
 
     if cli.list {

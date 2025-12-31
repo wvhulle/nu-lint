@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::instrument;
+use crate::log::init_env_log;
 
 #[test]
 fn test_infer_string_type_from_string_operations() {
-    instrument();
+    init_env_log();
     let bad_code = r"
 def process [text] {
     $text | str trim
@@ -77,7 +77,7 @@ def process [text: string, num] {
 
 #[test]
 fn test_optional_parameter_with_inference() {
-    instrument();
+    init_env_log();
     let bad_code = r"
 def greet [name?] {
     $name | str trim
@@ -98,7 +98,7 @@ def sum [...nums] {
 
 #[test]
 fn test_complex_body_with_if_statement() {
-    instrument();
+    init_env_log();
     let bad_code = r"
 def process [value] {
     if ($value > 10) {
@@ -123,7 +123,7 @@ def transform [data] {
 
 #[test]
 fn test_parameter_used_in_subexpression() {
-    instrument();
+    init_env_log();
     let bad_code = r"
 def calculate [x] {
     let result = ($x + 10)
@@ -155,7 +155,7 @@ def get_names [people] {
 
 #[test]
 fn test_nested_function_with_inference() {
-    instrument();
+    init_env_log();
     let bad_code = r#"
 def outer [] {
     def inner [param] {
@@ -290,7 +290,7 @@ def add_first [collection] {
 
 #[test]
 fn test_complex_body_with_let_statements() {
-    instrument();
+    init_env_log();
     let bad_code = r"
 def compute [x] {
     let doubled = ($x * 2)
@@ -303,7 +303,7 @@ def compute [x] {
 
 #[test]
 fn test_complex_body_with_multiple_pipelines() {
-    instrument();
+    init_env_log();
     let bad_code = r"
 def process_data [data] {
     let cleaned = ($data | str trim)
@@ -326,7 +326,7 @@ export def process [text] {
 
 #[test]
 fn test_parameter_in_nested_block() {
-    instrument();
+    init_env_log();
     let bad_code = r"
 def outer [value] {
     do {
@@ -339,7 +339,7 @@ def outer [value] {
 
 #[test]
 fn test_all_param_types_together() {
-    instrument();
+    init_env_log();
     let bad_code = r"
 def complex [required, optional?, ...rest] {
     $required | str trim
@@ -354,7 +354,7 @@ def complex [required, optional?, ...rest] {
 
 #[test]
 fn test_deeply_nested_if_statements() {
-    instrument();
+    init_env_log();
     let bad_code = r"
 def nested_logic [val] {
     if ($val > 0) {

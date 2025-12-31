@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::instrument;
+use crate::log::init_env_log;
 
 #[test]
 fn test_simple_string_chain_fix() {
-    instrument();
+    init_env_log();
     let bad_code = r#"
 if $status == "ok" {
     "success"

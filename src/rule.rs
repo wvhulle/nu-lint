@@ -115,6 +115,7 @@ impl dyn Rule {
         LintContext::test_get_violations(code, |context| self.check(context))
     }
 
+    #[track_caller]
     fn first_violation(&self, code: &str) -> Violation {
         let violations = self.run_check(code);
         assert!(

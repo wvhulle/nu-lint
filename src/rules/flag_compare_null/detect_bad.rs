@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::instrument;
+use crate::log::init_env_log;
 
 #[test]
 fn flag_used_without_null_check() {
-    instrument();
+    init_env_log();
     // Typed flags (with : type) can be null and require null checks
     let bad_code = r#"
 def my-command [--verbose: string] {
@@ -15,7 +15,7 @@ def my-command [--verbose: string] {
 
 #[test]
 fn flag_with_type_used_without_null_check() {
-    instrument();
+    init_env_log();
     let bad_code = r#"
 def my-command [--count: int] {
     1..$count
@@ -26,7 +26,7 @@ def my-command [--count: int] {
 
 #[test]
 fn multiple_flags_used_without_null_check() {
-    instrument();
+    init_env_log();
     // Typed flags can be null
     let bad_code = r#"
 def my-command [--verbose: string --debug: string] {
@@ -39,7 +39,7 @@ def my-command [--verbose: string --debug: string] {
 
 #[test]
 fn flag_with_short_form_used_without_null_check() {
-    instrument();
+    init_env_log();
     // Typed flags with short form can be null
     let bad_code = r#"
 def my-command [--verbose (-v): string] {
@@ -51,7 +51,7 @@ def my-command [--verbose (-v): string] {
 
 #[test]
 fn flag_used_in_expression_without_null_check() {
-    instrument();
+    init_env_log();
     let bad_code = r#"
 def my-command [--count: int] {
     let result = $count + 10
@@ -63,7 +63,7 @@ def my-command [--count: int] {
 
 #[test]
 fn flag_used_in_pipeline_without_null_check() {
-    instrument();
+    init_env_log();
     let bad_code = r#"
 def my-command [--path: string] {
     open $path | lines
@@ -74,7 +74,7 @@ def my-command [--path: string] {
 
 #[test]
 fn flag_used_in_record_without_null_check() {
-    instrument();
+    init_env_log();
     let bad_code = r#"
 def my-command [--name: string] {
     { user: $name }
@@ -85,7 +85,7 @@ def my-command [--name: string] {
 
 #[test]
 fn flag_with_null_check_but_also_used_without() {
-    instrument();
+    init_env_log();
     // Typed flags can be null
     let bad_code = r#"
 def my-command [--verbose: string] {
@@ -100,7 +100,7 @@ def my-command [--verbose: string] {
 
 #[test]
 fn flag_used_in_condition_before_null_check() {
-    instrument();
+    init_env_log();
     let bad_code = r#"
 def my-command [--count: int] {
     if $count > 0 {
@@ -113,7 +113,7 @@ def my-command [--count: int] {
 
 #[test]
 fn flag_used_in_string_interpolation_without_check() {
-    instrument();
+    init_env_log();
     let bad_code = r#"
 def my-command [--name: string] {
     print $"Hello ($name)"
@@ -124,7 +124,7 @@ def my-command [--name: string] {
 
 #[test]
 fn flag_used_in_list_without_check() {
-    instrument();
+    init_env_log();
     let bad_code = r#"
 def my-command [--item: string] {
     [$item "other"]
@@ -135,7 +135,7 @@ def my-command [--item: string] {
 
 #[test]
 fn flag_in_binary_comparison_without_null_check() {
-    instrument();
+    init_env_log();
     let bad_code = r#"
 def my-command [--value: int] {
     if $value == 42 {

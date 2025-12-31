@@ -1,116 +1,116 @@
 use super::RULE;
-use crate::log::instrument;
+use crate::log::init_env_log;
 
 #[test]
 fn detects_eza_simple() {
-    instrument();
+    init_env_log();
     RULE.assert_detects(r"^eza");
 }
 
 #[test]
 fn detects_eza_with_all() {
-    instrument();
+    init_env_log();
     RULE.assert_detects(r"^eza -a");
 }
 
 #[test]
 fn detects_eza_with_long_all() {
-    instrument();
+    init_env_log();
     RULE.assert_detects(r"^eza --all");
 }
 
 #[test]
 fn detects_eza_with_long_view() {
-    instrument();
+    init_env_log();
     RULE.assert_detects(r"^eza -l");
 }
 
 #[test]
 fn detects_eza_combined_flags() {
-    instrument();
+    init_env_log();
     RULE.assert_detects(r"^eza -la");
 }
 
 #[test]
 fn detects_eza_with_recurse() {
-    instrument();
+    init_env_log();
     RULE.assert_detects(r"^eza -R");
 }
 
 #[test]
 fn detects_eza_with_tree() {
-    instrument();
+    init_env_log();
     RULE.assert_detects(r"^eza -T");
 }
 
 #[test]
 fn detects_eza_with_sort() {
-    instrument();
+    init_env_log();
     RULE.assert_detects(r"^eza --sort=size");
 }
 
 #[test]
 fn detects_eza_with_reverse() {
-    instrument();
+    init_env_log();
     RULE.assert_detects(r"^eza -r");
 }
 
 #[test]
 fn detects_eza_with_only_dirs() {
-    instrument();
+    init_env_log();
     RULE.assert_detects(r"^eza -D");
 }
 
 #[test]
 fn detects_eza_with_only_files() {
-    instrument();
+    init_env_log();
     RULE.assert_detects(r"^eza -f");
 }
 
 #[test]
 fn detects_eza_with_path() {
-    instrument();
+    init_env_log();
     RULE.assert_detects(r"^eza src");
 }
 
 #[test]
 fn detects_eza_with_multiple_paths() {
-    instrument();
+    init_env_log();
     RULE.assert_detects(r"^eza src tests");
 }
 
 #[test]
 fn detects_eza_with_icons() {
-    instrument();
+    init_env_log();
     RULE.assert_detects(r"^eza --icons");
 }
 
 #[test]
 fn detects_eza_with_git() {
-    instrument();
+    init_env_log();
     RULE.assert_detects(r"^eza --git");
 }
 
 #[test]
 fn detects_eza_with_header() {
-    instrument();
+    init_env_log();
     RULE.assert_detects(r"^eza -h");
 }
 
 #[test]
 fn detects_eza_with_level() {
-    instrument();
+    init_env_log();
     RULE.assert_detects(r"^eza -T -L 2");
 }
 
 #[test]
 fn detects_eza_with_color() {
-    instrument();
+    init_env_log();
     RULE.assert_detects(r"^eza --color=always");
 }
 
 #[test]
 fn detects_eza_group_directories_first() {
-    instrument();
+    init_env_log();
     RULE.assert_detects(r"^eza --group-directories-first");
 }

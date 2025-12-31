@@ -72,6 +72,49 @@ impl From<LintLevel> for Severity {
     }
 }
 
+/// A detection in an external file (stdlib, imported module, etc.)
+///
+/// This represents a violation that occurs in a file other than the one being
+/// linted. It carries its own file path, source content, and file-relative span
+/// so it can be rendered with proper context.
+#[derive(Debug, Clone)]
+pub struct ExternalDetection {
+    /// The path to the external file
+    pub file: String,
+    /// The source content of the external file
+    pub source: String,
+    /// File-relative span within the external file
+    pub span: FileSpan,
+    /// The error message for this external location
+    pub message: String,
+    /// Optional label for the span
+    pub label: Option<String>,
+}
+
+impl ExternalDetection {
+    #[must_use]
+    pub fn new(
+        file: impl Into<String>,
+        source: impl Into<String>,
+        span: FileSpan,
+        message: impl Into<String>,
+    ) -> Self {
+        Self {
+            file: file.into(),
+            source: source.into(),
+            span,
+            message: message.into(),
+            label: None,
+        }
+    }
+
+    #[must_use]
+    pub fn with_label(mut self, label: impl Into<String>) -> Self {
+        self.label = Some(label.into());
+        self
+    }
+}
+
 /// A detected violation from a lint rule (before fix is attached).
 ///
 /// This type is returned by `LintRule::detect()` and deliberately has no `fix`
@@ -85,6 +128,8 @@ pub struct Detection {
     pub extra_labels: Vec<(LintSpan, Option<String>)>,
     pub help: Option<Cow<'static, str>>,
     pub notes: Vec<Cow<'static, str>>,
+    /// Related detections in external files (stdlib, imported modules, etc.)
+    pub external_detections: Vec<ExternalDetection>,
 }
 
 impl Detection {
@@ -98,6 +143,7 @@ impl Detection {
             extra_labels: Vec::new(),
             help: None,
             notes: Vec::new(),
+            external_detections: Vec::new(),
         }
     }
 
@@ -111,7 +157,15 @@ impl Detection {
             extra_labels: Vec::new(),
             help: None,
             notes: Vec::new(),
+            external_detections: Vec::new(),
         }
+    }
+
+    /// Add an external detection (for errors in stdlib, imported modules, etc.)
+    #[must_use]
+    pub fn with_external_detection(mut self, detection: ExternalDetection) -> Self {
+        self.external_detections.push(detection);
+        self
     }
 
     #[must_use]
@@ -159,6 +213,8 @@ pub struct Violation {
     pub(crate) file: Option<SourceFile>,
     pub(crate) source: Option<Cow<'static, str>>,
     pub doc_url: Option<&'static str>,
+    /// Related detections in external files
+    pub external_detections: Vec<ExternalDetection>,
 }
 
 impl Violation {
@@ -175,6 +231,7 @@ impl Violation {
             file: None,
             source: None,
             doc_url: None,
+            external_detections: detected.external_detections,
         }
     }
 

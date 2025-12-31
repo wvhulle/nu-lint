@@ -256,6 +256,8 @@ name = "nu"
 language-servers = ["nu-lint"]
 ```
 
+The official Nu LSP server offers completion and some other hints. It should be configured out of the box for new Helix installations and environments that have Nushell installed.
+
 ### Neovim
 
 Add to your Neovim configuration (Lua):
@@ -268,6 +270,8 @@ vim.lsp.config['nu-lint'] = {
 }
 vim.lsp.enable('nu-lint')
 ```
+
+You may want to configure official Nu language server in addition to this linter, see `nu --lsp` command.
 
 ### Emacs
 

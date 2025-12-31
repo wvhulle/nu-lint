@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::instrument;
+use crate::log::init_env_log;
 
 #[test]
 fn boolean_switch_without_null_check() {
-    instrument();
+    init_env_log();
     // Boolean switches (flags without a type) are never null - they are true when
     // present, false when absent
     let good_code = r#"
@@ -16,7 +16,7 @@ def opt_flag [--opt] {
 
 #[test]
 fn boolean_switch_used_in_if() {
-    instrument();
+    init_env_log();
     // Boolean switches can be used directly in conditionals without null check
     let good_code = r#"
 def my-command [--verbose] {
@@ -28,7 +28,7 @@ def my-command [--verbose] {
 
 #[test]
 fn flag_checked_with_not_equal_null() {
-    instrument();
+    init_env_log();
     let good_code = r#"
 def my-command [--verbose] {
     if $verbose != null {
@@ -41,7 +41,7 @@ def my-command [--verbose] {
 
 #[test]
 fn flag_checked_with_equal_null() {
-    instrument();
+    init_env_log();
     let good_code = r#"
 def my-command [--verbose] {
     if $verbose == null {
@@ -56,7 +56,7 @@ def my-command [--verbose] {
 
 #[test]
 fn command_without_flags() {
-    instrument();
+    init_env_log();
     let good_code = r#"
 def my-command [name: string] {
     print $name
@@ -67,7 +67,7 @@ def my-command [name: string] {
 
 #[test]
 fn flag_declared_but_not_used() {
-    instrument();
+    init_env_log();
     let good_code = r#"
 def my-command [--verbose] {
     print "Command executed"
@@ -78,7 +78,7 @@ def my-command [--verbose] {
 
 #[test]
 fn multiple_flags_all_checked() {
-    instrument();
+    init_env_log();
     let good_code = r#"
 def my-command [--verbose --debug] {
     if $verbose != null {
@@ -94,7 +94,7 @@ def my-command [--verbose --debug] {
 
 #[test]
 fn flag_null_check_in_nested_expression() {
-    instrument();
+    init_env_log();
     let good_code = r#"
 def my-command [--count: int] {
     if $count != null and $count > 0 {
@@ -107,7 +107,7 @@ def my-command [--count: int] {
 
 #[test]
 fn flag_with_reversed_null_check() {
-    instrument();
+    init_env_log();
     let good_code = r#"
 def my-command [--verbose] {
     if null != $verbose {
@@ -120,7 +120,7 @@ def my-command [--verbose] {
 
 #[test]
 fn flag_with_default_value() {
-    instrument();
+    init_env_log();
     let good_code = r#"
 def my-command [--output: string = "output.txt"] {
     save $output
@@ -131,7 +131,7 @@ def my-command [--output: string = "output.txt"] {
 
 #[test]
 fn flag_checked_with_not() {
-    instrument();
+    init_env_log();
     let good_code = r#"
 def my-command [--silent] {
     if (not $silent) {
@@ -144,7 +144,7 @@ def my-command [--silent] {
 
 #[test]
 fn flag_checked_with_not_no_parens() {
-    instrument();
+    init_env_log();
     let good_code = r#"
 def my-command [--silent] {
     if not $silent {
@@ -157,7 +157,7 @@ def my-command [--silent] {
 
 #[test]
 fn flag_only_used_in_null_comparison() {
-    instrument();
+    init_env_log();
     let good_code = r#"
 def my-command [--verbose] {
     let has_verbose = ($verbose != null)
@@ -169,7 +169,7 @@ def my-command [--verbose] {
 
 #[test]
 fn flag_used_only_in_equality_check() {
-    instrument();
+    init_env_log();
     let good_code = r#"
 def my-command [--mode: string] {
     if $mode == null {
@@ -182,7 +182,7 @@ def my-command [--mode: string] {
 
 #[test]
 fn flag_in_compound_null_check() {
-    instrument();
+    init_env_log();
     let good_code = r#"
 def my-command [--value: int] {
     if ($value != null) and ($value > 0) {
@@ -195,7 +195,7 @@ def my-command [--value: int] {
 
 #[test]
 fn flag_checked_before_string_interpolation() {
-    instrument();
+    init_env_log();
     let good_code = r#"
 def my-command [--name: string] {
     if $name != null {

@@ -139,7 +139,7 @@ impl LintEngine {
             .expect("Failed to add Print command");
 
         // Commented out because not needed for most lints and may slow down
-        // nu_std::load_standard_library(&mut engine_state).unwrap();
+        nu_std::load_standard_library(&mut engine_state).unwrap();
 
         // Set up $nu constant (required for const evaluation at parse time)
         engine_state.generate_nu_constant();

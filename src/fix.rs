@@ -400,6 +400,7 @@ mod tests {
             file: Some(SourceFile::from("test.nu")),
             source: None,
             doc_url: None,
+            external_detections: vec![],
         };
 
         let fixed = apply_fixes_to_content(content, &[&violation]);
@@ -545,6 +546,7 @@ mod tests {
             file: Some(SourceFile::from("test.nu")),
             source: None,
             doc_url: None,
+            external_detections: vec![],
         };
 
         let without_fix = Violation {
@@ -559,6 +561,7 @@ mod tests {
             file: Some(SourceFile::from("test.nu")),
             source: None,
             doc_url: None,
+            external_detections: vec![],
         };
 
         let violations = [&with_fix, &without_fix, &with_fix];
@@ -580,6 +583,7 @@ mod tests {
             file: Some(SourceFile::from("file1.nu")),
             source: None,
             doc_url: None,
+            external_detections: vec![],
         };
 
         let v2 = Violation {
@@ -594,6 +598,7 @@ mod tests {
             file: Some(SourceFile::from("file2.nu")),
             source: None,
             doc_url: None,
+            external_detections: vec![],
         };
 
         let v3 = Violation {
@@ -608,6 +613,7 @@ mod tests {
             file: Some(SourceFile::from("file1.nu")),
             source: None,
             doc_url: None,
+            external_detections: vec![],
         };
 
         let violations = vec![v1, v2, v3];

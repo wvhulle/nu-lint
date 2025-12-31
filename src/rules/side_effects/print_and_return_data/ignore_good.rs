@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::instrument;
+use crate::log::init_env_log;
 
 #[test]
 fn ignores_function_with_only_print() {
-    instrument();
+    init_env_log();
     let good_code = r#"
 def log-message [msg: string] {
     print $msg
@@ -15,7 +15,7 @@ def log-message [msg: string] {
 
 #[test]
 fn ignores_function_returning_nothing() {
-    instrument();
+    init_env_log();
     let good_code = r#"
 def process-data [] {
     print "Processing"
@@ -27,7 +27,7 @@ def process-data [] {
 
 #[test]
 fn ignores_side_effect_only_function() {
-    instrument();
+    init_env_log();
     let good_code = r#"
 def setup [] {
     mkdir /tmp/dir
@@ -40,7 +40,7 @@ def setup [] {
 
 #[test]
 fn ignores_separate_verbose_and_quiet_versions() {
-    instrument();
+    init_env_log();
     let good_code = r#"
 # The quiet version - no print, just data
 def get-data [] {
@@ -57,7 +57,7 @@ def show-data-status [] {
 
 #[test]
 fn ignores_function_with_type_annotation_nothing() {
-    instrument();
+    init_env_log();
     let good_code = r#"
 def notify []: nothing -> nothing {
     print "Notification sent"
@@ -68,7 +68,7 @@ def notify []: nothing -> nothing {
 
 #[test]
 fn ignores_main_function() {
-    instrument();
+    init_env_log();
     let good_code = r#"
 def main [] {
     print "Starting"

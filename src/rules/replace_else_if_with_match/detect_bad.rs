@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::instrument;
+use crate::log::init_env_log;
 
 #[test]
 fn test_detect_string_equality_chain_in_function() {
-    instrument();
+    init_env_log();
     let bad_code = r#"
 def get-color [scope: string] {
     if $scope == "wan" {
@@ -23,7 +23,7 @@ def get-color [scope: string] {
 
 #[test]
 fn test_detect_inline_if_chain() {
-    instrument();
+    init_env_log();
     let bad_code = r#"let priority = if $level == "high" { 1 } else if $level == "medium" { 2 } else if $level == "low" { 3 } else { 0 }"#;
 
     RULE.assert_detects(bad_code);

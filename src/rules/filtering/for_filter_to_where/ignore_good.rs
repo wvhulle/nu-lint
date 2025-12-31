@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::instrument;
+use crate::log::init_env_log;
 
 #[test]
 fn test_ignore_functional_where_usage() {
-    instrument();
+    init_env_log();
 
     let good = "$input | where $it > 5";
     RULE.assert_ignores(good);
@@ -11,7 +11,7 @@ fn test_ignore_functional_where_usage() {
 
 #[test]
 fn test_ignore_for_loop_with_transformation() {
-    instrument();
+    init_env_log();
 
     let good = r"
 mut results = []
@@ -26,7 +26,7 @@ for x in $input {
 
 #[test]
 fn test_ignore_for_loop_with_multiple_statements() {
-    instrument();
+    init_env_log();
 
     let good = r"
 mut filtered = []
@@ -42,7 +42,7 @@ for x in $input {
 
 #[test]
 fn test_ignore_for_loop_without_filtering() {
-    instrument();
+    init_env_log();
 
     let good = r"
 mut output = []
@@ -55,7 +55,7 @@ for x in $input {
 
 #[test]
 fn test_ignore_for_loop_simple_copying() {
-    instrument();
+    init_env_log();
 
     let good = r"
 mut data = []
@@ -68,7 +68,7 @@ for x in [1 2 3] {
 
 #[test]
 fn test_ignore_for_loop_complex_if_else_structure() {
-    instrument();
+    init_env_log();
 
     let good = r"
 mut switches = []

@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::instrument;
+use crate::log::init_env_log;
 
 #[test]
 fn detect_simple_field_comparison() {
-    instrument();
+    init_env_log();
     RULE.assert_detects(r#"ls | where $it.type == "dir""#);
 }
 

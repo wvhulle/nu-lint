@@ -6,7 +6,11 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::{LintError, rule::Rule, rules::groups::ALL_GROUPS};
+use crate::{
+    LintError,
+    rule::Rule,
+    rules::{self, groups::ALL_GROUPS},
+};
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(rename_all = "lowercase")]
@@ -31,9 +35,11 @@ pub struct Config {
     pub groups: HashMap<String, LintLevel>,
     pub rules: HashMap<String, LintLevel>,
     pub ignored: HashSet<String>,
+    pub additional: HashSet<String>,
     pub sequential: bool,
     pub pipeline_placement: PipelinePlacement,
     pub max_pipeline_length: usize,
+    pub skip_external_parse_errors: bool,
 }
 
 impl Default for Config {
@@ -41,10 +47,12 @@ impl Default for Config {
         Self {
             groups: HashMap::new(),
             rules: HashMap::new(),
-            ignored: HashSet::new(),
+            ignored: HashSet::from([rules::always_annotate_ext_hat::RULE.id().into()]),
+            additional: HashSet::new(),
             sequential: false,
             pipeline_placement: PipelinePlacement::default(),
             max_pipeline_length: 80,
+            skip_external_parse_errors: false,
         }
     }
 }

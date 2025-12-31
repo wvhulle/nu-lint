@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::instrument;
+use crate::log::init_env_log;
 
 #[test]
 fn test_detect_various_path_parameter_names() {
-    instrument();
+    init_env_log();
 
     let test_cases = [
         ("source_path", "cp $source_path $dest"),
@@ -23,7 +23,7 @@ fn test_detect_various_path_parameter_names() {
 
 #[test]
 fn test_detect_path_parameters_without_type_annotation() {
-    instrument();
+    init_env_log();
 
     for param_name in [
         "file_path",
@@ -38,7 +38,7 @@ fn test_detect_path_parameters_without_type_annotation() {
 
 #[test]
 fn test_detect_multiple_path_parameters() {
-    instrument();
+    init_env_log();
     let code = r"
 def sync-files [source_path: string, target_path: string, backup_path: string] {
     cp $source_path $target_path
@@ -50,7 +50,7 @@ def sync-files [source_path: string, target_path: string, backup_path: string] {
 
 #[test]
 fn test_detect_optional_path_parameter() {
-    instrument();
+    init_env_log();
     let code = r"
 def read-file [file_path?: string] {
     if ($file_path != null) {
@@ -63,7 +63,7 @@ def read-file [file_path?: string] {
 
 #[test]
 fn test_detect_exported_function() {
-    instrument();
+    init_env_log();
     let code = r"
 export def save-data [output_path: string, data] {
     $data | save $output_path
@@ -74,7 +74,7 @@ export def save-data [output_path: string, data] {
 
 #[test]
 fn test_detect_different_case_variations() {
-    instrument();
+    init_env_log();
     for (param, body) in [
         ("filePath", "open $filePath"),
         ("SOURCE_PATH", "cp $SOURCE_PATH dest"),
@@ -86,7 +86,7 @@ fn test_detect_different_case_variations() {
 
 #[test]
 fn test_detect_path_params_with_external_commands() {
-    instrument();
+    init_env_log();
 
     let test_cases = [
         ("backup_folder", "tar czf backup.tar.gz $backup_folder"),
@@ -101,7 +101,7 @@ fn test_detect_path_params_with_external_commands() {
 
 #[test]
 fn test_detect_multipath_external_commands() {
-    instrument();
+    init_env_log();
 
     let test_cases = [
         (

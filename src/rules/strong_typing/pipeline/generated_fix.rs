@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::instrument;
+use crate::log::init_env_log;
 
 #[test]
 fn test_fix_untyped_input() {
-    instrument();
+    init_env_log();
     let bad_code = r"
 def double [] {
     $in * 2
@@ -14,7 +14,7 @@ def double [] {
 
 #[test]
 fn test_missing_pipeline_annot_git() {
-    instrument();
+    init_env_log();
 
     let bad_code = r#"
 export def "git age" [] {
@@ -31,7 +31,7 @@ export def "git age" [] {
 
 #[test]
 fn test_fix_untyped_output() {
-    instrument();
+    init_env_log();
     let bad_code = r"
 def create-list [] {
     [1, 2, 3]
@@ -42,7 +42,7 @@ def create-list [] {
 
 #[test]
 fn test_infer_float() {
-    instrument();
+    init_env_log();
     let bad_code = r#"
 def time_to_hours [time_str: string] {
     let parts = ($time_str | split row ":")
@@ -56,7 +56,7 @@ def time_to_hours [time_str: string] {
 
 #[test]
 fn test_fix_both_input_and_output() {
-    instrument();
+    init_env_log();
     let bad_code = r"
 def transform [] {
     $in | each { |x| $x + 1 }
@@ -105,7 +105,7 @@ export def process [] {
 
 #[test]
 fn test_infer_int_out() {
-    instrument();
+    init_env_log();
     let bad_code = r"
 def get-value [] {
     42
@@ -146,7 +146,7 @@ def get_pi [] {
 
 #[test]
 fn test_infers_bool_output() {
-    instrument();
+    init_env_log();
     let bad_code = r"
 def is_ready [] {
     true
@@ -157,7 +157,7 @@ def is_ready [] {
 
 #[test]
 fn test_infers_list_output() {
-    instrument();
+    init_env_log();
     let bad_code = r"
 def get_items [] {
     [1, 2, 3]
@@ -248,7 +248,7 @@ def get_name [] {
 
 #[test]
 fn test_infers_list_input_from_each() {
-    instrument();
+    init_env_log();
     let bad_code = r"
 def process_items [] {
     $in | each {|x| $x + 1}
@@ -289,7 +289,7 @@ def multiply [factor: int] {
 
 #[test]
 fn test_fallback_to_any_for_complex_output() {
-    instrument();
+    init_env_log();
     let bad_code = r#"
 def complex [] {
     if true { "string" } else { 42 }
@@ -300,7 +300,7 @@ def complex [] {
 
 #[test]
 fn test_preserves_multiline_function_signature() {
-    instrument();
+    init_env_log();
     let bad_code = r"
 def calculate-brightness [
   current: float
@@ -324,7 +324,7 @@ def calculate-brightness [
 
 #[test]
 fn test_preserves_multiline_with_optional_params() {
-    instrument();
+    init_env_log();
     let bad_code = r"
 export def process-data [
   input: string
@@ -345,7 +345,7 @@ export def process-data [
 
 #[test]
 fn test_single_line_signature_stays_single_line() {
-    instrument();
+    init_env_log();
     let bad_code = r"
 def transform [data: string, options: record] {
     $data | str trim

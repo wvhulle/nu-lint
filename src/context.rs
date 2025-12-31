@@ -59,6 +59,19 @@ impl<'a> LintContext<'a> {
         self.source
     }
 
+    /// Check if a global span is within the user's file bounds
+    #[must_use]
+    pub const fn span_in_user_file(&self, span: Span) -> bool {
+        let file_end = self.file_offset + self.source.len();
+        span.start >= self.file_offset && span.end <= file_end
+    }
+
+    /// Get the source length of the user's file
+    #[must_use]
+    pub const fn source_len(&self) -> usize {
+        self.source.len()
+    }
+
     /// Get text for an AST span
     #[must_use]
     pub fn get_span_text(&self, span: Span) -> &str {
@@ -202,13 +215,19 @@ impl<'a> LintContext<'a> {
     }
 
     /// Iterator over newly added user-defined function declarations
+    /// Only returns functions that are actually defined in the user's file,
+    /// not imported stdlib functions
     pub fn new_user_functions(&self) -> impl Iterator<Item = (usize, &dyn Command)> + '_ {
         let (base_count, total_count) = self.new_decl_range();
         (base_count..total_count)
             .map(|decl_id| (decl_id, self.working_set.get_decl(DeclId::new(decl_id))))
             .filter(|(_, decl)| {
-                let name = &decl.signature().name;
-                !name.contains(' ') && !name.starts_with('_')
+                // Check if the function body is defined within the user's file
+                let Some(block_id) = decl.block_id() else {
+                    return false;
+                };
+                let block = self.working_set.get_block(block_id);
+                block.span.is_some_and(|span| self.span_in_user_file(span))
             })
     }
 

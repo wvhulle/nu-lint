@@ -1,9 +1,15 @@
-use std::{borrow::Cow, collections::HashMap};
+use std::{
+    borrow::Cow,
+    collections::HashMap,
+    error::Error,
+    fmt::{self, Write},
+    iter,
+};
 
-use miette::{NamedSource, Report};
+use miette::{Diagnostic, LabeledSpan, NamedSource, Report, Severity};
 
 use super::{Summary, read_source_code};
-use crate::violation::{Fix, Replacement, Violation};
+use crate::violation::{ExternalDetection, Fix, Replacement, Violation};
 
 const RED: &str = "\x1b[31m";
 const GREEN: &str = "\x1b[32m";
@@ -62,13 +68,69 @@ fn format_violation(
     let display_violation = with_extended_help(violation, source_code);
     let report = Report::new(display_violation).with_source_code(named_source);
 
+    // Format external detections if present
+    let external_output = format_external_detections(&violation.external_detections);
+
     let separator = if is_last {
         String::new()
     } else {
         format!("\n\n{}\n", "─".repeat(SEPARATOR_WIDTH))
     };
 
-    format!("\n{report:?}{separator}")
+    format!("\n{report:?}{external_output}{separator}")
+}
+
+/// Format external detections as additional diagnostic output
+fn format_external_detections(detections: &[ExternalDetection]) -> String {
+    if detections.is_empty() {
+        return String::new();
+    }
+
+    let mut output = String::new();
+    output.push_str("\n  Related locations in external files:\n");
+
+    for detection in detections {
+        let source = NamedSource::new(&detection.file, detection.source.clone());
+        let label = LabeledSpan::at(
+            detection.span.start..detection.span.end,
+            detection.label.as_deref().unwrap_or("here"),
+        );
+
+        let diagnostic = ExternalDiagnostic {
+            message: detection.message.clone(),
+            label,
+        };
+
+        let report = Report::new(diagnostic).with_source_code(source);
+        let _ = write!(output, "{report:?}");
+    }
+
+    output
+}
+
+/// Helper diagnostic for rendering external file locations
+#[derive(Debug)]
+struct ExternalDiagnostic {
+    message: String,
+    label: LabeledSpan,
+}
+
+impl fmt::Display for ExternalDiagnostic {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}
+
+impl Error for ExternalDiagnostic {}
+
+impl Diagnostic for ExternalDiagnostic {
+    fn severity(&self) -> Option<Severity> {
+        Some(Severity::Advice)
+    }
+
+    fn labels(&self) -> Option<Box<dyn Iterator<Item = LabeledSpan> + '_>> {
+        Some(Box::new(iter::once(self.label.clone())))
+    }
 }
 
 fn with_extended_help(violation: &Violation, source_code: &str) -> Violation {

@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::instrument;
+use crate::log::init_env_log;
 
 #[test]
 fn test_detect_for_loop_simple_numeric_filtering() {
-    instrument();
+    init_env_log();
 
     let bad_code = r"
 mut filtered = []
@@ -19,7 +19,7 @@ for x in $input {
 
 #[test]
 fn test_detect_for_loop_field_access_filtering() {
-    instrument();
+    init_env_log();
 
     let bad_code = r"
 mut active = []

@@ -1,5 +1,5 @@
 use super::RULE;
-use crate::log::instrument;
+use crate::log::init_env_log;
 
 #[test]
 fn test_external_with_from_json() {
@@ -27,7 +27,7 @@ fn test_external_with_from_yaml() {
 
 #[test]
 fn test_curl_with_from_toml() {
-    instrument();
+    init_env_log();
     let bad_code = r"^curl https://api.example.com/config.toml | from toml";
     RULE.assert_detects(bad_code);
 }
@@ -69,7 +69,7 @@ fn test_ssh_with_lines() {
 
 #[test]
 fn test_wget_with_simple_processing() {
-    instrument();
+    init_env_log();
     let bad_code = r"^wget -qO- https://example.com | lines | where $it != ''";
     RULE.assert_detects(bad_code);
 }

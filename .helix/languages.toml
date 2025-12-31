@@ -10,6 +10,11 @@ check.command = "clippy"
 completion.postfix.enable = false
 diagnostics.experimental.enable = true
 
+
+[language-server.nu]
+command = "nu"
+args = ["--lsp", "--no-config-file"]
+
 [[language]]
 name = "nu"
-language-servers = ["nu-lint"]
+language-servers = ["nu-lint", "nu"]

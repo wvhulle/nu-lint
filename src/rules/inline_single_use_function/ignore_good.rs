@@ -1,5 +1,5 @@
 use super::RULE;
-use crate::log::instrument;
+use crate::log::init_env_log;
 
 #[test]
 fn function_used_multiple_times() {
@@ -37,7 +37,7 @@ def main [] {
 
 #[test]
 fn function_with_actual_multi_line_body() {
-    instrument();
+    init_env_log();
     RULE.assert_ignores(
         r"
 def transform [] {

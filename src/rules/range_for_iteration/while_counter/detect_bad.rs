@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::instrument;
+use crate::log::init_env_log;
 
 #[test]
 fn test_detect_while_loop_with_counter() {
-    instrument();
+    init_env_log();
     let bad_code = r"
 mut attempts = 0
 while $attempts < 10 {
@@ -17,7 +17,7 @@ while $attempts < 10 {
 
 #[test]
 fn test_detect_while_loop_with_compound_assignment() {
-    instrument();
+    init_env_log();
     let bad_code = r"
 mut count = 0
 while $count < 5 {

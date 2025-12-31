@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::instrument;
+use crate::log::init_env_log;
 
 #[test]
 fn test_help_contains_subcommand_suggestion() {
-    instrument();
+    init_env_log();
     let bad_code = r#"
 def main [
     command?: string
@@ -24,7 +24,7 @@ def main [
 
 #[test]
 fn test_help_mentions_automatic_help() {
-    instrument();
+    init_env_log();
     let bad_code = r#"
 def main [
     cmd?: string
@@ -43,7 +43,7 @@ def main [
 
 #[test]
 fn test_violation_message_mentions_parameter_name() {
-    instrument();
+    init_env_log();
     let bad_code = r#"
 def main [
     action?: string

@@ -171,7 +171,6 @@ const EXTERNAL_TOOLS: Group = Group {
         super::external_tools::fd::RULE,
         super::external_tools::jq::RULE,
         super::external_tools::rg::RULE,
-        super::external_tools::unnecessary_hat::RULE,
         super::external_tools::wget::RULE,
         super::external_tools::which::RULE,
     ],

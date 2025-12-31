@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::instrument;
+use crate::log::init_env_log;
 
 #[test]
 fn test_detect_unnecessary_variable_simple() {
-    instrument();
+    init_env_log();
 
     let bad_code = r"
 def foo [] {

@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::instrument;
+use crate::log::init_env_log;
 
 #[test]
 fn test_fix_simple_each_if_to_where() {
-    instrument();
+    init_env_log();
 
     let bad_code = r"
 ls | each {|f| if $f.size > 100kb { $f } }
@@ -15,7 +15,7 @@ ls | each {|f| if $f.size > 100kb { $f } }
 
 #[test]
 fn test_fix_preserves_condition() {
-    instrument();
+    init_env_log();
 
     let bad_code = r"
 open users.json | each {|u| if $u.age >= 18 { $u } }
@@ -26,7 +26,7 @@ open users.json | each {|u| if $u.age >= 18 { $u } }
 
 #[test]
 fn test_fix_complex_condition() {
-    instrument();
+    init_env_log();
 
     let bad_code = r"
 open data.json | get items | each {|item| if ($item.status == 'active' and $item.count > 0) { $item } }
@@ -38,7 +38,7 @@ open data.json | get items | each {|item| if ($item.status == 'active' and $item
 
 #[test]
 fn test_fix_explanation_mentions_where() {
-    instrument();
+    init_env_log();
 
     let bad_code = r"
 ls | each {|f| if $f.size > 100kb { $f } }
@@ -49,7 +49,7 @@ ls | each {|f| if $f.size > 100kb { $f } }
 
 #[test]
 fn test_fix_removes_each_and_if() {
-    instrument();
+    init_env_log();
 
     let bad_code = r"
 [1 2 3 4 5] | each {|x| if $x > 2 { $x } }

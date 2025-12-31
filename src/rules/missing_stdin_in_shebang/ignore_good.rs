@@ -1,5 +1,5 @@
 use super::RULE;
-use crate::log::instrument;
+use crate::log::init_env_log;
 
 #[test]
 fn ignore_main_with_stdin_flag_standard() {
@@ -96,7 +96,7 @@ def main [] {
 
 #[test]
 fn ignore_main_with_nothing_input_and_nothing_output_and_flags() {
-    instrument();
+    init_env_log();
     let source = r#"#!/usr/bin/env nu
 
 def main [

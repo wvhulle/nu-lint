@@ -1,5 +1,5 @@
 use super::RULE;
-use crate::log::instrument;
+use crate::log::init_env_log;
 
 #[test]
 fn detect_missing_input_type_annotation() {
@@ -23,7 +23,7 @@ def create-list [] {
 
 #[test]
 fn detect_complex_function_missing_pipeline_types() {
-    instrument();
+    init_env_log();
 
     let bad_code = r"
 export def parse [] {

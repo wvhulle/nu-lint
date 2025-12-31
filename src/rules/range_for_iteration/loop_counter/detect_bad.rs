@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::instrument;
+use crate::log::init_env_log;
 
 #[test]
 fn test_detect_loop_with_counter_and_break() {
-    instrument();
+    init_env_log();
     let bad_code = r"
 mut x = 0
 loop {
@@ -17,7 +17,7 @@ loop {
 
 #[test]
 fn test_detect_loop_with_compound_increment() {
-    instrument();
+    init_env_log();
     let bad_code = r"
 mut i = 0
 loop {

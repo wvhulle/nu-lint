@@ -1,6 +1,9 @@
 use std::collections::BTreeSet;
 
-use nu_protocol::{Span, ast::{Block, Expr, Expression, ListItem, RecordItem}};
+use nu_protocol::{
+    Span,
+    ast::{Block, Expr, Expression, ListItem, RecordItem},
+};
 
 use crate::{
     LintLevel,
@@ -16,7 +19,8 @@ struct FixData {
 }
 
 /// Recursively collect spans of expressions in command position.
-/// Bare words in command position would be interpreted as commands, not strings.
+/// Bare words in command position would be interpreted as commands, not
+/// strings.
 fn collect_command_positions(block: &Block, ctx: &LintContext, spans: &mut BTreeSet<Span>) {
     for pipeline in &block.pipelines {
         for element in &pipeline.elements {

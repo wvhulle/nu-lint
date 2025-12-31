@@ -171,7 +171,8 @@ def main [n: int] {
 
 #[test]
 fn exported_function_not_called_from_main() {
-    // Exported functions are part of the module's public API and may be used externally
+    // Exported functions are part of the module's public API and may be used
+    // externally
     RULE.assert_ignores(
         r#"
 def main [] {
@@ -187,7 +188,8 @@ export def helper [] {
 
 #[test]
 fn completer_function_not_called_from_main() {
-    // Functions used as argument completers are referenced via @completer annotation
+    // Functions used as argument completers are referenced via @completer
+    // annotation
     RULE.assert_ignores(
         r#"
 def main [arg: string@my-completer] {

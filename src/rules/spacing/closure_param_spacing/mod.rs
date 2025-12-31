@@ -8,40 +8,64 @@ use crate::{
 };
 
 struct ClosureParamSpacingFixData {
-    span: Span,
+    whitespace_span: Span,
 }
 
 fn check_closure_param_spacing(
     context: &LintContext,
-    span: Span,
+    closure_span: Span,
 ) -> Vec<(Detection, ClosureParamSpacingFixData)> {
-    let text = context.get_span_text(span);
-    if text.is_empty() || !text.starts_with('{') || !text.ends_with('}') {
+    let text = context.get_span_text(closure_span);
+
+    // Validate basic structure: must start with '{' and end with '}'
+    let mut chars = text.chars();
+    if chars.next() != Some('{') || chars.next_back() != Some('}') {
         return vec![];
     }
-    let inner = &text[1..text.len() - 1];
+
+    // Get inner content (between braces) using char indices for UTF-8 safety
+    let inner: String = chars.collect();
     if inner.trim().is_empty() {
         return vec![];
     }
 
-    // Check for space before pipe (closure params)
-    if let Some(pipe_pos) = inner.find('|') {
-        if pipe_pos > 0 && inner[..pipe_pos].chars().all(char::is_whitespace) {
-            let opening_brace_span = Span::new(span.start, span.start + 1);
-            return vec![(
-                Detection::from_global_span(
-                    "No space allowed after opening curly brace before closure parameters"
-                        .to_string(),
-                    opening_brace_span,
-                )
-                .with_primary_label("opening curly brace")
-                .with_extra_span(Span::new(span.start + 1, span.start + 1 + pipe_pos))
-                .with_help("Use {|param| instead of { |param|"),
-                ClosureParamSpacingFixData { span },
-            )];
-        }
+    // Find leading whitespace before the parameter pipe
+    // Since we only process Expr::Closure with params, the pipe is the param
+    // delimiter
+    let leading_whitespace: String = inner.chars().take_while(|c| c.is_whitespace()).collect();
+
+    if leading_whitespace.is_empty() {
+        return vec![];
     }
-    vec![]
+
+    // Verify pipe follows the whitespace
+    let after_whitespace = &inner[leading_whitespace.len()..];
+    if !after_whitespace.starts_with('|') {
+        return vec![];
+    }
+
+    let opening_brace_span = Span::new(closure_span.start, closure_span.start + 1);
+    let whitespace_byte_len = leading_whitespace.len();
+    let whitespace_span = Span::new(
+        closure_span.start + 1,
+        closure_span.start + 1 + whitespace_byte_len,
+    );
+    let pipe_span = Span::new(whitespace_span.end, whitespace_span.end + 1);
+
+    vec![(
+        Detection::from_global_span(
+            "No space allowed after opening curly brace before closure parameters".to_string(),
+            opening_brace_span,
+        )
+        .with_primary_label("opening brace")
+        .with_extra_label("unwanted whitespace", whitespace_span)
+        .with_extra_label(
+            "parameter delimiter should follow brace directly",
+            pipe_span,
+        )
+        .with_help("Use {|param| instead of { |param|"),
+        ClosureParamSpacingFixData { whitespace_span },
+    )]
 }
 
 fn has_block_params(context: &LintContext, block_id: nu_protocol::BlockId) -> bool {
@@ -81,15 +105,11 @@ impl DetectFix for ClosureParamSpacing {
         })
     }
 
-    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let text = context.get_span_text(fix_data.span);
-        let inner = &text[1..text.len() - 1];
-        let trimmed = inner.trim_start();
-        let fixed = format!("{{{trimmed}}}");
-
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        // Simply remove the whitespace between the opening brace and the pipe
         Some(Fix::with_explanation(
             "Remove space before closure parameters",
-            vec![Replacement::new(fix_data.span, fixed)],
+            vec![Replacement::new(fix_data.whitespace_span, String::new())],
         ))
     }
 }

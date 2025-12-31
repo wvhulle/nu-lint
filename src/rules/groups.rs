@@ -148,7 +148,7 @@ const POSIX_TOOLS: Group = Group {
 
 const DOCUMENTATION: Group = Group {
     name: "documentation",
-    description: "Improve relevance of actionability of user-facing messages.",
+    description: "Improve actionability of user-facing messages.",
     rules: &[
         super::documentation::exported_function::RULE,
         super::documentation::descriptive_error_messages::RULE,

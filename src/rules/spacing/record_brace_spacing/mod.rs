@@ -11,18 +11,22 @@ use crate::{
 };
 
 struct RecordBraceSpacingFixData {
-    span: Span,
+    record_span: Span,
 }
 
 fn check_record_brace_spacing(
     context: &LintContext,
-    span: Span,
+    record_span: Span,
 ) -> Vec<(Detection, RecordBraceSpacingFixData)> {
-    let text = context.get_span_text(span);
-    if text.is_empty() || !text.starts_with('{') || !text.ends_with('}') {
+    let text = context.get_span_text(record_span);
+
+    // Validate basic structure using char iterators for UTF-8 safety
+    let mut chars = text.chars();
+    if chars.next() != Some('{') || chars.next_back() != Some('}') {
         return vec![];
     }
-    let inner = &text[1..text.len() - 1];
+
+    let inner: String = chars.collect();
     if inner.trim().is_empty() {
         return vec![];
     }
@@ -36,17 +40,17 @@ fn check_record_brace_spacing(
     let ends_with_space = inner.ends_with(char::is_whitespace);
 
     if starts_with_space || ends_with_space {
-        let opening_span = Span::new(span.start, span.start + 1);
-        let closing_span = Span::new(span.end - 1, span.end);
+        let opening_span = Span::new(record_span.start, record_span.start + 1);
+        let closing_span = Span::new(record_span.end - 1, record_span.end);
         vec![(
             Detection::from_global_span(
                 "Records should not have spaces inside curly braces".to_string(),
-                span,
+                record_span,
             )
             .with_extra_label("no space after", opening_span)
             .with_extra_label("no space before", closing_span)
             .with_help("Use {key: value} for records"),
-            RecordBraceSpacingFixData { span },
+            RecordBraceSpacingFixData { record_span },
         )]
     } else {
         vec![]
@@ -107,14 +111,20 @@ impl DetectFix for RecordBraceSpacing {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let text = context.get_span_text(fix_data.span);
-        let inner = &text[1..text.len() - 1];
+        let text = context.get_span_text(fix_data.record_span);
+
+        // Extract inner content using char iterators for UTF-8 safety
+        let mut chars = text.chars();
+        if chars.next() != Some('{') || chars.next_back() != Some('}') {
+            return None;
+        }
+        let inner: String = chars.collect();
         let trimmed = inner.trim();
         let fixed = format!("{{{trimmed}}}");
 
         Some(Fix::with_explanation(
             "Remove spaces inside record braces",
-            vec![Replacement::new(fix_data.span, fixed)],
+            vec![Replacement::new(fix_data.record_span, fixed)],
         ))
     }
 }

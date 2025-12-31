@@ -42,11 +42,11 @@ nu-lint --help
 
 All rules are optional and can be disabled with a configuration file. The rule definitions are compatible with:
 
-- The official Nu parser [nu-check](https://www.nushell.sh/commands/docs/nu-check.html).
+- The official Nu parser [nu-parser](https://crates.io/crates/nu-parser).
 - The TreeSitter-based Nu formatter [topiary-nushell](https://github.com/blindFS/topiary-nushell).
 - The official Nu [style guide](https://www.nushell.sh/book/style_guide.html)
 
-Some of them need further testing and improvement. Please make an issue on the issue tracker to report any bugs. In early stages of development some rules may be replaced or renamed.
+Some of the rules need further testing and improvement. Please make an issue on the issue tracker to report any bugs. In early stages of development some rules may be replaced or renamed.
 
 More than 100 rules are defined and most have automatic fixes available (list may be out-of-date):
 
@@ -58,9 +58,9 @@ More than 100 rules are defined and most have automatic fixes available (list ma
 - `redundant_ignore` (auto-fix)
 - `unnecessary_mut` (auto-fix)
 - `unused_helper_functions` (auto-fix)
-- `no_export_main` (auto-fix)
+- `script_export_main` (auto-fix)
 
-`documentation` - Improve relevance of actionability of user-facing messages.
+`documentation` - Improve actionability of user-facing messages.
 
 - `add_doc_comment_exported_fn`
 - `descriptive_error_messages`
@@ -78,7 +78,7 @@ More than 100 rules are defined and most have automatic fixes available (list ma
 - `descriptive_error_messages`
 - `escape_string_interpolation_operators`
 - `exit_only_in_main`
-- `check_flag_before_use`
+- `check_typed_flag_before_use`
 - `missing_stdin_in_shebang` (auto-fix)
 - `non_final_failure_check`
 - `use_error_make_for_catch` (auto-fix)
@@ -111,17 +111,19 @@ More than 100 rules are defined and most have automatic fixes available (list ma
 - `forbid_excessive_nesting`
 - `max_function_body_length`
 - `replace_if_else_chain_with_match` (auto-fix)
-- `brace_spacing` (auto-fix)
+- `curly_block_body_spacing` (auto-fix)
+- `curly_closure_param_spacing` (auto-fix)
 - `no_trailing_spaces` (auto-fix)
 - `omit_list_commas` (auto-fix)
 - `pipe_spacing` (auto-fix)
+- `curly_record_spacing` (auto-fix)
 - `reflow_wide_pipelines` (auto-fix)
 - `reflow_wide_lists` (auto-fix)
 - `wrap_wide_records` (auto-fix)
 
 `idiomatic` - Use Nu-native idioms instead of verbose patterns.
 
-- `bare_string_okay` (auto-fix)
+- `unnecessary_string_quotes` (auto-fix)
 - `use_is_not_empty` (auto-fix)
 - `dispatch_with_subcommands`
 - `inline_single_use_function`
@@ -172,7 +174,7 @@ More than 100 rules are defined and most have automatic fixes available (list ma
 - `use_builtin_cat` (auto-fix)
 - `use_builtin_cut` (auto-fix)
 - `use_builtin_date` (auto-fix)
-- `use_builtin_echo` (auto-fix)
+- `echo_just_identity` (auto-fix)
 - `use_builtin_find` (auto-fix)
 - `use_builtin_grep` (auto-fix)
 - `head_to_first` (auto-fix)
@@ -313,7 +315,7 @@ pipeline_placement = "start"
 performance = "warning"
 type-safety = "error"
 
-# Override a single rule lievel
+# Override a single rule level
 [rules]
 dispatch_with_subcommands = "hint"
 ```

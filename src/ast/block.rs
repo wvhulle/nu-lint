@@ -31,8 +31,12 @@ fn find_transitively_called_functions_impl(
         result.insert(callee_block_id);
 
         let callee_block = context.working_set.get_block(callee_block_id);
-        let transitive =
-            find_transitively_called_functions_impl(callee_block, context, available_functions, visited);
+        let transitive = find_transitively_called_functions_impl(
+            callee_block,
+            context,
+            available_functions,
+            visited,
+        );
         result.extend(transitive);
     }
 
@@ -100,11 +104,11 @@ pub trait BlockExt {
     fn all_elements(&self) -> Vec<&PipelineElement>;
     /// Checks if block contains variable references. Example: `{ $x + 1 }`
     fn contains_variables(&self, context: &LintContext) -> bool;
-    /// Collects all user function call block IDs in block. Returns the `BlockId` of each
-    /// called custom command's body.
+    /// Collects all user function call block IDs in block. Returns the
+    /// `BlockId` of each called custom command's body.
     fn collect_user_function_call_block_ids(&self, context: &LintContext) -> Vec<BlockId>;
-    /// Finds all transitively called functions by `BlockId`. Example: main calls foo, foo
-    /// calls bar - returns `BlockId`s of foo and bar
+    /// Finds all transitively called functions by `BlockId`. Example: main
+    /// calls foo, foo calls bar - returns `BlockId`s of foo and bar
     fn find_transitively_called_functions(
         &self,
         context: &LintContext,

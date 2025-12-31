@@ -84,8 +84,8 @@ def unused-with-params [name: string, count: int] {
 
 #[test]
 fn fix_erases_non_exported_unused_function() {
-    // Exported functions are NOT flagged as unused (they may be used by external importers)
-    // This test verifies only non-exported functions are removed
+    // Exported functions are NOT flagged as unused (they may be used by external
+    // importers) This test verifies only non-exported functions are removed
     let bad_code = r#"
 def main [] {
   print "main"

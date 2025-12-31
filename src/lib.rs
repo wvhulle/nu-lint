@@ -9,6 +9,7 @@ mod config;
 mod context;
 mod effect;
 mod engine;
+mod engine_state;
 mod external_commands;
 mod fix;
 mod log;

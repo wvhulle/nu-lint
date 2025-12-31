@@ -1,5 +1,5 @@
 use std::{
-    env, fs,
+    fs,
     io::{self, BufRead},
     path::{Path, PathBuf},
     sync::Mutex,
@@ -8,7 +8,6 @@ use std::{
 use ignore::WalkBuilder;
 use nu_parser::parse;
 use nu_protocol::{
-    Span, Value,
     ast::Block,
     engine::{EngineState, FileStack, StateWorkingSet},
 };
@@ -18,6 +17,7 @@ use crate::{
     LintError,
     config::Config,
     context::LintContext,
+    engine_state,
     rules::USED_RULES,
     violation::{SourceFile, Violation},
 };
@@ -114,36 +114,13 @@ pub struct LintEngine {
 }
 
 impl LintEngine {
-    /// Get or initialize the default engine state
+    /// Get or initialize the default engine state.
+    ///
+    /// This uses the shared engine state initialization from the `engine_state`
+    /// module, which follows the same pattern as nu-lsp in the main nushell binary.
     #[must_use]
     pub fn new_state() -> EngineState {
-        let mut engine_state = nu_cmd_lang::create_default_context();
-        engine_state = nu_command::add_shell_command_context(engine_state);
-        engine_state = nu_cli::add_cli_context(engine_state);
-
-        // Required by command `path self`
-        if let Ok(cwd) = env::current_dir()
-            && let Some(cwd) = cwd.to_str()
-        {
-            engine_state.add_env_var("PWD".into(), Value::string(cwd, Span::unknown()));
-        }
-
-        // Add print command (exported by nu-cli but not added by add_cli_context)
-        let delta = {
-            let mut working_set = StateWorkingSet::new(&engine_state);
-            working_set.add_decl(Box::new(nu_cli::Print));
-            working_set.render()
-        };
-        engine_state
-            .merge_delta(delta)
-            .expect("Failed to add Print command");
-
-        // Commented out because not needed for most lints and may slow down
-        // nu_std::load_standard_library(&mut engine_state).unwrap();
-
-        // Set up $nu constant (required for const evaluation at parse time)
-        engine_state.generate_nu_constant();
-        engine_state
+        engine_state::create_engine_state()
     }
 
     #[must_use]

@@ -55,3 +55,16 @@ fn ignores_hat_with_variable_args() {
 fn ignores_hat_in_pipeline() {
     RULE.assert_ignores("^ls | lines");
 }
+
+#[test]
+fn ignores_hat_with_variable_command() {
+    // When the command is a variable, the hat is necessary because the variable
+    // might resolve to a builtin name at runtime
+    RULE.assert_ignores("let file = 'test.txt'; ^$env.EDITOR $file");
+}
+
+#[test]
+fn ignores_hat_with_env_variable_command() {
+    // Environment variable as command - hat is required for safety
+    RULE.assert_ignores("^$env.SHELL --version");
+}

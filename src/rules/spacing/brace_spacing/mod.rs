@@ -1,9 +1,12 @@
+use std::collections::HashSet;
+
 use nu_protocol::{Span, ast::Expr};
 
 use crate::{
     LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
+    span::LintSpan,
     violation::{Detection, Fix, Replacement},
 };
 
@@ -117,22 +120,11 @@ fn has_block_params(context: &LintContext, block_id: nu_protocol::BlockId) -> bo
         || !block.signature.optional_positional.is_empty()
         || block.signature.rest_positional.is_some()
 }
-fn check(context: &LintContext) -> Vec<(Detection, BraceSpacingFixData)> {
-    context.detect_with_fix_data(|expr, ctx| match &expr.expr {
-        Expr::Closure(block_id) | Expr::Block(block_id) => {
-            let brace_type = if has_block_params(ctx, *block_id) {
-                BraceType::ClosureWithParams
-            } else {
-                BraceType::BlockWithoutParams
-            };
-            check_brace_spacing(ctx, expr.span, &brace_type)
-        }
-        Expr::Record(items) if !items.is_empty() => {
-            check_brace_spacing(ctx, expr.span, &BraceType::Record)
-        }
-        _ => vec![],
-    })
+
+const fn is_record_type(ty: &nu_protocol::Type) -> bool {
+    matches!(ty, nu_protocol::Type::Record(_))
 }
+
 struct BraceSpacing;
 
 impl DetectFix for BraceSpacing {
@@ -155,7 +147,42 @@ impl DetectFix for BraceSpacing {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        check(context)
+        let mut seen_spans: HashSet<(usize, usize)> = HashSet::new();
+        let results = context.detect_with_fix_data(|expr, ctx| {
+            match &expr.expr {
+                Expr::Closure(block_id) | Expr::Block(block_id) => {
+                    // If the expression type is Record, treat it as a record (not a block)
+                    // Nushell parses record literals in variable assignments as Block with Record
+                    // type
+                    if is_record_type(&expr.ty) {
+                        return check_brace_spacing(ctx, expr.span, &BraceType::Record);
+                    }
+
+                    let brace_type = if has_block_params(ctx, *block_id) {
+                        BraceType::ClosureWithParams
+                    } else {
+                        BraceType::BlockWithoutParams
+                    };
+                    check_brace_spacing(ctx, expr.span, &brace_type)
+                }
+                Expr::Record(items) if !items.is_empty() => {
+                    check_brace_spacing(ctx, expr.span, &BraceType::Record)
+                }
+                _ => vec![],
+            }
+        });
+
+        // Deduplicate by span - the same record can be visited via multiple AST paths
+        results
+            .into_iter()
+            .filter(|(detection, _)| {
+                let span_key = match detection.span {
+                    LintSpan::Global(s) => (s.start, s.end),
+                    LintSpan::File(s) => (s.start, s.end),
+                };
+                seen_spans.insert(span_key)
+            })
+            .collect()
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {

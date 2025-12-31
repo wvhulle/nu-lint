@@ -1,0 +1,129 @@
+use std::collections::HashSet;
+
+use nu_protocol::{Span, ast::Expr};
+
+use crate::{
+    LintLevel,
+    context::LintContext,
+    rule::{DetectFix, Rule},
+    span::LintSpan,
+    violation::{Detection, Fix, Replacement},
+};
+
+struct RecordBraceSpacingFixData {
+    span: Span,
+}
+
+fn check_record_brace_spacing(
+    context: &LintContext,
+    span: Span,
+) -> Vec<(Detection, RecordBraceSpacingFixData)> {
+    let text = context.get_span_text(span);
+    if text.is_empty() || !text.starts_with('{') || !text.ends_with('}') {
+        return vec![];
+    }
+    let inner = &text[1..text.len() - 1];
+    if inner.trim().is_empty() {
+        return vec![];
+    }
+
+    // Skip multiline records - they have different formatting conventions
+    if inner.contains('\n') {
+        return vec![];
+    }
+
+    let starts_with_space = inner.starts_with(char::is_whitespace);
+    let ends_with_space = inner.ends_with(char::is_whitespace);
+
+    if starts_with_space || ends_with_space {
+        let opening_span = Span::new(span.start, span.start + 1);
+        let closing_span = Span::new(span.end - 1, span.end);
+        vec![(
+            Detection::from_global_span(
+                "Records should not have spaces inside curly braces".to_string(),
+                span,
+            )
+            .with_extra_label("no space after", opening_span)
+            .with_extra_label("no space before", closing_span)
+            .with_help("Use {key: value} for records"),
+            RecordBraceSpacingFixData { span },
+        )]
+    } else {
+        vec![]
+    }
+}
+
+const fn is_record_type(ty: &nu_protocol::Type) -> bool {
+    matches!(ty, nu_protocol::Type::Record(_))
+}
+
+struct RecordBraceSpacing;
+
+impl DetectFix for RecordBraceSpacing {
+    type FixInput<'a> = RecordBraceSpacingFixData;
+
+    fn id(&self) -> &'static str {
+        "curly_record_spacing"
+    }
+
+    fn explanation(&self) -> &'static str {
+        "Records should not have spaces inside curly braces"
+    }
+
+    fn doc_url(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/book/style_guide.html#one-line-format")
+    }
+
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
+    }
+
+    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
+        let mut seen_spans: HashSet<(usize, usize)> = HashSet::new();
+        let results = context.detect_with_fix_data(|expr, ctx| {
+            match &expr.expr {
+                // Nushell parses record literals in variable assignments as Block with Record type
+                Expr::Block(_) if is_record_type(&expr.ty) => {
+                    check_record_brace_spacing(ctx, expr.span)
+                }
+                Expr::Record(items) if !items.is_empty() => {
+                    check_record_brace_spacing(ctx, expr.span)
+                }
+                _ => vec![],
+            }
+        });
+
+        // Deduplicate by span - the same record can be visited via multiple AST paths
+        results
+            .into_iter()
+            .filter(|(detection, _)| {
+                let span_key = match detection.span {
+                    LintSpan::Global(s) => (s.start, s.end),
+                    LintSpan::File(s) => (s.start, s.end),
+                };
+                seen_spans.insert(span_key)
+            })
+            .collect()
+    }
+
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let text = context.get_span_text(fix_data.span);
+        let inner = &text[1..text.len() - 1];
+        let trimmed = inner.trim();
+        let fixed = format!("{{{trimmed}}}");
+
+        Some(Fix::with_explanation(
+            "Remove spaces inside record braces",
+            vec![Replacement::new(fix_data.span, fixed)],
+        ))
+    }
+}
+
+pub static RULE: &dyn Rule = &RecordBraceSpacing;
+
+#[cfg(test)]
+mod detect_bad;
+#[cfg(test)]
+mod generated_fix;
+#[cfg(test)]
+mod ignore_good;

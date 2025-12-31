@@ -50,6 +50,18 @@ impl DetectFix for UnnecessaryHat {
                 return vec![];
             }
 
+            // If the command head is a variable or expression, the hat is necessary
+            // because the runtime value might conflict with a builtin command
+            if matches!(
+                &head.expr,
+                Expr::Var(_)
+                    | Expr::FullCellPath(_)
+                    | Expr::Subexpression(_)
+                    | Expr::StringInterpolation(_)
+            ) {
+                return vec![];
+            }
+
             let cmd = ctx.get_span_text(head.span);
             if has_builtin(cmd, ctx) {
                 return vec![];

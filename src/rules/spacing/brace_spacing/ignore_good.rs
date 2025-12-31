@@ -37,3 +37,17 @@ fn test_multiline_record_with_spacing_ignored() {
  }";
     RULE.assert_ignores(good);
 }
+
+#[test]
+fn test_record_assigned_to_variable() {
+    // Record assigned to a variable - no spaces inside braces
+    let good = "let page = {header: $header_data, document: $doc}";
+    RULE.assert_ignores(good);
+}
+
+#[test]
+fn test_record_with_variables() {
+    // Record with variable values - no spaces
+    let good = "let data = {name: $name, value: $value}";
+    RULE.assert_ignores(good);
+}

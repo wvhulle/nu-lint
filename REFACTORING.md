@@ -27,7 +27,8 @@ The nu-lsp server in the main nushell binary initializes its engine state as fol
 
 Location: `src/engine.rs` (before refactoring)
 
-The previous implementation:
+The previous implementation was similar but had the initialization logic duplicated
+inline within the `LintEngine::new_state()` method:
 
 1. `nu_cmd_lang::create_default_context()`
 2. `nu_command::add_shell_command_context()`
@@ -35,6 +36,12 @@ The previous implementation:
 4. Set PWD environment variable
 5. Manually add Print command
 6. `engine_state.generate_nu_constant()`
+
+**Key issues with the previous approach:**
+- Initialization logic was embedded in `LintEngine`, making it hard to verify consistency with nu-lsp
+- No clear documentation of how it related to nushell's own LSP initialization
+- Difficult to share initialization between different components (e.g., LSP server and lint engine)
+- No dedicated tests for the engine state initialization itself
 
 ## Solution
 
@@ -79,7 +86,7 @@ We also provided `create_engine_state_with_stdlib()` for future use when the sta
 
 ### Benefits
 
-1. **Code Sharing**: Both the lint engine (`LintEngine`) and LSP server (`ServerState`) now use the same initialization
+1. **Code Sharing**: The lint engine (`LintEngine`) now uses the shared initialization, and the LSP server (`ServerState`) indirectly benefits from this by using `LintEngine`
 2. **Consistency with nu-lsp**: The pattern matches how nushell's own LSP server initializes
 3. **Maintainability**: Engine state initialization logic is in one place
 4. **Documentation**: Comprehensive documentation explains the relationship to nu-lsp

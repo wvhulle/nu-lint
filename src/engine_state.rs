@@ -27,8 +27,10 @@
 ///
 /// ## Usage
 ///
-/// Both the `LintEngine` and the LSP server's `ServerState` use this shared
-/// initialization through `create_engine_state()`, ensuring consistent behavior.
+/// The `LintEngine` uses this shared initialization directly through 
+/// `create_engine_state()`. The LSP server's `ServerState` indirectly uses
+/// this initialization by creating a `LintEngine`, which ensures consistent
+/// engine state across both the linting and LSP functionality.
 use std::env;
 
 use nu_protocol::{
@@ -182,4 +184,3 @@ mod tests {
         assert!(true);
     }
 }
-

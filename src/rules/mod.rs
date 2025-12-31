@@ -13,6 +13,7 @@ pub mod collapsible_if;
 pub mod dangerous_file_operations;
 pub mod dispatch_with_subcommands;
 pub mod documentation;
+pub mod dynamic_script_import;
 pub mod error_make;
 pub mod errors_to_stderr;
 pub mod escape_string_interpolation_operators;
@@ -68,6 +69,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     dangerous_file_operations::RULE,
     dispatch_with_subcommands::RULE,
     documentation::descriptive_error_messages::RULE,
+    dynamic_script_import::RULE,
     documentation::exported_function::RULE,
     documentation::main_named_args::RULE,
     documentation::main_positional_args::RULE,

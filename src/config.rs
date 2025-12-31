@@ -52,7 +52,7 @@ impl Default for Config {
             sequential: false,
             pipeline_placement: PipelinePlacement::default(),
             max_pipeline_length: 80,
-            skip_external_parse_errors: false,
+            skip_external_parse_errors: true,
         }
     }
 }

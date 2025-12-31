@@ -225,6 +225,7 @@ const UPSTREAM: Group = Group {
     name: "upstream",
     description: "Forward warnings and errors of the upstream Nushell parser.",
     rules: &[
+        super::dynamic_script_import::RULE,
         super::upstream::nu_deprecated::RULE,
         super::upstream::nu_parse_error::RULE,
     ],

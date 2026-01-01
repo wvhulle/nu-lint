@@ -189,3 +189,40 @@ fn ignores_string_in_let_rhs_with_dash() {
     let code = r#"let x = "my-command""#;
     RULE.assert_ignores(code);
 }
+
+#[test]
+fn ignores_glob_pattern_with_asterisk() {
+    // Without quotes, "*.txt" would be a glob pattern matching files
+    // With quotes, it's a literal string containing an asterisk
+    let code = r#"echo "*.txt""#;
+    RULE.assert_ignores(code);
+}
+
+#[test]
+fn ignores_glob_pattern_with_question_mark() {
+    // Without quotes, "?.txt" would be a glob pattern
+    // With quotes, it's a literal string containing a question mark
+    let code = r#"echo "?.txt""#;
+    RULE.assert_ignores(code);
+}
+
+#[test]
+fn ignores_glob_pattern_with_multiple_wildcards() {
+    // Complex glob pattern with multiple metacharacters
+    let code = r#"echo "**/*.rs""#;
+    RULE.assert_ignores(code);
+}
+
+#[test]
+fn ignores_glob_pattern_in_string() {
+    // Question mark in middle of string
+    let code = r#"echo "file?.txt""#;
+    RULE.assert_ignores(code);
+}
+
+#[test]
+fn ignores_glob_pattern_asterisk_in_middle() {
+    // Asterisk in middle of string
+    let code = r#"echo "test*file""#;
+    RULE.assert_ignores(code);
+}

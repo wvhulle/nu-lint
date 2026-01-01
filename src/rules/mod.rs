@@ -6,7 +6,6 @@ pub mod always_annotate_ext_hat;
 pub mod ansi_over_escape_codes;
 pub mod avoid_nu_subprocess;
 pub mod avoid_self_import;
-pub mod bare_string_okay;
 pub mod builtin_not_empty;
 pub mod check_complete_exit_code;
 pub mod collapsible_if;
@@ -23,6 +22,7 @@ pub mod external_tools;
 pub mod filtering;
 pub mod flag_compare_null;
 pub mod forbid_excessive_nesting;
+pub mod glob_may_drop_quotes;
 pub mod ignore_over_dev_null;
 pub mod inline_single_use_function;
 pub mod items_instead_of_transpose_each;
@@ -42,6 +42,7 @@ pub mod range_for_iteration;
 pub mod redundant_ignore;
 pub mod remove_hat_not_builtin;
 pub mod remove_redundant_in;
+pub mod remove_string_quotes;
 pub mod replace_else_if_with_match;
 pub mod script_export_main;
 pub mod shorten_with_compound_assignment;
@@ -62,8 +63,9 @@ pub const USED_RULES: &[&dyn Rule] = &[
     ansi_over_escape_codes::RULE,
     avoid_nu_subprocess::RULE,
     avoid_self_import::RULE,
-    bare_string_okay::RULE,
+    remove_string_quotes::RULE,
     builtin_not_empty::RULE,
+    glob_may_drop_quotes::RULE,
     check_complete_exit_code::RULE,
     collapsible_if::RULE,
     dangerous_file_operations::RULE,

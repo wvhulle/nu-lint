@@ -124,7 +124,7 @@ impl DetectFix for UnnecessaryStringQuotes {
     type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
-        "unnecessary_string_quotes"
+        "remove_string_quotes"
     }
 
     fn explanation(&self) -> &'static str {

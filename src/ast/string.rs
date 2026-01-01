@@ -77,6 +77,62 @@ pub fn bare_word_needs_quotes(content: &str) -> bool {
         }
     }
 
+    // Check for glob metacharacters - these would be interpreted as patterns
+    if contains_glob_chars(content) {
+        return true;
+    }
+
+    false
+}
+
+/// Checks if content contains glob metacharacters that would cause it to be
+/// interpreted as a glob pattern when unquoted.
+///
+/// In Nushell, bare words (unquoted strings) containing `*` or `?` are
+/// interpreted as glob patterns that match files. Quoted strings preserve
+/// these characters literally.
+fn contains_glob_chars(content: &str) -> bool {
+    content.contains('*') || content.contains('?')
+}
+
+/// Checks if a glob pattern can be used as a bare (unquoted) glob.
+///
+/// This is similar to `bare_word_needs_quotes`, but allows glob metacharacters
+/// (`*` and `?`), which are expected in glob patterns. Returns `false` if the
+/// pattern can be used unquoted, `true` if it needs quotes or the `| into glob`
+/// conversion.
+pub fn bare_glob_needs_quotes(content: &str) -> bool {
+    if content.is_empty() {
+        return true;
+    }
+
+    // Check for reserved literals that would change meaning
+    if RESERVED_LITERALS.contains(&content) {
+        return true;
+    }
+
+    // Check if it would be parsed as a number (but allow patterns like "2*" as
+    // globs)
+    if looks_like_number(content) {
+        return true;
+    }
+
+    // Check first character for special meaning
+    let first_char = content.chars().next().unwrap();
+    if SPECIAL_START_CHARS.contains(&first_char) {
+        return true;
+    }
+
+    // Check for forbidden characters anywhere in the string
+    for ch in content.chars() {
+        if BARE_WORD_FORBIDDEN.contains(&ch) {
+            return true;
+        }
+    }
+
+    // Unlike bare_word_needs_quotes, we DON'T check for glob chars
+    // because they're expected in glob patterns
+
     false
 }
 

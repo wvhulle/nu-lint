@@ -41,7 +41,7 @@ const IDIOMATIC: Group = Group {
     name: "idiomatic",
     description: "Use Nu-native idioms instead of verbose patterns.",
     rules: &[
-        super::bare_string_okay::RULE,
+        super::remove_string_quotes::RULE,
         super::builtin_not_empty::RULE,
         super::dispatch_with_subcommands::RULE,
         super::inline_single_use_function::RULE,

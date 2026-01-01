@@ -59,6 +59,8 @@ More than 100 rules are defined and most have automatic fixes available (list ma
 - `unnecessary_mut` (auto-fix)
 - `unused_helper_functions` (auto-fix)
 - `script_export_main` (auto-fix)
+- `remove_string_quotes` (auto-fix)
+- `inline_single_use_function`
 
 `documentation` - Improve actionability of user-facing messages.
 
@@ -72,27 +74,25 @@ More than 100 rules are defined and most have automatic fixes available (list ma
 - `main_named_args_docs`
 - `max_positional_params`
 
-`error-handling` - Error handling best practices
+`runtime-errors` - Preventing unexpected runtime behaviour.
 
 - `check_complete_exit_code`
 - `descriptive_error_messages`
 - `escape_string_interpolation_operators`
 - `exit_only_in_main`
 - `check_typed_flag_before_use`
-- `missing_stdin_in_shebang` (auto-fix)
 - `non_final_failure_check`
-- `use_error_make_for_catch` (auto-fix)
+- `error_make_for_non_fatal` (auto-fix)
 - `try_instead_of_do`
 - `unsafe_dynamic_record_access` (auto-fix)
 
-`external-tools` - Replace common external CLI tools.
+`external` - Replace common external CLI tools.
 
 - `use_builtin_curl` (auto-fix)
 - `use_builtin_eza` (auto-fix)
 - `use_builtin_fd` (auto-fix)
 - `replace_jq_with_nu_get` (auto-fix)
 - `use_builtin_rg` (auto-fix)
-- `unnecessary_hat` (auto-fix)
 - `use_builtin_wget` (auto-fix)
 - `use_builtin_which` (auto-fix)
 
@@ -121,18 +121,17 @@ More than 100 rules are defined and most have automatic fixes available (list ma
 - `reflow_wide_lists` (auto-fix)
 - `wrap_wide_records` (auto-fix)
 
-`idiomatic` - Use Nu-native idioms instead of verbose patterns.
+`idioms` - Simplifications unique to the Nu language.
 
-- `unnecessary_string_quotes` (auto-fix)
 - `use_is_not_empty` (auto-fix)
 - `dispatch_with_subcommands`
-- `inline_single_use_function`
 - `items_instead_of_transpose_each` (auto-fix)
 - `merge_get_cell_path` (auto-fix)
 - `merge_multiline_print` (auto-fix)
 - `turn_positional_into_stream_input` (auto-fix)
 - `shorten_with_compound_assignment` (auto-fix)
 - `use_regex_operators` (auto-fix)
+- `ansi_over_escape_codes` (auto-fix)
 
 `iteration` - Better patterns for loops and iteration.
 
@@ -166,9 +165,10 @@ More than 100 rules are defined and most have automatic fixes available (list ma
 - `unnecessary_accumulate`
 - `merge_multiline_print` (auto-fix)
 
-`posix-tools` - Replace common bash/POSIX patterns.
+`posix` - Replace common bash/POSIX patterns.
 
 - `ignore_over_dev_null` (auto-fix)
+- `missing_stdin_in_shebang` (auto-fix)
 - `use_builtin_awk` (auto-fix)
 - `use_builtin_bat` (auto-fix)
 - `use_builtin_cat` (auto-fix)
@@ -188,10 +188,8 @@ More than 100 rules are defined and most have automatic fixes available (list ma
 - `tail_to_last` (auto-fix)
 - `use_builtin_uniq` (auto-fix)
 - `use_builtin_wc` (auto-fix)
-- `ansi_over_escape_codes` (auto-fix)
-- `ansi_over_escape_codes` (auto-fix)
 
-`side-effects` - Handle risky and unpredictable commands.
+`effects` - Handle built-in and external commands with side-effects.
 
 - `dangerous_file_operations`
 - `errors_to_stderr`
@@ -205,10 +203,12 @@ More than 100 rules are defined and most have automatic fixes available (list ma
 - `external_script_as_argument`
 - `add_type_hints_arguments` (auto-fix)
 - `prefer_path_type` (auto-fix)
-- `typed_pipeline_io` (auto-fix)
+- `missing_output_type` (auto-fix)
+- `missing_in_type` (auto-fix)
 
 `upstream` - Forward warnings and errors of the upstream Nushell parser.
 
+- `dynamic_script_import`
 - `nu_deprecated`
 - `nu_parse_error`
 

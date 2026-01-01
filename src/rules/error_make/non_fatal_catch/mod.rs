@@ -53,7 +53,7 @@ impl DetectFix for UseErrorMakeForCatch {
     type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
-        "use_error_make_for_catch"
+        "error_make_for_non_fatal"
     }
 
     fn explanation(&self) -> &'static str {

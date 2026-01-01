@@ -352,13 +352,13 @@ impl LintContext<'_> {
         use crate::engine::{LintEngine, parse_source};
 
         let engine_state = LintEngine::new_state();
-        let (block, working_set, file_offset) = parse_source(&engine_state, source.as_bytes());
+        let (block, working_set, file_offset) = parse_source(engine_state, source.as_bytes());
         let config = Config::default();
 
         let context = LintContext::new(
             source,
             &block,
-            &engine_state,
+            engine_state,
             &working_set,
             file_offset,
             &config,

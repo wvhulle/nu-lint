@@ -2,7 +2,7 @@ use std::{
     env, fs,
     io::{self, BufRead},
     path::{Path, PathBuf},
-    sync::Mutex,
+    sync::{LazyLock, Mutex},
 };
 
 use ignore::WalkBuilder;
@@ -110,40 +110,44 @@ pub fn collect_nu_files(paths: &[PathBuf]) -> Vec<PathBuf> {
 
 pub struct LintEngine {
     pub(crate) config: Config,
-    engine_state: EngineState,
+    engine_state: &'static EngineState,
 }
 
 impl LintEngine {
     /// Get or initialize the default engine state
     #[must_use]
-    pub fn new_state() -> EngineState {
-        let mut engine_state = nu_cmd_lang::create_default_context();
-        engine_state = nu_command::add_shell_command_context(engine_state);
-        engine_state = nu_cli::add_cli_context(engine_state);
+    pub fn new_state() -> &'static EngineState {
+        static ENGINE: LazyLock<EngineState> = LazyLock::new(|| {
+            let mut engine_state = nu_cmd_lang::create_default_context();
+            engine_state = nu_command::add_shell_command_context(engine_state);
+            engine_state = nu_cli::add_cli_context(engine_state);
 
-        // Required by command `path self`
-        if let Ok(cwd) = env::current_dir()
-            && let Some(cwd) = cwd.to_str()
-        {
-            engine_state.add_env_var("PWD".into(), Value::string(cwd, Span::unknown()));
-        }
+            // Required by command `path self`
+            if let Ok(cwd) = env::current_dir()
+                && let Some(cwd) = cwd.to_str()
+            {
+                engine_state.add_env_var("PWD".into(), Value::string(cwd, Span::unknown()));
+            }
 
-        // Add print command (exported by nu-cli but not added by add_cli_context)
-        let delta = {
-            let mut working_set = StateWorkingSet::new(&engine_state);
-            working_set.add_decl(Box::new(nu_cli::Print));
-            working_set.render()
-        };
-        engine_state
-            .merge_delta(delta)
-            .expect("Failed to add Print command");
+            // Add print command (exported by nu-cli but not added by add_cli_context)
+            let delta = {
+                let mut working_set = StateWorkingSet::new(&engine_state);
+                working_set.add_decl(Box::new(nu_cli::Print));
+                working_set.render()
+            };
+            engine_state
+                .merge_delta(delta)
+                .expect("Failed to add Print command");
 
-        // Commented out because not needed for most lints and may slow down
-        nu_std::load_standard_library(&mut engine_state).unwrap();
+            // Commented out because not needed for most lints and may slow down
+            nu_std::load_standard_library(&mut engine_state).unwrap();
 
-        // Set up $nu constant (required for const evaluation at parse time)
-        engine_state.generate_nu_constant();
-        engine_state
+            // Set up $nu constant (required for const evaluation at parse time)
+            engine_state.generate_nu_constant();
+
+            engine_state
+        });
+        &ENGINE
     }
 
     #[must_use]
@@ -230,12 +234,12 @@ impl LintEngine {
 
     #[must_use]
     pub fn lint_str(&self, source: &str) -> Vec<Violation> {
-        let (block, working_set, file_offset) = parse_source(&self.engine_state, source.as_bytes());
+        let (block, working_set, file_offset) = parse_source(self.engine_state, source.as_bytes());
 
         let context = LintContext::new(
             source,
             &block,
-            &self.engine_state,
+            self.engine_state,
             &working_set,
             file_offset,
             &self.config,

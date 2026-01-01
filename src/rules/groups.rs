@@ -10,17 +10,16 @@ pub struct Group {
 }
 
 const ERROR_HANDLING: Group = Group {
-    name: "error-handling",
-    description: "Error handling best practices",
+    name: "runtime-errors",
+    description: "Preventing unexpected runtime behaviour.",
     rules: &[
         super::check_complete_exit_code::RULE,
         super::documentation::descriptive_error_messages::RULE,
         super::escape_string_interpolation_operators::RULE,
         super::exit_only_in_main::RULE,
         super::flag_compare_null::RULE,
-        super::missing_stdin_in_shebang::RULE,
         super::non_final_failure_check::RULE,
-        super::error_make::use_error_make_for_catch::RULE,
+        super::error_make::non_fatal_catch::RULE,
         super::try_instead_of_do::RULE,
         super::unsafe_dynamic_record_access::RULE,
     ],
@@ -31,26 +30,26 @@ const TYPE_SAFETY: Group = Group {
     description: "Annotate with type hints where possible.",
     rules: &[
         super::external_script_as_argument::RULE,
-        super::strong_typing::argument::RULE,
-        super::strong_typing::paths::RULE,
-        super::strong_typing::pipeline::RULE,
+        super::typing::missing_argument_type::RULE,
+        super::typing::paths::RULE,
+        super::typing::missing_output_type::RULE,
+        super::typing::missing_in_type::RULE,
     ],
 };
 
 const IDIOMATIC: Group = Group {
-    name: "idiomatic",
-    description: "Use Nu-native idioms instead of verbose patterns.",
+    name: "idioms",
+    description: "Simplifications unique to the Nu language.",
     rules: &[
-        super::bare_string_okay::RULE,
         super::builtin_not_empty::RULE,
         super::dispatch_with_subcommands::RULE,
-        super::inline_single_use_function::RULE,
         super::items_instead_of_transpose_each::RULE,
         super::merge_get_cell_path::RULE,
         super::merge_multiline_print::RULE,
         super::positional_to_pipeline::RULE,
         super::shorten_with_compound_assignment::RULE,
         super::use_regex_operators::RULE,
+        super::ansi_over_escape_codes::RULE,
     ],
 };
 
@@ -101,6 +100,8 @@ const DEAD_CODE: Group = Group {
         super::unnecessary_mut::RULE,
         super::unused_helper_functions::RULE,
         super::script_export_main::RULE,
+        super::bare_string_okay::RULE,
+        super::inline_single_use_function::RULE,
     ],
 };
 
@@ -118,10 +119,11 @@ const PERFORMANCE: Group = Group {
 };
 
 const POSIX_TOOLS: Group = Group {
-    name: "posix-tools",
+    name: "posix",
     description: "Replace common bash/POSIX patterns.",
     rules: &[
         super::ignore_over_dev_null::RULE,
+        super::missing_stdin_in_shebang::RULE,
         super::posix_tools::awk::RULE,
         super::posix_tools::bat::RULE,
         super::posix_tools::cat::RULE,
@@ -141,8 +143,6 @@ const POSIX_TOOLS: Group = Group {
         super::posix_tools::tail::RULE,
         super::posix_tools::uniq::RULE,
         super::posix_tools::wc::RULE,
-        super::ansi_over_escape_codes::RULE,
-        super::ansi_over_escape_codes::RULE,
     ],
 };
 
@@ -163,7 +163,7 @@ const DOCUMENTATION: Group = Group {
 };
 
 const EXTERNAL_TOOLS: Group = Group {
-    name: "external-tools",
+    name: "external",
     description: "Replace common external CLI tools.",
     rules: &[
         super::external_tools::curl::RULE,
@@ -209,8 +209,8 @@ const NAMING: Group = Group {
 };
 
 const SIDE_EFFECTS: Group = Group {
-    name: "side-effects",
-    description: "Handle risky and unpredictable commands.",
+    name: "effects",
+    description: "Handle built-in and external commands with side-effects.",
     rules: &[
         super::dangerous_file_operations::RULE,
         super::errors_to_stderr::RULE,

@@ -9,16 +9,14 @@ use crate::{
 };
 
 const VAGUE_PATTERNS: &[&str] = &[
-    "error",
-    "failed",
-    "failure",
-    "err",
     "something went wrong",
+    "fatal error",
+    "does not work",
+    "broke down",
     "an error occurred",
     "unknown error",
     "unexpected error",
     "operation failed",
-    "invalid",
     "bad",
     "wrong",
 ];

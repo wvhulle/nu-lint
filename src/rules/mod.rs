@@ -47,8 +47,8 @@ pub mod script_export_main;
 pub mod shorten_with_compound_assignment;
 pub mod side_effects;
 pub mod spacing;
-pub mod strong_typing;
 pub mod try_instead_of_do;
+pub mod typing;
 pub mod unnecessary_accumulate;
 pub mod unnecessary_mut;
 pub mod unnecessary_variable_before_return;
@@ -77,7 +77,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     error_make::add_label::RULE,
     error_make::add_span_to_label::RULE,
     error_make::add_url::RULE,
-    error_make::use_error_make_for_catch::RULE,
+    error_make::non_fatal_catch::RULE,
     errors_to_stderr::RULE,
     escape_string_interpolation_operators::RULE,
     exit_only_in_main::RULE,
@@ -157,9 +157,10 @@ pub const USED_RULES: &[&dyn Rule] = &[
     spacing::reflow_wide_pipelines::RULE,
     spacing::wrap_long_lists::RULE,
     spacing::wrap_records::RULE,
-    strong_typing::argument::RULE,
-    strong_typing::paths::RULE,
-    strong_typing::pipeline::RULE,
+    typing::missing_argument_type::RULE,
+    typing::paths::RULE,
+    typing::missing_output_type::RULE,
+    typing::missing_in_type::RULE,
     try_instead_of_do::RULE,
     unnecessary_accumulate::RULE,
     unnecessary_mut::RULE,

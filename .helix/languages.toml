@@ -1,6 +1,6 @@
 [language-server.nu-lint]
 command = "cargo"
-args = ["run", "--", "--lsp"]
+args = ["run", "--release", "--", "--lsp"]
 
 [language-server.rust-analyzer.config]
 procMacro = true

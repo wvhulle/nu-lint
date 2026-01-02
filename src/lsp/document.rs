@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::Path};
+use std::{collections::{HashMap, HashSet}, path::Path};
 
 use lsp_types::{
     CodeAction, CodeActionKind, CodeActionOrCommand, CodeDescription, Diagnostic,
@@ -91,10 +91,18 @@ impl ServerState {
         let violations = self.engine.lint_str(content);
         let line_index = LineIndex::new(content);
 
-        let diagnostics = violations
-            .iter()
-            .map(|v| violation_to_diagnostic(v, content, &line_index, uri))
-            .collect();
+        let mut diagnostics = vec![];
+
+        for violation in &violations {
+            diagnostics.push(violation_to_diagnostic(violation, content, &line_index, uri));
+
+            diagnostics.extend(create_extra_label_diagnostics(
+                violation,
+                content,
+                &line_index,
+                uri,
+            ));
+        }
 
         self.documents.insert(
             uri.clone(),
@@ -239,6 +247,8 @@ fn build_related_information(
     line_index: &LineIndex,
     file_uri: &Uri,
 ) -> Vec<DiagnosticRelatedInformation> {
+    let mut seen_ranges = HashSet::new();
+
     violation
         .extra_labels
         .iter()
@@ -251,6 +261,16 @@ fn build_related_information(
             let file_span = span.file_span();
             let range = line_index.span_to_range(source, file_span.start, file_span.end);
 
+            let range_key = (
+                range.start.line,
+                range.start.character,
+                range.end.line,
+                range.end.character,
+            );
+            if !seen_ranges.insert(range_key) {
+                return None;
+            }
+
             Some(DiagnosticRelatedInformation {
                 location: Location {
                     uri: file_uri.clone(),
@@ -260,6 +280,78 @@ fn build_related_information(
             })
         })
         .collect()
+}
+
+fn create_extra_label_diagnostics(
+    violation: &Violation,
+    source: &str,
+    line_index: &LineIndex,
+    _file_uri: &Uri,
+) -> Vec<Diagnostic> {
+    let primary_span = violation.file_span();
+    let primary_range = line_index.span_to_range(source, primary_span.start, primary_span.end);
+
+    let mut seen_ranges = HashSet::new();
+
+    let result: Vec<Diagnostic> = violation
+        .extra_labels
+        .iter()
+        .filter_map(|(span, label)| {
+            let file_span = span.file_span();
+            let range = line_index.span_to_range(source, file_span.start, file_span.end);
+
+            log::debug!(
+                "Processing extra_label: span={:?}, range=({},{}) to ({},{}), label={:?}",
+                file_span,
+                range.start.line,
+                range.start.character,
+                range.end.line,
+                range.end.character,
+                label
+            );
+
+            if range.start == primary_range.start && range.end == primary_range.end {
+                log::debug!("  -> Filtered: same as primary range");
+                return None;
+            }
+
+            let range_key = (range.start.line, range.start.character, range.end.line, range.end.character);
+            if !seen_ranges.insert(range_key) {
+                log::debug!("  -> Filtered: duplicate range");
+                return None;
+            }
+
+            let message = label
+                .as_deref()
+                .map(ToString::to_string)
+                .unwrap_or_else(|| String::from("Related location"));
+
+            log::debug!("  -> Creating HINT diagnostic with message: {}", message);
+
+            Some(Diagnostic {
+                range,
+                severity: Some(DiagnosticSeverity::HINT),
+                code: violation
+                    .rule_id
+                    .as_deref()
+                    .map(|id| NumberOrString::String(id.to_string())),
+                code_description: None,
+                source: Some(String::from("nu-lint")),
+                message,
+                related_information: None,
+                tags: None,
+                data: None,
+            })
+        })
+        .collect();
+
+    log::debug!(
+        "Created {} HINT diagnostics from {} extra_labels",
+        result.len(),
+        violation.extra_labels.len()
+    );
+
+    result
 }
 
 #[must_use]
@@ -463,5 +555,181 @@ mod tests {
         assert_eq!(range.start.line, 0);
         assert_eq!(range.start.character, 0);
         assert_eq!(range.end.line, 2);
+    }
+
+    #[test]
+    fn extra_labels_create_hint_diagnostics() {
+        use crate::{span::FileSpan, violation::Detection};
+
+        let source = "def foo [] {\n    [1, 2, 3]\n}";
+        let line_index = LineIndex::new(source);
+        let uri: Uri = "file:///test.nu".parse().unwrap();
+
+        let mut violation = Detection::from_file_span(
+            "Function missing output type",
+            FileSpan::new(0, 9),
+        )
+        .with_primary_label("add output type");
+
+        violation.extra_labels.push((
+            FileSpan::new(17, 26).into(),
+            Some("returned here".to_string()),
+        ));
+
+        let mut violation = Violation::from_detected(violation, None);
+        violation.rule_id = Some("missing_output_type".into());
+        violation.lint_level = LintLevel::Warning;
+
+        let diagnostics =
+            vec![violation_to_diagnostic(&violation, source, &line_index, &uri)];
+        let extra_diagnostics =
+            create_extra_label_diagnostics(&violation, source, &line_index, &uri);
+
+        assert_eq!(diagnostics.len(), 1);
+        assert_eq!(extra_diagnostics.len(), 1);
+
+        let hint_diag = &extra_diagnostics[0];
+        assert_eq!(hint_diag.severity, Some(DiagnosticSeverity::HINT));
+        assert_eq!(hint_diag.message, "returned here");
+        assert_eq!(hint_diag.range.start.line, 1);
+    }
+
+    #[test]
+    fn extra_labels_without_text_create_hints() {
+        use crate::{span::FileSpan, violation::Detection};
+
+        let source = "def foo [] {\n    bar\n}";
+        let line_index = LineIndex::new(source);
+        let uri: Uri = "file:///test.nu".parse().unwrap();
+
+        let mut violation = Detection::from_file_span("Test violation", FileSpan::new(0, 9));
+        violation
+            .extra_labels
+            .push((FileSpan::new(17, 20).into(), None));
+
+        let violation = Violation::from_detected(violation, None);
+
+        let extra_diagnostics =
+            create_extra_label_diagnostics(&violation, source, &line_index, &uri);
+
+        assert_eq!(extra_diagnostics.len(), 1);
+        assert_eq!(extra_diagnostics[0].message, "Related location");
+        assert_eq!(
+            extra_diagnostics[0].severity,
+            Some(DiagnosticSeverity::HINT)
+        );
+    }
+
+    #[test]
+    fn multiple_extra_labels_create_multiple_hints() {
+        use crate::{span::FileSpan, violation::Detection};
+
+        let source = "if $x {\n    if $y {\n        foo\n    }\n}";
+        let line_index = LineIndex::new(source);
+        let uri: Uri = "file:///test.nu".parse().unwrap();
+
+        let mut violation =
+            Detection::from_file_span("Nested if can be collapsed", FileSpan::new(0, 7));
+        violation.extra_labels.push((
+            FileSpan::new(12, 19).into(),
+            Some("inner if".to_string()),
+        ));
+        violation.extra_labels.push((
+            FileSpan::new(28, 31).into(),
+            Some("inner body".to_string()),
+        ));
+
+        let violation = Violation::from_detected(violation, None);
+
+        let extra_diagnostics =
+            create_extra_label_diagnostics(&violation, source, &line_index, &uri);
+
+        assert_eq!(extra_diagnostics.len(), 2);
+        assert_eq!(extra_diagnostics[0].message, "inner if");
+        assert_eq!(extra_diagnostics[1].message, "inner body");
+    }
+
+    #[test]
+    fn lint_document_returns_main_and_hint_diagnostics() {
+        let config = Config::default();
+        let mut state = ServerState::new(config);
+        let uri: Uri = "file:///test.nu".parse().unwrap();
+
+        let source = "def foo [] {\n    [1, 2, 3]\n}";
+
+        let diagnostics = state.lint_document(&uri, source);
+
+        for diag in &diagnostics {
+            println!(
+                "Diagnostic: severity={:?}, message={}",
+                diag.severity, diag.message
+            );
+        }
+    }
+
+    #[test]
+    fn extra_labels_with_same_span_as_primary_are_filtered() {
+        use crate::{span::FileSpan, violation::Detection};
+
+        let source = "let x = (";
+        let line_index = LineIndex::new(source);
+        let uri: Uri = "file:///test.nu".parse().unwrap();
+
+        let primary_span = FileSpan::new(0, 9);
+        let mut violation = Detection::from_file_span("Unclosed parenthesis", primary_span)
+            .with_primary_label("expected closing )");
+
+        violation
+            .extra_labels
+            .push((primary_span.into(), Some("here".to_string())));
+
+        violation.extra_labels.push((
+            FileSpan::new(5, 6).into(),
+            Some("different location".to_string()),
+        ));
+
+        let violation = Violation::from_detected(violation, None);
+
+        let extra_diagnostics =
+            create_extra_label_diagnostics(&violation, source, &line_index, &uri);
+
+        assert_eq!(extra_diagnostics.len(), 1);
+        assert_eq!(extra_diagnostics[0].message, "different location");
+    }
+
+    #[test]
+    fn duplicate_extra_label_ranges_are_filtered() {
+        use crate::{span::FileSpan, violation::Detection};
+
+        let source = "mut result = []\n$result = $result ++ [1]";
+        let line_index = LineIndex::new(source);
+        let uri: Uri = "file:///test.nu".parse().unwrap();
+
+        let mut violation =
+            Detection::from_file_span("Capture of mutable variable", FileSpan::new(0, 15));
+
+        violation.extra_labels.push((
+            FileSpan::new(16, 23).into(),
+            Some("Capture of mutable variable".to_string()),
+        ));
+        violation.extra_labels.push((
+            FileSpan::new(16, 23).into(),
+            Some("Capture of mutable variable".to_string()),
+        ));
+        violation.extra_labels.push((
+            FileSpan::new(16, 23).into(),
+            Some("Capture of mutable variable".to_string()),
+        ));
+
+        let violation = Violation::from_detected(violation, None);
+
+        let extra_diagnostics =
+            create_extra_label_diagnostics(&violation, source, &line_index, &uri);
+
+        assert_eq!(extra_diagnostics.len(), 1);
+        assert_eq!(
+            extra_diagnostics[0].message,
+            "Capture of mutable variable"
+        );
     }
 }

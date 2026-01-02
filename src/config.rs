@@ -47,7 +47,10 @@ impl Default for Config {
         Self {
             groups: HashMap::new(),
             rules: HashMap::new(),
-            ignored: HashSet::from([rules::always_annotate_ext_hat::RULE.id().into()]),
+            ignored: HashSet::from([
+                rules::always_annotate_ext_hat::RULE.id().into(),
+                rules::upstream::nu_parse_error::RULE.id().into(),
+            ]),
             additional: HashSet::new(),
             sequential: false,
             pipeline_placement: PipelinePlacement::default(),

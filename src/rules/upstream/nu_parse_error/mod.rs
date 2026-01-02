@@ -79,6 +79,7 @@ impl DetectFix for NuParseError {
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let mut detections = Vec::new();
+        let mut seen_errors = std::collections::HashSet::new();
 
         for parse_error in &context.working_set.parse_errors {
             let error_span = parse_error.span();
@@ -90,6 +91,16 @@ impl DetectFix for NuParseError {
                 );
                 continue;
             }
+
+            let error_key = (error_span.start, error_span.end, parse_error.to_string());
+            if seen_errors.contains(&error_key) {
+                log::debug!(
+                    "Skipping duplicate parse error: {parse_error:?} (span {error_span:?})"
+                );
+                continue;
+            }
+            seen_errors.insert(error_key);
+
             log::debug!("Found parse error in user file: {parse_error:?}");
 
             // Collect labels

@@ -1,4 +1,7 @@
-use std::{collections::{HashMap, HashSet}, path::Path};
+use std::{
+    collections::{HashMap, HashSet},
+    path::Path,
+};
 
 use lsp_types::{
     CodeAction, CodeActionKind, CodeActionOrCommand, CodeDescription, Diagnostic,
@@ -94,7 +97,12 @@ impl ServerState {
         let mut diagnostics = vec![];
 
         for violation in &violations {
-            diagnostics.push(violation_to_diagnostic(violation, content, &line_index, uri));
+            diagnostics.push(violation_to_diagnostic(
+                violation,
+                content,
+                &line_index,
+                uri,
+            ));
 
             diagnostics.extend(create_extra_label_diagnostics(
                 violation,
@@ -315,7 +323,12 @@ fn create_extra_label_diagnostics(
                 return None;
             }
 
-            let range_key = (range.start.line, range.start.character, range.end.line, range.end.character);
+            let range_key = (
+                range.start.line,
+                range.start.character,
+                range.end.line,
+                range.end.character,
+            );
             if !seen_ranges.insert(range_key) {
                 log::debug!("  -> Filtered: duplicate range");
                 return None;
@@ -565,11 +578,9 @@ mod tests {
         let line_index = LineIndex::new(source);
         let uri: Uri = "file:///test.nu".parse().unwrap();
 
-        let mut violation = Detection::from_file_span(
-            "Function missing output type",
-            FileSpan::new(0, 9),
-        )
-        .with_primary_label("add output type");
+        let mut violation =
+            Detection::from_file_span("Function missing output type", FileSpan::new(0, 9))
+                .with_primary_label("add output type");
 
         violation.extra_labels.push((
             FileSpan::new(17, 26).into(),
@@ -580,8 +591,12 @@ mod tests {
         violation.rule_id = Some("missing_output_type".into());
         violation.lint_level = LintLevel::Warning;
 
-        let diagnostics =
-            vec![violation_to_diagnostic(&violation, source, &line_index, &uri)];
+        let diagnostics = vec![violation_to_diagnostic(
+            &violation,
+            source,
+            &line_index,
+            &uri,
+        )];
         let extra_diagnostics =
             create_extra_label_diagnostics(&violation, source, &line_index, &uri);
 
@@ -630,14 +645,12 @@ mod tests {
 
         let mut violation =
             Detection::from_file_span("Nested if can be collapsed", FileSpan::new(0, 7));
-        violation.extra_labels.push((
-            FileSpan::new(12, 19).into(),
-            Some("inner if".to_string()),
-        ));
-        violation.extra_labels.push((
-            FileSpan::new(28, 31).into(),
-            Some("inner body".to_string()),
-        ));
+        violation
+            .extra_labels
+            .push((FileSpan::new(12, 19).into(), Some("inner if".to_string())));
+        violation
+            .extra_labels
+            .push((FileSpan::new(28, 31).into(), Some("inner body".to_string())));
 
         let violation = Violation::from_detected(violation, None);
 
@@ -727,9 +740,6 @@ mod tests {
             create_extra_label_diagnostics(&violation, source, &line_index, &uri);
 
         assert_eq!(extra_diagnostics.len(), 1);
-        assert_eq!(
-            extra_diagnostics[0].message,
-            "Capture of mutable variable"
-        );
+        assert_eq!(extra_diagnostics[0].message, "Capture of mutable variable");
     }
 }

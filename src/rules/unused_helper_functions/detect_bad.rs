@@ -129,3 +129,22 @@ def pong [n: int] {
         2,
     );
 }
+
+#[test]
+fn unused_helper_with_exports() {
+    RULE.assert_detects(
+        r#"
+export def public_api [] {
+  helper_for_api
+}
+
+def helper_for_api [] {
+  print "used by export"
+}
+
+def truly_unused [] {
+  print "not used by anyone"
+}
+"#,
+    );
+}

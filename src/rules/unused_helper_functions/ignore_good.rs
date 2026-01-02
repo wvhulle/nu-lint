@@ -218,3 +218,159 @@ def format-completer [] {
 "#,
     );
 }
+
+#[test]
+fn helper_used_by_exported_function() {
+    RULE.assert_ignores(
+        r#"
+export def public_api [] {
+  helper
+}
+
+def helper [] {
+  print "used by exported function"
+}
+"#,
+    );
+}
+
+#[test]
+fn transitive_chain_from_exported_function() {
+    RULE.assert_ignores(
+        r#"
+export def public_api [] {
+  helper_a
+}
+
+def helper_a [] {
+  helper_b
+}
+
+def helper_b [] {
+  print "transitively used by export"
+}
+"#,
+    );
+}
+
+#[test]
+fn multiple_exports_sharing_helper() {
+    RULE.assert_ignores(
+        r#"
+export def export_a [] {
+  shared_helper
+}
+
+export def export_b [] {
+  shared_helper
+}
+
+def shared_helper [] {
+  print "shared by multiple exports"
+}
+"#,
+    );
+}
+
+#[test]
+fn module_without_main_only_exports() {
+    RULE.assert_ignores(
+        r#"
+export def api_one [] {
+  helper_one
+}
+
+export def api_two [] {
+  helper_two
+}
+
+def helper_one [] {
+  print "used by api_one"
+}
+
+def helper_two [] {
+  print "used by api_two"
+}
+"#,
+    );
+}
+
+#[test]
+fn mixed_entry_points_main_and_export() {
+    RULE.assert_ignores(
+        r#"
+def main [] {
+  print "main entry"
+}
+
+export def exported_api [] {
+  helper_for_export
+}
+
+def helper_for_export [] {
+  print "used only by exported function"
+}
+"#,
+    );
+}
+
+#[test]
+fn export_with_completer_calling_helper() {
+    RULE.assert_ignores(
+        r#"
+export def cmd [arg: string@my_completer] {
+  print $arg
+}
+
+def my_completer [] {
+  helper_for_completion
+}
+
+def helper_for_completion [] {
+  ["option1", "option2", "option3"]
+}
+"#,
+    );
+}
+
+#[test]
+fn main_and_export_both_calling_same_helper() {
+    RULE.assert_ignores(
+        r#"
+def main [] {
+  shared_helper
+}
+
+export def exported_func [] {
+  shared_helper
+}
+
+def shared_helper [] {
+  print "shared by both main and export"
+}
+"#,
+    );
+}
+
+#[test]
+fn deeply_nested_call_chain_from_export() {
+    RULE.assert_ignores(
+        r#"
+export def level1 [] {
+  level2
+}
+
+def level2 [] {
+  level3
+}
+
+def level3 [] {
+  level4
+}
+
+def level4 [] {
+  print "deeply nested"
+}
+"#,
+    );
+}

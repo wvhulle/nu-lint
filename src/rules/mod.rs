@@ -7,6 +7,7 @@ pub mod ansi_over_escape_codes;
 pub mod avoid_nu_subprocess;
 pub mod avoid_self_import;
 pub mod builtin_not_empty;
+pub mod chained_append;
 pub mod check_complete_exit_code;
 pub mod collapsible_if;
 pub mod dangerous_file_operations;
@@ -67,6 +68,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     avoid_self_import::RULE,
     remove_string_quotes::RULE,
     builtin_not_empty::RULE,
+    chained_append::RULE,
     glob_may_drop_quotes::RULE,
     check_complete_exit_code::RULE,
     collapsible_if::RULE,

@@ -1,38 +1,15 @@
 use nu_protocol::{
     Span, VarId,
-    ast::{Block, Expr, Expression, ExternalArgument, FindMapResult, Traverse},
+    ast::{Block, Expr, FindMapResult, Traverse},
 };
 
 use crate::{
     LintLevel,
-    ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
+    ast::{call::CallExt, span::SpanExt},
     context::LintContext,
-    effect::external::{ExternEffect, has_external_side_effect},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
-
-fn is_external_filesystem_command(expr: &Expression, context: &LintContext) -> bool {
-    if let Expr::ExternalCall(head, args) = &expr.expr {
-        let cmd_name = context.get_span_text(head.span);
-        has_external_side_effect(cmd_name, ExternEffect::ModifiesFileSystem, context, args)
-    } else {
-        false
-    }
-}
-
-fn external_call_contains_variable(expr: &Expression, var_id: VarId) -> bool {
-    if let Expr::ExternalCall(_head, args) = &expr.expr {
-        args.iter().any(|arg| {
-            let arg_expr = match arg {
-                ExternalArgument::Regular(e) | ExternalArgument::Spread(e) => e,
-            };
-            arg_expr.matches_var(var_id)
-        })
-    } else {
-        false
-    }
-}
 
 /// Semantic fix data: stores the parameter name, span, and whether it's
 /// optional
@@ -42,53 +19,16 @@ pub struct FixData {
     is_optional: bool,
 }
 
-const PATH_KEYWORDS: &[&str] = &["path", "file", "dir", "directory", "folder", "location"];
-
-fn is_likely_filesystem_param(param_name: &str) -> bool {
-    let lower_name = param_name.to_lowercase();
-    lower_name
-        .split(|c: char| c == '_' || c == '-' || !c.is_alphanumeric())
-        .any(|part| {
-            PATH_KEYWORDS
-                .iter()
-                .any(|&kw| part == kw || part.ends_with(kw))
-        })
-}
-
-fn check_nu_builtin_usage(expr: &Expression, var_id: VarId, context: &LintContext) -> bool {
-    if let Expr::Call(call) = &expr.expr {
-        call.is_filesystem_command(context) && call.uses_variable(var_id)
-    } else {
-        false
-    }
-}
-
-fn check_external_command_usage(
-    expr: &Expression,
-    var_id: VarId,
-    param_name: &str,
-    context: &LintContext,
-) -> bool {
-    is_external_filesystem_command(expr, context)
-        && external_call_contains_variable(expr, var_id)
-        && is_likely_filesystem_param(param_name)
-}
-
-fn parameter_used_as_path(
-    block: &Block,
-    var_id: VarId,
-    param_name: &str,
-    context: &LintContext,
-) -> bool {
+fn parameter_used_as_path(block: &Block, var_id: VarId, context: &LintContext) -> bool {
     block
         .find_map(context.working_set, &|expr| {
-            if check_nu_builtin_usage(expr, var_id, context)
-                || check_external_command_usage(expr, var_id, param_name, context)
+            if let Expr::Call(call) = &expr.expr
+                && call.is_filesystem_command(context)
+                && call.uses_variable(var_id)
             {
-                FindMapResult::Found(())
-            } else {
-                FindMapResult::Continue
+                return FindMapResult::Found(());
             }
+            FindMapResult::Continue
         })
         .is_some()
 }
@@ -108,7 +48,7 @@ fn detect_parameter(
         return None;
     }
 
-    if !parameter_used_as_path(block, param_var_id, &param.name, context) {
+    if !parameter_used_as_path(block, param_var_id, context) {
         return None;
     }
 
@@ -200,17 +140,17 @@ fn detect_function_parameters(
         .collect()
 }
 
-struct PreferPathType;
+struct StringAsPath;
 
-impl DetectFix for PreferPathType {
+impl DetectFix for StringAsPath {
     type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
-        "prefer_path_type"
+        "string_param_as_path"
     }
 
     fn explanation(&self) -> &'static str {
-        "Use Nushell's path type instead of string for parameters with 'path' in the name"
+        "Parameter typed as string but used as filesystem path"
     }
 
     fn doc_url(&self) -> Option<&'static str> {
@@ -250,7 +190,7 @@ impl DetectFix for PreferPathType {
     }
 }
 
-pub static RULE: &dyn Rule = &PreferPathType;
+pub static RULE: &dyn Rule = &StringAsPath;
 
 #[cfg(test)]
 mod detect_bad;

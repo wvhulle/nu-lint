@@ -31,7 +31,7 @@ const TYPE_SAFETY: Group = Group {
     rules: &[
         super::external_script_as_argument::RULE,
         super::typing::missing_argument_type::RULE,
-        super::typing::paths::RULE,
+        super::filesystem::string_as_path::RULE,
         super::typing::missing_output_type::RULE,
         super::typing::missing_in_type::RULE,
     ],
@@ -57,15 +57,23 @@ const PARSING: Group = Group {
     name: "parsing",
     description: "Better ways to parse and transform text data.",
     rules: &[
-        super::lines_instead_of_split::RULE,
+        super::parsing::lines_instead_of_split::RULE,
         super::never_space_split::RULE,
-        super::parsing::from_after_parsed_open::RULE,
         super::parsing::lines_each_to_parse::RULE,
-        super::parsing::open_raw_from_to_open::RULE,
         super::parsing::simplify_regex::RULE,
-        super::parsing::split_row_get_multistatement::RULE,
+        super::parsing::split_row_get_variable::RULE,
         super::parsing::split_row_first_last::RULE,
-        super::parsing::split_row_index_to_parse::RULE,
+        super::parsing::split_row_get_single_pipeline::RULE,
+    ],
+};
+
+const FILESYSTEM: Group = Group {
+    name: "filesystem",
+    description: "Simplify file and path operations.",
+    rules: &[
+        super::filesystem::from_after_parsed_open::RULE,
+        super::filesystem::open_raw_from_to_open::RULE,
+        super::filesystem::string_as_path::RULE,
     ],
 };
 
@@ -235,6 +243,7 @@ const UPSTREAM: Group = Group {
 pub const ALL_GROUPS: &[Group] = &[
     IDIOMATIC,
     PARSING,
+    FILESYSTEM,
     DEAD_CODE,
     POSIX_TOOLS,
     ITERATION,

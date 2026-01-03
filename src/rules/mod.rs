@@ -20,6 +20,7 @@ pub mod escape_string_interpolation_operators;
 pub mod exit_only_in_main;
 pub mod external_script_as_argument;
 pub mod external_tools;
+pub mod filesystem;
 pub mod filtering;
 pub mod flag_compare_null;
 pub mod forbid_excessive_nesting;
@@ -27,7 +28,6 @@ pub mod glob_may_drop_quotes;
 pub mod ignore_over_dev_null;
 pub mod inline_single_use_function;
 pub mod items_instead_of_transpose_each;
-pub mod lines_instead_of_split;
 pub mod max_function_body_length;
 pub mod max_positional_params;
 pub mod merge_get_cell_path;
@@ -106,7 +106,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     ignore_over_dev_null::RULE,
     inline_single_use_function::RULE,
     items_instead_of_transpose_each::RULE,
-    lines_instead_of_split::RULE,
+    parsing::lines_instead_of_split::RULE,
     max_function_body_length::RULE,
     max_positional_params::RULE,
     merge_get_cell_path::RULE,
@@ -118,13 +118,13 @@ pub const USED_RULES: &[&dyn Rule] = &[
     never_space_split::RULE,
     script_export_main::RULE,
     non_final_failure_check::RULE,
-    parsing::from_after_parsed_open::RULE,
+    filesystem::from_after_parsed_open::RULE,
+    filesystem::open_raw_from_to_open::RULE,
     parsing::lines_each_to_parse::RULE,
-    parsing::open_raw_from_to_open::RULE,
     parsing::simplify_regex::RULE,
-    parsing::split_row_get_multistatement::RULE,
+    parsing::split_row_get_variable::RULE,
     parsing::split_row_first_last::RULE,
-    parsing::split_row_index_to_parse::RULE,
+    parsing::split_row_get_single_pipeline::RULE,
     positional_to_pipeline::RULE,
     posix_tools::awk::RULE,
     posix_tools::bat::RULE,
@@ -167,7 +167,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     spacing::wrap_records::RULE,
     structured_data_to_external::RULE,
     typing::missing_argument_type::RULE,
-    typing::paths::RULE,
+    filesystem::string_as_path::RULE,
     typing::missing_output_type::RULE,
     typing::missing_in_type::RULE,
     try_instead_of_do::RULE,

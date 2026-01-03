@@ -24,8 +24,6 @@ This encourages lazy pipeline input: a positional list argument loads all data i
 
 ## Usage
 
-_(Editor integration is available, see below)_
-
 Lint all Nu files in working directory with:
 
 ```bash
@@ -48,7 +46,7 @@ All rules are optional and can be disabled with a configuration file. The rule d
 
 Some of the rules need further testing and improvement. Please make an issue on the issue tracker to report any bugs. In early stages of development some rules may be replaced or renamed.
 
-+116 rules are defined and most have automatic fixes available (list may be out-of-date):
++110 rules are defined and most have automatic fixes available (list may be out-of-date):
 
 `idioms` - Simplifications unique to the Nu language.
 
@@ -66,13 +64,17 @@ Some of the rules need further testing and improvement. Please make an issue on 
 
 - `lines_instead_of_split` (auto-fix)
 - `never_space_split` (auto-fix)
-- `from_after_parsed_open` (auto-fix)
 - `lines_each_to_parse` (auto-fix)
-- `open_raw_from_to_open` (auto-fix)
 - `simplify_regex_parse` (auto-fix)
-- `split_row_get_multistatement` (auto-fix)
+- `split_row_get_variable` (auto-fix)
 - `split_row_first_last` (auto-fix)
 - `split_row_get_single_pipeline` (auto-fix)
+
+`filesystem` - Simplify file and path operations.
+
+- `from_after_parsed_open` (auto-fix)
+- `open_raw_from_to_open` (auto-fix)
+- `string_param_as_path` (auto-fix)
 
 `dead-code` - Remove unused or redundant code
 
@@ -148,7 +150,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 
 - `external_script_as_argument`
 - `add_type_hints_arguments` (auto-fix)
-- `prefer_path_type` (auto-fix)
+- `string_param_as_path` (auto-fix)
 - `missing_output_type` (auto-fix)
 - `missing_in_type` (auto-fix)
 

@@ -11,7 +11,6 @@ use crate::{
 pub mod missing_argument_type;
 pub mod missing_in_type;
 pub mod missing_output_type;
-pub mod paths;
 
 pub fn find_return_span(block: &Block) -> Option<Span> {
     block

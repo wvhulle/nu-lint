@@ -78,8 +78,12 @@ fn test_fix_with_where_filter() {
 let split = ("a  b  c" | split row " " | where $it != "")
 $split | get 1
 "#;
-    // The fix suggests parse but won't perfectly replicate the where filter behavior
-    RULE.assert_fixed_contains(bad_code, r#"parse "{field0} {field1} {field2} {field3} {field4}""#);
+    // The fix suggests parse but won't perfectly replicate the where filter
+    // behavior
+    RULE.assert_fixed_contains(
+        bad_code,
+        r#"parse "{field0} {field1} {field2} {field3} {field4}""#,
+    );
     RULE.assert_fixed_contains(bad_code, "get 0.field1");
 }
 

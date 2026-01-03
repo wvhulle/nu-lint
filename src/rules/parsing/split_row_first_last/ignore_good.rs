@@ -8,7 +8,7 @@ fn test_ignore_split_row_without_first_last() {
 
 #[test]
 fn test_ignore_split_row_with_get() {
-    // Handled by split_row_index_to_parse rule
+    // Handled by split_row_get_single_pipeline rule
     let good = r#""a:b:c" | split row ":" | get 1"#;
     RULE.assert_ignores(good);
 }

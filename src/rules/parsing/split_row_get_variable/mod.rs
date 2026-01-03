@@ -71,19 +71,16 @@ impl SplitVariableTracker {
     }
 }
 
-pub enum FixData {
-    /// Fix data for replacing the split+index pattern with parse
-    WithDelimiter {
-        /// Span covering the entire pattern from assignment to index access
-        full_span: Span,
-        /// Span of the input expression being split (e.g., "a:b:c" in the
-        /// subexpression)
-        input_span: Span,
-        /// Delimiter extracted from the split call
-        delimiter: String,
-        /// Index being accessed
-        index: usize,
-    },
+pub struct WithDelimiter {
+    /// Span covering the entire pattern from assignment to index access
+    full_span: Span,
+    /// Span of the input expression being split (e.g., "a:b:c" in the
+    /// subexpression)
+    input_span: Span,
+    /// Delimiter extracted from the split call
+    delimiter: String,
+    /// Index being accessed
+    index: usize,
 }
 
 #[derive(Clone)]
@@ -255,7 +252,7 @@ fn detect_index_access(
     })
 }
 
-fn create_violation(match_info: MatchInfo, _context: &LintContext) -> (Detection, FixData) {
+fn create_violation(match_info: &MatchInfo, _context: &LintContext) -> (Detection, WithDelimiter) {
     let full_span = Span::new(
         match_info.split_info.split_span.start,
         match_info.access_span.end,
@@ -281,7 +278,7 @@ fn create_violation(match_info: MatchInfo, _context: &LintContext) -> (Detection
     .with_primary_label("split + index pattern across statements")
     .with_help(help_message);
 
-    let fix_data = FixData::WithDelimiter {
+    let fix_data = WithDelimiter {
         full_span,
         input_span: match_info.split_info.input_span,
         delimiter: delimiter.clone(),
@@ -291,7 +288,11 @@ fn create_violation(match_info: MatchInfo, _context: &LintContext) -> (Detection
     (violation, fix_data)
 }
 
-fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<(Detection, FixData)>) {
+fn check_block(
+    block: &Block,
+    context: &LintContext,
+    violations: &mut Vec<(Detection, WithDelimiter)>,
+) {
     let mut tracker = SplitVariableTracker::new();
 
     for pipeline in &block.pipelines {
@@ -308,23 +309,24 @@ fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<(Detec
 
         if let Some(match_info) = detect_index_access(pipeline, context, &tracker) {
             let var_id = match_info.split_info.var_id;
-            violations.push(create_violation(match_info, context));
+            violations.push(create_violation(&match_info, context));
             tracker.consume_split(var_id);
         }
     }
 }
 
-struct SplitFilterIndexMultistatement;
+struct SplitRowGetMultistatement;
 
-impl DetectFix for SplitFilterIndexMultistatement {
-    type FixInput<'a> = FixData;
+impl DetectFix for SplitRowGetMultistatement {
+    type FixInput<'a> = WithDelimiter;
 
     fn id(&self) -> &'static str {
-        "split_filter_index_multistatement"
+        "split_row_get_variable"
     }
 
     fn explanation(&self) -> &'static str {
-        "Prefer 'parse' command over 'split row | filter | get' pattern across multiple statements"
+        "Replace 'split row' followed by indexed 'get' access across statements with 'parse' for \
+         structured text extraction"
     }
 
     fn doc_url(&self) -> Option<&'static str> {
@@ -355,7 +357,7 @@ impl DetectFix for SplitFilterIndexMultistatement {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let FixData::WithDelimiter {
+        let WithDelimiter {
             full_span,
             input_span,
             delimiter,
@@ -390,7 +392,7 @@ impl DetectFix for SplitFilterIndexMultistatement {
     }
 }
 
-pub static RULE: &dyn Rule = &SplitFilterIndexMultistatement;
+pub static RULE: &dyn Rule = &SplitRowGetMultistatement;
 
 #[cfg(test)]
 mod detect_bad;

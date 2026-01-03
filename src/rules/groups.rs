@@ -30,6 +30,7 @@ const TYPE_SAFETY: Group = Group {
     description: "Annotate with type hints where possible.",
     rules: &[
         super::external_script_as_argument::RULE,
+        super::nothing_outside_function_signature::RULE,
         super::typing::missing_argument_type::RULE,
         super::filesystem::string_as_path::RULE,
         super::typing::missing_output_type::RULE,

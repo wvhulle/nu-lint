@@ -16,6 +16,7 @@ pub struct CustomCommandDef {
     pub body: BlockId,
     pub name: String,
     pub name_span: Span,
+    pub signature_span: Span,
     pub export_span: Option<Span>,
     pub signature: nu_protocol::Signature,
 }
@@ -45,6 +46,7 @@ impl CustomCommandDef {
         body: BlockId,
         name: String,
         name_span: Span,
+        signature_span: Span,
         export_span: Option<Span>,
         signature: nu_protocol::Signature,
     ) -> Self {
@@ -52,6 +54,7 @@ impl CustomCommandDef {
             body,
             name,
             name_span,
+            signature_span,
             export_span,
             signature,
         }
@@ -72,6 +75,9 @@ impl CustomCommandDef {
             _ => context.get_span_text(name_arg.span).to_string(),
         };
 
+        let signature_expr = call.get_positional_arg(1)?;
+        let signature_span = signature_expr.span;
+
         let body_expr = call.get_positional_arg(2)?;
         let block_id = body_expr.extract_block_id()?;
 
@@ -84,6 +90,7 @@ impl CustomCommandDef {
             block_id,
             name,
             name_arg.span,
+            signature_span,
             export_span,
             signature,
         ))

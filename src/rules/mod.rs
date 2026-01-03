@@ -36,6 +36,7 @@ pub mod missing_stdin_in_shebang;
 pub mod naming;
 pub mod never_space_split;
 pub mod non_final_failure_check;
+pub mod nothing_outside_function_signature;
 pub mod parsing;
 pub mod positional_to_pipeline;
 pub mod posix_tools;
@@ -118,6 +119,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     never_space_split::RULE,
     script_export_main::RULE,
     non_final_failure_check::RULE,
+    nothing_outside_function_signature::RULE,
     filesystem::from_after_parsed_open::RULE,
     filesystem::open_raw_from_to_open::RULE,
     parsing::lines_each_to_parse::RULE,

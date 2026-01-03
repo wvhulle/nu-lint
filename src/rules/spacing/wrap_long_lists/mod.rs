@@ -115,7 +115,7 @@ impl DetectFix for ReflowWideLists {
         let mut result = String::from("[\n");
 
         for item_span in &fix_data.items {
-            let item_text = context.get_span_text(*item_span);
+            let item_text = context.plain_text(*item_span);
             result.push_str("    ");
             result.push_str(item_text);
             result.push('\n');

@@ -15,7 +15,7 @@ fn check_block_body_spacing(
     context: &LintContext,
     block_span: Span,
 ) -> Vec<(Detection, BlockBodySpacingFixData)> {
-    let text = context.get_span_text(block_span);
+    let text = context.plain_text(block_span);
 
     // Validate basic structure using char iterators for UTF-8 safety
     let mut chars = text.chars();
@@ -102,7 +102,7 @@ impl DetectFix for BlockBodySpacing {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let text = context.get_span_text(fix_data.block_span);
+        let text = context.plain_text(fix_data.block_span);
 
         // Extract inner content using char iterators for UTF-8 safety
         let mut chars = text.chars();

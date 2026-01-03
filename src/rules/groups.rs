@@ -22,6 +22,8 @@ const ERROR_HANDLING: Group = Group {
         super::error_make::non_fatal_catch::RULE,
         super::try_instead_of_do::RULE,
         super::unsafe_dynamic_record_access::RULE,
+        super::missing_stdin_in_shebang::RULE,
+        super::dynamic_script_import::RULE,
     ],
 };
 
@@ -35,6 +37,8 @@ const TYPE_SAFETY: Group = Group {
         super::filesystem::string_as_path::RULE,
         super::typing::missing_output_type::RULE,
         super::typing::missing_in_type::RULE,
+        super::avoid_nu_subprocess::RULE,
+        super::dynamic_script_import::RULE,
     ],
 };
 
@@ -44,6 +48,7 @@ const IDIOMATIC: Group = Group {
     rules: &[
         super::builtin_not_empty::RULE,
         super::dispatch_with_subcommands::RULE,
+        super::hardcoded_math_constants::RULE,
         super::items_instead_of_transpose_each::RULE,
         super::merge_get_cell_path::RULE,
         super::merge_multiline_print::RULE,
@@ -133,7 +138,6 @@ const POSIX_TOOLS: Group = Group {
     description: "Replace common bash/POSIX patterns.",
     rules: &[
         super::ignore_over_dev_null::RULE,
-        super::missing_stdin_in_shebang::RULE,
         super::posix_tools::awk::RULE,
         super::posix_tools::bat::RULE,
         super::posix_tools::cat::RULE,

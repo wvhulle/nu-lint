@@ -195,7 +195,7 @@ impl DetectFix for ChainedAppend {
         let context: &LintContext = context;
         let elements: Vec<String> = element_spans
             .iter()
-            .map(|span| format!("...{}", context.get_span_text(*span).trim()))
+            .map(|span| format!("...{}", context.plain_text(*span).trim()))
             .collect();
 
         let fix = format!("[{}]", elements.join(", "));

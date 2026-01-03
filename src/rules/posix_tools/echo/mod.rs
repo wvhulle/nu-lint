@@ -54,7 +54,7 @@ fn extract_echo_args_span(element: &PipelineElement, context: &LintContext) -> O
             }
         }
         Expr::ExternalCall(head, args) => {
-            if context.get_span_text(head.span) != "echo" {
+            if context.plain_text(head.span) != "echo" {
                 return None;
             }
             // For external calls, get the span of arguments
@@ -75,7 +75,7 @@ fn extract_echo_args_span(element: &PipelineElement, context: &LintContext) -> O
 fn uses_echo(element: &PipelineElement, context: &LintContext) -> bool {
     match &element.expr.expr {
         Expr::Call(call) => call.is_call_to_command("echo", context),
-        Expr::ExternalCall(head, _) => context.get_span_text(head.span) == "echo",
+        Expr::ExternalCall(head, _) => context.plain_text(head.span) == "echo",
         _ => false,
     }
 }
@@ -181,9 +181,9 @@ impl DetectFix for UseBuiltinEcho {
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let args_span = fix_data.args_span?;
-        let args_text = context.get_span_text(args_span);
+        let args_text = context.plain_text(args_span);
 
-        let code_snippet = context.get_span_text(fix_data.element_span);
+        let code_snippet = context.plain_text(fix_data.element_span);
         Some(Fix::with_explanation(
             format!("Replace '{code_snippet}' with '{args_text}'"),
             vec![Replacement::new(

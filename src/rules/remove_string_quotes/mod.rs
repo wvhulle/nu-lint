@@ -68,7 +68,7 @@ impl DetectFix for UnnecessaryStringQuotes {
             if is_in_command_position(expr, parent) {
                 log::debug!(
                     "Skipping {} - in command position",
-                    context.get_span_text(expr.span)
+                    context.plain_text(expr.span)
                 );
                 return;
             }

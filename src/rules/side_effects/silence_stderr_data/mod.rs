@@ -57,7 +57,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Detectio
                 return None;
             }
 
-            let cmd_name = context.get_span_text(head.span);
+            let cmd_name = context.plain_text(head.span);
 
             if !has_external_side_effect(cmd_name, ExternEffect::WritesDataToStdErr, context, args)
             {

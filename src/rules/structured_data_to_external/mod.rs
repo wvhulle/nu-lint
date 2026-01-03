@@ -143,7 +143,7 @@ impl DetectFix for StructuredDataToExternal {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let original_text = context.get_span_text(fix_data.data_span);
+        let original_text = context.plain_text(fix_data.data_span);
 
         let new_text = format!("{} | {}", original_text, fix_data.conversion.as_command());
 
@@ -214,12 +214,12 @@ fn check_pipeline_pair(
         return None;
     };
 
-    let cmd_name = context.get_span_text(head.span);
+    let cmd_name = context.plain_text(head.span);
 
     log::debug!(
         "Checking external call to '{}' with input from '{}'",
         cmd_name,
-        context.get_span_text(left.expr.span)
+        context.plain_text(left.expr.span)
     );
 
     // Infer what's being piped in

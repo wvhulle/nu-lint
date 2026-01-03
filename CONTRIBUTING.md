@@ -17,21 +17,21 @@ Experiment with different variations of the anti-pattern. For example, you want 
 
 ## Testing locally
 
-Either you launch a Nushell with the `nu` command and try commands interactively or you specify commands in a string.
+If you are a human, you should launch a Nushell with the `nu` command and try commands interactively. Otherwise, if you are an AI agent you should you should specify Nu test commands in a string and pass them to the interpreter directly.
 
-You can also create a test file `/tmp/test.nu`:
+One of the simplest options is to just create a test file `/tmp/test.nu` and use it to experiment. If will almost always look like this:
 
 ```nu
+#!/usr/bin/env -S nu --stdin
+
 def main [] {
   SOME_ANTI_PATTERN
 }
 ```
 
-Then run it with `nu /tmp/test.nu` and observe the output in the terminal.
+Make it executable and run it with `/tmp/test.nu` and observe the output in the terminal.
 
 You can compare differences between shells by running `nu -c 'TEST_NU_CODE'` (for Nu test code)  and `bash -c 'TEST_BASH_CODE'` (for Bash test code).
-
-- **Use descriptive IDs**: Rule IDs should describe what they detect (e.g., `string_param_as_path`), not the fix (avoid `prefer_X` or `use_Y`).
 
 ## Rule implementation structure
 
@@ -43,6 +43,8 @@ src/rules/your_rule_name/
 ├── detect_bad.rs    # Tests for code that should trigger the rule
 ├── ignore_good.rs   # Tests for code that should NOT trigger the rule
 ```
+
+A test file for fixes may be added when the false negative and false positive tests are working correctly.
 
 Rules can also be grouped into submodules (e.g., `parsing/`, `filesystem/`, `typing/`) when they share common functionality.
 
@@ -99,15 +101,13 @@ impl DetectFix for YourRule {
 }
 ```
 
-The associated type `FixData` is supposed to contain semantical data only (avoid strings), since that is the only reliable data that should be used to construct fixes.
-
-You are not required to implement `Fix`, it has a default trait implementation.
-
-After implementing `DetectFix` you should erase the associated type `FixData` by casting it to a dynamic dispatch object:
+You are not required to implement `Fix`, it has a default trait implementation. After using the default `FixData = ()` (or coming up with your own) you should erase the associated type `FixData` by casting it to a dynamic dispatch object:
 
 ```rs
 pub static RULE: &dyn Rule = &YourRule;
 ```
+
+This allows the rule to appear in an array without heap allocation.
 
 ## Registering your rule
 
@@ -197,6 +197,10 @@ cargo test test_detect_unnecessary_variable_simple -- --nocapture
 The output of the log macros will be shown together with relative file paths. You can use this to fix issues in the implementation.
 
 From this moment, you need to repeat the previous steps over and over until you detect the anti-patterns you planned to detect. Only erase tests if they really don't belong to the category of mistakes you want to guard against.
+
+## Implementing auto-fix
+
+The associated type `FixData` is supposed to contain semantical data only such as spans. Avoid strings, names or other types of plain-text, since that is not reliable data that should be used to construct fixes (strings may appear anywhere duplicated with different meanings).
 
 ## Linting
 

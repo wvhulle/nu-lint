@@ -18,7 +18,7 @@ fn check_record_brace_spacing(
     context: &LintContext,
     record_span: Span,
 ) -> Vec<(Detection, RecordBraceSpacingFixData)> {
-    let text = context.get_span_text(record_span);
+    let text = context.plain_text(record_span);
 
     // Validate basic structure using char iterators for UTF-8 safety
     let mut chars = text.chars();
@@ -111,7 +111,7 @@ impl DetectFix for RecordBraceSpacing {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let text = context.get_span_text(fix_data.record_span);
+        let text = context.plain_text(fix_data.record_span);
 
         // Extract inner content using char iterators for UTF-8 safety
         let mut chars = text.chars();

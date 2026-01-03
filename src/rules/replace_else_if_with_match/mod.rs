@@ -28,7 +28,7 @@ fn extract_compared_variable(expr: &Expression, context: &LintContext) -> Option
     }
 
     if let Expr::FullCellPath(cell_path) = &left.expr {
-        return Some(context.get_span_text(cell_path.head.span).to_string());
+        return Some(context.plain_text(cell_path.head.span).to_string());
     }
 
     if let Some(var_name) = right.extract_variable_name(context) {
@@ -36,7 +36,7 @@ fn extract_compared_variable(expr: &Expression, context: &LintContext) -> Option
     }
 
     if let Expr::FullCellPath(cell_path) = &right.expr {
-        Some(context.get_span_text(cell_path.head.span).to_string())
+        Some(context.plain_text(cell_path.head.span).to_string())
     } else {
         None
     }
@@ -49,9 +49,9 @@ fn extract_comparison_value(expr: &Expression, context: &LintContext) -> Option<
 
     if left.extract_variable_name(context).is_some() || matches!(&left.expr, Expr::FullCellPath(_))
     {
-        Some(context.get_span_text(right.span).to_string())
+        Some(context.plain_text(right.span).to_string())
     } else {
-        Some(context.get_span_text(left.span).to_string())
+        Some(context.plain_text(left.span).to_string())
     }
 }
 
@@ -125,7 +125,7 @@ impl Iterator for ChainIterator<'_> {
 
         let body = call
             .get_positional_arg(1)
-            .map(|arg| self.context.get_span_text(arg.span).trim().to_string())?;
+            .map(|arg| self.context.plain_text(arg.span).trim().to_string())?;
 
         let branch = MatchBranch { pattern, body };
 
@@ -143,12 +143,8 @@ impl Iterator for ChainIterator<'_> {
             Some((false, else_expr)) => {
                 // Final else: store it for next iteration, return branch now
                 self.current = None;
-                self.final_else_pending = Some(
-                    self.context
-                        .get_span_text(else_expr.span)
-                        .trim()
-                        .to_string(),
-                );
+                self.final_else_pending =
+                    Some(self.context.plain_text(else_expr.span).trim().to_string());
                 Some(ChainIterResult::Branch(branch))
             }
             None => {

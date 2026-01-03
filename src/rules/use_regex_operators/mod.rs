@@ -69,7 +69,7 @@ fn check_contains_pattern(expr: &Expression, context: &LintContext) -> Vec<(Dete
         return vec![];
     };
 
-    let pattern_text = context.get_span_text(pattern_span);
+    let pattern_text = context.plain_text(pattern_span);
     if !is_simple_literal_pattern(pattern_text) {
         return vec![];
     }
@@ -125,8 +125,8 @@ impl DetectFix for UseRegexOperators {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let string_text = context.get_span_text(fix_data.string_expr_span);
-        let pattern_text = context.get_span_text(fix_data.pattern_span);
+        let string_text = context.plain_text(fix_data.string_expr_span);
+        let pattern_text = context.plain_text(fix_data.pattern_span);
 
         let operator = if fix_data.is_negated { "!~" } else { "=~" };
         let fixed_text = format!("{string_text} {operator} {pattern_text}");

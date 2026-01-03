@@ -119,7 +119,7 @@ impl ExpressionExt for Expression {
         match &self.expr {
             Expr::Var(var_id) | Expr::VarDecl(var_id) => {
                 let var = context.working_set.get_variable(*var_id);
-                Some(context.get_span_text(var.declaration_span).to_string())
+                Some(context.plain_text(var.declaration_span).to_string())
             }
             Expr::FullCellPath(cell_path) => cell_path.head.extract_variable_name(context),
             _ => None,
@@ -154,7 +154,7 @@ impl ExpressionExt for Expression {
     }
 
     fn span_text<'a>(&self, context: &'a LintContext) -> &'a str {
-        context.get_span_text(self.span)
+        context.plain_text(self.span)
     }
 
     fn extract_assigned_variable(&self) -> Option<VarId> {
@@ -490,7 +490,7 @@ impl ExpressionExt for Expression {
                 )
             }
             Expr::ExternalCall(call, args) => {
-                let cmd_name = context.get_span_text(call.span);
+                let cmd_name = context.plain_text(call.span);
                 log::debug!("Encountered ExternalCall: '{cmd_name}'");
                 if has_external_side_effect(cmd_name, ExternEffect::NoDataInStdout, context, args) {
                     Some(Type::Nothing)

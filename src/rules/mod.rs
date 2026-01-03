@@ -25,6 +25,7 @@ pub mod filtering;
 pub mod flag_compare_null;
 pub mod forbid_excessive_nesting;
 pub mod glob_may_drop_quotes;
+pub mod hardcoded_math_constants;
 pub mod ignore_over_dev_null;
 pub mod inline_single_use_function;
 pub mod items_instead_of_transpose_each;
@@ -71,6 +72,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     builtin_not_empty::RULE,
     chained_append::RULE,
     glob_may_drop_quotes::RULE,
+    hardcoded_math_constants::RULE,
     check_complete_exit_code::RULE,
     collapsible_if::RULE,
     dangerous_file_operations::RULE,

@@ -31,7 +31,7 @@ struct RedundantIgnoreFixData {
 fn command_produces_output(expr: &Expression, context: &LintContext) -> bool {
     match &expr.expr {
         Expr::ExternalCall(call, args) => {
-            let cmd_name = context.get_span_text(call.span);
+            let cmd_name = context.plain_text(call.span);
             !has_external_side_effect(cmd_name, ExternEffect::NoDataInStdout, context, args)
         }
         Expr::Call(call) => {
@@ -66,7 +66,7 @@ fn check_pipeline(
 
     let command_name = match &expr_before_ignore.expr {
         Expr::Call(call) => call.get_call_name(context),
-        Expr::ExternalCall(head, _) => context.get_span_text(head.span).to_string(),
+        Expr::ExternalCall(head, _) => context.plain_text(head.span).to_string(),
         _ => "pipeline".to_string(),
     };
 
@@ -76,7 +76,7 @@ fn check_pipeline(
     let start_span = elements_without_ignore.first()?.expr.span;
     let end_span = elements_without_ignore.last()?.expr.span;
     let combined_span = nu_protocol::Span::new(start_span.start, end_span.end);
-    let pipeline_text = context.get_span_text(combined_span);
+    let pipeline_text = context.plain_text(combined_span);
 
     let violation =
         Detection::from_global_span("Discarding command output with '| ignore'", ignore_span)

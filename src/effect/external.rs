@@ -73,7 +73,7 @@ pub fn has_external_recursive_flag(args: &[ExternalArgument], context: &LintCont
 pub fn extract_external_arg_text<'a>(arg: &ExternalArgument, context: &'a LintContext) -> &'a str {
     match arg {
         ExternalArgument::Regular(expr) | ExternalArgument::Spread(expr) => {
-            context.get_span_text(expr.span)
+            context.plain_text(expr.span)
         }
     }
 }

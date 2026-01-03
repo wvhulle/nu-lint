@@ -47,12 +47,12 @@ impl DynamicScriptImport {
         if !is_import_command {
             return vec![];
         }
-        let text = ctx.get_span_text(call.span());
+        let text = ctx.plain_text(call.span());
         log::debug!("Checking of `{text}` has a dynamic path");
         // Check if any positional argument is a dynamic expression (not a literal)
         let has_dynamic_path = call.arguments.iter().any(|arg| match arg {
             Argument::Positional(e) | Argument::Unknown(e) | Argument::Spread(e) => {
-                let argument = ctx.get_span_text(e.span);
+                let argument = ctx.plain_text(e.span);
                 log::debug!("Checking whether argument `{argument}` is dynamic.");
                 is_dynamic_expression(e)
             }

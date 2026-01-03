@@ -132,7 +132,7 @@ fn collect_io_types_from_expression(
             }
         }
         Expr::ExternalCall(head, args) => {
-            let command_name = context.get_span_text(head.span);
+            let command_name = context.plain_text(head.span);
             classify_external_io(command_name, args, head.span, context, io_spans);
         }
         _ => {}

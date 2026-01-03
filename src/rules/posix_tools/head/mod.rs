@@ -44,7 +44,7 @@ impl DetectFix for UseBuiltinHead {
                     return vec![];
                 };
 
-                let cmd_text = context.get_span_text(head.span);
+                let cmd_text = context.plain_text(head.span);
                 if cmd_text != "head" {
                     return vec![];
                 }
@@ -56,7 +56,7 @@ impl DetectFix for UseBuiltinHead {
                                 ExternalArgument::Regular(expr)
                                 | ExternalArgument::Spread(expr) => expr.span,
                             };
-                            (context.get_span_text(span), span)
+                            (context.plain_text(span), span)
                         })
                         .collect();
 

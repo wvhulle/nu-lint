@@ -43,7 +43,7 @@ impl SpanExt for Span {
 
     fn find_substring_span(&self, substring: &str, context: &LintContext) -> Span {
         context
-            .get_span_text(*self)
+            .plain_text(*self)
             .as_bytes()
             .windows(substring.len())
             .position(|window| window == substring.as_bytes())

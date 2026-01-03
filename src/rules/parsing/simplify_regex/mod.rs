@@ -34,7 +34,7 @@ fn extract_regex_pattern(call: &Call, context: &LintContext) -> Option<String> {
     }
 
     let pattern_arg = call.get_first_positional_arg()?;
-    let text = context.get_span_text(pattern_arg.span);
+    let text = context.plain_text(pattern_arg.span);
 
     match &pattern_arg.expr {
         Expr::String(s) | Expr::RawString(s) => Some(s.clone()),

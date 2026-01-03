@@ -146,7 +146,7 @@ impl DetectFix for UseErrorMakeForCatch {
 
     fn fix(&self, ctx: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let msg_span = fix_data.msg_expr_span?;
-        let text = ctx.get_span_text(msg_span);
+        let text = ctx.plain_text(msg_span);
 
         let msg_text = if fix_data.is_string_literal {
             format!("\"{text}\"")

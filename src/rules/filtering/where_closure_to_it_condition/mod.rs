@@ -32,7 +32,7 @@ fn extract_closure_parameter(
     let var_id = param.var_id?;
 
     let var = context.working_set.get_variable(var_id);
-    let param_name = context.get_span_text(var.declaration_span).to_string();
+    let param_name = context.plain_text(var.declaration_span).to_string();
 
     Some((param_name, var.declaration_span, var_id))
 }
@@ -42,8 +42,8 @@ fn find_param_decl_span_in_source(
     param_decl_span: nu_protocol::Span,
     context: &LintContext,
 ) -> Option<nu_protocol::Span> {
-    let block_text = context.get_span_text(block_span);
-    let param_text = context.get_span_text(param_decl_span);
+    let block_text = context.plain_text(block_span);
+    let param_text = context.plain_text(param_decl_span);
 
     let param_syntax = format!("|{param_text}|");
     let offset = block_text.find(&param_syntax)?;
@@ -91,7 +91,7 @@ fn check_filter_command_call(
         return vec![];
     }
 
-    let arg_text = context.get_span_text(arg_expr.span);
+    let arg_text = context.plain_text(arg_expr.span);
     let closure_param_syntax = format!("|{param_name}|");
     if !arg_text.contains(&closure_param_syntax) {
         return vec![];
@@ -187,7 +187,7 @@ impl DetectFix for WhereClosureToIt {
             .collect();
 
         for var_span in filtered_spans {
-            let var_text = context.get_span_text(*var_span);
+            let var_text = context.plain_text(*var_span);
             let replacement = if var_text.starts_with('$') {
                 format!("$it{}", &var_text[1 + fix_data.param_name.len()..])
             } else {

@@ -52,6 +52,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 
 - `use_is_not_empty` (auto-fix)
 - `dispatch_with_subcommands`
+- `hardcoded_math_constants` (auto-fix)
 - `items_instead_of_transpose_each` (auto-fix)
 - `merge_get_cell_path` (auto-fix)
 - `merge_multiline_print` (auto-fix)
@@ -91,7 +92,6 @@ Some of the rules need further testing and improvement. Please make an issue on 
 `posix` - Replace common bash/POSIX patterns.
 
 - `ignore_over_dev_null` (auto-fix)
-- `missing_stdin_in_shebang` (auto-fix)
 - `use_builtin_awk` (auto-fix)
 - `use_builtin_bat` (auto-fix)
 - `use_builtin_cat` (auto-fix)
@@ -128,6 +128,8 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `error_make_for_non_fatal` (auto-fix)
 - `try_instead_of_do`
 - `unsafe_dynamic_record_access` (auto-fix)
+- `missing_stdin_in_shebang` (auto-fix)
+- `dynamic_script_import`
 
 `filtering` - Better patterns for filtering and selecting data.
 
@@ -149,10 +151,13 @@ Some of the rules need further testing and improvement. Please make an issue on 
 `type-safety` - Annotate with type hints where possible.
 
 - `external_script_as_argument`
+- `nothing_outside_function_signature` (auto-fix)
 - `add_type_hints_arguments` (auto-fix)
 - `string_param_as_path` (auto-fix)
 - `missing_output_type` (auto-fix)
 - `missing_in_type` (auto-fix)
+- `avoid_nu_subprocess`
+- `dynamic_script_import`
 
 `documentation` - Improve actionability of user-facing messages.
 
@@ -307,7 +312,7 @@ You can also implement your own editor extensions using the `--lsp` flag as in: 
 
 ## Configuration
 
-Create `.nu-lint.toml` in your project root:
+You can configure some of the behaviour by tweaking options. For this you need to create a configuration file `.nu-lint.toml` in your project root. It may look like this:
 
 ```toml
 # This rule is ignored
@@ -326,3 +331,7 @@ type-safety = "error"
 [rules]
 dispatch_with_subcommands = "hint"
 ```
+
+In this particular case, the user overrides the 'level' of certain groups and individual rules.
+
+For any setting you don't set in that file, the defaults set in [./src/config.rs](./src/config.rs) will be used. If you specify the option in the configuration file, it will override the defaults.

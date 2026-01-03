@@ -78,7 +78,7 @@ fn extract_parse_from_closure(
     let pattern_arg = parse_call.get_first_positional_arg()?;
     let pattern = match &pattern_arg.expr {
         Expr::String(s) | Expr::RawString(s) => s.clone(),
-        _ => ctx.get_span_text(pattern_arg.span).to_string(),
+        _ => ctx.plain_text(pattern_arg.span).to_string(),
     };
 
     // Check if --regex flag is present

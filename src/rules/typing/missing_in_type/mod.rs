@@ -96,7 +96,7 @@ impl DetectFix for TypeNuPipelineInput {
 
     fn fix(&self, ctx: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let block = ctx.working_set.get_block(fix_data.body_block_id);
-        let original_sig_text = ctx.get_span_text(fix_data.sig_span);
+        let original_sig_text = ctx.plain_text(fix_data.sig_span);
         let parsed = parse_signature_types(original_sig_text);
         let params = extract_parameters_text(&block.signature);
 

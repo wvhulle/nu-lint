@@ -68,7 +68,7 @@ pub fn extract_first_function_parameter(
                         .map(|var_id| {
                             let var_span =
                                 context.working_set.get_variable(var_id).declaration_span;
-                            context.get_span_text(var_span).to_string()
+                            context.plain_text(var_span).to_string()
                         })
                 })
         })

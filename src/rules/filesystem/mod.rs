@@ -66,7 +66,7 @@ pub fn find_open_from_patterns<'a>(
             continue;
         };
 
-        let filename = context.get_span_text(filename_arg.span);
+        let filename = context.plain_text(filename_arg.span);
 
         // Extract actual filename content for extension detection, handling all string
         // formats
@@ -83,7 +83,7 @@ pub fn find_open_from_patterns<'a>(
             continue;
         }
 
-        let open_text = context.get_span_text(open_expr.span);
+        let open_text = context.plain_text(open_expr.span);
         let has_raw_flag = open_text.contains("--raw") || open_text.contains("-r ");
 
         // Store original filename text (with quotes) for use in fixes

@@ -274,7 +274,7 @@ impl DetectFix for TurnPositionalIntoStreamInput {
         // Check if the first usage is at the start of a pipeline (i.e., "$param | ...")
         let first_span = filtered_spans.first()?;
         let first_is_pipeline_start = context
-            .get_span_text(*first_span)
+            .plain_text(*first_span)
             .trim()
             .starts_with(&format!("${}", fix_data.param_name));
 
@@ -288,7 +288,7 @@ impl DetectFix for TurnPositionalIntoStreamInput {
         {
             // Check the text after the first var usage
             let after_span = Span::new(after_first_end, (after_first_end + 3).min(def_span_end));
-            let after_text = context.get_span_text(after_span);
+            let after_text = context.plain_text(after_span);
             after_text == pipeline_separator
         } else {
             false
@@ -310,7 +310,7 @@ impl DetectFix for TurnPositionalIntoStreamInput {
 
         // We also need to update the function signature to remove the parameter
         // Find the parameter list span and rebuild it
-        let def_text = context.get_span_text(fix_data.def_span);
+        let def_text = context.plain_text(fix_data.def_span);
 
         // Find the opening [ after the function name
         let bracket_start_idx = def_text.find('[')?;

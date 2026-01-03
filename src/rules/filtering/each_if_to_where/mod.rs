@@ -24,7 +24,7 @@ fn loop_var_from_each(call: &Call, context: &LintContext) -> Option<String> {
     let var_id = block.signature.required_positional.first()?.var_id?;
 
     let var = context.working_set.get_variable(var_id);
-    Some(context.get_span_text(var.declaration_span).to_string())
+    Some(context.plain_text(var.declaration_span).to_string())
 }
 
 fn get_if_then_block(call: &Call) -> Option<&Expression> {
@@ -175,7 +175,7 @@ impl DetectFix for WhereInsteadEachThenIf {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let condition = context.get_span_text(fix_data.condition_span);
+        let condition = context.plain_text(fix_data.condition_span);
         let fix_text = format!("where {condition}");
 
         Some(Fix::with_explanation(

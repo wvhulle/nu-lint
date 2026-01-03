@@ -74,7 +74,7 @@ impl<'a> LintContext<'a> {
 
     /// Get text for an AST span
     #[must_use]
-    pub fn get_span_text(&self, span: Span) -> &str {
+    pub fn plain_text(&self, span: Span) -> &str {
         from_utf8(self.working_set.get_span_contents(span))
             .expect("span contents should be valid UTF-8")
     }
@@ -274,7 +274,7 @@ impl<'a> LintContext<'a> {
                     return vec![];
                 };
 
-                let cmd_text = self.get_span_text(head.span);
+                let cmd_text = self.plain_text(head.span);
                 if cmd_text != external_cmd {
                     return vec![];
                 }
@@ -286,7 +286,7 @@ impl<'a> LintContext<'a> {
                     .iter()
                     .map(|arg| match arg {
                         ExternalArgument::Regular(expr) | ExternalArgument::Spread(expr) => {
-                            self.get_span_text(expr.span)
+                            self.plain_text(expr.span)
                         }
                     })
                     .collect();

@@ -173,7 +173,7 @@ impl DetectFix for UnnecessaryVariableBeforeReturn {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let replacement_text = context.get_span_text(fix_data.value_span).to_string();
+        let replacement_text = context.plain_text(fix_data.value_span).to_string();
         Some(Fix::with_explanation(
             format!("Return expression directly: {replacement_text}"),
             vec![Replacement::new(fix_data.combined_span, replacement_text)],

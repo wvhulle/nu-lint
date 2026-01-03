@@ -23,7 +23,7 @@ fn check_list_commas(
     if items.len() < 2 {
         return violations;
     }
-    let list_text = context.get_span_text(span);
+    let list_text = context.plain_text(span);
     // Skip if not a bracket list
     if !list_text.trim_start().starts_with('[') {
         return violations;
@@ -40,7 +40,7 @@ fn check_list_commas(
             continue;
         }
         let between_span = Span::new(current_expr.span.end, next_expr.span.start);
-        let between_text = context.get_span_text(between_span);
+        let between_text = context.plain_text(between_span);
         if between_text.contains(',') {
             // Find the comma position for precise span (use global span - will be
             // normalized later)

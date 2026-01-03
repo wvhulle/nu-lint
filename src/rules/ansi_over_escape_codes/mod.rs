@@ -178,7 +178,7 @@ fn check_string_expression(
         // For fixes, we need positions in the SOURCE text (with \e), not interpreted
         // text (with ESC byte) Get the source text and search for escape
         // patterns there
-        let source_text = context.get_span_text(expr.span);
+        let source_text = context.plain_text(expr.span);
         let source_content = if source_text.starts_with('"') && source_text.ends_with('"') {
             &source_text[1..source_text.len() - 1]
         } else {
@@ -240,7 +240,7 @@ impl DetectFix for AnsiOverEscapeCodes {
     }
 
     fn fix(&self, ctx: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let string_text = ctx.get_span_text(fix_data.string_span);
+        let string_text = ctx.plain_text(fix_data.string_span);
         let escapes = &fix_data.all_escapes;
 
         match escapes.len() {

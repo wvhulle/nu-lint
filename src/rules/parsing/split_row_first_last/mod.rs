@@ -26,7 +26,7 @@ struct FixData {
 fn is_first_call(call: &Call, ctx: &LintContext) -> bool {
     call.is_call_to_command("first", ctx)
         && call.get_first_positional_arg().is_none_or(|arg| {
-            ctx.get_span_text(arg.span)
+            ctx.plain_text(arg.span)
                 .parse::<usize>()
                 .is_ok_and(|n| n == 1)
         })
@@ -35,7 +35,7 @@ fn is_first_call(call: &Call, ctx: &LintContext) -> bool {
 fn is_last_call(call: &Call, ctx: &LintContext) -> bool {
     call.is_call_to_command("last", ctx)
         && call.get_first_positional_arg().is_none_or(|arg| {
-            ctx.get_span_text(arg.span)
+            ctx.plain_text(arg.span)
                 .parse::<usize>()
                 .is_ok_and(|n| n == 1)
         })

@@ -167,15 +167,6 @@ fn detect_in_block(block: &Block, context: &LintContext) -> Vec<(Detection, FixD
     violations
 }
 
-fn generate_spread_fix(element_spans: &[Span], context: &LintContext) -> String {
-    let elements: Vec<String> = element_spans
-        .iter()
-        .map(|span| format!("...{}", context.get_span_text(*span).trim()))
-        .collect();
-
-    format!("[{}]", elements.join(", "))
-}
-
 impl DetectFix for ChainedAppend {
     type FixInput<'a> = FixData;
 
@@ -200,12 +191,18 @@ impl DetectFix for ChainedAppend {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let element_spans: &[Span] = &fix_data.element_spans;
+        let context: &LintContext = context;
+        let elements: Vec<String> = element_spans
+            .iter()
+            .map(|span| format!("...{}", context.get_span_text(*span).trim()))
+            .collect();
+
+        let fix = format!("[{}]", elements.join(", "));
+
         Some(Fix::with_explanation(
             "Replace chained appends with spread syntax",
-            vec![Replacement::new(
-                fix_data.replace_span,
-                generate_spread_fix(&fix_data.element_spans, context),
-            )],
+            vec![Replacement::new(fix_data.replace_span, fix)],
         ))
     }
 }

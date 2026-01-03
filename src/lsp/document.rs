@@ -495,13 +495,12 @@ mod tests {
 
         let mut violation =
             Detection::from_file_span("Nested if can be collapsed", FileSpan::new(0, 39))
-                .with_primary_label("outer if")
-                .with_help("Combine with 'and'");
+                .with_primary_label("outer if");
         violation
             .extra_labels
             .push((FileSpan::new(12, 35).into(), Some("inner if".to_string())));
 
-        let mut violation = Violation::from_detected(violation, None);
+        let mut violation = Violation::from_detected(violation, None, Some("Combine with 'and'"));
 
         violation.lint_level = LintLevel::Warning;
 
@@ -586,7 +585,7 @@ mod tests {
             Some("returned here".to_string()),
         ));
 
-        let mut violation = Violation::from_detected(violation, None);
+        let mut violation = Violation::from_detected(violation, None, None);
         violation.rule_id = Some("missing_output_type".into());
         violation.lint_level = LintLevel::Warning;
 
@@ -621,7 +620,7 @@ mod tests {
             .extra_labels
             .push((FileSpan::new(17, 20).into(), None));
 
-        let violation = Violation::from_detected(violation, None);
+        let violation = Violation::from_detected(violation, None, None);
 
         let extra_diagnostics =
             create_extra_label_diagnostics(&violation, source, &line_index, &uri);
@@ -651,7 +650,7 @@ mod tests {
             .extra_labels
             .push((FileSpan::new(28, 31).into(), Some("inner body".to_string())));
 
-        let violation = Violation::from_detected(violation, None);
+        let violation = Violation::from_detected(violation, None, None);
 
         let extra_diagnostics =
             create_extra_label_diagnostics(&violation, source, &line_index, &uri);
@@ -700,7 +699,7 @@ mod tests {
             Some("different location".to_string()),
         ));
 
-        let violation = Violation::from_detected(violation, None);
+        let violation = Violation::from_detected(violation, None, None);
 
         let extra_diagnostics =
             create_extra_label_diagnostics(&violation, source, &line_index, &uri);
@@ -733,7 +732,7 @@ mod tests {
             Some("Capture of mutable variable".to_string()),
         ));
 
-        let violation = Violation::from_detected(violation, None);
+        let violation = Violation::from_detected(violation, None, None);
 
         let extra_diagnostics =
             create_extra_label_diagnostics(&violation, source, &line_index, &uri);

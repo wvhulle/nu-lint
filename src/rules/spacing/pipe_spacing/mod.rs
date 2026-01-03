@@ -93,8 +93,7 @@ impl<'a> PipeSpacingVisitor<'a> {
             let fix_span = Span::new(start, end);
 
             let violation = Detection::from_global_span(message.to_string(), violation_span)
-                .with_primary_label("spacing issue")
-                .with_help("Use ' | ' with single spaces");
+                .with_primary_label("spacing issue");
 
             let fix_data = FixData { fix_span };
 

@@ -100,19 +100,6 @@ def main [] {
 }
 
 #[test]
-fn test_help_message() {
-    let source = r"#!/usr/bin/env nu
-
-def main []: string -> string {
-    $in | str upcase
-}
-";
-
-    RULE.assert_help_contains(source, "--stdin");
-    RULE.assert_help_contains(source, "shebang");
-}
-
-#[test]
 fn test_fix_produces_valid_code() {
     // Test that the fix only replaces the shebang line, not the entire file
     let source = r"#!/usr/bin/env nu

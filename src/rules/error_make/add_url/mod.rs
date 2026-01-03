@@ -52,11 +52,7 @@ impl DetectFix for AddUrlToError {
                             "error make is missing 'url' field for documentation link",
                             call.span(),
                         )
-                        .with_primary_label("missing url")
-                        .with_help(
-                            "Add a 'url' field linking to relevant documentation:\n\
-                             url: \"https://example.com/docs/error-explanation\"",
-                        ),
+                        .with_primary_label("missing url"),
                     )
                 })
                 .into_iter()

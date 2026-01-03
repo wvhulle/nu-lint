@@ -67,12 +67,7 @@ impl AvoidSelfImport {
                 ),
                 expr.span,
             )
-            .with_primary_label("self-import here")
-            .with_help(
-                "Self-importing is unnecessary. Functions defined in the same file are already \
-                 available. Use direct function calls or `match` expressions to dispatch to \
-                 subcommands in `main`.",
-            ),
+            .with_primary_label("self-import here"),
         ]
     }
 

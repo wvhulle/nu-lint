@@ -204,16 +204,8 @@ fn create_violation(assignment: &CompleteAssignment) -> Detection {
         assignment.var_name
     );
 
-    let help_message = format!(
-        "Check the exit code to handle command failures. For example:\nif ${}.exit_code != 0 \
-         {{\n\x20   error make {{msg: '{cmd_desc}failed'}}\n}}\nOr use inline checking:\nlet \
-         success = ({cmd_desc}| complete | get exit_code) == 0",
-        assignment.var_name
-    );
-
     Detection::from_global_span(message, assignment.span)
         .with_primary_label("without exit_code check")
-        .with_help(help_message)
 }
 
 struct CheckCompleteExitCode;
@@ -226,7 +218,7 @@ impl DetectFix for CheckCompleteExitCode {
     }
 
     fn explanation(&self) -> &'static str {
-        "Check exit codes when using 'complete' to capture dangerous external command results"
+        "Check exit codes when using 'complete' to handle failed external command properly."
     }
 
     fn doc_url(&self) -> Option<&'static str> {
@@ -255,7 +247,5 @@ pub static RULE: &dyn Rule = &CheckCompleteExitCode;
 
 #[cfg(test)]
 mod detect_bad;
-#[cfg(test)]
-mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

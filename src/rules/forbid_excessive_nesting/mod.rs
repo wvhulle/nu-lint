@@ -262,7 +262,6 @@ fn create_violation(span: nu_protocol::Span, depth: usize) -> Detection {
         span,
     )
     .with_primary_label(format!("depth {depth} here"))
-    .with_help("Consider refactoring this code into smaller functions to reduce nesting depth")
 }
 
 struct ForbidExcessiveNesting;
@@ -276,6 +275,10 @@ impl DetectFix for ForbidExcessiveNesting {
 
     fn explanation(&self) -> &'static str {
         "Avoid excessive nesting (more than 4 levels deep)"
+    }
+
+    fn help(&self) -> Option<&'static str> {
+        Some("Consider refactoring into smaller functions to reduce nesting depth")
     }
 
     fn doc_url(&self) -> Option<&'static str> {

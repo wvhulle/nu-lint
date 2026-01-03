@@ -46,11 +46,7 @@ impl AvoidNuSubprocess {
                 "Avoid spawning `nu -c` subprocess from within a Nu script",
                 expr.span,
             )
-            .with_primary_label("subprocess spawned here")
-            .with_help(
-                "You're already running Nu. Call functions directly instead of spawning a \
-                 subprocess. Use `match` or direct function calls to dispatch to subcommands.",
-            ),
+            .with_primary_label("subprocess spawned here"),
         ]
     }
 

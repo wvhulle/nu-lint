@@ -63,12 +63,6 @@ fn test_fix_cluster_with_filter() {
 }
 
 #[test]
-fn test_help_contains_example() {
-    let bad_code = r#"$a | append $b | append $c"#;
-    RULE.assert_help_contains(bad_code, "spread syntax");
-}
-
-#[test]
 fn test_labels_mention_append() {
     let bad_code = r#"$a | append $b | append $c"#;
     RULE.assert_labels_contain(bad_code, "append");

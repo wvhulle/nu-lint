@@ -136,20 +136,7 @@ fn check_string_expression(
             return violations;
         }
 
-        let has_reset = escapes.iter().any(|(_, _, name)| name == "reset");
         let total_escapes = escapes.len();
-
-        // Get the first non-reset escape for the help message
-        let example_ansi = escapes
-            .iter()
-            .find(|(_, _, name)| name != "reset")
-            .map_or("red", |(_, _, name)| name.as_str());
-
-        let reset_reminder = if has_reset {
-            ""
-        } else {
-            "\n\nNote: Don't forget to add `$(ansi reset)` at the end to reset colors/styles."
-        };
 
         let violation = Detection::from_global_span(
             "Use `ansi` command instead of raw ANSI escape sequences",
@@ -159,21 +146,7 @@ fn check_string_expression(
             "ANSI escape sequence"
         } else {
             "ANSI escape sequences"
-        })
-        .with_help(format!(
-            "Use the `ansi` command for clearer and more portable color output.\n\
-             Instead of raw escape sequences, use `ansi {example_ansi}` or interpolate with `$(ansi {example_ansi})`.\n\
-             \n\
-             The `ansi` command provides:\n\
-             - Named colors (red, green, blue, etc.)\n\
-             - Styles (bold, underline, italic, etc.)\n\
-             - Better readability and maintainability\n\
-             - Cross-platform compatibility\n\
-             \n\
-             Example: `print $\"(ansi red)Error:(ansi reset) Something failed\"`{reset_reminder}\n\
-             \n\
-             See: https://www.nushell.sh/commands/docs/ansi.html"
-        ));
+        });
 
         // For fixes, we need positions in the SOURCE text (with \e), not interpreted
         // text (with ESC byte) Get the source text and search for escape

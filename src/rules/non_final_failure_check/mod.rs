@@ -55,8 +55,6 @@ fn create_violation(pipeline: &Pipeline, element: &ast::PipelineElement) -> Dete
     let message =
         "Nushell only checks the final external command's exit code in pipelines. ".to_string();
 
-    let help = "Wrap the external command in 'complete' to capture its exit code.";
-
     let last_element_span = pipeline.elements.last().map(|e| e.expr.span);
 
     let mut violation = Detection::from_global_span(message, element.expr.span)
@@ -67,7 +65,7 @@ fn create_violation(pipeline: &Pipeline, element: &ast::PipelineElement) -> Dete
             violation.with_extra_label("only this command's exit code is checked", last_span);
     }
 
-    violation.with_help(help)
+    violation
 }
 
 fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<Detection>) {

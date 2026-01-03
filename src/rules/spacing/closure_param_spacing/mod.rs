@@ -62,8 +62,7 @@ fn check_closure_param_spacing(
         .with_extra_label(
             "parameter delimiter should follow brace directly",
             pipe_span,
-        )
-        .with_help("Use {|param| instead of { |param|"),
+        ),
         ClosureParamSpacingFixData { whitespace_span },
     )]
 }

@@ -74,13 +74,7 @@ impl DynamicScriptImport {
                 ),
                 expr.span,
             )
-            .with_primary_label("dynamic import path")
-            .with_help(
-                "This import uses a computed path (variable, subexpression, or pipeline). nu-lint \
-                 cannot statically analyze the imported file, which may cause:\n- Parse errors \
-                 from the imported file to appear as false positives\n- Missing validation of the \
-                 imported module's structure",
-            ),
+            .with_primary_label("dynamic import path"),
         ]
     }
 }

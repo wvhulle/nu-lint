@@ -35,8 +35,7 @@ fn check(context: &LintContext) -> Vec<(Detection, TrailingSpaceFixData)> {
                     format!("Line {} has trailing whitespace", line_num + 1),
                     violation_span,
                 )
-                .with_primary_label("trailing whitespace")
-                .with_help("Remove trailing spaces"),
+                .with_primary_label("trailing whitespace"),
                 TrailingSpaceFixData {
                     span: violation_span,
                 },

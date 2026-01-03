@@ -104,11 +104,6 @@ impl DetectFix for InlineSingleUseFunction {
                 )
                 .with_primary_label("single-use function")
                 .with_extra_label("could be inlined", body_span)
-                .with_help(
-                    "Consider inlining this function at its call site. Single-line helper \
-                     functions used only once may add unnecessary indirection and reduce code \
-                     clarity.",
-                )
             })
             .collect();
         Self::no_fix(violations)

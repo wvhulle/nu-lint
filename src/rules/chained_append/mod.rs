@@ -117,7 +117,6 @@ fn create_violation(
     );
 
     let mut detection = Detection::from_global_span(message, replace_span)
-        .with_help("Use spread syntax: [...$list1, ...$list2, ...$list3]")
         .with_extra_label("First append", pipeline.elements[first_idx].expr.span)
         .with_extra_label("Last append", pipeline.elements[last_idx].expr.span);
 

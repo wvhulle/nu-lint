@@ -118,8 +118,7 @@ impl DetectFix for UnnecessaryMut {
                     mut_span,
                 )
                 .with_primary_label("unnecessary mut keyword")
-                .with_extra_label("variable never reassigned", decl_span)
-                .with_help(format!("Remove 'mut' keyword:\nlet {var_name} = ..."));
+                .with_extra_label("variable never reassigned", decl_span);
 
                 let fix_data = UnnecessaryMutFixData { var_name, mut_span };
 

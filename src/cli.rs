@@ -221,7 +221,6 @@ impl Cli {
                 ""
             }
         }
-        println!("Rule Groups\n");
         for set in ALL_GROUPS {
             println!("`{}` - {}\n", set.name, set.description);
             for rule in set.rules {
@@ -229,7 +228,6 @@ impl Cli {
             }
             println!();
         }
-        println!("*{n} groups available.*", n = ALL_GROUPS.len());
     }
 
     fn explain_rule(rule_id: &str) {

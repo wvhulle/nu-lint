@@ -74,11 +74,7 @@ impl DetectFix for RemoveHatNotBuiltin {
                 hat_span,
             )
             .with_primary_label("redundant prefix")
-            .with_extra_label("has no built-in equivalent", head.span)
-            .with_help(format!(
-                "The '^' prefix is only needed when a built-in command with the same name exists. \
-                 '{cmd}' has no built-in equivalent, so the prefix is redundant."
-            ));
+            .with_extra_label("has no built-in equivalent", head.span);
 
             let fix_data = UnnecessaryHatFixData {
                 cmd: cmd.into(),

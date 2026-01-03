@@ -122,3 +122,39 @@ let result = (^git clone https://github.com/user/repo | complete)
 
     RULE.assert_detects(bad_code);
 }
+
+#[test]
+fn test_suggestion_includes_actual_variable_name() {
+    let bad_code = r"
+let my_result = (^sed -i 's/foo/bar/g' file.txt | complete)
+";
+
+    RULE.assert_detects(bad_code);
+}
+
+#[test]
+fn test_suggestion_includes_external_command_name() {
+    let bad_code = r"
+let result = (^rm -rf /tmp/build | complete)
+";
+
+    RULE.assert_detects(bad_code);
+}
+
+#[test]
+fn test_suggestion_adapts_to_different_variable_names() {
+    let bad_code = r"
+mut fetch_output = (^sed -i '' config.txt | complete)
+";
+
+    RULE.assert_detects(bad_code);
+}
+
+#[test]
+fn test_violation_message_mentions_specific_external_command() {
+    let bad_code = r"
+let status = (^sed -i 's/x/y/g' service.txt | complete)
+";
+
+    RULE.assert_detects(bad_code);
+}

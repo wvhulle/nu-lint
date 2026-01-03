@@ -33,11 +33,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection,
             .with_extra_label(
                 "--raw returns text instead of structured data",
                 pattern.open_expr.span,
-            )
-            .with_help(format!(
-                "Use 'open {filename}' without --raw - Nu recognizes .{format} files and parses \
-                 them automatically"
-            ));
+            );
 
             let fix_data = FixData {
                 full_span,

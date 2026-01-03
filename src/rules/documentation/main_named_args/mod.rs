@@ -44,12 +44,7 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Detection> {
                     ),
                     flag_span,
                 )
-                .with_primary_label("undocumented flag")
-                .with_help(format!(
-                    "Add a documentation comment after the parameter: {flag_name} # Description \
-                     of {}",
-                    flag.long
-                )),
+                .with_primary_label("undocumented flag"),
             );
         }
     }
@@ -68,6 +63,10 @@ impl DetectFix for MainNamedArgsDocs {
 
     fn explanation(&self) -> &'static str {
         "Named parameters (flags) in main functions should have documentation comments"
+    }
+
+    fn help(&self) -> Option<&'static str> {
+        Some("Add a documentation comment after the parameter: # Description")
     }
 
     fn doc_url(&self) -> Option<&'static str> {

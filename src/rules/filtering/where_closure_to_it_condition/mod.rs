@@ -109,12 +109,7 @@ fn check_filter_command_call(
         arg_expr.span,
     )
     .with_primary_label("closure with named parameter")
-    .with_extra_label(format!("{command_name} command"), call.span())
-    .with_help(format!(
-        "Replace `{command_name} {{|param| $param ...}}` with `{command_name} {{|it| $it ...}}` \
-         or `{command_name} {{$it ...}}` for simpler syntax. Using `$it` is more concise and \
-         idiomatic when you don't need to store the closure in a variable.",
-    ));
+    .with_extra_label(format!("{command_name} command"), call.span());
 
     let fix_data = RowConditionFixData {
         param_decl_span,

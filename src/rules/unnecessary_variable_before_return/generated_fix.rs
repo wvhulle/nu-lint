@@ -13,8 +13,6 @@ def foo [] {
 ";
 
     RULE.assert_detects(bad_code);
-    RULE.assert_help_contains(bad_code, "Return the expression directly");
-    RULE.assert_help_contains(bad_code, "instead of assigning to a variable first");
     RULE.assert_fixed_contains(bad_code, "some | pipeline");
 }
 

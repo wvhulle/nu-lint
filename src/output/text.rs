@@ -1,5 +1,4 @@
 use std::{
-    borrow::Cow,
     collections::HashMap,
     error::Error,
     fmt::{self, Write},
@@ -138,7 +137,7 @@ fn with_extended_help(violation: &Violation, source_code: &str) -> Violation {
         || violation.clone(),
         |text| {
             let mut v = violation.clone();
-            v.help = Some(Cow::Owned(text));
+            v.help = Some(text);
             v
         },
     )

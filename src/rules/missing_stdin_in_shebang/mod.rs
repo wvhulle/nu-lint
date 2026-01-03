@@ -198,11 +198,7 @@ fn check_main_function(
     let fix_data = create_fix_data_for_shebang(context);
 
     let violation = Detection::from_global_span(message, def.name_span)
-        .with_primary_label("main function expecting stdin")
-        .with_help(
-            "Add --stdin flag to shebang: #!/usr/bin/env -S nu --stdin or #!/usr/bin/env nu \
-             --stdin (if env supports multiple args)",
-        );
+        .with_primary_label("main function expecting stdin");
 
     vec![(violation, fix_data)]
 }
@@ -222,6 +218,13 @@ impl DetectFix for MissingStdinInShebang {
 
     fn doc_url(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/scripts.html")
+    }
+
+    fn help(&self) -> Option<&'static str> {
+        Some(
+            "Add --stdin flag to shebang: #!/usr/bin/env -S nu --stdin or #!/usr/bin/env nu \
+             --stdin",
+        )
     }
 
     fn level(&self) -> LintLevel {

@@ -74,8 +74,7 @@ fn create_violation(span: nu_protocol::Span, fields: &[RecordItem]) -> (Detectio
         Detection::from_global_span(
             "Long records should use multiline format with each field on a separate line",
             span,
-        )
-        .with_help("Put each record field on a separate line for better readability"),
+        ),
         RecordFixData {
             span,
             fields: field_data,

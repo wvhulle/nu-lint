@@ -50,9 +50,6 @@ fn check_record_msg_field(record: &[RecordItem]) -> Option<Detection> {
         is_vague_message(&msg).then(|| {
             Detection::from_global_span("Error message is too vague or generic", value.span)
                 .with_primary_label("vague message")
-                .with_help(
-                    "Use a descriptive message explaining what went wrong and how to fix it.",
-                )
         })
     })
 }
@@ -71,7 +68,6 @@ fn check_print_stderr(call: &Call) -> Option<Detection> {
             first_arg.span,
         )
         .with_primary_label("vague error output")
-        .with_help("Use a descriptive message explaining what went wrong and how to fix it.")
     })
 }
 

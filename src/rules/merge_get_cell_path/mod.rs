@@ -129,8 +129,7 @@ fn create_violation_for_range(pipeline: &Pipeline, start_idx: usize, end_idx: us
     let num_gets = end_idx - start_idx + 1;
     let message = format!("Use combined cell path instead of {num_gets} chained 'get' commands");
 
-    let mut violation = Detection::from_global_span(message, full_span)
-        .with_help("Combine into single 'get' with dot-separated cell path");
+    let mut violation = Detection::from_global_span(message, full_span);
 
     for idx in start_idx..=end_idx {
         let span = pipeline.elements[idx].expr.span;
@@ -152,6 +151,10 @@ impl DetectFix for MergeGetCellPath {
 
     fn explanation(&self) -> &'static str {
         "Prefer combined cell paths over chained 'get' commands"
+    }
+
+    fn help(&self) -> Option<&'static str> {
+        Some("Combine into single 'get' with dot-separated cell path")
     }
 
     fn doc_url(&self) -> Option<&'static str> {

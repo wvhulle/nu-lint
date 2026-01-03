@@ -1,6 +1,6 @@
 use nu_protocol::ast::Expr;
 
-use super::{extract_first_function_parameter, extract_record_from_expr, has_field};
+use super::{extract_record_from_expr, has_field};
 use crate::{
     LintLevel,
     ast::call::CallExt,
@@ -54,21 +54,12 @@ impl DetectFix for AddLabelToError {
                 return vec![];
             }
 
-            let example_span = extract_first_function_parameter(ctx, call.span()).map_or_else(
-                || "$span".to_string(),
-                |param| format!("(metadata ${param}).span"),
-            );
-
             vec![
                 Detection::from_global_span(
                     "error make is missing 'label' (or 'labels') field for error location",
                     call.span(),
                 )
-                .with_primary_label("error missing label")
-                .with_help(format!(
-                    "Add a 'label' field to pinpoint where the error occurred:\nlabel: {{ text: \
-                     \"describe the problem\", span: {example_span} }}"
-                )),
+                .with_primary_label("error missing label"),
             ]
         }))
     }

@@ -100,13 +100,8 @@ fn check_function_definition(call: &Call, context: &LintContext) -> Option<Detec
         def.name
     );
 
-    let suggestion = "Use `print -e` for stderr, separate into data/logging functions, or \
-                      document the intentional mixing"
-        .to_string();
-
     let mut violation = Detection::from_global_span(message, def.name_span)
-        .with_primary_label("function with mixed output")
-        .with_help(suggestion);
+        .with_primary_label("function with mixed output");
 
     for span in print_spans {
         violation = violation.with_extra_label("prints to stdout", span);

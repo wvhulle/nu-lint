@@ -88,8 +88,7 @@ fn check_pipeline_for_split_first_last(
         let violation = Detection::from_global_span(message, span)
             .with_primary_label(label)
             .with_extra_label("split row call", current.expr.span)
-            .with_extra_label("access call", next.expr.span)
-            .with_help("The 'parse' command can extract the first or last segment more directly.");
+            .with_extra_label("access call", next.expr.span);
 
         Some((
             violation,

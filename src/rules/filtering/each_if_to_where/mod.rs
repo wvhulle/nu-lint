@@ -131,8 +131,7 @@ fn check_expression(expr: &Expression, context: &LintContext) -> Vec<(Detection,
         expr.span,
     )
     .with_primary_label("each with if pattern")
-    .with_extra_label("filtering logic inside closure", block_span)
-    .with_help("Use '$list | where <condition>' for readability");
+    .with_extra_label("filtering logic inside closure", block_span);
 
     let fix_data = FixData {
         each_span: expr.span,

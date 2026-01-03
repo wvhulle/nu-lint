@@ -116,8 +116,7 @@ fn detect_signature(
                 format!("Parameter `{}` is missing type annotation", param.name),
                 param_span,
             )
-            .with_primary_label("add type annotation")
-            .with_help("Add type annotation like 'param: string' or 'param: int'");
+            .with_primary_label("add type annotation");
 
             if let Some(usage_span) = usage_span {
                 violation = violation.with_extra_label("used here", usage_span);

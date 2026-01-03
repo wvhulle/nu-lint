@@ -257,18 +257,13 @@ fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<(Detection, Fi
         if let Some(cond_span) = first_branch_span {
             v = v.with_extra_label(format!("comparing '{compared_var}'"), cond_span);
         }
-        v.with_help(
-            "Use 'match $var { value1 => { ... }, value2 => { ... }, _ => { ... } }' for clearer \
-             value-based branching"
-                .to_string(),
-        )
+        v
     } else {
         Detection::from_global_span(
             "Long if-else-if chain - consider using 'match' for clearer branching",
             call.head,
         )
         .with_primary_label("start of chain")
-        .with_help("For multiple related conditions, 'match' provides clearer pattern matching")
     };
 
     // Collect branch data for fix generation (only if consistent variable)

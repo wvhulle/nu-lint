@@ -101,13 +101,10 @@ fn check_not_is_empty(expr: &Expression, ctx: &LintContext) -> Vec<(Detection, I
 
     let not_span = nu_protocol::Span::new(expr.span.start, expr.span.start + 3);
 
-    let violation = Detection::from_global_span(
-        "Use 'is-not-empty' instead of 'not ... is-empty' for better readability",
-        not_span,
-    )
-    .with_primary_label("negation operator")
-    .with_extra_label("is-empty check", inner_expr.span)
-    .with_help("Replace with 'is-not-empty'");
+    let violation =
+        Detection::from_global_span("Use 'is-not-empty' for better readability", not_span)
+            .with_primary_label("negation operator")
+            .with_extra_label("is-empty check", inner_expr.span);
 
     let fix_data = IsNotEmptyFixData {
         span: expr.span,

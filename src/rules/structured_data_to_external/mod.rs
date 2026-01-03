@@ -277,12 +277,6 @@ fn create_violation(
         detection = detection.with_extra_label("with redirection", get_redirection_span(redir));
     }
 
-    detection = detection.with_help(
-        "External commands receive data as text. Structured data will be implicitly serialized as \
-         string input for the external command."
-            .to_string(),
-    );
-
     let fix_data = FixData {
         data_span: left_element.expr.span,
         conversion,

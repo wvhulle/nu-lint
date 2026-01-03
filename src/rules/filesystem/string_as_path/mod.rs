@@ -65,15 +65,12 @@ fn detect_parameter(
         }
     );
 
-    let optional_marker = if is_optional { "?" } else { "" };
-
     let param_in_sig_span = signature_span.find_substring_span(&param.name, context);
     let param_end = find_param_type_end(param_in_sig_span, signature_span, context);
     let replace_span = Span::new(param_in_sig_span.start, param_end);
 
-    let violation = Detection::from_global_span(message, param_span)
-        .with_primary_label("used as path")
-        .with_help(format!("Use `{}{optional_marker}: path`", param.name));
+    let violation =
+        Detection::from_global_span(message, param_span).with_primary_label("used as path");
 
     let fix_data = FixData {
         param_name: param.name.clone(),

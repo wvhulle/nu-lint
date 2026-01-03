@@ -24,7 +24,7 @@ impl DetectFix for AlwaysHatExtCall {
     }
 
     fn explanation(&self) -> &'static str {
-        "Detect unnecessary '^' prefix on external commands"
+        "Always use the '^' prefix on external commands"
     }
 
     fn doc_url(&self) -> Option<&'static str> {
@@ -51,8 +51,7 @@ impl DetectFix for AlwaysHatExtCall {
                         ),
                         expr.span,
                     )
-                    .with_primary_label("missing '^' prefix")
-                    .with_help("Use '^' prefix to indicate external command"),
+                    .with_primary_label("missing '^' prefix"),
                     FixData {
                         cmd: ctx.plain_text(head.span).into(),
                         args: args.to_vec().into_boxed_slice(),

@@ -105,8 +105,7 @@ impl DetectFix for RemoveRedundantIn {
                     format!("Redundant $in in function '{}'", signature.name),
                     def.declaration_span(context),
                 )
-                .with_primary_label("function with redundant $in")
-                .with_help("Remove redundant $in - it's implicit at the start of pipelines");
+                .with_primary_label("function with redundant $in");
 
                 if let Some(body_span) = block.span {
                     violation = violation.with_extra_label("$in used at pipeline start", body_span);

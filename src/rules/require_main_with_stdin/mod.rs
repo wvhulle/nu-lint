@@ -87,12 +87,7 @@ impl DetectFix for RequireMainWithStdin {
             if uses_pipeline_input(expr, ctx) {
                 return vec![
                     Detection::from_global_span("Using $in outside of a main function", expr.span)
-                        .with_primary_label("$in used here")
-                        .with_help(
-                            "When using $in to read from stdin/pipeline, you must define a 'def \
-                             main [] { ... }' function. The $in variable is only available in \
-                             pipeline contexts like function bodies.",
-                        ),
+                        .with_primary_label("$in used here"),
                 ];
             }
             vec![]

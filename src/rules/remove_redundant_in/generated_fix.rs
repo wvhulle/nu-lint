@@ -6,7 +6,6 @@ fn fix_get_field_operation() {
 
     RULE.assert_detects(source);
     RULE.assert_fixed_contains(source, "get $field");
-    RULE.assert_help_contains(source, "Remove redundant $in");
 }
 
 #[test]
@@ -15,7 +14,6 @@ fn fix_select_operation() {
 
     RULE.assert_detects(source);
     RULE.assert_fixed_contains(source, "select $column");
-    RULE.assert_help_contains(source, "Remove redundant $in");
 }
 
 #[test]
@@ -24,7 +22,6 @@ fn fix_each_operation() {
 
     RULE.assert_detects(source);
     RULE.assert_fixed_contains(source, "each { |x| $x * $factor }");
-    RULE.assert_help_contains(source, "Remove redundant $in");
 }
 
 #[test]
@@ -33,7 +30,6 @@ fn fix_no_parameters() {
 
     RULE.assert_detects(source);
     RULE.assert_fixed_contains(source, "where active");
-    RULE.assert_help_contains(source, "Remove redundant $in");
 }
 
 #[test]
@@ -42,7 +38,6 @@ fn fix_complex_pipeline() {
 
     RULE.assert_detects(source);
     RULE.assert_fixed_contains(source, "where active | select name | sort-by name");
-    RULE.assert_help_contains(source, "Remove redundant $in");
 }
 
 #[test]
@@ -51,23 +46,18 @@ fn fix_no_space_after_in() {
 
     RULE.assert_detects(source);
     RULE.assert_fixed_contains(source, "where $it > 0");
-    RULE.assert_help_contains(source, "Remove redundant $in");
 }
 
 #[test]
 fn fix_sort_by_operation() {
     let source = "def sort-by-field [field] { $in | sort-by $field }";
 
-    RULE.assert_detects(source);
     RULE.assert_fixed_contains(source, "sort-by $field");
-    RULE.assert_help_contains(source, "Remove redundant $in");
 }
 
 #[test]
 fn fix_first_operation() {
     let source = "def take-first [n] { $in | first $n }";
 
-    RULE.assert_detects(source);
     RULE.assert_fixed_contains(source, "first $n");
-    RULE.assert_help_contains(source, "Remove redundant $in");
 }

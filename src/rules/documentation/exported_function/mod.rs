@@ -59,12 +59,7 @@ fn check_exported_function(call: &Call, context: &LintContext) -> Option<Detecti
                 call.head,
             )
             .with_primary_label("missing doc comment")
-            .with_extra_label("exported function", func_def.name_span)
-            .with_help(format!(
-                "Add a documentation comment (starting with #) above the export.\nExample:\n  # \
-                 Description of what this function does\n  export def {} [] {{ ... }}",
-                func_def.name
-            )),
+            .with_extra_label("exported function", func_def.name_span),
         )
     }
 }
@@ -80,6 +75,9 @@ impl DetectFix for AddDocCommentExportedFn {
 
     fn explanation(&self) -> &'static str {
         "Exported functions should have documentation comments"
+    }
+    fn help(&self) -> Option<&'static str> {
+        Some("Add a documentation comment (starting with #) above the export.")
     }
 
     fn doc_url(&self) -> Option<&'static str> {

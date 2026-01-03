@@ -48,9 +48,6 @@ fn check_call(call: &Call, ctx: &LintContext) -> Vec<(Detection, FixData)> {
         // Create violation
         let cmd_name = ctx.working_set.get_decl(call.decl_id).name().to_string();
 
-        // Determine if pattern can be bare or needs glob subexpression
-        let can_be_bare = !bare_glob_needs_quotes(pattern);
-
         let violation = Detection::from_global_span(
             format!(
                 "Quoted glob pattern `\"{pattern}\"` passed to `{cmd_name}` won't expand to match \
@@ -58,19 +55,7 @@ fn check_call(call: &Call, ctx: &LintContext) -> Vec<(Detection, FixData)> {
             ),
             arg_expr.span,
         )
-        .with_primary_label("use unquoted glob or glob subexpression")
-        .with_help(if can_be_bare {
-            format!(
-                "In Nushell, `{pattern}` without quotes expands to match files, while \
-                 \"{pattern}\" with quotes is treated as a literal string pattern that won't \
-                 expand. The `{cmd_name}` command typically expects glob patterns to expand and \
-                 match actual files."
-            )
-        } else {
-            "This pattern contains spaces or special characters that prevent it from being a bare \
-             word."
-                .to_string()
-        });
+        .with_primary_label("use unquoted glob or glob subexpression");
 
         results.push((
             violation,

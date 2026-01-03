@@ -37,10 +37,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection,
             .with_extra_label(
                 "Nu recognizes this format and parses it automatically",
                 pattern.open_expr.span,
-            )
-            .with_help(format!(
-                "Remove '| from {format}' - Nu already parses .{format} files into structured data"
-            ));
+            );
 
             let fix_data = FixData {
                 full_span,

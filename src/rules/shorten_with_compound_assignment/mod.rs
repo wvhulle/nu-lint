@@ -102,8 +102,7 @@ fn detect_compound_assignment(
     )
     .with_primary_label("variable being reassigned")
     .with_extra_label("same variable repeated on RHS", sub_left.span)
-    .with_extra_label("operand could be compound-assigned", sub_right.span)
-    .with_help(format!("Replace with: {var_text} {compound_op}"));
+    .with_extra_label("operand could be compound-assigned", sub_right.span);
 
     let fix_data = FixData {
         full_span: expr.span,

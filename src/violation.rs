@@ -1,4 +1,4 @@
-use std::{borrow::Cow, error::Error, fmt, iter::once, path::Path};
+use std::{borrow::Cow, error::Error, fmt, iter::once, path::Path, string::ToString};
 
 use miette::{Diagnostic, LabeledSpan, Severity};
 use nu_protocol::Span;
@@ -126,8 +126,6 @@ pub struct Detection {
     pub span: LintSpan,
     pub primary_label: Option<Cow<'static, str>>,
     pub extra_labels: Vec<(LintSpan, Option<String>)>,
-    pub help: Option<Cow<'static, str>>,
-    pub notes: Vec<Cow<'static, str>>,
     /// Related detections in external files (stdlib, imported modules, etc.)
     pub external_detections: Vec<ExternalDetection>,
 }
@@ -141,8 +139,6 @@ impl Detection {
             span: LintSpan::from(global_span),
             primary_label: None,
             extra_labels: Vec::new(),
-            help: None,
-            notes: Vec::new(),
             external_detections: Vec::new(),
         }
     }
@@ -155,8 +151,6 @@ impl Detection {
             span: LintSpan::File(span),
             primary_label: None,
             extra_labels: Vec::new(),
-            help: None,
-            notes: Vec::new(),
             external_detections: Vec::new(),
         }
     }
@@ -165,12 +159,6 @@ impl Detection {
     #[must_use]
     pub fn with_external_detection(mut self, detection: ExternalDetection) -> Self {
         self.external_detections.push(detection);
-        self
-    }
-
-    #[must_use]
-    pub fn with_help(mut self, help: impl Into<Cow<'static, str>>) -> Self {
-        self.help = Some(help.into());
         self
     }
 
@@ -208,7 +196,7 @@ pub struct Violation {
     pub span: LintSpan,
     pub primary_label: Option<Cow<'static, str>>,
     pub extra_labels: Vec<(LintSpan, Option<String>)>,
-    pub help: Option<Cow<'static, str>>,
+    pub help: Option<String>,
     pub fix: Option<Fix>,
     pub(crate) file: Option<SourceFile>,
     pub(crate) source: Option<Cow<'static, str>>,
@@ -218,7 +206,11 @@ pub struct Violation {
 }
 
 impl Violation {
-    pub(crate) fn from_detected(detected: Detection, fix: Option<Fix>) -> Self {
+    pub(crate) fn from_detected(
+        detected: Detection,
+        fix: Option<Fix>,
+        help: impl Into<Option<&'static str>>,
+    ) -> Self {
         Self {
             rule_id: None,
             lint_level: LintLevel::default(),
@@ -226,7 +218,7 @@ impl Violation {
             span: detected.span,
             primary_label: detected.primary_label,
             extra_labels: detected.extra_labels,
-            help: detected.help,
+            help: help.into().map(ToString::to_string),
             fix,
             file: None,
             source: None,

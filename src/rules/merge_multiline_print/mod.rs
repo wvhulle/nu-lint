@@ -109,11 +109,7 @@ fn create_violation(prints: Vec<PrintInfo>) -> (Detection, FixData) {
         ),
         combined_span,
     )
-    .with_primary_label("consecutive prints")
-    .with_help(
-        "Merge consecutive print statements into a single print with a multiline string for \
-         cleaner code. Use `print \"line1\\nline2\\nline3\"` instead of multiple print calls.",
-    );
+    .with_primary_label("consecutive prints");
 
     let fix_data = FixData {
         prints,
@@ -222,6 +218,13 @@ impl DetectFix for MergeMultilinePrint {
 
     fn doc_url(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/working_with_strings.html#string-formats-at-a-glance")
+    }
+
+    fn help(&self) -> Option<&'static str> {
+        Some(
+            "Merge consecutive print statements into a single print with a multiline string for \
+             cleaner code. Use `print \"line1\\nline2\\nline3\"` instead of multiple print calls.",
+        )
     }
 
     fn level(&self) -> LintLevel {

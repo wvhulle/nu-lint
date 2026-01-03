@@ -152,11 +152,7 @@ fn create_violation(
         ),
         f.definition.declaration_span(context),
     )
-    .with_primary_label("unused function")
-    .with_help(
-        "Remove unused helper functions or call them from entry points (main or exported \
-         functions) or other used functions",
-    );
+    .with_primary_label("unused function");
 
     let fix_data = UnusedFunctionFixData {
         name: f.definition.name.clone(),

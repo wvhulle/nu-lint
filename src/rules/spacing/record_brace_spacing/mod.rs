@@ -48,8 +48,7 @@ fn check_record_brace_spacing(
                 record_span,
             )
             .with_extra_label("no space after", opening_span)
-            .with_extra_label("no space before", closing_span)
-            .with_help("Use {key: value} for records"),
+            .with_extra_label("no space before", closing_span),
             RecordBraceSpacingFixData { record_span },
         )]
     } else {

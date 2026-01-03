@@ -139,8 +139,7 @@ fn create_violation(
         find_function_definition_span(&signature.name, context).unwrap_or(name_span.into());
 
     let violation = Detection::from_file_span("Use pipeline input instead of parameter", name_span)
-        .with_primary_label("function with single data parameter")
-        .with_help("Pipeline input enables better composability and streaming performance");
+        .with_primary_label("function with single data parameter");
 
     let remaining_params: Vec<String> = signature
         .required_positional
@@ -169,8 +168,7 @@ fn create_violation_with_span(
 ) -> Option<ViolationPair> {
     let violation =
         Detection::from_global_span("Use pipeline input instead of parameter", def_span)
-            .with_primary_label("function with single data parameter")
-            .with_help("Pipeline input enables better composability and streaming performance");
+            .with_primary_label("function with single data parameter");
 
     let remaining_params: Vec<String> = signature
         .required_positional
@@ -202,6 +200,10 @@ impl DetectFix for TurnPositionalIntoStreamInput {
     fn explanation(&self) -> &'static str {
         "Custom commands with data parameters used as pipeline input should receive that data via \
          pipeline input ($in) instead."
+    }
+
+    fn help(&self) -> Option<&'static str> {
+        Some("Pipeline input enables better composability and streaming performance")
     }
 
     fn doc_url(&self) -> Option<&'static str> {

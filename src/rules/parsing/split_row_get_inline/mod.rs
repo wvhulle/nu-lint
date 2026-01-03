@@ -54,28 +54,18 @@ fn check_pipeline_for_split_get(
         delimiter.map_or_else(
             || {
                 let violation = Detection::from_global_span(
-                    "Manual string splitting with indexed access - consider using 'parse'",
+                    "Use 'parse' instead of chaining 'split row | get' in a pipeline",
                     span,
                 )
-                .with_primary_label("split + index pattern")
-                .with_help(
-                    "Use 'parse \"{field0} {field1}\"' for structured text extraction. For \
-                     complex delimiters containing regex special characters, use 'parse --regex' \
-                     with named capture groups like '(?P<field0>.*)delimiter(?P<field1>.*)'",
-                );
+                .with_primary_label("split row followed by indexed get in same pipeline");
                 Some((violation, FixData::NoFix))
             },
             |delim| {
-                let replacement = generate_parse_replacement(&delim, &[index]);
                 let violation = Detection::from_global_span(
-                    "Manual string splitting with indexed access - consider using 'parse'",
+                    "Use 'parse' instead of chaining 'split row | get' in a pipeline",
                     span,
                 )
-                .with_primary_label("split + index pattern")
-                .with_help(format!(
-                    "Use '{replacement}' for structured text extraction. Access fields by name \
-                     (e.g., $result.field{index}) instead of index."
-                ));
+                .with_primary_label("split row followed by indexed get in same pipeline");
                 Some((
                     violation,
                     FixData::WithDelimiter {
@@ -103,16 +93,35 @@ impl DetectFix for SplitGetRule {
     type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
-        "split_row_get_single_pipeline"
+        "split_row_get_inline"
     }
 
     fn explanation(&self) -> &'static str {
-        "Replace 'split row' followed by indexed 'get' access in a single pipeline with 'parse' \
-         for structured text extraction"
+        "Replace chained 'split row | get INDEX' pattern in a single pipeline with 'parse' for \
+         structured text extraction"
     }
 
     fn doc_url(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/parse.html")
+    }
+
+    fn help(&self) -> Option<&'static str> {
+        Some(
+            r#"Chaining 'split row' with indexed 'get' access is verbose and error-prone because:
+- You need to count field positions manually
+- The code doesn't show what each field represents
+- Off-by-one errors are common
+
+Instead, use 'parse' for structured text extraction.
+
+The 'parse' command creates records with named fields. Access them by name
+(e.g., $result.field_name) instead of by index, making your code more readable
+and maintainable.
+
+Example:
+  Before: "192.168.1.100:8080" | split row ":" | get 0
+  After:  "192.168.1.100:8080" | parse "{ip}:{port}" | get ip"#,
+        )
     }
 
     fn level(&self) -> LintLevel {

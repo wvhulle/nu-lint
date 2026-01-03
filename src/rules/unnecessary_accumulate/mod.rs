@@ -112,7 +112,6 @@ fn create_violations(
                 *span,
             )
             .with_primary_label("empty list initialization")
-            .with_help("Use the list directly instead of copying: 'let data = [1 2 3]'")
         })
         .collect()
 }

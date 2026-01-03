@@ -51,8 +51,7 @@ fn check_brace_spacing(
                         opening_brace_span,
                     )
                     .with_primary_label("opening brace")
-                    .with_extra_span(Span::new(span.start + 1, span.start + 1 + pipe_pos))
-                    .with_help("Use {|param| instead of { |param|"),
+                    .with_extra_span(Span::new(span.start + 1, span.start + 1 + pipe_pos)),
                     BraceSpacingFixData {
                         span,
                         brace_type: brace_type.clone(),
@@ -75,8 +74,7 @@ fn check_brace_spacing(
                         span,
                     )
                     .with_extra_label("needs space after", opening_span)
-                    .with_extra_label("needs space before", closing_span)
-                    .with_help("Use { body } for blocks without parameters"),
+                    .with_extra_label("needs space before", closing_span),
                     BraceSpacingFixData {
                         span,
                         brace_type: brace_type.clone(),
@@ -101,8 +99,7 @@ fn check_brace_spacing(
                         span,
                     )
                     .with_extra_label("no space after", opening_span)
-                    .with_extra_label("no space before", closing_span)
-                    .with_help("Use {key: value} for records"),
+                    .with_extra_label("no space before", closing_span),
                     BraceSpacingFixData {
                         span,
                         brace_type: brace_type.clone(),

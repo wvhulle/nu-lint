@@ -84,10 +84,7 @@ fn check_contains_pattern(expr: &Expression, context: &LintContext) -> Vec<(Dete
         format!("Use '{operator}' operator instead of verbose '{verb}' check"),
         expr.span,
     )
-    .with_primary_label(format!("verbose {verb} pattern"))
-    .with_help(format!(
-        "The '{operator}' operator is more concise and idiomatic for simple pattern matching"
-    ));
+    .with_primary_label(format!("verbose {verb} pattern"));
 
     let fix_data = FixData {
         full_expr_span: expr.span,

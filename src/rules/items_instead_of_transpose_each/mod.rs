@@ -316,10 +316,6 @@ impl DetectFix for ItemsInsteadOfTransposeEach {
                 .with_extra_label(
                     format!("accesses ${} and ${}", pattern.col1, pattern.col2),
                     pattern.closure_span,
-                )
-                .with_help(
-                    "The 'items' command directly iterates over key-value pairs without needing \
-                     transpose",
                 );
                 (violation, pattern)
             })

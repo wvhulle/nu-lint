@@ -1,8 +1,6 @@
 use nu_protocol::ast::{Expr, Expression, ListItem, RecordItem};
 
-use super::{
-    extract_first_function_parameter, extract_record_from_expr, get_labels_value, has_field,
-};
+use super::{extract_record_from_expr, get_labels_value, has_field};
 use crate::{
     LintLevel,
     ast::call::CallExt,
@@ -129,11 +127,6 @@ impl DetectFix for AddSpanToLabel {
             }
             log::debug!("Found {} labels missing span", labels_missing_span.len());
 
-            let example_span = extract_first_function_parameter(ctx, call.span()).map_or_else(
-                || "$span".to_string(),
-                |param| format!("(metadata ${param}).span"),
-            );
-
             labels_missing_span
                 .into_iter()
                 .map(|label_expr| {
@@ -142,10 +135,6 @@ impl DetectFix for AddSpanToLabel {
                         label_expr.span,
                     )
                     .with_primary_label("missing span")
-                    .with_help(format!(
-                        "Add a 'span' field to point to the problematic code:\n{{ text: \"...\", \
-                         span: {example_span} }}"
-                    ))
                 })
                 .collect()
         }))

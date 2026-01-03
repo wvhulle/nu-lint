@@ -32,6 +32,14 @@ impl DetectFix for NothingOutsideFunctionSignature {
         Some("https://www.nushell.sh/book/types.html#nothing")
     }
 
+    fn help(&self) -> Option<&'static str> {
+        Some(
+            r#"'nothing' is a type annotation keyword for function signatures. It indicates that a function returns no value.
+
+To represent the absence of a value in a function body, use 'null' instead."#,
+        )
+    }
+
     fn level(&self) -> LintLevel {
         LintLevel::Error
     }
@@ -63,14 +71,7 @@ impl DetectFix for NothingOutsideFunctionSignature {
                  expressions or function bodies",
                 expr.span,
             )
-            .with_primary_label("'nothing' used outside function signature")
-            .with_help(
-                "'nothing' is a type annotation keyword for function signatures. It indicates \
-                 that a function returns no value.",
-            )
-            .with_help(
-                "To represent the absence of a value in a function body, use 'null' instead.",
-            );
+            .with_primary_label("'nothing' used outside function signature");
 
             vec![(detection, FixData { span: expr.span })]
         });
@@ -94,7 +95,5 @@ pub static RULE: &dyn Rule = &NothingOutsideFunctionSignature;
 
 #[cfg(test)]
 mod detect_bad;
-#[cfg(test)]
-mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

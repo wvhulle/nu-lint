@@ -144,20 +144,11 @@ impl DetectFix for UseForOverEach {
                 let (list_span, pipeline_elements_before_each) = extract_pipeline_info(expr, ctx)
                     .unwrap_or_else(|| (Span::new(call.span().start, call.span().start), 0));
 
-                let help_message = if pipeline_elements_before_each == 1 {
-                    "Each iteration returns nothing, producing an empty table. Use 'for' loop \
-                     instead"
-                } else {
-                    "Each iteration returns nothing, producing an empty table. Add '| ignore' to \
-                     suppress the output, or refactor to use 'for' loop"
-                };
-
                 let violation = Detection::from_global_span(
                     "Use 'for' loop or '| ignore' for side effects only",
                     call.span(),
                 )
-                .with_primary_label("closure returns nothing")
-                .with_help(help_message);
+                .with_primary_label("closure returns nothing");
 
                 let fix_data = FixData {
                     replace_span: call.span(),

@@ -1,7 +1,8 @@
 use std::{collections::HashSet, str::from_utf8};
 
+use const_format::formatcp;
 use miette::Diagnostic;
-use nu_protocol::{ParseError, Span, engine::StateWorkingSet};
+use nu_protocol::{Span, engine::StateWorkingSet};
 
 use crate::{
     LintLevel, NU_PARSER_VERSION,
@@ -31,31 +32,6 @@ fn find_file_for_span<'a>(working_set: &'a StateWorkingSet, span: Span) -> Optio
     None
 }
 
-fn build_help_text(parse_error: &ParseError, is_external: bool) -> String {
-    let mut parts = Vec::new();
-
-    if let Some(help_text) = parse_error.help() {
-        parts.push(help_text.to_string());
-    }
-
-    if is_external {
-        parts.push(
-            "This error originates from a dynamically imported file (via `overlay use`, `source`, \
-             or `use` with a computed path). These errors cannot be fixed in your code and are \
-             shown for informational purposes only."
-                .to_string(),
-        );
-    }
-
-    let version_note = format!(
-        "nu-lint expects Nushell {NU_PARSER_VERSION}. If your installed version differs, this may \
-         cause false positives."
-    );
-    parts.push(version_note);
-
-    parts.join("\n\n")
-}
-
 struct NuParseError;
 
 impl DetectFix for NuParseError {
@@ -63,6 +39,13 @@ impl DetectFix for NuParseError {
 
     fn id(&self) -> &'static str {
         "nu_parse_error"
+    }
+
+    fn help(&self) -> Option<&'static str> {
+        Some(formatcp!(
+            "nu-lint expects Nushell {NU_PARSER_VERSION}. If your installed version differs, this \
+             may cause false positives."
+        ))
     }
 
     fn explanation(&self) -> &'static str {
@@ -107,13 +90,12 @@ impl DetectFix for NuParseError {
             let labels: Vec<_> = parse_error.labels().into_iter().flatten().collect();
 
             // Check if any labels point to external files (indicates dynamic import issue)
-            let has_external_labels = labels.iter().any(|label| {
+            let _has_external_labels = labels.iter().any(|label| {
                 let span = Span::new(label.offset(), label.offset() + label.len());
                 !context.span_in_user_file(span)
             });
 
-            let mut detection = Detection::from_global_span(parse_error.to_string(), error_span)
-                .with_help(build_help_text(parse_error, has_external_labels));
+            let mut detection = Detection::from_global_span(parse_error.to_string(), error_span);
 
             // Process labels - add in-file labels as extra_labels, external as
             // ExternalDetection
@@ -159,7 +141,5 @@ impl DetectFix for NuParseError {
 pub static RULE: &dyn Rule = &NuParseError;
 #[cfg(test)]
 mod detect_bad;
-#[cfg(test)]
-mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

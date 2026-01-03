@@ -22,7 +22,6 @@ fn extract_exit_code(call: &Call) -> Option<i64> {
 }
 
 struct ErrorToStdout {
-    print_message: String,
     span: nu_protocol::Span,
 }
 
@@ -39,8 +38,7 @@ fn check_print_exit_calls(
             let exit_code = extract_exit_code(exit_call)?;
             (exit_code != 0).then_some(print_message)
         })
-        .map(|print_message| ErrorToStdout {
-            print_message,
+        .map(|_print_message| ErrorToStdout {
             span: print_call.span(),
         })
 }
@@ -80,25 +78,12 @@ fn check_same_pipeline_print_exit(
     })
 }
 
-fn truncate_message(msg: &str, max_len: usize) -> String {
-    if msg.len() > max_len {
-        format!("{}...", &msg[..max_len])
-    } else {
-        msg.to_string()
-    }
-}
-
 fn create_violation(pattern: &ErrorToStdout) -> Detection {
-    let truncated_msg = truncate_message(&pattern.print_message, 60);
-
     Detection::from_global_span(
         "Error message printed to stdout instead of stderr",
         pattern.span,
     )
     .with_primary_label("prints error to stdout")
-    .with_help(format!(
-        "Use 'print --stderr \"{truncated_msg}\"' to send error messages to stderr"
-    ))
 }
 
 fn check_sequential_patterns<'a>(

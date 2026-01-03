@@ -21,6 +21,9 @@ pub trait DetectFix: Send + Sync + 'static {
     fn doc_url(&self) -> Option<&'static str> {
         None
     }
+    fn help(&self) -> Option<&'static str> {
+        None
+    }
     fn level(&self) -> LintLevel;
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)>;
     fn fix(&self, _context: &LintContext, _fix_data: &Self::FixInput<'_>) -> Option<Fix> {
@@ -78,8 +81,9 @@ impl<T: DetectFix> Rule for T {
         self.detect(context)
             .into_iter()
             .map(|(detected, fix_data)| {
+                let help = self.help();
                 let fix = self.fix(context, &fix_data);
-                Violation::from_detected(detected, fix)
+                Violation::from_detected(detected, fix, help)
             })
             .collect()
     }
@@ -223,18 +227,6 @@ impl dyn Rule {
             fix.explanation.contains(expected_text),
             "Expected fix explanation to contain '{expected_text}', but got: {}",
             fix.explanation
-        );
-    }
-
-    #[track_caller]
-    pub fn assert_help_contains(&self, code: &str, expected_text: &str) {
-        let help = self
-            .first_violation(code)
-            .help
-            .expect("Expected violation to have help text");
-        assert!(
-            help.contains(expected_text),
-            "Expected help to contain '{expected_text}', but got: {help}"
         );
     }
 

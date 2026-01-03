@@ -65,15 +65,7 @@ fn check_flag_usage_in_body(call: &Call, context: &LintContext) -> Vec<(Detectio
                 usage_span,
             )
             .with_primary_label("typed flag used without null check")
-            .with_extra_label("flag declared here", flag_span)
-            .with_help(format!(
-                "Check if the flag value is not null before using it: 'if ${} != null {{ ... }}'",
-                flag.long
-            ))
-            .with_help(
-                "Alternative: provide a default value in the function signature: '--flag: type = \
-                 default-value'",
-            );
+            .with_extra_label("flag declared here", flag_span);
 
             Some((detection, ()))
         })

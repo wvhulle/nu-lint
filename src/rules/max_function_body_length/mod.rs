@@ -26,15 +26,9 @@ fn function_violation(
             "Function `{}` has {line_count} lines, which exceeds the maximum of {MAX_LINES} lines",
             def.name
         );
-        let suggestion = format!(
-            "Consider refactoring `{}` into smaller, more focused functions. Break down complex \
-             logic into helper functions with clear responsibilities.",
-            def.name
-        );
         Detection::from_file_span(message, def.declaration_span(context))
             .with_primary_label(format!("{line_count} lines"))
             .with_extra_label("function body", block_span)
-            .with_help(suggestion)
     })
 }
 struct TooManyLines;
@@ -48,6 +42,12 @@ impl DetectFix for TooManyLines {
 
     fn explanation(&self) -> &'static str {
         "Function bodies should be short to maintain readability"
+    }
+
+    fn help(&self) -> Option<&'static str> {
+        Some(
+            "Consider refactoring into smaller, more focused functions with clear responsibilities",
+        )
     }
 
     fn doc_url(&self) -> Option<&'static str> {

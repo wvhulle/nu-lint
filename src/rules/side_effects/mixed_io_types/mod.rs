@@ -168,12 +168,7 @@ fn analyze_top_level_script(context: &LintContext) -> Option<Detection> {
     let script_span = context.ast.span.unwrap_or(Span::unknown());
 
     let mut detection = Detection::from_global_span(message, script_span)
-        .with_primary_label("script with mixed I/O")
-        .with_help(
-            "Consider separating different I/O operations into focused functions. This makes the \
-             code easier to test, mock, and reason about. For scripts without functions, create \
-             separate functions for network operations, file operations, and printing.",
-        );
+        .with_primary_label("script with mixed I/O");
 
     for (io_type, spans) in &io_spans {
         for span in spans {
@@ -204,12 +199,7 @@ fn analyze_function_body(
     );
 
     let mut detection = Detection::from_file_span(message, def.declaration_span(context))
-        .with_primary_label("function with mixed I/O")
-        .with_help(
-            "Consider separating different I/O operations into focused functions. This makes the \
-             code easier to test, mock, and reason about. Group file operations together, network \
-             operations together, and printing separately.",
-        );
+        .with_primary_label("function with mixed I/O");
 
     for (io_type, spans) in &io_spans {
         for span in spans {

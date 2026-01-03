@@ -146,7 +146,6 @@ fn check_while_loop_for_counter(
         )
         .with_primary_label("counter initialization")
         .with_extra_label("while loop using counter", call.span())
-        .with_help("Use '0..$max | each { |i| ... }' instead of while loop with counter")
     })
 }
 

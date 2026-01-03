@@ -1,9 +1,6 @@
 use nu_protocol::ast::{Expr, Expression, RecordItem};
 
-use crate::{
-    ast::{call::CallExt, expression::ExpressionExt},
-    context::LintContext,
-};
+use crate::{ast::expression::ExpressionExt, context::LintContext};
 
 pub mod add_help;
 pub mod add_label;
@@ -36,42 +33,6 @@ pub fn extract_record_from_expr(expr: &Expression) -> Option<&Vec<RecordItem>> {
         },
         _ => None,
     }
-}
-
-pub fn extract_first_function_parameter(
-    context: &LintContext,
-    call_span: nu_protocol::Span,
-) -> Option<String> {
-    context
-        .ast
-        .pipelines
-        .iter()
-        .flat_map(|pipeline| &pipeline.elements)
-        .filter_map(|element| match &element.expr.expr {
-            Expr::Call(call) => Some(call),
-            _ => None,
-        })
-        .find_map(|call| {
-            call.custom_command_def(context)?;
-            let block_id = call.get_positional_arg(2)?.extract_block_id()?;
-            let func_block = context.working_set.get_block(block_id);
-
-            func_block
-                .span
-                .filter(|s| s.contains_span(call_span))
-                .and_then(|_| {
-                    func_block
-                        .signature
-                        .required_positional
-                        .first()
-                        .and_then(|param| param.var_id)
-                        .map(|var_id| {
-                            let var_span =
-                                context.working_set.get_variable(var_id).declaration_span;
-                            context.plain_text(var_span).to_string()
-                        })
-                })
-        })
 }
 
 pub fn get_labels_value<'a>(

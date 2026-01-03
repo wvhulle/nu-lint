@@ -94,6 +94,10 @@ impl DetectFix for HardcodedMathConstants {
         "Hardcoded mathematical constants should use std/math constants instead"
     }
 
+    fn help(&self) -> Option<&'static str> {
+        Some("Add 'use std/math' at the top of your file, then use $math constants")
+    }
+
     fn doc_url(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/modules.html#using-modules")
     }
@@ -116,11 +120,7 @@ impl DetectFix for HardcodedMathConstants {
                     ),
                     expr.span,
                 )
-                .with_primary_label("hardcoded constant")
-                .with_help(format!(
-                    "Add 'use std/math' at the top of your file, then use $math.{constant_name} \
-                     instead of the hardcoded value"
-                ));
+                .with_primary_label("hardcoded constant");
 
                 let fix_data = FixData {
                     constant_name,

@@ -127,9 +127,6 @@ fn create_dangerous_path_violation(
         command_span,
     )
     .with_primary_label(label)
-    .with_help(
-        "Avoid operations on system paths. Use specific file paths and consider backup first",
-    )
 }
 
 fn create_variable_validation_violation(
@@ -142,9 +139,6 @@ fn create_variable_validation_violation(
         command_span,
     )
     .with_primary_label("unvalidated variable")
-    .with_help(format!(
-        "Validate variable before use: if ({path_str} | path exists) {{ {cmd_name} {path_str} }}"
-    ))
 }
 
 fn is_pipeline_variable(path: &str) -> bool {

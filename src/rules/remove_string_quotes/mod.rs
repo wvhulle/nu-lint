@@ -102,12 +102,7 @@ impl DetectFix for UnnecessaryStringQuotes {
                 format!("Unnecessary {quote_type} quotes around '{unquoted_content}'"),
                 expr.span,
             )
-            .with_primary_label("can be a bare word")
-            .with_help(
-                "Bare words work for alphanumeric strings, paths, URLs, and identifiers. Quotes \
-                 are needed for strings with spaces, special characters, or values that would be \
-                 parsed as numbers, booleans, or null.",
-            );
+            .with_primary_label("can be a bare word");
 
             results.push((
                 violation,

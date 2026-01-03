@@ -1,4 +1,7 @@
-use nu_protocol::ast::{Call, Expr};
+use nu_protocol::{
+    PositionalArg,
+    ast::{Call, Expr},
+};
 
 use crate::{
     LintLevel,
@@ -7,6 +10,34 @@ use crate::{
     rule::{DetectFix, Rule},
     violation::Detection,
 };
+
+fn check_positional_param(
+    param: &PositionalArg,
+    param_type: &str,
+    context: &LintContext,
+) -> Option<Detection> {
+    let var_id = param.var_id?;
+    let var = context.working_set.get_variable(var_id);
+    let param_span = var.declaration_span;
+
+    if param_span.has_inline_doc_comment(context) {
+        return None;
+    }
+
+    Some(
+        Detection::from_global_span(
+            format!(
+                "{} parameter '{}' in main function is missing documentation comment",
+                param_type, param.name
+            ),
+            param_span,
+        )
+        .with_primary_label(format!(
+            "undocumented {} parameter",
+            param_type.to_lowercase()
+        )),
+    )
+}
 
 fn check_main_function(call: &Call, context: &LintContext) -> Vec<Detection> {
     let Some(def) = call.custom_command_def(context) else {
@@ -23,78 +54,21 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Detection> {
     let mut violations = Vec::new();
 
     for param in &signature.required_positional {
-        if let Some(var_id) = param.var_id {
-            let var = context.working_set.get_variable(var_id);
-            let param_span = var.declaration_span;
-
-            if !param_span.has_inline_doc_comment(context) {
-                violations.push(
-                    Detection::from_global_span(
-                        format!(
-                            "Positional parameter '{}' in main function is missing documentation \
-                             comment",
-                            param.name
-                        ),
-                        param_span,
-                    )
-                    .with_primary_label("undocumented parameter")
-                    .with_help(format!(
-                        "Add a documentation comment after the parameter: {} # Description of {}",
-                        param.name, param.name
-                    )),
-                );
-            }
+        if let Some(detection) = check_positional_param(param, "Positional", context) {
+            violations.push(detection);
         }
     }
 
     for param in &signature.optional_positional {
-        if let Some(var_id) = param.var_id {
-            let var = context.working_set.get_variable(var_id);
-            let param_span = var.declaration_span;
-
-            if !param_span.has_inline_doc_comment(context) {
-                violations.push(
-                    Detection::from_global_span(
-                        format!(
-                            "Optional positional parameter '{}' in main function is missing \
-                             documentation comment",
-                            param.name
-                        ),
-                        param_span,
-                    )
-                    .with_primary_label("undocumented optional parameter")
-                    .with_help(format!(
-                        "Add a documentation comment after the parameter: {} # Description of {}",
-                        param.name, param.name
-                    )),
-                );
-            }
+        if let Some(detection) = check_positional_param(param, "Optional positional", context) {
+            violations.push(detection);
         }
     }
 
     if let Some(rest_param) = &signature.rest_positional
-        && let Some(var_id) = rest_param.var_id
+        && let Some(detection) = check_positional_param(rest_param, "Rest positional", context)
     {
-        let var = context.working_set.get_variable(var_id);
-        let param_span = var.declaration_span;
-
-        if !param_span.has_inline_doc_comment(context) {
-            violations.push(
-                Detection::from_global_span(
-                    format!(
-                        "Rest positional parameter '{}' in main function is missing documentation \
-                         comment",
-                        rest_param.name
-                    ),
-                    param_span,
-                )
-                .with_primary_label("undocumented rest parameter")
-                .with_help(format!(
-                    "Add a documentation comment after the parameter: ...{} # Description of {}",
-                    rest_param.name, rest_param.name
-                )),
-            );
-        }
+        violations.push(detection);
     }
 
     violations
@@ -111,6 +85,10 @@ impl DetectFix for MainPositionalArgsDocs {
 
     fn explanation(&self) -> &'static str {
         "Positional parameters in main functions should have documentation comments"
+    }
+
+    fn help(&self) -> Option<&'static str> {
+        Some("Add a documentation comment after the parameter: <param> # Description of <param>")
     }
 
     fn doc_url(&self) -> Option<&'static str> {

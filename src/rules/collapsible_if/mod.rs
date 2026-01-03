@@ -94,8 +94,7 @@ impl DetectFix for CollapsibleIf {
                 .with_extra_label(
                     "inner if can be merged with outer condition",
                     inner_call.span(),
-                )
-                .with_help("Combine conditions using 'and' instead of nesting if statements");
+                );
 
                 let fix_data = FixData {
                     replace_span: call.span(),

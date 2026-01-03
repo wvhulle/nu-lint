@@ -1,3 +1,4 @@
+use const_format::formatcp;
 use nu_protocol::ParseWarning;
 
 use crate::{
@@ -6,7 +7,6 @@ use crate::{
     rule::{DetectFix, Rule},
     violation::Detection,
 };
-
 struct NuDeprecated;
 
 impl DetectFix for NuDeprecated {
@@ -14,6 +14,13 @@ impl DetectFix for NuDeprecated {
 
     fn id(&self) -> &'static str {
         "nu_deprecated"
+    }
+
+    fn help(&self) -> Option<&'static str> {
+        Some(formatcp!(
+            "nu-lint expects Nushell {NU_PARSER_VERSION}. If your installed version differs, this \
+             may cause false positives."
+        ))
     }
 
     fn explanation(&self) -> &'static str {
@@ -35,20 +42,9 @@ impl DetectFix for NuDeprecated {
                 .parse_warnings
                 .iter()
                 .map(|warning| {
-                    let ParseWarning::Deprecated {
-                        label, span, help, ..
-                    } = warning;
-                    let mut violation = Detection::from_global_span(label.clone(), *span)
-                        .with_primary_label("deprecated");
-                    let nu_version_note =
-                        format!("This linter was compiled against Nu {NU_PARSER_VERSION}");
-                    if let Some(help_text) = help {
-                        violation =
-                            violation.with_help(help_text.clone() + "\n\n" + &nu_version_note);
-                    } else {
-                        violation = violation.with_help(nu_version_note);
-                    }
-                    violation
+                    let ParseWarning::Deprecated { label, span, .. } = warning;
+                    Detection::from_global_span(label.clone(), *span)
+                        .with_primary_label("deprecated")
                 })
                 .collect(),
         )
@@ -59,7 +55,5 @@ pub static RULE: &dyn Rule = &NuDeprecated;
 
 #[cfg(test)]
 mod detect_bad;
-#[cfg(test)]
-mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

@@ -98,8 +98,7 @@ impl DetectFix for TryInsteadOfDo {
                     do_span,
                 )
                 .with_primary_label("do keyword")
-                .with_extra_label(error_label, error_span)
-                .with_help("Replace 'do { ... }' with 'try { ... }' for proper error handling"),
+                .with_extra_label(error_label, error_span),
             ]
         });
         Self::no_fix(violations)

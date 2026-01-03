@@ -19,6 +19,10 @@ impl DetectFix for MaxPositionalParams {
         "Custom commands should have ≤ 2 positional parameters"
     }
 
+    fn help(&self) -> Option<&'static str> {
+        Some("Consider using named flags (--flag) for parameters beyond the first 2")
+    }
+
     fn level(&self) -> LintLevel {
         LintLevel::Warning
     }
@@ -53,9 +57,6 @@ impl DetectFix for MaxPositionalParams {
                         def.declaration_span(context),
                     )
                     .with_primary_label(format!("{positional_count} positional params"))
-                    .with_help(
-                        "Consider using named flags (--flag) for parameters beyond the first 2",
-                    )
                 })
             })
             .collect();

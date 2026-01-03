@@ -41,8 +41,7 @@ fn check_block_body_spacing(
                 block_span,
             )
             .with_extra_label("needs space after", opening_span)
-            .with_extra_label("needs space before", closing_span)
-            .with_help("Use { body } for blocks without parameters"),
+            .with_extra_label("needs space before", closing_span),
             BlockBodySpacingFixData { block_span },
         )]
     } else {

@@ -36,24 +36,6 @@ const fn is_string_parameter(param: &nu_protocol::PositionalArg) -> bool {
     )
 }
 
-/// Generate suggestion message based on function context
-fn create_suggestion_message(param_name: &str, function_name: &str) -> String {
-    if function_name == "main" {
-        format!(
-            "Instead of passing '{param_name}' as a script path argument, define the \
-             functionality as a function in the same file. This makes the code more maintainable \
-             and testable. For example: 'def {param_name}-handler [] {{ ... }}' and call it \
-             directly in main."
-        )
-    } else {
-        format!(
-            "Instead of passing '{param_name}' as a script path argument to function \
-             '{function_name}', consider defining the external script logic as an internal \
-             function. This improves code maintainability and testability."
-        )
-    }
-}
-
 /// Create a violation for a parameter that's used as an external command
 fn create_violation(
     param_name: &str,
@@ -68,7 +50,6 @@ fn create_violation(
         function_def.declaration_span(context),
     )
     .with_primary_label("using script parameter")
-    .with_help(create_suggestion_message(param_name, &function_def.name))
 }
 
 struct ExternalScriptAsArgument;

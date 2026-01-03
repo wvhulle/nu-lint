@@ -1,4 +1,3 @@
-use heck::ToShoutySnakeCase;
 use nu_protocol::ast::Expr;
 
 use crate::{
@@ -71,11 +70,7 @@ impl DetectFix for ScreamingSnakeConstants {
                         ),
                         var_arg.span,
                     )
-                    .with_primary_label("non-SCREAMING_SNAKE_CASE")
-                    .with_help(format!(
-                        "Consider renaming to: {}",
-                        const_name.to_shouty_snake_case()
-                    )),
+                    .with_primary_label("non-SCREAMING_SNAKE_CASE"),
                 ]
             }
         });

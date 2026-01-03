@@ -94,10 +94,7 @@ fn check_parse_regex(expr: &Expr, ctx: &LintContext) -> Option<(Detection, FixDa
         "Complex 'parse --regex' can be simplified to 'parse' with pattern syntax",
         call.span(),
     )
-    .with_primary_label("complex regex pattern")
-    .with_help(format!(
-        "Use 'parse \"{simplified}\"' instead of 'parse --regex' for simpler patterns"
-    ));
+    .with_primary_label("complex regex pattern");
 
     Some((
         violation,

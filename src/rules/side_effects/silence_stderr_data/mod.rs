@@ -90,7 +90,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Detectio
                  redirected to ignore"
             );
 
-            let help_message = format!(
+            let _help_message = format!(
                 "Command '{cmd_name}' produces useful output on stderr. Consider removing the \
                  stderr redirection (e>| or o+e>|) to preserve this output, or redirect stderr to \
                  a file for later inspection."
@@ -98,8 +98,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Detectio
 
             Some(
                 Detection::from_global_span(message, element.expr.span)
-                    .with_primary_label("silences stderr data")
-                    .with_help(help_message),
+                    .with_primary_label("silences stderr data"),
             )
         })
 }

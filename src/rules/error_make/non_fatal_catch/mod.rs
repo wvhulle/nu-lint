@@ -117,12 +117,7 @@ impl DetectFix for UseErrorMakeForCatch {
                 format!("Consider 'error make' instead of 'print --stderr' {context_hint}"),
                 expr.span,
             )
-            .with_primary_label("stderr output in catchable context")
-            .with_help(
-                "Use 'error make { msg: \"...\" }' to throw a catchable exception. This allows \
-                 callers to handle the error with 'try/catch'. Reserve 'print --stderr' + 'exit' \
-                 for top-level unrecoverable termination in 'main'.",
-            );
+            .with_primary_label("stderr output in catchable context");
 
             // Extract message expression info for fix generation
             let msg_expr = call.get_first_positional_arg();

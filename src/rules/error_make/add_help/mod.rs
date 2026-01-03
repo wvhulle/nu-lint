@@ -34,11 +34,7 @@ fn check_error_make_call(expr: &Expression, ctx: &LintContext) -> Vec<Detection>
             "error make is missing 'help' field to guide users",
             call.span(),
         )
-        .with_primary_label("missing help")
-        .with_help(
-            "Add a 'help' field explaining how to fix the issue:\nhelp: \"describe how to resolve \
-             this error\"",
-        ),
+        .with_primary_label("missing help"),
     ]
 }
 

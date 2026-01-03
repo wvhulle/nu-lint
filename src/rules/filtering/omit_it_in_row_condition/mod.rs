@@ -70,17 +70,7 @@ fn check_binary_op_for_it_field(
                         "Field name can be used directly in row condition without `$it.` prefix",
                         it_access.full_span,
                     )
-                    .with_primary_label("unnecessary `$it.` prefix")
-                    .with_help(format!(
-                        r"In row conditions, field names on the LEFT side of comparisons are automatically expanded to `$it.field`. You can write `{0}` instead of `$it.{0}`.
-
-Rules for when `$it.` can be omitted:
-- Only in row conditions (blocks without `|params|`), not closures
-- Only on the LEFT side of comparison operators (==, !=, <, >, <=, >=, =~, etc.)
-- Only for simple field access (not nested fields like `$it.user.name`)
-- Not in math operations or complex expressions (e.g., `$it.x * 2` needs `$it.`)",
-                        it_access.field_name
-                    ));
+                    .with_primary_label("unnecessary `$it.` prefix");
 
                     violations.push((violation, it_access));
                 }

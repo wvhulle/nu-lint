@@ -56,8 +56,7 @@ fn create_violation(span: nu_protocol::Span, items: &[ListItem]) -> (Detection, 
         Detection::from_global_span(
             "Long lists should use multiline format with each item on a separate line",
             span,
-        )
-        .with_help("Put each list item on a separate line for better readability"),
+        ),
         ListFixData {
             span,
             items: item_spans,

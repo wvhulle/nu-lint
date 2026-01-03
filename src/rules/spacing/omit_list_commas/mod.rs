@@ -50,8 +50,7 @@ fn check_list_commas(
                     between_span.start + comma_pos + 1,
                 );
                 violations.push((
-                    Detection::from_global_span("Omit commas between list items", comma_span)
-                        .with_help("Remove the comma - Nushell lists don't need commas"),
+                    Detection::from_global_span("Omit commas between list items", comma_span),
                     CommaFixData { comma_span },
                 ));
             }

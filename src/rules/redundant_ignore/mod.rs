@@ -64,12 +64,6 @@ fn check_pipeline(
         return None;
     }
 
-    let command_name = match &expr_before_ignore.expr {
-        Expr::Call(call) => call.get_call_name(context),
-        Expr::ExternalCall(head, _) => context.plain_text(head.span).to_string(),
-        _ => "pipeline".to_string(),
-    };
-
     let ignore_span = pipeline.elements.last()?.expr.span;
 
     let elements_without_ignore = &pipeline.elements[..pipeline.elements.len() - 1];
@@ -80,14 +74,7 @@ fn check_pipeline(
 
     let violation =
         Detection::from_global_span("Discarding command output with '| ignore'", ignore_span)
-            .with_primary_label("redundant ignore")
-            .with_help(format!(
-                "Command '{command_name}' produces output that is being discarded with '| \
-                 ignore'.\n\nIf you don't need the output, consider:\n1. Removing the command if \
-                 it has no side effects\n2. Using error handling if you only care about \
-                 success/failure:\n   try {{ {command_name} }}\n3. If the output is intentionally \
-                 discarded, add a comment explaining why"
-            ));
+            .with_primary_label("redundant ignore");
 
     let pipeline_span = nu_protocol::Span::new(
         pipeline.elements.first()?.expr.span.start,

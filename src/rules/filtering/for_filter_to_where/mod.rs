@@ -347,10 +347,7 @@ impl DetectFix for FilterCollectWithWhere {
                     ),
                     *span,
                 )
-                .with_primary_label("accumulator variable")
-                .with_help(
-                    "Use '$input | where <condition>' for simple filtering without transformation",
-                );
+                .with_primary_label("accumulator variable");
                 violations.push(violation);
             }
         }

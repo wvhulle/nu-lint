@@ -48,6 +48,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 
 +110 rules are defined and most have automatic fixes available (list may be out-of-date):
 
+<!-- start-rule-groups -->
 `idioms` - Simplifications unique to the Nu language.
 
 - `use_is_not_empty` (auto-fix)
@@ -67,9 +68,9 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `never_space_split` (auto-fix)
 - `lines_each_to_parse` (auto-fix)
 - `simplify_regex_parse` (auto-fix)
-- `split_row_get_variable` (auto-fix)
+- `split_row_get_multistatement` (auto-fix)
 - `split_row_first_last` (auto-fix)
-- `split_row_get_single_pipeline` (auto-fix)
+- `split_row_get_inline` (auto-fix)
 
 `filesystem` - Simplify file and path operations.
 
@@ -219,6 +220,8 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `dynamic_script_import`
 - `nu_deprecated`
 - `nu_parse_error`
+
+<!-- end-rule-groups -->
 
 ## Installation
 

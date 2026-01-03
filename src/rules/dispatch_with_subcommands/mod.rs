@@ -65,30 +65,7 @@ fn find_match_dispatch<'a>(
         })
 }
 
-fn extract_branch_names(call: &Call) -> impl Iterator<Item = String> + '_ {
-    call.get_positional_arg(1)
-        .and_then(|arg| match &arg.expr {
-            Expr::MatchBlock(patterns) => Some(patterns),
-            _ => None,
-        })
-        .into_iter()
-        .flatten()
-        .filter_map(|(pattern, _)| match &pattern.pattern {
-            Pattern::Expression(expr) => match &expr.expr {
-                Expr::String(s) => Some(s.clone()),
-                _ => None,
-            },
-            _ => None,
-        })
-}
-
 fn build_violation(param_name: &str, match_call: &Call) -> Detection {
-    let subcommand_examples = extract_branch_names(match_call)
-        .take(3)
-        .map(|name| format!("def \"main {name}\" [] {{ ... }}"))
-        .collect::<Vec<_>>()
-        .join("\n");
-
     Detection::from_global_span(
         format!(
             "Main function uses match dispatch on '{param_name}' - use native subcommands instead"
@@ -96,11 +73,6 @@ fn build_violation(param_name: &str, match_call: &Call) -> Detection {
         match_call.span(),
     )
     .with_primary_label("match-based dispatch")
-    .with_help(format!(
-        "Replace match-based dispatch with native subcommands for automatic help, tab completion, \
-         and cleaner code:\n\n{subcommand_examples}\n\nRun 'script.nu --help' to see all \
-         subcommands automatically."
-    ))
 }
 
 struct DispatchWithSubcommands;
@@ -152,7 +124,5 @@ pub static RULE: &dyn Rule = &DispatchWithSubcommands;
 
 #[cfg(test)]
 mod detect_bad;
-#[cfg(test)]
-mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

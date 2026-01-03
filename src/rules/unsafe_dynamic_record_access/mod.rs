@@ -52,8 +52,7 @@ fn check_get_call(
         call.head,
     )
     .with_primary_label("add -o flag for safe access")
-    .with_extra_label("dynamic key", key_arg.span)
-    .with_help("Use 'get -o $key' to return null for missing keys instead of causing errors");
+    .with_extra_label("dynamic key", key_arg.span);
 
     let fix_data = DynamicAccessFixData { insert_span };
 

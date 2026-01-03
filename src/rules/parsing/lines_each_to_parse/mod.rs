@@ -147,8 +147,7 @@ fn check_pipeline_for_lines_each_parse(
             span,
         )
         .with_primary_label("redundant each with parse")
-        .with_extra_label("each closure can be removed", next.expr.span)
-        .with_help("The 'parse' command can be applied directly after 'lines' without 'each'.");
+        .with_extra_label("each closure can be removed", next.expr.span);
 
         Some((
             violation,

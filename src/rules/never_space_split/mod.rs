@@ -57,12 +57,7 @@ fn check_interpolation(expr: &Expression, context: &LintContext) -> Option<(Dete
         format!("Unnecessary string interpolation around variable '{variable_text}'"),
         expr.span,
     )
-    .with_primary_label("unnecessary interpolation")
-    .with_help(format!(
-        "Nushell never splits variables on whitespace, unlike bash.\nYou can use the variable \
-         directly: {variable_text}\nQuotes are only needed to prevent splitting in bash, not in \
-         Nushell."
-    ));
+    .with_primary_label("unnecessary interpolation");
 
     let fix_data = FixData {
         interpolation_span: expr.span,

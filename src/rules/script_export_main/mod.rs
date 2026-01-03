@@ -42,12 +42,7 @@ fn check_export_main_in_script(
         export_span,
     )
     .with_primary_label("remove 'export' keyword")
-    .with_extra_label("script entry point", func_def.name_span)
-    .with_help(
-        "In scripts (files with shebang), 'def main' is the entry point and doesn't need \
-         'export'. Use 'export def main' only in modules where the command should be importable."
-            .to_string(),
-    );
+    .with_extra_label("script entry point", func_def.name_span);
 
     Some((violation, func_def))
 }
@@ -63,6 +58,10 @@ impl DetectFix for ScriptExportMain {
 
     fn explanation(&self) -> &'static str {
         "In scripts, 'def main' is the entry point and doesn't need 'export'"
+    }
+
+    fn help(&self) -> Option<&'static str> {
+        Some("Use 'export def main' only in modules where the command should be importable")
     }
 
     fn doc_url(&self) -> Option<&'static str> {

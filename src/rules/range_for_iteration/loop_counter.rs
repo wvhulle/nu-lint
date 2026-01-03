@@ -213,11 +213,7 @@ impl DetectFix for LoopCounter {
                             counter_span,
                         )
                         .with_primary_label("counter initialization")
-                        .with_extra_label("loop using counter with break", call.span())
-                        .with_help(
-                            "Use '0..$max | each { |i| ... }' instead of loop with counter and \
-                             break",
-                        ),
+                        .with_extra_label("loop using counter with break", call.span()),
                     ]
                 })
             })

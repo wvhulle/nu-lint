@@ -65,10 +65,7 @@ impl DetectFix for LinesInsteadOfSplit {
                 "Use 'lines' instead of 'split row \"\\n\"' for splitting by newlines",
                 expr.span,
             )
-            .with_primary_label("inefficient newline split")
-            .with_help(
-                "The 'lines' command is more efficient and clearer for splitting text by newlines",
-            );
+            .with_primary_label("inefficient newline split");
 
             let fix_data = FixData {
                 replace_span: expr.span,

@@ -50,6 +50,8 @@ impl Default for Config {
             ignored: HashSet::from([
                 rules::always_annotate_ext_hat::RULE.id().into(),
                 rules::upstream::nu_parse_error::RULE.id().into(),
+                rules::error_make::add_url::RULE.id().into(),
+                rules::error_make::add_label::RULE.id().into(),
             ]),
             additional: HashSet::new(),
             sequential: false,

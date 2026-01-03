@@ -120,7 +120,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     parsing::lines_each_to_parse::RULE,
     parsing::open_raw_from_to_open::RULE,
     parsing::simplify_regex::RULE,
-    parsing::split_filter_index_multistatement::RULE,
+    parsing::split_row_get_multistatement::RULE,
     parsing::split_row_first_last::RULE,
     parsing::split_row_index_to_parse::RULE,
     positional_to_pipeline::RULE,

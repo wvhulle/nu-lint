@@ -103,11 +103,12 @@ impl DetectFix for SplitGetRule {
     type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
-        "split_row_get_to_parse"
+        "split_row_get_single_pipeline"
     }
 
     fn explanation(&self) -> &'static str {
-        "Prefer 'parse' command over 'split row | get' pattern"
+        "Replace 'split row' followed by indexed 'get' access in a single pipeline with 'parse' \
+         for structured text extraction"
     }
 
     fn doc_url(&self) -> Option<&'static str> {

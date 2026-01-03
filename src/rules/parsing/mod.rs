@@ -16,8 +16,8 @@ pub mod from_after_parsed_open;
 pub mod lines_each_to_parse;
 pub mod open_raw_from_to_open;
 pub mod simplify_regex;
-pub mod split_filter_index_multistatement;
 pub mod split_row_first_last;
+pub mod split_row_get_multistatement;
 pub mod split_row_index_to_parse;
 
 /// Data extracted from an `open FILE | from FORMAT` pipeline pattern

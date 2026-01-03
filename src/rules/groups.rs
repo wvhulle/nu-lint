@@ -63,7 +63,7 @@ const PARSING: Group = Group {
         super::parsing::lines_each_to_parse::RULE,
         super::parsing::open_raw_from_to_open::RULE,
         super::parsing::simplify_regex::RULE,
-        super::parsing::split_filter_index_multistatement::RULE,
+        super::parsing::split_row_get_multistatement::RULE,
         super::parsing::split_row_first_last::RULE,
         super::parsing::split_row_index_to_parse::RULE,
     ],

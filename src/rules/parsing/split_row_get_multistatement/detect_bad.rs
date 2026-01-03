@@ -1,8 +1,9 @@
 use super::RULE;
+use crate::log::init_log;
 
 #[test]
 fn test_detect_simple_split_get_across_statements() {
-    crate::log::init_log();
+    init_log();
     let bad_code = r#"
 let split = ("a:b:c" | split row ":")
 $split | get 0
@@ -62,6 +63,39 @@ fn test_user_reported_case() {
 let rest = "2025-11-20 08:21:51 +01:00"
 let split = ($rest | split row " " | where $it != "")
 $split | get 1
+"#;
+    RULE.assert_detects(bad_code);
+}
+
+#[test]
+fn test_detect_in_function_definition() {
+    let bad_code = r#"
+def process_data [] {
+    let split = ("a:b:c" | split row ":")
+    $split | get 0
+}
+"#;
+    RULE.assert_detects(bad_code);
+}
+
+#[test]
+fn test_detect_in_closure() {
+    let bad_code = r#"
+let process = {||
+    let split = ("hello world" | split row " ")
+    $split | get 1
+}
+"#;
+    RULE.assert_detects(bad_code);
+}
+
+#[test]
+fn test_detect_in_nested_closure() {
+    let bad_code = r#"
+["data:one", "data:two"] | each {|item|
+    let split = ($item | split row ":")
+    $split | get 1
+}
 "#;
     RULE.assert_detects(bad_code);
 }

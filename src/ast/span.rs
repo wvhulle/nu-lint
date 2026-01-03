@@ -1,18 +1,18 @@
-use std::collections::HashMap;
+use std::collections::BTreeSet;
 
-use nu_protocol::{BlockId, Span};
+use nu_protocol::Span;
 
-use crate::{ast::block::BlockExt, context::LintContext};
+use crate::{ast::{block::BlockExt, declaration::CustomCommandDef}, context::LintContext};
 
 pub trait SpanExt {
     #[must_use]
     /// Finds function containing this span. Example: statement span inside `def
     /// process [] { ... }`
-    fn find_containing_function(
+    fn find_containing_function<'a>(
         &self,
-        functions: &HashMap<BlockId, String>,
+        functions: &'a BTreeSet<CustomCommandDef>,
         context: &LintContext,
-    ) -> Option<String>;
+    ) -> Option<&'a CustomCommandDef>;
     #[must_use]
     /// Finds the span of a substring within this span. Example: finding
     /// parameter name within signature span
@@ -24,24 +24,23 @@ pub trait SpanExt {
 }
 
 impl SpanExt for Span {
-    fn find_containing_function(
+    fn find_containing_function<'a>(
         &self,
-        functions: &HashMap<BlockId, String>,
+        functions: &'a BTreeSet<CustomCommandDef>,
         context: &LintContext,
-    ) -> Option<String> {
+    ) -> Option<&'a CustomCommandDef> {
         functions
             .iter()
-            .filter(|(block_id, _)| {
+            .filter(|def| {
                 context
                     .working_set
-                    .get_block(**block_id)
+                    .get_block(def.body)
                     .contains_span(*self)
             })
-            .min_by_key(|(block_id, _)| {
-                let block = context.working_set.get_block(**block_id);
+            .min_by_key(|def| {
+                let block = context.working_set.get_block(def.body);
                 block.span.map_or(usize::MAX, |s| s.end - s.start)
             })
-            .map(|(_, name)| name.clone())
     }
 
     fn find_substring_span(&self, substring: &str, context: &LintContext) -> Span {

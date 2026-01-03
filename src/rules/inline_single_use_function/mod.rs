@@ -53,9 +53,6 @@ fn count_function_calls(function_name: &str, context: &LintContext) -> usize {
     );
     all_calls.len()
 }
-fn is_exported_function(function_name: &str, context: &LintContext) -> bool {
-    context.source_contains(&format!("export def {function_name}"))
-}
 
 struct InlineSingleUseFunction;
 
@@ -80,25 +77,28 @@ impl DetectFix for InlineSingleUseFunction {
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let function_definitions = context.collect_function_definitions();
-        let has_main = function_definitions.values().any(|name| name == "main");
+        let has_main = function_definitions
+            .iter()
+            .any(super::super::ast::declaration::CustomCommandDef::is_main);
         if !has_main {
             return vec![];
         }
         let violations = function_definitions
             .iter()
-            .filter(|(_, name)| *name != "main")
-            .filter(|(_, name)| !is_exported_function(name, context))
-            .filter(|(block_id, _)| has_single_statement_body(**block_id, context))
-            .filter(|(_, name)| count_function_calls(name, context) == 1)
-            .map(|(block_id, function_name)| {
-                let name_span = context.find_declaration_span(function_name);
-                let block = context.working_set.get_block(*block_id);
+            .filter(|def| !def.is_main())
+            .filter(|def| !def.is_exported())
+            .filter(|def| has_single_statement_body(def.body, context))
+            .filter(|def| count_function_calls(&def.name, context) == 1)
+            .map(|def| {
+                let name_span = context.find_declaration_span(&def.name);
+                let block = context.working_set.get_block(def.body);
                 // body_span is global (AST), name_span is file-relative - use AST span or
                 // convert
                 let body_span = block.span.unwrap_or_else(|| name_span.into());
                 Detection::from_file_span(
                     format!(
-                        "Function `{function_name}` has a single-line body and is only used once"
+                        "Function `{}` has a single-line body and is only used once",
+                        def.name
                     ),
                     name_span,
                 )

@@ -1,7 +1,6 @@
-use nu_protocol::{Id, marker::Block};
-
 use crate::{
     LintLevel,
+    ast::declaration,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
@@ -12,29 +11,27 @@ fn check(context: &LintContext) -> Vec<Detection> {
     context
         .collect_function_definitions()
         .iter()
-        .filter_map(|(block_id, function_name)| {
-            function_violation(context, *block_id, function_name)
-        })
+        .filter_map(|def| function_violation(context, def))
         .collect()
 }
 fn function_violation(
     context: &LintContext<'_>,
-    block_id: Id<Block>,
-    function_name: &String,
+    def: &declaration::CustomCommandDef,
 ) -> Option<Detection> {
-    let block = context.working_set.get_block(block_id);
+    let block = context.working_set.get_block(def.body);
     let block_span = block.span?;
     let line_count = context.get_span_text(block_span).lines().count();
     (line_count > MAX_LINES).then(|| {
         let message = format!(
-            "Function `{function_name}` has {line_count} lines, which exceeds the maximum of \
-             {MAX_LINES} lines"
+            "Function `{}` has {line_count} lines, which exceeds the maximum of {MAX_LINES} lines",
+            def.name
         );
         let suggestion = format!(
-            "Consider refactoring `{function_name}` into smaller, more focused functions. Break \
-             down complex logic into helper functions with clear responsibilities."
+            "Consider refactoring `{}` into smaller, more focused functions. Break down complex \
+             logic into helper functions with clear responsibilities.",
+            def.name
         );
-        let name_span = context.find_declaration_span(function_name);
+        let name_span = context.find_declaration_span(&def.name);
         Detection::from_file_span(message, name_span)
             .with_primary_label(format!("{line_count} lines"))
             .with_extra_label("function body", block_span)

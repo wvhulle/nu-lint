@@ -66,37 +66,6 @@ fn create_violation(param_name: &str, function_name: &str, context: &LintContext
     .with_help(create_suggestion_message(param_name, function_name))
 }
 
-fn check(context: &LintContext) -> Vec<Detection> {
-    let function_bodies = context.collect_function_definitions();
-
-    context
-        .new_user_functions()
-        .filter_map(|(_, decl)| {
-            let signature = decl.signature();
-
-            // Find the function body block
-            function_bodies
-                .iter()
-                .find_map(|(block_id, name)| (name == &signature.name).then_some(*block_id))
-                .map(|function_block_id| (signature, function_block_id))
-        })
-        .flat_map(|(signature, function_block_id)| {
-            let function_block = context.working_set.get_block(function_block_id);
-            signature
-                .required_positional
-                .iter()
-                .chain(&signature.optional_positional)
-                .filter(|param| is_string_parameter(param))
-                .filter_map(|param| param.var_id.map(|var_id| (param, var_id)))
-                .filter(|(_, var_id)| {
-                    contains_external_call_with_variable(function_block, *var_id, context)
-                })
-                .map(|(param, _)| create_violation(&param.name, &signature.name, context))
-                .collect::<Vec<_>>()
-        })
-        .collect()
-}
-
 struct ExternalScriptAsArgument;
 
 impl DetectFix for ExternalScriptAsArgument {
@@ -120,7 +89,36 @@ impl DetectFix for ExternalScriptAsArgument {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        Self::no_fix(check(context))
+        let function_bodies = context.collect_function_definitions();
+
+        let detections = context
+            .new_user_functions()
+            .filter_map(|(_, decl)| {
+                let signature = decl.signature();
+
+                // Find the function body block
+                function_bodies
+                    .iter()
+                    .find_map(|def| (def.name == signature.name).then_some(def.body))
+                    .map(|function_block_id| (signature, function_block_id))
+            })
+            .flat_map(|(signature, function_block_id)| {
+                let function_block = context.working_set.get_block(function_block_id);
+                signature
+                    .required_positional
+                    .iter()
+                    .chain(&signature.optional_positional)
+                    .filter(|param| is_string_parameter(param))
+                    .filter_map(|param| param.var_id.map(|var_id| (param, var_id)))
+                    .filter(|(_, var_id)| {
+                        contains_external_call_with_variable(function_block, *var_id, context)
+                    })
+                    .map(|(param, _)| create_violation(&param.name, &signature.name, context))
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+
+        Self::no_fix(detections)
     }
 }
 

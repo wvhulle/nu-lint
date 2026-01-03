@@ -46,26 +46,27 @@ impl DetectFix for ExitOnlyInMain {
                 }
 
                 // Check if this exit is inside a function
-                let Some(function_name) = call.head.find_containing_function(&functions, ctx)
+                let Some(function_def) = call.head.find_containing_function(&functions, ctx)
                 else {
                     return vec![];
                 };
 
                 // Allow exit in main function
-                if function_name == "main" {
+                if function_def.is_main() {
                     return vec![];
                 }
 
                 return vec![
                     Detection::from_global_span(
                         format!(
-                            "Function '{function_name}' uses 'exit' which terminates the entire \
-                             script"
+                            "Function '{}' uses 'exit' which terminates the entire \
+                             script",
+                            function_def.name
                         ),
                         call.head,
                     )
                     .with_primary_label("exit call")
-                    .with_extra_label(format!("inside '{function_name}'"), expr.span)
+                    .with_extra_label(format!("inside '{}'", function_def.name), expr.span)
                     .with_help(
                         "Use 'return' to exit the function, or 'error make' to signal an error. \
                          Only 'main' should use 'exit'.",

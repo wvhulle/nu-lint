@@ -1,13 +1,13 @@
 use std::{collections::HashMap, fmt, string::ToString};
 
 use nu_protocol::{
-    BlockId, Span,
+    Span,
     ast::{Block, Call, Expr, Expression, ExternalArgument},
 };
 
 use crate::{
     LintLevel,
-    ast::{call::CallExt, expression::ExpressionExt},
+    ast::{self, call::CallExt, expression::ExpressionExt},
     context::LintContext,
     effect::{
         builtin::{BuiltinEffect, has_builtin_side_effect},
@@ -185,11 +185,10 @@ fn analyze_top_level_script(context: &LintContext) -> Option<Detection> {
 }
 
 fn analyze_function_body(
-    block_id: BlockId,
-    function_name: &str,
+    def: &ast::declaration::CustomCommandDef,
     context: &LintContext,
 ) -> Option<Detection> {
-    let block = context.working_set.get_block(block_id);
+    let block = context.working_set.get_block(def.body);
     let io_spans = collect_io_types_from_block(block, context);
 
     if io_spans.len() < 2 {
@@ -199,12 +198,13 @@ fn analyze_function_body(
     let io_type_names: Vec<String> = io_spans.keys().map(ToString::to_string).collect();
 
     let message = format!(
-        "Function `{function_name}` mixes different I/O types: {}",
+        "Function `{}` mixes different I/O types: {}",
+        def.name,
         io_type_names.join(", ")
     );
 
     let mut detection =
-        Detection::from_file_span(message, context.find_declaration_span(function_name))
+        Detection::from_file_span(message, context.find_declaration_span(&def.name))
             .with_primary_label("function with mixed I/O")
             .with_help(
                 "Consider separating different I/O operations into focused functions. This makes \
@@ -252,8 +252,8 @@ impl DetectFix for SeparateLocalRemoteIo {
         violations.extend(
             function_definitions
                 .iter()
-                .filter(|(_, name)| *name != "main")
-                .filter_map(|(block_id, name)| analyze_function_body(*block_id, name, context)),
+                .filter(|def| !def.is_main())
+                .filter_map(|def| analyze_function_body(def, context)),
         );
 
         Self::no_fix(violations)

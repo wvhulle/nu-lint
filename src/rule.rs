@@ -29,11 +29,11 @@ pub trait DetectFix: Send + Sync + 'static {
 
     /// Pairs violations with default fix input (for rules with `FixInput =
     /// ()`).
-    fn no_fix<'a>(violations: Vec<Detection>) -> Vec<(Detection, Self::FixInput<'a>)>
+    fn no_fix<'a>(detections: Vec<Detection>) -> Vec<(Detection, Self::FixInput<'a>)>
     where
         Self::FixInput<'a>: Default,
     {
-        violations
+        detections
             .into_iter()
             .map(|v| (v, Self::FixInput::default()))
             .collect()

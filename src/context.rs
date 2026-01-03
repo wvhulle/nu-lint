@@ -1,7 +1,7 @@
-use std::{collections::HashMap, str::from_utf8};
+use std::{collections::BTreeSet, str::from_utf8};
 
 use nu_protocol::{
-    BlockId, DeclId, Span,
+    DeclId, Span,
     ast::{Block, Expr, Expression, Traverse},
     engine::{Command, EngineState, StateWorkingSet},
 };
@@ -10,7 +10,7 @@ use nu_protocol::{
 use crate::violation;
 use crate::{
     Config,
-    ast::call::CallExt,
+    ast::{self, call::CallExt},
     external_commands::{self, ExternalCmdFixData},
     span::FileSpan,
     violation::Detection,
@@ -214,12 +214,12 @@ impl<'a> LintContext<'a> {
         violations
     }
 
-    /// Traverse the AST with parent context, calling the callback for each expression
-    /// with its parent expression (if any).
+    /// Traverse the AST with parent context, calling the callback for each
+    /// expression with its parent expression (if any).
     ///
-    /// This builds on top of the `Traverse` trait but adds parent tracking, which is
-    /// useful for rules that need to know the context of an expression (e.g., whether
-    /// a string is in command position).
+    /// This builds on top of the `Traverse` trait but adds parent tracking,
+    /// which is useful for rules that need to know the context of an
+    /// expression (e.g., whether a string is in command position).
     pub(crate) fn traverse_with_parent<F>(&self, mut callback: F)
     where
         F: FnMut(&Expression, Option<&Expression>),
@@ -279,9 +279,9 @@ impl<'a> LintContext<'a> {
         (base_count, total_count)
     }
 
-    /// Collect all function definitions with their names and block IDs
+    /// Collect all function definitions
     #[must_use]
-    pub fn collect_function_definitions(&self) -> HashMap<BlockId, String> {
+    pub fn collect_function_definitions(&self) -> BTreeSet<ast::declaration::CustomCommandDef> {
         let mut functions = Vec::new();
         self.ast.flat_map(
             self.working_set,
@@ -289,10 +289,7 @@ impl<'a> LintContext<'a> {
                 let Expr::Call(call) = &expr.expr else {
                     return vec![];
                 };
-                call.custom_command_def(self)
-                    .map(|def| (def.body, def.name))
-                    .into_iter()
-                    .collect()
+                call.custom_command_def(self).into_iter().collect()
             },
             &mut functions,
         );

@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use nu_protocol::{
     BlockId, Span,
     ast::{Call, Expr},
@@ -14,6 +16,26 @@ pub struct CustomCommandDef {
     pub name: String,
     pub name_span: Span,
     pub export_span: Option<Span>,
+}
+
+impl PartialEq for CustomCommandDef {
+    fn eq(&self, other: &Self) -> bool {
+        self.body == other.body
+    }
+}
+
+impl Eq for CustomCommandDef {}
+
+impl PartialOrd for CustomCommandDef {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for CustomCommandDef {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.body.cmp(&other.body)
+    }
 }
 
 impl CustomCommandDef {

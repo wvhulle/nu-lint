@@ -44,6 +44,7 @@ pub mod remove_hat_not_builtin;
 pub mod remove_redundant_in;
 pub mod remove_string_quotes;
 pub mod replace_else_if_with_match;
+pub mod require_main_with_stdin;
 pub mod script_export_main;
 pub mod shorten_with_compound_assignment;
 pub mod side_effects;
@@ -145,6 +146,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     redundant_ignore::RULE,
     remove_redundant_in::RULE,
     replace_else_if_with_match::RULE,
+    require_main_with_stdin::RULE,
     shorten_with_compound_assignment::RULE,
     side_effects::mixed_io_types::RULE,
     side_effects::print_and_return_data::RULE,

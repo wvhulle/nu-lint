@@ -94,7 +94,7 @@ impl DetectFix for UseErrorMakeForCatch {
 
             let in_non_main_function = span
                 .find_containing_function(&functions, ctx)
-                .is_some_and(|name| name != "main");
+                .is_some_and(|def| !def.is_main());
 
             let in_try_block = try_blocks.iter().any(|block_id| {
                 ctx.working_set

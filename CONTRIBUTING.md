@@ -8,18 +8,10 @@ Always start from valid Nu shell code. Experiment with different versions of the
 
 You can compare by running: `nu -c 'TEST'`  and `bash -c 'TEST'`.
 
-The first thing you might want to do for a new rule is investigate how Nu parses the fragment. The recommended way is to use nu-lint's `--ast` flag, which prints an expanded AST with all nested blocks fully shown (unlike Nu's built-in `ast` command which only shows block IDs):
+The first thing you might want to do for a new rule is investigate how Nu parses the fragment. You can use the `--ast` flag:
 
 ```bash
 cargo run -- --ast 'def main [] { if $in { ".md" } }'
-```
-
-This will output a clean JSON representation of the AST with all blocks, closures, and subexpressions fully expanded, making it much easier to understand the structure.
-
-Alternatively, you can use Nu's built-in command for interactive exploration:
-
-```bash
-ast --json benches/fixtures/small_file.nu | get block | from json | explore
 ```
 
 Or from Bash, call the Nu interpreter to show the AST (note: this shows block IDs instead of expanded blocks):
@@ -27,6 +19,14 @@ Or from Bash, call the Nu interpreter to show the AST (note: this shows block ID
 ```bash
 nu -c 'ast --json benches/fixtures/small_file.nu | get block'
 ```
+
+Alternatively, within a running Nu session, you can use Nu's built-in command to explore a JSON verrsion:
+
+```bash
+ast --json benches/fixtures/small_file.nu | get block | from json | explore
+```
+
+## Test structure
 
 Please follow a somewhat predictable test file structure. Currently the convention is to have three different test files for each new rule:
 
@@ -36,21 +36,20 @@ Please follow a somewhat predictable test file structure. Currently the conventi
 
 ## Debugging
 
-The primary way to debug new rules is:
+You can debug the code in two ways:
 
-- Add a call to the function `crate::log::instrument()` at the beginning of the test you are debugging
-- Call debug macros of the `log` crate in the new rule implementation.
-- Set the `RUST_LOG` environment variable.
+- Use the built-in Rust macro `dbg!`
+- Use a custom formatter for `env_logger`:
+  - Add a call to the function `crate::log::init_log()` at the beginning of the test you are debugging
+  - Call debug macros of the `log` crate in the new rule implementation.
 
-For example, you could run one test named `test_detect_unnecessary_variable_simple` in any test file with the RUST_LOG environment variable:
+For example, you could run one test named `test_detect_unnecessary_variable_simple`:
 
 ```bash
-RUST_LOG=debug cargo test test_detect_unnecessary_variable_simple -- --nocapture
+cargo test test_detect_unnecessary_variable_simple -- --nocapture
 ```
 
 The output of the log macros will be shown together with relative file paths. You can use this to fix issues in the implementation.
-
-(It would be possible to use the [test-log](https://crates.io/crates/test-log) crate but I preferred implementing a custom formatter for `env-logger` displaying relative file links.)
 
 ## Linting
 

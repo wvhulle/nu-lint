@@ -7,6 +7,12 @@ fn use_static_list() {
     let code = "use /path/to/utils.nu [foo bar]";
     RULE.assert_ignores(code);
 }
+#[test]
+fn use_static_list_std() {
+    init_log();
+    let code = "use std/math [PI]";
+    RULE.assert_ignores(code);
+}
 
 #[test]
 fn test_static_use_literal_path() {

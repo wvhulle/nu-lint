@@ -8,6 +8,7 @@ use clap::Parser;
 
 use crate::{
     LintLevel,
+    ast::tree,
     config::Config,
     engine::{LintEngine, collect_nu_files},
     fix::{apply_fixes, apply_fixes_to_stdin, format_fix_results},
@@ -245,7 +246,6 @@ impl Cli {
             process::exit(1);
         }
     }
-
 }
 
 pub fn run() {
@@ -262,7 +262,7 @@ pub fn run() {
     } else if let Some(ref rule_id) = cli.explain {
         Cli::explain_rule(rule_id);
     } else if let Some(ref source) = cli.ast {
-        crate::ast::tree::print_ast(source);
+        tree::print_ast(source);
     } else if cli.lsp {
         lsp::run_lsp_server();
     } else if cli.fix {

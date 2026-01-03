@@ -336,10 +336,9 @@ fn create_extra_label_diagnostics(
 
             let message = label
                 .as_deref()
-                .map(ToString::to_string)
-                .unwrap_or_else(|| String::from("Related location"));
+                .map_or_else(|| String::from("Related location"), ToString::to_string);
 
-            log::debug!("  -> Creating HINT diagnostic with message: {}", message);
+            log::debug!("  -> Creating HINT diagnostic with message: {message}");
 
             Some(Diagnostic {
                 range,
@@ -591,7 +590,7 @@ mod tests {
         violation.rule_id = Some("missing_output_type".into());
         violation.lint_level = LintLevel::Warning;
 
-        let diagnostics = vec![violation_to_diagnostic(
+        let diagnostics = [violation_to_diagnostic(
             &violation,
             source,
             &line_index,

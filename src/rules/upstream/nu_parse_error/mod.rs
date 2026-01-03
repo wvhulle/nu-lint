@@ -1,4 +1,4 @@
-use std::str::from_utf8;
+use std::{collections::HashSet, str::from_utf8};
 
 use miette::Diagnostic;
 use nu_protocol::{ParseError, Span, engine::StateWorkingSet};
@@ -79,7 +79,7 @@ impl DetectFix for NuParseError {
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let mut detections = Vec::new();
-        let mut seen_errors = std::collections::HashSet::new();
+        let mut seen_errors = HashSet::new();
 
         for parse_error in &context.working_set.parse_errors {
             let error_span = parse_error.span();

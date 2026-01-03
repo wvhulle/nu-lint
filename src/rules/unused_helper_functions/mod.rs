@@ -84,11 +84,10 @@ fn collect_completer_block_ids(context: &LintContext) -> HashSet<BlockId> {
                         ids.push(id);
                     }
                 }
-                if let Some(param) = &sig.rest_positional {
-                    if let Some(id) = extract_completer_block_id(param.completion.as_ref(), context)
-                    {
-                        ids.push(id);
-                    }
+                if let Some(param) = &sig.rest_positional
+                    && let Some(id) = extract_completer_block_id(param.completion.as_ref(), context)
+                {
+                    ids.push(id);
                 }
                 for flag in &sig.named {
                     if let Some(id) = extract_completer_block_id(flag.completion.as_ref(), context)

@@ -78,7 +78,7 @@ impl DetectFix for UnnecessaryStringQuotes {
                 return;
             };
 
-            let (content, quote_type) = match &string_format {
+            let (unquoted_content, quote_type) = match &string_format {
                 StringFormat::Double(s) => (s, "double"),
                 StringFormat::Single(s) => (s, "single"),
                 // Only suggest removing simple quotes, not interpolation/raw/backtick strings
@@ -90,16 +90,16 @@ impl DetectFix for UnnecessaryStringQuotes {
             };
 
             // Check if the string actually needs quotes
-            if bare_word_needs_quotes(content) {
-                log::debug!("String '{content}' needs quotes");
+            if bare_word_needs_quotes(unquoted_content) {
+                log::debug!("String '{unquoted_content}' needs quotes");
                 return;
             }
 
-            log::debug!("String '{content}' can be a bare word");
+            log::debug!("String '{unquoted_content}' can be a bare word");
 
             // Report unnecessary quotes
             let violation = Detection::from_global_span(
-                format!("Unnecessary {quote_type} quotes around '{content}'"),
+                format!("Unnecessary {quote_type} quotes around '{unquoted_content}'"),
                 expr.span,
             )
             .with_primary_label("can be a bare word")
@@ -113,7 +113,7 @@ impl DetectFix for UnnecessaryStringQuotes {
                 violation,
                 FixData {
                     quoted_span: expr.span,
-                    unquoted_content: content.clone(),
+                    unquoted_content: unquoted_content.clone(),
                 },
             ));
         });

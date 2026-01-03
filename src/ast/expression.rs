@@ -72,7 +72,6 @@ pub trait ExpressionExt: Traverse {
 
     /// Traverse expression and all descendants with parent tracking.
     /// Calls the callback for each expression with its immediate parent.
-    /// Mirrors the structure of the Traverse trait's flat_map to stay in sync with upstream.
     fn traverse_with_parent<'a, F>(
         &'a self,
         context: &'a LintContext,
@@ -646,13 +645,13 @@ impl ExpressionExt for Expression {
         parent: Option<&'a Expression>,
         callback: &mut F,
     ) where
-        F: FnMut(&'a Expression, Option<&'a Expression>),
+        F: FnMut(&'a Self, Option<&'a Self>),
     {
         // Call callback for this expression
         callback(self, parent);
 
         // Recursively process children, marking self as their parent
-        let mut recur = |child: &'a Expression| {
+        let mut recur = |child: &'a Self| {
             child.traverse_with_parent(context, Some(self), callback);
         };
 

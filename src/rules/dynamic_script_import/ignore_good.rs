@@ -1,4 +1,12 @@
 use super::RULE;
+use crate::log::init_log;
+
+#[test]
+fn use_static_list() {
+    init_log();
+    let code = "use /path/to/utils.nu [foo bar]";
+    RULE.assert_ignores(code);
+}
 
 #[test]
 fn test_static_use_literal_path() {

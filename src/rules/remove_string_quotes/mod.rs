@@ -16,58 +16,21 @@ struct FixData {
     unquoted_content: String,
 }
 
-/// Check if an expression is in command position.
-/// A bare word in command position would be interpreted as a command to
-/// execute.
+/// Check if an expression is in command position where a bare word would be
+/// interpreted as a command to execute.
+///
+/// Per Nushell docs: "if you use a bare word plainly on the command line (that
+/// is, not inside a data structure or used as a command parameter) or inside
+/// round brackets ( ), it will be interpreted as an external command"
 fn is_in_command_position(expr: &Expression, parent: Option<&Expression>) -> bool {
     parent.is_none_or(|parent| match &parent.expr {
         // If parent is an ExternalCall and this is the head, it's in command position
         Expr::ExternalCall(head, _args) => head.span == expr.span,
-        // If parent is a MatchBlock, this expression is a match arm body
+        // If parent is a MatchBlock, this expression is a match arm body (command position)
         Expr::Block(_) | Expr::Closure(_) | Expr::Subexpression(_) | Expr::MatchBlock(_) => true,
         // Otherwise, not in command position
         _ => false,
     })
-}
-
-fn check_string_needs_quotes(expr: &Expression, ctx: &LintContext) -> Option<(Detection, FixData)> {
-    let string_format = StringFormat::from_expression(expr, ctx)?;
-
-    let (content, quote_type) = match &string_format {
-        StringFormat::Double(s) => (s, "double"),
-        StringFormat::Single(s) => (s, "single"),
-        StringFormat::BareWord(_)
-        | StringFormat::InterpolationDouble(_)
-        | StringFormat::InterpolationSingle(_)
-        | StringFormat::Backtick(_)
-        | StringFormat::Raw(_) => return None,
-    };
-
-    if bare_word_needs_quotes(content) {
-        log::debug!("String needs quotes: {content}");
-        return None;
-    }
-    log::debug!("String does not need quotes: {content}");
-
-    let violation = Detection::from_global_span(
-        format!("Unnecessary {quote_type} quotes around string '{content}'"),
-        expr.span,
-    )
-    .with_primary_label("can be a bare word")
-    .with_help(
-        "Bare words work for alphanumeric strings, paths starting with `.` or `/`, URLs, and \
-         identifiers with `-` or `_`. Quotes are needed for strings with spaces, special \
-         characters, or values that would be parsed as numbers, booleans, or null."
-            .to_string(),
-    );
-
-    Some((
-        violation,
-        FixData {
-            quoted_span: expr.span,
-            unquoted_content: content.clone(),
-        },
-    ))
 }
 
 struct UnnecessaryStringQuotes;
@@ -76,7 +39,7 @@ impl DetectFix for UnnecessaryStringQuotes {
     type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
-        "remove_string_quotes"
+        "string_may_be_bare"
     }
 
     fn explanation(&self) -> &'static str {
@@ -95,23 +58,64 @@ impl DetectFix for UnnecessaryStringQuotes {
         let mut results = Vec::new();
 
         context.traverse_with_parent(|expr, parent| {
-            if !matches!(expr.expr, Expr::String(_)) {
+            // Only look at string expressions
+            let Expr::String(_) = &expr.expr else {
                 return;
-            }
+            };
 
             // Skip strings in command position - they would be interpreted as external
             // commands
             if is_in_command_position(expr, parent) {
                 log::debug!(
-                    "Skipping {} since it is in command position.",
+                    "Skipping {} - in command position",
                     context.get_span_text(expr.span)
                 );
                 return;
             }
 
-            if let Some(detection) = check_string_needs_quotes(expr, context) {
-                results.push(detection);
+            // Extract the string content and quote type
+            let Some(string_format) = StringFormat::from_expression(expr, context) else {
+                return;
+            };
+
+            let (content, quote_type) = match &string_format {
+                StringFormat::Double(s) => (s, "double"),
+                StringFormat::Single(s) => (s, "single"),
+                // Only suggest removing simple quotes, not interpolation/raw/backtick strings
+                StringFormat::BareWord(_)
+                | StringFormat::InterpolationDouble(_)
+                | StringFormat::InterpolationSingle(_)
+                | StringFormat::Backtick(_)
+                | StringFormat::Raw(_) => return,
+            };
+
+            // Check if the string actually needs quotes
+            if bare_word_needs_quotes(content) {
+                log::debug!("String '{content}' needs quotes");
+                return;
             }
+
+            log::debug!("String '{content}' can be a bare word");
+
+            // Report unnecessary quotes
+            let violation = Detection::from_global_span(
+                format!("Unnecessary {quote_type} quotes around '{content}'"),
+                expr.span,
+            )
+            .with_primary_label("can be a bare word")
+            .with_help(
+                "Bare words work for alphanumeric strings, paths, URLs, and identifiers. Quotes \
+                 are needed for strings with spaces, special characters, or values that would be \
+                 parsed as numbers, booleans, or null.",
+            );
+
+            results.push((
+                violation,
+                FixData {
+                    quoted_span: expr.span,
+                    unquoted_content: content.clone(),
+                },
+            ));
         });
 
         results

@@ -1,4 +1,4 @@
-use nu_protocol::ast::{Argument, Expr, Expression};
+use nu_protocol::ast::{Argument, Expr, Expression, FullCellPath};
 
 use crate::{
     ast::call::CallExt,
@@ -47,15 +47,19 @@ impl DynamicScriptImport {
         if !is_import_command {
             return vec![];
         }
-
+        let text = ctx.get_span_text(call.span());
+        log::debug!("Checking of `{text}` has a dynamic path");
         // Check if any positional argument is a dynamic expression (not a literal)
-        let has_dynamic_path = call.arguments.iter().any(|arg| {
-            let arg_expr = match arg {
-                Argument::Positional(e) | Argument::Unknown(e) | Argument::Spread(e) => e,
-                Argument::Named(_) => return false,
-            };
-
-            Self::is_dynamic_expression(arg_expr)
+        let has_dynamic_path = call.arguments.iter().any(|arg| match arg {
+            Argument::Positional(e) | Argument::Unknown(e) | Argument::Spread(e) => {
+                let argument = ctx.get_span_text(e.span);
+                log::debug!("Checking whether argument `{argument}` is dynamic.");
+                is_dynamic_expression(e)
+            }
+            Argument::Named(e) => e.2.as_ref().is_some_and(|e| {
+                log::debug!("Checking whether named argument is dynamic.");
+                is_dynamic_expression(e)
+            }),
         });
 
         if !has_dynamic_path {
@@ -79,30 +83,52 @@ impl DynamicScriptImport {
             ),
         ]
     }
-
-    fn is_dynamic_expression(expr: &Expression) -> bool {
-        match &expr.expr {
-            // Literal strings and filepaths are static
-            // Variables, subexpressions, and pipelines are dynamic
-            // String interpolation is dynamic if it contains expressions
-            Expr::StringInterpolation(parts) => parts
-                .iter()
-                .any(|part| !matches!(part.expr, Expr::String(_))),
-            // Other literal types are static
-            Expr::String(_)
-            | Expr::RawString(_)
-            | Expr::GlobPattern(_, _)
-            | Expr::Filepath(_, _)
-            | Expr::Int(_)
-            | Expr::Float(_)
-            | Expr::Bool(_)
-            | Expr::Nothing => false,
-            // Everything else - check conservatively
-            _ => true,
+}
+fn is_dynamic_expression(expr: &Expression) -> bool {
+    log::debug!(
+        "Checking whether expression of type `{:#?}` is dynamic.",
+        expr.expr
+    );
+    match &expr.expr {
+        // Literal strings and filepaths are static
+        // Variables, subexpressions, and pipelines are dynamic
+        // String interpolation is dynamic if it contains expressions
+        Expr::StringInterpolation(parts) => {
+            log::debug!("Encountered string interpolation.");
+            parts.iter().any(is_dynamic_expression)
         }
+        Expr::List(list) => list.iter().any(|e| {
+            log::debug!(
+                "Encountered a list with element of the shape: {:#?}",
+                e.expr()
+            );
+
+            is_dynamic_expression(e.expr())
+        }),
+        Expr::FullCellPath(e) => match &**e {
+            FullCellPath {
+                head:
+                    Expression {
+                        expr: Expr::List(list),
+                        ..
+                    },
+                ..
+            } => list.iter().any(|e| is_dynamic_expression(e.expr())),
+            _ => true,
+        },
+        // Other literal types are static
+        Expr::String(_)
+        | Expr::RawString(_)
+        | Expr::GlobPattern(_, _)
+        | Expr::Filepath(_, _)
+        | Expr::Int(_)
+        | Expr::Float(_)
+        | Expr::Bool(_)
+        | Expr::Nothing => false,
+        // Everything else - check conservatively
+        _ => true,
     }
 }
-
 pub static RULE: &dyn Rule = &DynamicScriptImport;
 
 #[cfg(test)]

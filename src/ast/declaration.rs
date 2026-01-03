@@ -74,13 +74,19 @@ impl CustomCommandDef {
 
         let body_expr = call.get_positional_arg(2)?;
         let block_id = body_expr.extract_block_id()?;
-        
+
         let block = context.working_set.get_block(block_id);
         let signature = (*block.signature).clone();
 
         let export_span = is_exported.then(|| Span::new(call.head.start, call.head.start + 7));
 
-        Some(Self::new(block_id, name, name_arg.span, export_span, signature))
+        Some(Self::new(
+            block_id,
+            name,
+            name_arg.span,
+            export_span,
+            signature,
+        ))
     }
 
     pub fn is_main(&self) -> bool {
@@ -92,7 +98,8 @@ impl CustomCommandDef {
     }
 
     /// Get the declaration span as a `FileSpan` for use in detections
-    /// This requires the `LintContext` to normalize the global span to file-relative positions
+    /// This requires the `LintContext` to normalize the global span to
+    /// file-relative positions
     pub const fn declaration_span(&self, context: &LintContext) -> FileSpan {
         context.normalize_span(self.name_span)
     }

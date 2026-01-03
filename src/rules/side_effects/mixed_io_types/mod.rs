@@ -203,14 +203,13 @@ fn analyze_function_body(
         io_type_names.join(", ")
     );
 
-    let mut detection =
-        Detection::from_file_span(message, def.declaration_span(context))
-            .with_primary_label("function with mixed I/O")
-            .with_help(
-                "Consider separating different I/O operations into focused functions. This makes \
-                 the code easier to test, mock, and reason about. Group file operations together, \
-                 network operations together, and printing separately.",
-            );
+    let mut detection = Detection::from_file_span(message, def.declaration_span(context))
+        .with_primary_label("function with mixed I/O")
+        .with_help(
+            "Consider separating different I/O operations into focused functions. This makes the \
+             code easier to test, mock, and reason about. Group file operations together, network \
+             operations together, and printing separately.",
+        );
 
     for (io_type, spans) in &io_spans {
         for span in spans {

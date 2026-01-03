@@ -332,7 +332,8 @@ impl BlockExt for Block {
     {
         use crate::ast::expression::ExpressionExt;
 
-        // For each pipeline element, parent is the block/closure/subexpression expression
+        // For each pipeline element, parent is the block/closure/subexpression
+        // expression
         for pipeline in &self.pipelines {
             for element in &pipeline.elements {
                 element.expr.traverse_with_parent(context, parent, callback);

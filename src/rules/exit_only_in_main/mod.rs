@@ -36,7 +36,7 @@ impl DetectFix for ExitOnlyInMain {
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         // First, collect all function definitions
-        let functions = context.collect_function_definitions();
+        let functions = context.custom_commands();
 
         // Then, find all exit calls and check if they're in non-main functions
         let violations = context.detect(|expr, ctx| {
@@ -46,8 +46,7 @@ impl DetectFix for ExitOnlyInMain {
                 }
 
                 // Check if this exit is inside a function
-                let Some(function_def) = call.head.find_containing_function(&functions, ctx)
-                else {
+                let Some(function_def) = call.head.find_containing_function(&functions, ctx) else {
                     return vec![];
                 };
 
@@ -59,8 +58,7 @@ impl DetectFix for ExitOnlyInMain {
                 return vec![
                     Detection::from_global_span(
                         format!(
-                            "Function '{}' uses 'exit' which terminates the entire \
-                             script",
+                            "Function '{}' uses 'exit' which terminates the entire script",
                             function_def.name
                         ),
                         call.head,

@@ -1,9 +1,9 @@
 use std::{collections::BTreeSet, str::from_utf8};
 
 use nu_protocol::{
-    DeclId, Span,
+    Span,
     ast::{Block, Expr, Expression, Traverse},
-    engine::{Command, EngineState, StateWorkingSet},
+    engine::{EngineState, StateWorkingSet},
 };
 
 #[cfg(test)]
@@ -229,48 +229,6 @@ impl<'a> LintContext<'a> {
         self.ast.traverse_with_parent(self, None, &mut callback);
     }
 
-    /// Iterator over newly added user-defined function declarations
-    /// Only returns functions that are actually defined in the user's file,
-    /// not imported stdlib functions
-    pub fn new_user_functions(&self) -> impl Iterator<Item = (usize, &dyn Command)> + '_ {
-        let (base_count, total_count) = self.new_decl_range();
-        (base_count..total_count)
-            .map(|decl_id| (decl_id, self.working_set.get_decl(DeclId::new(decl_id))))
-            .filter(|(_, decl)| {
-                // Check if the function body is defined within the user's file
-                let Some(block_id) = decl.block_id() else {
-                    return false;
-                };
-                let block = self.working_set.get_block(block_id);
-                block.span.is_some_and(|span| self.span_in_user_file(span))
-            })
-    }
-
-    /// Find the span of a function/declaration name in the source code
-    /// Returns a file-relative span since it searches the source string
-    #[must_use]
-    pub fn find_declaration_span(&self, name: &str) -> FileSpan {
-        const PATTERNS: &[(&str, &str, usize)] = &[
-            ("def ", "", 4),
-            ("def \"", "\"", 5),
-            ("export def ", "", 11),
-            ("export def \"", "\"", 12),
-        ];
-
-        for (prefix, suffix, offset) in PATTERNS {
-            let pattern = format!("{prefix}{name}{suffix}");
-            if let Some(pos) = self.source.find(&pattern) {
-                let start = pos + offset;
-                return FileSpan::new(start, start + name.len());
-            }
-        }
-
-        self.source.find(name).map_or_else(
-            || self.normalize_span(self.ast.span.unwrap_or_else(Span::unknown)),
-            |pos| FileSpan::new(pos, pos + name.len()),
-        )
-    }
-
     /// Range of declaration IDs added during parsing: `base..total`
     #[must_use]
     pub fn new_decl_range(&self) -> (usize, usize) {
@@ -281,7 +239,7 @@ impl<'a> LintContext<'a> {
 
     /// Collect all function definitions
     #[must_use]
-    pub fn collect_function_definitions(&self) -> BTreeSet<ast::declaration::CustomCommandDef> {
+    pub fn custom_commands(&self) -> BTreeSet<ast::declaration::CustomCommandDef> {
         let mut functions = Vec::new();
         self.ast.flat_map(
             self.working_set,
@@ -294,12 +252,6 @@ impl<'a> LintContext<'a> {
             &mut functions,
         );
         functions.into_iter().collect()
-    }
-
-    /// Check if a function is exported
-    #[must_use]
-    pub fn is_exported_function(&self, function_name: &str) -> bool {
-        self.source.contains(&format!("export def {function_name}"))
     }
 
     /// Detect a specific external command and suggest a builtin alternative.

@@ -5,7 +5,9 @@ use nu_protocol::{
 
 use crate::{
     LintLevel,
-    ast::{block::BlockExt, call::CallExt, declaration::CustomCommandDef, expression::ExpressionExt},
+    ast::{
+        block::BlockExt, call::CallExt, declaration::CustomCommandDef, expression::ExpressionExt,
+    },
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -68,29 +70,25 @@ fn find_pipeline_data_parameters<'a>(
 
 /// Analyze a function from its signature (for registered functions)
 fn analyze_function_from_signature(
-    signature: &nu_protocol::Signature,
-    block_id: nu_protocol::BlockId,
+    def: &CustomCommandDef,
     context: &LintContext,
 ) -> Vec<ViolationPair> {
     // Check if block exists in working set
-    if block_id.get() >= context.working_set.num_blocks() {
+    if def.body.get() >= context.working_set.num_blocks() {
         return vec![];
     }
 
-    let block = context.working_set.get_block(block_id);
-    let pipeline_params = find_pipeline_data_parameters(signature, &block.pipelines);
+    let block = context.working_set.get_block(def.body);
+    let pipeline_params = find_pipeline_data_parameters(&def.signature, &block.pipelines);
 
     pipeline_params
         .into_iter()
-        .filter_map(|param| create_violation(signature, param, block_id, context))
+        .filter_map(|param| create_violation(def, param, context))
         .collect()
 }
 
 /// Analyze a function from AST definition (for unregistered functions)
-fn analyze_function_from_ast(
-    def: &CustomCommandDef,
-    context: &LintContext,
-) -> Vec<ViolationPair> {
+fn analyze_function_from_ast(def: &CustomCommandDef, context: &LintContext) -> Vec<ViolationPair> {
     let block = context.working_set.get_block(def.body);
     let pipeline_params = find_pipeline_data_parameters(&block.signature, &block.pipelines);
 
@@ -104,7 +102,13 @@ fn analyze_function_from_ast(
     pipeline_params
         .into_iter()
         .filter_map(|param| {
-            create_violation_with_span(&function_signature, param, def_span, def.body, def.is_exported())
+            create_violation_with_span(
+                &function_signature,
+                param,
+                def_span,
+                def.body,
+                def.is_exported(),
+            )
         })
         .collect()
 }
@@ -124,12 +128,13 @@ fn find_function_definition_span(function_name: &str, context: &LintContext) -> 
 }
 
 fn create_violation(
-    signature: &nu_protocol::Signature,
+    def: &CustomCommandDef,
     param: &nu_protocol::PositionalArg,
-    block_id: nu_protocol::BlockId,
     context: &LintContext,
 ) -> Option<ViolationPair> {
-    let name_span = context.find_declaration_span(&signature.name);
+    let name_span = def.declaration_span(context);
+    let signature = &def.signature;
+    let block_id = def.body;
     let def_span =
         find_function_definition_span(&signature.name, context).unwrap_or(name_span.into());
 
@@ -210,29 +215,19 @@ impl DetectFix for TurnPositionalIntoStreamInput {
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         log::debug!("prefer_pipeline_input: Starting rule check");
 
-        let user_functions: Vec<_> = context.new_user_functions().collect();
-        log::debug!("Found {} registered user functions", user_functions.len());
-
-        let function_definitions = context.collect_function_definitions();
+        let function_definitions = context.custom_commands();
         log::debug!(
             "Found {} function definitions in AST",
             function_definitions.len()
         );
 
-        user_functions
+        function_definitions
             .iter()
-            .flat_map(|(block_id, decl)| {
-                analyze_function_from_signature(
-                    &decl.signature(),
-                    nu_protocol::BlockId::new(*block_id),
-                    context,
-                )
+            .flat_map(|def| {
+                analyze_function_from_signature(def, context)
+                    .into_iter()
+                    .chain(analyze_function_from_ast(def, context))
             })
-            .chain(
-                function_definitions.iter().flat_map(|def| {
-                    analyze_function_from_ast(def, context)
-                }),
-            )
             .collect()
     }
 

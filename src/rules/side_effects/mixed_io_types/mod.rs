@@ -204,7 +204,7 @@ fn analyze_function_body(
     );
 
     let mut detection =
-        Detection::from_file_span(message, context.find_declaration_span(&def.name))
+        Detection::from_file_span(message, def.declaration_span(context))
             .with_primary_label("function with mixed I/O")
             .with_help(
                 "Consider separating different I/O operations into focused functions. This makes \
@@ -241,7 +241,7 @@ impl DetectFix for SeparateLocalRemoteIo {
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let mut violations = Vec::new();
 
-        let function_definitions = context.collect_function_definitions();
+        let function_definitions = context.custom_commands();
 
         if function_definitions.is_empty()
             && let Some(detection) = analyze_top_level_script(context)

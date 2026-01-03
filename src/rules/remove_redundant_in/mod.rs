@@ -89,11 +89,11 @@ impl DetectFix for RemoveRedundantIn {
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context
-            .new_user_functions()
-            .filter_map(|(_, decl)| {
-                let signature = decl.signature();
-                let block_id = decl.block_id()?;
-                let block = context.working_set.get_block(block_id);
+            .custom_commands()
+            .iter()
+            .filter_map(|def| {
+                let signature = &def.signature;
+                let block = context.working_set.get_block(def.body);
 
                 let redundant_in_spans = collect_redundant_in_spans(&block.pipelines, context);
 
@@ -101,11 +101,9 @@ impl DetectFix for RemoveRedundantIn {
                     return None;
                 }
 
-                let name_span = context.find_declaration_span(&signature.name);
-
                 let mut violation = Detection::from_file_span(
                     format!("Redundant $in in function '{}'", signature.name),
-                    name_span,
+                    def.declaration_span(context),
                 )
                 .with_primary_label("function with redundant $in")
                 .with_help("Remove redundant $in - it's implicit at the start of pipelines");

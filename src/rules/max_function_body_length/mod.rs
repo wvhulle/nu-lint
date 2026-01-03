@@ -9,7 +9,7 @@ const MAX_LINES: usize = 40;
 
 fn check(context: &LintContext) -> Vec<Detection> {
     context
-        .collect_function_definitions()
+        .custom_commands()
         .iter()
         .filter_map(|def| function_violation(context, def))
         .collect()
@@ -31,8 +31,7 @@ fn function_violation(
              logic into helper functions with clear responsibilities.",
             def.name
         );
-        let name_span = context.find_declaration_span(&def.name);
-        Detection::from_file_span(message, name_span)
+        Detection::from_file_span(message, def.declaration_span(context))
             .with_primary_label(format!("{line_count} lines"))
             .with_extra_label("function body", block_span)
             .with_help(suggestion)

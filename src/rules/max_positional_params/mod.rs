@@ -25,9 +25,10 @@ impl DetectFix for MaxPositionalParams {
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let detections = context
-            .new_user_functions()
-            .filter_map(|(_, decl)| {
-                let signature = decl.signature();
+            .custom_commands()
+            .iter()
+            .filter_map(|def| {
+                let signature = &def.signature;
                 log::debug!("Checking command '{}'", signature.name);
                 // Count only positional parameters (not flags)
                 let positional_count = signature.required_positional.len()
@@ -44,13 +45,12 @@ impl DetectFix for MaxPositionalParams {
                          parameters",
                         signature.name
                     );
-                    let name_span = context.find_declaration_span(&signature.name);
                     Detection::from_file_span(
                         format!(
                             "Command has {positional_count} positional parameters, should have ≤ \
                              {MAX_POSITIONAL}"
                         ),
-                        name_span,
+                        def.declaration_span(context),
                     )
                     .with_primary_label(format!("{positional_count} positional params"))
                     .with_help(

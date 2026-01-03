@@ -63,7 +63,7 @@ impl DetectFix for RequireMainWithStdin {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let functions = context.collect_function_definitions();
+        let functions = context.custom_commands();
         let has_main = functions
             .iter()
             .any(super::super::ast::declaration::CustomCommandDef::is_main);

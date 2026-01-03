@@ -8,6 +8,7 @@ use nu_protocol::{
 use crate::{
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
+    span::FileSpan,
 };
 
 #[derive(Debug, Clone)]
@@ -16,6 +17,7 @@ pub struct CustomCommandDef {
     pub name: String,
     pub name_span: Span,
     pub export_span: Option<Span>,
+    pub signature: nu_protocol::Signature,
 }
 
 impl PartialEq for CustomCommandDef {
@@ -44,12 +46,14 @@ impl CustomCommandDef {
         name: String,
         name_span: Span,
         export_span: Option<Span>,
+        signature: nu_protocol::Signature,
     ) -> Self {
         Self {
             body,
             name,
             name_span,
             export_span,
+            signature,
         }
     }
 
@@ -70,10 +74,13 @@ impl CustomCommandDef {
 
         let body_expr = call.get_positional_arg(2)?;
         let block_id = body_expr.extract_block_id()?;
+        
+        let block = context.working_set.get_block(block_id);
+        let signature = (*block.signature).clone();
 
         let export_span = is_exported.then(|| Span::new(call.head.start, call.head.start + 7));
 
-        Some(Self::new(block_id, name, name_arg.span, export_span))
+        Some(Self::new(block_id, name, name_arg.span, export_span, signature))
     }
 
     pub fn is_main(&self) -> bool {
@@ -82,5 +89,11 @@ impl CustomCommandDef {
 
     pub const fn is_exported(&self) -> bool {
         self.export_span.is_some()
+    }
+
+    /// Get the declaration span as a `FileSpan` for use in detections
+    /// This requires the `LintContext` to normalize the global span to file-relative positions
+    pub const fn declaration_span(&self, context: &LintContext) -> FileSpan {
+        context.normalize_span(self.name_span)
     }
 }

@@ -5,7 +5,7 @@ use nu_protocol::{
 
 use crate::{
     LintLevel,
-    ast::expression::ExpressionExt,
+    ast::{declaration::CustomCommandDef, expression::ExpressionExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
@@ -55,15 +55,20 @@ fn create_suggestion_message(param_name: &str, function_name: &str) -> String {
 }
 
 /// Create a violation for a parameter that's used as an external command
-fn create_violation(param_name: &str, function_name: &str, context: &LintContext) -> Detection {
+fn create_violation(
+    param_name: &str,
+    function_def: &CustomCommandDef,
+    context: &LintContext,
+) -> Detection {
     Detection::from_file_span(
         format!(
-            "Function '{function_name}' parameter '{param_name}' is used as an external command."
+            "Function '{}' parameter '{param_name}' is used as an external command.",
+            function_def.name
         ),
-        context.find_declaration_span(function_name),
+        function_def.declaration_span(context),
     )
     .with_primary_label("using script parameter")
-    .with_help(create_suggestion_message(param_name, function_name))
+    .with_help(create_suggestion_message(param_name, &function_def.name))
 }
 
 struct ExternalScriptAsArgument;
@@ -89,31 +94,23 @@ impl DetectFix for ExternalScriptAsArgument {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let function_bodies = context.collect_function_definitions();
-
         let detections = context
-            .new_user_functions()
-            .filter_map(|(_, decl)| {
-                let signature = decl.signature();
+            .custom_commands()
+            .iter()
+            .flat_map(|def| {
+                let function_block = context.working_set.get_block(def.body);
 
-                // Find the function body block
-                function_bodies
-                    .iter()
-                    .find_map(|def| (def.name == signature.name).then_some(def.body))
-                    .map(|function_block_id| (signature, function_block_id))
-            })
-            .flat_map(|(signature, function_block_id)| {
-                let function_block = context.working_set.get_block(function_block_id);
-                signature
+                function_block
+                    .signature
                     .required_positional
                     .iter()
-                    .chain(&signature.optional_positional)
+                    .chain(&function_block.signature.optional_positional)
                     .filter(|param| is_string_parameter(param))
                     .filter_map(|param| param.var_id.map(|var_id| (param, var_id)))
                     .filter(|(_, var_id)| {
                         contains_external_call_with_variable(function_block, *var_id, context)
                     })
-                    .map(|(param, _)| create_violation(&param.name, &signature.name, context))
+                    .map(|(param, _)| create_violation(&param.name, def, context))
                     .collect::<Vec<_>>()
             })
             .collect();

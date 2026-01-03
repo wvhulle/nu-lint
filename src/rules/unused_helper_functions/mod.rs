@@ -143,7 +143,6 @@ fn create_violation(
     context: &LintContext,
     f: &LocatedFunction,
 ) -> (Detection, UnusedFunctionFixData) {
-    let name_span = context.find_declaration_span(&f.definition.name);
     let removal_span = context.expand_span_to_full_lines(f.location);
 
     let violation = Detection::from_file_span(
@@ -151,7 +150,7 @@ fn create_violation(
             "Function '{}' is defined but never called from entry points",
             f.definition.name
         ),
-        name_span,
+        f.definition.declaration_span(context),
     )
     .with_primary_label("unused function")
     .with_help(

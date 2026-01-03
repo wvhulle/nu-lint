@@ -2,7 +2,10 @@ use std::collections::BTreeSet;
 
 use nu_protocol::Span;
 
-use crate::{ast::{block::BlockExt, declaration::CustomCommandDef}, context::LintContext};
+use crate::{
+    ast::{block::BlockExt, declaration::CustomCommandDef},
+    context::LintContext,
+};
 
 pub trait SpanExt {
     #[must_use]
@@ -31,12 +34,7 @@ impl SpanExt for Span {
     ) -> Option<&'a CustomCommandDef> {
         functions
             .iter()
-            .filter(|def| {
-                context
-                    .working_set
-                    .get_block(def.body)
-                    .contains_span(*self)
-            })
+            .filter(|def| context.working_set.get_block(def.body).contains_span(*self))
             .min_by_key(|def| {
                 let block = context.working_set.get_block(def.body);
                 block.span.map_or(usize::MAX, |s| s.end - s.start)

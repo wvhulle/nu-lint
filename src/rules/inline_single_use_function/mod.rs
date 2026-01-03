@@ -76,7 +76,7 @@ impl DetectFix for InlineSingleUseFunction {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let function_definitions = context.collect_function_definitions();
+        let function_definitions = context.custom_commands();
         let has_main = function_definitions
             .iter()
             .any(super::super::ast::declaration::CustomCommandDef::is_main);
@@ -90,7 +90,7 @@ impl DetectFix for InlineSingleUseFunction {
             .filter(|def| has_single_statement_body(def.body, context))
             .filter(|def| count_function_calls(&def.name, context) == 1)
             .map(|def| {
-                let name_span = context.find_declaration_span(&def.name);
+                let name_span = def.declaration_span(context);
                 let block = context.working_set.get_block(def.body);
                 // body_span is global (AST), name_span is file-relative - use AST span or
                 // convert

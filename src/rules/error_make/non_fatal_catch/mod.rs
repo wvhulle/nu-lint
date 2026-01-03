@@ -69,7 +69,7 @@ impl DetectFix for UseErrorMakeForCatch {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let functions = context.collect_function_definitions();
+        let functions = context.custom_commands();
         let try_blocks = collect_try_blocks(context);
 
         context.detect_with_fix_data(|expr, ctx| {

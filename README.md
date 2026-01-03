@@ -48,78 +48,7 @@ All rules are optional and can be disabled with a configuration file. The rule d
 
 Some of the rules need further testing and improvement. Please make an issue on the issue tracker to report any bugs. In early stages of development some rules may be replaced or renamed.
 
-More than 100 rules are defined and most have automatic fixes available (list may be out-of-date):
-
-`dead-code` - Remove unused or redundant code
-
-- `avoid_self_import`
-- `unnecessary_accumulate`
-- `unnecessary_variable_before_return` (auto-fix)
-- `redundant_ignore` (auto-fix)
-- `unnecessary_mut` (auto-fix)
-- `unused_helper_functions` (auto-fix)
-- `script_export_main` (auto-fix)
-- `remove_string_quotes` (auto-fix)
-- `inline_single_use_function`
-
-`documentation` - Improve actionability of user-facing messages.
-
-- `add_doc_comment_exported_fn`
-- `descriptive_error_messages`
-- `add_label_to_error`
-- `add_help_to_error`
-- `add_span_to_label`
-- `add_url_to_error`
-- `main_positional_args_docs`
-- `main_named_args_docs`
-- `max_positional_params`
-
-`runtime-errors` - Preventing unexpected runtime behaviour.
-
-- `check_complete_exit_code`
-- `descriptive_error_messages`
-- `escape_string_interpolation_operators`
-- `exit_only_in_main`
-- `check_typed_flag_before_use`
-- `non_final_failure_check`
-- `error_make_for_non_fatal` (auto-fix)
-- `try_instead_of_do`
-- `unsafe_dynamic_record_access` (auto-fix)
-
-`external` - Replace common external CLI tools.
-
-- `use_builtin_curl` (auto-fix)
-- `use_builtin_eza` (auto-fix)
-- `use_builtin_fd` (auto-fix)
-- `replace_jq_with_nu_get` (auto-fix)
-- `use_builtin_rg` (auto-fix)
-- `use_builtin_wget` (auto-fix)
-- `use_builtin_which` (auto-fix)
-
-`filtering` - Better patterns for filtering and selecting data.
-
-- `each_if_to_where` (auto-fix)
-- `for_filter_to_where`
-- `omit_it_in_row_condition` (auto-fix)
-- `where_or_filter_closure_to_it_row_condition` (auto-fix)
-- `remove_redundant_in` (auto-fix)
-
-`formatting` - Formatting according to Nushell guidelines.
-
-- `ansi_over_escape_codes` (auto-fix)
-- `collapsible_if` (auto-fix)
-- `forbid_excessive_nesting`
-- `max_function_body_length`
-- `replace_if_else_chain_with_match` (auto-fix)
-- `curly_block_body_spacing` (auto-fix)
-- `curly_closure_param_spacing` (auto-fix)
-- `no_trailing_spaces` (auto-fix)
-- `omit_list_commas` (auto-fix)
-- `pipe_spacing` (auto-fix)
-- `curly_record_spacing` (auto-fix)
-- `reflow_wide_pipelines` (auto-fix)
-- `reflow_wide_lists` (auto-fix)
-- `wrap_wide_records` (auto-fix)
++116 rules are defined and most have automatic fixes available (list may be out-of-date):
 
 `idioms` - Simplifications unique to the Nu language.
 
@@ -133,18 +62,6 @@ More than 100 rules are defined and most have automatic fixes available (list ma
 - `use_regex_operators` (auto-fix)
 - `ansi_over_escape_codes` (auto-fix)
 
-`iteration` - Better patterns for loops and iteration.
-
-- `replace_loop_counter_with_range`
-- `replace_counter_while_with_each`
-
-`naming` - Follow official naming conventions
-
-- `kebab_case_commands`
-- `screaming_snake_constants`
-- `snake_case_variables` (auto-fix)
-- `add_label_to_error`
-
 `parsing` - Better ways to parse and transform text data.
 
 - `lines_instead_of_split` (auto-fix)
@@ -153,17 +70,21 @@ More than 100 rules are defined and most have automatic fixes available (list ma
 - `lines_each_to_parse` (auto-fix)
 - `open_raw_from_to_open` (auto-fix)
 - `simplify_regex_parse` (auto-fix)
+- `split_row_get_multistatement` (auto-fix)
 - `split_row_first_last` (auto-fix)
-- `split_row_get_to_parse` (auto-fix)
+- `split_row_get_single_pipeline` (auto-fix)
 
-`performance` - Rules with potential performance impact
+`dead-code` - Remove unused or redundant code
 
-- `avoid_nu_subprocess`
-- `dispatch_with_subcommands`
 - `avoid_self_import`
-- `turn_positional_into_stream_input` (auto-fix)
 - `unnecessary_accumulate`
-- `merge_multiline_print` (auto-fix)
+- `unnecessary_variable_before_return` (auto-fix)
+- `redundant_ignore` (auto-fix)
+- `unnecessary_mut` (auto-fix)
+- `unused_helper_functions` (auto-fix)
+- `script_export_main` (auto-fix)
+- `string_may_be_bare` (auto-fix)
+- `inline_single_use_function`
 
 `posix` - Replace common bash/POSIX patterns.
 
@@ -189,6 +110,60 @@ More than 100 rules are defined and most have automatic fixes available (list ma
 - `use_builtin_uniq` (auto-fix)
 - `use_builtin_wc` (auto-fix)
 
+`iteration` - Better patterns for loops and iteration.
+
+- `replace_loop_counter_with_range`
+- `replace_counter_while_with_each`
+
+`runtime-errors` - Preventing unexpected runtime behaviour.
+
+- `check_complete_exit_code`
+- `descriptive_error_messages`
+- `escape_string_interpolation_operators`
+- `exit_only_in_main`
+- `check_typed_flag_before_use`
+- `non_final_failure_check`
+- `error_make_for_non_fatal` (auto-fix)
+- `try_instead_of_do`
+- `unsafe_dynamic_record_access` (auto-fix)
+
+`filtering` - Better patterns for filtering and selecting data.
+
+- `each_if_to_where` (auto-fix)
+- `for_filter_to_where`
+- `omit_it_in_row_condition` (auto-fix)
+- `where_or_filter_closure_to_it_row_condition` (auto-fix)
+- `remove_redundant_in` (auto-fix)
+
+`performance` - Rules with potential performance impact
+
+- `avoid_nu_subprocess`
+- `dispatch_with_subcommands`
+- `avoid_self_import`
+- `turn_positional_into_stream_input` (auto-fix)
+- `unnecessary_accumulate`
+- `merge_multiline_print` (auto-fix)
+
+`type-safety` - Annotate with type hints where possible.
+
+- `external_script_as_argument`
+- `add_type_hints_arguments` (auto-fix)
+- `prefer_path_type` (auto-fix)
+- `missing_output_type` (auto-fix)
+- `missing_in_type` (auto-fix)
+
+`documentation` - Improve actionability of user-facing messages.
+
+- `add_doc_comment_exported_fn`
+- `descriptive_error_messages`
+- `add_label_to_error`
+- `add_help_to_error`
+- `add_span_to_label`
+- `add_url_to_error`
+- `main_positional_args_docs`
+- `main_named_args_docs`
+- `max_positional_params`
+
 `effects` - Handle built-in and external commands with side-effects.
 
 - `dangerous_file_operations`
@@ -198,13 +173,39 @@ More than 100 rules are defined and most have automatic fixes available (list ma
 - `silence_side_effect_only_each` (auto-fix)
 - `silence_stderr_data`
 
-`type-safety` - Annotate with type hints where possible.
+`external` - Replace common external CLI tools.
 
-- `external_script_as_argument`
-- `add_type_hints_arguments` (auto-fix)
-- `prefer_path_type` (auto-fix)
-- `missing_output_type` (auto-fix)
-- `missing_in_type` (auto-fix)
+- `use_builtin_curl` (auto-fix)
+- `use_builtin_eza` (auto-fix)
+- `use_builtin_fd` (auto-fix)
+- `replace_jq_with_nu_get` (auto-fix)
+- `use_builtin_rg` (auto-fix)
+- `use_builtin_wget` (auto-fix)
+- `use_builtin_which` (auto-fix)
+
+`formatting` - Formatting according to Nushell guidelines.
+
+- `ansi_over_escape_codes` (auto-fix)
+- `collapsible_if` (auto-fix)
+- `forbid_excessive_nesting`
+- `max_function_body_length`
+- `replace_if_else_chain_with_match` (auto-fix)
+- `curly_block_body_spacing` (auto-fix)
+- `curly_closure_param_spacing` (auto-fix)
+- `no_trailing_spaces` (auto-fix)
+- `omit_list_commas` (auto-fix)
+- `pipe_spacing` (auto-fix)
+- `curly_record_spacing` (auto-fix)
+- `reflow_wide_pipelines` (auto-fix)
+- `reflow_wide_lists` (auto-fix)
+- `wrap_wide_records` (auto-fix)
+
+`naming` - Follow official naming conventions
+
+- `kebab_case_commands`
+- `screaming_snake_constants`
+- `snake_case_variables` (auto-fix)
+- `add_label_to_error`
 
 `upstream` - Forward warnings and errors of the upstream Nushell parser.
 

@@ -214,6 +214,21 @@ impl<'a> LintContext<'a> {
         violations
     }
 
+    /// Traverse the AST with parent context, calling the callback for each expression
+    /// with its parent expression (if any).
+    ///
+    /// This builds on top of the `Traverse` trait but adds parent tracking, which is
+    /// useful for rules that need to know the context of an expression (e.g., whether
+    /// a string is in command position).
+    pub(crate) fn traverse_with_parent<F>(&self, mut callback: F)
+    where
+        F: FnMut(&Expression, Option<&Expression>),
+    {
+        use crate::ast::block::BlockExt;
+
+        self.ast.traverse_with_parent(self, None, &mut callback);
+    }
+
     /// Iterator over newly added user-defined function declarations
     /// Only returns functions that are actually defined in the user's file,
     /// not imported stdlib functions

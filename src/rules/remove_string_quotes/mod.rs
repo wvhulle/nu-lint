@@ -1,8 +1,6 @@
-use std::collections::BTreeSet;
-
 use nu_protocol::{
     Span,
-    ast::{Block, Expr, Expression, ListItem, RecordItem},
+    ast::{Expr, Expression},
 };
 
 use crate::{
@@ -18,66 +16,18 @@ struct FixData {
     unquoted_content: String,
 }
 
-/// Recursively collect spans of expressions in command position.
-/// Bare words in command position would be interpreted as commands, not
-/// strings.
-fn collect_command_positions(block: &Block, ctx: &LintContext, spans: &mut BTreeSet<Span>) {
-    for pipeline in &block.pipelines {
-        for element in &pipeline.elements {
-            if matches!(element.expr.expr, Expr::String(_)) {
-                spans.insert(element.expr.span);
-            }
-            visit_expr(&element.expr, ctx, spans);
-        }
-    }
-}
-
-fn visit_expr(expr: &Expression, ctx: &LintContext, spans: &mut BTreeSet<Span>) {
-    match &expr.expr {
-        Expr::Block(id) | Expr::Closure(id) | Expr::Subexpression(id) | Expr::RowCondition(id) => {
-            collect_command_positions(ctx.working_set.get_block(*id), ctx, spans);
-        }
-        Expr::MatchBlock(arms) => {
-            for (_, arm_expr) in arms {
-                if matches!(arm_expr.expr, Expr::String(_)) {
-                    spans.insert(arm_expr.span);
-                }
-                visit_expr(arm_expr, ctx, spans);
-            }
-        }
-        Expr::Keyword(kw) => visit_expr(&kw.expr, ctx, spans),
-        Expr::Call(call) => {
-            for arg in &call.arguments {
-                if let Some(e) = arg.expr() {
-                    visit_expr(e, ctx, spans);
-                }
-            }
-        }
-        Expr::List(items) => {
-            for item in items {
-                match item {
-                    ListItem::Item(e) | ListItem::Spread(_, e) => visit_expr(e, ctx, spans),
-                }
-            }
-        }
-        Expr::Record(items) => {
-            for item in items {
-                match item {
-                    RecordItem::Pair(k, v) => {
-                        visit_expr(k, ctx, spans);
-                        visit_expr(v, ctx, spans);
-                    }
-                    RecordItem::Spread(_, e) => visit_expr(e, ctx, spans),
-                }
-            }
-        }
-        Expr::BinaryOp(lhs, _, rhs) => {
-            visit_expr(lhs, ctx, spans);
-            visit_expr(rhs, ctx, spans);
-        }
-        Expr::FullCellPath(fcp) => visit_expr(&fcp.head, ctx, spans),
-        _ => {}
-    }
+/// Check if an expression is in command position.
+/// A bare word in command position would be interpreted as a command to
+/// execute.
+fn is_in_command_position(expr: &Expression, parent: Option<&Expression>) -> bool {
+    parent.is_none_or(|parent| match &parent.expr {
+        // If parent is an ExternalCall and this is the head, it's in command position
+        Expr::ExternalCall(head, _args) => head.span == expr.span,
+        // If parent is a MatchBlock, this expression is a match arm body
+        Expr::Block(_) | Expr::Closure(_) | Expr::Subexpression(_) | Expr::MatchBlock(_) => true,
+        // Otherwise, not in command position
+        _ => false,
+    })
 }
 
 fn check_string_needs_quotes(expr: &Expression, ctx: &LintContext) -> Option<(Detection, FixData)> {
@@ -94,8 +44,10 @@ fn check_string_needs_quotes(expr: &Expression, ctx: &LintContext) -> Option<(De
     };
 
     if bare_word_needs_quotes(content) {
+        log::debug!("String needs quotes: {content}");
         return None;
     }
+    log::debug!("String does not need quotes: {content}");
 
     let violation = Detection::from_global_span(
         format!("Unnecessary {quote_type} quotes around string '{content}'"),
@@ -140,21 +92,29 @@ impl DetectFix for UnnecessaryStringQuotes {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let mut command_positions = BTreeSet::new();
-        collect_command_positions(context.ast, context, &mut command_positions);
+        let mut results = Vec::new();
 
-        context.detect_with_fix_data(|expr, ctx| {
+        context.traverse_with_parent(|expr, parent| {
             if !matches!(expr.expr, Expr::String(_)) {
-                return vec![];
+                return;
             }
 
-            // Skip strings in command position - they would be interpreted as commands
-            if command_positions.contains(&expr.span) {
-                return vec![];
+            // Skip strings in command position - they would be interpreted as external
+            // commands
+            if is_in_command_position(expr, parent) {
+                log::debug!(
+                    "Skipping {} since it is in command position.",
+                    context.get_span_text(expr.span)
+                );
+                return;
             }
 
-            check_string_needs_quotes(expr, ctx).into_iter().collect()
-        })
+            if let Some(detection) = check_string_needs_quotes(expr, context) {
+                results.push(detection);
+            }
+        });
+
+        results
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {

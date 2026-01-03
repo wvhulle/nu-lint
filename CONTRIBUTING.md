@@ -8,13 +8,21 @@ Always start from valid Nu shell code. Experiment with different versions of the
 
 You can compare by running: `nu -c 'TEST'`  and `bash -c 'TEST'`.
 
-The first thing you might want to do for a new rule is investigate how Nu parses the fragment. Nu has a built-in command that allows you to interactively explore
+The first thing you might want to do for a new rule is investigate how Nu parses the fragment. The recommended way is to use nu-lint's `--ast` flag, which prints an expanded AST with all nested blocks fully shown (unlike Nu's built-in `ast` command which only shows block IDs):
+
+```bash
+cargo run -- --ast 'def main [] { if $in { ".md" } }'
+```
+
+This will output a clean JSON representation of the AST with all blocks, closures, and subexpressions fully expanded, making it much easier to understand the structure.
+
+Alternatively, you can use Nu's built-in command for interactive exploration:
 
 ```bash
 ast --json benches/fixtures/small_file.nu | get block | from json | explore
 ```
 
-If you are using Bash (or Claude is calling Bash), call the Nu interpreter from a Bash shell to show a JSON representation. This JSON representation is easier to read:
+Or from Bash, call the Nu interpreter to show the AST (note: this shows block IDs instead of expanded blocks):
 
 ```bash
 nu -c 'ast --json benches/fixtures/small_file.nu | get block'

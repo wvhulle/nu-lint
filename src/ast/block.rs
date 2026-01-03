@@ -155,6 +155,16 @@ pub trait BlockExt {
     fn find_expr_spans<F>(&self, context: &LintContext, predicate: F) -> Vec<Span>
     where
         F: Fn(&Expression, &LintContext) -> bool;
+
+    /// Traverse block and all descendants with parent tracking.
+    /// Calls the callback for each expression with its immediate parent.
+    fn traverse_with_parent<'a, F>(
+        &'a self,
+        context: &'a LintContext,
+        parent: Option<&'a Expression>,
+        callback: &mut F,
+    ) where
+        F: FnMut(&'a Expression, Option<&'a Expression>);
 }
 
 impl BlockExt for Block {
@@ -310,5 +320,23 @@ impl BlockExt for Block {
             &mut matching_spans,
         );
         matching_spans
+    }
+
+    fn traverse_with_parent<'a, F>(
+        &'a self,
+        context: &'a LintContext,
+        parent: Option<&'a Expression>,
+        callback: &mut F,
+    ) where
+        F: FnMut(&'a Expression, Option<&'a Expression>),
+    {
+        use crate::ast::expression::ExpressionExt;
+
+        // For each pipeline element, parent is the block/closure/subexpression expression
+        for pipeline in &self.pipelines {
+            for element in &pipeline.elements {
+                element.expr.traverse_with_parent(context, parent, callback);
+            }
+        }
     }
 }

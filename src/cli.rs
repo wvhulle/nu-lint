@@ -47,6 +47,11 @@ pub struct Cli {
     #[arg(long, value_name = "RULE_ID", conflicts_with_all = ["fix", "lsp", "list", "groups"])]
     explain: Option<String>,
 
+    /// Print AST (Abstract Syntax Tree) with expanded blocks for the given
+    /// source code
+    #[arg(long, value_name = "SOURCE", conflicts_with_all = ["fix", "lsp", "list", "groups", "explain"])]
+    ast: Option<String>,
+
     /// Output format
     #[arg(long, short = 'f', value_enum, default_value_t = Format::Text)]
     format: Format,
@@ -240,6 +245,7 @@ impl Cli {
             process::exit(1);
         }
     }
+
 }
 
 pub fn run() {
@@ -255,6 +261,8 @@ pub fn run() {
         Cli::list_groups();
     } else if let Some(ref rule_id) = cli.explain {
         Cli::explain_rule(rule_id);
+    } else if let Some(ref source) = cli.ast {
+        crate::ast::tree::print_ast(source);
     } else if cli.lsp {
         lsp::run_lsp_server();
     } else if cli.fix {

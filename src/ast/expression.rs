@@ -69,6 +69,17 @@ pub trait ExpressionExt: Traverse {
     /// Extracts external command name from expression. Example: `^ls` returns
     /// "ls"
     fn extract_external_command_name(&self, context: &LintContext) -> Option<String>;
+
+    /// Traverse expression and all descendants with parent tracking.
+    /// Calls the callback for each expression with its immediate parent.
+    /// Mirrors the structure of the Traverse trait's flat_map to stay in sync with upstream.
+    fn traverse_with_parent<'a, F>(
+        &'a self,
+        context: &'a LintContext,
+        parent: Option<&'a Expression>,
+        callback: &mut F,
+    ) where
+        F: FnMut(&'a Expression, Option<&'a Expression>);
 }
 
 pub const fn is_dollar_in_var(var_id: VarId) -> bool {
@@ -627,6 +638,107 @@ impl ExpressionExt for Expression {
                 FindMapResult::Continue
             }
         })
+    }
+
+    fn traverse_with_parent<'a, F>(
+        &'a self,
+        context: &'a LintContext,
+        parent: Option<&'a Expression>,
+        callback: &mut F,
+    ) where
+        F: FnMut(&'a Expression, Option<&'a Expression>),
+    {
+        // Call callback for this expression
+        callback(self, parent);
+
+        // Recursively process children, marking self as their parent
+        let mut recur = |child: &'a Expression| {
+            child.traverse_with_parent(context, Some(self), callback);
+        };
+
+        // This structure mirrors Expression::flat_map from nu_protocol::ast::Traverse
+        // to ensure it stays in sync with upstream changes
+        match &self.expr {
+            Expr::RowCondition(block_id)
+            | Expr::Subexpression(block_id)
+            | Expr::Block(block_id)
+            | Expr::Closure(block_id) => {
+                let block = context.working_set.get_block(*block_id);
+                block.traverse_with_parent(context, Some(self), callback);
+            }
+            Expr::Range(range) => {
+                for sub_expr in [&range.from, &range.next, &range.to].into_iter().flatten() {
+                    recur(sub_expr);
+                }
+            }
+            Expr::Call(call) => {
+                for arg in &call.arguments {
+                    if let Some(sub_expr) = arg.expr() {
+                        recur(sub_expr);
+                    }
+                }
+            }
+            Expr::ExternalCall(head, args) => {
+                recur(head.as_ref());
+                for arg in args {
+                    recur(arg.expr());
+                }
+            }
+            Expr::UnaryNot(e) | Expr::Collect(_, e) => recur(e.as_ref()),
+            Expr::BinaryOp(lhs, op, rhs) => {
+                recur(lhs);
+                recur(op);
+                recur(rhs);
+            }
+            Expr::MatchBlock(matches) => {
+                for (_pattern, e) in matches {
+                    recur(e);
+                }
+            }
+            Expr::List(items) => {
+                for item in items {
+                    match item {
+                        ListItem::Item(e) | ListItem::Spread(_, e) => recur(e),
+                    }
+                }
+            }
+            Expr::Record(items) => {
+                for item in items {
+                    match item {
+                        RecordItem::Spread(_, e) => recur(e),
+                        RecordItem::Pair(key, val) => {
+                            recur(key);
+                            recur(val);
+                        }
+                    }
+                }
+            }
+            Expr::Table(table) => {
+                for column in &table.columns {
+                    recur(column);
+                }
+                for row in &table.rows {
+                    for item in row {
+                        recur(item);
+                    }
+                }
+            }
+            Expr::ValueWithUnit(vu) => recur(&vu.expr),
+            Expr::FullCellPath(fcp) => recur(&fcp.head),
+            Expr::Keyword(kw) => recur(&kw.expr),
+            Expr::StringInterpolation(vec) | Expr::GlobInterpolation(vec, _) => {
+                for item in vec {
+                    recur(item);
+                }
+            }
+            Expr::AttributeBlock(ab) => {
+                for attr in &ab.attributes {
+                    recur(&attr.expr);
+                }
+                recur(&ab.item);
+            }
+            _ => (),
+        }
     }
 }
 

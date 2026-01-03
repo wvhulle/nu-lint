@@ -1,4 +1,30 @@
 use super::RULE;
+use crate::log::init_log;
+
+#[test]
+fn ignore_command_position() {
+    init_log();
+    let code = r#"
+        def main [] {
+            ".md"
+        }
+     "#;
+    RULE.assert_ignores(code);
+}
+
+#[test]
+fn ignore_command_position_if() {
+    init_log();
+    let code = r#"
+        def main [] {
+            if $in {
+                ".md"    
+            }
+            
+        }
+     "#;
+    RULE.assert_ignores(code);
+}
 
 #[test]
 fn ignores_bare_words() {

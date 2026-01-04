@@ -44,7 +44,7 @@ src/rules/your_rule_name/
 ├── ignore_good.rs   # Tests for code that should NOT trigger the rule
 ```
 
-A test file for fixes may be added when the false negative and false positive tests are working correctly.
+A test file for fixes may be added when the false negative and false positive tests are working correctly (typically named generated_fix.rs, see later).
 
 Rules can also be grouped into submodules (e.g., `parsing/`, `filesystem/`, `typing/`) when they share common functionality.
 

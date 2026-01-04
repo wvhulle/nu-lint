@@ -1,7 +1,6 @@
 use crate::{
     LintLevel,
-    context::LintContext,
-    external_commands::ExternalCmdFixData,
+    context::{ExternalCmdFixData, LintContext},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -212,9 +211,30 @@ impl DetectFix for UseBuiltinAwk {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let mut violations = context.external_invocations("awk", NOTE);
-        violations.extend(context.external_invocations("gawk", NOTE));
-        violations.extend(context.external_invocations("mawk", NOTE));
+        let validator = |_cmd: &str, args: &[&str]| {
+            // Only detect simple awk patterns that we can reliably translate
+            // Don't detect if there are multiple statements, functions, or complex control
+            // flow
+            let has_complex_features = args.iter().any(|arg| {
+                arg.contains("BEGIN") ||
+                arg.contains("END") ||
+                arg.contains("function") ||
+                arg.contains("for") ||
+                arg.contains("while") ||
+                arg.contains("if") && arg.matches("if").count() > 1 || // Multiple conditionals
+                arg.contains(';') && arg.matches(';').count() > 1 ||    // Multiple statements
+                arg.starts_with("-f") || *arg == "-f" ||                // External script file
+                arg.starts_with("-v") && arg.contains('=') // Complex variable assignments
+            });
+            if has_complex_features {
+                None
+            } else {
+                Some(NOTE)
+            }
+        };
+        let mut violations = context.detect_external_with_validation("awk", validator);
+        violations.extend(context.detect_external_with_validation("gawk", validator));
+        violations.extend(context.detect_external_with_validation("mawk", validator));
         violations
     }
 

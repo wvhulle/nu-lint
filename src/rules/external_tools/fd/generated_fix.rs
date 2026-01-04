@@ -1,56 +1,46 @@
 use super::RULE;
 
 #[test]
-fn replaces_fd_pattern_with_ls_glob() {
-    let source = r#"^fd "test""#;
-    RULE.assert_fixed_contains(source, "ls ./**/*test*");
+fn replaces_fd_pattern_with_glob() {
+    RULE.assert_fixed_contains(r#"^fd "test""#, "glob ./**/*test*");
 }
 
 #[test]
 fn replaces_fd_with_directory() {
-    let source = "^fd test src";
-    RULE.assert_fixed_contains(source, "ls src/**/*test*");
+    RULE.assert_fixed_contains("^fd test src", "glob src/**/*test*");
 }
 
 #[test]
 fn replaces_fd_extension_with_glob() {
-    let source = "^fd -e rs";
-    RULE.assert_fixed_contains(source, "ls ./**/*.rs");
-}
-
-#[test]
-fn replaces_fd_type_file() {
-    let source = "^fd -t f";
-    RULE.assert_fixed_contains(source, "ls ./**/* | where type == file");
-}
-
-#[test]
-fn replaces_fd_type_directory() {
-    let source = "^fd -t d";
-    RULE.assert_fixed_contains(source, "ls ./**/* | where type == dir");
+    RULE.assert_fixed_contains("^fd -e rs", "glob ./**/*.rs");
 }
 
 #[test]
 fn replaces_fd_glob_pattern() {
-    let source = "^fd -g '*.rs' src";
-    RULE.assert_fixed_contains(source, "ls src/**/*.rs");
+    RULE.assert_fixed_contains("^fd -g '*.rs' src", "glob src/**/*.rs");
 }
 
 #[test]
 fn replaces_fd_with_pattern_and_extension() {
-    let source = "^fd -e rs test";
-    RULE.assert_fixed_contains(source, "ls ./**/*.rs");
+    RULE.assert_fixed_contains("^fd -e rs test", "glob ./**/*.rs");
 }
 
 #[test]
-fn explains_structured_data_advantage() {
-    let source = "^fd test";
-    RULE.assert_fix_explanation_contains(source, "structured data");
+fn replaces_fd_type_file_uses_ls() {
+    RULE.assert_fixed_contains("^fd -t f", "ls ./**/* | where type == file");
 }
 
 #[test]
-fn explains_hidden_files_note() {
-    let source = "^fd -H";
-    RULE.assert_fix_explanation_contains(source, "hidden");
-    RULE.assert_fix_explanation_contains(source, "ls -a");
+fn replaces_fd_type_directory_uses_ls() {
+    RULE.assert_fixed_contains("^fd -t d", "ls ./**/* | where type == dir");
+}
+
+#[test]
+fn replaces_fd_type_symlink_uses_ls() {
+    RULE.assert_fixed_contains("^fd -t l", "ls ./**/* | where type == symlink");
+}
+
+#[test]
+fn replaces_fd_pattern_and_type_uses_ls() {
+    RULE.assert_fixed_contains("^fd -t f test", "ls ./**/*test* | where type == file");
 }

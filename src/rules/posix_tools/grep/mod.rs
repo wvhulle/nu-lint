@@ -1,7 +1,6 @@
 use crate::{
     LintLevel,
-    context::LintContext,
-    external_commands::ExternalCmdFixData,
+    context::{ExternalCmdFixData, LintContext},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -228,9 +227,26 @@ impl DetectFix for UseBuiltinGrep {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let mut violations = context.external_invocations("grep", NOTE);
-        // ripgrep
-        violations.extend(context.external_invocations("rg", NOTE));
+        let validator = |_cmd: &str, args: &[&str]| {
+            // Only exclude very complex grep features that really can't translate
+            let has_very_complex = args.iter().any(|arg| {
+                matches!(
+                    *arg,
+                    "--color" | "--colour" |     // Color output
+                    "-Z" | "--null" |            // Null separator
+                    "-a" | "--text" |            // Text mode forcing
+                    "-I" | "--binary-files" |   // Binary handling
+                    "-D" | "--devices" |         // Device handling
+                    "--line-buffered" |          // Line buffering
+                    "-T" | "--initial-tab" |     // Initial tab
+                    "-z" | "--null-data" // Null-terminated input
+                ) || arg.starts_with("--include")
+                    || arg.starts_with("--exclude")
+            });
+            if has_very_complex { None } else { Some(NOTE) }
+        };
+        let mut violations = context.detect_external_with_validation("grep", validator);
+        violations.extend(context.detect_external_with_validation("rg", validator));
         violations
     }
 

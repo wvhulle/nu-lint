@@ -1,7 +1,6 @@
 use crate::{
     LintLevel,
-    context::LintContext,
-    external_commands::ExternalCmdFixData,
+    context::{ExternalCmdFixData, LintContext},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -77,7 +76,30 @@ impl DetectFix for UseBuiltinWget {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.external_invocations("wget", NOTE)
+        context.detect_external_with_validation("wget", |_, args| {
+            // Don't detect complex wget features
+            let has_complex = args.iter().any(|arg| {
+                matches!(
+                    *arg,
+                    "--mirror" | "-m" |           // Mirroring
+                    "--recursive" | "-r" |        // Recursive download
+                    "--span-hosts" | "-H" |       // Span hosts
+                    "--page-requisites" | "-p" |  // Download page requisites
+                    "--convert-links" | "-k" |    // Convert links
+                    "--backup-converted" | "-K" | // Backup converted files
+                    "--reject" | "-R" |           // Reject patterns
+                    "--accept" | "-A" |           // Accept patterns
+                    "--level" | "-l" |            // Recursion depth
+                    "--quota" | "-Q" |            // Download quota
+                    "--wait" | "-w" |             // Wait between requests
+                    "--random-wait" |             // Random wait
+                    "--no-parent" | "-np" |       // Don't ascend to parent
+                    "--timestamping" | "-N" |     // Timestamping
+                    "--continue" | "-c" // Continue download (could support)
+                )
+            });
+            if has_complex { None } else { Some(NOTE) }
+        })
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {

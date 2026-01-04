@@ -1,7 +1,6 @@
 use crate::{
     LintLevel,
-    context::LintContext,
-    external_commands::ExternalCmdFixData,
+    context::{ExternalCmdFixData, LintContext},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -118,7 +117,9 @@ impl DetectFix for UseBuiltinCd {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.external_invocations("cd", NOTE)
+        // External cd is always wrong - it can't change the shell's directory
+        // This is a conceptual error, not a translation issue
+        context.detect_external_with_validation("cd", |_, _| Some(NOTE))
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {

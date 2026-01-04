@@ -1,7 +1,6 @@
 use crate::{
     LintLevel,
-    context::LintContext,
-    external_commands::ExternalCmdFixData,
+    context::{ExternalCmdFixData, LintContext},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -32,7 +31,7 @@ impl DetectFix for UseBuiltinTac {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.external_invocations("tac", NOTE)
+        context.detect_external_with_validation("tac", |_, _| Some(NOTE))
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {

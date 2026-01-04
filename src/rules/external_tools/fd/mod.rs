@@ -1,17 +1,13 @@
 use crate::{
     LintLevel,
-    context::LintContext,
-    external_commands::ExternalCmdFixData,
+    context::{ExternalCmdFixData, LintContext},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
 
-const NOTE: &str = "Use 'ls **/*.ext' for recursive file matching or 'glob **/*.ext' for pattern \
-                    matching. While fd is a modern alternative to bash find with better \
-                    performance and UX, Nushell's ls provides structured table data that \
-                    integrates seamlessly with Nushell's data manipulation commands. This enables \
-                    operations like sorting, filtering, and transforming file lists without \
-                    parsing text output.";
+const NOTE: &str = "Use Nu's 'glob' for pattern matching or 'ls' for type filtering. 'glob \
+                    **/*.ext' returns file paths. 'ls **/*.ext' returns structured data (name, \
+                    type, size, modified) for filtering with 'where'.";
 
 #[derive(Default)]
 struct FdOptions<'a> {
@@ -19,7 +15,6 @@ struct FdOptions<'a> {
     path: Option<&'a str>,
     file_type: Option<&'a str>,
     extension: Option<&'a str>,
-    hidden: bool,
     glob_mode: bool,
 }
 
@@ -27,151 +22,77 @@ impl<'a> FdOptions<'a> {
     fn parse(args: impl IntoIterator<Item = &'a str>) -> Self {
         let mut opts = Self::default();
         let mut iter = args.into_iter();
-        let mut positional_index = 0;
+        let mut positional = 0;
 
         while let Some(arg) = iter.next() {
             match arg {
-                "-t" | "--type" => {
-                    opts.file_type = iter.next();
+                "-t" | "--type" => opts.file_type = iter.next(),
+                "-e" | "--extension" => opts.extension = iter.next(),
+                "-g" | "--glob" => opts.glob_mode = true,
+                "-d" | "--max-depth" | "-E" | "--exclude" | "-S" | "--size"
+                | "--changed-within" | "--changed-before" => {
+                    iter.next();
                 }
-                "-e" | "--extension" => {
-                    opts.extension = iter.next();
-                }
-                "-H" | "--hidden" => {
-                    opts.hidden = true;
-                }
-                "-g" | "--glob" => {
-                    opts.glob_mode = true;
-                }
-                "-I" | "--no-ignore" | "-u" | "--unrestricted" | "-s" | "--case-sensitive"
-                | "-i" | "--ignore-case" => {}
-                s if s.starts_with('-') => {
-                    Self::skip_flag_with_value(&mut iter, s);
-                }
-                other => {
-                    Self::set_positional(&mut opts, other, &mut positional_index);
+                s if s.starts_with('-') => {}
+                val => {
+                    match positional {
+                        0 => opts.pattern = Some(val),
+                        1 => opts.path = Some(val),
+                        _ => {}
+                    }
+                    positional += 1;
                 }
             }
         }
-
         opts
     }
 
-    fn skip_flag_with_value<'b>(iter: &mut impl Iterator<Item = &'b str>, flag: &str) {
-        if matches!(
-            flag,
-            "-d" | "--max-depth"
-                | "-E"
-                | "--exclude"
-                | "-S"
-                | "--size"
-                | "--changed-within"
-                | "--changed-before"
-        ) {
-            iter.next();
-        }
-    }
-
-    #[allow(
-        clippy::missing_const_for_fn,
-        reason = "Const fn cannot have mutable references to generic types"
-    )]
-    fn set_positional(opts: &mut Self, value: &'a str, positional_index: &mut usize) {
-        match *positional_index {
-            0 => opts.pattern = Some(value),
-            1 => opts.path = Some(value),
-            _ => {}
-        }
-        *positional_index += 1;
-    }
-
     fn to_nushell(&self) -> (String, String) {
-        let base_path = self.path.unwrap_or(".");
+        let base = self.path.unwrap_or(".");
+        let pattern = self.build_glob_pattern(base);
 
-        let glob_pattern = self.build_glob_pattern(base_path);
-        let (filters, examples) = self.build_filters();
-
-        let replacement = if filters.is_empty() {
-            format!("ls {glob_pattern}")
-        } else {
-            format!("ls {glob_pattern} | {}", filters.join(" | "))
-        };
-
-        let description = self.build_description(&glob_pattern, &examples);
-
-        (replacement, description)
+        self.type_filter().map_or_else(
+            || {
+                let replacement = format!("glob {pattern}");
+                let description = format!(
+                    "Use 'glob {pattern}' to find files. '**' recursively matches subdirectories."
+                );
+                (replacement, description)
+            },
+            |type_filter| {
+                let replacement = format!("ls {pattern} | {type_filter}");
+                let description = format!(
+                    "Use 'ls {pattern} | {type_filter}'. ls returns structured data for filtering."
+                );
+                (replacement, description)
+            },
+        )
     }
 
-    fn build_glob_pattern(&self, base_path: &str) -> String {
+    fn build_glob_pattern(&self, base: &str) -> String {
         if let Some(ext) = self.extension {
-            return format!("{base_path}/**/*.{ext}");
+            return format!("{base}/**/*.{ext}");
         }
-
         self.pattern.map_or_else(
-            || format!("{base_path}/**/*"),
-            |pattern| {
-                let clean = pattern.trim_matches('"').trim_matches('\'');
+            || format!("{base}/**/*"),
+            |p| {
+                let clean = p.trim_matches('"').trim_matches('\'');
                 if clean.contains('*') || self.glob_mode {
-                    format!("{base_path}/**/{clean}")
+                    format!("{base}/**/{clean}")
                 } else {
-                    format!("{base_path}/**/*{clean}*")
+                    format!("{base}/**/*{clean}*")
                 }
             },
         )
     }
 
-    fn build_filters(&self) -> (Vec<String>, Vec<String>) {
-        let mut filters = Vec::new();
-        let mut examples = Vec::new();
-
-        if let Some((filter, example)) = self.file_type.and_then(|ftype| match ftype {
-            "f" | "file" => Some(("where type == file", "type: 'where type == file'")),
-            "d" | "directory" => Some(("where type == dir", "type: 'where type == dir'")),
-            "l" | "symlink" => Some(("where type == symlink", "type: 'where type == symlink'")),
+    fn type_filter(&self) -> Option<&'static str> {
+        self.file_type.and_then(|t| match t {
+            "f" | "file" => Some("where type == file"),
+            "d" | "directory" => Some("where type == dir"),
+            "l" | "symlink" => Some("where type == symlink"),
             _ => None,
-        }) {
-            filters.push(filter.to_string());
-            examples.push(example.to_string());
-        }
-
-        (filters, examples)
-    }
-
-    fn build_description(&self, glob_pattern: &str, examples: &[String]) -> String {
-        let mut parts = vec![format!(
-            "Use 'ls {glob_pattern}' for recursive file search."
-        )];
-
-        if self.pattern.is_some() || self.extension.is_some() {
-            parts.push(
-                "The '**' glob recursively matches all subdirectories, and the pattern filters \
-                 file names."
-                    .to_string(),
-            );
-        }
-
-        if !examples.is_empty() {
-            parts.push(format!(
-                "Pipeline filters replace fd flags: {}.",
-                examples.join(", ")
-            ));
-        }
-
-        if self.hidden {
-            parts.push(
-                "Note: Nushell's ls does not show hidden files by default; use 'ls -a' to include \
-                 them."
-                    .to_string(),
-            );
-        }
-
-        parts.push(
-            "Nushell's ls returns structured data (name, type, size, modified) enabling data \
-             manipulation with 'where', 'sort-by', 'group-by', etc., without text parsing."
-                .to_string(),
-        );
-
-        parts.join(" ")
+        })
     }
 }
 
@@ -185,7 +106,7 @@ impl DetectFix for UseBuiltinFd {
     }
 
     fn explanation(&self) -> &'static str {
-        "Use Nu's 'ls' with glob patterns instead of 'fd' command"
+        "Use Nu's 'glob' or 'ls' instead of 'fd'"
     }
 
     fn doc_url(&self) -> Option<&'static str> {
@@ -197,13 +118,12 @@ impl DetectFix for UseBuiltinFd {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.external_invocations("fd", NOTE)
+        context.detect_external_with_validation("fd", |_, _| Some(NOTE))
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let opts = FdOptions::parse(fix_data.arg_strings.iter().copied());
         let (replacement, description) = opts.to_nushell();
-
         Some(Fix {
             explanation: description.into(),
             replacements: vec![Replacement {

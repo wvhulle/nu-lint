@@ -1,7 +1,6 @@
 use crate::{
     LintLevel,
-    context::LintContext,
-    external_commands::ExternalCmdFixData,
+    context::{ExternalCmdFixData, LintContext},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -30,7 +29,31 @@ impl DetectFix for UseBuiltinWc {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.external_invocations("wc", NOTE)
+        context.detect_external_with_validation("wc", |_, args| {
+            // Only reliably translate -l (line count) to 'lines | length'
+            // Don't detect -c (bytes), -m (chars), -w (words), or -L (max line length)
+            let has_complex = args.iter().any(|arg| {
+                matches!(
+                    *arg,
+                    "-c" | "--bytes" |          // Byte count
+                    "-m" | "--chars" |          // Character count (different from str length)
+                    "-w" | "--words" |          // Word count
+                    "-L" | "--max-line-length" | // Longest line
+                    "--files0-from" // Read from file list
+                )
+            });
+            // Only detect if it's -l or no flags (default includes line count)
+            let has_line_flag = args.iter().any(|arg| *arg == "-l" || *arg == "--lines");
+            let has_only_files = args.iter().all(|arg| !arg.starts_with('-'));
+
+            if has_complex {
+                None
+            } else if has_line_flag || has_only_files {
+                Some(NOTE)
+            } else {
+                None
+            }
+        })
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {

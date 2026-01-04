@@ -96,12 +96,14 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `use_builtin_awk` (auto-fix)
 - `use_builtin_bat` (auto-fix)
 - `use_builtin_cat` (auto-fix)
-- `use_builtin_cut` (auto-fix)
 - `use_builtin_date` (auto-fix)
+- `use_sys_disks_instead_of_df` (auto-fix)
 - `echo_just_identity` (auto-fix)
 - `use_builtin_find` (auto-fix)
+- `use_sys_mem_instead_of_free` (auto-fix)
 - `use_builtin_grep` (auto-fix)
 - `head_to_first` (auto-fix)
+- `use_sys_host_instead_of_hostname` (auto-fix)
 - `use_builtin_cd` (auto-fix)
 - `use_builtin_ls` (auto-fix)
 - `use_builtin_pager` (auto-fix)
@@ -110,8 +112,13 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `use_builtin_sort` (auto-fix)
 - `use_builtin_tac` (auto-fix)
 - `tail_to_last` (auto-fix)
+- `use_sys_host_instead_of_uname` (auto-fix)
 - `use_builtin_uniq` (auto-fix)
+- `use_sys_host_instead_of_uptime` (auto-fix)
+- `use_sys_users_instead_of_users` (auto-fix)
+- `use_sys_users_instead_of_w` (auto-fix)
 - `use_builtin_wc` (auto-fix)
+- `use_sys_users_instead_of_who` (auto-fix)
 
 `iteration` - Better patterns for loops and iteration.
 
@@ -137,6 +144,10 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `each_if_to_where` (auto-fix)
 - `for_filter_to_where`
 - `omit_it_in_row_condition` (auto-fix)
+- `slice_to_drop` (auto-fix)
+- `slice_to_last` (auto-fix)
+- `slice_to_skip` (auto-fix)
+- `slice_to_take` (auto-fix)
 - `where_or_filter_closure_to_it_row_condition` (auto-fix)
 - `remove_redundant_in` (auto-fix)
 
@@ -184,10 +195,8 @@ Some of the rules need further testing and improvement. Please make an issue on 
 `external` - Replace common external CLI tools.
 
 - `use_builtin_curl` (auto-fix)
-- `use_builtin_eza` (auto-fix)
 - `use_builtin_fd` (auto-fix)
 - `replace_jq_with_nu_get` (auto-fix)
-- `use_builtin_rg` (auto-fix)
 - `use_builtin_wget` (auto-fix)
 - `use_builtin_which` (auto-fix)
 

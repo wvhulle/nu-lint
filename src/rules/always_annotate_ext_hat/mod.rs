@@ -28,7 +28,7 @@ impl DetectFix for AlwaysHatExtCall {
     }
 
     fn doc_url(&self) -> Option<&'static str> {
-        Some("https://www.nushell.sh/book/external_commands.html")
+        Some("https://www.nushell.sh/book/running_externals.html")
     }
 
     fn level(&self) -> LintLevel {

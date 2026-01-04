@@ -1,7 +1,6 @@
 use crate::{
     LintLevel,
-    context::LintContext,
-    external_commands::ExternalCmdFixData,
+    context::{ExternalCmdFixData, LintContext},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -175,10 +174,11 @@ impl DetectFix for UseBuiltinLs {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let mut violations = context.external_invocations("ls", NOTE);
-        // exa/eza alternatives commonly used
+        // ls/exa/eza all work well with Nu's structured ls command
+        // Most common flags translate cleanly
+        let mut violations = context.detect_external_with_validation("ls", |_, _| Some(NOTE));
         for cmd in ["exa", "eza"] {
-            violations.extend(context.external_invocations(cmd, NOTE));
+            violations.extend(context.detect_external_with_validation(cmd, |_, _| Some(NOTE)));
         }
         violations
     }

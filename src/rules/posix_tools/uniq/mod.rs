@@ -1,7 +1,6 @@
 use crate::{
     LintLevel,
-    context::LintContext,
-    external_commands::ExternalCmdFixData,
+    context::{ExternalCmdFixData, LintContext},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -152,7 +151,17 @@ impl DetectFix for UseBuiltinUniq {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.external_invocations("uniq", NOTE)
+        context.detect_external_with_validation("uniq", |_, args| {
+            // Only exclude very complex uniq options
+            let has_very_complex = args.iter().any(|arg| {
+                matches!(
+                    *arg,
+                    "-z" | "--zero-terminated" |   // Null terminated
+                    "--group" // Group adjacent duplicates
+                )
+            });
+            if has_very_complex { None } else { Some(NOTE) }
+        })
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {

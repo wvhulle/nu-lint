@@ -1,7 +1,6 @@
 use crate::{
     LintLevel,
-    context::LintContext,
-    external_commands::ExternalCmdFixData,
+    context::{ExternalCmdFixData, LintContext},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -217,7 +216,25 @@ impl DetectFix for UseBuiltinFind {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.external_invocations("find", NOTE)
+        context.detect_external_with_validation("find", |_, args| {
+            // Only exclude very complex find usage that definitely won't translate
+            // Let the fix logic handle most cases
+            let has_very_complex = args.iter().any(|arg| {
+                matches!(
+                    *arg,
+                    "-exec" | "-execdir" |       // Command execution
+                    "-ok" | "-okdir" |           // Interactive exec
+                    "-delete" |                  // Delete files (dangerous)
+                    "-fprint" | "-fprint0" |     // Print to file
+                    "-fls" |                      // ls to file
+                    "-prune" |                   // Prune directories
+                    "-quit" |                    // Early termination
+                    "-samefile" |                // Same file check
+                    "!" | "-not" | "(" | ")" // Complex boolean logic
+                )
+            });
+            if has_very_complex { None } else { Some(NOTE) }
+        })
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {

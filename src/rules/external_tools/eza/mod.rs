@@ -2,8 +2,7 @@ use std::iter::Peekable;
 
 use crate::{
     LintLevel,
-    context::LintContext,
-    external_commands::ExternalCmdFixData,
+    context::{ExternalCmdFixData, LintContext},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -251,7 +250,9 @@ impl DetectFix for UseBuiltinEza {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.external_invocations("eza", NOTE)
+        // eza/exa are modern ls alternatives
+        // They work well with Nu's structured ls output
+        context.detect_external_with_validation("eza", |_, _| Some(NOTE))
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {

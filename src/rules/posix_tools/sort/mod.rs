@@ -1,7 +1,6 @@
 use crate::{
     LintLevel,
-    context::LintContext,
-    external_commands::ExternalCmdFixData,
+    context::{ExternalCmdFixData, LintContext},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -168,7 +167,23 @@ impl DetectFix for UseBuiltinSort {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.external_invocations("sort", NOTE)
+        context.detect_external_with_validation("sort", |_, args| {
+            // Only exclude very advanced sort options
+            let has_very_complex = args.iter().any(|arg| {
+                matches!(
+                    *arg,
+                    "-c" | "--check" |               // Check if sorted
+                    "-C" | "--check=quiet" |
+                    "-m" | "--merge" |               // Merge sorted files
+                    "-o" | "--output" |              // Output to file
+                    "-z" | "--zero-terminated" |     // Null terminated
+                    "--parallel" |                    // Parallel sort
+                    "--batch-size" | "--buffer-size" | "--compress-program" |
+                    "--debug" | "--files0-from" | "--random-source"
+                )
+            });
+            if has_very_complex { None } else { Some(NOTE) }
+        })
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {

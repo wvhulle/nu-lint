@@ -11,10 +11,15 @@ use crate::violation;
 use crate::{
     Config,
     ast::{self, call::CallExt},
-    external_commands::{self, ExternalCmdFixData},
     span::FileSpan,
     violation::Detection,
 };
+
+/// Fix data for external command alternatives
+pub struct ExternalCmdFixData<'a> {
+    pub arg_strings: Box<[&'a str]>,
+    pub expr_span: Span,
+}
 
 /// Context containing all lint information (source, AST, and engine state)
 ///
@@ -254,15 +259,22 @@ impl<'a> LintContext<'a> {
         functions.into_iter().collect()
     }
 
-    /// Detect a specific external command and suggest a builtin alternative.
-    /// Returns detected violations with fix data that can be used to generate
-    /// fixes.
+    /// Detect external command invocations with custom validation.
+    /// This allows rules to check if the arguments can be reliably translated
+    /// before reporting a violation.
+    ///
+    /// The validator function receives the command name and argument strings,
+    /// and should return `Some(note)` if the invocation should be reported,
+    /// or `None` if it should be ignored.
     #[must_use]
-    pub fn external_invocations<'context>(
+    pub fn detect_external_with_validation<'context, F>(
         &'context self,
         external_cmd: &'static str,
-        note: &'static str,
-    ) -> Vec<(Detection, ExternalCmdFixData<'context>)> {
+        validator: F,
+    ) -> Vec<(Detection, ExternalCmdFixData<'context>)>
+    where
+        F: Fn(&str, &[&str]) -> Option<&'static str>,
+    {
         use nu_protocol::ast::{Expr, ExternalArgument, Traverse};
 
         let mut results = Vec::new();
@@ -279,9 +291,6 @@ impl<'a> LintContext<'a> {
                     return vec![];
                 }
 
-                let detected = Detection::from_global_span(note, expr.span)
-                    .with_primary_label(format!("external '{cmd_text}'"));
-
                 let arg_strings: Vec<&str> = args
                     .iter()
                     .map(|arg| match arg {
@@ -291,8 +300,16 @@ impl<'a> LintContext<'a> {
                     })
                     .collect();
 
-                let fix_data = external_commands::ExternalCmdFixData {
-                    arg_strings,
+                // Validate if this invocation should be reported
+                let Some(note) = validator(cmd_text, &arg_strings) else {
+                    return vec![];
+                };
+
+                let detected = Detection::from_global_span(note, expr.span)
+                    .with_primary_label(format!("external '{cmd_text}'"));
+
+                let fix_data = ExternalCmdFixData {
+                    arg_strings: arg_strings.into_boxed_slice(),
                     expr_span: expr.span,
                 };
 
@@ -302,6 +319,24 @@ impl<'a> LintContext<'a> {
         );
 
         results
+    }
+
+    /// Detect a specific external command and suggest a builtin alternative.
+    /// Returns detected violations with fix data that can be used to generate
+    /// fixes.
+    ///
+    /// DEPRECATED: Use `detect_external_with_validation` instead to ensure
+    /// only reliably translatable invocations are detected.
+    #[must_use]
+    #[deprecated(
+        note = "Use detect_external_with_validation to validate arguments before reporting"
+    )]
+    pub fn external_invocations<'context>(
+        &'context self,
+        external_cmd: &'static str,
+        note: &'static str,
+    ) -> Vec<(Detection, ExternalCmdFixData<'context>)> {
+        self.detect_external_with_validation(external_cmd, |_, _| Some(note))
     }
 }
 

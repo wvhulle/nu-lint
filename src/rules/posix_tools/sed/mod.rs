@@ -1,7 +1,6 @@
 use crate::{
     LintLevel,
-    context::LintContext,
-    external_commands::ExternalCmdFixData,
+    context::{ExternalCmdFixData, LintContext},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -30,8 +29,16 @@ impl DetectFix for UseBuiltinSed {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let mut violations = context.external_invocations("sed", NOTE);
-        violations.extend(context.external_invocations("gsed", NOTE));
+        let validator = |_cmd: &str, args: &[&str]| {
+            // Detect most sed usage - only exclude very complex features
+            // Most validation happens in the fix logic
+            let has_complex = args.iter().any(|arg| {
+                *arg == "-f" || (arg.starts_with("-f") && arg.len() > 2) // External script file
+            });
+            if has_complex { None } else { Some(NOTE) }
+        };
+        let mut violations = context.detect_external_with_validation("sed", validator);
+        violations.extend(context.detect_external_with_validation("gsed", validator));
         violations
     }
 

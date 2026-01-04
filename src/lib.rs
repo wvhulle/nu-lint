@@ -9,7 +9,6 @@ mod config;
 mod context;
 mod effect;
 mod engine;
-mod external_commands;
 mod fix;
 mod log;
 mod lsp;

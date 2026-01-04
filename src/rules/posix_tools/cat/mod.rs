@@ -1,7 +1,6 @@
 use crate::{
     LintLevel,
-    context::LintContext,
-    external_commands::ExternalCmdFixData,
+    context::{ExternalCmdFixData, LintContext},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -170,7 +169,19 @@ impl DetectFix for UseBuiltinCat {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.external_invocations("cat", NOTE)
+        // Cat with common flags can be translated to open + pipelines
+        // Only exclude very advanced flags that we truly can't handle
+        context.detect_external_with_validation("cat", |_, args| {
+            let has_unsupported = args.iter().any(|arg| {
+                matches!(
+                    *arg,
+                    "-v" | "--show-nonprinting" | // Show non-printing chars (complex)
+                    "-u" |                        // Unbuffered (not applicable)
+                    "-e" | "-t" // Combined flags (-vE, -vT) - complex
+                )
+            });
+            if has_unsupported { None } else { Some(NOTE) }
+        })
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {

@@ -1,7 +1,6 @@
 use crate::{
     LintLevel,
-    context::LintContext,
-    external_commands::ExternalCmdFixData,
+    context::{ExternalCmdFixData, LintContext},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -42,8 +41,10 @@ impl DetectFix for UseBuiltinBat {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let mut violations = context.external_invocations("bat", NOTE);
-        violations.extend(context.external_invocations("batcat", NOTE));
+        // bat/batcat are essentially cat with syntax highlighting
+        // Nu's open provides similar functionality for viewing files
+        let mut violations = context.detect_external_with_validation("bat", |_, _| Some(NOTE));
+        violations.extend(context.detect_external_with_validation("batcat", |_, _| Some(NOTE)));
         violations
     }
 

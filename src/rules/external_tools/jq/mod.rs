@@ -301,7 +301,35 @@ impl DetectFix for ReplaceJqWithNuGet {
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context
-            .external_invocations("jq", NOTE)
+            .detect_external_with_validation("jq", |_, args| {
+                // Only check the filter (first non-flag arg), not file arguments
+                let filter_arg = args.iter().find(|arg| !arg.starts_with('-'));
+
+                let has_complex_filter = filter_arg.is_some_and(|filter| {
+                    // These patterns suggest complex jq that won't translate well
+                    filter.contains("def ") ||          // Function definitions
+                    filter.contains("reduce") ||        // Reduce operations
+                    filter.contains("recurse") ||       // Recursion
+                    filter.contains("@base64") ||       // Format strings
+                    filter.contains("@uri") ||
+                    filter.contains("@csv") ||
+                    filter.contains("@tsv") ||
+                    filter.contains("@html") ||
+                    filter.contains("@json") ||
+                    filter.contains("try") ||           // Error handling
+                    filter.contains("catch") ||
+                    filter.contains("//") ||            // Alternative operator (could support)
+                    filter.contains(" and ") ||         // Complex boolean logic
+                    filter.contains(" or ") ||
+                    filter.contains(" not ") ||
+                    filter.contains("limit") ||         // Limit operations
+                    filter.contains("until") ||         // Until loops
+                    filter.contains("while") ||         // While loops
+                    filter.contains('$') ||             // jq Variables (not Nu variables in file args)
+                    filter.matches('|').count() > 2 // Complex pipelines
+                });
+                if has_complex_filter { None } else { Some(NOTE) }
+            })
             .into_iter()
             .filter_map(|(violation, fix_data)| {
                 let filter_index = fix_data

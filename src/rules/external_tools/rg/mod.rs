@@ -1,7 +1,6 @@
 use crate::{
     LintLevel,
-    context::LintContext,
-    external_commands::ExternalCmdFixData,
+    context::{ExternalCmdFixData, LintContext},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -310,7 +309,30 @@ impl DetectFix for UseBuiltinRg {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.external_invocations("rg", NOTE)
+        // Ripgrep is similar to grep - only detect simple usage
+        context.detect_external_with_validation("rg", |_, args| {
+            let has_complex = args.iter().any(|arg| {
+                matches!(
+                    *arg,
+                    "-A" | "--after-context" |
+                    "-B" | "--before-context" |
+                    "-C" | "--context" |
+                    "-m" | "--max-count" |
+                    "--max-depth" |
+                    "--max-filesize" |
+                    "-o" | "--only-matching" |
+                    "--passthru" |
+                    "--pre" |                    // Preprocessor
+                    "--replace" |               // Replacement
+                    "--sort" | "--sortr" |      // Sorting
+                    "--stats" |                 // Statistics
+                    "-z" | "--search-zip" |     // Search compressed
+                    "--multiline" | "-U" // Multiline patterns
+                ) || arg.starts_with("--type-")
+                    || arg.starts_with("-t")
+            });
+            if has_complex { None } else { Some(NOTE) }
+        })
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {

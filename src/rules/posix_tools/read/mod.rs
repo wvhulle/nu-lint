@@ -1,7 +1,6 @@
 use crate::{
     LintLevel,
-    context::LintContext,
-    external_commands::ExternalCmdFixData,
+    context::{ExternalCmdFixData, LintContext},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -30,12 +29,15 @@ impl DetectFix for UseBuiltinRead {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.external_invocations("read", NOTE)
+        context.detect_external_with_validation("read", |_, _| Some(NOTE))
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let args_text: Vec<&str> = fix_data.arg_strings.clone();
-        let (repl, desc) = if args_text.iter().any(|&s| s == "-s" || s == "--silent") {
+        let (repl, desc) = if fix_data
+            .arg_strings
+            .iter()
+            .any(|&s| s == "-s" || s == "--silent")
+        {
             (
                 "input -s".to_string(),
                 "Use 'input -s' for secure password input (hidden)".to_string(),

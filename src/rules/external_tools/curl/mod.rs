@@ -225,7 +225,30 @@ impl DetectFix for UseBuiltinCurl {
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context
-            .external_invocations("curl", NOTE)
+            .detect_external_with_validation("curl", |_, args| {
+                // Don't detect very complex curl usage
+                let has_complex = args.iter().any(|arg| {
+                    matches!(
+                        *arg,
+                        "--proxy" | "--socks" |       // Proxy settings
+                        "--cert" | "--key" |          // Client certificates
+                        "--cacert" | "--capath" |     // CA certificates
+                        "--ftp-" |                     // FTP-specific options
+                        "--tftp-" |                    // TFTP options
+                        "--telnet-" |                  // Telnet options
+                        "--resolve" |                  // Custom DNS
+                        "--connect-timeout" |         // Connection timeout
+                        "--max-time" |                 // Max transfer time
+                        "--retry" |                    // Retry logic
+                        "--limit-rate" |               // Rate limiting
+                        "--compressed" |               // Compression
+                        "--tr-encoding" |              // Transfer encoding
+                        "--negotiate" | "--ntlm" | "--digest" | "--basic" // Auth methods
+                    ) || arg.starts_with("--proxy")
+                        || arg.starts_with("--socks")
+                });
+                if has_complex { None } else { Some(NOTE) }
+            })
             .into_iter()
             .map(|(detection, fix_data)| {
                 let options = HttpOptions::parse_curl(fix_data.arg_strings.iter().copied());

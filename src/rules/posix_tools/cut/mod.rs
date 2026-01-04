@@ -1,12 +1,9 @@
 use crate::{
     LintLevel,
-    context::LintContext,
-    external_commands::ExternalCmdFixData,
+    context::{ExternalCmdFixData, LintContext},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
-
-const NOTE: &str = "Use 'select' to choose specific columns.";
 
 struct UseBuiltinCut;
 
@@ -30,7 +27,9 @@ impl DetectFix for UseBuiltinCut {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.external_invocations("cut", NOTE)
+        // Don't detect cut at all - select is for structured data, cut is for text processing
+        // They operate in different domains and translation is unreliable
+        context.detect_external_with_validation("cut", |_, _| None)
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
@@ -44,13 +43,7 @@ impl DetectFix for UseBuiltinCut {
 pub static RULE: &dyn Rule = &UseBuiltinCut;
 
 #[cfg(test)]
-mod tests {
-    use super::RULE;
+mod detect_bad;
+#[cfg(test)]
+mod ignore_good;
 
-    #[test]
-    fn converts_cut_to_select() {
-        let source = "^cut";
-        RULE.assert_fixed_contains(source, "select");
-        RULE.assert_fix_explanation_contains(source, "columns");
-    }
-}

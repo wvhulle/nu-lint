@@ -2,8 +2,7 @@ use std::iter::Peekable;
 
 use crate::{
     LintLevel,
-    context::LintContext,
-    external_commands::ExternalCmdFixData,
+    context::{ExternalCmdFixData, LintContext},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -120,7 +119,23 @@ impl DetectFix for UseBuiltinDate {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.external_invocations("date", NOTE)
+        context.detect_external_with_validation("date", |_, args| {
+            // Only detect simple date usage, not complex formatting or date arithmetic
+            let has_complex = args.iter().any(|arg| {
+                matches!(
+                    *arg,
+                    "-d" | "--date" |           // Parse arbitrary date string
+                    "-f" | "--file" |           // Read dates from file
+                    "-r" | "--reference" |      // Display file modification time
+                    "-s" | "--set" |            // Set system time
+                    "--resolution" |            // Show resolution
+                    "-I" | "--iso-8601" |       // ISO 8601 (could support)
+                    "-R" | "--rfc-email" // RFC 5322 (could support)
+                ) || arg.starts_with("--date=")
+                    || arg.starts_with("--file=")
+            });
+            if has_complex { None } else { Some(NOTE) }
+        })
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {

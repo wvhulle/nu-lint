@@ -1,17 +1,15 @@
 use crate::{
     LintLevel,
-    context::LintContext,
-    external_commands::ExternalCmdFixData,
+    context::{ExternalCmdFixData, LintContext},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
 
-const NOTE: &str = "Use 'ls **/*.ext' for recursive file matching or 'glob **/*.ext' for pattern \
-                    matching. While fd is a modern alternative to bash find with better \
-                    performance and UX, Nushell's ls provides structured table data that \
-                    integrates seamlessly with Nushell's data manipulation commands. This enables \
-                    operations like sorting, filtering, and transforming file lists without \
-                    parsing text output.";
+const NOTE: &str = "Use 'glob' for pattern-based file finding. While fd is a modern alternative \
+                    to bash find with better performance and UX, Nushell's glob command provides \
+                    the same functionality with structured output that integrates seamlessly with \
+                    Nushell's data manipulation commands. This enables operations like sorting, \
+                    filtering, and transforming file lists without parsing text output.";
 
 #[derive(Default)]
 struct FdOptions<'a> {
@@ -92,9 +90,9 @@ impl<'a> FdOptions<'a> {
         let (filters, examples) = self.build_filters();
 
         let replacement = if filters.is_empty() {
-            format!("ls {glob_pattern}")
+            format!("glob {glob_pattern}")
         } else {
-            format!("ls {glob_pattern} | {}", filters.join(" | "))
+            format!("glob {glob_pattern} | {}", filters.join(" | "))
         };
 
         let description = self.build_description(&glob_pattern, &examples);
@@ -139,7 +137,7 @@ impl<'a> FdOptions<'a> {
 
     fn build_description(&self, glob_pattern: &str, examples: &[String]) -> String {
         let mut parts = vec![format!(
-            "Use 'ls {glob_pattern}' for recursive file search."
+            "Use 'glob {glob_pattern}' for pattern-based file finding."
         )];
 
         if self.pattern.is_some() || self.extension.is_some() {
@@ -159,15 +157,14 @@ impl<'a> FdOptions<'a> {
 
         if self.hidden {
             parts.push(
-                "Note: Nushell's ls does not show hidden files by default; use 'ls -a' to include \
-                 them."
+                "Note: Nushell's glob shows hidden files by default (unlike fd which hides them)."
                     .to_string(),
             );
         }
 
         parts.push(
-            "Nushell's ls returns structured data (name, type, size, modified) enabling data \
-             manipulation with 'where', 'sort-by', 'group-by', etc., without text parsing."
+            "Nushell's glob returns structured data (enabling 'where', 'sort-by', 'group-by', \
+             etc.) while fd returns text that requires parsing."
                 .to_string(),
         );
 
@@ -181,11 +178,11 @@ impl DetectFix for UseBuiltinFd {
     type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
-        "use_builtin_fd"
+        "replace_fd_with_glob"
     }
 
     fn explanation(&self) -> &'static str {
-        "Use Nu's 'ls' with glob patterns instead of 'fd' command"
+        "Use Nu's 'glob' command instead of 'fd'"
     }
 
     fn doc_url(&self) -> Option<&'static str> {
@@ -197,7 +194,9 @@ impl DetectFix for UseBuiltinFd {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.external_invocations("fd", NOTE)
+        // fd is a modern find alternative with good defaults
+        // Most fd usage translates reasonably to glob
+        context.detect_external_with_validation("fd", |_, _| Some(NOTE))
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {

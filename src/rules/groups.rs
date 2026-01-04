@@ -188,10 +188,8 @@ const EXTERNAL_TOOLS: Group = Group {
     description: "Replace common external CLI tools.",
     rules: &[
         super::external_tools::curl::RULE,
-        super::external_tools::eza::RULE,
         super::external_tools::fd::RULE,
         super::external_tools::jq::RULE,
-        super::external_tools::rg::RULE,
         super::external_tools::wget::RULE,
         super::external_tools::which::RULE,
     ],

@@ -5,10 +5,10 @@ use crate::{
     violation::{Detection, Fix, Replacement},
 };
 
-const NOTE: &str = "Use Nu's 'glob' for pattern matching or 'ls' for metadata filtering. \
-                    'glob **/*.ext' returns file paths. 'ls **/*.ext' returns structured \
-                    data (name, type, size, modified) for filtering with 'where'. \
-                    Note: Nu's 'find' (without ^) searches data structures, not filesystems.";
+const NOTE: &str = "Use Nu's 'glob' for pattern matching or 'ls' for metadata filtering. 'glob \
+                    **/*.ext' returns file paths. 'ls **/*.ext' returns structured data (name, \
+                    type, size, modified) for filtering with 'where'. Note: Nu's 'find' (without \
+                    ^) searches data structures, not filesystems.";
 
 #[derive(Default)]
 struct FindOptions<'a> {
@@ -32,7 +32,9 @@ impl<'a> FindOptions<'a> {
                 "-size" => opts.size = iter.next(),
                 "-mtime" | "-mmin" => opts.mtime = iter.next(),
                 "-empty" => opts.empty = true,
-                "-maxdepth" | "-mindepth" | "-newer" | "-executable" | "-perm" => { iter.next(); }
+                "-maxdepth" | "-mindepth" | "-newer" | "-executable" | "-perm" => {
+                    iter.next();
+                }
                 s if !s.starts_with('-') && opts.path.is_none() => opts.path = Some(s),
                 _ => {}
             }
@@ -48,8 +50,8 @@ impl<'a> FindOptions<'a> {
         if filters.is_empty() {
             let replacement = format!("glob {pattern}");
             let description = format!(
-                "Use 'glob {pattern}' to find files. '**' recursively matches subdirectories. \
-                 Use 'ls' instead if you need to filter by type/size/time."
+                "Use 'glob {pattern}' to find files. '**' recursively matches subdirectories. Use \
+                 'ls' instead if you need to filter by type/size/time."
             );
             (replacement, description)
         } else {
@@ -105,13 +107,10 @@ impl<'a> FindOptions<'a> {
 }
 
 fn parse_size_filter(size: &str) -> String {
-    let (op, value) = if let Some(s) = size.strip_prefix('+') {
-        (">", s)
-    } else if let Some(s) = size.strip_prefix('-') {
-        ("<", s)
-    } else {
-        ("==", size)
-    };
+    let (op, value) = size.strip_prefix('+').map_or_else(
+        || size.strip_prefix('-').map_or(("==", size), |s| ("<", s)),
+        |s| (">", s),
+    );
     format!("where size {op} {}", convert_size_to_nu(value))
 }
 
@@ -126,13 +125,10 @@ fn convert_size_to_nu(size: &str) -> String {
 }
 
 fn parse_time_filter(mtime: &str) -> String {
-    let (op, days) = if let Some(s) = mtime.strip_prefix('+') {
-        ("<", s)
-    } else if let Some(s) = mtime.strip_prefix('-') {
-        (">", s)
-    } else {
-        (">", mtime)
-    };
+    let (op, days) = mtime.strip_prefix('+').map_or_else(
+        || mtime.strip_prefix('-').map_or((">", mtime), |s| (">", s)),
+        |s| ("<", s),
+    );
     format!("where modified {op} ((date now) - {days}day)")
 }
 
@@ -141,24 +137,49 @@ struct UseBuiltinFind;
 impl DetectFix for UseBuiltinFind {
     type FixInput<'a> = ExternalCmdFixData<'a>;
 
-    fn id(&self) -> &'static str { "use_builtin_find" }
+    fn id(&self) -> &'static str {
+        "use_builtin_find"
+    }
 
-    fn explanation(&self) -> &'static str { "Use Nu's 'glob' or 'ls' instead of external 'find'" }
+    fn explanation(&self) -> &'static str {
+        "Use Nu's 'glob' or 'ls' instead of external 'find'"
+    }
 
     fn doc_url(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/glob.html")
     }
 
-    fn level(&self) -> LintLevel { LintLevel::Warning }
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
+    }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context.detect_external_with_validation("find", |_, args| {
-            let dominated_by_complex = args.iter().any(|arg| matches!(*arg,
-                "-exec" | "-execdir" | "-ok" | "-okdir" | "-delete" |
-                "-fprint" | "-fprint0" | "-fls" | "-prune" | "-quit" |
-                "-samefile" | "!" | "-not" | "(" | ")"
-            ));
-            if dominated_by_complex { None } else { Some(NOTE) }
+            let dominated_by_complex = args.iter().any(|arg| {
+                matches!(
+                    *arg,
+                    "-exec"
+                        | "-execdir"
+                        | "-ok"
+                        | "-okdir"
+                        | "-delete"
+                        | "-fprint"
+                        | "-fprint0"
+                        | "-fls"
+                        | "-prune"
+                        | "-quit"
+                        | "-samefile"
+                        | "!"
+                        | "-not"
+                        | "("
+                        | ")"
+                )
+            });
+            if dominated_by_complex {
+                None
+            } else {
+                Some(NOTE)
+            }
         })
     }
 

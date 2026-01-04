@@ -5,9 +5,9 @@ use crate::{
     violation::{Detection, Fix, Replacement},
 };
 
-const NOTE: &str = "Use Nu's 'glob' for pattern matching or 'ls' for type filtering. \
-                    'glob **/*.ext' returns file paths. 'ls **/*.ext' returns structured \
-                    data (name, type, size, modified) for filtering with 'where'.";
+const NOTE: &str = "Use Nu's 'glob' for pattern matching or 'ls' for type filtering. 'glob \
+                    **/*.ext' returns file paths. 'ls **/*.ext' returns structured data (name, \
+                    type, size, modified) for filtering with 'where'.";
 
 #[derive(Default)]
 struct FdOptions<'a> {
@@ -30,7 +30,9 @@ impl<'a> FdOptions<'a> {
                 "-e" | "--extension" => opts.extension = iter.next(),
                 "-g" | "--glob" => opts.glob_mode = true,
                 "-d" | "--max-depth" | "-E" | "--exclude" | "-S" | "--size"
-                | "--changed-within" | "--changed-before" => { iter.next(); }
+                | "--changed-within" | "--changed-before" => {
+                    iter.next();
+                }
                 s if s.starts_with('-') => {}
                 val => {
                     match positional {
@@ -49,19 +51,22 @@ impl<'a> FdOptions<'a> {
         let base = self.path.unwrap_or(".");
         let pattern = self.build_glob_pattern(base);
 
-        if let Some(type_filter) = self.type_filter() {
-            let replacement = format!("ls {pattern} | {type_filter}");
-            let description = format!(
-                "Use 'ls {pattern} | {type_filter}'. ls returns structured data for filtering."
-            );
-            (replacement, description)
-        } else {
-            let replacement = format!("glob {pattern}");
-            let description = format!(
-                "Use 'glob {pattern}' to find files. '**' recursively matches subdirectories."
-            );
-            (replacement, description)
-        }
+        self.type_filter().map_or_else(
+            || {
+                let replacement = format!("glob {pattern}");
+                let description = format!(
+                    "Use 'glob {pattern}' to find files. '**' recursively matches subdirectories."
+                );
+                (replacement, description)
+            },
+            |type_filter| {
+                let replacement = format!("ls {pattern} | {type_filter}");
+                let description = format!(
+                    "Use 'ls {pattern} | {type_filter}'. ls returns structured data for filtering."
+                );
+                (replacement, description)
+            },
+        )
     }
 
     fn build_glob_pattern(&self, base: &str) -> String {
@@ -96,15 +101,21 @@ struct UseBuiltinFd;
 impl DetectFix for UseBuiltinFd {
     type FixInput<'a> = ExternalCmdFixData<'a>;
 
-    fn id(&self) -> &'static str { "use_builtin_fd" }
+    fn id(&self) -> &'static str {
+        "use_builtin_fd"
+    }
 
-    fn explanation(&self) -> &'static str { "Use Nu's 'glob' or 'ls' instead of 'fd'" }
+    fn explanation(&self) -> &'static str {
+        "Use Nu's 'glob' or 'ls' instead of 'fd'"
+    }
 
     fn doc_url(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/glob.html")
     }
 
-    fn level(&self) -> LintLevel { LintLevel::Hint }
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
+    }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context.detect_external_with_validation("fd", |_, _| Some(NOTE))

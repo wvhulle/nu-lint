@@ -187,7 +187,7 @@ impl DetectFix for UseBuiltinSort {
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let opts = SortOptions::parse(fix_data.arg_strings.iter().copied());
+        let opts = SortOptions::parse(fix_data.arg_strings(_context));
         let (replacement, description) = opts.to_nushell();
 
         Some(Fix {

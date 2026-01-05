@@ -122,7 +122,7 @@ impl DetectFix for UseBuiltinFd {
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let opts = FdOptions::parse(fix_data.arg_strings.iter().copied());
+        let opts = FdOptions::parse(fix_data.arg_strings(_context));
         let (replacement, description) = opts.to_nushell();
         Some(Fix {
             explanation: description.into(),

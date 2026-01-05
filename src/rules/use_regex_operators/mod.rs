@@ -2,7 +2,7 @@ use nu_protocol::ast::{Expr, Expression};
 
 use crate::{
     Fix, LintLevel, Replacement,
-    ast::{call::CallExt, regex::contains_regex_special_chars, string::strip_quotes},
+    ast::{call::CallExt, regex::contains_regex_special_chars, string::StringFormat},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
@@ -10,20 +10,28 @@ use crate::{
 
 struct FixData {
     full_expr_span: nu_protocol::Span,
-    string_expr_span: nu_protocol::Span,
+    string_span: nu_protocol::Span,
     pattern_span: nu_protocol::Span,
     is_negated: bool,
 }
 
-fn is_simple_literal_pattern(pattern_text: &str) -> bool {
-    let unquoted = strip_quotes(pattern_text);
-    !contains_regex_special_chars(unquoted)
+fn is_valid_pattern(pattern_expr: &Expression, context: &LintContext) -> bool {
+    match &pattern_expr.expr {
+        Expr::String(_) | Expr::RawString(_) => {
+            let Some(string_format) = StringFormat::from_expression(pattern_expr, context) else {
+                return false;
+            };
+            !contains_regex_special_chars(string_format.content())
+        }
+        Expr::Var(_) | Expr::VarDecl(_) | Expr::FullCellPath(_) => true,
+        _ => false,
+    }
 }
 
-fn extract_str_contains_spans(
-    expr: &Expression,
-    context: &LintContext,
-) -> Option<(nu_protocol::Span, nu_protocol::Span)> {
+fn extract_str_contains_data<'a>(
+    expr: &'a Expression,
+    context: &'a LintContext,
+) -> Option<(&'a Expression, &'a Expression)> {
     let block_id = match &expr.expr {
         Expr::Subexpression(id) => *id,
         Expr::FullCellPath(path) => {
@@ -55,7 +63,7 @@ fn extract_str_contains_spans(
     let pattern_arg = call.get_first_positional_arg()?;
     let first_element = pipeline.elements.first()?;
 
-    Some((first_element.expr.span, pattern_arg.span))
+    Some((&first_element.expr, pattern_arg))
 }
 
 fn check_contains_pattern(expr: &Expression, context: &LintContext) -> Vec<(Detection, FixData)> {
@@ -64,13 +72,11 @@ fn check_contains_pattern(expr: &Expression, context: &LintContext) -> Vec<(Dete
         _ => (false, expr),
     };
 
-    let Some((string_expr_span, pattern_span)) = extract_str_contains_spans(inner_expr, context)
-    else {
+    let Some((string_expr, pattern_expr)) = extract_str_contains_data(inner_expr, context) else {
         return vec![];
     };
 
-    let pattern_text = context.plain_text(pattern_span);
-    if !is_simple_literal_pattern(pattern_text) {
+    if !is_valid_pattern(pattern_expr, context) {
         return vec![];
     }
 
@@ -88,8 +94,8 @@ fn check_contains_pattern(expr: &Expression, context: &LintContext) -> Vec<(Dete
 
     let fix_data = FixData {
         full_expr_span: expr.span,
-        string_expr_span,
-        pattern_span,
+        string_span: string_expr.span,
+        pattern_span: pattern_expr.span,
         is_negated,
     };
 
@@ -102,7 +108,7 @@ impl DetectFix for UseRegexOperators {
     type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
-        "use_regex_operators"
+        "contains_to_like_regex_operators"
     }
 
     fn explanation(&self) -> &'static str {
@@ -122,7 +128,7 @@ impl DetectFix for UseRegexOperators {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let string_text = context.plain_text(fix_data.string_expr_span);
+        let string_text = context.plain_text(fix_data.string_span);
         let pattern_text = context.plain_text(fix_data.pattern_span);
 
         let operator = if fix_data.is_negated { "!~" } else { "=~" };

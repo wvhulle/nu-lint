@@ -35,8 +35,8 @@ impl DetectFix for UseBuiltinWhich {
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let repl = fix_data
-            .arg_strings
-            .first()
+            .arg_strings(_context)
+            .next()
             .map_or_else(|| "which".to_string(), |cmd| format!("which {cmd}"));
         Some(Fix::with_explanation(
             "Use built-in which",

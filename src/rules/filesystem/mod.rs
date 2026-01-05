@@ -3,10 +3,7 @@ use nu_protocol::{
     ast::{Expr, Expression, Pipeline},
 };
 
-use crate::{
-    ast::{call::CallExt, string::strip_quotes},
-    context::LintContext,
-};
+use crate::{ast::call::CallExt, context::LintContext};
 
 pub mod from_after_parsed_open;
 pub mod open_raw_from_to_open;
@@ -68,11 +65,9 @@ pub fn find_open_from_patterns<'a>(
 
         let filename = context.plain_text(filename_arg.span);
 
-        // Extract actual filename content for extension detection, handling all string
-        // formats
         let filename_content = match &filename_arg.expr {
             Expr::String(s) | Expr::RawString(s) | Expr::GlobPattern(s, _) => s.as_str(),
-            _ => strip_quotes(filename),
+            _ => filename,
         };
 
         let Some(file_format) = context.format_for_extension(filename_content) else {

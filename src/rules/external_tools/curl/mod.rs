@@ -251,7 +251,7 @@ impl DetectFix for UseBuiltinCurl {
             })
             .into_iter()
             .map(|(detection, fix_data)| {
-                let options = HttpOptions::parse_curl(fix_data.arg_strings.iter().copied());
+                let options = HttpOptions::parse_curl(fix_data.arg_strings(context));
                 (
                     detection,
                     CurlFixData {

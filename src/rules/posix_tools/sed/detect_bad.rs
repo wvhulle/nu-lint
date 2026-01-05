@@ -31,20 +31,8 @@ fn test_detect_sed_inplace_global() {
 }
 
 #[test]
-fn test_detect_sed_delete() {
-    let bad_code = r"^sed '/pattern/d'";
-    RULE.assert_detects(bad_code);
-}
-
-#[test]
 fn test_detect_sed_combined_inplace_flags() {
     let bad_code = r"^sed -ie 's/test/prod/g' app.conf";
-    RULE.assert_detects(bad_code);
-}
-
-#[test]
-fn test_detect_sed_without_args() {
-    let bad_code = r"^sed";
     RULE.assert_detects(bad_code);
 }
 

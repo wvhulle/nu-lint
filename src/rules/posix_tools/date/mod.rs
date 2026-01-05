@@ -139,7 +139,7 @@ impl DetectFix for UseBuiltinDate {
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let opts = DateOptions::parse(fix_data.arg_strings.iter().copied());
+        let opts = DateOptions::parse(fix_data.arg_strings(_context));
         let (replacement, explanation) = opts.to_nushell();
 
         Some(Fix::with_explanation(

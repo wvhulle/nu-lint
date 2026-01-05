@@ -49,9 +49,9 @@ impl DetectFix for UseBuiltinBat {
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let has_complex_flags = fix_data.arg_strings.iter().any(|s| {
+        let has_complex_flags = fix_data.arg_strings(_context).any(|s| {
             matches!(
-                *s,
+                s,
                 "--language" | "-l" | "--theme" | "--style" | "--paging" | "--color"
             ) || s.starts_with("--language=")
                 || s.starts_with("--theme=")
@@ -62,7 +62,7 @@ impl DetectFix for UseBuiltinBat {
             return None;
         }
 
-        let filename = fix_data.arg_strings.iter().find(|s| !s.starts_with('-'));
+        let filename = fix_data.arg_strings(_context).find(|s| !s.starts_with('-'));
 
         let (replacement, description) = filename.map_or_else(
             || {

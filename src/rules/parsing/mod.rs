@@ -4,7 +4,7 @@ use crate::{
     ast::{
         call::CallExt,
         regex::{contains_regex_special_chars, escape_regex},
-        string::strip_quotes,
+        string::StringFormat,
     },
     context::LintContext,
 };
@@ -38,10 +38,9 @@ pub fn extract_delimiter_from_split_call(call: &Call, context: &LintContext) -> 
         return None;
     }
     let arg = call.get_first_positional_arg()?;
-    let text = context.plain_text(arg.span);
     match &arg.expr {
         Expr::String(s) | Expr::RawString(s) => Some(s.clone()),
-        _ => Some(strip_quotes(text).to_string()),
+        _ => StringFormat::from_expression(arg, context).map(|fmt| fmt.content().to_string()),
     }
 }
 

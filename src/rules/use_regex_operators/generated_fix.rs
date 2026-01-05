@@ -31,7 +31,7 @@ fn test_fix_negated_str_contains() {
 }
 
 #[test]
-fn test_fix_explanation() {
-    let bad_code = "($str | str contains 'x')";
-    RULE.assert_fix_explanation_contains(bad_code, "=~");
+fn test_fix_variable() {
+    let bad_code = "($str | str contains $a)";
+    RULE.assert_fixed_contains(bad_code, "=~ $a");
 }

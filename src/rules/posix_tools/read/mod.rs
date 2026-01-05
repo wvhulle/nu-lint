@@ -34,9 +34,8 @@ impl DetectFix for UseBuiltinRead {
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let (repl, desc) = if fix_data
-            .arg_strings
-            .iter()
-            .any(|&s| s == "-s" || s == "--silent")
+            .arg_strings(_context)
+            .any(|s| s == "-s" || s == "--silent")
         {
             (
                 "input -s".to_string(),

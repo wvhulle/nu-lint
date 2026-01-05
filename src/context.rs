@@ -17,8 +17,24 @@ use crate::{
 
 /// Fix data for external command alternatives
 pub struct ExternalCmdFixData<'a> {
-    pub arg_strings: Box<[&'a str]>,
+    /// Argument expressions from the external call
+    pub args: Box<[&'a Expression]>,
     pub expr_span: Span,
+}
+
+impl<'a> ExternalCmdFixData<'a> {
+    /// DEPRECATED: Get argument strings for backward compatibility
+    ///
+    /// This method extracts raw source text from Expression spans.
+    /// Rules should migrate to using `args` directly with
+    /// `StringFormat::from_expression` or other AST helpers for proper
+    /// quote handling.
+    #[deprecated(
+        note = "Use `args` field with StringFormat::from_expression for proper quote handling"
+    )]
+    pub fn arg_strings(&self, context: &'a LintContext<'a>) -> impl Iterator<Item = &str> {
+        self.args.iter().map(|e| context.plain_text(e.span))
+    }
 }
 
 /// Context containing all lint information (source, AST, and engine state)
@@ -291,14 +307,16 @@ impl<'a> LintContext<'a> {
                     return vec![];
                 }
 
-                let arg_strings: Vec<&str> = args
+                let arg_exprs: Vec<&Expression> = args
                     .iter()
                     .map(|arg| match arg {
-                        ExternalArgument::Regular(expr) | ExternalArgument::Spread(expr) => {
-                            self.plain_text(expr.span)
-                        }
+                        ExternalArgument::Regular(expr) | ExternalArgument::Spread(expr) => expr,
                     })
                     .collect();
+
+                // Build string slices for validation (temporary for backward compatibility)
+                let arg_strings: Vec<&str> =
+                    arg_exprs.iter().map(|e| self.plain_text(e.span)).collect();
 
                 // Validate if this invocation should be reported
                 let Some(note) = validator(cmd_text, &arg_strings) else {
@@ -309,7 +327,7 @@ impl<'a> LintContext<'a> {
                     .with_primary_label(format!("external '{cmd_text}'"));
 
                 let fix_data = ExternalCmdFixData {
-                    arg_strings: arg_strings.into_boxed_slice(),
+                    args: arg_exprs.into_boxed_slice(),
                     expr_span: expr.span,
                 };
 

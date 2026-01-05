@@ -239,7 +239,7 @@ impl DetectFix for UseBuiltinAwk {
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let opts = AwkOptions::parse(fix_data.arg_strings.iter().copied());
+        let opts = AwkOptions::parse(fix_data.arg_strings(_context));
         let (replacement, description) = opts.to_nushell();
 
         Some(Fix {

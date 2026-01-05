@@ -61,7 +61,7 @@ impl DetectFix for UseBuiltinPager {
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let opts = PagerOptions::parse(fix_data.arg_strings.iter().copied());
+        let opts = PagerOptions::parse(fix_data.arg_strings(_context));
 
         let (replacement, description) = if opts.follow {
             let file = opts.filename.as_deref().unwrap_or("file");

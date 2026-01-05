@@ -57,7 +57,7 @@ impl DetectFix for UseBuiltinWc {
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let (replacement, description) = if fix_data.arg_strings.iter().copied().any(|x| x == "-l")
+        let (replacement, description) = if fix_data.arg_strings(_context).any(|x| x == "-l")
         {
             (
                 "lines | length".to_string(),

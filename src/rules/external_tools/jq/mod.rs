@@ -333,17 +333,20 @@ impl DetectFix for ReplaceJqWithNuGet {
             .into_iter()
             .filter_map(|(violation, fix_data)| {
                 let filter_index = fix_data
-                    .arg_strings
-                    .iter()
+                    .arg_strings(context)
                     .position(|arg| !arg.starts_with('-'))
                     .unwrap_or(0);
 
-                let (filter, file_arg) = if filter_index < fix_data.arg_strings.len() {
-                    let filter = fix_data.arg_strings[filter_index].to_string();
+                let (filter, file_arg) = if filter_index < fix_data.arg_strings(context).count() {
+                    let filter = fix_data
+                        .arg_strings(context)
+                        .nth(filter_index)
+                        .unwrap()
+                        .to_string();
                     let file_arg = fix_data
-                        .arg_strings
-                        .get(filter_index + 1)
-                        .map(ToString::to_string);
+                        .arg_strings(context)
+                        .nth(filter_index + 1)
+                        .map(std::string::ToString::to_string);
                     (filter, file_arg)
                 } else {
                     (String::new(), None)

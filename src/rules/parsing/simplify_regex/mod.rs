@@ -8,7 +8,7 @@ use regex::Regex;
 
 use crate::{
     Fix, LintLevel, Replacement,
-    ast::{call::CallExt, regex::contains_regex_special_chars, string::strip_quotes},
+    ast::{call::CallExt, regex::contains_regex_special_chars, string::StringFormat},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
@@ -34,11 +34,10 @@ fn extract_regex_pattern(call: &Call, context: &LintContext) -> Option<String> {
     }
 
     let pattern_arg = call.get_first_positional_arg()?;
-    let text = context.plain_text(pattern_arg.span);
 
     match &pattern_arg.expr {
         Expr::String(s) | Expr::RawString(s) => Some(s.clone()),
-        _ => Some(strip_quotes(text).to_string()),
+        _ => StringFormat::from_expression(pattern_arg, context).map(|fmt| fmt.content().to_string()),
     }
 }
 

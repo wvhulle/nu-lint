@@ -103,7 +103,7 @@ impl DetectFix for UseBuiltinWget {
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let opts = WgetOptions::parse_wget(fix_data.arg_strings.iter().copied());
+        let opts = WgetOptions::parse_wget(fix_data.arg_strings(_context));
         let (replacement, description) = opts.to_nushell();
 
         Some(Fix {

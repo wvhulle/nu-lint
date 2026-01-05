@@ -2,7 +2,7 @@ use nu_protocol::ast::Expr;
 
 use crate::{
     LintLevel,
-    ast::{call::CallExt, string::strip_quotes},
+    ast::call::CallExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
@@ -25,13 +25,12 @@ fn check(context: &LintContext) -> Vec<Detection> {
             return vec![];
         };
 
-        let raw_cmd_name = &func_def.name;
+        let cmd_name = &func_def.name;
         let name_span = func_def.name_span;
 
-        let cmd_name = strip_quotes(raw_cmd_name);
         let kebab_case_name = to_kebab_case_preserving_spaces(cmd_name);
 
-        if cmd_name == kebab_case_name {
+        if cmd_name.as_str() == kebab_case_name {
             return vec![];
         }
 

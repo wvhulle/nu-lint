@@ -334,16 +334,3 @@ impl StringFormat {
             .or(single_quote)
     }
 }
-
-/// Strips surrounding quotes from text (double quotes, single quotes, or
-/// backticks).
-///
-/// This is useful for command names which can be quoted with any of these
-/// delimiters.
-pub fn strip_quotes(text: &str) -> &str {
-    text.strip_prefix('"')
-        .and_then(|s| s.strip_suffix('"'))
-        .or_else(|| text.strip_prefix('\'').and_then(|s| s.strip_suffix('\'')))
-        .or_else(|| text.strip_prefix('`').and_then(|s| s.strip_suffix('`')))
-        .unwrap_or(text)
-}

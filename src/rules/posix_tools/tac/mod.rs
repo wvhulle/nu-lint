@@ -35,7 +35,7 @@ impl DetectFix for UseBuiltinTac {
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let filename = fix_data.arg_strings.iter().find(|s| !s.starts_with('-'));
+        let filename = fix_data.arg_strings(_context).find(|s| !s.starts_with('-'));
 
         let replacement = filename.map_or_else(
             || "open --raw | lines | reverse".to_string(),

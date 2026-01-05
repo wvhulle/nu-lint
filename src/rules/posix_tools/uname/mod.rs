@@ -105,7 +105,7 @@ impl DetectFix for UseSysHostInsteadOfUname {
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let opts = UnameOptions::parse(fix_data.arg_strings.iter().copied());
+        let opts = UnameOptions::parse(fix_data.arg_strings(_context));
         let (replacement, description) = opts.to_nushell();
 
         Some(Fix {

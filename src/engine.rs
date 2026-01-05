@@ -120,8 +120,8 @@ impl LintEngine {
         static ENGINE: LazyLock<EngineState> = LazyLock::new(|| {
             let mut engine_state = nu_cmd_lang::create_default_context();
             engine_state = nu_command::add_shell_command_context(engine_state);
+            engine_state = nu_cmd_extra::add_extra_command_context(engine_state);
             engine_state = nu_cli::add_cli_context(engine_state);
-
             // Required by command `path self`
             if let Ok(cwd) = env::current_dir()
                 && let Some(cwd) = cwd.to_str()

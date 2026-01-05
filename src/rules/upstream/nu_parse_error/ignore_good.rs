@@ -1,4 +1,12 @@
 use super::RULE;
+use crate::log::init_log;
+
+#[test]
+fn test_config_nu() {
+    init_log();
+    let code = "config nu --doc | nu-highlight | to html --html-color";
+    RULE.assert_ignores(code);
+}
 
 #[test]
 fn ignore_valid_let_statement() {

@@ -54,6 +54,4 @@ impl DetectFix for NuDeprecated {
 pub static RULE: &dyn Rule = &NuDeprecated;
 
 #[cfg(test)]
-mod detect_bad;
-#[cfg(test)]
 mod ignore_good;

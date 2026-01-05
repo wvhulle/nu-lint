@@ -76,6 +76,20 @@ fn fix_mawk_same_as_awk() {
 }
 
 #[test]
+fn handles_variable_filename() {
+    let source = r#"^awk '{print $1}' $file"#;
+    RULE.assert_count(source, 1);
+    RULE.assert_fixed_contains(source, "open --raw $file | lines");
+}
+
+#[test]
+fn handles_escaped_quotes_in_pattern() {
+    let source = r#"^awk '/"test"/' file.txt"#;
+    RULE.assert_count(source, 1);
+    RULE.assert_fixed_contains(source, r#"where $it =~ ""test"""#);
+}
+
+#[test]
 fn fix_description_mentions_pipeline() {
     let source = "^awk";
     RULE.assert_count(source, 1);

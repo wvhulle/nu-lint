@@ -1,5 +1,6 @@
 use crate::{
     LintLevel,
+    ast::string::StringFormat,
     context::{ExternalCmdFixData, LintContext},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -10,32 +11,49 @@ const NOTE: &str = "Use Nu's 'glob' for pattern matching or 'ls' for metadata fi
                     type, size, modified) for filtering with 'where'. Note: Nu's 'find' (without \
                     ^) searches data structures, not filesystems.";
 
+enum PathArg {
+    Formatted(StringFormat),
+    Raw(String),
+}
+
 #[derive(Default)]
-struct FindOptions<'a> {
-    path: Option<&'a str>,
-    name_pattern: Option<&'a str>,
-    file_type: Option<&'a str>,
-    size: Option<&'a str>,
-    mtime: Option<&'a str>,
+struct FindOptions {
+    path: Option<PathArg>,
+    name_pattern: Option<String>,
+    file_type: Option<String>,
+    size: Option<String>,
+    mtime: Option<String>,
     empty: bool,
 }
 
-impl<'a> FindOptions<'a> {
-    fn parse(args: impl IntoIterator<Item = &'a str>) -> Self {
+impl FindOptions {
+    fn parse<'a>(args: impl IntoIterator<Item = (&'a str, Option<StringFormat>)>) -> Self {
         let mut opts = Self::default();
-        let mut iter = args.into_iter();
+        let mut iter = args.into_iter().peekable();
 
-        while let Some(arg) = iter.next() {
+        while let Some((arg, format)) = iter.next() {
             match arg {
-                "-name" | "-iname" => opts.name_pattern = iter.next(),
-                "-type" => opts.file_type = iter.next(),
-                "-size" => opts.size = iter.next(),
-                "-mtime" | "-mmin" => opts.mtime = iter.next(),
+                "-name" | "-iname" => {
+                    opts.name_pattern = iter.next().map(|(t, _)| t.to_string());
+                }
+                "-type" => {
+                    opts.file_type = iter.next().map(|(t, _)| t.to_string());
+                }
+                "-size" => {
+                    opts.size = iter.next().map(|(t, _)| t.to_string());
+                }
+                "-mtime" | "-mmin" => {
+                    opts.mtime = iter.next().map(|(t, _)| t.to_string());
+                }
                 "-empty" => opts.empty = true,
                 "-maxdepth" | "-mindepth" | "-newer" | "-executable" | "-perm" => {
                     iter.next();
                 }
-                s if !s.starts_with('-') && opts.path.is_none() => opts.path = Some(s),
+                s if !s.starts_with('-') && opts.path.is_none() => {
+                    opts.path = Some(
+                        format.map_or_else(|| PathArg::Raw(s.to_string()), PathArg::Formatted),
+                    );
+                }
                 _ => {}
             }
         }
@@ -43,8 +61,7 @@ impl<'a> FindOptions<'a> {
     }
 
     fn to_nushell(&self) -> (String, String) {
-        let base = self.path.unwrap_or(".");
-        let pattern = self.build_glob_pattern(base);
+        let pattern = self.build_glob_pattern();
         let filters = self.build_filters();
 
         if filters.is_empty() {
@@ -64,15 +81,21 @@ impl<'a> FindOptions<'a> {
         }
     }
 
-    fn build_glob_pattern(&self, base: &str) -> String {
-        self.name_pattern.map_or_else(
+    fn build_glob_pattern(&self) -> String {
+        let base = self.path.as_ref().map_or_else(
+            || ".".to_string(),
+            |p| match p {
+                PathArg::Formatted(fmt) => fmt.reconstruct(fmt.content()),
+                PathArg::Raw(s) => s.clone(),
+            },
+        );
+        self.name_pattern.as_ref().map_or_else(
             || format!("{base}/**/*"),
             |p| {
-                let clean = p.trim_matches('"').trim_matches('\'');
-                if clean.contains('*') {
-                    format!("{base}/**/{clean}")
+                if p.contains('*') {
+                    format!("{base}/**/{p}")
                 } else {
-                    format!("{base}/**/*{clean}*")
+                    format!("{base}/**/*{p}*")
                 }
             },
         )
@@ -81,7 +104,7 @@ impl<'a> FindOptions<'a> {
     fn build_filters(&self) -> Vec<String> {
         let mut filters = Vec::new();
 
-        if let Some(f) = self.file_type.and_then(|t| match t {
+        if let Some(f) = self.file_type.as_ref().and_then(|t| match t.as_str() {
             "f" => Some("where type == file"),
             "d" => Some("where type == dir"),
             "l" => Some("where type == symlink"),
@@ -90,11 +113,11 @@ impl<'a> FindOptions<'a> {
             filters.push(f.to_string());
         }
 
-        if let Some(size) = self.size {
+        if let Some(size) = &self.size {
             filters.push(parse_size_filter(size));
         }
 
-        if let Some(mtime) = self.mtime {
+        if let Some(mtime) = &self.mtime {
             filters.push(parse_time_filter(mtime));
         }
 
@@ -138,7 +161,7 @@ impl DetectFix for UseBuiltinFind {
     type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
-        "use_builtin_find"
+        "find_to_glob"
     }
 
     fn explanation(&self) -> &'static str {
@@ -154,10 +177,10 @@ impl DetectFix for UseBuiltinFind {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.detect_external_with_validation("find", |_, args| {
-            let dominated_by_complex = args.iter().any(|arg| {
+        context.detect_external_with_validation("find", |_, fix_data, ctx| {
+            let dominated_by_complex = fix_data.arg_texts(ctx).any(|text| {
                 matches!(
-                    *arg,
+                    text,
                     "-exec"
                         | "-execdir"
                         | "-ok"
@@ -183,8 +206,11 @@ impl DetectFix for UseBuiltinFind {
         })
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let opts = FindOptions::parse(fix_data.arg_strings(_context));
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let args_with_formats = fix_data
+            .arg_texts(context)
+            .zip(fix_data.arg_formats(context));
+        let opts = FindOptions::parse(args_with_formats);
         let (replacement, description) = opts.to_nushell();
         Some(Fix {
             explanation: description.into(),

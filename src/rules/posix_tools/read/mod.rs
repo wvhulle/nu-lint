@@ -29,14 +29,12 @@ impl DetectFix for UseBuiltinRead {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.detect_external_with_validation("read", |_, _| Some(NOTE))
+        context.detect_external_with_validation("read", |_, _, _| Some(NOTE))
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let (repl, desc) = if fix_data
-            .arg_strings(_context)
-            .any(|s| s == "-s" || s == "--silent")
-        {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let arg_texts: Vec<&str> = fix_data.arg_texts(context).collect();
+        let (repl, desc) = if arg_texts.iter().any(|s| *s == "-s" || *s == "--silent") {
             (
                 "input -s".to_string(),
                 "Use 'input -s' for secure password input (hidden)".to_string(),

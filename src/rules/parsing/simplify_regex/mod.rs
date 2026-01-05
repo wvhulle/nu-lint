@@ -37,7 +37,9 @@ fn extract_regex_pattern(call: &Call, context: &LintContext) -> Option<String> {
 
     match &pattern_arg.expr {
         Expr::String(s) | Expr::RawString(s) => Some(s.clone()),
-        _ => StringFormat::from_expression(pattern_arg, context).map(|fmt| fmt.content().to_string()),
+        _ => {
+            StringFormat::from_expression(pattern_arg, context).map(|fmt| fmt.content().to_string())
+        }
     }
 }
 

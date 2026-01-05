@@ -29,12 +29,13 @@ impl DetectFix for UseBuiltinWc {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.detect_external_with_validation("wc", |_, args| {
+        context.detect_external_with_validation("wc", |_, fix_data, ctx| {
             // Only reliably translate -l (line count) to 'lines | length'
             // Don't detect -c (bytes), -m (chars), -w (words), or -L (max line length)
-            let has_complex = args.iter().any(|arg| {
+            let arg_texts: Vec<&str> = fix_data.arg_texts(ctx).collect();
+            let has_complex = arg_texts.iter().any(|text| {
                 matches!(
-                    *arg,
+                    *text,
                     "-c" | "--bytes" |          // Byte count
                     "-m" | "--chars" |          // Character count (different from str length)
                     "-w" | "--words" |          // Word count
@@ -43,8 +44,10 @@ impl DetectFix for UseBuiltinWc {
                 )
             });
             // Only detect if it's -l or no flags (default includes line count)
-            let has_line_flag = args.iter().any(|arg| *arg == "-l" || *arg == "--lines");
-            let has_only_files = args.iter().all(|arg| !arg.starts_with('-'));
+            let has_line_flag = arg_texts
+                .iter()
+                .any(|text| *text == "-l" || *text == "--lines");
+            let has_only_files = arg_texts.iter().all(|text| !text.starts_with('-'));
 
             if has_complex {
                 None
@@ -56,9 +59,8 @@ impl DetectFix for UseBuiltinWc {
         })
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let (replacement, description) = if fix_data.arg_strings(_context).any(|x| x == "-l")
-        {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let (replacement, description) = if fix_data.arg_texts(context).any(|x| x == "-l") {
             (
                 "lines | length".to_string(),
                 "Use 'lines | length' to count lines in a file".to_string(),

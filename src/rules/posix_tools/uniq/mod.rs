@@ -23,22 +23,24 @@ struct UniqOptions {
 impl UniqOptions {
     fn parse<'a>(args: impl IntoIterator<Item = &'a str>) -> Self {
         let mut opts = Self::default();
-        let mut iter = args.into_iter();
+        let mut iter = args.into_iter().peekable();
 
-        while let Some(arg) = iter.next() {
-            match arg {
+        while let Some(text) = iter.next() {
+            match text {
                 "-c" | "--count" => opts.count = true,
                 "-d" | "--repeated" => opts.repeated = true,
                 "-u" | "--unique" => opts.unique = true,
                 "-i" | "--ignore-case" => opts.ignore_case = true,
                 "-f" | "--skip-fields" => {
-                    opts.skip_fields = iter.next().and_then(|s| s.parse().ok());
+                    if let Some(next) = iter.next() {
+                        opts.skip_fields = next.parse().ok();
+                    }
                 }
-                _ if arg.starts_with("-f") && arg.len() > 2 => {
-                    opts.skip_fields = arg[2..].parse().ok();
+                s if s.starts_with("-f") && s.len() > 2 => {
+                    opts.skip_fields = s[2..].parse().ok();
                 }
-                _ if arg.starts_with('-') && !arg.starts_with("--") && arg.len() > 2 => {
-                    Self::parse_combined_flags(&mut opts, arg);
+                s if s.starts_with('-') && !s.starts_with("--") && s.len() > 2 => {
+                    Self::parse_combined_flags(&mut opts, text);
                 }
                 _ => {}
             }
@@ -151,11 +153,11 @@ impl DetectFix for UseBuiltinUniq {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.detect_external_with_validation("uniq", |_, args| {
+        context.detect_external_with_validation("uniq", |_, fix_data, ctx| {
             // Only exclude very complex uniq options
-            let has_very_complex = args.iter().any(|arg| {
+            let has_very_complex = fix_data.arg_texts(ctx).any(|text| {
                 matches!(
-                    *arg,
+                    text,
                     "-z" | "--zero-terminated" |   // Null terminated
                     "--group" // Group adjacent duplicates
                 )
@@ -164,8 +166,8 @@ impl DetectFix for UseBuiltinUniq {
         })
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let opts = UniqOptions::parse(fix_data.arg_strings(_context));
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let opts = UniqOptions::parse(fix_data.arg_texts(context));
         let (replacement, description) = opts.to_nushell();
 
         Some(Fix {

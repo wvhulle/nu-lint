@@ -29,28 +29,27 @@ impl DetectFix for UseBuiltinSed {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let validator = |_cmd: &str, args: &[&str]| {
+        let validator = |_cmd: &str, fix_data: &ExternalCmdFixData, ctx: &LintContext| {
             // Only detect simple substitution patterns that str replace can handle
-            let has_unsupported = args.iter().any(|arg| {
+            let has_unsupported = fix_data.arg_texts(ctx).any(|text| {
                 // External script file
-                *arg == "-f" || (arg.starts_with("-f") && arg.len() > 2) ||
+                text == "-f" || (text.starts_with("-f") && text.len() > 2) ||
                 // Non-substitution sed commands (looking for /d, /p, etc. patterns)
-                (arg.contains('/') && (
-                    arg.ends_with("/d") || arg.ends_with("/p") || 
-                    arg.ends_with("/a") || arg.ends_with("/i") || 
-                    arg.ends_with("/c")
+                (text.contains('/') && (
+                    text.ends_with("/d") || text.ends_with("/p") || 
+                    text.ends_with("/a") || text.ends_with("/i") || 
+                    text.ends_with("/c")
                 )) ||
                 // Multiple commands separated by semicolon
-                (arg.contains(';') && arg.contains('/')) ||
+                (text.contains(';') && text.contains('/')) ||
                 // Print mode (changes behavior significantly)
-                *arg == "-n" || *arg == "--quiet" || *arg == "--silent"
+                text == "-n" || text == "--quiet" || text == "--silent"
             });
 
             // Check if there's at least one substitution pattern
-            let has_substitution = args.iter().any(|arg| {
-                let trimmed = arg.trim_matches('"').trim_matches('\'');
-                trimmed.starts_with("s/") || trimmed.contains(" s/")
-            });
+            let has_substitution = fix_data
+                .arg_texts(ctx)
+                .any(|text| text.starts_with("s/") || text.contains(" s/"));
 
             if has_unsupported || !has_substitution {
                 None
@@ -63,8 +62,8 @@ impl DetectFix for UseBuiltinSed {
         violations
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let replacement = parse_sed_args(fix_data.arg_strings(_context));
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let replacement = parse_sed_args(fix_data.arg_texts(context));
 
         Some(Fix {
             explanation: "Replace with str replace".into(),
@@ -156,17 +155,15 @@ fn parse_combined_flags(arg: &str) -> CombinedFlags {
 }
 
 fn parse_substitution(pattern: &str) -> (&str, &str, bool) {
-    let clean = pattern.trim_matches('"').trim_matches('\'');
-
-    if !clean.starts_with('s') {
+    if !pattern.starts_with('s') {
         return ("pattern", "replacement", false);
     }
 
     // Find delimiter (typically '/' but could be others)
-    let delimiter = clean.chars().nth(1).unwrap_or('/');
+    let delimiter = pattern.chars().nth(1).unwrap_or('/');
 
     // Split by delimiter, handling escaped delimiters
-    let parts: Vec<&str> = clean[2..].split(delimiter).collect();
+    let parts: Vec<&str> = pattern[2..].split(delimiter).collect();
 
     if parts.len() < 2 {
         return ("pattern", "replacement", false);

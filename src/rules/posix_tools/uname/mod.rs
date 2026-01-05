@@ -22,15 +22,15 @@ impl UnameOptions {
     fn parse<'a>(args: impl IntoIterator<Item = &'a str>) -> Self {
         let mut opts = Self::default();
 
-        for arg in args {
-            Self::parse_arg(&mut opts, arg);
+        for text in args {
+            Self::parse_arg(&mut opts, text);
         }
 
         opts
     }
 
-    fn parse_arg(opts: &mut Self, arg: &str) {
-        match arg {
+    fn parse_arg(opts: &mut Self, text: &str) {
+        match text {
             "-a" | "--all" => opts.all = true,
             "-s" | "--kernel-name" => opts.kernel_name = true,
             "-r" | "--kernel-release" => opts.kernel_release = true,
@@ -101,11 +101,11 @@ impl DetectFix for UseSysHostInsteadOfUname {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.detect_external_with_validation("uname", |_, _| Some(NOTE))
+        context.detect_external_with_validation("uname", |_, _, _| Some(NOTE))
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let opts = UnameOptions::parse(fix_data.arg_strings(_context));
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let opts = UnameOptions::parse(fix_data.arg_texts(context));
         let (replacement, description) = opts.to_nushell();
 
         Some(Fix {

@@ -171,10 +171,10 @@ impl DetectFix for UseBuiltinCat {
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         // Cat with common flags can be translated to open + pipelines
         // Only exclude very advanced flags that we truly can't handle
-        context.detect_external_with_validation("cat", |_, args| {
-            let has_unsupported = args.iter().any(|arg| {
+        context.detect_external_with_validation("cat", |_, fix_data, ctx| {
+            let has_unsupported = fix_data.arg_texts(ctx).any(|text| {
                 matches!(
-                    *arg,
+                    text,
                     "-v" | "--show-nonprinting" | // Show non-printing chars (complex)
                     "-u" |                        // Unbuffered (not applicable)
                     "-e" | "-t" // Combined flags (-vE, -vT) - complex
@@ -184,8 +184,8 @@ impl DetectFix for UseBuiltinCat {
         })
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let opts = CatOptions::parse(fix_data.arg_strings(_context));
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let opts = CatOptions::parse(fix_data.arg_texts(context));
         let (replacement, description) = opts.to_nushell();
 
         Some(Fix {

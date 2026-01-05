@@ -10,7 +10,7 @@ use nu_protocol::{
 use crate::violation;
 use crate::{
     Config,
-    ast::{self, call::CallExt},
+    ast::{self, call::CallExt, string::StringFormat},
     span::FileSpan,
     violation::Detection,
 };
@@ -22,18 +22,46 @@ pub struct ExternalCmdFixData<'a> {
     pub expr_span: Span,
 }
 
-impl<'a> ExternalCmdFixData<'a> {
-    /// DEPRECATED: Get argument strings for backward compatibility
+impl ExternalCmdFixData<'_> {
+    /// Get argument text content for each argument.
     ///
-    /// This method extracts raw source text from Expression spans.
-    /// Rules should migrate to using `args` directly with
-    /// `StringFormat::from_expression` or other AST helpers for proper
-    /// quote handling.
-    #[deprecated(
-        note = "Use `args` field with StringFormat::from_expression for proper quote handling"
-    )]
-    pub fn arg_strings(&self, context: &'a LintContext<'a>) -> impl Iterator<Item = &str> {
-        self.args.iter().map(|e| context.plain_text(e.span))
+    /// For string literals, returns the unquoted content.
+    /// For other expressions (variables, subexpressions), returns the source
+    /// text.
+    ///
+    /// This is the primary API for parsing command arguments.
+    pub fn arg_texts<'b>(&'b self, context: &'b LintContext<'b>) -> impl Iterator<Item = &'b str> {
+        self.args.iter().map(move |expr| match &expr.expr {
+            Expr::String(s) | Expr::RawString(s) => s.as_str(),
+            _ => context.plain_text(expr.span),
+        })
+    }
+
+    /// Get string format information for arguments that need quote
+    /// preservation.
+    ///
+    /// Returns `Some(StringFormat)` for string literals (with quote type info).
+    /// Returns `None` for non-string expressions (variables, subexpressions,
+    /// etc.).
+    ///
+    /// Use this when generating replacement text that must preserve quote
+    /// styles.
+    pub fn arg_formats(&self, context: &LintContext) -> Vec<Option<StringFormat>> {
+        self.args
+            .iter()
+            .map(|expr| StringFormat::from_expression(expr, context))
+            .collect()
+    }
+
+    /// Check if an argument is a string literal (safe to extract unquoted
+    /// content).
+    pub fn arg_is_string(&self, index: usize) -> bool {
+        self.args.get(index).is_some_and(|expr| {
+            matches!(
+                &expr.expr,
+                Expr::String(_) | Expr::RawString(_) | Expr::StringInterpolation(_)
+            )
+        })
     }
 }
 
@@ -279,7 +307,7 @@ impl<'a> LintContext<'a> {
     /// This allows rules to check if the arguments can be reliably translated
     /// before reporting a violation.
     ///
-    /// The validator function receives the command name and argument strings,
+    /// The validator function receives the command name, fix data, and context,
     /// and should return `Some(note)` if the invocation should be reported,
     /// or `None` if it should be ignored.
     #[must_use]
@@ -289,7 +317,7 @@ impl<'a> LintContext<'a> {
         validator: F,
     ) -> Vec<(Detection, ExternalCmdFixData<'context>)>
     where
-        F: Fn(&str, &[&str]) -> Option<&'static str>,
+        F: Fn(&str, &ExternalCmdFixData<'context>, &'context Self) -> Option<&'static str>,
     {
         use nu_protocol::ast::{Expr, ExternalArgument, Traverse};
 
@@ -314,22 +342,18 @@ impl<'a> LintContext<'a> {
                     })
                     .collect();
 
-                // Build string slices for validation (temporary for backward compatibility)
-                let arg_strings: Vec<&str> =
-                    arg_exprs.iter().map(|e| self.plain_text(e.span)).collect();
+                let fix_data = ExternalCmdFixData {
+                    args: arg_exprs.into_boxed_slice(),
+                    expr_span: expr.span,
+                };
 
                 // Validate if this invocation should be reported
-                let Some(note) = validator(cmd_text, &arg_strings) else {
+                let Some(note) = validator(cmd_text, &fix_data, self) else {
                     return vec![];
                 };
 
                 let detected = Detection::from_global_span(note, expr.span)
                     .with_primary_label(format!("external '{cmd_text}'"));
-
-                let fix_data = ExternalCmdFixData {
-                    args: arg_exprs.into_boxed_slice(),
-                    expr_span: expr.span,
-                };
 
                 vec![(detected, fix_data)]
             },
@@ -337,24 +361,6 @@ impl<'a> LintContext<'a> {
         );
 
         results
-    }
-
-    /// Detect a specific external command and suggest a builtin alternative.
-    /// Returns detected violations with fix data that can be used to generate
-    /// fixes.
-    ///
-    /// DEPRECATED: Use `detect_external_with_validation` instead to ensure
-    /// only reliably translatable invocations are detected.
-    #[must_use]
-    #[deprecated(
-        note = "Use detect_external_with_validation to validate arguments before reporting"
-    )]
-    pub fn external_invocations<'context>(
-        &'context self,
-        external_cmd: &'static str,
-        note: &'static str,
-    ) -> Vec<(Detection, ExternalCmdFixData<'context>)> {
-        self.detect_external_with_validation(external_cmd, |_, _| Some(note))
     }
 }
 

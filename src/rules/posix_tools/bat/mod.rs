@@ -43,15 +43,17 @@ impl DetectFix for UseBuiltinBat {
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         // bat/batcat are essentially cat with syntax highlighting
         // Nu's open provides similar functionality for viewing files
-        let mut violations = context.detect_external_with_validation("bat", |_, _| Some(NOTE));
-        violations.extend(context.detect_external_with_validation("batcat", |_, _| Some(NOTE)));
+        let mut violations = context.detect_external_with_validation("bat", |_, _, _| Some(NOTE));
+        violations.extend(context.detect_external_with_validation("batcat", |_, _, _| Some(NOTE)));
         violations
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let has_complex_flags = fix_data.arg_strings(_context).any(|s| {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let arg_texts: Vec<&str> = fix_data.arg_texts(context).collect();
+
+        let has_complex_flags = arg_texts.iter().any(|s| {
             matches!(
-                s,
+                *s,
                 "--language" | "-l" | "--theme" | "--style" | "--paging" | "--color"
             ) || s.starts_with("--language=")
                 || s.starts_with("--theme=")
@@ -62,7 +64,7 @@ impl DetectFix for UseBuiltinBat {
             return None;
         }
 
-        let filename = fix_data.arg_strings(_context).find(|s| !s.starts_with('-'));
+        let filename = arg_texts.iter().find(|text| !text.starts_with('-'));
 
         let (replacement, description) = filename.map_or_else(
             || {
@@ -73,18 +75,18 @@ impl DetectFix for UseBuiltinBat {
                         .to_string(),
                 )
             },
-            |file| {
-                if is_structured_file(file) {
+            |file_text| {
+                if is_structured_file(file_text) {
                     (
-                        format!("open {file}"),
+                        format!("open {file_text}"),
                         format!(
-                            "Use 'open {file}' to auto-parse this structured file. Nu will detect \
-                             the format and return a table/record you can query directly."
+                            "Use 'open {file_text}' to auto-parse this structured file. Nu will \
+                             detect the format and return a table/record you can query directly."
                         ),
                     )
                 } else {
                     (
-                        format!("open --raw {file}"),
+                        format!("open --raw {file_text}"),
                         "Use 'open --raw' for plain text files. For structured files (JSON, TOML, \
                          CSV), use 'open' without --raw to get parsed data."
                             .to_string(),

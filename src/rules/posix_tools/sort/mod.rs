@@ -167,11 +167,11 @@ impl DetectFix for UseBuiltinSort {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.detect_external_with_validation("sort", |_, args| {
+        context.detect_external_with_validation("sort", |_, fix_data, ctx| {
             // Only exclude very advanced sort options
-            let has_very_complex = args.iter().any(|arg| {
+            let has_very_complex = fix_data.arg_texts(ctx).any(|text| {
                 matches!(
-                    *arg,
+                    text,
                     "-c" | "--check" |               // Check if sorted
                     "-C" | "--check=quiet" |
                     "-m" | "--merge" |               // Merge sorted files
@@ -186,8 +186,8 @@ impl DetectFix for UseBuiltinSort {
         })
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let opts = SortOptions::parse(fix_data.arg_strings(_context));
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let opts = SortOptions::parse(fix_data.arg_texts(context));
         let (replacement, description) = opts.to_nushell();
 
         Some(Fix {

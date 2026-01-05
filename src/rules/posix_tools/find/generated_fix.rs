@@ -126,3 +126,21 @@ fn ignores_unsupported_maxdepth_but_processes_name() {
 fn ignores_unsupported_executable_flag() {
     RULE.assert_fixed_contains(r"^find . -executable", "glob ./**/*");
 }
+
+#[test]
+fn handles_variable_path() {
+    RULE.assert_fixed_contains(r#"^find $dir -name "*.rs""#, "glob $dir/**/*.rs");
+}
+
+#[test]
+fn handles_variable_pattern() {
+    RULE.assert_fixed_contains(r"^find . -name $pattern", "glob ./**/*$pattern*");
+}
+
+#[test]
+fn handles_escaped_quotes_in_name() {
+    RULE.assert_fixed_contains(
+        r#"^find . -name "file with \"quotes\"""#,
+        r#"glob ./**/*file with "quotes"*"#,
+    );
+}

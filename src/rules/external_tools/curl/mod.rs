@@ -2,6 +2,7 @@ use nu_protocol::Span;
 
 use crate::{
     LintLevel,
+    ast::string::StringFormat,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -17,51 +18,70 @@ struct HttpOptions {
     headers: Vec<(String, String)>,
     user: Option<String>,
     password: Option<String>,
-    data: Option<String>,
+    data: Option<DataArg>,
     output_file: Option<String>,
 }
 
+enum DataArg {
+    Formatted(StringFormat),
+    Raw(String),
+}
+
 impl HttpOptions {
-    fn parse_curl<'a>(args: impl IntoIterator<Item = &'a str>) -> Self {
+    fn parse_curl<'a>(args: impl IntoIterator<Item = (&'a str, Option<StringFormat>)>) -> Self {
         args.into_iter()
             .fold(
                 (Self::default(), None::<&str>),
-                |(mut opts, expecting), arg| match (expecting, arg) {
-                    (Some("-X" | "--request"), method) => {
-                        opts.method = parse_method(method);
+                |(mut opts, expecting), (text, format)| match expecting {
+                    Some("-X" | "--request") => {
+                        opts.method = parse_method(text);
                         (opts, None)
                     }
-                    (Some("-H" | "--header"), header) => {
-                        if let Some(h) = parse_header(header) {
+                    Some("-H" | "--header") => {
+                        if let Some(h) = parse_header(text) {
                             opts.headers.push(h);
                         }
                         (opts, None)
                     }
-                    (Some("-u" | "--user"), credentials) => {
-                        let (user, password) = parse_credentials(credentials);
+                    Some("-u" | "--user") => {
+                        let (user, password) = parse_credentials(text);
                         opts.user = user;
                         opts.password = password;
                         (opts, None)
                     }
-                    (Some("-d" | "--data" | "--data-raw"), data) => {
-                        opts.data = Some(data.to_string());
+                    Some("-d" | "--data" | "--data-raw") => {
+                        opts.data = Some(
+                            format
+                                .map_or_else(|| DataArg::Raw(text.to_string()), DataArg::Formatted),
+                        );
                         opts.method = match opts.method {
                             HttpMethod::Get => HttpMethod::Post,
                             m => m,
                         };
                         (opts, None)
                     }
-                    (Some("-o" | "--output"), file) => {
-                        opts.output_file = Some(file.to_string());
+                    Some("-o" | "--output") => {
+                        opts.output_file = Some(text.to_string());
                         (opts, None)
                     }
-                    (
-                        None,
-                        "-X" | "--request" | "-H" | "--header" | "-u" | "--user" | "-d" | "--data"
-                        | "--data-raw" | "-o" | "--output",
-                    ) => (opts, Some(arg)),
-                    (None, s) if !s.starts_with('-') && opts.url.is_none() => {
-                        opts.url = Some(s.to_string());
+                    None if matches!(
+                        text,
+                        "-X" | "--request"
+                            | "-H"
+                            | "--header"
+                            | "-u"
+                            | "--user"
+                            | "-d"
+                            | "--data"
+                            | "--data-raw"
+                            | "-o"
+                            | "--output"
+                    ) =>
+                    {
+                        (opts, Some(text))
+                    }
+                    None if !text.starts_with('-') && opts.url.is_none() => {
+                        opts.url = Some(text.to_string());
                         (opts, None)
                     }
                     _ => (opts, None),
@@ -104,7 +124,11 @@ impl HttpOptions {
         parts.push(url.to_string());
 
         if let Some(data) = &self.data {
-            parts.push(data.clone());
+            let data_str = match data {
+                DataArg::Formatted(fmt) => fmt.reconstruct(fmt.content()),
+                DataArg::Raw(text) => text.clone(),
+            };
+            parts.push(data_str);
         }
 
         if let Some(file) = &self.output_file {
@@ -225,11 +249,11 @@ impl DetectFix for UseBuiltinCurl {
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context
-            .detect_external_with_validation("curl", |_, args| {
+            .detect_external_with_validation("curl", |_, fix_data, ctx| {
                 // Don't detect very complex curl usage
-                let has_complex = args.iter().any(|arg| {
+                let has_complex = fix_data.arg_texts(ctx).any(|text| {
                     matches!(
-                        *arg,
+                        text,
                         "--proxy" | "--socks" |       // Proxy settings
                         "--cert" | "--key" |          // Client certificates
                         "--cacert" | "--capath" |     // CA certificates
@@ -244,14 +268,17 @@ impl DetectFix for UseBuiltinCurl {
                         "--compressed" |               // Compression
                         "--tr-encoding" |              // Transfer encoding
                         "--negotiate" | "--ntlm" | "--digest" | "--basic" // Auth methods
-                    ) || arg.starts_with("--proxy")
-                        || arg.starts_with("--socks")
+                    ) || text.starts_with("--proxy")
+                        || text.starts_with("--socks")
                 });
                 if has_complex { None } else { Some(NOTE) }
             })
             .into_iter()
             .map(|(detection, fix_data)| {
-                let options = HttpOptions::parse_curl(fix_data.arg_strings(context));
+                let args_with_formats = fix_data
+                    .arg_texts(context)
+                    .zip(fix_data.arg_formats(context));
+                let options = HttpOptions::parse_curl(args_with_formats);
                 (
                     detection,
                     CurlFixData {

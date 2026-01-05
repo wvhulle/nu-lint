@@ -18,13 +18,13 @@ impl WgetOptions {
     fn parse_wget<'a>(args: impl IntoIterator<Item = &'a str>) -> Self {
         args.into_iter()
             .fold(
-                (Self::default(), None::<&str>),
-                |(mut opts, expecting), arg| match (expecting, arg) {
+                (Self::default(), None::<String>),
+                |(mut opts, expecting), arg| match (expecting.as_deref(), arg) {
                     (Some("-O" | "--output-document"), file) => {
                         opts.output_file = Some(file.to_string());
                         (opts, None)
                     }
-                    (None, "-O" | "--output-document") => (opts, Some(arg)),
+                    (None, "-O" | "--output-document") => (opts, Some(arg.to_string())),
                     (None, s) if !s.starts_with('-') && opts.url.is_none() => {
                         opts.url = Some(s.to_string());
                         (opts, None)
@@ -76,11 +76,11 @@ impl DetectFix for UseBuiltinWget {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.detect_external_with_validation("wget", |_, args| {
+        context.detect_external_with_validation("wget", |_, fix_data, ctx| {
             // Don't detect complex wget features
-            let has_complex = args.iter().any(|arg| {
+            let has_complex = fix_data.arg_texts(ctx).any(|text| {
                 matches!(
-                    *arg,
+                    text,
                     "--mirror" | "-m" |           // Mirroring
                     "--recursive" | "-r" |        // Recursive download
                     "--span-hosts" | "-H" |       // Span hosts
@@ -102,8 +102,8 @@ impl DetectFix for UseBuiltinWget {
         })
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let opts = WgetOptions::parse_wget(fix_data.arg_strings(_context));
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let opts = WgetOptions::parse_wget(fix_data.arg_texts(context));
         let (replacement, description) = opts.to_nushell();
 
         Some(Fix {

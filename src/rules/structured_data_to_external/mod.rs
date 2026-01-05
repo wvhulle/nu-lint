@@ -45,33 +45,20 @@ impl ExternalStdin {
 
     /// Get the preferred format for known external commands
     fn get_command_preference(cmd_name: &str, ty: &Type) -> Option<Self> {
-        // Extract command name without path or arguments
-        let cmd_base = cmd_name
-            .trim_start_matches("./")
-            .trim_start_matches("../")
-            .split('/')
-            .next_back()
-            .unwrap_or(cmd_name)
-            .split_whitespace()
+        match cmd_name
+            .rsplit('/')
             .next()
-            .unwrap_or(cmd_name);
-
-        match cmd_base {
-            // Commands that expect JSON (regardless of data type)
-            "jq" | "json_pp" | "json" | "jsonlint" => Some(Self::Json),
-
-            // Commands that expect CSV (for tables)
+            .unwrap_or(cmd_name)
+            .trim_start_matches('^')
+        {
+            "jq" | "json_pp" | "jsonlint" => Some(Self::Json),
             "csvlook" | "csvstat" | "csvcut" | "csvgrep" => Some(Self::Csv),
-
-            // Line-oriented commands: use Lines for lists, Text for tables
             "grep" | "sed" | "awk" | "sort" | "uniq" | "wc" | "cat" | "less" | "more" | "head"
             | "tail" => match ty {
                 Type::List(_) => Some(Self::Lines),
                 Type::Table(_) | Type::Record(_) => Some(Self::Text),
-                _ => None, // Let from_type handle primitives
+                _ => None,
             },
-
-            // No specific preference for other commands
             _ => None,
         }
     }
@@ -121,7 +108,7 @@ impl DetectFix for StructuredDataToExternal {
     type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
-        "convert_structured_to_string_external"
+        "explicit_format_prep_external"
     }
 
     fn explanation(&self) -> &'static str {

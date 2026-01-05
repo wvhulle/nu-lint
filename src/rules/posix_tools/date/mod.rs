@@ -25,10 +25,9 @@ impl DateOptions {
             date_str: None,
         };
 
-        let args_vec: Vec<&str> = args.into_iter().collect();
-        let mut iter = args_vec.iter().copied().peekable();
-        while let Some(arg) = iter.next() {
-            Self::parse_arg(&mut opts, arg, &mut iter);
+        let mut iter = args.into_iter().peekable();
+        while let Some(text) = iter.next() {
+            Self::parse_arg(&mut opts, text, &mut iter);
         }
 
         opts
@@ -36,25 +35,21 @@ impl DateOptions {
 
     fn parse_arg<'a>(
         opts: &mut Self,
-        arg: &'a str,
+        text: &'a str,
         iter: &mut Peekable<impl Iterator<Item = &'a str>>,
     ) {
-        match arg {
+        match text {
             "-u" | "--utc" => opts.utc = true,
             s if s.starts_with("--date=") => {
-                opts.date_str = s.strip_prefix("--date=").map(String::from);
+                opts.date_str = Some(s.to_string());
             }
             "-d" | "--date" => {
-                opts.date_str = iter.next().map(String::from);
+                if let Some(next_text) = iter.next() {
+                    opts.date_str = Some(next_text.to_string());
+                }
             }
             s if s.starts_with('+') => {
-                let rest = &s[1..];
-                let needs_quotes = !(rest.starts_with('"') || rest.starts_with('\''));
-                opts.fmt = Some(if needs_quotes {
-                    format!("'{rest}'")
-                } else {
-                    rest.to_string()
-                });
+                opts.fmt = Some(s.to_string());
             }
             _ => {}
         }
@@ -66,8 +61,8 @@ impl DateOptions {
 
         explanation.push("returns a datetime value".to_string());
 
-        if let Some(ds) = &self.date_str {
-            let trimmed = ds.trim();
+        if let Some(ds_text) = &self.date_str {
+            let trimmed = ds_text.strip_prefix("--date=").unwrap_or(ds_text).trim();
             let ds_quoted = if trimmed.starts_with('\'') || trimmed.starts_with('"') {
                 trimmed.to_string()
             } else {
@@ -84,8 +79,15 @@ impl DateOptions {
             explanation.push("convert to UTC with 'date to-timezone'".to_string());
         }
 
-        if let Some(f) = &self.fmt {
-            parts.push(format!("format date {f}"));
+        if let Some(f_text) = &self.fmt {
+            let rest = &f_text[1..];
+            let needs_quotes = !(rest.starts_with('"') || rest.starts_with('\''));
+            let fmt_str = if needs_quotes {
+                format!("'{rest}'")
+            } else {
+                rest.to_string()
+            };
+            parts.push(format!("format date {fmt_str}"));
             explanation.push("format output with 'format date'".to_string());
         }
 
@@ -119,11 +121,11 @@ impl DetectFix for UseBuiltinDate {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.detect_external_with_validation("date", |_, args| {
+        context.detect_external_with_validation("date", |_, fix_data, ctx| {
             // Only detect simple date usage, not complex formatting or date arithmetic
-            let has_complex = args.iter().any(|arg| {
+            let has_complex = fix_data.arg_texts(ctx).any(|text| {
                 matches!(
-                    *arg,
+                    text,
                     "-d" | "--date" |           // Parse arbitrary date string
                     "-f" | "--file" |           // Read dates from file
                     "-r" | "--reference" |      // Display file modification time
@@ -131,15 +133,15 @@ impl DetectFix for UseBuiltinDate {
                     "--resolution" |            // Show resolution
                     "-I" | "--iso-8601" |       // ISO 8601 (could support)
                     "-R" | "--rfc-email" // RFC 5322 (could support)
-                ) || arg.starts_with("--date=")
-                    || arg.starts_with("--file=")
+                ) || text.starts_with("--date=")
+                    || text.starts_with("--file=")
             });
             if has_complex { None } else { Some(NOTE) }
         })
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let opts = DateOptions::parse(fix_data.arg_strings(_context));
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let opts = DateOptions::parse(fix_data.arg_texts(context));
         let (replacement, explanation) = opts.to_nushell();
 
         Some(Fix::with_explanation(

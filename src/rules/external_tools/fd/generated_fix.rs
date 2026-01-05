@@ -44,3 +44,26 @@ fn replaces_fd_type_symlink_uses_ls() {
 fn replaces_fd_pattern_and_type_uses_ls() {
     RULE.assert_fixed_contains("^fd -t f test", "ls ./**/*test* | where type == file");
 }
+
+#[test]
+fn handles_variable_pattern() {
+    RULE.assert_fixed_contains("^fd $pattern", "glob ./**/*$pattern*");
+}
+
+#[test]
+fn handles_variable_directory() {
+    RULE.assert_fixed_contains("^fd test $dir", "glob $dir/**/*test*");
+}
+
+#[test]
+fn handles_escaped_quotes_in_pattern() {
+    RULE.assert_fixed_contains(
+        r#"^fd "file with \"quotes\"""#,
+        r#"glob ./**/*file with "quotes"*"#,
+    );
+}
+
+#[test]
+fn handles_single_quoted_pattern() {
+    RULE.assert_fixed_contains("^fd 'test pattern'", "glob ./**/*test pattern*");
+}

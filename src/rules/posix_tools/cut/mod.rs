@@ -29,7 +29,7 @@ impl DetectFix for UseBuiltinCut {
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         // Don't detect cut at all - select is for structured data, cut is for text processing
         // They operate in different domains and translation is unreliable
-        context.detect_external_with_validation("cut", |_, _| None)
+        context.detect_external_with_validation("cut", |_, _, _| None)
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {

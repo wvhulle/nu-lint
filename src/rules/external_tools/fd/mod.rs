@@ -10,24 +10,24 @@ const NOTE: &str = "Use Nu's 'glob' for pattern matching or 'ls' for type filter
                     type, size, modified) for filtering with 'where'.";
 
 #[derive(Default)]
-struct FdOptions<'a> {
-    pattern: Option<&'a str>,
-    path: Option<&'a str>,
-    file_type: Option<&'a str>,
-    extension: Option<&'a str>,
+struct FdOptions {
+    pattern: Option<String>,
+    path: Option<String>,
+    file_type: Option<String>,
+    extension: Option<String>,
     glob_mode: bool,
 }
 
-impl<'a> FdOptions<'a> {
-    fn parse(args: impl IntoIterator<Item = &'a str>) -> Self {
+impl FdOptions {
+    fn parse<'a>(args: impl IntoIterator<Item = &'a str>) -> Self {
         let mut opts = Self::default();
         let mut iter = args.into_iter();
         let mut positional = 0;
 
         while let Some(arg) = iter.next() {
             match arg {
-                "-t" | "--type" => opts.file_type = iter.next(),
-                "-e" | "--extension" => opts.extension = iter.next(),
+                "-t" | "--type" => opts.file_type = iter.next().map(str::to_string),
+                "-e" | "--extension" => opts.extension = iter.next().map(str::to_string),
                 "-g" | "--glob" => opts.glob_mode = true,
                 "-d" | "--max-depth" | "-E" | "--exclude" | "-S" | "--size"
                 | "--changed-within" | "--changed-before" => {
@@ -36,8 +36,8 @@ impl<'a> FdOptions<'a> {
                 s if s.starts_with('-') => {}
                 val => {
                     match positional {
-                        0 => opts.pattern = Some(val),
-                        1 => opts.path = Some(val),
+                        0 => opts.pattern = Some(val.to_string()),
+                        1 => opts.path = Some(val.to_string()),
                         _ => {}
                     }
                     positional += 1;
@@ -48,7 +48,7 @@ impl<'a> FdOptions<'a> {
     }
 
     fn to_nushell(&self) -> (String, String) {
-        let base = self.path.unwrap_or(".");
+        let base = self.path.as_deref().unwrap_or(".");
         let pattern = self.build_glob_pattern(base);
 
         self.type_filter().map_or_else(
@@ -70,24 +70,23 @@ impl<'a> FdOptions<'a> {
     }
 
     fn build_glob_pattern(&self, base: &str) -> String {
-        if let Some(ext) = self.extension {
+        if let Some(ext) = self.extension.as_deref() {
             return format!("{base}/**/*.{ext}");
         }
-        self.pattern.map_or_else(
+        self.pattern.as_deref().map_or_else(
             || format!("{base}/**/*"),
             |p| {
-                let clean = p.trim_matches('"').trim_matches('\'');
-                if clean.contains('*') || self.glob_mode {
-                    format!("{base}/**/{clean}")
+                if p.contains('*') || self.glob_mode {
+                    format!("{base}/**/{p}")
                 } else {
-                    format!("{base}/**/*{clean}*")
+                    format!("{base}/**/*{p}*")
                 }
             },
         )
     }
 
     fn type_filter(&self) -> Option<&'static str> {
-        self.file_type.and_then(|t| match t {
+        self.file_type.as_deref().and_then(|t| match t {
             "f" | "file" => Some("where type == file"),
             "d" | "directory" => Some("where type == dir"),
             "l" | "symlink" => Some("where type == symlink"),
@@ -118,11 +117,11 @@ impl DetectFix for UseBuiltinFd {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.detect_external_with_validation("fd", |_, _| Some(NOTE))
+        context.detect_external_with_validation("fd", |_, _, _| Some(NOTE))
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let opts = FdOptions::parse(fix_data.arg_strings(_context));
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let opts = FdOptions::parse(fix_data.arg_texts(context));
         let (replacement, description) = opts.to_nushell();
         Some(Fix {
             explanation: description.into(),

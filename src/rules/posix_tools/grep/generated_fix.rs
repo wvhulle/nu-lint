@@ -101,6 +101,27 @@ fn fix_description_mentions_where() {
 }
 
 #[test]
+fn handles_variable_pattern() {
+    let source = "^grep $pattern file.txt";
+    RULE.assert_count(source, 1);
+    RULE.assert_fixed_contains(source, r#"where $it =~ "$pattern""#);
+}
+
+#[test]
+fn handles_variable_filename() {
+    let source = r#"^grep "error" $logfile"#;
+    RULE.assert_count(source, 1);
+    RULE.assert_fixed_contains(source, "open $logfile");
+}
+
+#[test]
+fn handles_escaped_quotes_in_pattern() {
+    let source = r#"^grep "error \"critical\"" logs.txt"#;
+    RULE.assert_count(source, 1);
+    RULE.assert_fixed_contains(source, r#"where $it =~ "error "critical"""#);
+}
+
+#[test]
 fn fix_description_mentions_structured_data() {
     let source = r#"^grep "error" logs.txt"#;
     RULE.assert_count(source, 1);

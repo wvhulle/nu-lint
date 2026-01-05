@@ -83,12 +83,11 @@ impl GrepOptions {
 
     fn to_nushell(&self) -> (String, String) {
         let pattern = self.pattern.as_deref().unwrap_or("pattern");
-        let clean_pattern = pattern.trim_matches('"').trim_matches('\'');
 
         if self.should_use_find() {
-            self.build_find_replacement(clean_pattern)
+            self.build_find_replacement(pattern)
         } else {
-            self.build_where_replacement(clean_pattern)
+            self.build_where_replacement(pattern)
         }
     }
 
@@ -227,11 +226,11 @@ impl DetectFix for UseBuiltinGrep {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let validator = |_cmd: &str, args: &[&str]| {
+        let validator = |_cmd: &str, fix_data: &ExternalCmdFixData, ctx: &LintContext| {
             // Only exclude very complex grep features that really can't translate
-            let has_very_complex = args.iter().any(|arg| {
+            let has_very_complex = fix_data.arg_texts(ctx).any(|text| {
                 matches!(
-                    *arg,
+                    text,
                     "--color" | "--colour" |     // Color output
                     "-Z" | "--null" |            // Null separator
                     "-a" | "--text" |            // Text mode forcing
@@ -240,8 +239,8 @@ impl DetectFix for UseBuiltinGrep {
                     "--line-buffered" |          // Line buffering
                     "-T" | "--initial-tab" |     // Initial tab
                     "-z" | "--null-data" // Null-terminated input
-                ) || arg.starts_with("--include")
-                    || arg.starts_with("--exclude")
+                ) || text.starts_with("--include")
+                    || text.starts_with("--exclude")
             });
             if has_very_complex { None } else { Some(NOTE) }
         };
@@ -250,8 +249,8 @@ impl DetectFix for UseBuiltinGrep {
         violations
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let opts = GrepOptions::parse(fix_data.arg_strings(_context));
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let opts = GrepOptions::parse(fix_data.arg_texts(context));
         let (replacement, description) = opts.to_nushell();
 
         Some(Fix {

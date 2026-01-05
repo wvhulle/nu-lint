@@ -64,3 +64,15 @@ fn test_fix_gsed_to_str_replace() {
     let bad_code = r"^gsed 's/foo/bar/'";
     RULE.assert_fixed_contains(bad_code, "str replace 'foo' 'bar'");
 }
+
+#[test]
+fn handles_variable_filename() {
+    let bad_code = r"^sed 's/foo/bar/' $file";
+    RULE.assert_fixed_contains(bad_code, "open $file | str replace 'foo' 'bar'");
+}
+
+#[test]
+fn handles_escaped_quotes_in_replacement() {
+    let bad_code = r#"^sed "s/old/\"new\"/" file.txt"#;
+    RULE.assert_count(bad_code, 1);
+}

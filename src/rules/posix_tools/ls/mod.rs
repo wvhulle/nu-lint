@@ -28,19 +28,19 @@ impl LsOptions {
     fn parse<'a>(args: impl IntoIterator<Item = &'a str>) -> Self {
         let mut opts = Self::default();
 
-        for arg in args {
-            Self::parse_arg(&mut opts, arg);
+        for text in args {
+            Self::parse_arg(&mut opts, text);
         }
 
         opts
     }
 
-    fn parse_arg(opts: &mut Self, arg: &str) {
-        if arg.starts_with('-') && !arg.starts_with("--") {
+    fn parse_arg(opts: &mut Self, text: &str) {
+        if text.starts_with('-') && !text.starts_with("--") {
             // Handle combined short flags like -la
-            Self::parse_short_flags(opts, arg);
+            Self::parse_short_flags(opts, text);
         } else {
-            Self::parse_long_flag(opts, arg);
+            Self::parse_long_flag(opts, text);
         }
     }
 
@@ -60,8 +60,8 @@ impl LsOptions {
         }
     }
 
-    fn parse_long_flag(opts: &mut Self, arg: &str) {
-        match arg {
+    fn parse_long_flag(opts: &mut Self, text: &str) {
+        match text {
             "--all" => opts.all = true,
             "--human-readable" => opts.human_readable = true,
             "--recursive" => opts.recursive = true,
@@ -176,15 +176,15 @@ impl DetectFix for UseBuiltinLs {
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         // ls/exa/eza all work well with Nu's structured ls command
         // Most common flags translate cleanly
-        let mut violations = context.detect_external_with_validation("ls", |_, _| Some(NOTE));
+        let mut violations = context.detect_external_with_validation("ls", |_, _, _| Some(NOTE));
         for cmd in ["exa", "eza"] {
-            violations.extend(context.detect_external_with_validation(cmd, |_, _| Some(NOTE)));
+            violations.extend(context.detect_external_with_validation(cmd, |_, _, _| Some(NOTE)));
         }
         violations
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let opts = LsOptions::parse(fix_data.arg_strings(_context));
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let opts = LsOptions::parse(fix_data.arg_texts(context));
         let (replacement, description) = opts.to_nushell();
 
         Some(Fix {

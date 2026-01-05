@@ -31,11 +31,12 @@ impl DetectFix for UseBuiltinTac {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.detect_external_with_validation("tac", |_, _| Some(NOTE))
+        context.detect_external_with_validation("tac", |_, _, _| Some(NOTE))
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let filename = fix_data.arg_strings(_context).find(|s| !s.starts_with('-'));
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let arg_texts: Vec<&str> = fix_data.arg_texts(context).collect();
+        let filename = arg_texts.iter().find(|text| !text.starts_with('-'));
 
         let replacement = filename.map_or_else(
             || "open --raw | lines | reverse".to_string(),

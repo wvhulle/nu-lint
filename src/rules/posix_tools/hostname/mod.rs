@@ -30,7 +30,7 @@ impl DetectFix for UseSysHostInsteadOfHostname {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.detect_external_with_validation("hostname", |_, _| Some(NOTE))
+        context.detect_external_with_validation("hostname", |_, _, _| Some(NOTE))
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {

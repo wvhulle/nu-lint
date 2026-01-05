@@ -10,15 +10,6 @@ const NOTE: &str = "Use 'where' for filtering rows, 'split column' for field ext
                     structured data pipelines replace awk's text-based approach with typed \
                     columns and native operations.";
 
-fn strip_quotes(s: &str) -> &str {
-    let t = s.trim();
-    if (t.starts_with('"') && t.ends_with('"')) || (t.starts_with('\'') && t.ends_with('\'')) {
-        &t[1..t.len() - 1]
-    } else {
-        t
-    }
-}
-
 #[derive(Default)]
 struct AwkOptions {
     field_separator: Option<String>,
@@ -32,39 +23,38 @@ struct AwkOptions {
 impl AwkOptions {
     fn parse<'a>(args: impl IntoIterator<Item = &'a str>) -> Self {
         let mut opts = Self::default();
-        let mut iter = args.into_iter();
+        let args: Vec<&str> = args.into_iter().collect();
+        let mut i = 0;
 
-        while let Some(arg) = iter.next() {
-            Self::parse_arg(&mut opts, arg, &mut iter);
+        while i < args.len() {
+            let arg = args[i];
+            match arg {
+                "-F" => {
+                    if let Some(&sep) = args.get(i + 1) {
+                        opts.field_separator = Some(sep.to_string());
+                        i += 1;
+                    }
+                }
+                s if s.starts_with("-F") && s.len() > 2 => {
+                    opts.field_separator = Some(s[2..].to_string());
+                }
+                "-v" | "-f" => {
+                    i += 1; // Skip next argument
+                }
+                // Patterns with / delimiters or braces are programs
+                s if s.starts_with('/') || s.contains('{') => {
+                    opts.parse_program(s);
+                }
+                // Everything else that's not a flag is a file
+                s if !s.starts_with('-') => {
+                    opts.files.push(s.to_string());
+                }
+                _ => {}
+            }
+            i += 1;
         }
 
         opts
-    }
-
-    fn parse_arg<'a>(opts: &mut Self, arg: &'a str, iter: &mut impl Iterator<Item = &'a str>) {
-        match arg {
-            "-F" => {
-                if let Some(sep) = iter.next() {
-                    opts.field_separator = Some(strip_quotes(sep).to_string());
-                }
-            }
-            s if s.starts_with("-F") && s.len() > 2 => {
-                opts.field_separator = Some(strip_quotes(&s[2..]).to_string());
-            }
-            "-v" | "-f" => {
-                iter.next();
-            }
-            s if s.starts_with('"') || s.starts_with('\'') => {
-                opts.parse_program(strip_quotes(s));
-            }
-            s if !s.starts_with('-') && !s.contains('{') => {
-                opts.files.push(s.to_string());
-            }
-            s if s.contains('{') => {
-                opts.parse_program(s);
-            }
-            _ => {}
-        }
     }
 
     fn parse_program(&mut self, program: &str) {
@@ -152,10 +142,10 @@ impl AwkOptions {
             return;
         }
 
-        let sep = self.field_separator.as_deref().unwrap_or(" ");
-        let sep_display = if sep == " " { "\" \"" } else { sep };
+        let sep_text = self.field_separator.as_deref().unwrap_or(" ");
+        let sep_display = if sep_text == " " { "\" \"" } else { sep_text };
         parts.push(format!("split column {sep_display}"));
-        examples.push(format!("-F{sep}: use 'split column {sep_display}'"));
+        examples.push(format!("-F{sep_text}: use 'split column {sep_display}'"));
 
         if self.print_fields.len() == 1 {
             let col = format!("column{}", self.print_fields[0]);
@@ -211,20 +201,20 @@ impl DetectFix for UseBuiltinAwk {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let validator = |_cmd: &str, args: &[&str]| {
+        let validator = |_cmd: &str, fix_data: &ExternalCmdFixData, ctx: &LintContext| {
             // Only detect simple awk patterns that we can reliably translate
             // Don't detect if there are multiple statements, functions, or complex control
             // flow
-            let has_complex_features = args.iter().any(|arg| {
-                arg.contains("BEGIN") ||
-                arg.contains("END") ||
-                arg.contains("function") ||
-                arg.contains("for") ||
-                arg.contains("while") ||
-                arg.contains("if") && arg.matches("if").count() > 1 || // Multiple conditionals
-                arg.contains(';') && arg.matches(';').count() > 1 ||    // Multiple statements
-                arg.starts_with("-f") || *arg == "-f" ||                // External script file
-                arg.starts_with("-v") && arg.contains('=') // Complex variable assignments
+            let has_complex_features = fix_data.arg_texts(ctx).any(|text| {
+                text.contains("BEGIN") ||
+                text.contains("END") ||
+                text.contains("function") ||
+                text.contains("for") ||
+                text.contains("while") ||
+                text.contains("if") && text.matches("if").count() > 1 || // Multiple conditionals
+                text.contains(';') && text.matches(';').count() > 1 ||    // Multiple statements
+                text.starts_with("-f") || text == "-f" ||                // External script file
+                text.starts_with("-v") && text.contains('=') // Complex variable assignments
             });
             if has_complex_features {
                 None
@@ -238,8 +228,8 @@ impl DetectFix for UseBuiltinAwk {
         violations
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let opts = AwkOptions::parse(fix_data.arg_strings(_context));
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let opts = AwkOptions::parse(fix_data.arg_texts(context));
         let (replacement, description) = opts.to_nushell();
 
         Some(Fix {

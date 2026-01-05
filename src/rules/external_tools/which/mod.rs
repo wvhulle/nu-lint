@@ -30,14 +30,14 @@ impl DetectFix for UseBuiltinWhich {
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         // which has a direct Nu builtin equivalent
-        context.detect_external_with_validation("which", |_, _| Some(NOTE))
+        context.detect_external_with_validation("which", |_, _, _| Some(NOTE))
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let repl = fix_data
-            .arg_strings(_context)
-            .next()
-            .map_or_else(|| "which".to_string(), |cmd| format!("which {cmd}"));
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let arg_texts: Vec<&str> = fix_data.arg_texts(context).collect();
+        let repl = arg_texts
+            .first()
+            .map_or_else(|| "which".to_string(), |arg| format!("which {arg}"));
         Some(Fix::with_explanation(
             "Use built-in which",
             vec![Replacement::new(fix_data.expr_span, repl)],

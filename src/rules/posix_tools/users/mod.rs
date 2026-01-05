@@ -30,7 +30,7 @@ impl DetectFix for UseSysUsersInsteadOfUsers {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.detect_external_with_validation("users", |_, _| Some(NOTE))
+        context.detect_external_with_validation("users", |_, _, _| Some(NOTE))
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {

@@ -7,7 +7,7 @@ use crate::{
     LintLevel,
     ast::{
         block::BlockExt, call::CallExt, expression::ExpressionExt, pipeline::PipelineExt,
-        span::SpanExt, syntax_shape::SyntaxShapeExt,
+        span::SpanExt,
     },
     context::LintContext,
     rule::{DetectFix, Rule},
@@ -76,7 +76,7 @@ fn get_param_type_str(
             |var_id| infer_param_type(var_id, body_block_id, ctx).to_string(),
         )
     } else {
-        shape.to_type_string()
+        shape.to_string() // Use upstream Display
     }
 }
 

@@ -6,5 +6,4 @@ pub mod pipeline;
 pub mod regex;
 pub mod span;
 pub mod string;
-pub mod syntax_shape;
 pub mod tree;

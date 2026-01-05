@@ -4,7 +4,7 @@ use nu_protocol::{
 };
 
 use super::{
-    FixData, extract_parameters_text, find_signature_span, get_input_type, parse_signature_types,
+    FixData, extract_parameters_text, find_signature_span, get_input_type, get_output_type,
 };
 use crate::{
     LintLevel,
@@ -96,12 +96,12 @@ impl DetectFix for TypeNuPipelineInput {
 
     fn fix(&self, ctx: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let block = ctx.working_set.get_block(fix_data.body_block_id);
-        let original_sig_text = ctx.plain_text(fix_data.sig_span);
-        let parsed = parse_signature_types(original_sig_text);
-        let params = extract_parameters_text(&block.signature);
+        let signature = &block.signature;
 
+        // Use AST data: extract parameters and types from signature
+        let params = extract_parameters_text(signature);
         let input_type = block.infer_input_type(ctx);
-        let output_type = parsed.output_type.unwrap_or(Type::Any);
+        let output_type = get_output_type(signature).unwrap_or(Type::Any);
 
         let new_signature = format!("[{params}]: {input_type} -> {output_type}");
 

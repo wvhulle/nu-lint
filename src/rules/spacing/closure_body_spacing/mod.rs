@@ -31,8 +31,7 @@ fn closing_pipe_char_index(text: &str) -> Option<usize> {
     chars.find(|(_, c)| *c == '|').map(|(i, _)| i)
 }
 
-/// Check spacing around closure body, returning (needs_space_after_pipe,
-/// needs_space_before_brace).
+/// Check spacing around closure body
 fn check_body_spacing(text: &str, pipe_idx: usize) -> (bool, bool) {
     let chars: Vec<char> = text.chars().collect();
     let after_pipe = chars.get(pipe_idx + 1).is_some_and(|c| !c.is_whitespace());

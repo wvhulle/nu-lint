@@ -1,5 +1,5 @@
 use nu_protocol::{
-    BlockId, Span, SyntaxShape, Type,
+    BlockId, Flag, PositionalArg, Span, SyntaxShape, Type,
     ast::{Block, Call},
 };
 
@@ -36,45 +36,50 @@ pub fn find_signature_span(call: &Call, _ctx: &LintContext) -> Option<Span> {
     Some(sig_arg.span)
 }
 
-pub fn extract_parameters_text(signature: &nu_protocol::Signature) -> String {
-    let format_param = |name: &str, shape: &SyntaxShape, suffix: &str| match shape {
-        SyntaxShape::Any => format!("{name}{suffix}"),
-        _ => format!("{name}{suffix}: {shape}"), // Use upstream Display
-    };
+/// Format a positional parameter (required, optional, or rest).
+fn format_positional(p: &PositionalArg, optional: bool, rest: bool) -> String {
+    let prefix = if rest { "..." } else { "" };
+    let suffix = if optional { "?" } else { "" };
+    match &p.shape {
+        SyntaxShape::Any => format!("{prefix}{}{suffix}", p.name),
+        shape => format!("{prefix}{}{suffix}: {shape}", p.name),
+    }
+}
 
-    let params = signature
+/// Format a flag/named parameter.
+fn format_flag(f: &Flag) -> String {
+    let short = f.short.map(|s| format!(" (-{s})")).unwrap_or_default();
+    let arg_type = f.arg.as_ref().map(|s| format!(": {s}")).unwrap_or_default();
+    format!("--{}{short}{arg_type}", f.long)
+}
+
+/// Extract parameters from a signature as Nu source text.
+pub fn extract_parameters_text(signature: &nu_protocol::Signature) -> String {
+    signature
         .required_positional
         .iter()
-        .map(|p| format_param(&p.name, &p.shape, ""))
+        .map(|p| format_positional(p, false, false))
         .chain(
             signature
                 .optional_positional
                 .iter()
-                .map(|p| format_param(&p.name, &p.shape, "?")),
+                .map(|p| format_positional(p, true, false)),
         )
         .chain(
             signature
                 .rest_positional
                 .iter()
-                .map(|p| format_param(&format!("...{}", p.name), &p.shape, "")),
+                .map(|p| format_positional(p, false, true)),
         )
         .chain(
             signature
                 .named
                 .iter()
                 .filter(|f| f.long != "help")
-                .map(|f| {
-                    let base = f.short.map_or_else(
-                        || format!("--{}", f.long),
-                        |s| format!("--{} (-{s})", f.long),
-                    );
-                    f.arg
-                        .as_ref()
-                        .map_or(base.clone(), |shape| format!("{base}: {shape}"))
-                }),
-        );
-
-    params.collect::<Vec<_>>().join(", ")
+                .map(format_flag),
+        )
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 pub struct FixData {

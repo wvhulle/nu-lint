@@ -1,5 +1,6 @@
 use nu_protocol::{Span, ast::Expr};
 
+use super::has_explicit_pipe_delimiters;
 use crate::{
     LintLevel,
     context::LintContext,
@@ -54,24 +55,14 @@ fn check_closure_param_spacing(
 
     vec![(
         Detection::from_global_span(
-            "No space allowed after opening curly brace before closure parameters".to_string(),
+            "Closure opening brace should directly touch parameter pipe `{|`".to_string(),
             opening_brace_span,
         )
-        .with_primary_label("opening brace")
-        .with_extra_label("unwanted whitespace", whitespace_span)
-        .with_extra_label(
-            "parameter delimiter should follow brace directly",
-            pipe_span,
-        ),
+        .with_primary_label("`{` here")
+        .with_extra_label("remove this whitespace", whitespace_span)
+        .with_extra_label("`|` should follow `{` directly", pipe_span),
         ClosureParamSpacingFixData { whitespace_span },
     )]
-}
-
-fn has_block_params(context: &LintContext, block_id: nu_protocol::BlockId) -> bool {
-    let block = context.working_set.get_block(block_id);
-    !block.signature.required_positional.is_empty()
-        || !block.signature.optional_positional.is_empty()
-        || block.signature.rest_positional.is_some()
 }
 
 struct ClosureParamSpacing;
@@ -80,11 +71,11 @@ impl DetectFix for ClosureParamSpacing {
     type FixInput<'a> = ClosureParamSpacingFixData;
 
     fn id(&self) -> &'static str {
-        "curly_closure_param_spacing"
+        "closure_brace_pipe_spacing"
     }
 
     fn explanation(&self) -> &'static str {
-        "No space allowed between opening curly brace and closure parameters"
+        "Closure parameter pipe should directly follow opening brace: `{|` not `{ |`"
     }
 
     fn doc_url(&self) -> Option<&'static str> {
@@ -97,7 +88,8 @@ impl DetectFix for ClosureParamSpacing {
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context.detect_with_fix_data(|expr, ctx| match &expr.expr {
-            Expr::Closure(block_id) if has_block_params(ctx, *block_id) => {
+            // Check any closure with explicit pipe delimiters (including empty `||`)
+            Expr::Closure(_) if has_explicit_pipe_delimiters(ctx, expr.span) => {
                 check_closure_param_spacing(ctx, expr.span)
             }
             _ => vec![],

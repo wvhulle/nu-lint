@@ -1,5 +1,6 @@
 use nu_protocol::{Span, ast::Expr};
 
+use super::{has_block_params, has_explicit_pipe_delimiters, is_record_type};
 use crate::{
     LintLevel,
     context::LintContext,
@@ -36,28 +37,16 @@ fn check_block_body_spacing(
         let closing_span = Span::new(block_span.end - 1, block_span.end);
         vec![(
             Detection::from_global_span(
-                "Blocks and closures without parameters should have spaces inside curly braces"
-                    .to_string(),
+                "Block body needs spaces inside braces: `{ body }` not `{body}`".to_string(),
                 block_span,
             )
-            .with_extra_label("needs space after", opening_span)
-            .with_extra_label("needs space before", closing_span),
+            .with_extra_label("add space after `{`", opening_span)
+            .with_extra_label("add space before `}`", closing_span),
             BlockBodySpacingFixData { block_span },
         )]
     } else {
         vec![]
     }
-}
-
-fn has_block_params(context: &LintContext, block_id: nu_protocol::BlockId) -> bool {
-    let block = context.working_set.get_block(block_id);
-    !block.signature.required_positional.is_empty()
-        || !block.signature.optional_positional.is_empty()
-        || block.signature.rest_positional.is_some()
-}
-
-const fn is_record_type(ty: &nu_protocol::Type) -> bool {
-    matches!(ty, nu_protocol::Type::Record(_))
 }
 
 struct BlockBodySpacing;
@@ -66,11 +55,11 @@ impl DetectFix for BlockBodySpacing {
     type FixInput<'a> = BlockBodySpacingFixData;
 
     fn id(&self) -> &'static str {
-        "curly_block_body_spacing"
+        "block_brace_spacing"
     }
 
     fn explanation(&self) -> &'static str {
-        "Blocks and closures without parameters should have spaces inside curly braces"
+        "Block body needs spaces inside braces: `{ body }` not `{body}`"
     }
 
     fn doc_url(&self) -> Option<&'static str> {
@@ -89,7 +78,12 @@ impl DetectFix for BlockBodySpacing {
                     if is_record_type(&expr.ty) {
                         return vec![];
                     }
-                    // Only check blocks/closures without parameters
+                    // Skip closures with explicit pipe delimiters (including empty `||`)
+                    // These follow closure spacing rules (no space after `{`)
+                    if has_explicit_pipe_delimiters(ctx, expr.span) {
+                        return vec![];
+                    }
+                    // Only check blocks without actual parameters
                     if !has_block_params(ctx, *block_id) {
                         return check_block_body_spacing(ctx, expr.span);
                     }

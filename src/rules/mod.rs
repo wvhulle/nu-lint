@@ -170,6 +170,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     side_effects::silence_side_effect_only_each::RULE,
     side_effects::silence_stderr_data::RULE,
     spacing::block_body_spacing::RULE,
+    spacing::closure_body_spacing::RULE,
     spacing::closure_param_spacing::RULE,
     spacing::no_trailing_spaces::RULE,
     spacing::omit_list_commas::RULE,

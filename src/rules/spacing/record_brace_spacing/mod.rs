@@ -2,6 +2,7 @@ use std::collections::HashSet;
 
 use nu_protocol::{Span, ast::Expr};
 
+use super::is_record_type;
 use crate::{
     LintLevel,
     context::LintContext,
@@ -44,20 +45,16 @@ fn check_record_brace_spacing(
         let closing_span = Span::new(record_span.end - 1, record_span.end);
         vec![(
             Detection::from_global_span(
-                "Records should not have spaces inside curly braces".to_string(),
+                "Record braces should touch content: `{a: 1}` not `{ a: 1 }`".to_string(),
                 record_span,
             )
-            .with_extra_label("no space after", opening_span)
-            .with_extra_label("no space before", closing_span),
+            .with_extra_label("remove space after `{`", opening_span)
+            .with_extra_label("remove space before `}`", closing_span),
             RecordBraceSpacingFixData { record_span },
         )]
     } else {
         vec![]
     }
-}
-
-const fn is_record_type(ty: &nu_protocol::Type) -> bool {
-    matches!(ty, nu_protocol::Type::Record(_))
 }
 
 struct RecordBraceSpacing;
@@ -66,11 +63,11 @@ impl DetectFix for RecordBraceSpacing {
     type FixInput<'a> = RecordBraceSpacingFixData;
 
     fn id(&self) -> &'static str {
-        "curly_record_spacing"
+        "record_brace_spacing"
     }
 
     fn explanation(&self) -> &'static str {
-        "Records should not have spaces inside curly braces"
+        "Record braces should touch content: `{a: 1}` not `{ a: 1 }`"
     }
 
     fn doc_url(&self) -> Option<&'static str> {

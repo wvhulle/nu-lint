@@ -1,4 +1,4 @@
-use std::{collections::BTreeSet, str::from_utf8};
+use std::{collections::BTreeSet, str::from_utf8, vec::Vec};
 
 use nu_protocol::{
     Span,
@@ -259,6 +259,18 @@ impl<'a> LintContext<'a> {
     {
         let mut violations = Vec::new();
         let f = |expr: &Expression| fix_data_collector(expr, self);
+        self.ast.flat_map(self.working_set, &f, &mut violations);
+        violations
+    }
+
+    pub(crate) fn detect_single<F>(&self, detector: F) -> Vec<Detection>
+    where
+        F: Fn(&Expression, &Self) -> Option<Detection>,
+    {
+        let mut violations = Vec::new();
+        let f = |expr: &Expression| {
+            detector(expr, self).map_or_else(Vec::new, |detection| vec![detection])
+        };
         self.ast.flat_map(self.working_set, &f, &mut violations);
         violations
     }

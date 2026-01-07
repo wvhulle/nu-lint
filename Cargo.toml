@@ -14,7 +14,8 @@ keywords = ["nushell", "linter", "static-analysis", "code-quality", "shell"]
 license = "MIT"
 name = "nu-lint"
 repository = "https://codeberg.org/wvhulle/nu-lint"
-version = "0.0.108"
+# Find latest published version with `cargo search nu-lint`
+version = "0.0.109"
 
 [lints.clippy]
 # https://rust-lang.github.io/rust-clippy/master/index.html

@@ -638,7 +638,7 @@ impl ExpressionExt for Expression {
             }
         })
     }
-
+    #[allow(clippy::excessive_nesting, reason = "Recursive")]
     fn traverse_with_parent<'a, F>(
         &'a self,
         context: &'a LintContext,

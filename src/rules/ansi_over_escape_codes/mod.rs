@@ -1,5 +1,3 @@
-use std::fmt::Write;
-
 use nu_protocol::ast::{Expr, Expression, Traverse};
 
 use crate::{
@@ -9,175 +7,167 @@ use crate::{
     violation::{Detection, Fix, Replacement},
 };
 
+struct EscapeMatch {
+    span: nu_protocol::Span,
+    ansi_name: &'static str,
+}
+
 struct AnsiEscapeSequence {
     string_span: nu_protocol::Span,
-    // Store all escapes: (position, length, ansi_name)
-    all_escapes: Vec<(usize, usize, String)>,
+    escapes: Vec<EscapeMatch>,
 }
 
-/// ANSI escape sequence patterns with their corresponding `ansi` command names.
-/// These mappings align with nu-ansi-term's Color enum and Nushell's ansi
-/// command.
-const fn get_ansi_escape_patterns() -> &'static [(&'static str, &'static str)] {
-    &[
-        // Standard colors (30-37) - match nu-ansi-term::Color variants
-        ("\x1b[30m", "black"),   // Color::Black foreground
-        ("\x1b[31m", "red"),     // Color::Red foreground
-        ("\x1b[32m", "green"),   // Color::Green foreground
-        ("\x1b[33m", "yellow"),  // Color::Yellow foreground
-        ("\x1b[34m", "blue"),    // Color::Blue foreground
-        ("\x1b[35m", "magenta"), // Color::Purple/Magenta foreground
-        ("\x1b[36m", "cyan"),    // Color::Cyan foreground
-        ("\x1b[37m", "white"),   // Color::White foreground
-        // Bright/light colors (90-97) - match nu-ansi-term light variants
-        ("\x1b[90m", "dark_gray"),    // Color::DarkGray foreground
-        ("\x1b[91m", "red_bold"),     // Color::LightRed foreground
-        ("\x1b[92m", "green_bold"),   // Color::LightGreen foreground
-        ("\x1b[93m", "yellow_bold"),  // Color::LightYellow foreground
-        ("\x1b[94m", "blue_bold"),    // Color::LightBlue foreground
-        ("\x1b[95m", "magenta_bold"), // Color::LightPurple foreground
-        ("\x1b[96m", "cyan_bold"),    // Color::LightCyan foreground
-        ("\x1b[97m", "white_bold"),   // Color::LightGray foreground
-        // Style attributes (SGR parameters)
-        ("\x1b[0m", "reset"),         // Reset all attributes
-        ("\x1b[1m", "bold"),          // Bold/increased intensity
-        ("\x1b[2m", "dimmed"),        // Dimmed/faint
-        ("\x1b[3m", "italic"),        // Italic
-        ("\x1b[4m", "underline"),     // Underline
-        ("\x1b[5m", "blink"),         // Slow blink
-        ("\x1b[7m", "reverse"),       // Reverse video
-        ("\x1b[8m", "hidden"),        // Hidden/invisible
-        ("\x1b[9m", "strikethrough"), // Crossed out/strike-through
-    ]
+/// ANSI escape sequence patterns as they appear in source code (with literal
+/// \e).
+const SOURCE_ESCAPE_PATTERNS: &[(&str, &str)] = &[
+    // Standard colors (30-37)
+    ("\\e[30m", "black"),
+    ("\\e[31m", "red"),
+    ("\\e[32m", "green"),
+    ("\\e[33m", "yellow"),
+    ("\\e[34m", "blue"),
+    ("\\e[35m", "magenta"),
+    ("\\e[36m", "cyan"),
+    ("\\e[37m", "white"),
+    // Bright/light colors (90-97)
+    ("\\e[90m", "dark_gray"),
+    ("\\e[91m", "red_bold"),
+    ("\\e[92m", "green_bold"),
+    ("\\e[93m", "yellow_bold"),
+    ("\\e[94m", "blue_bold"),
+    ("\\e[95m", "magenta_bold"),
+    ("\\e[96m", "cyan_bold"),
+    ("\\e[97m", "white_bold"),
+    // Style attributes
+    ("\\e[0m", "reset"),
+    ("\\e[1m", "bold"),
+    ("\\e[2m", "dimmed"),
+    ("\\e[3m", "italic"),
+    ("\\e[4m", "underline"),
+    ("\\e[5m", "blink"),
+    ("\\e[7m", "reverse"),
+    ("\\e[8m", "hidden"),
+    ("\\e[9m", "strikethrough"),
+];
+
+/// ANSI escape sequence patterns as interpreted (with actual ESC byte).
+const INTERPRETED_ESCAPE_PATTERNS: &[(&str, &str)] = &[
+    ("\x1b[30m", "black"),
+    ("\x1b[31m", "red"),
+    ("\x1b[32m", "green"),
+    ("\x1b[33m", "yellow"),
+    ("\x1b[34m", "blue"),
+    ("\x1b[35m", "magenta"),
+    ("\x1b[36m", "cyan"),
+    ("\x1b[37m", "white"),
+    ("\x1b[90m", "dark_gray"),
+    ("\x1b[91m", "red_bold"),
+    ("\x1b[92m", "green_bold"),
+    ("\x1b[93m", "yellow_bold"),
+    ("\x1b[94m", "blue_bold"),
+    ("\x1b[95m", "magenta_bold"),
+    ("\x1b[96m", "cyan_bold"),
+    ("\x1b[97m", "white_bold"),
+    ("\x1b[0m", "reset"),
+    ("\x1b[1m", "bold"),
+    ("\x1b[2m", "dimmed"),
+    ("\x1b[3m", "italic"),
+    ("\x1b[4m", "underline"),
+    ("\x1b[5m", "blink"),
+    ("\x1b[7m", "reverse"),
+    ("\x1b[8m", "hidden"),
+    ("\x1b[9m", "strikethrough"),
+];
+
+fn has_ansi_escapes(text: &str) -> bool {
+    INTERPRETED_ESCAPE_PATTERNS
+        .iter()
+        .any(|(pattern, _)| text.contains(pattern))
 }
 
-fn find_all_ansi_escapes(
-    text: &str,
-    _base_span: nu_protocol::Span,
-) -> Vec<(usize, String, String)> {
+fn find_source_escapes(source: &str, base_offset: usize) -> Vec<EscapeMatch> {
     let mut results = Vec::new();
-    let patterns = get_ansi_escape_patterns();
 
-    for (escape_seq, ansi_name) in patterns {
-        let mut start = 0;
-        while let Some(pos) = text[start..].find(escape_seq) {
-            let absolute_pos = start + pos;
-            results.push((
-                absolute_pos,
-                (*escape_seq).to_string(),
-                (*ansi_name).to_string(),
-            ));
-            start = absolute_pos + escape_seq.len();
-        }
-    }
-
-    // Sort by position so violations appear in the order they occur in the string
-    results.sort_by_key(|(pos, _, _)| *pos);
-
-    results
-}
-
-fn find_source_escapes(source: &str) -> Vec<(usize, usize, String)> {
-    let mut results = Vec::new();
-
-    // Patterns as they appear in SOURCE (with literal \e)
-    let patterns = [
-        ("\\e[30m", "black"),
-        ("\\e[31m", "red"),
-        ("\\e[32m", "green"),
-        ("\\e[33m", "yellow"),
-        ("\\e[34m", "blue"),
-        ("\\e[35m", "magenta"),
-        ("\\e[36m", "cyan"),
-        ("\\e[37m", "white"),
-        ("\\e[90m", "dark_gray"),
-        ("\\e[91m", "red_bold"),
-        ("\\e[92m", "green_bold"),
-        ("\\e[93m", "yellow_bold"),
-        ("\\e[94m", "blue_bold"),
-        ("\\e[95m", "magenta_bold"),
-        ("\\e[96m", "cyan_bold"),
-        ("\\e[97m", "white_bold"),
-        ("\\e[0m", "reset"),
-        ("\\e[1m", "bold"),
-        ("\\e[2m", "dimmed"),
-        ("\\e[3m", "italic"),
-        ("\\e[4m", "underline"),
-        ("\\e[5m", "blink"),
-        ("\\e[7m", "reverse"),
-        ("\\e[8m", "hidden"),
-        ("\\e[9m", "strikethrough"),
-    ];
-
-    for (pattern, ansi_name) in &patterns {
+    for (pattern, ansi_name) in SOURCE_ESCAPE_PATTERNS {
         let mut start = 0;
         while let Some(pos) = source[start..].find(pattern) {
             let absolute_pos = start + pos;
-            results.push((absolute_pos, pattern.len(), (*ansi_name).to_string()));
+            let span = nu_protocol::Span::new(
+                base_offset + absolute_pos,
+                base_offset + absolute_pos + pattern.len(),
+            );
+            results.push(EscapeMatch { span, ansi_name });
             start = absolute_pos + pattern.len();
         }
     }
 
-    results.sort_by_key(|(pos, _, _)| *pos);
+    results.sort_by_key(|m| m.span.start);
     results
 }
 
-fn check_string_expression(
-    expr: &Expression,
-    context: &LintContext,
-) -> Vec<(Detection, AnsiEscapeSequence)> {
-    let mut violations = Vec::new();
-
-    if let Expr::String(content) = &expr.expr {
-        // Check for ANSI escapes in the interpreted content
-        let escapes = find_all_ansi_escapes(content, expr.span);
-
-        if escapes.is_empty() {
-            return violations;
-        }
-
-        let total_escapes = escapes.len();
-
-        let violation = Detection::from_global_span(
-            "Use `ansi` command instead of raw ANSI escape sequences",
-            expr.span,
-        )
-        .with_primary_label(if total_escapes == 1 {
-            "ANSI escape sequence"
-        } else {
-            "ANSI escape sequences"
-        });
-
-        // For fixes, we need positions in the SOURCE text (with \e), not interpreted
-        // text (with ESC byte) Get the source text and search for escape
-        // patterns there
-        let source_text = context.plain_text(expr.span);
-        let source_content = if source_text.starts_with('"') && source_text.ends_with('"') {
-            &source_text[1..source_text.len() - 1]
-        } else {
-            source_text
-        };
-
-        // Search for \e[XXm patterns in the source
-        let all_escapes = find_source_escapes(source_content);
-
-        violations.push((
-            violation,
-            AnsiEscapeSequence {
-                string_span: expr.span,
-                all_escapes,
-            },
-        ));
+fn check_plain_string(
+    text: &str,
+    span: nu_protocol::Span,
+    ctx: &LintContext,
+) -> Option<(Detection, AnsiEscapeSequence)> {
+    if !has_ansi_escapes(text) {
+        return None;
     }
 
-    violations
+    let source_text = ctx.plain_text(span);
+
+    let escapes = find_source_escapes(source_text, span.start);
+
+    if escapes.is_empty() {
+        return None;
+    }
+
+    let violation = Detection::from_global_span(
+        "Use `ansi` command instead of raw ANSI escape sequences",
+        span,
+    )
+    .with_primary_label(if escapes.len() == 1 {
+        "ANSI escape sequence"
+    } else {
+        "ANSI escape sequences"
+    });
+
+    Some((
+        violation,
+        AnsiEscapeSequence {
+            string_span: span,
+            escapes,
+        },
+    ))
 }
 
 fn check_expression(
     expr: &Expression,
     context: &LintContext,
 ) -> Vec<(Detection, AnsiEscapeSequence)> {
-    check_string_expression(expr, context)
+    let mut violations = Vec::new();
+
+    match &expr.expr {
+        Expr::String(text) => {
+            if let Some(violation) = check_plain_string(text, expr.span, context) {
+                violations.push(violation);
+            }
+        }
+        Expr::StringInterpolation(parts) => {
+            let string_parts = parts.iter().filter_map(|part| match &part.expr {
+                Expr::String(text) => Some((text.as_str(), part.span)),
+                _ => None,
+            });
+            for (text, span) in string_parts {
+                if let Some(violation) = check_plain_string(text, span, context) {
+                    violations.push(violation);
+                }
+            }
+        }
+        _ => {}
+    }
+
+    violations
 }
 
 struct AnsiOverEscapeCodes;
@@ -212,70 +202,48 @@ impl DetectFix for AnsiOverEscapeCodes {
         violations
     }
 
-    fn fix(&self, ctx: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let string_text = ctx.plain_text(fix_data.string_span);
-        let escapes = &fix_data.all_escapes;
+    fn fix(&self, _ctx: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let escapes = &fix_data.escapes;
 
-        match escapes.len() {
-            1 => {
-                // Single escape sequence - simple replacement
-                let (_, _, ansi_name) = &escapes[0];
-                let fixed_text = format!("$(ansi {ansi_name})");
-
-                Some(Fix::with_explanation(
-                    format!(
-                        "Replace string with ANSI escape sequence with `ansi {ansi_name}` command"
-                    ),
-                    vec![Replacement::new(fix_data.string_span, fixed_text)],
-                ))
-            }
-            2 => {
-                // Check if this is a color+reset pattern
-                let (_pos1, _len1, name1) = &escapes[0];
-                let (_pos2, _len2, name2) = &escapes[1];
-
-                // Common pattern: color/style at start, reset at end
-                (name2 == "reset" || name1 == "reset").then(|| {
-                    let content = if string_text.starts_with('"') && string_text.ends_with('"') {
-                        &string_text[1..string_text.len() - 1]
-                    } else {
-                        string_text
-                    };
-
-                    // Get the color/style name (the non-reset one)
-                    let color_name = if name1 == "reset" { name2 } else { name1 };
-
-                    // Reconstruct with $(ansi ...) interpolations
-                    let mut result = String::new();
-                    let mut last_end = 0;
-
-                    for (pos, len, ansi_name) in escapes {
-                        // Add text before this escape
-                        result.push_str(&content[last_end..*pos]);
-                        // Add $(ansi ...) interpolation
-                        write!(&mut result, "$(ansi {ansi_name})").unwrap();
-                        last_end = pos + len;
-                    }
-
-                    // Add any remaining text after the last escape
-                    result.push_str(&content[last_end..]);
-
-                    // Wrap in double quotes for interpolated string
-                    let fixed_text = format!("\"{result}\"");
-                    Fix::with_explanation(
-                        format!(
-                            "Replace string with ANSI escape sequences with `ansi {color_name}` \
-                             and `ansi reset` commands"
-                        ),
-                        vec![Replacement::new(fix_data.string_span, fixed_text)],
-                    )
-                })
-            }
-            _ => {
-                // Three or more escape sequences - manual rewriting is better
-                None
-            }
+        if escapes.len() != 2 {
+            return None;
         }
+
+        let first = &escapes[0];
+        let second = &escapes[1];
+
+        // Must be color+reset pattern
+        if second.ansi_name != "reset" && first.ansi_name != "reset" {
+            return None;
+        }
+
+        let color_name = if first.ansi_name == "reset" {
+            second.ansi_name
+        } else {
+            first.ansi_name
+        };
+
+        // Build replacements: replace each escape sequence span with (ansi name)
+        // and change the opening quote from " to $"
+        let mut replacements = Vec::with_capacity(3);
+
+        // Replace opening " with $"
+        let opening_quote_span =
+            nu_protocol::Span::new(fix_data.string_span.start, fix_data.string_span.start + 1);
+        replacements.push(Replacement::new(opening_quote_span, "$\"".to_string()));
+
+        // Replace each escape sequence with (ansi name)
+        for escape in escapes {
+            let replacement = format!("(ansi {})", escape.ansi_name);
+            replacements.push(Replacement::new(escape.span, replacement));
+        }
+
+        Some(Fix::with_explanation(
+            format!(
+                "Replace ANSI escape sequences with `ansi {color_name}` and `ansi reset` commands"
+            ),
+            replacements,
+        ))
     }
 }
 

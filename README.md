@@ -59,7 +59,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `merge_multiline_print` (auto-fix)
 - `turn_positional_into_stream_input` (auto-fix)
 - `shorten_with_compound_assignment` (auto-fix)
-- `use_regex_operators` (auto-fix)
+- `contains_to_like_regex_operators` (auto-fix)
 - `ansi_over_escape_codes` (auto-fix)
 
 `parsing` - Better ways to parse and transform text data.
@@ -99,7 +99,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `use_builtin_date` (auto-fix)
 - `use_sys_disks_instead_of_df` (auto-fix)
 - `echo_just_identity` (auto-fix)
-- `use_builtin_find` (auto-fix)
+- `find_to_glob` (auto-fix)
 - `use_sys_mem_instead_of_free` (auto-fix)
 - `use_builtin_grep` (auto-fix)
 - `head_to_first` (auto-fix)
@@ -108,7 +108,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `use_builtin_ls` (auto-fix)
 - `use_builtin_pager` (auto-fix)
 - `use_builtin_read` (auto-fix)
-- `use_builtin_sed` (auto-fix)
+- `sed_to_str_replace` (auto-fix)
 - `use_builtin_sort` (auto-fix)
 - `use_builtin_tac` (auto-fix)
 - `tail_to_last` (auto-fix)
@@ -207,12 +207,12 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `forbid_excessive_nesting`
 - `max_function_body_length`
 - `replace_if_else_chain_with_match` (auto-fix)
-- `curly_block_body_spacing` (auto-fix)
-- `curly_closure_param_spacing` (auto-fix)
+- `block_brace_spacing` (auto-fix)
+- `closure_brace_pipe_spacing` (auto-fix)
 - `no_trailing_spaces` (auto-fix)
 - `omit_list_commas` (auto-fix)
 - `pipe_spacing` (auto-fix)
-- `curly_record_spacing` (auto-fix)
+- `record_brace_spacing` (auto-fix)
 - `reflow_wide_pipelines` (auto-fix)
 - `reflow_wide_lists` (auto-fix)
 - `wrap_wide_records` (auto-fix)

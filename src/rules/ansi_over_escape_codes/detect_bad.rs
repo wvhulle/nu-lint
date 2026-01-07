@@ -46,11 +46,6 @@ fn detect_white_color() {
 }
 
 #[test]
-fn detect_in_interpolated_string() {
-    RULE.assert_detects(r#"let msg = $"Status: \e[32mOK\e[0m""#);
-}
-
-#[test]
 fn detect_multiple_sequences() {
     let code = r#"print "\e[31mError:\e[0m \e[1mFailed\e[0m""#;
     // One violation per string (not per escape sequence)
@@ -65,4 +60,9 @@ fn detect_bright_red() {
 #[test]
 fn detect_italic_style() {
     RULE.assert_detects(r#"print "\e[3mItalic\e[0m""#);
+}
+
+#[test]
+fn detect_in_interpolated_string() {
+    RULE.assert_detects(r#"let msg = $"Status: \e[32mOK\e[0m""#);
 }

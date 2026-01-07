@@ -39,23 +39,21 @@ impl DetectFix for ExitOnlyInMain {
         let functions = context.custom_commands();
 
         // Then, find all exit calls and check if they're in non-main functions
-        let violations = context.detect(|expr, ctx| {
+        let violations = context.detect_single(|expr, ctx| {
             if let Expr::Call(call) = &expr.expr {
                 if !is_exit_call(call, ctx) {
-                    return vec![];
+                    return None;
                 }
 
                 // Check if this exit is inside a function
-                let Some(function_def) = call.head.find_containing_function(&functions, ctx) else {
-                    return vec![];
-                };
+                let function_def = call.head.find_containing_function(&functions, ctx)?;
 
                 // Allow exit in main function
                 if function_def.is_main() {
-                    return vec![];
+                    return None;
                 }
 
-                return vec![
+                return Some(
                     Detection::from_global_span(
                         format!(
                             "Function '{}' uses 'exit' which terminates the entire script",
@@ -65,9 +63,9 @@ impl DetectFix for ExitOnlyInMain {
                     )
                     .with_primary_label("exit call")
                     .with_extra_label(format!("inside '{}'", function_def.name), expr.span),
-                ];
+                );
             }
-            vec![]
+            None
         });
 
         Self::no_fix(violations)

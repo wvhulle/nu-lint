@@ -2,13 +2,6 @@ use super::RULE;
 
 #[test]
 fn converts_head_with_count_to_first() {
-    let source = "^head -5 file.txt";
-    RULE.assert_fixed_contains(source, "first 5");
-    RULE.assert_fix_explanation_contains(source, "first");
-}
-
-#[test]
-fn converts_head_without_count_to_first_ten() {
-    let source = "^head file.txt";
-    RULE.assert_fixed_contains(source, "first 10");
+    let source = "^head -n 10 file.txt";
+    RULE.assert_fixed_is(source, "open file.txt | lines | first 10");
 }

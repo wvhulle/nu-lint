@@ -48,12 +48,12 @@ impl DetectFix for CollapsibleIf {
         "collapsible_if"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Collapse nested if statements without else clauses into a single if with combined \
          conditions"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/control_flow.html")
     }
 

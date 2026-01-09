@@ -149,15 +149,15 @@ impl DetectFix for MergeGetCellPath {
         "merge_get_cell_path"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Prefer combined cell paths over chained 'get' commands"
     }
 
-    fn help(&self) -> Option<&'static str> {
+    fn long_description(&self) -> Option<&'static str> {
         Some("Combine into single 'get' with dot-separated cell path")
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/navigating_structured_data.html")
     }
 

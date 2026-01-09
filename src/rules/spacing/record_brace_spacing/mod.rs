@@ -66,11 +66,11 @@ impl DetectFix for RecordBraceSpacing {
         "record_brace_spacing"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Record braces should touch content: `{a: 1}` not `{ a: 1 }`"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/style_guide.html#one-line-format")
     }
 

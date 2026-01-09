@@ -94,11 +94,11 @@ impl DetectFix for UseSysMemInsteadOfFree {
         "use_sys_mem_instead_of_free"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Use Nu's 'sys mem' command instead of 'free' for memory information"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/sys_mem.html")
     }
 

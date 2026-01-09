@@ -123,11 +123,11 @@ impl DetectFix for ShortenWithCompoundAssignment {
         "shorten_with_compound_assignment"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Compound assignment operators simplify simple arithmetic."
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/operators.html")
     }
 

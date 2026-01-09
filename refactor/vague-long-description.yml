@@ -1,7 +1,8 @@
+
 # yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
 
-id: long-descriptions
-message: Rule descriptions should not be too long
+id: description
+message: Rule descriptions should straightforward
 severity: warning # error, warning, info, hint
 language: Rust
 rule:
@@ -9,8 +10,10 @@ rule:
     inside:
         stopBy:
           kind: function_item
-        pattern: fn short_description
+        any:
+          - pattern: fn short_description
+          - pattern: fn long_description
     has:
       kind: string_content
-      not:
-            regex: ^.{30,70}$
+      any:
+        - regex: (?i).*prefer.*

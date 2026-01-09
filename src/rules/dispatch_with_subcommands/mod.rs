@@ -84,11 +84,11 @@ impl DetectFix for DispatchWithSubcommands {
         "dispatch_with_subcommands"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Use native 'def \"main subcommand\"' instead of match-based command dispatch in main"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/custom_commands.html#subcommands")
     }
 

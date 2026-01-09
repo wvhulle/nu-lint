@@ -213,11 +213,11 @@ impl DetectFix for UseBuiltinGrep {
         "use_builtin_grep"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Use Nu's 'find' or 'where' instead of 'grep' for better data handling"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/find.html")
     }
 

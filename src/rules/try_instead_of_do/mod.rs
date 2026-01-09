@@ -56,11 +56,11 @@ impl DetectFix for TryInsteadOfDo {
         "try_instead_of_do"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Use 'try' blocks instead of 'do' blocks for error-prone operations"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/try.html")
     }
 

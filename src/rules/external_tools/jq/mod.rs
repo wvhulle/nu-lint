@@ -268,11 +268,11 @@ impl DetectFix for ReplaceJqWithNuGet {
         "replace_jq_with_nu_get"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Prefer Nushell built-ins over jq for data operations that have direct equivalents"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/from_json.html")
     }
 

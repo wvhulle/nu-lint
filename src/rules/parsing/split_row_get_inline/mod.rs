@@ -96,16 +96,16 @@ impl DetectFix for SplitGetRule {
         "split_row_get_inline"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Replace chained 'split row | get INDEX' pattern in a single pipeline with 'parse' for \
          structured text extraction"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/parse.html")
     }
 
-    fn help(&self) -> Option<&'static str> {
+    fn long_description(&self) -> Option<&'static str> {
         Some(
             r#"Chaining 'split row' with indexed 'get' access is verbose and error-prone because:
 - You need to count field positions manually

@@ -17,7 +17,7 @@ impl DetectFix for AvoidSelfImport {
         "avoid_self_import"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Avoid importing the current script from itself; functions are already available in scope"
     }
 

@@ -78,12 +78,12 @@ impl DetectFix for GlobMayDropQuotes {
         "glob_may_drop_quotes"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Glob patterns in quotes are treated as literal strings. Commands expecting glob patterns \
          work better with bare (unquoted) glob expressions for automatic file matching."
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/lang-guide/chapters/types/basic_types/glob.html")
     }
 

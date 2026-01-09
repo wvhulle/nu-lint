@@ -66,11 +66,11 @@ impl DetectFix for UseBuiltinPager {
         "use_builtin_pager"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Use Nu's 'explore' for interactive viewing or 'watch' for monitoring file changes"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/explore.html")
     }
 

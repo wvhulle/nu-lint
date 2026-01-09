@@ -137,7 +137,7 @@ fn with_extended_help(violation: &Violation, source_code: &str) -> Violation {
         || violation.clone(),
         |text| {
             let mut v = violation.clone();
-            v.help = Some(text);
+            v.long_description = Some(text);
             v
         },
     )
@@ -145,11 +145,11 @@ fn with_extended_help(violation: &Violation, source_code: &str) -> Violation {
 
 fn build_help_text(violation: &Violation, source_code: &str) -> Option<String> {
     let parts: Vec<String> = [
-        violation.help.as_deref().map(String::from),
+        violation.long_description.as_deref().map(String::from),
         violation
             .fix
             .as_ref()
-            .map(|fix| format_fix(fix, source_code, violation.help.is_some()))
+            .map(|fix| format_fix(fix, source_code, violation.long_description.is_some()))
             .filter(|s| !s.is_empty()),
         violation
             .doc_url

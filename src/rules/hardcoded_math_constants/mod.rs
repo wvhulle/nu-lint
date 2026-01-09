@@ -90,15 +90,15 @@ impl DetectFix for HardcodedMathConstants {
         "hardcoded_math_constants"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Hardcoded mathematical constants should use std/math constants instead"
     }
 
-    fn help(&self) -> Option<&'static str> {
+    fn long_description(&self) -> Option<&'static str> {
         Some("Add 'use std/math' at the top of your file, then use $math constants")
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/modules.html#using-modules")
     }
 

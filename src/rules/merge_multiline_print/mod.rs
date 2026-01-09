@@ -212,15 +212,15 @@ impl DetectFix for MergeMultilinePrint {
         "merge_multiline_print"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Consecutive print statements can be merged into a single print with a multiline string"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/working_with_strings.html#string-formats-at-a-glance")
     }
 
-    fn help(&self) -> Option<&'static str> {
+    fn long_description(&self) -> Option<&'static str> {
         Some(
             "Merge consecutive print statements into a single print with a multiline string for \
              cleaner code. Use `print \"line1\\nline2\\nline3\"` instead of multiple print calls.",

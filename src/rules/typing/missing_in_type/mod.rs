@@ -75,11 +75,11 @@ impl DetectFix for TypeNuPipelineInput {
         "missing_in_type"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Custom commands that use $in should have specific input type annotations"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/custom_commands.html#input-output-types")
     }
 

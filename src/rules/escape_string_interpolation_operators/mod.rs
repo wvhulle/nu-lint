@@ -250,11 +250,11 @@ impl DetectFix for EscapeStringInterpolationOperators {
         "escape_string_interpolation_operators"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Escape braces in string interpolations to avoid runtime errors"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/working_with_strings.html#string-interpolation")
     }
 

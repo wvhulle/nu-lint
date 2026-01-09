@@ -33,11 +33,11 @@ impl DetectFix for SliceToDrop {
         "slice_to_drop"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Use 'drop' instead of 'slice ..-N' to drop last N-1 elements"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/drop.html")
     }
 

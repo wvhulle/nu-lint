@@ -16,7 +16,7 @@ impl DetectFix for AvoidNuSubprocess {
         "avoid_nu_subprocess"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Spawning `nu -c` from within a Nu script is redundant; call functions directly instead"
     }
 

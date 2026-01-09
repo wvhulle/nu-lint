@@ -104,11 +104,11 @@ impl DetectFix for NonFinalFailureCheck {
         "non_final_failure_check"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Only the exit code of the last external command in a pipeline is reported."
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/blog/2025-10-15-nushell_v0_108_0.html#pipefail-16449-toc")
     }
 

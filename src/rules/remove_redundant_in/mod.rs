@@ -75,11 +75,11 @@ impl DetectFix for RemoveRedundantIn {
         "remove_redundant_in"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Remove redundant $in at the start of pipelines - it's implicit in Nushell"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/special_variables.html")
     }
 

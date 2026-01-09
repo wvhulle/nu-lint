@@ -12,9 +12,10 @@ pub mod add_url;
 pub mod non_fatal_catch;
 
 pub fn extract_field_name(key: &Expression, context: &LintContext) -> String {
-    StringFormat::from_expression(key, context)
-        .map(|format| format.content().to_string())
-        .unwrap_or_else(|| key.span_text(context).to_string())
+    StringFormat::from_expression(key, context).map_or_else(
+        || key.span_text(context).to_string(),
+        |format| format.content().to_string(),
+    )
 }
 
 pub fn has_field(record: &[RecordItem], field_name: &str, context: &LintContext) -> bool {

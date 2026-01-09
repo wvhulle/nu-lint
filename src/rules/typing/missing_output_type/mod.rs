@@ -81,11 +81,11 @@ impl DetectFix for TypeCommandOutput {
         "missing_output_type"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Custom commands that produce output should have specific output type annotations"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/custom_commands.html#input-output-types")
     }
 

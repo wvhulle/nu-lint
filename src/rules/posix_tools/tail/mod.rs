@@ -23,11 +23,11 @@ impl DetectFix for UseBuiltinTail {
         "tail_to_last"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Use Nu's 'last' command instead of 'tail' for cleaner syntax"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/last.html")
     }
 

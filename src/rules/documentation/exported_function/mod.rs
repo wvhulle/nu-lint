@@ -73,14 +73,14 @@ impl DetectFix for AddDocCommentExportedFn {
         "add_doc_comment_exported_fn"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Exported functions should have documentation comments"
     }
-    fn help(&self) -> Option<&'static str> {
+    fn long_description(&self) -> Option<&'static str> {
         Some("Add a documentation comment (starting with #) above the export.")
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/custom_commands.html#documenting-your-command")
     }
 

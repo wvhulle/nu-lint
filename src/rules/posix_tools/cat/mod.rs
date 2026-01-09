@@ -156,11 +156,11 @@ impl DetectFix for UseBuiltinCat {
         "use_builtin_cat"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Use Nu's 'open' command instead of 'cat' for better file handling"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/open.html")
     }
 

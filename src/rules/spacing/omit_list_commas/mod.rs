@@ -68,11 +68,11 @@ impl DetectFix for OmitListCommas {
         "omit_list_commas"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Omit commas between list items."
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/style_guide.html#basic")
     }
 

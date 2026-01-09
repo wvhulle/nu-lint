@@ -53,11 +53,11 @@ impl DetectFix for KebabCaseCommands {
         "kebab_case_commands"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Custom commands should use kebab-case naming convention"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/style_guide.html#commands")
     }
 

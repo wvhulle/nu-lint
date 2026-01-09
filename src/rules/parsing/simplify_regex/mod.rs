@@ -115,11 +115,11 @@ impl DetectFix for SimplifyRegexRule {
         "simplify_regex_parse"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "You can rewrite 'parse --regex' for simple delimiters using simpler capture group syntax."
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/parse.html")
     }
 

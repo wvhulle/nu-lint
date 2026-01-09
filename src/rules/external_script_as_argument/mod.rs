@@ -61,12 +61,12 @@ impl DetectFix for ExternalScriptAsArgument {
         "external_script_as_argument"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Avoid passing external scripts as arguments to custom commands; define them as functions \
          instead"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/modules.html")
     }
 

@@ -17,11 +17,11 @@ impl DetectFix for UseSysUsersInsteadOfUsers {
         "use_sys_users_instead_of_users"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Use Nu's 'sys users | get user' command instead of 'users'"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/sys_users.html")
     }
 

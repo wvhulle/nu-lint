@@ -97,11 +97,11 @@ impl DetectFix for SnakeCaseVariables {
         "snake_case_variables"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Variables should use snake_case naming convention"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/style_guide.html#variables-and-command-parameters")
     }
 

@@ -177,11 +177,11 @@ impl DetectFix for LinesEachParseRule {
         "lines_each_to_parse"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Simplify 'lines | each { parse }' to 'lines | parse'"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/parse.html")
     }
 

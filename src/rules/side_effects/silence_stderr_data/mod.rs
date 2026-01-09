@@ -140,7 +140,7 @@ impl DetectFix for SilenceStderrData {
         "silence_stderr_data"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "External commands that write data to stderr should not have stderr redirected to ignore"
     }
 

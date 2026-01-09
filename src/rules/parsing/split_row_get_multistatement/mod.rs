@@ -316,16 +316,16 @@ impl DetectFix for SplitRowGetMultistatement {
         "split_row_get_multistatement"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Replace the pattern where 'split row' is assigned to a variable and later accessed by \
          index with 'parse' for structured text extraction"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/parse.html")
     }
 
-    fn help(&self) -> Option<&'static str> {
+    fn long_description(&self) -> Option<&'static str> {
         Some(
             r#"Storing 'split row' results in a variable and then accessing by index is problematic:
 - The variable name doesn't indicate what fields are available

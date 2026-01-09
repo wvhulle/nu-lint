@@ -99,12 +99,12 @@ impl DetectFix for ReflowWidePipelines {
         "reflow_wide_pipelines"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Pipelines exceeding the configured character limit should be split across multiple lines \
          for readability"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/style_guide.html#multi-line-format")
     }
 

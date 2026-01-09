@@ -17,11 +17,11 @@ impl DetectFix for DynamicScriptImport {
         "dynamic_script_import"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Dynamic import paths cannot be statically validated and may lead to runtime errors."
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/modules.html")
     }
 

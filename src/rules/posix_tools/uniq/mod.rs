@@ -140,11 +140,11 @@ impl DetectFix for UseBuiltinUniq {
         "use_builtin_uniq"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Use Nu's 'uniq' command for structured data support"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/uniq.html")
     }
 

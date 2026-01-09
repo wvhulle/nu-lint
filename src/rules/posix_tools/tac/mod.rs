@@ -18,11 +18,11 @@ impl DetectFix for UseBuiltinTac {
         "use_builtin_tac"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Use Nu's 'open --raw | lines | reverse' instead of 'tac' for reversing file content"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/reverse.html")
     }
 

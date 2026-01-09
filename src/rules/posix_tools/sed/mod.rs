@@ -16,11 +16,11 @@ impl DetectFix for UseBuiltinSed {
         "sed_to_str_replace"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Use Nu's 'str replace' instead of 'sed'"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/str_replace.html")
     }
 
@@ -36,8 +36,8 @@ impl DetectFix for UseBuiltinSed {
                 text == "-f" || (text.starts_with("-f") && text.len() > 2) ||
                 // Non-substitution sed commands (looking for /d, /p, etc. patterns)
                 (text.contains('/') && (
-                    text.ends_with("/d") || text.ends_with("/p") || 
-                    text.ends_with("/a") || text.ends_with("/i") || 
+                    text.ends_with("/d") || text.ends_with("/p") ||
+                    text.ends_with("/a") || text.ends_with("/i") ||
                     text.ends_with("/c")
                 )) ||
                 // Multiple commands separated by semicolon

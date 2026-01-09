@@ -40,17 +40,17 @@ impl DetectFix for TooManyLines {
         "max_function_body_length"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Function bodies should be short to maintain readability"
     }
 
-    fn help(&self) -> Option<&'static str> {
+    fn long_description(&self) -> Option<&'static str> {
         Some(
             "Consider refactoring into smaller, more focused functions with clear responsibilities",
         )
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/custom_commands.html")
     }
 

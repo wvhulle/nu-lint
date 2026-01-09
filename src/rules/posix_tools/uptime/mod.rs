@@ -18,11 +18,11 @@ impl DetectFix for UseSysHostInsteadOfUptime {
         "use_sys_host_instead_of_uptime"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Use Nu's 'sys host | get uptime' command instead of 'uptime'"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/sys_host.html")
     }
 

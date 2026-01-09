@@ -33,11 +33,11 @@ impl DetectFix for SliceToLast {
         "slice_to_last"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Use 'last' instead of 'slice (-N)..' to get last N elements"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/last.html")
     }
 

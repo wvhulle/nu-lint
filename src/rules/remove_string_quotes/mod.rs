@@ -42,11 +42,11 @@ impl DetectFix for UnnecessaryStringQuotes {
         "string_may_be_bare"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Quoted strings that can be written as bare words should omit the quotes for readability"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/working_with_strings.html#bare-word-strings")
     }
 

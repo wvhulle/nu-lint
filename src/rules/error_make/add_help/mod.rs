@@ -47,11 +47,11 @@ impl DetectFix for AddHelpToError {
         "add_help_to_error"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "error make should include 'help' field to guide users toward a solution"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/error_make.html")
     }
 

@@ -31,11 +31,11 @@ impl DetectFix for LinesInsteadOfSplit {
         "lines_instead_of_split"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         r#"Use 'lines' instead of 'split row "\n"' for better performance and clarity"#
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/lines.html")
     }
 

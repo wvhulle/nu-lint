@@ -95,11 +95,11 @@ impl DetectFix for ClosureBodySpacing {
         "closure_pipe_body_spacing"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Closure body needs spaces: `{|x| body }` not `{|x|body}`"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/style_guide.html#one-line-format")
     }
 

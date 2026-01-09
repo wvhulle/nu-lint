@@ -71,11 +71,11 @@ impl DetectFix for UnnecessaryMut {
         "unnecessary_mut"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Variables should only be marked 'mut' when they are actually reassigned"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/variables.html#mutable-variables")
     }
 

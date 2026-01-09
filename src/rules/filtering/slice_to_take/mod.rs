@@ -33,11 +33,11 @@ impl DetectFix for SliceToTake {
         "slice_to_take"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Use 'take' instead of 'slice 0..N' to take first N elements"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/take.html")
     }
 

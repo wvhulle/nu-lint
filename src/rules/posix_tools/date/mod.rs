@@ -108,11 +108,11 @@ impl DetectFix for UseBuiltinDate {
         "use_builtin_date"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Use 'date now' instead of external date"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/date_now.html")
     }
 

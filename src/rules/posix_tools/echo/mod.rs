@@ -158,11 +158,11 @@ impl DetectFix for UseBuiltinEcho {
         "echo_just_identity"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Do not use the built-in (or external) 'echo' as it's just an identity function in Nushell."
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/thinking_in_nu.html")
     }
 

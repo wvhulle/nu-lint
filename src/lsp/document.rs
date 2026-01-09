@@ -242,7 +242,7 @@ fn build_message(violation: &Violation) -> String {
     );
 
     violation
-        .help
+        .long_description
         .as_ref()
         .map_or(base_message.clone(), |help| {
             format!("{base_message}\n\nHelp: {help}")

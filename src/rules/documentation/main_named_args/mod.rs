@@ -61,15 +61,15 @@ impl DetectFix for MainNamedArgsDocs {
         "main_named_args_docs"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Named parameters (flags) in main functions should have documentation comments"
     }
 
-    fn help(&self) -> Option<&'static str> {
+    fn long_description(&self) -> Option<&'static str> {
         Some("Add a documentation comment after the parameter: # Description")
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/custom_commands.html#flags")
     }
 

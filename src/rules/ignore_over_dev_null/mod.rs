@@ -178,11 +178,11 @@ impl DetectFix for IgnoreOverDevNull {
         "ignore_over_dev_null"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Use '| ignore' instead of redirecting to /dev/null"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/ignore.html")
     }
 

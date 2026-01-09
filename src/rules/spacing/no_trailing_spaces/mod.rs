@@ -55,11 +55,11 @@ impl DetectFix for NoTrailingSpaces {
         "no_trailing_spaces"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Eliminate trailing spaces at the end of lines"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/style_guide.html#multi-line-format")
     }
 

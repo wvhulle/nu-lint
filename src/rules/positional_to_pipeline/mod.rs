@@ -197,16 +197,16 @@ impl DetectFix for TurnPositionalIntoStreamInput {
         "turn_positional_into_stream_input"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Custom commands with data parameters used as pipeline input should receive that data via \
          pipeline input ($in) instead."
     }
 
-    fn help(&self) -> Option<&'static str> {
+    fn long_description(&self) -> Option<&'static str> {
         Some("Pipeline input enables better composability and streaming performance")
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/pipelines.html")
     }
 
@@ -253,28 +253,8 @@ impl DetectFix for TurnPositionalIntoStreamInput {
         var_spans.sort_by_key(|span| span.start);
         var_spans.dedup();
 
-        // Filter out overlapping spans (keep the largest span for each start position)
-        let filtered_spans: Vec<Span> =
-            var_spans.iter().copied().fold(Vec::new(), |mut acc, span| {
-                if let Some(last) = acc.last_mut() {
-                    // If this span starts at the same position, keep the larger one
-                    if span.start == last.start {
-                        if span.end > last.end {
-                            *last = span;
-                        }
-                    } else if span.start >= last.end {
-                        // Non-overlapping span
-                        acc.push(span);
-                    }
-                    // Skip spans that start within the previous span
-                } else {
-                    acc.push(span);
-                }
-                acc
-            });
-
         // Check if the first usage is at the start of a pipeline (i.e., "$param | ...")
-        let first_span = filtered_spans.first()?;
+        let first_span = var_spans.first()?;
         let first_is_pipeline_start = context
             .plain_text(*first_span)
             .trim()
@@ -299,7 +279,7 @@ impl DetectFix for TurnPositionalIntoStreamInput {
         let mut replacements = Vec::new();
 
         // Build replacements for variable usages
-        for (i, &span) in filtered_spans.iter().enumerate() {
+        for (i, &span) in var_spans.iter().enumerate() {
             if i == 0 && remove_pipeline_prefix {
                 // For first usage followed by " | ", remove both the var and the separator
                 let extended_span = Span::new(span.start, span.end + 3);

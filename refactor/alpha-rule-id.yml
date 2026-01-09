@@ -1,16 +1,18 @@
+
 # yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
 
-id: long-descriptions
-message: Rule descriptions should not be too long
+id: alpha-rule-id
+message: IDs of rules should be lowercase letters separated by spaces
 severity: warning # error, warning, info, hint
 language: Rust
 rule:
     kind: string_literal
     inside:
-        stopBy:
-          kind: function_item
-        pattern: fn short_description
+      kind: block
+      inside:
+        kind: function_item
+        pattern: fn id
     has:
       kind: string_content
       not:
-            regex: ^.{30,70}$
+        regex: ^(?:[a-z]+_)+[a-z]+$

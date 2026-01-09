@@ -154,11 +154,11 @@ impl DetectFix for UseBuiltinSort {
         "use_builtin_sort"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Use Nu's 'sort' command for better data type support"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/sort.html")
     }
 

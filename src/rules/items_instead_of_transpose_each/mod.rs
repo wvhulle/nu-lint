@@ -268,11 +268,11 @@ impl DetectFix for ItemsInsteadOfTransposeEach {
         "items_instead_of_transpose_each"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Use 'items' instead of 'transpose | each' when iterating over record entries"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/items.html")
     }
 

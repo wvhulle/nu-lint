@@ -95,11 +95,11 @@ impl DetectFix for DescriptiveErrorMessages {
         "descriptive_error_messages"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Error messages should be descriptive and actionable"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/creating_errors.html")
     }
 

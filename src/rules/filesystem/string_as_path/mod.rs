@@ -146,11 +146,11 @@ impl DetectFix for StringAsPath {
         "string_param_as_path"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Parameter typed as string but used as filesystem path"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/types_of_data.html#paths")
     }
 

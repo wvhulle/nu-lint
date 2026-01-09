@@ -16,18 +16,18 @@ impl DetectFix for NuDeprecated {
         "nu_deprecated"
     }
 
-    fn help(&self) -> Option<&'static str> {
+    fn long_description(&self) -> Option<&'static str> {
         Some(formatcp!(
             "nu-lint expects Nushell {NU_PARSER_VERSION}. If your installed version differs, this \
              may cause false positives."
         ))
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Nushell parser detected deprecated command or flag usage"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/")
     }
 

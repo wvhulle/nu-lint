@@ -27,11 +27,11 @@ impl DetectFix for ScreamingSnakeConstants {
         "screaming_snake_constants"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Constants should use SCREAMING_SNAKE_CASE naming convention"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/style_guide.html#environment-variables")
     }
 

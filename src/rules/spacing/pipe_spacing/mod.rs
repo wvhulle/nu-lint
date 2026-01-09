@@ -190,11 +190,11 @@ impl DetectFix for PipeSpacing {
         "pipe_spacing"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Pipes should have exactly one space before and after when on the same line"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/style_guide.html#basic")
     }
 

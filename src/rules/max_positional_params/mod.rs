@@ -15,11 +15,11 @@ impl DetectFix for MaxPositionalParams {
         "max_positional_params"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Custom commands should have ≤ 2 positional parameters"
     }
 
-    fn help(&self) -> Option<&'static str> {
+    fn long_description(&self) -> Option<&'static str> {
         Some("Consider using named flags (--flag) for parameters beyond the first 2")
     }
 

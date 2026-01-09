@@ -14,18 +14,33 @@ use crate::{
 
 /// Trait for implementing lint rules with typed fix data.
 pub trait DetectFix: Send + Sync + 'static {
+    /// Data used to construct a fix (optional)
     type FixInput<'a>: Send + Sync;
 
+    /// Should only contain lower-case letters and underscores. Imperative,
+    /// descriptive and around 2-4 keywords.
     fn id(&self) -> &'static str;
-    fn explanation(&self) -> &'static str;
-    fn doc_url(&self) -> Option<&'static str> {
-        None
-    }
-    fn help(&self) -> Option<&'static str> {
-        None
-    }
+
+    /// Default lint level of rule
     fn level(&self) -> LintLevel;
+
+    /// Create a vector of detections of violations of the rule
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)>;
+
+    /// Description shown next to rule ID in table
+    fn short_description(&self) -> &'static str;
+
+    /// Optional long description formatted as additional help next to
+    /// violations. Remove if too short and use `short_description` instead.
+    fn long_description(&self) -> Option<&'static str> {
+        None
+    }
+
+    /// Optional hyperlink to (semi-)official Nu shell documentation or style
+    /// guide
+    fn source_link(&self) -> Option<&'static str> {
+        None
+    }
     fn fix(&self, _context: &LintContext, _fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         None
     }
@@ -49,8 +64,8 @@ pub trait DetectFix: Send + Sync + 'static {
 /// impl.
 pub trait Rule: Send + Sync {
     fn id(&self) -> &'static str;
-    fn explanation(&self) -> &'static str;
-    fn doc_url(&self) -> Option<&'static str>;
+    fn short_description(&self) -> &'static str;
+    fn source_link(&self) -> Option<&'static str>;
     fn level(&self) -> LintLevel;
     fn has_auto_fix(&self) -> bool;
     fn check(&self, context: &LintContext) -> Vec<Violation>;
@@ -61,12 +76,12 @@ impl<T: DetectFix> Rule for T {
         DetectFix::id(self)
     }
 
-    fn explanation(&self) -> &'static str {
-        DetectFix::explanation(self)
+    fn short_description(&self) -> &'static str {
+        DetectFix::short_description(self)
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
-        DetectFix::doc_url(self)
+    fn source_link(&self) -> Option<&'static str> {
+        DetectFix::source_link(self)
     }
 
     fn level(&self) -> LintLevel {
@@ -81,9 +96,9 @@ impl<T: DetectFix> Rule for T {
         self.detect(context)
             .into_iter()
             .map(|(detected, fix_data)| {
-                let help = self.help();
+                let long_description = self.long_description();
                 let fix = self.fix(context, &fix_data);
-                Violation::from_detected(detected, fix, help)
+                Violation::from_detected(detected, fix, long_description)
             })
             .collect()
     }

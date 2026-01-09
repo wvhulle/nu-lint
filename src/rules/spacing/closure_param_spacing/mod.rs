@@ -74,11 +74,11 @@ impl DetectFix for ClosureParamSpacing {
         "closure_brace_pipe_spacing"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Closure parameter pipe should directly follow opening brace: `{|` not `{ |`"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/style_guide.html#one-line-format")
     }
 

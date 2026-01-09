@@ -165,7 +165,7 @@ impl Cli {
         let max_id_len = sorted_rules.iter().map(|r| r.id().len()).max().unwrap_or(0) + 2; // +2 for backticks
         let max_desc_len = sorted_rules
             .iter()
-            .map(|r| r.explanation().len())
+            .map(|r| r.short_description().len())
             .max()
             .unwrap_or(0);
 
@@ -198,7 +198,7 @@ impl Cli {
             println!(
                 "| {:<width_id$} | {:<width_desc$} | {:<7} | {:<8} |",
                 id_formatted,
-                rule.explanation(),
+                rule.short_description(),
                 level,
                 auto_fix,
                 width_id = max_id_len,
@@ -235,8 +235,8 @@ impl Cli {
 
         if let Some(rule) = rule {
             println!("Rule: {}", rule.id());
-            println!("Explanation: {}", rule.explanation());
-            if let Some(url) = rule.doc_url() {
+            println!("Explanation: {}", rule.short_description());
+            if let Some(url) = rule.source_link() {
                 println!("Documentation: {url}");
             }
         } else {

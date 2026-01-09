@@ -88,11 +88,11 @@ impl DetectFix for UseSysHostInsteadOfUname {
         "use_sys_host_instead_of_uname"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Use Nu's 'sys host' command instead of 'uname' for system information"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/sys_host.html")
     }
 

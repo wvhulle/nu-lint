@@ -23,11 +23,11 @@ impl DetectFix for AlwaysHatExtCall {
         "add_hat_external_commands"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Always use the '^' prefix on external commands"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/running_externals.html")
     }
 

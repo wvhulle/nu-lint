@@ -104,11 +104,11 @@ impl DetectFix for UseBuiltinCd {
         "use_builtin_cd"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Use Nu's built-in 'cd' instead of external cd command"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/cd.html")
     }
 

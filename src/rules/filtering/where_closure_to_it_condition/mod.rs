@@ -140,11 +140,11 @@ impl DetectFix for WhereClosureToIt {
         "where_or_filter_closure_to_it_row_condition"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Prefer `$it` over named closure parameters in 'where' and 'filter' for conciseness"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/where.html")
     }
 

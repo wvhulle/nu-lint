@@ -22,17 +22,17 @@ impl DetectFix for NothingOutsideFunctionSignature {
         "nothing_outside_function_signature"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "The keyword 'nothing' should only appear in function signatures (as return type \
          annotations), not in function bodies or other expressions. Using 'nothing' outside of \
          signatures is a programming error."
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/types.html#nothing")
     }
 
-    fn help(&self) -> Option<&'static str> {
+    fn long_description(&self) -> Option<&'static str> {
         Some(
             r#"'nothing' is a type annotation keyword for function signatures. It indicates that a function returns no value.
 

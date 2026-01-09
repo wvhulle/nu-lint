@@ -76,12 +76,12 @@ impl DetectFix for NeverSpaceSplit {
         "never_space_split"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Nushell never splits variables on whitespace; quotes around single variables are \
          unnecessary"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/variables.html")
     }
 

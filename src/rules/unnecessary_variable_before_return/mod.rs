@@ -139,11 +139,11 @@ impl DetectFix for UnnecessaryVariableBeforeReturn {
         "unnecessary_variable_before_return"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Variable assigned and immediately returned adds unnecessary verbosity"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/thinking_in_nu.html#implicit-return")
     }
 

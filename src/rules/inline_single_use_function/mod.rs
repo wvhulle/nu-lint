@@ -63,11 +63,11 @@ impl DetectFix for InlineSingleUseFunction {
         "inline_single_use_function"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Detect single-line custom commands used only once that could be inlined"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/custom_commands.html")
     }
 

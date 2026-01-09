@@ -196,7 +196,7 @@ pub struct Violation {
     pub span: LintSpan,
     pub primary_label: Option<Cow<'static, str>>,
     pub extra_labels: Vec<(LintSpan, Option<String>)>,
-    pub help: Option<String>,
+    pub long_description: Option<String>,
     pub fix: Option<Fix>,
     pub(crate) file: Option<SourceFile>,
     pub(crate) source: Option<Cow<'static, str>>,
@@ -209,7 +209,7 @@ impl Violation {
     pub(crate) fn from_detected(
         detected: Detection,
         fix: Option<Fix>,
-        help: impl Into<Option<&'static str>>,
+        long_description: impl Into<Option<&'static str>>,
     ) -> Self {
         Self {
             rule_id: None,
@@ -218,7 +218,7 @@ impl Violation {
             span: detected.span,
             primary_label: detected.primary_label,
             extra_labels: detected.extra_labels,
-            help: help.into().map(ToString::to_string),
+            long_description: long_description.into().map(ToString::to_string),
             fix,
             file: None,
             source: None,
@@ -296,7 +296,7 @@ impl Diagnostic for Violation {
     }
 
     fn help<'a>(&'a self) -> Option<Box<dyn fmt::Display + 'a>> {
-        self.help
+        self.long_description
             .as_ref()
             .map(|h| Box::new(h.clone()) as Box<dyn fmt::Display>)
     }

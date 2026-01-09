@@ -266,7 +266,7 @@ impl LintEngine {
                 for violation in &mut violations {
                     violation.set_rule_id(rule.id());
                     violation.set_lint_level(lint_level);
-                    violation.set_doc_url(rule.doc_url());
+                    violation.set_doc_url(rule.source_link());
                 }
 
                 (!violations.is_empty()).then_some(violations)

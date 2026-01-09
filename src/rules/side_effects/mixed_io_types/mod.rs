@@ -219,7 +219,7 @@ impl DetectFix for SeparateLocalRemoteIo {
         "dont_mix_different_effects"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Functions should not mix different types of I/O operations or effects."
     }
 

@@ -222,7 +222,7 @@ impl DetectFix for DangerousFileOperations {
         "dangerous_file_operations"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Detect dangerous file operations that could cause data loss"
     }
 

@@ -150,11 +150,11 @@ impl DetectFix for WhereInsteadEachThenIf {
         "each_if_to_where"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Use 'where' for filtering instead of 'each' with 'if'"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/where.html")
     }
 

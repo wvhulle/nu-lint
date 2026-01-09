@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
+
+id: fix-uses-context
+message: The fix data (constructed in detection phase) should already contain enough semantic data such as spans to efficiently construct a fix in the fix phase.
+severity: info # error, warning, info, hint
+language: Rust
+rule:
+    kind: identifier
+    regex: ^(context|ctx)
+    inside:
+      kind: parameter
+      inside:
+        stopBy: end
+        kind: function_item
+        pattern: fn fix
+        context: impl DetectFix { $$$ }

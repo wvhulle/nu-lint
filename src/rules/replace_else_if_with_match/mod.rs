@@ -292,11 +292,11 @@ impl DetectFix for ReplaceIfElseChainWithMatch {
         "replace_if_else_chain_with_match"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Use 'match' for value-based branching instead of if-else-if chains"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/match.html")
     }
 

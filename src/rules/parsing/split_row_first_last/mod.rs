@@ -134,11 +134,11 @@ impl DetectFix for SplitFirstLastRule {
         "split_row_first_last"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Use 'parse' instead of 'split row | first' or 'split row | last'"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/parse.html")
     }
 

@@ -56,11 +56,11 @@ impl DetectFix for UseErrorMakeForCatch {
         "error_make_for_non_fatal"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Use 'error make' for catchable errors in functions and try blocks"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/control_flow.html#error-make")
     }
 

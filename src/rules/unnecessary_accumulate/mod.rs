@@ -207,7 +207,7 @@ impl DetectFix for UnnecessaryAccumulate {
         "unnecessary_accumulate"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "No need to initialize an empty list and fill it by copying items. Use the list directly \
          instead."
     }

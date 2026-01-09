@@ -50,11 +50,11 @@ impl DetectFix for RequireMainWithStdin {
         "require_main_with_stdin"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Scripts using $in must define a main function"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         None
     }
 

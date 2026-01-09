@@ -156,13 +156,13 @@ impl DetectFix for FlagCompareNull {
         "check_typed_flag_before_use"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Typed flags (--flag: type) in custom commands are optional and should be checked for null \
          before use. Boolean switches (--flag without type) are always true/false and don't need \
          null checks."
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/custom_commands.html#flags")
     }
 

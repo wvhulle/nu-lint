@@ -179,11 +179,11 @@ impl DetectFix for AnsiOverEscapeCodes {
         "ansi_over_escape_codes"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Use `ansi` command instead of raw ANSI escape sequences for colored output"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/ansi.html")
     }
 

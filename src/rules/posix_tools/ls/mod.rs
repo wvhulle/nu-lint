@@ -161,11 +161,11 @@ impl DetectFix for UseBuiltinLs {
         "use_builtin_ls"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Use Nu's built-in 'ls' instead of external ls command for structured data"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/ls.html")
     }
 

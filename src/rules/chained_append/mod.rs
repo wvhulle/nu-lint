@@ -37,7 +37,7 @@ fn is_append_call(expr: &Expression, context: &LintContext) -> bool {
 }
 
 fn is_data_preserving(expr: &Expression, context: &LintContext) -> bool {
-    matches!(&expr.expr, Expr::Call(call) 
+    matches!(&expr.expr, Expr::Call(call)
         if DATA_PRESERVING_COMMANDS.contains(&call.get_call_name(context).as_str()))
 }
 
@@ -173,11 +173,11 @@ impl DetectFix for ChainedAppend {
         "chained_append"
     }
 
-    fn explanation(&self) -> &'static str {
+    fn short_description(&self) -> &'static str {
         "Use spread syntax instead of chained 'append' commands"
     }
 
-    fn doc_url(&self) -> Option<&'static str> {
+    fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/operators.html#spread-operator")
     }
 

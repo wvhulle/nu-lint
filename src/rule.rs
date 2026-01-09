@@ -222,14 +222,17 @@ impl dyn Rule {
         let fixed = self.apply_first_fix(code);
         assert!(
             fixed.contains(expected_text),
-            "Expected fixed code to contain '{expected_text}', but got: {fixed}"
+            "Expected fixed code to contain `{expected_text}`, but it didn't, it was `{fixed}`"
         );
     }
 
     #[track_caller]
     pub fn assert_fixed_is(&self, bad_code: &str, expected_code: &str) {
         let fixed = self.apply_first_fix(bad_code);
-        assert_eq!(fixed, expected_code, "Expected fix to produce exact code");
+        assert!(
+            fixed == expected_code,
+            "Expected fix to be `{fixed}` but received `{expected_code}`"
+        );
     }
 
     #[track_caller]

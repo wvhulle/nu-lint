@@ -166,3 +166,23 @@ fn fix_does_not_replace_similar_variable_names() {
     RULE.assert_fixed_contains(source, "$new_servers");
     RULE.assert_fixed_contains(source, "get -o $it");
 }
+
+#[test]
+fn fix_nested_closure_with_same_param_name() {
+    // Edge case: nested closure with same parameter name
+    // Both closures are detected, but only the outer one gets fixed in a single
+    // pass (the inner one would be fixed in a subsequent run)
+    let source = r"[1, 2, 3] | where {|x| ([] | where {|x| $x > 0} | length) > 0 or $x > 2}";
+    RULE.assert_count(source, 2); // Both inner and outer where closures are detected
+    // Only the outer closure is fixed in first pass
+    RULE.assert_fixed_contains(source, "or $it > 2"); // Outer closure fixed
+}
+
+#[test]
+fn fix_closure_with_utf8_characters() {
+    // UTF-8 safety: ensure multi-byte characters are handled correctly
+    let source = r#"["测试", "テスト", "🎉"] | where {|文字| $文字 == "测试"}"#;
+    let expected = r#"["测试", "テスト", "🎉"] | where { $it == "测试"}"#;
+    RULE.assert_count(source, 1);
+    RULE.assert_fixed_is(source, expected);
+}

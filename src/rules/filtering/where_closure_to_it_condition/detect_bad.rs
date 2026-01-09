@@ -111,3 +111,18 @@ fn detect_filter_with_complex_condition() {
 fn detect_filter_with_pipeline() {
     RULE.assert_detects(r"[1, 2, 3] | filter {|x| ($x | str length) > 0}");
 }
+
+#[test]
+fn detect_closure_with_nested_closure_same_param_name() {
+    // Edge case: nested closure with same parameter name
+    // Should detect outer |x| correctly even when inner |x| appears in the text
+    RULE.assert_detects(
+        r"[1, 2, 3] | where {|x| ([] | where {|x| $x > 0} | length) > 0 or $x > 2}",
+    );
+}
+
+#[test]
+fn detect_closure_with_utf8_characters() {
+    // UTF-8 safety: parameter and surrounding text contain multi-byte characters
+    RULE.assert_detects(r#"["测试", "テスト", "🎉"] | where {|文字| $文字 == "测试"}"#);
+}

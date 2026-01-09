@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
+
+id: plain-text-search
+message: Do not do plain text search in the source code. That is error-prone. Instead, use the AST structure inside the lint context.
+severity: info # error, warning, info, hint
+language: Rust
+rule:
+  all:
+    - pattern: $TEXT.find($$$)
+    - not:
+        pattern: $$.iter().find($$$)
+constraints:
+  TEXT:
+    regex: .*text.*
+    not:
+      regex: \.iter\(\)
+
+# Match: some_text.find(pattern)
+# Ignore: some_text.iter().find(...)

@@ -35,17 +35,7 @@ impl ExternalStdin {
     /// type
     fn from_command_and_type(cmd_name: &str, ty: &Type) -> Self {
         // First check if the command has a known preferred format
-        if let Some(format) = Self::get_command_preference(cmd_name, ty) {
-            return format;
-        }
-
-        // Otherwise, use type-based defaults
-        Self::from_type(ty)
-    }
-
-    /// Get the preferred format for known external commands
-    fn get_command_preference(cmd_name: &str, ty: &Type) -> Option<Self> {
-        match cmd_name
+        if let Some(format) = match cmd_name
             .rsplit('/')
             .next()
             .unwrap_or(cmd_name)
@@ -60,8 +50,14 @@ impl ExternalStdin {
                 _ => None,
             },
             _ => None,
+        } {
+            return format;
         }
+
+        // Otherwise, use type-based defaults
+        Self::from_type(ty)
     }
+
     /// Get default format based on data type
     const fn from_type(ty: &Type) -> Self {
         match ty {

@@ -1,6 +1,9 @@
 use nu_protocol::ast::{Expr, Expression, RecordItem};
 
-use crate::{ast::expression::ExpressionExt, context::LintContext};
+use crate::{
+    ast::{expression::ExpressionExt, string::StringFormat},
+    context::LintContext,
+};
 
 pub mod add_help;
 pub mod add_label;
@@ -9,13 +12,9 @@ pub mod add_url;
 pub mod non_fatal_catch;
 
 pub fn extract_field_name(key: &Expression, context: &LintContext) -> String {
-    match &key.expr {
-        Expr::String(s) | Expr::RawString(s) => s.clone(),
-        _ => key
-            .span_text(context)
-            .trim_matches(|c| c == '"' || c == '\'')
-            .to_string(),
-    }
+    StringFormat::from_expression(key, context)
+        .map(|format| format.content().to_string())
+        .unwrap_or_else(|| key.span_text(context).to_string())
 }
 
 pub fn has_field(record: &[RecordItem], field_name: &str, context: &LintContext) -> bool {

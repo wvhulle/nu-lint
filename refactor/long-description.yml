@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
+
+id: long-description
+message: Rule descriptions should not be too long
+severity: error # error, warning, info, hint
+language: Rust
+rule:
+    kind: string_literal
+    inside:
+        stopBy:
+          kind: function_item
+        pattern: fn explanation
+    has:
+      kind: string_content
+      regex: ^.{55,}$

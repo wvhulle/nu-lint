@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
+
+id: short-help
+message: Help texts should be at least a sentence.
+severity: error # error, warning, info, hint
+language: Rust
+rule:
+    kind: string_literal
+    inside:
+        kind: function_item
+        stopBy: end
+        pattern: fn help
+    has:
+      kind: string_content
+      regex: ^.{0,80}$

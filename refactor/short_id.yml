@@ -1,0 +1,17 @@
+
+# yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
+
+id: short-id
+message: IDs of rules should be three keywords long at least
+severity: error # error, warning, info, hint
+language: Rust
+rule:
+    kind: string_literal
+    inside:
+      kind: block
+      inside:
+        kind: function_item
+        pattern: fn id
+    has:
+      kind: string_content
+      regex: ^.{0,15}$

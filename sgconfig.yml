@@ -1,0 +1,4 @@
+ruleDirs:
+- refactor
+testConfigs:
+- testDir: refactor-tests

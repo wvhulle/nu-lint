@@ -94,6 +94,22 @@ fn io_category_can_error(context: &LintContext, call: &Call) -> bool {
     )
 }
 
+fn ls_can_error(_context: &LintContext, call: &Call) -> bool {
+    // ls without arguments lists current directory and rarely errors
+    // ls with a path argument can error if the path doesn't exist
+    call.arguments
+        .iter()
+        .any(|arg| matches!(arg, Argument::Positional(_)))
+}
+
+fn http_can_error(_context: &LintContext, call: &Call) -> bool {
+    // http without a URL just shows help and doesn't error
+    // http with a URL (positional arg) makes a network request that can fail
+    call.arguments
+        .iter()
+        .any(|arg| matches!(arg, Argument::Positional(_)))
+}
+
 fn print_to_stdout(_context: &LintContext, call: &Call) -> bool {
     use crate::ast::call::CallExt;
     !call.has_named_flag("stderr")
@@ -186,18 +202,14 @@ pub const BUILTIN_COMMAND_SIDE_EFFECTS: &[(&str, &[(BuiltinEffect, EffectWhenFla
             always,
         )],
     ),
+    // exit is not catchable by try - it terminates the process
+    // Only flagged as Dangerous when exit code is non-zero
     (
         "exit",
-        &[
-            (
-                BuiltinEffect::CommonEffect(CommonEffect::LikelyErrors),
-                always,
-            ),
-            (
-                BuiltinEffect::CommonEffect(CommonEffect::Dangerous),
-                exit_is_dangerous,
-            ),
-        ],
+        &[(
+            BuiltinEffect::CommonEffect(CommonEffect::Dangerous),
+            exit_is_dangerous,
+        )],
     ),
     (
         "error",
@@ -206,18 +218,13 @@ pub const BUILTIN_COMMAND_SIDE_EFFECTS: &[(&str, &[(BuiltinEffect, EffectWhenFla
             always,
         )],
     ),
-    (
-        "to",
-        &[(
-            BuiltinEffect::CommonEffect(CommonEffect::LikelyErrors),
-            always,
-        )],
-    ),
+    // 'to' commands rarely error at runtime - serialization usually works
+    // Removed from LikelyErrors
     (
         "http",
         &[(
             BuiltinEffect::CommonEffect(CommonEffect::LikelyErrors),
-            always,
+            http_can_error,
         )],
     ),
     (
@@ -241,34 +248,9 @@ pub const BUILTIN_COMMAND_SIDE_EFFECTS: &[(&str, &[(BuiltinEffect, EffectWhenFla
             always,
         )],
     ),
-    (
-        "sleep",
-        &[(
-            BuiltinEffect::CommonEffect(CommonEffect::LikelyErrors),
-            always,
-        )],
-    ),
-    (
-        "hide",
-        &[(
-            BuiltinEffect::CommonEffect(CommonEffect::LikelyErrors),
-            always,
-        )],
-    ),
-    (
-        "source",
-        &[(
-            BuiltinEffect::CommonEffect(CommonEffect::LikelyErrors),
-            always,
-        )],
-    ),
-    (
-        "source-env",
-        &[(
-            BuiltinEffect::CommonEffect(CommonEffect::LikelyErrors),
-            always,
-        )],
-    ),
+    // sleep: type errors are caught at parse-time, not runtime
+    // hide: doesn't error when variable doesn't exist
+    // source/source-env: errors at parse-time, try can't catch them
     (
         "load",
         &[(
@@ -288,7 +270,7 @@ pub const BUILTIN_COMMAND_SIDE_EFFECTS: &[(&str, &[(BuiltinEffect, EffectWhenFla
         "ls",
         &[(
             BuiltinEffect::CommonEffect(CommonEffect::LikelyErrors),
-            always,
+            ls_can_error,
         )],
     ),
     ("git", &[]),

@@ -1,8 +1,8 @@
-use nu_protocol::ast::{self, Block, Expr, Pipeline, Traverse};
+use nu_protocol::ast::{self, Expr, Pipeline};
 
 use crate::{
     LintLevel,
-    ast::{call::CallExt, expression::ExpressionExt},
+    ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
     context::LintContext,
     effect::{
         CommonEffect,
@@ -12,9 +12,9 @@ use crate::{
     violation::Detection,
 };
 
-fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Detection> {
+fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<Detection> {
     if pipeline.elements.len() == 1 {
-        return None;
+        return vec![];
     }
 
     for (i, element) in pipeline.elements[0..pipeline.elements.len() - 1]
@@ -44,11 +44,11 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Detectio
                 continue;
             }
             let violation = create_violation(pipeline, element);
-            return Some(violation);
+            return vec![violation];
         }
     }
 
-    None
+    vec![]
 }
 
 fn create_violation(pipeline: &Pipeline, element: &ast::PipelineElement) -> Detection {
@@ -66,33 +66,6 @@ fn create_violation(pipeline: &Pipeline, element: &ast::PipelineElement) -> Dete
     }
 
     violation
-}
-
-fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<Detection>) {
-    for pipeline in &block.pipelines {
-        violations.extend(check_pipeline(pipeline, context));
-
-        for element in &pipeline.elements {
-            let mut blocks = Vec::new();
-            element.expr.flat_map(
-                context.working_set,
-                &|expr| match &expr.expr {
-                    Expr::Block(block_id)
-                    | Expr::Closure(block_id)
-                    | Expr::Subexpression(block_id) => {
-                        vec![*block_id]
-                    }
-                    _ => vec![],
-                },
-                &mut blocks,
-            );
-
-            for &block_id in &blocks {
-                let nested_block = context.working_set.get_block(block_id);
-                check_block(nested_block, context, violations);
-            }
-        }
-    }
 }
 
 struct NonFinalFailureCheck;
@@ -117,9 +90,7 @@ impl DetectFix for NonFinalFailureCheck {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let mut violations = Vec::new();
-        check_block(context.ast, context, &mut violations);
-        Self::no_fix(violations)
+        Self::no_fix(context.ast.detect_in_pipelines(context, check_pipeline))
     }
 }
 

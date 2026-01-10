@@ -1,11 +1,11 @@
 use nu_protocol::{
     Span,
-    ast::{Block, Expr, Expression, Pipeline, Traverse},
+    ast::{Expr, Expression, Pipeline},
 };
 
 use crate::{
     LintLevel,
-    ast::call::CallExt,
+    ast::{block::BlockExt, call::CallExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -133,37 +133,14 @@ fn create_violation(
     )
 }
 
-fn detect_in_block(block: &Block, context: &LintContext) -> Vec<(Detection, FixData)> {
-    let mut violations: Vec<_> = block
-        .pipelines
-        .iter()
-        .flat_map(|pipeline| {
-            find_append_clusters(pipeline, context)
-                .into_iter()
-                .filter_map(|cluster| {
-                    let spans = extract_element_spans(pipeline, &cluster)?;
-                    Some(create_violation(&cluster, spans, pipeline))
-                })
+fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection, FixData)> {
+    find_append_clusters(pipeline, context)
+        .into_iter()
+        .filter_map(|cluster| {
+            let spans = extract_element_spans(pipeline, &cluster)?;
+            Some(create_violation(&cluster, spans, pipeline))
         })
-        .collect();
-
-    // Recursively check nested blocks
-    for pipeline in &block.pipelines {
-        for element in &pipeline.elements {
-            element.expr.flat_map(
-                context.working_set,
-                &|expr| match &expr.expr {
-                    Expr::Block(id) | Expr::Closure(id) | Expr::Subexpression(id) => {
-                        detect_in_block(context.working_set.get_block(*id), context)
-                    }
-                    _ => vec![],
-                },
-                &mut violations,
-            );
-        }
-    }
-
-    violations
+        .collect()
 }
 
 impl DetectFix for ChainedAppend {
@@ -186,7 +163,7 @@ impl DetectFix for ChainedAppend {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        detect_in_block(context.ast, context)
+        context.ast.detect_in_pipelines(context, check_pipeline)
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {

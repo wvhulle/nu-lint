@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use nu_protocol::{
     BlockId, Span, Type, VarId,
-    ast::{Block, Expr, Expression, PipelineElement, Traverse},
+    ast::{Block, Expr, Expression, Pipeline, PipelineElement, Traverse},
 };
 
 use super::call::CallExt;
@@ -165,6 +165,18 @@ pub trait BlockExt {
         callback: &mut F,
     ) where
         F: FnMut(&'a Expression, Option<&'a Expression>);
+
+    /// Recursively detect violations in all pipelines of this block and nested
+    /// blocks. This is a common pattern used by many lint rules.
+    ///
+    /// The `check_pipeline` function is called for each pipeline and should
+    /// return violations found in that pipeline. The function automatically
+    /// recurses into closures, blocks, and subexpressions.
+    fn detect_in_pipelines<T>(
+        &self,
+        context: &LintContext,
+        check_pipeline: impl Fn(&Pipeline, &LintContext) -> Vec<T> + Copy,
+    ) -> Vec<T>;
 }
 
 impl BlockExt for Block {
@@ -340,4 +352,44 @@ impl BlockExt for Block {
             }
         }
     }
+
+    fn detect_in_pipelines<T>(
+        &self,
+        context: &LintContext,
+        check_pipeline: impl Fn(&Pipeline, &LintContext) -> Vec<T> + Copy,
+    ) -> Vec<T> {
+        let mut results: Vec<T> = self
+            .pipelines
+            .iter()
+            .flat_map(|p| check_pipeline(p, context))
+            .collect();
+
+        // Recurse into nested blocks (closures, blocks, subexpressions)
+        for pipeline in &self.pipelines {
+            for element in &pipeline.elements {
+                element.expr.flat_map(
+                    context.working_set,
+                    &|expr: &Expression| recurse_into_nested(expr, context, check_pipeline),
+                    &mut results,
+                );
+            }
+        }
+
+        results
+    }
+}
+
+fn recurse_into_nested<T>(
+    expr: &Expression,
+    context: &LintContext,
+    check_pipeline: impl Fn(&Pipeline, &LintContext) -> Vec<T> + Copy,
+) -> Vec<T> {
+    expr.extract_block_id()
+        .map(|id| {
+            context
+                .working_set
+                .get_block(id)
+                .detect_in_pipelines(context, check_pipeline)
+        })
+        .unwrap_or_default()
 }

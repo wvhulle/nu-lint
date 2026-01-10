@@ -5,7 +5,7 @@ use nu_protocol::{
 
 use crate::{
     Fix, LintLevel, Replacement,
-    ast::call::CallExt,
+    ast::{block::BlockExt, call::CallExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
@@ -90,82 +90,75 @@ fn extract_parse_from_closure(
     Some((pattern, uses_regex))
 }
 
-fn check_pipeline_for_lines_each_parse(
-    pipeline: &Pipeline,
-    context: &LintContext,
-) -> Option<(Detection, FixData)> {
+fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection, FixData)> {
     if pipeline.elements.len() < 2 {
-        return None;
+        return vec![];
     }
 
-    pipeline.elements.windows(2).find_map(|window| {
-        let [current, next] = window else {
-            return None;
-        };
+    pipeline
+        .elements
+        .windows(2)
+        .filter_map(|window| {
+            let [current, next] = window else {
+                return None;
+            };
 
-        // First must be `lines` call
-        let Expr::Call(lines_call) = &current.expr.expr else {
-            return None;
-        };
-        if !lines_call.is_call_to_command("lines", context) {
-            return None;
-        }
-
-        // Second must be `each` call with closure
-        let Expr::Call(each_call) = &next.expr.expr else {
-            return None;
-        };
-        if !each_call.is_call_to_command("each", context) {
-            return None;
-        }
-
-        // Get the closure argument
-        let closure_arg = each_call.arguments.iter().find_map(|arg| {
-            if let Argument::Positional(expr) = arg
-                && let Expr::Closure(block_id) = &expr.expr
-            {
-                return Some(*block_id);
+            // First must be `lines` call
+            let Expr::Call(lines_call) = &current.expr.expr else {
+                return None;
+            };
+            if !lines_call.is_call_to_command("lines", context) {
+                return None;
             }
-            None
-        })?;
 
-        let closure_block = context.working_set.get_block(closure_arg);
+            // Second must be `each` call with closure
+            let Expr::Call(each_call) = &next.expr.expr else {
+                return None;
+            };
+            if !each_call.is_call_to_command("each", context) {
+                return None;
+            }
 
-        // Get closure parameter
-        let signature = &closure_block.signature;
-        let param = signature.required_positional.first()?;
-        let param_id = param.var_id?;
+            // Get the closure argument
+            let closure_arg = each_call.arguments.iter().find_map(|arg| {
+                if let Argument::Positional(expr) = arg
+                    && let Expr::Closure(block_id) = &expr.expr
+                {
+                    return Some(*block_id);
+                }
+                None
+            })?;
 
-        // Check if closure body is just `$param | parse "..."`
-        let (parse_pattern, uses_regex) =
-            extract_parse_from_closure(closure_block, param_id, context)?;
+            let closure_block = context.working_set.get_block(closure_arg);
 
-        let span = Span::new(current.expr.span.start, next.expr.span.end);
+            // Get closure parameter
+            let signature = &closure_block.signature;
+            let param = signature.required_positional.first()?;
+            let param_id = param.var_id?;
 
-        let violation = Detection::from_global_span(
-            "Simplify 'lines | each { parse }' to 'lines | parse'",
-            span,
-        )
-        .with_primary_label("redundant each with parse")
-        .with_extra_label("each closure can be removed", next.expr.span);
+            // Check if closure body is just `$param | parse "..."`
+            let (parse_pattern, uses_regex) =
+                extract_parse_from_closure(closure_block, param_id, context)?;
 
-        Some((
-            violation,
-            FixData {
+            let span = Span::new(current.expr.span.start, next.expr.span.end);
+
+            let violation = Detection::from_global_span(
+                "Simplify 'lines | each { parse }' to 'lines | parse'",
                 span,
-                parse_pattern,
-                uses_regex,
-            },
-        ))
-    })
-}
+            )
+            .with_primary_label("redundant each with parse")
+            .with_extra_label("each closure can be removed", next.expr.span);
 
-fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<(Detection, FixData)>) {
-    for pipeline in &block.pipelines {
-        if let Some(violation) = check_pipeline_for_lines_each_parse(pipeline, context) {
-            violations.push(violation);
-        }
-    }
+            Some((
+                violation,
+                FixData {
+                    span,
+                    parse_pattern,
+                    uses_regex,
+                },
+            ))
+        })
+        .collect()
 }
 
 struct LinesEachParseRule;
@@ -190,22 +183,7 @@ impl DetectFix for LinesEachParseRule {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let mut violations = Vec::new();
-
-        check_block(context.ast, context, &mut violations);
-
-        violations.extend(context.detect_with_fix_data(|expr, ctx| {
-            let mut expr_violations = Vec::new();
-
-            if let Expr::Closure(block_id) | Expr::Block(block_id) = &expr.expr {
-                let block = ctx.working_set.get_block(*block_id);
-                check_block(block, ctx, &mut expr_violations);
-            }
-
-            expr_violations
-        }));
-
-        violations
+        context.ast.detect_in_pipelines(context, check_pipeline)
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {

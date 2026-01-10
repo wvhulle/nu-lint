@@ -1,8 +1,8 @@
-use nu_protocol::ast::{Block, Expr, Expression, Pipeline, Traverse};
+use nu_protocol::ast::{Expr, Pipeline};
 
 use crate::{
     LintLevel,
-    ast::{call::CallExt, expression::ExpressionExt},
+    ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
     context::LintContext,
     effect::{
         CommonEffect,
@@ -19,65 +19,42 @@ fn is_piped_to_complete(pipeline: &Pipeline, idx: usize, context: &LintContext) 
 }
 
 fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<Detection> {
-    let mut violations = Vec::new();
-
-    for (i, element) in pipeline.elements.iter().enumerate() {
-        let Expr::ExternalCall(cmd_expr, args) = &element.expr.expr else {
-            continue;
-        };
-
-        let cmd_name = cmd_expr.span_text(context);
-
-        if !has_external_side_effect(
-            cmd_name,
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-            context,
-            args,
-        ) {
-            continue;
-        }
-
-        if is_piped_to_complete(pipeline, i, context) {
-            continue;
-        }
-
-        let violation = Detection::from_global_span(
-            format!(
-                "External command '{cmd_name}' can fail silently. Pipe to 'complete' and check \
-                 'exit_code'."
-            ),
-            element.expr.span,
-        )
-        .with_primary_label("may return non-zero exit code");
-
-        violations.push(violation);
-    }
-
-    violations
-}
-
-fn check_block(block: &Block, context: &LintContext) -> Vec<Detection> {
-    let mut violations: Vec<_> = block
-        .pipelines
+    pipeline
+        .elements
         .iter()
-        .flat_map(|p| check_pipeline(p, context))
-        .collect();
+        .enumerate()
+        .filter_map(|(i, element)| {
+            let Expr::ExternalCall(cmd_expr, args) = &element.expr.expr else {
+                return None;
+            };
 
-    for pipeline in &block.pipelines {
-        for element in &pipeline.elements {
-            element.expr.flat_map(
-                context.working_set,
-                &|expr: &Expression| {
-                    expr.extract_block_id()
-                        .map(|id| check_block(context.working_set.get_block(id), context))
-                        .unwrap_or_default()
-                },
-                &mut violations,
-            );
-        }
-    }
+            let cmd_name = cmd_expr.span_text(context);
 
-    violations
+            if !has_external_side_effect(
+                cmd_name,
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                context,
+                args,
+            ) {
+                return None;
+            }
+
+            if is_piped_to_complete(pipeline, i, context) {
+                return None;
+            }
+
+            Some(
+                Detection::from_global_span(
+                    format!(
+                        "External command '{cmd_name}' can fail silently. Pipe to 'complete' and \
+                         check 'exit_code'."
+                    ),
+                    element.expr.span,
+                )
+                .with_primary_label("may return non-zero exit code"),
+            )
+        })
+        .collect()
 }
 
 struct WrapExternalWithComplete;
@@ -113,7 +90,7 @@ impl DetectFix for WrapExternalWithComplete {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        Self::no_fix(check_block(context.ast, context))
+        Self::no_fix(context.ast.detect_in_pipelines(context, check_pipeline))
     }
 }
 

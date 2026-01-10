@@ -1,10 +1,10 @@
 use nu_protocol::ast::{
-    Block, Expr, Pipeline, PipelineElement, PipelineRedirection, RedirectionSource,
-    RedirectionTarget, Traverse,
+    Expr, Pipeline, PipelineElement, PipelineRedirection, RedirectionSource, RedirectionTarget,
 };
 
 use crate::{
     LintLevel,
+    ast::block::BlockExt,
     context::LintContext,
     effect::external::{ExternEffect, extract_external_arg_text, has_external_side_effect},
     rule::{DetectFix, Rule},
@@ -43,12 +43,12 @@ fn next_element_is_ignore(
         })
 }
 
-fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Detection> {
+fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<Detection> {
     pipeline
         .elements
         .iter()
         .enumerate()
-        .find_map(|(i, element)| {
+        .filter_map(|(i, element)| {
             let Expr::ExternalCall(head, args) = &element.expr.expr else {
                 return None;
             };
@@ -90,45 +90,12 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<Detectio
                  redirected to ignore"
             );
 
-            let _help_message = format!(
-                "Command '{cmd_name}' produces useful output on stderr. Consider removing the \
-                 stderr redirection (e>| or o+e>|) to preserve this output, or redirect stderr to \
-                 a file for later inspection."
-            );
-
             Some(
                 Detection::from_global_span(message, element.expr.span)
                     .with_primary_label("silences stderr data"),
             )
         })
-}
-
-fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<Detection>) {
-    for pipeline in &block.pipelines {
-        violations.extend(check_pipeline(pipeline, context));
-
-        let nested_block_ids: Vec<_> = pipeline
-            .elements
-            .iter()
-            .flat_map(|element| {
-                let mut blocks = Vec::new();
-                element.expr.flat_map(
-                    context.working_set,
-                    &|expr| match &expr.expr {
-                        Expr::Block(id) | Expr::Closure(id) | Expr::Subexpression(id) => vec![*id],
-                        _ => vec![],
-                    },
-                    &mut blocks,
-                );
-                blocks
-            })
-            .collect();
-
-        for block_id in nested_block_ids {
-            let nested_block = context.working_set.get_block(block_id);
-            check_block(nested_block, context, violations);
-        }
-    }
+        .collect()
 }
 
 struct SilenceStderrData;
@@ -141,7 +108,7 @@ impl DetectFix for SilenceStderrData {
     }
 
     fn short_description(&self) -> &'static str {
-        "External commands that write data to stderr should not have stderr redirected to ignore"
+        "External commands that write data to stderr should not be silenced"
     }
 
     fn level(&self) -> LintLevel {
@@ -149,9 +116,7 @@ impl DetectFix for SilenceStderrData {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let mut violations = Vec::new();
-        check_block(context.ast, context, &mut violations);
-        Self::no_fix(violations)
+        Self::no_fix(context.ast.detect_in_pipelines(context, check_pipeline))
     }
 }
 

@@ -1,11 +1,9 @@
-use nu_protocol::{
-    Span,
-    ast::{Block, Expr, Pipeline},
-};
+use nu_protocol::{Span, ast::Pipeline};
 
 use super::{find_open_from_patterns, open_from_span};
 use crate::{
     LintLevel,
+    ast::block::BlockExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -50,12 +48,6 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection,
         .collect()
 }
 
-fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<(Detection, FixData)>) {
-    for pipeline in &block.pipelines {
-        violations.extend(check_pipeline(pipeline, context));
-    }
-}
-
 /// Detects `open FILE.json | from json` which is an error because `open`
 /// already recognizes the file format and parses it into structured data. The
 /// `from` command expects text input, not structured data.
@@ -81,22 +73,7 @@ impl DetectFix for FromAfterParsedOpen {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let mut violations = Vec::new();
-
-        check_block(context.ast, context, &mut violations);
-
-        violations.extend(context.detect_with_fix_data(|expr, ctx| {
-            let mut expr_violations = Vec::new();
-
-            if let Expr::Closure(block_id) | Expr::Block(block_id) = &expr.expr {
-                let block = ctx.working_set.get_block(*block_id);
-                check_block(block, ctx, &mut expr_violations);
-            }
-
-            expr_violations
-        }));
-
-        violations
+        context.ast.detect_in_pipelines(context, check_pipeline)
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {

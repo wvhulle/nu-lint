@@ -1,6 +1,6 @@
 use nu_protocol::{
     Span,
-    ast::{Block, Expr, Pipeline},
+    ast::{Expr, Pipeline},
 };
 
 use super::{
@@ -9,6 +9,7 @@ use super::{
 };
 use crate::{
     Fix, LintLevel, Replacement,
+    ast::block::BlockExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
@@ -23,68 +24,62 @@ pub enum FixData {
     NoFix,
 }
 
-fn check_pipeline_for_split_get(
-    pipeline: &Pipeline,
-    context: &LintContext,
-) -> Option<(Detection, FixData)> {
+fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection, FixData)> {
     if pipeline.elements.len() < 2 {
-        return None;
+        return vec![];
     }
 
-    pipeline.elements.windows(2).find_map(|window| {
-        let [current, next] = window else {
-            return None;
-        };
-        let (Expr::Call(split_call), Expr::Call(access_call)) =
-            (&current.expr.expr, &next.expr.expr)
-        else {
-            return None;
-        };
+    pipeline
+        .elements
+        .windows(2)
+        .filter_map(|window| {
+            let [current, next] = window else {
+                return None;
+            };
+            let (Expr::Call(split_call), Expr::Call(access_call)) =
+                (&current.expr.expr, &next.expr.expr)
+            else {
+                return None;
+            };
 
-        if !is_split_row_call(split_call, context) || !is_indexed_access_call(access_call, context)
-        {
-            return None;
-        }
+            if !is_split_row_call(split_call, context)
+                || !is_indexed_access_call(access_call, context)
+            {
+                return None;
+            }
 
-        let index = extract_index_from_call(access_call, context)?;
-        let span = Span::new(current.expr.span.start, next.expr.span.end);
+            let index = extract_index_from_call(access_call, context)?;
+            let span = Span::new(current.expr.span.start, next.expr.span.end);
 
-        let delimiter = extract_delimiter_from_split_call(split_call, context);
+            let delimiter = extract_delimiter_from_split_call(split_call, context);
 
-        delimiter.map_or_else(
-            || {
-                let violation = Detection::from_global_span(
-                    "Use 'parse' instead of chaining 'split row | get' in a pipeline",
-                    span,
-                )
-                .with_primary_label("split row followed by indexed get in same pipeline");
-                Some((violation, FixData::NoFix))
-            },
-            |delim| {
-                let violation = Detection::from_global_span(
-                    "Use 'parse' instead of chaining 'split row | get' in a pipeline",
-                    span,
-                )
-                .with_primary_label("split row followed by indexed get in same pipeline");
-                Some((
-                    violation,
-                    FixData::WithDelimiter {
+            delimiter.map_or_else(
+                || {
+                    let violation = Detection::from_global_span(
+                        "Use 'parse' instead of chaining 'split row | get' in a pipeline",
                         span,
-                        delimiter: delim,
-                        index,
-                    },
-                ))
-            },
-        )
-    })
-}
-
-fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<(Detection, FixData)>) {
-    for pipeline in &block.pipelines {
-        if let Some(violation) = check_pipeline_for_split_get(pipeline, context) {
-            violations.push(violation);
-        }
-    }
+                    )
+                    .with_primary_label("split row followed by indexed get in same pipeline");
+                    Some((violation, FixData::NoFix))
+                },
+                |delim| {
+                    let violation = Detection::from_global_span(
+                        "Use 'parse' instead of chaining 'split row | get' in a pipeline",
+                        span,
+                    )
+                    .with_primary_label("split row followed by indexed get in same pipeline");
+                    Some((
+                        violation,
+                        FixData::WithDelimiter {
+                            span,
+                            delimiter: delim,
+                            index,
+                        },
+                    ))
+                },
+            )
+        })
+        .collect()
 }
 
 struct SplitGetRule;
@@ -129,22 +124,7 @@ Example:
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let mut violations = Vec::new();
-
-        check_block(context.ast, context, &mut violations);
-
-        violations.extend(context.detect_with_fix_data(|expr, ctx| {
-            let mut expr_violations = Vec::new();
-
-            if let Expr::Closure(block_id) | Expr::Block(block_id) = &expr.expr {
-                let block = ctx.working_set.get_block(*block_id);
-                check_block(block, ctx, &mut expr_violations);
-            }
-
-            expr_violations
-        }));
-
-        violations
+        context.ast.detect_in_pipelines(context, check_pipeline)
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {

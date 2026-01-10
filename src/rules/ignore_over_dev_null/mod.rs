@@ -1,10 +1,11 @@
 use nu_protocol::ast::{
-    Block, Expr, Expression, Pipeline, PipelineElement, PipelineRedirection, RedirectionSource,
-    RedirectionTarget, Traverse,
+    Expr, Expression, Pipeline, PipelineElement, PipelineRedirection, RedirectionSource,
+    RedirectionTarget,
 };
 
 use crate::{
     Fix, LintLevel, Replacement,
+    ast::block::BlockExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
@@ -60,17 +61,18 @@ const fn is_external_call(expr: &Expression) -> bool {
     matches!(&expr.expr, Expr::ExternalCall(..))
 }
 
-fn check_pipeline(
-    pipeline: &Pipeline,
-    context: &LintContext,
-) -> Option<(Detection, IgnoreFixData)> {
-    let first_element = &pipeline.elements[0];
+fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection, IgnoreFixData)> {
+    let Some(first_element) = pipeline.elements.first() else {
+        return vec![];
+    };
 
     if !is_external_call(&first_element.expr) {
-        return None;
+        return vec![];
     }
 
-    let redirect_type = detect_dev_null_redirect(first_element)?;
+    let Some(redirect_type) = detect_dev_null_redirect(first_element) else {
+        return vec![];
+    };
 
     log::debug!(
         "Found /dev/null redirect in pipeline at span {:?}",
@@ -78,7 +80,7 @@ fn check_pipeline(
     );
 
     let Expr::ExternalCall(head, _args) = &first_element.expr.expr else {
-        return None;
+        return vec![];
     };
 
     let cmd_name = context.plain_text(head.span);
@@ -133,40 +135,7 @@ fn check_pipeline(
         replacement_text,
     };
 
-    Some((violation, fix_data))
-}
-
-fn check_block(
-    block: &Block,
-    context: &LintContext,
-    violations: &mut Vec<(Detection, IgnoreFixData)>,
-) {
-    for pipeline in &block.pipelines {
-        if let Some(violation) = check_pipeline(pipeline, context) {
-            violations.push(violation);
-        }
-
-        for element in &pipeline.elements {
-            let mut blocks = Vec::new();
-            element.expr.flat_map(
-                context.working_set,
-                &|expr| match &expr.expr {
-                    Expr::Block(block_id)
-                    | Expr::Closure(block_id)
-                    | Expr::Subexpression(block_id) => {
-                        vec![*block_id]
-                    }
-                    _ => vec![],
-                },
-                &mut blocks,
-            );
-
-            for &block_id in &blocks {
-                let nested_block = context.working_set.get_block(block_id);
-                check_block(nested_block, context, violations);
-            }
-        }
-    }
+    vec![(violation, fix_data)]
 }
 
 struct IgnoreOverDevNull;
@@ -191,9 +160,7 @@ impl DetectFix for IgnoreOverDevNull {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let mut violations = Vec::new();
-        check_block(context.ast, context, &mut violations);
-        violations
+        context.ast.detect_in_pipelines(context, check_pipeline)
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {

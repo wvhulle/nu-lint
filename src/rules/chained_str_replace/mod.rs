@@ -1,11 +1,11 @@
 use nu_protocol::{
     Span,
-    ast::{Argument, Block, Expr, Expression, Pipeline, Traverse},
+    ast::{Argument, Expr, Expression, Pipeline},
 };
 
 use crate::{
     LintLevel,
-    ast::{call::CallExt, expression::ExpressionExt},
+    ast::{block::BlockExt, call::CallExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -154,31 +154,6 @@ fn find_clusters_in_pipeline(
         .collect()
 }
 
-fn detect_in_block(block: &Block, ctx: &LintContext) -> Vec<(Detection, Option<FixData>)> {
-    let mut results: Vec<_> = block
-        .pipelines
-        .iter()
-        .flat_map(|p| find_clusters_in_pipeline(p, ctx))
-        .collect();
-
-    // Recurse into nested blocks
-    for pipeline in &block.pipelines {
-        for element in &pipeline.elements {
-            element.expr.flat_map(
-                ctx.working_set,
-                &|expr: &Expression| {
-                    expr.extract_block_id()
-                        .map(|id| detect_in_block(ctx.working_set.get_block(id), ctx))
-                        .unwrap_or_default()
-                },
-                &mut results,
-            );
-        }
-    }
-
-    results
-}
-
 struct ChainedStrReplace;
 
 impl DetectFix for ChainedStrReplace {
@@ -211,7 +186,9 @@ impl DetectFix for ChainedStrReplace {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        detect_in_block(context.ast, context)
+        context
+            .ast
+            .detect_in_pipelines(context, find_clusters_in_pipeline)
     }
 
     fn fix(&self, _context: &LintContext, data: &Self::FixInput<'_>) -> Option<Fix> {

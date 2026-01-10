@@ -5,6 +5,7 @@ mod context;
 mod effect;
 mod engine;
 mod fix;
+mod format_conversions;
 mod log;
 mod lsp;
 mod output;

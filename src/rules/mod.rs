@@ -52,7 +52,8 @@ pub mod script_export_main;
 pub mod shorten_with_compound_assignment;
 pub mod side_effects;
 pub mod spacing;
-pub mod structured_data_to_external;
+pub mod structured_data_to_csv_tool;
+pub mod structured_data_to_json_tool;
 pub mod try_instead_of_do;
 pub mod typing;
 pub mod unnecessary_accumulate;
@@ -179,7 +180,8 @@ pub const USED_RULES: &[&dyn Rule] = &[
     spacing::reflow_wide_pipelines::RULE,
     spacing::wrap_long_lists::RULE,
     spacing::wrap_records::RULE,
-    structured_data_to_external::RULE,
+    structured_data_to_csv_tool::RULE,
+    structured_data_to_json_tool::RULE,
     typing::missing_argument_type::RULE,
     filesystem::string_as_path::RULE,
     typing::missing_output_type::RULE,

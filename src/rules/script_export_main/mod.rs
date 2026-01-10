@@ -60,10 +60,6 @@ impl DetectFix for ScriptExportMain {
         "In scripts, 'def main' is the entry point and doesn't need 'export'"
     }
 
-    fn long_description(&self) -> Option<&'static str> {
-        Some("Use 'export def main' only in modules where the command should be importable")
-    }
-
     fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/scripts.html#parameterizing-scripts")
     }

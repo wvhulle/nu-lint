@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
 
 id: long-description-to-short
-message: When including a long description, use at least a few sentences.
+message: When including a long description, use at least a few sentences. For short descriptions you can use the short_description.
 severity: warning # error, warning, info, hint
 language: Rust
 rule:

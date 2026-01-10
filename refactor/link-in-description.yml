@@ -2,8 +2,8 @@
 
 # yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
 
-id: description
-message: Rule descriptions should straightforward
+id: link-http-format
+message: When a link is provided it needs to have the right format.
 severity: warning # error, warning, info, hint
 language: Rust
 rule:

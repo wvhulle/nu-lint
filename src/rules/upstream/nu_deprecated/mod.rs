@@ -19,7 +19,8 @@ impl DetectFix for NuDeprecated {
     fn long_description(&self) -> Option<&'static str> {
         Some(formatcp!(
             "nu-lint expects Nushell {NU_PARSER_VERSION}. If your installed version differs, this \
-             may cause false positives."
+             may cause false positives. Check that your Nushell version matches the expected version \
+             to avoid incorrect warnings."
         ))
     }
 

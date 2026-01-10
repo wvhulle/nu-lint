@@ -202,10 +202,6 @@ impl DetectFix for TurnPositionalIntoStreamInput {
          pipeline input ($in) instead."
     }
 
-    fn long_description(&self) -> Option<&'static str> {
-        Some("Pipeline input enables better composability and streaming performance")
-    }
-
     fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/pipelines.html")
     }

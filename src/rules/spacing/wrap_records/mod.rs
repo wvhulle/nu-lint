@@ -95,7 +95,7 @@ impl DetectFix for WrapWideRecords {
     }
 
     fn short_description(&self) -> &'static str {
-        "Prefer multiline format for long or complex records"
+        "Use multiline format for long or complex records"
     }
 
     fn source_link(&self) -> Option<&'static str> {

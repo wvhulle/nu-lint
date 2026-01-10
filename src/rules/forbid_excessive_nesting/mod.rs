@@ -277,10 +277,6 @@ impl DetectFix for ForbidExcessiveNesting {
         "Avoid excessive nesting (more than 4 levels deep)"
     }
 
-    fn long_description(&self) -> Option<&'static str> {
-        Some("Consider refactoring into smaller functions to reduce nesting depth")
-    }
-
     fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/thinking_in_nu.html")
     }

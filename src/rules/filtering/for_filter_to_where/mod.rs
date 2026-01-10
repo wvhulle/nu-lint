@@ -299,7 +299,7 @@ impl DetectFix for FilterCollectWithWhere {
     }
 
     fn short_description(&self) -> &'static str {
-        "Prefer 'where' filter over for loop with if statement and append"
+        "Use 'where' filter instead of for loop with if and append"
     }
 
     fn source_link(&self) -> Option<&'static str> {

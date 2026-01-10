@@ -17,7 +17,7 @@ impl DetectFix for UseBuiltinWhich {
     }
 
     fn short_description(&self) -> &'static str {
-        "Prefer built-in 'which'"
+        "Use built-in 'which'"
     }
 
     fn source_link(&self) -> Option<&'static str> {

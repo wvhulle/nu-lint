@@ -17,7 +17,7 @@ impl DetectFix for UseBuiltinRead {
     }
 
     fn short_description(&self) -> &'static str {
-        "Prefer 'input' over 'read'"
+        "Use 'input' instead of 'read'"
     }
 
     fn source_link(&self) -> Option<&'static str> {

@@ -220,13 +220,6 @@ impl DetectFix for MissingStdinInShebang {
         Some("https://www.nushell.sh/book/scripts.html")
     }
 
-    fn long_description(&self) -> Option<&'static str> {
-        Some(
-            "Add --stdin flag to shebang: #!/usr/bin/env -S nu --stdin or #!/usr/bin/env nu \
-             --stdin",
-        )
-    }
-
     fn level(&self) -> LintLevel {
         LintLevel::Error
     }

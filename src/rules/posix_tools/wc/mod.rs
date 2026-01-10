@@ -17,7 +17,7 @@ impl DetectFix for UseBuiltinWc {
     }
 
     fn short_description(&self) -> &'static str {
-        "Prefer 'length' over external wc"
+        "Use 'length' instead of external wc"
     }
 
     fn source_link(&self) -> Option<&'static str> {

@@ -2,7 +2,8 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
 
 id: description
-message: Rule descriptions should straightforward
+message: Rule descriptions should straightforward. Do not use vague or imprecise words.
+
 severity: warning # error, warning, info, hint
 language: Rust
 rule:

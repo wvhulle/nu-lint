@@ -269,7 +269,7 @@ impl DetectFix for ReplaceJqWithNuGet {
     }
 
     fn short_description(&self) -> &'static str {
-        "Prefer Nushell built-ins over jq for data operations that have direct equivalents"
+        "Use Nushell built-ins for data operations with direct equivalents"
     }
 
     fn source_link(&self) -> Option<&'static str> {

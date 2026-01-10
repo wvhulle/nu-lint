@@ -223,7 +223,8 @@ impl DetectFix for MergeMultilinePrint {
     fn long_description(&self) -> Option<&'static str> {
         Some(
             "Merge consecutive print statements into a single print with a multiline string for \
-             cleaner code. Use `print \"line1\\nline2\\nline3\"` instead of multiple print calls.",
+             cleaner code. Use `print \"line1\\nline2\\nline3\"` instead of multiple print calls. \
+             This improves readability and reduces the number of print commands executed.",
         )
     }
 

@@ -24,6 +24,10 @@ pub trait SpanExt {
     /// Check if there's a documentation comment on the same line as this span
     /// This is used for inline parameter documentation: `param # Description`
     fn has_inline_doc_comment(&self, context: &LintContext) -> bool;
+    #[must_use]
+    /// Check if this span is contained within any of the provided container
+    /// spans
+    fn is_inside_any(&self, container_spans: &[Span]) -> bool;
 }
 
 impl SpanExt for Span {
@@ -66,5 +70,11 @@ impl SpanExt for Span {
         // "count" so we need to check if " # " appears anywhere on the rest of
         // the line
         rest_of_line.contains(" # ")
+    }
+
+    fn is_inside_any(&self, container_spans: &[Span]) -> bool {
+        container_spans
+            .iter()
+            .any(|s| s.start <= self.start && s.end >= self.end)
     }
 }

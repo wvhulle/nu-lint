@@ -7,7 +7,9 @@ pub mod ansi_over_escape_codes;
 pub mod avoid_nu_subprocess;
 pub mod avoid_self_import;
 pub mod builtin_not_empty;
+pub mod catch_builtin_error_try;
 pub mod chained_append;
+pub mod chained_str_replace;
 pub mod check_complete_exit_code;
 pub mod collapsible_if;
 pub mod dangerous_file_operations;
@@ -41,6 +43,7 @@ pub mod nothing_outside_function_signature;
 pub mod parsing;
 pub mod positional_to_pipeline;
 pub mod posix_tools;
+pub mod prefer_long_flags;
 pub mod range_for_iteration;
 pub mod redundant_ignore;
 pub mod remove_hat_not_builtin;
@@ -56,6 +59,9 @@ pub mod structured_data_to_csv_tool;
 pub mod structured_data_to_json_tool;
 pub mod try_instead_of_do;
 pub mod typing;
+pub mod unchecked_cell_path_index;
+pub mod unchecked_first_last;
+pub mod unchecked_get_index;
 pub mod unnecessary_accumulate;
 pub mod unnecessary_mut;
 pub mod unnecessary_variable_before_return;
@@ -72,6 +78,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     remove_string_quotes::RULE,
     builtin_not_empty::RULE,
     chained_append::RULE,
+    chained_str_replace::RULE,
     glob_may_drop_quotes::RULE,
     hardcoded_math_constants::RULE,
     check_complete_exit_code::RULE,
@@ -117,6 +124,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     max_positional_params::RULE,
     merge_get_cell_path::RULE,
     merge_multiline_print::RULE,
+    catch_builtin_error_try::RULE,
     missing_stdin_in_shebang::RULE,
     naming::kebab_case_commands::RULE,
     naming::screaming_snake_constants::RULE,
@@ -133,6 +141,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     parsing::split_row_first_last::RULE,
     parsing::split_row_get_inline::RULE,
     positional_to_pipeline::RULE,
+    prefer_long_flags::RULE,
     posix_tools::awk::RULE,
     posix_tools::bat::RULE,
     posix_tools::cat::RULE,
@@ -191,6 +200,9 @@ pub const USED_RULES: &[&dyn Rule] = &[
     unnecessary_mut::RULE,
     unnecessary_variable_before_return::RULE,
     unsafe_dynamic_record_access::RULE,
+    unchecked_cell_path_index::RULE,
+    unchecked_first_last::RULE,
+    unchecked_get_index::RULE,
     unused_helper_functions::RULE,
     upstream::nu_deprecated::RULE,
     upstream::nu_parse_error::RULE,

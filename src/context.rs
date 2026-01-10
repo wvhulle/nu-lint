@@ -216,6 +216,26 @@ impl<'a> LintContext<'a> {
         self.file_offset
     }
 
+    /// Collect spans of all calls to the specified commands
+    #[must_use]
+    pub fn collect_command_spans(&self, commands: &[&str]) -> Vec<Span> {
+        let mut spans = Vec::new();
+        self.ast.flat_map(
+            self.working_set,
+            &|expr| {
+                if let Expr::Call(call) = &expr.expr {
+                    let cmd_name = call.get_call_name(self);
+                    if commands.iter().any(|&cmd| cmd == cmd_name) {
+                        return vec![expr.span];
+                    }
+                }
+                vec![]
+            },
+            &mut spans,
+        );
+        spans
+    }
+
     /// Expand a span to include the full line(s) it occupies
     /// Takes a global AST span and returns a global span
     #[must_use]

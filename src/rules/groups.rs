@@ -24,6 +24,10 @@ const ERROR_HANDLING: Group = Group {
         super::unsafe_dynamic_record_access::RULE,
         super::missing_stdin_in_shebang::RULE,
         super::dynamic_script_import::RULE,
+        super::catch_builtin_error_try::RULE,
+        super::unchecked_cell_path_index::RULE,
+        super::unchecked_get_index::RULE,
+        super::unchecked_first_last::RULE,
     ],
 };
 
@@ -134,6 +138,7 @@ const PERFORMANCE: Group = Group {
         super::positional_to_pipeline::RULE,
         super::unnecessary_accumulate::RULE,
         super::merge_multiline_print::RULE,
+        super::chained_str_replace::RULE,
     ],
 };
 
@@ -184,6 +189,7 @@ const DOCUMENTATION: Group = Group {
         super::documentation::main_positional_args::RULE,
         super::documentation::main_named_args::RULE,
         super::max_positional_params::RULE,
+        super::prefer_long_flags::RULE,
     ],
 };
 

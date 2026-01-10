@@ -46,7 +46,7 @@ All rules are optional and can be disabled with a configuration file. The rule d
 
 Some of the rules need further testing and improvement. Please make an issue on the issue tracker to report any bugs. In early stages of development some rules may be replaced or renamed.
 
-+110 rules are defined and most have automatic fixes available (list may be out-of-date):
++120 rules are defined and most have automatic fixes available (list may be out-of-date):
 
 <!-- start-rule-groups -->
 `idioms` - Simplifications unique to the Nu language.
@@ -138,6 +138,10 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `unsafe_dynamic_record_access` (auto-fix)
 - `missing_stdin_in_shebang` (auto-fix)
 - `dynamic_script_import`
+- `catch_builtin_error_try`
+- `unchecked_cell_path_index` (auto-fix)
+- `unchecked_get_index` (auto-fix)
+- `unchecked_first_last` (auto-fix)
 
 `filtering` - Better patterns for filtering and selecting data.
 
@@ -148,7 +152,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `slice_to_last` (auto-fix)
 - `slice_to_skip` (auto-fix)
 - `slice_to_take` (auto-fix)
-- `where_or_filter_closure_to_it_row_condition` (auto-fix)
+- `where_closure_drop_parameter` (auto-fix)
 - `remove_redundant_in` (auto-fix)
 
 `performance` - Rules with potential performance impact
@@ -159,6 +163,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `turn_positional_into_stream_input` (auto-fix)
 - `unnecessary_accumulate`
 - `merge_multiline_print` (auto-fix)
+- `chained_str_replace` (auto-fix)
 
 `type-safety` - Annotate with type hints where possible.
 
@@ -182,6 +187,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `main_positional_args_docs`
 - `main_named_args_docs`
 - `max_positional_params`
+- `explicit_long_flags` (auto-fix)
 
 `effects` - Handle built-in and external commands with side-effects.
 

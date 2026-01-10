@@ -1,11 +1,15 @@
 use nu_protocol::{
     Span,
-    ast::{Expr, Expression, Pipeline},
+    ast::{Expr, Pipeline},
 };
 
 use crate::{
     LintLevel,
-    ast::{block::BlockExt, call::CallExt},
+    ast::{
+        block::BlockExt,
+        call::CallExt,
+        pipeline::{ClusterConfig, PipelineExt},
+    },
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -27,68 +31,17 @@ pub struct FixData {
     element_spans: Vec<Span>,
 }
 
-const MIN_CONSECUTIVE_APPENDS: usize = 2;
-const MAX_GAP: usize = 3;
-
 const DATA_PRESERVING_COMMANDS: &[&str] = &["filter", "where", "sort", "unique", "uniq"];
 
-fn is_append_call(expr: &Expression, context: &LintContext) -> bool {
-    matches!(&expr.expr, Expr::Call(call) if call.is_call_to_command("append", context))
-}
-
-fn is_data_preserving(expr: &Expression, context: &LintContext) -> bool {
-    matches!(&expr.expr, Expr::Call(call)
-        if DATA_PRESERVING_COMMANDS.contains(&call.get_call_name(context).as_str()))
-}
-
-fn has_valid_gap(pipeline: &Pipeline, start: usize, end: usize, context: &LintContext) -> bool {
-    end - start <= MAX_GAP
-        && (start + 1..end).all(|i| is_data_preserving(&pipeline.elements[i].expr, context))
-}
-
-fn find_append_clusters(pipeline: &Pipeline, context: &LintContext) -> Vec<Vec<usize>> {
-    let append_indices: Vec<usize> = pipeline
-        .elements
-        .iter()
-        .enumerate()
-        .filter_map(|(idx, elem)| is_append_call(&elem.expr, context).then_some(idx))
-        .collect();
-
-    if append_indices.len() < MIN_CONSECUTIVE_APPENDS {
-        return Vec::new();
-    }
-
-    let mut clusters = Vec::new();
-    let mut current = vec![append_indices[0]];
-
-    for window in append_indices.windows(2) {
-        let (prev, curr) = (window[0], window[1]);
-        if curr - prev == 1 || has_valid_gap(pipeline, prev, curr, context) {
-            current.push(curr);
-        } else {
-            if current.len() >= MIN_CONSECUTIVE_APPENDS {
-                clusters.push(current);
-            }
-            current = vec![curr];
-        }
-    }
-
-    if current.len() >= MIN_CONSECUTIVE_APPENDS {
-        clusters.push(current);
-    }
-
-    clusters
-}
-
-fn extract_element_spans(pipeline: &Pipeline, cluster: &[usize]) -> Option<Vec<Span>> {
-    let first_idx = *cluster.first()?;
+fn extract_element_spans(pipeline: &Pipeline, indices: &[usize]) -> Option<Vec<Span>> {
+    let first_idx = *indices.first()?;
     if first_idx == 0 {
         return None;
     }
 
     let mut spans = vec![pipeline.elements[first_idx - 1].expr.span];
 
-    for &idx in cluster {
+    for &idx in indices {
         let Expr::Call(call) = &pipeline.elements[idx].expr.expr else {
             return None;
         };
@@ -98,47 +51,44 @@ fn extract_element_spans(pipeline: &Pipeline, cluster: &[usize]) -> Option<Vec<S
     Some(spans)
 }
 
-fn create_violation(
-    cluster: &[usize],
-    element_spans: Vec<Span>,
-    pipeline: &Pipeline,
-) -> (Detection, FixData) {
-    let first_idx = cluster[0];
-    let last_idx = *cluster.last().unwrap();
-
-    let replace_span = Span::new(
-        pipeline.elements[first_idx - 1].expr.span.start,
-        pipeline.elements[last_idx].expr.span.end,
-    );
-
-    let message = format!(
-        "Consider using spread syntax instead of {} chained 'append' operations",
-        cluster.len()
-    );
-
-    let mut detection = Detection::from_global_span(message, replace_span)
-        .with_extra_label("First append", pipeline.elements[first_idx].expr.span)
-        .with_extra_label("Last append", pipeline.elements[last_idx].expr.span);
-
-    if let Some(first_span) = element_spans.first() {
-        detection = detection.with_extra_label("Starting list", *first_span);
-    }
-
-    (
-        detection,
-        FixData {
-            replace_span,
-            element_spans,
-        },
-    )
-}
-
 fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection, FixData)> {
-    find_append_clusters(pipeline, context)
+    let config = ClusterConfig::min_consecutive(2)
+        .with_max_gap(3)
+        .with_allowed_gaps(DATA_PRESERVING_COMMANDS.to_vec());
+
+    pipeline
+        .find_command_clusters("append", context, &config)
         .into_iter()
         .filter_map(|cluster| {
-            let spans = extract_element_spans(pipeline, &cluster)?;
-            Some(create_violation(&cluster, spans, pipeline))
+            let spans = extract_element_spans(pipeline, &cluster.indices)?;
+            let first_idx = cluster.first_index()?;
+            let last_idx = cluster.last_index()?;
+
+            let replace_span = Span::new(
+                pipeline.elements[first_idx - 1].expr.span.start,
+                pipeline.elements[last_idx].expr.span.end,
+            );
+
+            let message = format!(
+                "Consider using spread syntax instead of {} chained 'append' operations",
+                cluster.len()
+            );
+
+            let mut detection = Detection::from_global_span(message, replace_span)
+                .with_extra_label("First append", pipeline.elements[first_idx].expr.span)
+                .with_extra_label("Last append", pipeline.elements[last_idx].expr.span);
+
+            if let Some(first_span) = spans.first() {
+                detection = detection.with_extra_label("Starting list", *first_span);
+            }
+
+            Some((
+                detection,
+                FixData {
+                    replace_span,
+                    element_spans: spans,
+                },
+            ))
         })
         .collect()
 }

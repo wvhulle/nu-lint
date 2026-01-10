@@ -1,11 +1,15 @@
 use nu_protocol::{
     Span,
-    ast::{Argument, Expr, Expression, Pipeline},
+    ast::{Argument, Call, Expr, Pipeline},
 };
 
 use crate::{
     LintLevel,
-    ast::{block::BlockExt, call::CallExt},
+    ast::{
+        block::BlockExt,
+        call::CallExt,
+        pipeline::{ClusterConfig, PipelineExt},
+    },
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -18,21 +22,7 @@ struct FixData {
     replacement: String,
 }
 
-fn is_str_replace(expr: &Expression, ctx: &LintContext) -> bool {
-    matches!(&expr.expr, Expr::Call(c) if c.is_call_to_command("str replace", ctx))
-}
-
-fn has_flag(expr: &Expression, flag: &str) -> bool {
-    let Expr::Call(c) = &expr.expr else {
-        return false;
-    };
-    c.has_named_flag(flag)
-}
-
-fn extract_args(expr: &Expression) -> Option<(String, String)> {
-    let Expr::Call(call) = &expr.expr else {
-        return None;
-    };
+fn extract_args(call: &Call) -> Option<(String, String)> {
     let pos: Vec<_> = call
         .arguments
         .iter()
@@ -72,16 +62,16 @@ fn patterns_overlap(patterns: &[String]) -> bool {
     })
 }
 
-fn try_build_fix(cluster: &[&Expression]) -> Option<FixData> {
+fn try_build_fix(calls: &[&Call], span: Span) -> Option<FixData> {
     let mut finds = Vec::new();
     let mut replacement = None;
 
-    for expr in cluster {
-        let (find, repl) = extract_args(expr)?;
-        if !has_flag(expr, "all") && !has_flag(expr, "a") {
+    for call in calls {
+        let (find, repl) = extract_args(call)?;
+        if !call.has_named_flag("all") && !call.has_named_flag("a") {
             return None;
         }
-        if has_flag(expr, "regex") || has_flag(expr, "r") {
+        if call.has_named_flag("regex") || call.has_named_flag("r") {
             return None;
         }
         if replacement.get_or_insert(repl.clone()) != &repl {
@@ -95,7 +85,7 @@ fn try_build_fix(cluster: &[&Expression]) -> Option<FixData> {
     }
 
     Some(FixData {
-        span: Span::new(cluster.first()?.span.start, cluster.last()?.span.end),
+        span,
         patterns: finds.iter().map(|s| escape_regex(s)).collect(),
         replacement: replacement?,
     })
@@ -105,40 +95,13 @@ fn find_clusters_in_pipeline(
     pipeline: &Pipeline,
     ctx: &LintContext,
 ) -> Vec<(Detection, Option<FixData>)> {
-    let elements = &pipeline.elements;
-    let is_replace = |i: usize| is_str_replace(&elements[i].expr, ctx);
+    let config = ClusterConfig::min_consecutive(2);
 
-    // Find consecutive runs of str replace calls
-    let mut clusters = Vec::new();
-    let mut start = 0;
-
-    while start < elements.len() {
-        if !is_replace(start) {
-            start += 1;
-            continue;
-        }
-
-        let end = (start..elements.len())
-            .take_while(|&i| is_replace(i))
-            .last()
-            .unwrap_or(start)
-            + 1;
-
-        if end - start >= 2 {
-            clusters.push(start..end);
-        }
-        start = end;
-    }
-
-    clusters
+    pipeline
+        .find_command_clusters("str replace", ctx, &config)
         .into_iter()
-        .map(|range| {
-            let cluster: Vec<_> = elements[range].iter().map(|e| &e.expr).collect();
-            let span = Span::new(
-                cluster.first().unwrap().span.start,
-                cluster.last().unwrap().span.end,
-            );
-            let fix = try_build_fix(&cluster);
+        .map(|cluster| {
+            let fix = try_build_fix(&cluster.calls, cluster.span);
 
             let msg = format!(
                 "{} consecutive 'str replace' calls. {}",
@@ -149,7 +112,7 @@ fn find_clusters_in_pipeline(
                     "Consider combining if patterns share the same replacement"
                 }
             );
-            (Detection::from_global_span(msg, span), fix)
+            (Detection::from_global_span(msg, cluster.span), fix)
         })
         .collect()
 }

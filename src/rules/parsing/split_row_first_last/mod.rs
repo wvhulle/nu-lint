@@ -1,12 +1,12 @@
 use nu_protocol::{
     Span,
-    ast::{Call, Expr, Pipeline},
+    ast::{Call, Pipeline},
 };
 
 use super::{extract_delimiter_from_split_call, is_split_row_call};
 use crate::{
     Fix, LintLevel, Replacement,
-    ast::{block::BlockExt, call::CallExt, regex::escape_regex},
+    ast::{block::BlockExt, call::CallExt, pipeline::PipelineExt, regex::escape_regex},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
@@ -41,38 +41,22 @@ fn is_last_call(call: &Call, ctx: &LintContext) -> bool {
         })
 }
 
+fn is_first_or_last(call: &Call, ctx: &LintContext) -> bool {
+    is_first_call(call, ctx) || is_last_call(call, ctx)
+}
+
 fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection, FixData)> {
-    if pipeline.elements.len() < 2 {
-        return vec![];
-    }
-
     pipeline
-        .elements
-        .windows(2)
-        .filter_map(|window| {
-            let [current, next] = window else {
-                return None;
-            };
-            let (Expr::Call(split_call), Expr::Call(access_call)) =
-                (&current.expr.expr, &next.expr.expr)
-            else {
-                return None;
-            };
-
-            if !is_split_row_call(split_call, context) {
-                return None;
-            }
-
-            let access_type = if is_first_call(access_call, context) {
+        .find_command_pairs(context, is_split_row_call, is_first_or_last)
+        .into_iter()
+        .filter_map(|pair| {
+            let access_type = if is_first_call(pair.second, context) {
                 AccessType::First
-            } else if is_last_call(access_call, context) {
-                AccessType::Last
             } else {
-                return None;
+                AccessType::Last
             };
 
-            let delimiter = extract_delimiter_from_split_call(split_call, context)?;
-            let span = Span::new(current.expr.span.start, next.expr.span.end);
+            let delimiter = extract_delimiter_from_split_call(pair.first, context)?;
 
             let (message, label) = match access_type {
                 AccessType::First => (
@@ -85,15 +69,15 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection,
                 ),
             };
 
-            let violation = Detection::from_global_span(message, span)
+            let violation = Detection::from_global_span(message, pair.span)
                 .with_primary_label(label)
-                .with_extra_label("split row call", current.expr.span)
-                .with_extra_label("access call", next.expr.span);
+                .with_extra_label("split row call", pair.first.span())
+                .with_extra_label("access call", pair.second.span());
 
             Some((
                 violation,
                 FixData {
-                    span,
+                    span: pair.span,
                     delimiter,
                     access_type,
                 },

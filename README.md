@@ -54,7 +54,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `use_is_not_empty` (auto-fix)
 - `dispatch_with_subcommands`
 - `hardcoded_math_constants` (auto-fix)
-- `items_instead_of_transpose_each` (auto-fix)
+- `transpose_items` (auto-fix)
 - `merge_get_cell_path` (auto-fix)
 - `merge_multiline_print` (auto-fix)
 - `turn_positional_into_stream_input` (auto-fix)
@@ -142,6 +142,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `unchecked_cell_path_index` (auto-fix)
 - `unchecked_get_index` (auto-fix)
 - `unchecked_first_last` (auto-fix)
+- `wrap_external_with_complete`
 
 `filtering` - Better patterns for filtering and selecting data.
 

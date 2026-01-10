@@ -5,7 +5,7 @@ use nu_protocol::{
 
 use crate::{
     Fix, LintLevel, Replacement,
-    ast::call::CallExt,
+    ast::{call::CallExt, pipeline::PipelineExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
@@ -132,108 +132,83 @@ fn detect_pattern_in_pipeline(
     pipeline: &Pipeline,
     context: &LintContext,
 ) -> Vec<TransposeEachPattern> {
-    let mut patterns = Vec::new();
-
     log::debug!(
         "Checking pipeline with {} elements",
         pipeline.elements.len()
     );
 
-    for i in 0..pipeline.elements.len().saturating_sub(1) {
-        let transpose_elem = &pipeline.elements[i];
-        let each_elem = &pipeline.elements[i + 1];
+    pipeline
+        .find_command_pairs(
+            context,
+            |call, ctx| call.is_call_to_command("transpose", ctx),
+            |call, ctx| call.is_call_to_command("each", ctx),
+        )
+        .into_iter()
+        .filter_map(|pair| {
+            log::debug!("Found transpose | each pair");
 
-        let Expr::Call(transpose_call) = &transpose_elem.expr.expr else {
-            continue;
-        };
+            let Some((col1, col2)) = extract_transpose_column_names(pair.first) else {
+                log::debug!("Failed to extract 2 column names");
+                return None;
+            };
 
-        log::debug!("Found call at index {i}");
+            log::debug!("Column names: {col1}, {col2}");
 
-        if !transpose_call.is_call_to_command("transpose", context) {
-            log::debug!("Not transpose command");
-            continue;
-        }
+            let Some(Argument::Positional(closure_arg) | Argument::Unknown(closure_arg)) =
+                pair.second.arguments.first()
+            else {
+                log::debug!("Each doesn't have positional argument");
+                return None;
+            };
 
-        log::debug!("Found transpose command");
+            let Expr::Closure(block_id) = &closure_arg.expr else {
+                log::debug!("Argument is not a closure");
+                return None;
+            };
 
-        let Some((col1, col2)) = extract_transpose_column_names(transpose_call) else {
-            log::debug!("Failed to extract 2 column names");
-            continue;
-        };
+            log::debug!("Closure found");
 
-        log::debug!("Column names: {col1}, {col2}");
+            let block = context.working_set.get_block(*block_id);
 
-        let Expr::Call(each_call) = &each_elem.expr.expr else {
-            log::debug!("Next element is not a call");
-            continue;
-        };
+            if block.signature.required_positional.len() != 1 {
+                log::debug!(
+                    "Closure has {} parameters",
+                    block.signature.required_positional.len()
+                );
+                return None;
+            }
 
-        if !each_call.is_call_to_command("each", context) {
-            log::debug!("Next call is not each");
-            continue;
-        }
+            log::debug!("Closure has 1 parameter");
 
-        log::debug!("Found each call");
+            let param = &block.signature.required_positional[0];
+            let Some(closure_var_id) = param.var_id else {
+                log::debug!("Parameter doesn't have var_id");
+                return None;
+            };
 
-        let Some(Argument::Positional(closure_arg) | Argument::Unknown(closure_arg)) =
-            each_call.arguments.first()
-        else {
-            log::debug!("Each doesn't have positional argument");
-            continue;
-        };
+            log::debug!("Checking field usage");
 
-        let Expr::Closure(block_id) = &closure_arg.expr else {
-            log::debug!("Argument is not a closure");
-            continue;
-        };
+            let Some(cell_path_replacements) =
+                closure_only_uses_fields(*block_id, closure_var_id, &col1, &col2, context)
+            else {
+                log::debug!("Closure doesn't only use the specified fields");
+                return None;
+            };
 
-        log::debug!("Closure found");
+            log::debug!("Pattern matched!");
 
-        let block = context.working_set.get_block(*block_id);
-
-        if block.signature.required_positional.len() != 1 {
-            log::debug!(
-                "Closure has {} parameters",
-                block.signature.required_positional.len()
-            );
-            continue;
-        }
-
-        log::debug!("Closure has 1 parameter");
-
-        let param = &block.signature.required_positional[0];
-        let Some(closure_var_id) = param.var_id else {
-            log::debug!("Parameter doesn't have var_id");
-            continue;
-        };
-
-        log::debug!("Checking field usage");
-
-        let Some(cell_path_replacements) =
-            closure_only_uses_fields(*block_id, closure_var_id, &col1, &col2, context)
-        else {
-            log::debug!("Closure doesn't only use the specified fields");
-            continue;
-        };
-
-        log::debug!("Pattern matched!");
-
-        let combined_span =
-            nu_protocol::Span::new(transpose_call.head.start, each_elem.expr.span.end);
-
-        patterns.push(TransposeEachPattern {
-            each_call: *each_call.clone(),
-            col1,
-            col2,
-            combined_span,
-            transpose_span: transpose_call.head,
-            each_span: each_call.head,
-            closure_span: closure_arg.span,
-            cell_path_replacements,
-        });
-    }
-
-    patterns
+            Some(TransposeEachPattern {
+                each_call: pair.second.clone(),
+                col1,
+                col2,
+                combined_span: pair.span,
+                transpose_span: pair.first.head,
+                each_span: pair.second.head,
+                closure_span: closure_arg.span,
+                cell_path_replacements,
+            })
+        })
+        .collect()
 }
 
 fn collect_patterns_from_block(
@@ -265,7 +240,7 @@ impl DetectFix for ItemsInsteadOfTransposeEach {
     type FixInput<'a> = TransposeEachPattern;
 
     fn id(&self) -> &'static str {
-        "items_instead_of_transpose_each"
+        "transpose_items"
     }
 
     fn short_description(&self) -> &'static str {

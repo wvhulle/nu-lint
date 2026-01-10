@@ -1,11 +1,15 @@
 use nu_protocol::{
     Span,
-    ast::{Expr, Expression, PathMember, Pipeline},
+    ast::{Expr, Expression, PathMember},
 };
 
 use crate::{
     LintLevel,
-    ast::{call::CallExt, string::cell_path_member_needs_quotes},
+    ast::{
+        call::CallExt,
+        pipeline::{ClusterConfig, PipelineExt},
+        string::cell_path_member_needs_quotes,
+    },
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -24,14 +28,6 @@ fn extract_cell_path_members(expr: &Expression) -> Option<Vec<PathMember>> {
     } else {
         None
     }
-}
-
-fn is_get_call(expr: &Expression, context: &LintContext) -> bool {
-    matches!(&expr.expr, Expr::Call(call) if call.is_call_to_command("get", context))
-}
-
-fn combine_cell_path_members(member_groups: &[Vec<PathMember>]) -> Vec<PathMember> {
-    member_groups.iter().flatten().cloned().collect()
 }
 
 const fn format_optional_prefix(optional: bool) -> &'static str {
@@ -73,73 +69,6 @@ const fn get_command_label(idx: usize, start_idx: usize, end_idx: usize) -> &'st
     }
 }
 
-const MIN_CONSECUTIVE_GETS: usize = 2;
-
-fn find_consecutive_gets(pipeline: &Pipeline, context: &LintContext) -> Vec<(usize, usize)> {
-    let mut ranges = Vec::new();
-    let mut current_range_start = None;
-
-    for (idx, element) in pipeline.elements.iter().enumerate() {
-        if is_get_call(&element.expr, context) {
-            current_range_start.get_or_insert(idx);
-        } else if let Some(start) = current_range_start.take() {
-            let range_length = idx - start;
-            if range_length >= MIN_CONSECUTIVE_GETS {
-                ranges.push((start, idx - 1));
-            }
-        }
-    }
-
-    if let Some(start) = current_range_start {
-        let last_idx = pipeline.elements.len() - 1;
-        let range_length = last_idx - start + 1;
-        if range_length >= MIN_CONSECUTIVE_GETS {
-            ranges.push((start, last_idx));
-        }
-    }
-
-    ranges
-}
-
-fn collect_cell_path_members_from_pipeline(
-    pipeline: &Pipeline,
-    start_idx: usize,
-    end_idx: usize,
-) -> Option<Vec<Vec<PathMember>>> {
-    (start_idx..=end_idx)
-        .map(|idx| {
-            let element = &pipeline.elements[idx];
-            let Expr::Call(call) = &element.expr.expr else {
-                return None;
-            };
-            let arg = call.get_first_positional_arg()?;
-            extract_cell_path_members(arg)
-        })
-        .collect()
-}
-
-fn calculate_full_span(pipeline: &Pipeline, start_idx: usize, end_idx: usize) -> Span {
-    let start_span = pipeline.elements[start_idx].expr.span;
-    let end_span = pipeline.elements[end_idx].expr.span;
-    Span::new(start_span.start, end_span.end)
-}
-
-fn create_violation_for_range(pipeline: &Pipeline, start_idx: usize, end_idx: usize) -> Detection {
-    let full_span = calculate_full_span(pipeline, start_idx, end_idx);
-    let num_gets = end_idx - start_idx + 1;
-    let message = format!("Use combined cell path instead of {num_gets} chained 'get' commands");
-
-    let mut violation = Detection::from_global_span(message, full_span);
-
-    for idx in start_idx..=end_idx {
-        let span = pipeline.elements[idx].expr.span;
-        let label = get_command_label(idx, start_idx, end_idx);
-        violation = violation.with_extra_label(label, span);
-    }
-
-    violation
-}
-
 struct MergeGetCellPath;
 
 impl DetectFix for MergeGetCellPath {
@@ -162,26 +91,57 @@ impl DetectFix for MergeGetCellPath {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
+        let config = ClusterConfig::min_consecutive(2);
+
         context
             .ast
             .pipelines
             .iter()
             .flat_map(|pipeline| {
-                find_consecutive_gets(pipeline, context)
+                pipeline
+                    .find_command_clusters("get", context, &config)
                     .into_iter()
-                    .filter_map(|(start_idx, end_idx)| {
-                        let violation = create_violation_for_range(pipeline, start_idx, end_idx);
+                    .filter_map(|cluster| {
+                        let start_idx = cluster.first_index()?;
+                        let end_idx = cluster.last_index()?;
 
-                        let member_groups =
-                            collect_cell_path_members_from_pipeline(pipeline, start_idx, end_idx)?;
-                        let combined_members = combine_cell_path_members(&member_groups);
+                        // Collect cell path members from each get call
+                        let member_groups: Option<Vec<Vec<PathMember>>> = cluster
+                            .indices
+                            .iter()
+                            .map(|&idx| {
+                                let element = &pipeline.elements[idx];
+                                let Expr::Call(call) = &element.expr.expr else {
+                                    return None;
+                                };
+                                let arg = call.get_first_positional_arg()?;
+                                extract_cell_path_members(arg)
+                            })
+                            .collect();
+
+                        let member_groups = member_groups?;
+                        let combined_members: Vec<PathMember> =
+                            member_groups.into_iter().flatten().collect();
+
+                        // Create violation with labels
+                        let num_gets = cluster.len();
+                        let message = format!(
+                            "Use combined cell path instead of {num_gets} chained 'get' commands"
+                        );
+
+                        let mut detection = Detection::from_global_span(message, cluster.span);
+                        for &idx in &cluster.indices {
+                            let span = pipeline.elements[idx].expr.span;
+                            let label = get_command_label(idx, start_idx, end_idx);
+                            detection = detection.with_extra_label(label, span);
+                        }
 
                         let fix_data = FixData {
-                            full_span: calculate_full_span(pipeline, start_idx, end_idx),
+                            full_span: cluster.span,
                             combined_members,
                         };
 
-                        Some((violation, fix_data))
+                        Some((detection, fix_data))
                     })
             })
             .collect()

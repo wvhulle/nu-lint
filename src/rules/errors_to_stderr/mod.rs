@@ -61,21 +61,16 @@ fn check_same_pipeline_print_exit(
     pipeline: &Pipeline,
     context: &LintContext,
 ) -> Option<ErrorToStdout> {
-    (pipeline.elements.len() >= 2).then_some(()).and_then(|()| {
-        pipeline.elements.windows(2).find_map(|elements| {
-            let [first, second] = elements else {
-                return None;
-            };
+    use crate::ast::pipeline::PipelineExt;
 
-            let Expr::Call(print_call) = &first.expr.expr else {
-                return None;
-            };
-            let Expr::Call(exit_call) = &second.expr.expr else {
-                return None;
-            };
-            check_print_exit_calls(print_call, exit_call, context)
-        })
-    })
+    pipeline
+        .find_command_pairs(
+            context,
+            |call, ctx| call.is_call_to_command("print", ctx) && !call.has_named_flag("stderr"),
+            |call, ctx| call.is_call_to_command("exit", ctx),
+        )
+        .into_iter()
+        .find_map(|pair| check_print_exit_calls(pair.first, pair.second, context))
 }
 
 fn create_violation(pattern: &ErrorToStdout) -> Detection {

@@ -1,7 +1,4 @@
-use nu_protocol::{
-    Span,
-    ast::{Expr, Pipeline},
-};
+use nu_protocol::{Span, ast::Pipeline};
 
 use super::{
     extract_delimiter_from_split_call, extract_index_from_call, generate_parse_replacement,
@@ -9,7 +6,7 @@ use super::{
 };
 use crate::{
     Fix, LintLevel, Replacement,
-    ast::block::BlockExt,
+    ast::{block::BlockExt, pipeline::PipelineExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
@@ -25,59 +22,26 @@ pub enum FixData {
 }
 
 fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection, FixData)> {
-    if pipeline.elements.len() < 2 {
-        return vec![];
-    }
-
     pipeline
-        .elements
-        .windows(2)
-        .filter_map(|window| {
-            let [current, next] = window else {
-                return None;
-            };
-            let (Expr::Call(split_call), Expr::Call(access_call)) =
-                (&current.expr.expr, &next.expr.expr)
-            else {
-                return None;
-            };
+        .find_command_pairs(context, is_split_row_call, is_indexed_access_call)
+        .into_iter()
+        .filter_map(|pair| {
+            let index = extract_index_from_call(pair.second, context)?;
+            let delimiter = extract_delimiter_from_split_call(pair.first, context);
 
-            if !is_split_row_call(split_call, context)
-                || !is_indexed_access_call(access_call, context)
-            {
-                return None;
-            }
-
-            let index = extract_index_from_call(access_call, context)?;
-            let span = Span::new(current.expr.span.start, next.expr.span.end);
-
-            let delimiter = extract_delimiter_from_split_call(split_call, context);
-
-            delimiter.map_or_else(
-                || {
-                    let violation = Detection::from_global_span(
-                        "Use 'parse' instead of chaining 'split row | get' in a pipeline",
-                        span,
-                    )
-                    .with_primary_label("split row followed by indexed get in same pipeline");
-                    Some((violation, FixData::NoFix))
-                },
-                |delim| {
-                    let violation = Detection::from_global_span(
-                        "Use 'parse' instead of chaining 'split row | get' in a pipeline",
-                        span,
-                    )
-                    .with_primary_label("split row followed by indexed get in same pipeline");
-                    Some((
-                        violation,
-                        FixData::WithDelimiter {
-                            span,
-                            delimiter: delim,
-                            index,
-                        },
-                    ))
-                },
+            let violation = Detection::from_global_span(
+                "Use 'parse' instead of chaining 'split row | get' in a pipeline",
+                pair.span,
             )
+            .with_primary_label("split row followed by indexed get in same pipeline");
+
+            let fix_data = delimiter.map_or(FixData::NoFix, |delim| FixData::WithDelimiter {
+                span: pair.span,
+                delimiter: delim,
+                index,
+            });
+
+            Some((violation, fix_data))
         })
         .collect()
 }
@@ -92,12 +56,7 @@ impl DetectFix for SplitGetRule {
     }
 
     fn short_description(&self) -> &'static str {
-        "Replace chained 'split row | get INDEX' pattern in a single pipeline with 'parse' for \
-         structured text extraction"
-    }
-
-    fn source_link(&self) -> Option<&'static str> {
-        Some("https://www.nushell.sh/commands/docs/parse.html")
+        "Replace 'split row | get INDEX' pattern with 'parse'"
     }
 
     fn long_description(&self) -> Option<&'static str> {
@@ -117,6 +76,10 @@ Example:
   Before: "192.168.1.100:8080" | split row ":" | get 0
   After:  "192.168.1.100:8080" | parse "{ip}:{port}" | get ip"#,
         )
+    }
+
+    fn source_link(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/commands/docs/parse.html")
     }
 
     fn level(&self) -> LintLevel {

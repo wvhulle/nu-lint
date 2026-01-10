@@ -3,7 +3,10 @@ use nu_protocol::{
     ast::{Expr, Expression, Pipeline},
 };
 
-use crate::{ast::call::CallExt, context::LintContext};
+use crate::{
+    ast::{call::CallExt, pipeline::PipelineExt},
+    context::LintContext,
+};
 
 pub mod from_after_parsed_open;
 pub mod open_raw_from_to_open;
@@ -29,69 +32,43 @@ pub fn find_open_from_patterns<'a>(
     pipeline: &'a Pipeline,
     context: &'a LintContext,
 ) -> Vec<OpenFromPattern<'a>> {
-    let elements = &pipeline.elements;
-    if elements.len() < 2 {
-        return vec![];
-    }
+    pipeline
+        .find_command_pairs(
+            context,
+            |call, ctx| call.is_call_to_command("open", ctx),
+            |call, ctx| call.get_call_name(ctx).starts_with("from "),
+        )
+        .into_iter()
+        .filter_map(|pair| {
+            let from_name = pair.second.get_call_name(context);
+            let format = from_name.strip_prefix("from ")?;
 
-    let mut patterns = Vec::new();
+            let filename_arg = pair.first.get_first_positional_arg()?;
+            let filename = context.plain_text(filename_arg.span);
 
-    for i in 0..elements.len() - 1 {
-        let open_expr = &elements[i].expr;
-        let from_expr = &elements[i + 1].expr;
+            let filename_content = match &filename_arg.expr {
+                Expr::String(s) | Expr::RawString(s) | Expr::GlobPattern(s, _) => s.as_str(),
+                _ => filename,
+            };
 
-        let Expr::Call(open_call) = &open_expr.expr else {
-            continue;
-        };
+            let file_format = context.format_for_extension(filename_content)?;
 
-        if !open_call.is_call_to_command("open", context) {
-            continue;
-        }
+            if file_format != format {
+                return None;
+            }
 
-        let Expr::Call(from_call) = &from_expr.expr else {
-            continue;
-        };
+            let open_text = context.plain_text(pair.span);
+            let has_raw_flag = open_text.contains("--raw") || open_text.contains("-r ");
 
-        let from_name = from_call.get_call_name(context);
-        if !from_name.starts_with("from ") {
-            continue;
-        }
-
-        let format = from_name.strip_prefix("from ").unwrap_or_default();
-
-        let Some(filename_arg) = open_call.get_first_positional_arg() else {
-            continue;
-        };
-
-        let filename = context.plain_text(filename_arg.span);
-
-        let filename_content = match &filename_arg.expr {
-            Expr::String(s) | Expr::RawString(s) | Expr::GlobPattern(s, _) => s.as_str(),
-            _ => filename,
-        };
-
-        let Some(file_format) = context.format_for_extension(filename_content) else {
-            continue;
-        };
-
-        if file_format != format {
-            continue;
-        }
-
-        let open_text = context.plain_text(open_expr.span);
-        let has_raw_flag = open_text.contains("--raw") || open_text.contains("-r ");
-
-        // Store original filename text (with quotes) for use in fixes
-        patterns.push(OpenFromPattern {
-            open_expr,
-            from_expr,
-            filename: filename.to_string(),
-            format: format.to_string(),
-            has_raw_flag,
-        });
-    }
-
-    patterns
+            Some(OpenFromPattern {
+                open_expr: &pipeline.elements[pair.first_index].expr,
+                from_expr: &pipeline.elements[pair.second_index].expr,
+                filename: filename.to_string(),
+                format: format.to_string(),
+                has_raw_flag,
+            })
+        })
+        .collect()
 }
 
 /// Create a span covering from open to from (the entire `open FILE | from

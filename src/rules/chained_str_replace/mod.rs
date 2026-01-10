@@ -1,11 +1,11 @@
 use nu_protocol::{
-    BlockId, Span,
+    Span,
     ast::{Argument, Block, Expr, Expression, Pipeline, Traverse},
 };
 
 use crate::{
     LintLevel,
-    ast::call::CallExt,
+    ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -154,13 +154,6 @@ fn find_clusters_in_pipeline(
         .collect()
 }
 
-const fn extract_block_id(expr: &Expr) -> Option<BlockId> {
-    match expr {
-        Expr::Block(id) | Expr::Closure(id) | Expr::Subexpression(id) => Some(*id),
-        _ => None,
-    }
-}
-
 fn detect_in_block(block: &Block, ctx: &LintContext) -> Vec<(Detection, Option<FixData>)> {
     let mut results: Vec<_> = block
         .pipelines
@@ -173,8 +166,8 @@ fn detect_in_block(block: &Block, ctx: &LintContext) -> Vec<(Detection, Option<F
         for element in &pipeline.elements {
             element.expr.flat_map(
                 ctx.working_set,
-                &|expr| {
-                    extract_block_id(&expr.expr)
+                &|expr: &Expression| {
+                    expr.extract_block_id()
                         .map(|id| detect_in_block(ctx.working_set.get_block(id), ctx))
                         .unwrap_or_default()
                 },

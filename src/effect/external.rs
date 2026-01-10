@@ -459,487 +459,437 @@ pub const EXTERNAL_COMMAND_SIDE_EFFECTS: &[(
             (ExternEffect::WritesDataToStdErr, always),
         ],
     ),
-    ("evtest", &[(ExternEffect::WritesDataToStdErr, always)]),
+    (
+        "evtest",
+        &[(
+            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            always,
+        )],
+    ),
+    // Modern CLI alternatives
+    (
+        "rg",
+        &[(
+            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            always,
+        )],
+    ),
+    (
+        "fd",
+        &[(
+            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            always,
+        )],
+    ),
+    ("bat", &[]),
+    ("exa", &[]),
+    ("eza", &[]),
+    ("htop", &[(ExternEffect::NoDataInStdout, always)]),
+    ("btop", &[(ExternEffect::NoDataInStdout, always)]),
+    (
+        "duf",
+        &[(
+            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            always,
+        )],
+    ),
+    (
+        "dust",
+        &[(
+            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            always,
+        )],
+    ),
+    // Package managers - Node.js ecosystem
+    (
+        "npm",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::ModifiesFileSystem, always),
+            (ExternEffect::ModifiesNetworkState, always),
+        ],
+    ),
+    (
+        "npx",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::ModifiesFileSystem, always),
+            (ExternEffect::ModifiesNetworkState, always),
+        ],
+    ),
+    (
+        "yarn",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::ModifiesFileSystem, always),
+            (ExternEffect::ModifiesNetworkState, always),
+        ],
+    ),
+    (
+        "pnpm",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::ModifiesFileSystem, always),
+            (ExternEffect::ModifiesNetworkState, always),
+        ],
+    ),
+    (
+        "node",
+        &[(
+            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            always,
+        )],
+    ),
+    // Package managers - Python ecosystem
+    (
+        "pip",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::ModifiesFileSystem, always),
+            (ExternEffect::ModifiesNetworkState, always),
+        ],
+    ),
+    (
+        "pip3",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::ModifiesFileSystem, always),
+            (ExternEffect::ModifiesNetworkState, always),
+        ],
+    ),
+    (
+        "pipx",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::ModifiesFileSystem, always),
+            (ExternEffect::ModifiesNetworkState, always),
+        ],
+    ),
+    (
+        "uv",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::ModifiesFileSystem, always),
+            (ExternEffect::ModifiesNetworkState, always),
+        ],
+    ),
+    (
+        "poetry",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::ModifiesFileSystem, always),
+            (ExternEffect::ModifiesNetworkState, always),
+        ],
+    ),
+    (
+        "python",
+        &[(
+            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            always,
+        )],
+    ),
+    (
+        "python3",
+        &[(
+            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            always,
+        )],
+    ),
+    (
+        "pytest",
+        &[(
+            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            always,
+        )],
+    ),
+    (
+        "mypy",
+        &[(
+            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            always,
+        )],
+    ),
+    (
+        "ruff",
+        &[(
+            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            always,
+        )],
+    ),
+    // Package managers - Rust ecosystem
+    (
+        "cargo",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::ModifiesFileSystem, always),
+            (ExternEffect::ModifiesNetworkState, always),
+        ],
+    ),
+    (
+        "rustc",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::ModifiesFileSystem, always),
+        ],
+    ),
+    (
+        "rustup",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::ModifiesFileSystem, always),
+            (ExternEffect::ModifiesNetworkState, always),
+        ],
+    ),
+    // Container and orchestration tools
+    (
+        "docker",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::ModifiesFileSystem, always),
+            (ExternEffect::ModifiesNetworkState, always),
+        ],
+    ),
+    (
+        "podman",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::ModifiesFileSystem, always),
+            (ExternEffect::ModifiesNetworkState, always),
+        ],
+    ),
+    (
+        "kubectl",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::ModifiesNetworkState, always),
+        ],
+    ),
+    (
+        "vagrant",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::ModifiesFileSystem, always),
+            (ExternEffect::ModifiesNetworkState, always),
+        ],
+    ),
+    // Build tools
+    (
+        "make",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::ModifiesFileSystem, always),
+        ],
+    ),
+    (
+        "cmake",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::ModifiesFileSystem, always),
+        ],
+    ),
+    (
+        "ninja",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::ModifiesFileSystem, always),
+        ],
+    ),
+    (
+        "meson",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::ModifiesFileSystem, always),
+        ],
+    ),
+    // File system operations
+    (
+        "chmod",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::ModifiesFileSystem, always),
+            (ExternEffect::NoDataInStdout, always),
+        ],
+    ),
+    (
+        "chown",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::ModifiesFileSystem, always),
+            (ExternEffect::NoDataInStdout, always),
+        ],
+    ),
+    (
+        "ln",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::ModifiesFileSystem, always),
+            (ExternEffect::NoDataInStdout, always),
+        ],
+    ),
+    (
+        "touch",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::ModifiesFileSystem, always),
+            (ExternEffect::NoDataInStdout, always),
+        ],
+    ),
+    (
+        "mkdir",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::ModifiesFileSystem, always),
+            (ExternEffect::NoDataInStdout, always),
+        ],
+    ),
+    (
+        "rmdir",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::ModifiesFileSystem, always),
+            (ExternEffect::NoDataInStdout, always),
+        ],
+    ),
+    // Data processing tools
+    (
+        "jq",
+        &[(
+            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            always,
+        )],
+    ),
+    (
+        "yq",
+        &[(
+            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            always,
+        )],
+    ),
+    ("less", &[(ExternEffect::NoDataInStdout, always)]),
+    // Additional common tools
+    (
+        "diff",
+        &[(
+            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            always,
+        )],
+    ),
+    (
+        "patch",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::ModifiesFileSystem, always),
+        ],
+    ),
+    (
+        "which",
+        &[(
+            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            always,
+        )],
+    ),
+    ("env", &[]),
+    ("printenv", &[]),
+    (
+        "tee",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::ModifiesFileSystem, always),
+        ],
+    ),
+    (
+        "dd",
+        &[
+            (
+                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                always,
+            ),
+            (ExternEffect::ModifiesFileSystem, always),
+            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+        ],
+    ),
 ];
-
-#[cfg(test)]
-mod tests {
-    use nu_protocol::ast::Expr;
-
-    use super::*;
-
-    fn with_external_args<F, R>(source: &str, f: F) -> R
-    where
-        F: for<'b> FnOnce(&LintContext<'b>, &[ExternalArgument]) -> R,
-    {
-        LintContext::test_with_parsed_source(source, |context| {
-            let args = context
-                .ast
-                .pipelines
-                .first()
-                .and_then(|pipeline| pipeline.elements.first())
-                .and_then(|element| match &element.expr.expr {
-                    Expr::ExternalCall(_, args) => Some(args.as_ref()),
-                    _ => None,
-                })
-                .unwrap_or(&[]);
-            f(&context, args)
-        })
-    }
-
-    #[test]
-    fn test_curl_without_output_flag_does_not_modify_filesystem() {
-        with_external_args("curl https://example.com", |context, args| {
-            assert!(
-                !has_external_side_effect("curl", ExternEffect::ModifiesFileSystem, context, args),
-                "curl without output flag should not modify filesystem"
-            );
-        });
-    }
-
-    #[test]
-    fn test_curl_with_short_output_flag_modifies_filesystem() {
-        with_external_args("curl -o output.txt https://example.com", |context, args| {
-            assert!(
-                has_external_side_effect("curl", ExternEffect::ModifiesFileSystem, context, args),
-                "curl with -o flag should modify filesystem"
-            );
-        });
-    }
-
-    #[test]
-    fn test_curl_with_long_output_flag_modifies_filesystem() {
-        with_external_args(
-            "curl --output output.txt https://example.com",
-            |context, args| {
-                assert!(
-                    has_external_side_effect(
-                        "curl",
-                        ExternEffect::ModifiesFileSystem,
-                        context,
-                        args
-                    ),
-                    "curl with --output flag should modify filesystem"
-                );
-            },
-        );
-    }
-
-    #[test]
-    fn test_curl_with_remote_name_modifies_filesystem() {
-        with_external_args("curl -O https://example.com/file.txt", |context, args| {
-            assert!(
-                has_external_side_effect("curl", ExternEffect::ModifiesFileSystem, context, args),
-                "curl with -O flag should modify filesystem"
-            );
-        });
-    }
-
-    #[test]
-    fn test_tar_list_does_not_modify_filesystem() {
-        with_external_args("tar -t -f archive.tar", |context, args| {
-            assert!(
-                !has_external_side_effect("tar", ExternEffect::ModifiesFileSystem, context, args),
-                "tar -t (list) should not modify filesystem"
-            );
-        });
-    }
-
-    #[test]
-    fn test_tar_extract_modifies_filesystem() {
-        with_external_args("tar -x -f archive.tar", |context, args| {
-            assert!(
-                has_external_side_effect("tar", ExternEffect::ModifiesFileSystem, context, args),
-                "tar -x (extract) should modify filesystem"
-            );
-        });
-    }
-
-    #[test]
-    fn test_tar_create_modifies_filesystem() {
-        with_external_args("tar -c -f archive.tar files/", |context, args| {
-            assert!(
-                has_external_side_effect("tar", ExternEffect::ModifiesFileSystem, context, args),
-                "tar -c (create) should modify filesystem"
-            );
-        });
-    }
-
-    #[test]
-    fn test_tar_create_combined_flags_modifies_filesystem() {
-        with_external_args("tar czf backup.tar.gz folder/", |context, args| {
-            assert!(
-                has_external_side_effect("tar", ExternEffect::ModifiesFileSystem, context, args),
-                "tar czf (create with compression) should modify filesystem"
-            );
-        });
-    }
-
-    #[test]
-    fn test_sed_without_inplace_does_not_modify_filesystem() {
-        with_external_args("sed 's/foo/bar/' file.txt", |context, args| {
-            assert!(
-                !has_external_side_effect("sed", ExternEffect::ModifiesFileSystem, context, args),
-                "sed without -i should not modify filesystem"
-            );
-        });
-    }
-
-    #[test]
-    fn test_sed_with_inplace_modifies_filesystem() {
-        with_external_args("sed -i 's/foo/bar/' file.txt", |context, args| {
-            assert!(
-                has_external_side_effect("sed", ExternEffect::ModifiesFileSystem, context, args),
-                "sed with -i should modify filesystem"
-            );
-        });
-    }
-
-    #[test]
-    fn test_sed_without_inplace_is_not_dangerous() {
-        with_external_args("sed 's/foo/bar/' file.txt", |context, args| {
-            assert!(
-                !has_external_side_effect(
-                    "sed",
-                    ExternEffect::CommonEffect(CommonEffect::Dangerous),
-                    context,
-                    args
-                ),
-                "sed without -i should not be dangerous"
-            );
-        });
-    }
-
-    #[test]
-    fn test_sed_with_inplace_is_dangerous() {
-        with_external_args("sed -i 's/foo/bar/' file.txt", |context, args| {
-            assert!(
-                has_external_side_effect(
-                    "sed",
-                    ExternEffect::CommonEffect(CommonEffect::Dangerous),
-                    context,
-                    args
-                ),
-                "sed with -i should be dangerous"
-            );
-        });
-    }
-
-    #[test]
-    fn test_git_push_force_is_dangerous() {
-        with_external_args("git push --force origin main", |context, args| {
-            assert!(
-                has_external_side_effect(
-                    "git",
-                    ExternEffect::CommonEffect(CommonEffect::Dangerous),
-                    context,
-                    args
-                ),
-                "git push --force should be dangerous"
-            );
-        });
-    }
-
-    #[test]
-    fn test_git_push_force_short_flag_is_dangerous() {
-        with_external_args("git push -f origin main", |context, args| {
-            assert!(
-                has_external_side_effect(
-                    "git",
-                    ExternEffect::CommonEffect(CommonEffect::Dangerous),
-                    context,
-                    args
-                ),
-                "git push -f should be dangerous"
-            );
-        });
-    }
-
-    #[test]
-    fn test_git_reset_hard_is_dangerous() {
-        with_external_args("git reset --hard HEAD~1", |context, args| {
-            assert!(
-                has_external_side_effect(
-                    "git",
-                    ExternEffect::CommonEffect(CommonEffect::Dangerous),
-                    context,
-                    args
-                ),
-                "git reset --hard should be dangerous"
-            );
-        });
-    }
-
-    #[test]
-    fn test_git_clean_force_is_dangerous() {
-        with_external_args("git clean -fd", |context, args| {
-            assert!(
-                has_external_side_effect(
-                    "git",
-                    ExternEffect::CommonEffect(CommonEffect::Dangerous),
-                    context,
-                    args
-                ),
-                "git clean -fd should be dangerous"
-            );
-        });
-    }
-
-    #[test]
-    fn test_git_branch_force_delete_is_dangerous() {
-        with_external_args("git branch -D feature-branch", |context, args| {
-            assert!(
-                has_external_side_effect(
-                    "git",
-                    ExternEffect::CommonEffect(CommonEffect::Dangerous),
-                    context,
-                    args
-                ),
-                "git branch -D should be dangerous"
-            );
-        });
-    }
-
-    #[test]
-    fn test_git_clone_modifies_filesystem() {
-        with_external_args("git clone https://github.com/user/repo", |context, args| {
-            assert!(
-                has_external_side_effect("git", ExternEffect::ModifiesFileSystem, context, args),
-                "git clone should modify filesystem"
-            );
-        });
-    }
-
-    #[test]
-    fn test_git_pull_modifies_filesystem() {
-        with_external_args("git pull origin main", |context, args| {
-            assert!(
-                has_external_side_effect("git", ExternEffect::ModifiesFileSystem, context, args),
-                "git pull should modify filesystem"
-            );
-        });
-    }
-
-    #[test]
-    fn test_git_checkout_modifies_filesystem() {
-        with_external_args("git checkout develop", |context, args| {
-            assert!(
-                has_external_side_effect("git", ExternEffect::ModifiesFileSystem, context, args),
-                "git checkout should modify filesystem"
-            );
-        });
-    }
-
-    #[test]
-    fn test_git_status_does_not_modify_filesystem() {
-        with_external_args("git status", |context, args| {
-            assert!(
-                !has_external_side_effect("git", ExternEffect::ModifiesFileSystem, context, args),
-                "git status should not modify filesystem"
-            );
-        });
-    }
-
-    #[test]
-    fn test_git_log_does_not_modify_filesystem() {
-        with_external_args("git log --oneline", |context, args| {
-            assert!(
-                !has_external_side_effect("git", ExternEffect::ModifiesFileSystem, context, args),
-                "git log should not modify filesystem"
-            );
-        });
-    }
-
-    #[test]
-    fn test_git_diff_does_not_modify_filesystem() {
-        with_external_args("git diff HEAD~1", |context, args| {
-            assert!(
-                !has_external_side_effect("git", ExternEffect::ModifiesFileSystem, context, args),
-                "git diff should not modify filesystem"
-            );
-        });
-    }
-
-    #[test]
-    fn test_git_push_without_force_is_not_dangerous() {
-        with_external_args("git push origin main", |context, args| {
-            assert!(
-                !has_external_side_effect(
-                    "git",
-                    ExternEffect::CommonEffect(CommonEffect::Dangerous),
-                    context,
-                    args
-                ),
-                "git push without --force should not be dangerous"
-            );
-        });
-    }
-
-    #[test]
-    fn test_git_reset_without_hard_is_not_dangerous() {
-        with_external_args("git reset HEAD~1", |context, args| {
-            assert!(
-                !has_external_side_effect(
-                    "git",
-                    ExternEffect::CommonEffect(CommonEffect::Dangerous),
-                    context,
-                    args
-                ),
-                "git reset without --hard should not be dangerous"
-            );
-        });
-    }
-
-    #[test]
-    fn test_git_config_get_does_not_modify_filesystem() {
-        with_external_args("git config get user.name", |context, args| {
-            assert!(
-                !has_external_side_effect("git", ExternEffect::ModifiesFileSystem, context, args),
-                "git config get should not modify filesystem"
-            );
-        });
-    }
-
-    #[test]
-    fn test_git_config_list_does_not_modify_filesystem() {
-        with_external_args("git config --list", |context, args| {
-            assert!(
-                !has_external_side_effect("git", ExternEffect::ModifiesFileSystem, context, args),
-                "git config --list should not modify filesystem"
-            );
-        });
-    }
-
-    #[test]
-    fn test_git_config_set_modifies_filesystem() {
-        with_external_args("git config user.name \"John Doe\"", |context, args| {
-            assert!(
-                has_external_side_effect("git", ExternEffect::ModifiesFileSystem, context, args),
-                "git config set should modify filesystem"
-            );
-        });
-    }
-
-    #[test]
-    fn test_git_config_global_modifies_filesystem() {
-        with_external_args(
-            "git config --global user.email \"john@example.com\"",
-            |context, args| {
-                assert!(
-                    has_external_side_effect(
-                        "git",
-                        ExternEffect::ModifiesFileSystem,
-                        context,
-                        args
-                    ),
-                    "git config --global should modify filesystem"
-                );
-            },
-        );
-    }
-
-    #[test]
-    fn test_git_status_does_not_likely_error() {
-        with_external_args("git status", |context, args| {
-            assert!(
-                !has_external_side_effect(
-                    "git",
-                    ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-                    context,
-                    args
-                ),
-                "git status should not be likely to error"
-            );
-        });
-    }
-
-    #[test]
-    fn test_git_log_does_not_likely_error() {
-        with_external_args("git log --oneline", |context, args| {
-            assert!(
-                !has_external_side_effect(
-                    "git",
-                    ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-                    context,
-                    args
-                ),
-                "git log should not be likely to error"
-            );
-        });
-    }
-
-    #[test]
-    fn test_git_diff_does_not_likely_error() {
-        with_external_args("git diff HEAD~1", |context, args| {
-            assert!(
-                !has_external_side_effect(
-                    "git",
-                    ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-                    context,
-                    args
-                ),
-                "git diff should not be likely to error"
-            );
-        });
-    }
-
-    #[test]
-    fn test_git_clone_likely_errors() {
-        with_external_args("git clone https://github.com/user/repo", |context, args| {
-            assert!(
-                has_external_side_effect(
-                    "git",
-                    ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-                    context,
-                    args
-                ),
-                "git clone should be likely to error"
-            );
-        });
-    }
-
-    #[test]
-    fn test_git_pull_likely_errors() {
-        with_external_args("git pull origin main", |context, args| {
-            assert!(
-                has_external_side_effect(
-                    "git",
-                    ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-                    context,
-                    args
-                ),
-                "git pull should be likely to error"
-            );
-        });
-    }
-
-    #[test]
-    fn test_git_push_likely_errors() {
-        with_external_args("git push origin main", |context, args| {
-            assert!(
-                has_external_side_effect(
-                    "git",
-                    ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-                    context,
-                    args
-                ),
-                "git push should be likely to error"
-            );
-        });
-    }
-
-    #[test]
-    fn test_git_merge_likely_errors() {
-        with_external_args("git merge feature-branch", |context, args| {
-            assert!(
-                has_external_side_effect(
-                    "git",
-                    ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-                    context,
-                    args
-                ),
-                "git merge should be likely to error"
-            );
-        });
-    }
-}

@@ -28,6 +28,7 @@ const ERROR_HANDLING: Group = Group {
         super::unchecked_cell_path_index::RULE,
         super::unchecked_get_index::RULE,
         super::unchecked_first_last::RULE,
+        super::wrap_external_with_complete::RULE,
     ],
 };
 

@@ -69,6 +69,7 @@ pub mod unsafe_dynamic_record_access;
 pub mod unused_helper_functions;
 pub mod upstream;
 pub mod use_regex_operators;
+pub mod wrap_external_with_complete;
 
 /// All rules that are used by default when linting.
 pub const USED_RULES: &[&dyn Rule] = &[
@@ -207,4 +208,5 @@ pub const USED_RULES: &[&dyn Rule] = &[
     upstream::nu_deprecated::RULE,
     upstream::nu_parse_error::RULE,
     use_regex_operators::RULE,
+    wrap_external_with_complete::RULE,
 ];

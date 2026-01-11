@@ -69,6 +69,7 @@ pub mod unnecessary_variable_before_return;
 pub mod unsafe_dynamic_record_access;
 pub mod unused_helper_functions;
 pub mod upstream;
+pub mod use_over_source;
 pub mod use_regex_operators;
 pub mod wrap_external_with_complete;
 
@@ -145,6 +146,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     parsing::split_row_get_inline::RULE,
     positional_to_pipeline::RULE,
     prefer_long_flags::RULE,
+    use_over_source::RULE,
     posix_tools::awk::RULE,
     posix_tools::bat::RULE,
     posix_tools::cat::RULE,

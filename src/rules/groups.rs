@@ -58,6 +58,7 @@ const IDIOMATIC: Group = Group {
         super::merge_get_cell_path::RULE,
         super::merge_multiline_print::RULE,
         super::positional_to_pipeline::RULE,
+        super::use_over_source::RULE,
         super::shorten_with_compound_assignment::RULE,
         super::use_regex_operators::RULE,
         super::ansi_over_escape_codes::RULE,

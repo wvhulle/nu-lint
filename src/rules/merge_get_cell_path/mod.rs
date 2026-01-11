@@ -1,6 +1,6 @@
 use nu_protocol::{
     Span,
-    ast::{Expr, Expression, PathMember},
+    ast::{Expr, Expression, PathMember, PipelineElement},
 };
 
 use crate::{
@@ -69,6 +69,15 @@ const fn get_command_label(idx: usize, start_idx: usize, end_idx: usize) -> &'st
     }
 }
 
+/// Extract cell path members from a pipeline element's get call
+fn extract_members_from_get_call(element: &PipelineElement) -> Option<Vec<PathMember>> {
+    let Expr::Call(call) = &element.expr.expr else {
+        return None;
+    };
+    let arg = call.get_first_positional_arg()?;
+    extract_cell_path_members(arg)
+}
+
 struct MergeGetCellPath;
 
 impl DetectFix for MergeGetCellPath {
@@ -109,14 +118,7 @@ impl DetectFix for MergeGetCellPath {
                         let member_groups: Option<Vec<Vec<PathMember>>> = cluster
                             .indices
                             .iter()
-                            .map(|&idx| {
-                                let element = &pipeline.elements[idx];
-                                let Expr::Call(call) = &element.expr.expr else {
-                                    return None;
-                                };
-                                let arg = call.get_first_positional_arg()?;
-                                extract_cell_path_members(arg)
-                            })
+                            .map(|&idx| extract_members_from_get_call(&pipeline.elements[idx]))
                             .collect();
 
                         let member_groups = member_groups?;

@@ -58,9 +58,11 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `merge_get_cell_path` (auto-fix)
 - `merge_multiline_print` (auto-fix)
 - `turn_positional_into_stream_input` (auto-fix)
+- `use_over_source`
 - `shorten_with_compound_assignment` (auto-fix)
 - `contains_to_like_regex_operators` (auto-fix)
 - `ansi_over_escape_codes` (auto-fix)
+- `append_to_concat_assign` (auto-fix)
 
 `parsing` - Better ways to parse and transform text data.
 
@@ -89,6 +91,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `script_export_main` (auto-fix)
 - `string_may_be_bare` (auto-fix)
 - `inline_single_use_function`
+- `append_to_concat_assign` (auto-fix)
 
 `posix` - Replace common bash/POSIX patterns.
 
@@ -127,6 +130,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 
 `runtime-errors` - Preventing unexpected runtime behaviour.
 
+- `avoid_last_exit_code` (auto-fix)
 - `check_complete_exit_code`
 - `descriptive_error_messages`
 - `escape_string_interpolation_operators`
@@ -143,6 +147,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `unchecked_get_index` (auto-fix)
 - `unchecked_first_last` (auto-fix)
 - `wrap_external_with_complete`
+- `use_over_source`
 
 `filtering` - Better patterns for filtering and selecting data.
 

@@ -28,15 +28,11 @@ fn get_nested_single_if<'a>(call: &Call, context: &'a LintContext<'a>) -> Option
     get_single_if_call(context.working_set.get_block(then_block_id), context)
 }
 
-#[allow(
-    clippy::struct_field_names,
-    reason = "Names describe their purpose clearly"
-)]
 pub struct FixData {
     replace_span: Span,
-    outer_condition_span: Span,
-    inner_condition_span: Span,
-    inner_body_span: Span,
+    outer_condition: Span,
+    inner_condition: Span,
+    inner_body: Span,
 }
 
 struct CollapsibleIf;
@@ -98,9 +94,9 @@ impl DetectFix for CollapsibleIf {
 
                 let fix_data = FixData {
                     replace_span: call.span(),
-                    outer_condition_span: outer_condition.span,
-                    inner_condition_span: inner_condition.span,
-                    inner_body_span: inner_body.span,
+                    outer_condition: outer_condition.span,
+                    inner_condition: inner_condition.span,
+                    inner_body: inner_body.span,
                 };
 
                 vec![(detected, fix_data)]
@@ -110,9 +106,9 @@ impl DetectFix for CollapsibleIf {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let outer_cond = context.plain_text(fix_data.outer_condition_span).trim();
-        let inner_cond = context.plain_text(fix_data.inner_condition_span).trim();
-        let body = context.plain_text(fix_data.inner_body_span).trim();
+        let outer_cond = context.plain_text(fix_data.outer_condition).trim();
+        let inner_cond = context.plain_text(fix_data.inner_condition).trim();
+        let body = context.plain_text(fix_data.inner_body).trim();
 
         let fix_text = format!("if {outer_cond} and {inner_cond} {body}");
 

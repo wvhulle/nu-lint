@@ -30,6 +30,7 @@ const ERROR_HANDLING: Group = Group {
         super::unchecked_get_index::RULE,
         super::unchecked_first_last::RULE,
         super::wrap_external_with_complete::RULE,
+        super::use_over_source::RULE,
     ],
 };
 
@@ -63,6 +64,7 @@ const IDIOMATIC: Group = Group {
         super::shorten_with_compound_assignment::RULE,
         super::use_regex_operators::RULE,
         super::ansi_over_escape_codes::RULE,
+        super::append_to_concat_assign::RULE,
     ],
 };
 
@@ -128,6 +130,7 @@ const DEAD_CODE: Group = Group {
         super::script_export_main::RULE,
         super::remove_string_quotes::RULE,
         super::inline_single_use_function::RULE,
+        super::append_to_concat_assign::RULE,
     ],
 };
 

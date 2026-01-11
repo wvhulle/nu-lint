@@ -22,17 +22,7 @@ fn load_config_from_workspace(params: &InitializeParams) -> Config {
         .workspace_folders
         .as_ref()
         .and_then(|folders| folders.first())
-        .map(|folder| Path::new(folder.uri.path().as_str()))
-        .or_else(|| {
-            #[allow(
-                deprecated,
-                reason = "root_uri is deprecated but needed for older clients"
-            )]
-            params
-                .root_uri
-                .as_ref()
-                .map(|uri| Path::new(uri.path().as_str()))
-        });
+        .map(|folder| Path::new(folder.uri.path().as_str()));
 
     workspace_path.and_then(find_config_file_from).map_or_else(
         || {

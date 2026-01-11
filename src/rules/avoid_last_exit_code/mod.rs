@@ -18,22 +18,21 @@ struct FixData {
     external_cmd_text: String,
 }
 
-/// Helper to check if a cell path member list contains a specific field name
-fn cell_path_has_member(members: &[PathMember], member_name: &str) -> bool {
-    members
-        .iter()
-        .any(|m| matches!(m, PathMember::String { val, .. } if val == member_name))
-}
-
-/// Check if expression is `$env.LAST_EXIT_CODE`
+/// Check if expression is exactly `$env.LAST_EXIT_CODE`
 fn is_last_exit_code_access(expr: &Expression) -> bool {
     let Expr::FullCellPath(cell_path) = &expr.expr else {
         return false;
     };
 
     // Check if head is $env
-    matches!(&cell_path.head.expr, Expr::Var(var_id) if *var_id == ENV_VARIABLE_ID)
-        && cell_path_has_member(&cell_path.tail, "LAST_EXIT_CODE")
+    let is_env_var =
+        matches!(&cell_path.head.expr, Expr::Var(var_id) if *var_id == ENV_VARIABLE_ID);
+
+    // Check if tail is exactly one member: "LAST_EXIT_CODE"
+    let is_exact_member = cell_path.tail.len() == 1
+        && matches!(&cell_path.tail[0], PathMember::String { val, .. } if val == "LAST_EXIT_CODE");
+
+    is_env_var && is_exact_member
 }
 
 /// Find the first external command in a pipeline

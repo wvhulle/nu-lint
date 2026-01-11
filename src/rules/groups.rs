@@ -13,6 +13,7 @@ const ERROR_HANDLING: Group = Group {
     name: "runtime-errors",
     description: "Preventing unexpected runtime behaviour.",
     rules: &[
+        super::avoid_last_exit_code::RULE,
         super::check_complete_exit_code::RULE,
         super::documentation::descriptive_error_messages::RULE,
         super::escape_string_interpolation_operators::RULE,

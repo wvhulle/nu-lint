@@ -31,7 +31,7 @@ fn load_config_from_workspace(params: &InitializeParams) -> Config {
         },
         |path| {
             log::info!("Loading config from {}", path.display());
-            Config::load_from_file(&path).unwrap_or_else(|e| {
+            Config::load(&path).unwrap_or_else(|e| {
                 log::warn!("Failed to load config from {}: {e}", path.display());
                 Config::default()
             })

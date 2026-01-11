@@ -2,8 +2,10 @@ use std::{
     collections::{HashMap, HashSet},
     fs,
     path::{Path, PathBuf},
+    str::FromStr,
 };
 
+use nu_protocol::{FromValue, ShellError, Value};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -12,8 +14,11 @@ use crate::{
     rules::{self, groups::ALL_GROUPS},
 };
 
-#[derive(Debug, Clone, Copy, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(
+    Debug, Clone, Copy, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord, FromValue,
+)]
 #[serde(rename_all = "lowercase")]
+#[nu_value(rename_all = "snake_case")]
 pub enum LintLevel {
     Hint,
     #[default]
@@ -21,12 +26,38 @@ pub enum LintLevel {
     Error,
 }
 
-#[derive(Debug, Clone, Copy, Deserialize, Serialize, Default, PartialEq, Eq)]
+impl FromStr for LintLevel {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "hint" => Ok(Self::Hint),
+            "warning" => Ok(Self::Warning),
+            "error" => Ok(Self::Error),
+            _ => Err("expected 'hint', 'warning', or 'error'"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, Default, PartialEq, Eq, FromValue)]
 #[serde(rename_all = "lowercase")]
+#[nu_value(rename_all = "snake_case")]
 pub enum PipelinePlacement {
     #[default]
     Start,
     End,
+}
+
+impl FromStr for PipelinePlacement {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "start" => Ok(Self::Start),
+            "end" => Ok(Self::End),
+            _ => Err("expected 'start' or 'end'"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -40,6 +71,42 @@ pub struct Config {
     pub pipeline_placement: PipelinePlacement,
     pub max_pipeline_length: usize,
     pub skip_external_parse_errors: bool,
+}
+
+impl FromValue for Config {
+    fn from_value(value: Value) -> Result<Self, ShellError> {
+        let span = value.span();
+        let record = value.into_record()?;
+        let mut config = Self::default();
+
+        for (key, val) in record {
+            match key.as_str() {
+                "groups" => config.groups = HashMap::from_value(val)?,
+                "rules" => config.rules = HashMap::from_value(val)?,
+                "ignored" => {
+                    config.ignored = Vec::<String>::from_value(val)?.into_iter().collect()
+                }
+                "additional" => {
+                    config.additional = Vec::<String>::from_value(val)?.into_iter().collect()
+                }
+                "sequential" => config.sequential = bool::from_value(val)?,
+                "pipeline_placement" => config.pipeline_placement = PipelinePlacement::from_value(val)?,
+                "max_pipeline_length" => config.max_pipeline_length = usize::from_value(val)?,
+                "skip_external_parse_errors" => {
+                    config.skip_external_parse_errors = bool::from_value(val)?
+                }
+                _ => {
+                    return Err(ShellError::InvalidValue {
+                        valid: "groups, rules, ignored, additional, sequential, pipeline_placement, max_pipeline_length, skip_external_parse_errors".into(),
+                        actual: key,
+                        span,
+                    });
+                }
+            }
+        }
+
+        Ok(config)
+    }
 }
 
 impl Default for Config {
@@ -77,7 +144,7 @@ impl Config {
     ///
     /// Returns an error if the file cannot be read or if the TOML content is
     /// invalid.
-    pub(crate) fn load_from_file(path: &Path) -> Result<Self, LintError> {
+    pub fn load(path: &Path) -> Result<Self, LintError> {
         let content = fs::read_to_string(path).map_err(|source| LintError::Io {
             path: path.to_path_buf(),
             source,

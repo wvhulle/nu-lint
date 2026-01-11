@@ -27,7 +27,7 @@ use violation::{Fix, Replacement};
 const NU_PARSER_VERSION: &str = env!("NU_PARSER_VERSION");
 
 #[derive(Debug)]
-enum LintError {
+pub enum LintError {
     Io { path: PathBuf, source: io::Error },
     Config { source: de::Error },
 }

@@ -121,7 +121,10 @@ impl LintEngine {
             let mut engine_state = nu_cmd_lang::create_default_context();
             engine_state = nu_command::add_shell_command_context(engine_state);
             engine_state = nu_cmd_extra::add_extra_command_context(engine_state);
-            engine_state = nu_cli::add_cli_context(engine_state);
+            #[cfg(feature = "cli")]
+            {
+                engine_state = nu_cli::add_cli_context(engine_state);
+            }
             // Required by command `path self`
             if let Ok(cwd) = env::current_dir()
                 && let Some(cwd) = cwd.to_str()
@@ -130,14 +133,17 @@ impl LintEngine {
             }
 
             // Add print command (exported by nu-cli but not added by add_cli_context)
-            let delta = {
-                let mut working_set = StateWorkingSet::new(&engine_state);
-                working_set.add_decl(Box::new(nu_cli::Print));
-                working_set.render()
-            };
-            engine_state
-                .merge_delta(delta)
-                .expect("Failed to add Print command");
+            #[cfg(feature = "cli")]
+            {
+                let delta = {
+                    let mut working_set = StateWorkingSet::new(&engine_state);
+                    working_set.add_decl(Box::new(nu_cli::Print));
+                    working_set.render()
+                };
+                engine_state
+                    .merge_delta(delta)
+                    .expect("Failed to add Print command");
+            }
 
             // Commented out because not needed for most lints and may slow down
             nu_std::load_standard_library(&mut engine_state).unwrap();

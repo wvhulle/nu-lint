@@ -94,14 +94,14 @@ log = "0.4"
 lsp-server = "0.7"
 lsp-types = "0.97"
 miette = { version = "7.6", features = ["fancy"] }
-nu-cli = "0.109.1"
-nu-cmd-extra = "0.109.1"
-nu-cmd-lang = "0.109.1"
-nu-command = { version = "0.109.1", features = ["sqlite"] }
-nu-parser = "0.109.1"
-nu-protocol = "0.109.1"
-nu-std = "0.109.1"
-nu-utils = "0.109.1"
+nu-cli = { version = "0.109.2", optional = true }
+nu-cmd-extra = "0.109.2"
+nu-cmd-lang = "0.109.2"
+nu-command = { version = "0.109.2", features = ["sqlite"] }
+nu-parser = "0.109.2"
+nu-protocol = "0.109.2"
+nu-std = "0.109.2"
+nu-utils = "0.109.2"
 rayon = "1.10"
 reedline = { path = "../reedline", optional = true }
 regex = "1.10"
@@ -111,7 +111,8 @@ similar = "2.6"
 toml = "0.8"
 
 [features]
-default = []
+default = ["cli"]
+cli = ["nu-cli"]
 reedline = ["dep:reedline"]
 
 [dev-dependencies]
@@ -125,3 +126,14 @@ toml = "0.8"
 [[bench]]
 harness = false
 name = "speed"
+
+[patch.crates-io]
+nu-cli = { path = "../nushell/crates/nu-cli" }
+nu-cmd-extra = { path = "../nushell/crates/nu-cmd-extra" }
+nu-cmd-lang = { path = "../nushell/crates/nu-cmd-lang" }
+nu-command = { path = "../nushell/crates/nu-command" }
+nu-parser = { path = "../nushell/crates/nu-parser" }
+nu-protocol = { path = "../nushell/crates/nu-protocol" }
+nu-std = { path = "../nushell/crates/nu-std" }
+nu-utils = { path = "../nushell/crates/nu-utils" }
+reedline = { path = "../reedline" }

@@ -74,7 +74,7 @@ pub struct Cli {
 impl Cli {
     fn load_config(path: Option<PathBuf>) -> Config {
         path.map(|p| {
-            Config::load_from_file(&p).unwrap_or_else(|e| {
+            Config::load(&p).unwrap_or_else(|e| {
                 log::error!("Error loading config from {}: {e}", p.display());
                 Config::default()
             })

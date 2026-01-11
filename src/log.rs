@@ -1,6 +1,15 @@
-use std::{env::current_dir, io, io::Write};
+use std::{
+    env::current_dir,
+    fs::{File, OpenOptions},
+    io::{self, Write},
+    path::Path,
+    sync::Mutex,
+};
 
 use env_logger::fmt::Formatter;
+
+/// Global log file handle for file-based logging
+static LOG_FILE: Mutex<Option<File>> = Mutex::new(None);
 
 /// Initialize the logger with an easy to read format for stdout terminal
 /// output. Use it to debug tests with print debugging.
@@ -13,12 +22,36 @@ pub fn init_env_log() {
         .ok();
 }
 
+/// Initialize logging to stderr (default behavior)
 pub fn init_log() {
     env_logger::builder()
         .format(format_log_record)
         .filter_level(log::LevelFilter::Debug)
         .try_init()
         .ok();
+}
+
+/// Initialize logging to a file instead of stderr.
+/// Useful for debugging interactive applications like reedline.
+pub fn init_log_to_file(path: &Path) -> io::Result<()> {
+    let file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(path)?;
+
+    // Store file handle globally
+    if let Ok(mut guard) = LOG_FILE.lock() {
+        *guard = Some(file);
+    }
+
+    env_logger::builder()
+        .format(format_log_record_to_file)
+        .filter_level(log::LevelFilter::Debug)
+        .try_init()
+        .ok();
+
+    Ok(())
 }
 
 fn format_log_record(buf: &mut Formatter, record: &log::Record) -> io::Result<()> {
@@ -34,6 +67,24 @@ fn format_log_record(buf: &mut Formatter, record: &log::Record) -> io::Result<()
         record.args(),
         color_end
     )
+}
+
+fn format_log_record_to_file(_buf: &mut Formatter, record: &log::Record) -> io::Result<()> {
+    if let Ok(mut guard) = LOG_FILE.lock() {
+        if let Some(ref mut file) = *guard {
+            let relative_file = get_relative_file_path(record);
+            writeln!(
+                file,
+                "[{:5}] {}:{} {}",
+                record.level(),
+                relative_file,
+                record.line().unwrap_or(0),
+                record.args()
+            )?;
+            file.flush()?;
+        }
+    }
+    Ok(())
 }
 
 fn get_relative_file_path<'a>(record: &'a log::Record) -> &'a str {

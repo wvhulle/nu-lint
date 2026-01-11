@@ -6,9 +6,11 @@ mod effect;
 mod engine;
 mod fix;
 mod format_conversions;
-mod log;
+pub mod log;
 mod lsp;
 mod output;
+#[cfg(feature = "reedline")]
+pub mod reedline_adapter;
 mod rule;
 mod rules;
 mod span;

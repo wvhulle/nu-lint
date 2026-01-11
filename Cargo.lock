@@ -2412,7 +2412,7 @@ dependencies = [
  "nu-utils",
  "nucleo-matcher",
  "percent-encoding",
- "reedline",
+ "reedline 0.44.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "strum",
  "sysinfo",
  "unicode-segmentation",
@@ -2560,7 +2560,7 @@ dependencies = [
  "quick-xml 0.38.4",
  "rand",
  "rayon",
- "reedline",
+ "reedline 0.44.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rmp",
  "roxmltree",
  "rusqlite",
@@ -2674,6 +2674,7 @@ dependencies = [
  "lsp-server",
  "lsp-types",
  "miette",
+ "nu-ansi-term",
  "nu-cli",
  "nu-cmd-extra",
  "nu-cmd-lang",
@@ -2683,6 +2684,7 @@ dependencies = [
  "nu-std",
  "nu-utils",
  "rayon",
+ "reedline 0.44.0",
  "regex",
  "serde",
  "serde_json",
@@ -3588,6 +3590,25 @@ dependencies = [
  "getrandom 0.2.16",
  "libredox",
  "thiserror 2.0.17",
+]
+
+[[package]]
+name = "reedline"
+version = "0.44.0"
+dependencies = [
+ "chrono",
+ "crossterm",
+ "fd-lock",
+ "itertools 0.13.0",
+ "nu-ansi-term",
+ "serde",
+ "strip-ansi-escapes",
+ "strum",
+ "strum_macros 0.26.4",
+ "thiserror 2.0.17",
+ "unicase",
+ "unicode-segmentation",
+ "unicode-width 0.2.2",
 ]
 
 [[package]]

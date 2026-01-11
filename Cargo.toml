@@ -103,14 +103,20 @@ nu-protocol = "0.109.1"
 nu-std = "0.109.1"
 nu-utils = "0.109.1"
 rayon = "1.10"
+reedline = { path = "../reedline", optional = true }
 regex = "1.10"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 similar = "2.6"
 toml = "0.8"
 
+[features]
+default = []
+reedline = ["dep:reedline"]
+
 [dev-dependencies]
 criterion = { version = "0.7", features = ["html_reports", "csv_output"] }
+nu-ansi-term = "0.50"
 tempfile = "3.10"
 
 [build-dependencies]

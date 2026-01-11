@@ -6,6 +6,8 @@ use std::{
 
 use clap::Parser;
 
+#[cfg(feature = "lsp")]
+use crate::lsp;
 use crate::{
     LintLevel,
     ast::tree,
@@ -13,7 +15,6 @@ use crate::{
     engine::{LintEngine, collect_nu_files},
     fix::{apply_fixes, apply_fixes_to_stdin, format_fix_results},
     log::init_log,
-    lsp,
     output::{Format, Summary, format_output},
     rule::Rule,
     rules::{USED_RULES, groups::ALL_GROUPS},
@@ -22,7 +23,7 @@ use crate::{
 #[derive(Parser)]
 #[command(name = "nu-lint")]
 #[command(about = "A linter for Nushell scripts")]
-#[command(version)]
+#[command(version, long_version = concat!(env!("CARGO_PKG_VERSION"), " (expects Nu ", env!("NU_PARSER_VERSION"), ")"))]
 pub struct Cli {
     /// Files or directories to lint/fix
     #[arg(default_value = ".")]
@@ -262,7 +263,13 @@ pub fn run() {
     } else if let Some(ref source) = cli.ast {
         tree::print_ast(source);
     } else if cli.lsp {
+        #[cfg(feature = "lsp")]
         lsp::run_lsp_server();
+        #[cfg(not(feature = "lsp"))]
+        {
+            eprintln!("LSP feature not enabled. Rebuild with --features lsp");
+            process::exit(1);
+        }
     } else if cli.fix {
         cli.fix();
     } else {

@@ -79,8 +79,8 @@ impl DiagnosticsProvider for NuLintDiagnosticsProvider {
                         })
                         .collect();
 
-                    diagnostic =
-                        diagnostic.with_fix(ReedlineFix::new(fix.explanation.to_string(), replacements));
+                    diagnostic = diagnostic
+                        .with_fix(ReedlineFix::new(fix.explanation.to_string(), replacements));
                 }
 
                 diagnostic

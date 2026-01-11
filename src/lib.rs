@@ -7,6 +7,7 @@ mod engine;
 mod fix;
 mod format_conversions;
 pub mod log;
+#[cfg(feature = "lsp")]
 mod lsp;
 mod output;
 #[cfg(feature = "reedline")]
@@ -24,7 +25,7 @@ pub use fix::apply_fixes_iteratively;
 use toml::de;
 use violation::{Fix, Replacement};
 
-const NU_PARSER_VERSION: &str = env!("NU_PARSER_VERSION");
+pub const NU_PARSER_VERSION: &str = env!("NU_PARSER_VERSION");
 
 #[derive(Debug)]
 pub enum LintError {

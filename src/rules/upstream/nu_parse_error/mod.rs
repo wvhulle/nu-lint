@@ -1,11 +1,10 @@
 use std::{collections::HashSet, str::from_utf8};
 
-use const_format::formatcp;
 use miette::Diagnostic;
 use nu_protocol::{Span, engine::StateWorkingSet};
 
 use crate::{
-    LintLevel, NU_PARSER_VERSION,
+    LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
     span::FileSpan,
@@ -42,11 +41,11 @@ impl DetectFix for NuParseError {
     }
 
     fn long_description(&self) -> Option<&'static str> {
-        Some(formatcp!(
-            "nu-lint expects Nushell {NU_PARSER_VERSION}. If your installed version differs, this \
+        Some(
+            "nu-lint expects a specific Nushell version. If your installed version differs, this \
              may cause false positives. Check that your Nushell version matches the expected \
-             version to avoid incorrect warnings."
-        ))
+             version to avoid incorrect warnings.",
+        )
     }
 
     fn short_description(&self) -> &'static str {

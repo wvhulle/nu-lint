@@ -83,21 +83,24 @@ impl FromValue for Config {
             match key.as_str() {
                 "groups" => config.groups = HashMap::from_value(val)?,
                 "rules" => config.rules = HashMap::from_value(val)?,
-                "ignored" => {
-                    config.ignored = Vec::<String>::from_value(val)?.into_iter().collect()
-                }
+                "ignored" => config.ignored = Vec::<String>::from_value(val)?.into_iter().collect(),
                 "additional" => {
                     config.additional = Vec::<String>::from_value(val)?.into_iter().collect()
                 }
                 "sequential" => config.sequential = bool::from_value(val)?,
-                "pipeline_placement" => config.pipeline_placement = PipelinePlacement::from_value(val)?,
+                "pipeline_placement" => {
+                    config.pipeline_placement = PipelinePlacement::from_value(val)?
+                }
                 "max_pipeline_length" => config.max_pipeline_length = usize::from_value(val)?,
                 "skip_external_parse_errors" => {
                     config.skip_external_parse_errors = bool::from_value(val)?
                 }
                 _ => {
                     return Err(ShellError::InvalidValue {
-                        valid: "groups, rules, ignored, additional, sequential, pipeline_placement, max_pipeline_length, skip_external_parse_errors".into(),
+                        valid: "groups, rules, ignored, additional, sequential, \
+                                pipeline_placement, max_pipeline_length, \
+                                skip_external_parse_errors"
+                            .into(),
                         actual: key,
                         span,
                     });

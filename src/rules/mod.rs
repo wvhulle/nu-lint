@@ -4,6 +4,7 @@ pub mod groups;
 
 pub mod always_annotate_ext_hat;
 pub mod ansi_over_escape_codes;
+pub mod append_to_concat_assign;
 pub mod avoid_nu_subprocess;
 pub mod avoid_self_import;
 pub mod builtin_not_empty;
@@ -74,6 +75,7 @@ pub mod wrap_external_with_complete;
 /// All rules that are used by default when linting.
 pub const USED_RULES: &[&dyn Rule] = &[
     ansi_over_escape_codes::RULE,
+    append_to_concat_assign::RULE,
     avoid_nu_subprocess::RULE,
     avoid_self_import::RULE,
     remove_string_quotes::RULE,

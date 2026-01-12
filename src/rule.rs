@@ -41,6 +41,13 @@ pub trait DetectFix: Send + Sync + 'static {
     fn source_link(&self) -> Option<&'static str> {
         None
     }
+
+    /// Rules that conflict with this rule. When both rules are enabled,
+    /// the linter will error at startup.
+    fn conflicts_with(&self) -> &'static [&'static dyn Rule] {
+        &[]
+    }
+
     fn fix(&self, _context: &LintContext, _fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         None
     }
@@ -68,6 +75,7 @@ pub trait Rule: Send + Sync {
     fn source_link(&self) -> Option<&'static str>;
     fn level(&self) -> LintLevel;
     fn has_auto_fix(&self) -> bool;
+    fn conflicts_with(&self) -> &'static [&'static dyn Rule];
     fn check(&self, context: &LintContext) -> Vec<Violation>;
 }
 
@@ -90,6 +98,10 @@ impl<T: DetectFix> Rule for T {
 
     fn has_auto_fix(&self) -> bool {
         TypeId::of::<T::FixInput<'static>>() != TypeId::of::<()>()
+    }
+
+    fn conflicts_with(&self) -> &'static [&'static dyn Rule] {
+        DetectFix::conflicts_with(self)
     }
 
     fn check(&self, context: &LintContext) -> Vec<Violation> {

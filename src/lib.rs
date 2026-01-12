@@ -26,8 +26,17 @@ const NU_PARSER_VERSION: &str = env!("NU_PARSER_VERSION");
 
 #[derive(Debug)]
 enum LintError {
-    Io { path: PathBuf, source: io::Error },
-    Config { source: de::Error },
+    Io {
+        path: PathBuf,
+        source: io::Error,
+    },
+    Config {
+        source: de::Error,
+    },
+    RuleConflict {
+        rule_a: &'static str,
+        rule_b: &'static str,
+    },
 }
 
 impl fmt::Display for LintError {
@@ -37,6 +46,12 @@ impl fmt::Display for LintError {
                 write!(f, "failed to read '{}': {source}", path.display())
             }
             Self::Config { source } => write!(f, "invalid configuration: {source}"),
+            Self::RuleConflict { rule_a, rule_b } => {
+                write!(
+                    f,
+                    "conflicting rules: '{rule_a}' and '{rule_b}' cannot both be enabled"
+                )
+            }
         }
     }
 }
@@ -46,6 +61,7 @@ impl Error for LintError {
         match self {
             Self::Io { source, .. } => Some(source),
             Self::Config { source } => Some(source),
+            Self::RuleConflict { .. } => None,
         }
     }
 }

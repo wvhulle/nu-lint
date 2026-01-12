@@ -22,3 +22,14 @@ fn detects_commas_in_nested_list() {
 
     RULE.assert_count(code, 3);
 }
+
+#[test]
+fn detects_comma_before_comment_with_comma() {
+    let code = r#"let responses = [
+    "item1", # comment with comma 2,3
+    "item2"
+]"#;
+    // Should detect 1 comma: after "item1" (the comma in the comment should be
+    // ignored)
+    RULE.assert_count(code, 1);
+}

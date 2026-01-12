@@ -4,6 +4,7 @@ use crate::{
     LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
+    rules::remove_hat_not_builtin,
     violation::{Detection, Fix, Replacement},
 };
 
@@ -33,6 +34,11 @@ impl DetectFix for AlwaysHatExtCall {
 
     fn level(&self) -> LintLevel {
         LintLevel::Warning
+    }
+
+    fn conflicts_with(&self) -> &'static [&'static dyn Rule] {
+        static CONFLICTS: &[&dyn Rule] = &[remove_hat_not_builtin::RULE];
+        CONFLICTS
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

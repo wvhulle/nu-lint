@@ -2661,7 +2661,7 @@ dependencies = [
 
 [[package]]
 name = "nu-lint"
-version = "0.0.115"
+version = "0.0.116"
 dependencies = [
  "clap",
  "const_format",

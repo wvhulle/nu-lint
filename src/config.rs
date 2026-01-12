@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     LintError,
     rule::Rule,
-    rules::{self, groups::ALL_GROUPS},
+    rules::{self, USED_RULES, groups::ALL_GROUPS},
 };
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
@@ -83,6 +83,29 @@ impl Config {
             source,
         })?;
         Self::load_from_str(&content)
+    }
+
+    /// Validate that no conflicting rules are both enabled
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if two conflicting rules are both enabled.
+    pub fn validate(&self) -> Result<(), LintError> {
+        for rule in USED_RULES.iter() {
+            if self.get_lint_level(*rule).is_none() {
+                continue;
+            }
+
+            for conflicting_rule in rule.conflicts_with() {
+                if self.get_lint_level(*conflicting_rule).is_some() {
+                    return Err(LintError::RuleConflict {
+                        rule_a: rule.id(),
+                        rule_b: conflicting_rule.id(),
+                    });
+                }
+            }
+        }
+        Ok(())
     }
 
     /// Get the effective lint level for a specific rule
@@ -174,5 +197,39 @@ mod tests {
             .find(|r| r.id() == "snake_case_variables")
             .unwrap();
         assert_eq!(config.get_lint_level(*ignored_rule), None);
+    }
+
+    #[test]
+    fn test_validate_passes_with_default_config() {
+        let result = Config::default().validate();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_validate_passes_when_one_conflicting_rule_ignored() {
+        // Enable add_hat but ignore remove_hat
+        let mut ignored = Config::default().ignored;
+        ignored.remove("add_hat_external_commands"); // enable add_hat
+        ignored.insert("remove_hat_not_builtin".into()); // ignore remove_hat
+
+        let config = Config {
+            ignored,
+            ..Config::default()
+        };
+
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_validate_conflict_from_toml() {
+        let toml_str = r#"
+            ignored = []
+        "#;
+
+        let config = Config::load_from_str(toml_str).unwrap();
+        let result = config.validate();
+
+        assert!(result.is_err());
+        assert!(matches!(result, Err(LintError::RuleConflict { .. })));
     }
 }

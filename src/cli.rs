@@ -40,6 +40,10 @@ pub struct Cli {
     #[arg(long, conflicts_with_all = ["fix", "lsp", "groups", "explain"], alias = "rules")]
     list: bool,
 
+    /// Only show rules that are enabled (use with --list)
+    #[arg(long, requires = "list")]
+    enabled: bool,
+
     /// List all available rule groups
     #[arg(long, conflicts_with_all = ["fix", "lsp", "list", "explain"], alias = "sets")]
     groups: bool,
@@ -92,6 +96,10 @@ impl Cli {
 
     fn lint(&self) {
         let config = Self::load_config(self.config.clone());
+        if let Err(e) = config.validate() {
+            eprintln!("Error: {e}");
+            process::exit(1);
+        }
         let engine = LintEngine::new(config);
 
         let violations = if self.stdin {
@@ -123,6 +131,10 @@ impl Cli {
 
     fn fix(&self) {
         let config = Self::load_config(self.config.clone());
+        if let Err(e) = config.validate() {
+            eprintln!("Error: {e}");
+            process::exit(1);
+        }
         let engine = LintEngine::new(config);
 
         if self.stdin {
@@ -157,58 +169,54 @@ impl Cli {
         print!("{output}");
     }
 
-    fn list_rules() {
-        println!("## Available Lint Rules\n");
-        let mut sorted_rules = USED_RULES.to_vec();
+    fn list_rules(config: Option<&Config>) {
+        let mut sorted_rules: Vec<&dyn Rule> = USED_RULES
+            .iter()
+            .filter(|r| {
+                config
+                    .map(|c| c.get_lint_level(**r).is_some())
+                    .unwrap_or(true)
+            })
+            .copied()
+            .collect();
         sorted_rules.sort_by_key(|r| r.id());
 
-        let max_id_len = sorted_rules.iter().map(|r| r.id().len()).max().unwrap_or(0) + 2; // +2 for backticks
-        let max_desc_len = sorted_rules
-            .iter()
-            .map(|r| r.short_description().len())
-            .max()
-            .unwrap_or(0);
+        if sorted_rules.is_empty() {
+            println!("No rules enabled.");
+            return;
+        }
 
-        println!(
-            "| {:<width_id$} | {:<width_desc$} | {:<7} | {:<8} |",
-            "Rule",
-            "Description",
-            "Level",
-            "Auto-fix",
-            width_id = max_id_len,
-            width_desc = max_desc_len
-        );
-        println!(
-            "| {:-<width_id$} | {:-<width_desc$} | {:-<7} | {:-<8} |",
-            "",
-            "",
-            "",
-            "",
-            width_id = max_id_len,
-            width_desc = max_desc_len
-        );
+        let max_id_len = sorted_rules.iter().map(|r| r.id().len()).max().unwrap_or(0);
+        let max_desc_len = 50; // Truncate descriptions to fit screen
+
         for rule in &sorted_rules {
-            let level = match rule.level() {
-                LintLevel::Hint => "hint",
-                LintLevel::Warning => "warning",
-                LintLevel::Error => "error",
+            let level = config
+                .and_then(|c| c.get_lint_level(*rule))
+                .unwrap_or_else(|| rule.level());
+            let level_char = match level {
+                LintLevel::Hint => 'H',
+                LintLevel::Warning => 'W',
+                LintLevel::Error => 'E',
             };
-            let auto_fix = if rule.has_auto_fix() { "Yes" } else { "" };
-            let id_formatted = format!("`{}`", rule.id());
+            let fix_char = if rule.has_auto_fix() { 'F' } else { ' ' };
+            let desc = rule.short_description();
+            let desc_truncated = if desc.len() > max_desc_len {
+                format!("{}...", &desc[..max_desc_len - 3])
+            } else {
+                desc.to_string()
+            };
             println!(
-                "| {:<width_id$} | {:<width_desc$} | {:<7} | {:<8} |",
-                id_formatted,
-                rule.short_description(),
-                level,
-                auto_fix,
-                width_id = max_id_len,
-                width_desc = max_desc_len
+                "{level_char}{fix_char} {:<width$}  {desc_truncated}",
+                rule.id(),
+                width = max_id_len
             );
         }
+
         let fixable_count = sorted_rules.iter().filter(|r| r.has_auto_fix()).count();
         println!(
-            "\n*{n} rules available, {f} with auto-fix.*",
+            "\n{n} rules{enabled}, {f} fixable. [H]int [W]arning [E]rror [F]ixable",
             n = sorted_rules.len(),
+            enabled = if config.is_some() { " enabled" } else { "" },
             f = fixable_count
         );
     }
@@ -254,7 +262,8 @@ pub fn run() {
     }
 
     if cli.list {
-        Cli::list_rules();
+        let config = cli.enabled.then(|| Cli::load_config(cli.config.clone()));
+        Cli::list_rules(config.as_ref());
     } else if cli.groups {
         Cli::list_groups();
     } else if let Some(ref rule_id) = cli.explain {

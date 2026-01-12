@@ -14,6 +14,18 @@ struct CommaFixData {
     comma_span: Span,
 }
 
+fn find_comma_outside_comment(between_text: &str) -> Option<usize> {
+    let mut offset = 0;
+    for line in between_text.split('\n') {
+        let comment_start = line.find('#').unwrap_or(line.len());
+        if let Some(comma_pos) = line[..comment_start].find(',') {
+            return Some(offset + comma_pos);
+        }
+        offset += line.len() + 1;
+    }
+    None
+}
+
 fn check_list_commas(
     context: &LintContext,
     span: Span,
@@ -24,11 +36,9 @@ fn check_list_commas(
         return violations;
     }
     let list_text = context.plain_text(span);
-    // Skip if not a bracket list
     if !list_text.trim_start().starts_with('[') {
         return violations;
     }
-    // Check for commas between list items
     for i in 0..items.len() - 1 {
         let current_expr = match &items[i] {
             ListItem::Item(expr) | ListItem::Spread(_, expr) => expr,
@@ -41,19 +51,15 @@ fn check_list_commas(
         }
         let between_span = Span::new(current_expr.span.end, next_expr.span.start);
         let between_text = context.plain_text(between_span);
-        if between_text.contains(',') {
-            // Find the comma position for precise span (use global span - will be
-            // normalized later)
-            if let Some(comma_pos) = between_text.find(',') {
-                let comma_span = Span::new(
-                    between_span.start + comma_pos,
-                    between_span.start + comma_pos + 1,
-                );
-                violations.push((
-                    Detection::from_global_span("Omit commas between list items", comma_span),
-                    CommaFixData { comma_span },
-                ));
-            }
+        if let Some(comma_pos) = find_comma_outside_comment(&between_text) {
+            let comma_span = Span::new(
+                between_span.start + comma_pos,
+                between_span.start + comma_pos + 1,
+            );
+            violations.push((
+                Detection::from_global_span("Omit commas between list items", comma_span),
+                CommaFixData { comma_span },
+            ));
         }
     }
     violations

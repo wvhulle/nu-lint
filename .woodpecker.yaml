@@ -2,9 +2,9 @@
 # Triggers on git tags matching v* pattern (e.g., v0.0.118)
 #
 # Local usage:
-#   nu .woodpecker/changelog.nu
-#   nu .woodpecker/build.nu
-#   nu .woodpecker/release.nu v0.0.119
+#   nu scripts/changelog.nu
+#   nu scripts/build.nu
+#   nu scripts/release.nu v0.0.119
 
 when:
   - event: tag
@@ -14,12 +14,12 @@ steps:
   - name: changelog
     image: nixos/nix:latest
     commands:
-      - nix-shell -p git-cliff nushell git --run "nu .woodpecker/changelog.nu"
+      - nix-shell -p git-cliff nushell git --run "nu scripts/changelog.nu"
 
   - name: build
     image: nixos/nix:latest
     commands:
-      - nix-shell -p nushell --run "nu .woodpecker/build.nu"
+      - nix-shell -p nushell --run "nu scripts/build.nu"
 
   - name: release
     image: nixos/nix:latest
@@ -27,7 +27,7 @@ steps:
       CODEBERG_TOKEN:
         from_secret: codeberg_token
     commands:
-      - nix-shell -p nushell git --run "nu .woodpecker/release.nu $CI_COMMIT_TAG"
+      - nix-shell -p nushell git --run "nu scripts/release.nu $CI_COMMIT_TAG"
     depends_on:
       - changelog
       - build

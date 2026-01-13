@@ -4,7 +4,6 @@
 # Local usage:
 #   nu scripts/changelog.nu
 #   nu scripts/build.nu
-#   nu scripts/release.nu v0.0.119
 
 when:
   - event: tag
@@ -25,12 +24,16 @@ steps:
       - nix-shell -p nushell git cacert cachix --run "nu scripts/build.nu"
 
   - name: release
-    image: nixos/nix:latest
-    environment:
-      CODEBERG_TOKEN:
+    image: woodpeckerci/plugin-gitea-release
+    settings:
+      base_url: https://codeberg.org
+      files:
+        - dist/*
+      api_key:
         from_secret: codeberg_token
-    commands:
-      - nix-shell -p nushell git cacert --run "nu scripts/release.nu $CI_COMMIT_TAG"
+      target: main
+      note: RELEASE_NOTES.md
+      title: ${CI_COMMIT_TAG}
     depends_on:
       - changelog
       - build

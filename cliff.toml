@@ -1,0 +1,49 @@
+# git-cliff configuration for nu-lint
+# https://git-cliff.org/docs/configuration
+
+[changelog]
+header = ""
+body = """
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | upper_first }}
+{% for commit in commits %}
+- {{ commit.message | split(pat="\n") | first | trim }}\
+{% endfor %}
+{% endfor %}
+"""
+footer = ""
+trim = true
+
+[git]
+conventional_commits = true
+filter_unconventional = false
+split_commits = false
+commit_parsers = [
+    # Conventional commits (future)
+    { message = "^feat", group = "Added" },
+    { message = "^fix", group = "Fixed" },
+    { message = "^doc", group = "Documentation" },
+    { message = "^perf", group = "Performance" },
+    { message = "^refactor", group = "Changed" },
+    { message = "^style", group = "Changed" },
+    { message = "^test", group = "Testing" },
+    { message = "^chore", group = "Miscellaneous" },
+    { message = "^ci", group = "CI" },
+    # Current commit style (legacy)
+    { message = "^[Aa]dd", group = "Added" },
+    { message = "^[Ff]ix", group = "Fixed" },
+    { message = "^[Rr]emove", group = "Removed" },
+    { message = "^[Uu]pdate", group = "Changed" },
+    { message = "^[Rr]educe", group = "Changed" },
+    { message = "^[Ii]mprov", group = "Changed" },
+    { message = "^[Mm]ake", group = "Changed" },
+    { message = "^[Mm]erge", skip = true },
+    { message = "^[Ss]ome", group = "Changed" },
+    { body = ".*", group = "Other" },
+]
+filter_commits = false
+tag_pattern = "v[0-9].*"
+skip_tags = ""
+ignore_tags = ""
+topo_order = false
+sort_commits = "oldest"

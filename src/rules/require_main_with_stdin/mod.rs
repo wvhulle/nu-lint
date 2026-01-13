@@ -1,45 +1,10 @@
-use nu_protocol::ast::{Argument, Expr, Expression};
-
 use crate::{
     LintLevel,
-    ast::{expression::is_pipeline_input_var, span::SpanExt},
+    ast::{expression::ExpressionExt, span::SpanExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
 };
-
-/// Check if an expression uses $in (pipeline input variable)
-fn uses_pipeline_input(expr: &Expression, context: &LintContext) -> bool {
-    match &expr.expr {
-        Expr::Var(var_id) => {
-            let var = context.working_set.get_variable(*var_id);
-            is_pipeline_input_var(*var_id, context) && var.const_val.is_none()
-        }
-        Expr::BinaryOp(left, _, right) => {
-            uses_pipeline_input(left, context) || uses_pipeline_input(right, context)
-        }
-        Expr::UnaryNot(inner) => uses_pipeline_input(inner, context),
-        Expr::Collect(_var_id, _inner_expr) => true,
-        Expr::Call(call) => call.arguments.iter().any(|arg| {
-            if let Argument::Positional(arg_expr) | Argument::Named((_, _, Some(arg_expr))) = arg {
-                uses_pipeline_input(arg_expr, context)
-            } else {
-                false
-            }
-        }),
-        Expr::FullCellPath(cell_path) => uses_pipeline_input(&cell_path.head, context),
-        Expr::Subexpression(block_id) => {
-            let block = context.working_set.get_block(*block_id);
-            block.pipelines.iter().any(|pipeline| {
-                pipeline
-                    .elements
-                    .iter()
-                    .any(|elem| uses_pipeline_input(&elem.expr, context))
-            })
-        }
-        _ => false,
-    }
-}
 
 struct RequireMainWithStdin;
 
@@ -83,11 +48,14 @@ impl DetectFix for RequireMainWithStdin {
                 return vec![];
             }
 
-            // Check if this top-level expression uses $in
-            if uses_pipeline_input(expr, ctx) {
+            // Check if this top-level expression uses $in (not $it in row conditions)
+            if let Some(dollar_in_span) = expr.find_dollar_in_usage() {
                 return vec![
-                    Detection::from_global_span("Using $in outside of a main function", expr.span)
-                        .with_primary_label("$in used here"),
+                    Detection::from_global_span(
+                        "Using $in outside of a main function",
+                        dollar_in_span,
+                    )
+                    .with_primary_label("$in used here"),
                 ];
             }
             vec![]

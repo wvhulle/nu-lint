@@ -404,7 +404,9 @@ impl ExpressionExt for Expression {
             Expr::BinaryOp(lhs, _, rhs) => lhs
                 .find_dollar_in_usage()
                 .or_else(|| rhs.find_dollar_in_usage()),
-            Expr::UnaryNot(e) | Expr::Collect(_, e) => e.find_dollar_in_usage(),
+            Expr::UnaryNot(e) => e.find_dollar_in_usage(),
+            // Collect represents $in usage - return the span of the Collect expression
+            Expr::Collect(_, _) => Some(self.span),
             Expr::StringInterpolation(items) => {
                 items.iter().find_map(ExpressionExt::find_dollar_in_usage)
             }

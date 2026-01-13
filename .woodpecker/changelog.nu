@@ -4,13 +4,13 @@
 # Usage: ./changelog.nu [--output <file>]
 
 def main [
-    --output (-o): string = "RELEASE_NOTES.md"
+    --output (-o): string = "RELEASE_NOTES.md"  # Output file path
 ]: nothing -> string {
     print $"(ansi blue)Generating changelog...(ansi reset)"
 
-    ^git-cliff --current --strip header -o $output | complete | ignore
+    git-cliff --current --strip header -o $output | complete
 
     print $"(ansi green)Changelog written to ($output)(ansi reset)"
     print ""
-    open $output
+    try { open $output } catch { "" }
 }

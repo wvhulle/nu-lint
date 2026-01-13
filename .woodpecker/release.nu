@@ -11,23 +11,23 @@ def main [
     let token = load-token
 
     if $token == "" and not $dry_run {
-        error make { msg: "CODEBERG_TOKEN not set. Create .env file or set environment variable." }
+        error make {msg: "CODEBERG_TOKEN not set. Create .env file or set environment variable."}
     }
 
-    if not (dist | path exists) {
-        error make { msg: "dist/ directory not found. Run build.nu first." }
+    if not ("dist" | path exists) {
+        error make {msg: "dist/ directory not found. Run build.nu first."}
     }
 
-    let files = ls dist | get name
+    let files = try { ls dist | get name } catch { [] }
 
-    let notes_file = RELEASE_NOTES.md
+    let notes_file = "RELEASE_NOTES.md"
     if not ($notes_file | path exists) {
-        error make { msg: $"($notes_file) not found. Run changelog.nu first." }
+        error make {msg: $"($notes_file) not found. Run changelog.nu first."}
     }
-    let notes = open $notes_file
+    let notes = try { open $notes_file } catch { "" }
 
     if $dry_run {
-        print-dry-run $tag $draft $files $notes
+        print-dry-run {tag: $tag, draft: $draft, files: $files, notes: $notes}
         return
     }
 
@@ -46,8 +46,8 @@ def main [
 
     let response = try {
         http post $api_url ($body | to json) --content-type application/json --headers [Authorization $"token ($token)"]
-    } catch { |e|
-        error make { msg: $"Failed to create release: ($e.msg)" }
+    } catch {|e|
+        error make {msg: $"Failed to create release: ($e.msg)"}
     }
 
     let release_id = $response.id
@@ -58,59 +58,65 @@ def main [
         let filename = $f | path basename
         let upload_url = $"https://codeberg.org/api/v1/repos/($repo_path)/releases/($release_id)/assets?name=($filename)"
 
+        let content = try { open --raw $f } catch {|e|
+            error make {msg: $"Failed to read ($f): ($e.msg)"}
+        }
         try {
-            http post $upload_url (open --raw $f) --content-type application/octet-stream --headers [Authorization $"token ($token)"]
-        } catch { |e|
-            error make { msg: $"Failed to upload ($f): ($e.msg)" }
+            http post $upload_url $content --content-type application/octet-stream --headers [Authorization $"token ($token)"]
+        } catch {|e|
+            error make {msg: $"Failed to upload ($f): ($e.msg)"}
         }
     }
 
-    print $"(ansi green)Release ($tag) published!(ansi reset)"
-    print $"https://codeberg.org/($repo_path)/releases/tag/($tag)"
+    print $"(ansi green)Release ($tag) published!(ansi reset)\nhttps://codeberg.org/($repo_path)/releases/tag/($tag)"
 }
 
 def load-token []: nothing -> string {
-    if (.env | path exists) {
-        open .env
-            | lines
-            | parse "{key}={value}"
-            | where key == CODEBERG_TOKEN
-            | get value
-            | first
-            | default ""
+    if (".env" | path exists) {
+        try {
+            open .env
+                | lines
+                | parse "{key}={value}"
+                | where key == CODEBERG_TOKEN
+                | get value
+                | first
+                | default ""
+        } catch { "" }
     } else {
         $env.CODEBERG_TOKEN? | default ""
     }
 }
 
 def get-repo-path []: nothing -> string {
-    let remote = if (^git remote | complete | get stdout | lines | any { $in == codeberg }) {
-        ^git remote get-url codeberg | complete | get stdout | str trim
+    let result = git remote | complete
+    let has_codeberg = if $result.exit_code == 0 {
+        $result.stdout | lines | any { $in == codeberg }
     } else {
-        ^git remote get-url origin | complete | get stdout | str trim
+        false
+    }
+
+    let remote = if $has_codeberg {
+        let r = git remote get-url codeberg | complete
+        if $r.exit_code == 0 { $r.stdout | str trim } else { "" }
+    } else {
+        let r = git remote get-url origin | complete
+        if $r.exit_code == 0 { $r.stdout | str trim } else { "" }
     }
 
     $remote
-        | str replace https://codeberg.org/ ""
-        | str replace ssh://git@codeberg.org/ ""
-        | str replace git@codeberg.org: ""
-        | str replace .git ""
+        | str replace --all --regex 'https://codeberg.org/|ssh://git@codeberg.org/|git@codeberg.org:|\.git$' ""
 }
 
 def print-dry-run [
-    tag: string
-    draft: bool
-    files: list<string>
-    notes: string
+    opts: record<tag: string, draft: bool, files: list<string>, notes: string>
 ]: nothing -> nothing {
-    print $"(ansi yellow)Dry run - would create release:(ansi reset)"
-    print $"  Tag: ($tag)"
-    print $"  Draft: ($draft)"
+    print $"(ansi yellow)Dry run - would create release:(ansi reset)
+  Tag: ($opts.tag)
+  Draft: ($opts.draft)"
     print "  Files:"
-    for f in $files {
-        let size = (ls $f).0.size
+    for f in $opts.files {
+        let size = try { ls $f | get 0?.size? | default "?" } catch { "?" }
         print $"    - ($f) \(($size)\)"
     }
-    print "  Notes:"
-    print $notes
+    print $"  Notes:\n($opts.notes)"
 }

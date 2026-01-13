@@ -240,10 +240,12 @@ pub fn violation_to_diagnostic(
 }
 
 fn build_message(violation: &Violation) -> String {
-    violation.primary_label.as_ref().map_or_else(
-        || violation.message.to_string(),
-        |label| format!("{}: {label}", violation.message),
-    )
+    // Use only the short message for LSP diagnostics.
+    // The primary_label is redundant for inline display since the underline
+    // already indicates the location. Appending it creates overly long messages
+    // like "Unnecessary '^' prefix: redundant prefix" which are hard to read
+    // in editors that show diagnostics inline (Helix, reedline, etc.)
+    violation.message.to_string()
 }
 
 fn build_related_information(
@@ -252,39 +254,65 @@ fn build_related_information(
     line_index: &LineIndex,
     file_uri: &Uri,
 ) -> Vec<DiagnosticRelatedInformation> {
+    let mut result = Vec::new();
     let mut seen_ranges = HashSet::new();
 
-    violation
-        .extra_labels
-        .iter()
-        .filter_map(|(span, label)| {
-            let label_text = label.as_deref()?;
-            if label_text.is_empty() {
-                return None;
-            }
-
-            let file_span = span.file_span();
+    // Add primary_label as the first related information entry.
+    // This keeps the main diagnostic message short while preserving
+    // the detailed context for IDEs that display related information.
+    if let Some(ref label) = violation.primary_label {
+        if !label.is_empty() {
+            let file_span = violation.file_span();
             let range = line_index.span_to_range(source, file_span.start, file_span.end);
-
             let range_key = (
                 range.start.line,
                 range.start.character,
                 range.end.line,
                 range.end.character,
             );
-            if !seen_ranges.insert(range_key) {
-                return None;
-            }
-
-            Some(DiagnosticRelatedInformation {
+            seen_ranges.insert(range_key);
+            result.push(DiagnosticRelatedInformation {
                 location: Location {
                     uri: file_uri.clone(),
                     range,
                 },
-                message: label_text.to_string(),
-            })
-        })
-        .collect()
+                message: label.to_string(),
+            });
+        }
+    }
+
+    // Add extra_labels as additional related information
+    for (span, label) in &violation.extra_labels {
+        let Some(label_text) = label.as_deref() else {
+            continue;
+        };
+        if label_text.is_empty() {
+            continue;
+        }
+
+        let file_span = span.file_span();
+        let range = line_index.span_to_range(source, file_span.start, file_span.end);
+
+        let range_key = (
+            range.start.line,
+            range.start.character,
+            range.end.line,
+            range.end.character,
+        );
+        if !seen_ranges.insert(range_key) {
+            continue;
+        }
+
+        result.push(DiagnosticRelatedInformation {
+            location: Location {
+                uri: file_uri.clone(),
+                range,
+            },
+            message: label_text.to_string(),
+        });
+    }
+
+    result
 }
 
 fn create_extra_label_diagnostics(
@@ -521,13 +549,16 @@ mod tests {
 
         let diagnostic = violation_to_diagnostic(&violation, source, &line_index, &file_uri);
 
-        assert!(diagnostic.message.contains("outer if"));
+        // Message should be short (without primary_label appended)
+        assert_eq!(diagnostic.message, "Nested if can be collapsed");
 
+        // primary_label ("outer if") should now be in related_information
         let related = diagnostic
             .related_information
             .expect("should have related_information");
-        assert_eq!(related.len(), 1);
-        assert_eq!(related[0].message, "inner if");
+        assert_eq!(related.len(), 2); // primary_label + extra_label
+        assert_eq!(related[0].message, "outer if"); // primary_label first
+        assert_eq!(related[1].message, "inner if"); // extra_label second
         assert_eq!(related[0].location.uri.as_str(), "file:///test.nu");
     }
 

@@ -34,19 +34,19 @@ def main [
 }
 
 # Load .env file if present (for local development)
-def load-dotenv []: nothing -> nothing {
+def --env load-dotenv []: nothing -> nothing {
     if not (".env" | path exists) { return }
 
     log debug "Loading .env file..."
     open .env
         | lines
-        | where {|line| $line | str contains "=" }
+        | where {|line| ($line | str trim | str starts-with "#" | not $in) and ($line | str contains "=") }
         | each {|line|
             let idx = $line | str index-of "="
             { ($line | str substring ..<$idx): ($line | str substring ($idx + 1)..) }
         }
-        | reduce {|it, acc| $acc | merge $it }
-        | load-env $in
+        | reduce --fold {} {|it, acc| $acc | merge $it }
+        | load-env
 }
 
 # Get Cachix token from environment (CI or local .env)

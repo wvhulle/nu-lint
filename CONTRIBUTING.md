@@ -10,7 +10,7 @@ Before starting on a new rule, check if there is no existing rule that needs to 
 
 Experiment with different variations of the anti-pattern. For example, you want to forbid `nothing` in non-signature positions. Here is a checklist:
 
-- In which *contexts does is this an anti-pattern*. Just in signatures? Or also as the return type of a block? Can You use it literals?
+- In which _contexts does is this an anti-pattern_. Just in signatures? Or also as the return type of a block? Can You use it literals?
 - Is it possible to detect this reliably from AST? Can you use the information of Nu parser to give predictable detections of the anti-pattern? If not, you need strong justification to use heuristics, which should be avoided.
 - Can this anti-pattern be fixed? When can it not be fixed?
 - Should we offer different fixes depending on the situation? Preferably, you split a rule and anti-pattern in different sub-rules when the fixes are wide apart.
@@ -31,7 +31,7 @@ def main [] {
 
 Make it executable and run it with `/tmp/test.nu` and observe the output in the terminal.
 
-You can compare differences between shells by running `nu -c 'TEST_NU_CODE'` (for Nu test code)  and `bash -c 'TEST_BASH_CODE'` (for Bash test code).
+You can compare differences between shells by running `nu -c 'TEST_NU_CODE'` (for Nu test code) and `bash -c 'TEST_BASH_CODE'` (for Bash test code).
 
 ## Rule implementation structure
 
@@ -231,4 +231,12 @@ git checkout main
 cargo bench --bench speed -- --save-baseline main
 git checkout your-branch
 cargo bench --bench speed -- --baseline main
+```
+
+## Cachix
+
+Check if it is already in the cachix cache with something like:
+
+```bash
+nix-store --realise /nix/store/c0qksplq2v9i2a0ksvxfwp4npizjkmhg-nu-lint-0.0.121 --store https://wvhulle.cachix.org
 ```

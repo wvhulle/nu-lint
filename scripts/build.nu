@@ -5,7 +5,7 @@
 
 def main [
     --cargo  # Use cargo instead of nix build (for local development)
-    --cache: string = "nu-lint"  # Cachix cache name
+    --cache: string = "wvhulle"  # Cachix cache name
 ]: nothing -> nothing {
     try { mkdir dist }
 

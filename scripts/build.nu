@@ -5,7 +5,7 @@
 
 def main [
     --cargo  # Use cargo instead of nix build (for local development)
-]: nothing -> table {
+]: nothing -> nothing {
     try { mkdir dist }
 
     if $cargo {
@@ -16,21 +16,38 @@ def main [
 
     create-checksums
     print $"(ansi green)Build complete!(ansi reset)"
-    try { ls dist } catch { [] }
+    print (try { ls dist } catch { "No files in dist" })
 }
 
 def build-nix []: nothing -> nothing {
     print $"(ansi blue)Building with nix...(ansi reset)"
 
-    nix build .#default | complete
-    try { cp result/bin/nu-lint dist/nu-lint-linux-x86_64 | complete }
-    try { chmod +x dist/nu-lint-linux-x86_64 | complete }
+    # Run nix build and stream output
+    let result = do { ^nix build .#default --print-build-logs } | complete
+    if $result.exit_code != 0 {
+        print $"(ansi red)nix build failed:(ansi reset)"
+        print $result.stderr
+        error make {msg: "nix build failed"}
+    }
+
+    print $"(ansi blue)Copying binary to dist/...(ansi reset)"
+    try { ^cp result/bin/nu-lint dist/nu-lint-linux-x86_64 } catch {|e|
+        print $"(ansi red)Failed to copy binary: ($e.msg)(ansi reset)"
+    }
+    try { ^chmod +x dist/nu-lint-linux-x86_64 }
+
+    print $"(ansi green)Binary ready: dist/nu-lint-linux-x86_64(ansi reset)"
 }
 
 def build-cargo []: nothing -> nothing {
     print $"(ansi blue)Building with cargo...(ansi reset)"
 
-    cargo build --release | complete
+    let result = do { ^cargo build --release } | complete
+    if $result.exit_code != 0 {
+        print $"(ansi red)cargo build failed:(ansi reset)"
+        print $result.stderr
+        error make {msg: "cargo build failed"}
+    }
 
     let arch = try { uname | get machine } catch { "x86_64" }
     let os = try { uname | get kernel-name | str downcase } catch { "linux" }
@@ -42,8 +59,10 @@ def build-cargo []: nothing -> nothing {
         error make {msg: $"Invalid os: ($os)"}
     }
     let target = $"dist/nu-lint-($os)-($arch)"
-    try { cp target/release/nu-lint $target | complete }
-    try { chmod +x $target | complete }
+    try { ^cp target/release/nu-lint $target }
+    try { ^chmod +x $target }
+
+    print $"(ansi green)Binary ready: ($target)(ansi reset)"
 }
 
 def create-checksums []: nothing -> nothing {
@@ -52,10 +71,9 @@ def create-checksums []: nothing -> nothing {
     try { cd dist } catch { return }
     let files = try { ls nu-lint-* | get name } catch { return }
 
-    $files | each { |f|
+    $files | each {|f|
         let hash = try { open --raw $f | hash sha256 } catch { "error" }
+        print $"  ($f): ($hash | str substring 0..16)..."
         $"($hash)  ($f)"
     } | str join "\n" | try { save -f checksums-sha256.txt }
-
-    print (try { open checksums-sha256.txt } catch { "No checksums" })
 }

@@ -2,20 +2,30 @@
 
 use std/log
 
-# Build release binary for nu-lint
-# Usage: ./build.nu [--cargo] [--cache <name>]
+# Build release binaries for nu-lint
+# Usage: ./build.nu [--cargo] [--cache <name>] [--targets <list>]
 
 def main [
     --cargo  # Use cargo instead of nix build (for local development)
     --cache: string = "wvhulle"  # Cachix cache name
+    --targets: list<string> = []  # Target triples to build (empty = native only)
 ]: nothing -> nothing {
     mkdir dist
     load-dotenv
 
-    if $cargo {
-        build-cargo
+    let build_targets = if ($targets | is-empty) {
+        [( get-target-triple )]
     } else {
-        build-nix $cache
+        $targets
+    }
+
+    for target in $build_targets {
+        log info $"Building for ($target)..."
+        if $cargo {
+            build-cargo $target
+        } else {
+            build-nix $cache $target
+        }
     }
 
     create-checksums
@@ -83,8 +93,8 @@ def enable-flakes []: nothing -> nothing {
     try { "experimental-features = nix-command flakes\n" | save --append /etc/nix/nix.conf }
 }
 
-# Get platform info for binary naming
-def get-platform []: nothing -> record<os: string, arch: string> {
+# Get Rust target triple for binstall compatibility
+def get-target-triple []: nothing -> string {
     let arch = try { uname | get machine } catch { "x86_64" }
     let os = try { uname | get kernel-name | str downcase } catch { "linux" }
 
@@ -95,44 +105,76 @@ def get-platform []: nothing -> record<os: string, arch: string> {
         }
     }
 
-    { os: $os, arch: $arch }
-}
-
-# Copy binary to dist with platform-specific name
-def copy-binary [src: string]: nothing -> string {
-    let platform = get-platform
-    let target = $"dist/nu-lint-($platform.os)-($platform.arch)"
-
-    ^cp $src $target
-    ^chmod +x $target
+    # Map to Rust target triples (binstall expects these)
+    let target = match [$os $arch] {
+        ["linux" "x86_64"] => "x86_64-unknown-linux-gnu"
+        ["linux" "aarch64"] => "aarch64-unknown-linux-gnu"
+        ["darwin" "x86_64"] => "x86_64-apple-darwin"
+        ["darwin" "arm64"] => "aarch64-apple-darwin"
+        ["darwin" "aarch64"] => "aarch64-apple-darwin"
+        _ => $"($arch)-unknown-($os)-gnu"
+    }
 
     $target
 }
 
-# Build with Nix
-def build-nix [cache: string]: nothing -> nothing {
+# Copy binary to dist as tarball with binstall-compatible name
+def copy-binary [src: string, target_triple: string]: nothing -> string {
+    let archive_name = $"nu-lint-($target_triple).tar.gz"
+    let archive_path = $"dist/($archive_name)"
+
+    # Create tarball with binary inside (binstall expects this)
+    log debug $"Creating archive ($archive_name)..."
+    ^tar -czf $archive_path -C ($src | path dirname) ($src | path basename)
+
+    $archive_path
+}
+
+# Build with Nix for a specific target
+def build-nix [cache: string, target_triple: string]: nothing -> nothing {
     log debug "Configuring nix..."
     enable-flakes
     setup-cachix $cache
 
-    log info "Building with nix..."
-    ^nix build .#default --print-build-logs
+    # Map target triple to nix package attribute
+    # See flake.nix packages for available targets
+    let nix_attr = match $target_triple {
+        "x86_64-unknown-linux-gnu" => "default"
+        "aarch64-unknown-linux-gnu" => "aarch64-linux"
+        "x86_64-apple-darwin" => "default"
+        "aarch64-apple-darwin" => "default"
+        _ => {
+            log warning $"Unknown target ($target_triple), using default"
+            "default"
+        }
+    }
+
+    log info $"Building with nix \(($nix_attr)\) for ($target_triple)..."
+    ^nix build $".#($nix_attr)" --print-build-logs
 
     push-to-cachix $cache
 
     log debug "Copying binary to dist/..."
-    let target = copy-binary "result/bin/nu-lint"
-    log info $"Binary ready: ($target)"
+    let archive = copy-binary "result/bin/nu-lint" $target_triple
+    log info $"Binary ready: ($archive)"
 }
 
-# Build with Cargo
-def build-cargo []: nothing -> nothing {
-    log info "Building with cargo..."
+# Build with Cargo for a specific target
+def build-cargo [target_triple: string]: nothing -> nothing {
+    log info $"Building with cargo for ($target_triple)..."
 
-    ^cargo build --release
-
-    let target = copy-binary "target/release/nu-lint"
-    log info $"Binary ready: ($target)"
+    let native = get-target-triple
+    if $target_triple == $native {
+        ^cargo build --release
+        let archive = copy-binary "target/release/nu-lint" $target_triple
+        log info $"Binary ready: ($archive)"
+    } else {
+        # Cross-compilation requires the target to be installed
+        ^rustup target add $target_triple
+        ^cargo build --release --target $target_triple
+        let archive = copy-binary $"target/($target_triple)/release/nu-lint" $target_triple
+        log info $"Binary ready: ($archive)"
+    }
 }
 
 # Generate SHA256 checksums for dist files
@@ -140,7 +182,7 @@ def create-checksums []: nothing -> nothing {
     log debug "Creating checksums..."
 
     cd dist
-    let files = try { ls nu-lint-* | get name } catch { return }
+    let files = try { ls *.tar.gz | get name } catch { return }
 
     $files
         | each {|f|

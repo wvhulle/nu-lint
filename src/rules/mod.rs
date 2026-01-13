@@ -58,6 +58,7 @@ pub mod script_export_main;
 pub mod shorten_with_compound_assignment;
 pub mod side_effects;
 pub mod spacing;
+pub mod stdlib_log;
 pub mod structured_data_to_csv_tool;
 pub mod structured_data_to_json_tool;
 pub mod try_instead_of_do;
@@ -217,4 +218,5 @@ pub const USED_RULES: &[&dyn Rule] = &[
     use_regex_operators::RULE,
     redundant_complete_streaming::RULE,
     wrap_external_with_complete::RULE,
+    stdlib_log::RULE,
 ];

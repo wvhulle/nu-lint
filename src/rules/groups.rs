@@ -65,6 +65,7 @@ const IDIOMATIC: Group = Group {
         super::use_regex_operators::RULE,
         super::ansi_over_escape_codes::RULE,
         super::append_to_concat_assign::RULE,
+        super::stdlib_log::RULE,
     ],
 };
 

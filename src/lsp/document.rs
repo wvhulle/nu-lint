@@ -260,25 +260,25 @@ fn build_related_information(
     // Add primary_label as the first related information entry.
     // This keeps the main diagnostic message short while preserving
     // the detailed context for IDEs that display related information.
-    if let Some(ref label) = violation.primary_label {
-        if !label.is_empty() {
-            let file_span = violation.file_span();
-            let range = line_index.span_to_range(source, file_span.start, file_span.end);
-            let range_key = (
-                range.start.line,
-                range.start.character,
-                range.end.line,
-                range.end.character,
-            );
-            seen_ranges.insert(range_key);
-            result.push(DiagnosticRelatedInformation {
-                location: Location {
-                    uri: file_uri.clone(),
-                    range,
-                },
-                message: label.to_string(),
-            });
-        }
+    if let Some(ref label) = violation.primary_label
+        && !label.is_empty()
+    {
+        let file_span = violation.file_span();
+        let range = line_index.span_to_range(source, file_span.start, file_span.end);
+        let range_key = (
+            range.start.line,
+            range.start.character,
+            range.end.line,
+            range.end.character,
+        );
+        seen_ranges.insert(range_key);
+        result.push(DiagnosticRelatedInformation {
+            location: Location {
+                uri: file_uri.clone(),
+                range,
+            },
+            message: label.to_string(),
+        });
     }
 
     // Add extra_labels as additional related information
@@ -396,14 +396,14 @@ pub const fn ranges_overlap(a: &Range, b: &Range) -> bool {
     a.start.line <= b.end.line && b.start.line <= a.end.line
 }
 
-/// Check if a language_id indicates nushell.
+/// Check if a `language_id` indicates nushell.
 #[must_use]
 pub const fn is_nushell_language_id(language_id: &str) -> bool {
     language_id.eq_ignore_ascii_case("nushell") || language_id.eq_ignore_ascii_case("nu")
 }
 
 /// Check if a URI looks like a nushell file based on extension or scheme.
-/// This is a fallback for clients that don't set language_id properly.
+/// This is a fallback for clients that don't set `language_id` properly.
 #[must_use]
 pub fn is_nushell_file(uri: &Uri) -> bool {
     // Accept repl:// URIs for REPL integration

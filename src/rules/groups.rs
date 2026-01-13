@@ -145,6 +145,7 @@ const PERFORMANCE: Group = Group {
         super::unnecessary_accumulate::RULE,
         super::merge_multiline_print::RULE,
         super::chained_str_replace::RULE,
+        super::redundant_complete_streaming::RULE,
     ],
 };
 

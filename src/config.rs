@@ -91,7 +91,7 @@ impl Config {
     ///
     /// Returns an error if two conflicting rules are both enabled.
     pub fn validate(&self) -> Result<(), LintError> {
-        for rule in USED_RULES.iter() {
+        for rule in USED_RULES {
             if self.get_lint_level(*rule).is_none() {
                 continue;
             }

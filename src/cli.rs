@@ -172,11 +172,7 @@ impl Cli {
     fn list_rules(config: Option<&Config>) {
         let mut sorted_rules: Vec<&dyn Rule> = USED_RULES
             .iter()
-            .filter(|r| {
-                config
-                    .map(|c| c.get_lint_level(**r).is_some())
-                    .unwrap_or(true)
-            })
+            .filter(|r| config.is_none_or(|c| c.get_lint_level(**r).is_some()))
             .copied()
             .collect();
         sorted_rules.sort_by_key(|r| r.id());

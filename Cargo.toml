@@ -15,7 +15,7 @@ license = "MIT"
 name = "nu-lint"
 repository = "https://codeberg.org/wvhulle/nu-lint"
 # Find latest published version with `cargo search nu-lint`
-version = "0.0.118"
+version = "0.0.119"
 
 [lints.clippy]
 # https://rust-lang.github.io/rust-clippy/master/index.html

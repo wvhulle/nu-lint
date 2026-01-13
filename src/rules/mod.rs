@@ -47,6 +47,7 @@ pub mod positional_to_pipeline;
 pub mod posix_tools;
 pub mod prefer_long_flags;
 pub mod range_for_iteration;
+pub mod redundant_complete_streaming;
 pub mod redundant_ignore;
 pub mod remove_hat_not_builtin;
 pub mod remove_redundant_in;
@@ -214,5 +215,6 @@ pub const USED_RULES: &[&dyn Rule] = &[
     upstream::nu_deprecated::RULE,
     upstream::nu_parse_error::RULE,
     use_regex_operators::RULE,
+    redundant_complete_streaming::RULE,
     wrap_external_with_complete::RULE,
 ];

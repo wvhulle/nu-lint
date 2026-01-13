@@ -51,7 +51,7 @@ fn check_list_commas(
         }
         let between_span = Span::new(current_expr.span.end, next_expr.span.start);
         let between_text = context.plain_text(between_span);
-        if let Some(comma_pos) = find_comma_outside_comment(&between_text) {
+        if let Some(comma_pos) = find_comma_outside_comment(between_text) {
             let comma_span = Span::new(
                 between_span.start + comma_pos,
                 between_span.start + comma_pos + 1,

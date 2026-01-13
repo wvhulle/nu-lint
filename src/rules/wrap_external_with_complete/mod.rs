@@ -39,6 +39,12 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<Detection> 
                 return None;
             }
 
+            // Skip commands where streaming output is preferred (build tools, etc.)
+            // Users often want to see live progress rather than buffering with complete
+            if has_external_side_effect(cmd_name, ExternEffect::StreamingOutput, context, args) {
+                return None;
+            }
+
             if is_piped_to_complete(pipeline, i, context) {
                 return None;
             }

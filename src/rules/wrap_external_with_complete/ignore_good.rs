@@ -50,3 +50,52 @@ fn ignore_complete_in_function() {
     "#,
     );
 }
+
+// Streaming output commands - users want to see live progress
+#[test]
+fn ignore_git_clone_streaming() {
+    // git clone shows progress, buffering defeats the purpose
+    RULE.assert_ignores("^git clone https://github.com/example/repo");
+}
+
+#[test]
+fn ignore_git_push_streaming() {
+    RULE.assert_ignores("^git push origin main");
+}
+
+#[test]
+fn ignore_git_pull_streaming() {
+    RULE.assert_ignores("^git pull");
+}
+
+#[test]
+fn ignore_cargo_build_streaming() {
+    // Build output should stream for progress visibility
+    RULE.assert_ignores("^cargo build");
+}
+
+#[test]
+fn ignore_cargo_test_streaming() {
+    RULE.assert_ignores("^cargo test");
+}
+
+#[test]
+fn ignore_npm_install_streaming() {
+    RULE.assert_ignores("^npm install");
+}
+
+#[test]
+fn ignore_make_streaming() {
+    RULE.assert_ignores("^make");
+}
+
+#[test]
+fn ignore_docker_build_streaming() {
+    RULE.assert_ignores("^docker build .");
+}
+
+#[test]
+fn ignore_wget_streaming() {
+    // wget shows download progress by default
+    RULE.assert_ignores("^wget https://example.com/file.tar.gz");
+}

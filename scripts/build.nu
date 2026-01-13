@@ -44,12 +44,8 @@ def build-nix [cache: string]: nothing -> nothing {
     }
 
     print $"(ansi blue)Building with nix...(ansi reset)"
-    let result = do { ^nix build .#default --print-build-logs } | complete
-    if $result.exit_code != 0 {
-        print $"(ansi red)nix build failed:(ansi reset)"
-        print $result.stderr
-        error make {msg: "nix build failed"}
-    }
+    # Run directly without capturing to stream output in real-time
+    ^nix build .#default --print-build-logs
 
     # Push to cache if available
     if $has_cachix and $has_token {

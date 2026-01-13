@@ -1,5 +1,7 @@
 #!/usr/bin/env nu
 
+use std/log
+
 # Build release binary for nu-lint
 # Usage: ./build.nu [--cargo] [--cache <name>]
 
@@ -7,7 +9,8 @@ def main [
     --cargo  # Use cargo instead of nix build (for local development)
     --cache: string = "wvhulle"  # Cachix cache name
 ]: nothing -> nothing {
-    try { mkdir dist }
+    mkdir dist
+    load-dotenv
 
     if $cargo {
         build-cargo
@@ -16,91 +19,135 @@ def main [
     }
 
     create-checksums
-    print $"(ansi green)Build complete!(ansi reset)"
-    print (try { ls dist } catch { "No files in dist" })
+    log info "Build complete!"
+    print (ls dist)
 }
 
-def build-nix [cache: string]: nothing -> nothing {
-    print $"(ansi blue)Configuring nix...(ansi reset)"
+# Load .env file if present (for local development)
+def load-dotenv []: nothing -> nothing {
+    if not (".env" | path exists) { return }
 
-    # Enable flakes
-    "experimental-features = nix-command flakes\n" | save --append /etc/nix/nix.conf
-
-    # Setup Cachix if token available
-    let has_cachix = (which cachix | length) > 0
-    let has_token = ($env.CACHIX_AUTH_TOKEN? | default "") != ""
-
-    if $has_cachix and $has_token {
-        print $"(ansi blue)Setting up Cachix cache: ($cache)(ansi reset)"
-        try {
-            ^cachix authtoken $env.CACHIX_AUTH_TOKEN
-            ^cachix use $cache
-            print $"(ansi green)Cachix configured(ansi reset)"
-        } catch {
-            print $"(ansi yellow)Cachix setup failed, continuing without cache(ansi reset)"
+    log debug "Loading .env file..."
+    open .env
+        | lines
+        | where {|line| $line | str contains "=" }
+        | each {|line|
+            let idx = $line | str index-of "="
+            { ($line | str substring ..<$idx): ($line | str substring ($idx + 1)..) }
         }
-    } else {
-        print $"(ansi yellow)Cachix not available or no token, building without cache(ansi reset)"
-    }
-
-    print $"(ansi blue)Building with nix...(ansi reset)"
-    # Run directly without capturing to stream output in real-time
-    ^nix build .#default --print-build-logs
-
-    # Push to cache if available
-    if $has_cachix and $has_token {
-        print $"(ansi blue)Pushing to Cachix...(ansi reset)"
-        try { ^cachix push $cache ./result } catch {
-            print $"(ansi yellow)Failed to push to cache(ansi reset)"
-        }
-    }
-
-    print $"(ansi blue)Copying binary to dist/...(ansi reset)"
-    try { ^cp result/bin/nu-lint dist/nu-lint-linux-x86_64 } catch {|e|
-        print $"(ansi red)Failed to copy binary: ($e.msg)(ansi reset)"
-        error make {msg: "Failed to copy binary"}
-    }
-    try { ^chmod +x dist/nu-lint-linux-x86_64 }
-
-    print $"(ansi green)Binary ready: dist/nu-lint-linux-x86_64(ansi reset)"
+        | reduce {|it, acc| $acc | merge $it }
+        | load-env $in
 }
 
-def build-cargo []: nothing -> nothing {
-    print $"(ansi blue)Building with cargo...(ansi reset)"
+# Get Cachix token from environment (CI or local .env)
+def get-cachix-token []: nothing -> string {
+    $env.CACHIX_AUTH_TOKEN? | default ($env.CACHIX_TOKEN? | default "")
+}
 
-    let result = do { ^cargo build --release } | complete
-    if $result.exit_code != 0 {
-        print $"(ansi red)cargo build failed:(ansi reset)"
-        print $result.stderr
-        error make {msg: "cargo build failed"}
+def cachix-available []: nothing -> bool {
+    (which cachix | length) > 0 and (get-cachix-token | is-not-empty)
+}
+
+# Configure Cachix for pulling cached artifacts
+def setup-cachix [cache: string]: nothing -> nothing {
+    if not (cachix-available) {
+        log warning "Cachix not available or no token, building without cache"
+        return
     }
 
+    log info $"Setting up Cachix cache: ($cache)"
+    try {
+        ^cachix authtoken (get-cachix-token)
+        ^cachix use $cache
+        log info "Cachix configured"
+    } catch {
+        log warning "Cachix setup failed, continuing without cache"
+    }
+}
+
+# Push build artifacts to Cachix
+def push-to-cachix [cache: string]: nothing -> nothing {
+    if not (cachix-available) { return }
+
+    log info "Pushing build closure to Cachix..."
+    try {
+        ^nix-store --query --requisites ./result | ^cachix push $cache
+    } catch {
+        log warning "Failed to push to cache"
+    }
+}
+
+# Enable nix flakes in CI environment
+def enable-flakes []: nothing -> nothing {
+    if not ("/etc/nix/nix.conf" | path exists) { return }
+    try { "experimental-features = nix-command flakes\n" | save --append /etc/nix/nix.conf }
+}
+
+# Get platform info for binary naming
+def get-platform []: nothing -> record<os: string, arch: string> {
     let arch = try { uname | get machine } catch { "x86_64" }
     let os = try { uname | get kernel-name | str downcase } catch { "linux" }
 
-    if ($arch | str replace --all --regex '[a-zA-Z0-9_-]' '' | str length) > 0 {
-        error make {msg: $"Invalid arch: ($arch)"}
-    }
-    if ($os | str replace --all --regex '[a-zA-Z0-9_-]' '' | str length) > 0 {
-        error make {msg: $"Invalid os: ($os)"}
+    # Validate to prevent path injection
+    for field in [$arch $os] {
+        if ($field | str replace --all --regex '[a-zA-Z0-9_-]' '' | is-not-empty) {
+            error make { msg: $"Invalid platform component: ($field)" }
+        }
     }
 
-    let target = $"dist/nu-lint-($os)-($arch)"
-    try { ^cp target/release/nu-lint $target }
-    try { ^chmod +x $target }
-
-    print $"(ansi green)Binary ready: ($target)(ansi reset)"
+    { os: $os, arch: $arch }
 }
 
-def create-checksums []: nothing -> nothing {
-    print $"(ansi blue)Creating checksums...(ansi reset)"
+# Copy binary to dist with platform-specific name
+def copy-binary [src: string]: nothing -> string {
+    let platform = get-platform
+    let target = $"dist/nu-lint-($platform.os)-($platform.arch)"
 
-    try { cd dist } catch { return }
+    ^cp $src $target
+    ^chmod +x $target
+
+    $target
+}
+
+# Build with Nix
+def build-nix [cache: string]: nothing -> nothing {
+    log debug "Configuring nix..."
+    enable-flakes
+    setup-cachix $cache
+
+    log info "Building with nix..."
+    ^nix build .#default --print-build-logs
+
+    push-to-cachix $cache
+
+    log debug "Copying binary to dist/..."
+    let target = copy-binary "result/bin/nu-lint"
+    log info $"Binary ready: ($target)"
+}
+
+# Build with Cargo
+def build-cargo []: nothing -> nothing {
+    log info "Building with cargo..."
+
+    ^cargo build --release
+
+    let target = copy-binary "target/release/nu-lint"
+    log info $"Binary ready: ($target)"
+}
+
+# Generate SHA256 checksums for dist files
+def create-checksums []: nothing -> nothing {
+    log debug "Creating checksums..."
+
+    cd dist
     let files = try { ls nu-lint-* | get name } catch { return }
 
-    $files | each {|f|
-        let hash = try { open --raw $f | hash sha256 } catch { "error" }
-        print $"  ($f): ($hash | str substring 0..16)..."
-        $"($hash)  ($f)"
-    } | str join "\n" | try { save -f checksums-sha256.txt }
+    $files
+        | each {|f|
+            let hash = open --raw $f | hash sha256
+            log debug $"  ($f): ($hash | str substring 0..16)..."
+            $"($hash)  ($f)"
+        }
+        | str join "\n"
+        | save -f checksums-sha256.txt
 }

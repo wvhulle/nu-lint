@@ -139,7 +139,8 @@ fn handle_did_change(connection: &Connection, state: &mut ServerState, params: s
     let Some(change) = params.content_changes.into_iter().last() else {
         return;
     };
-    // Check if document is tracked (was opened as nushell) or matches file extension
+    // Check if document is tracked (was opened as nushell) or matches file
+    // extension
     if state.has_document(&uri) || is_nushell_file(&uri) {
         let diagnostics = state.lint_document(&uri, &change.text);
         publish_diagnostics(connection, uri, diagnostics);
@@ -162,7 +163,8 @@ fn handle_did_save(connection: &Connection, state: &mut ServerState, params: ser
         return;
     };
 
-    // Check if document is tracked (was opened as nushell) or matches file extension
+    // Check if document is tracked (was opened as nushell) or matches file
+    // extension
     if state.has_document(&uri) || is_nushell_file(&uri) {
         let diagnostics = state.lint_document(&uri, &content);
         publish_diagnostics(connection, uri, diagnostics);

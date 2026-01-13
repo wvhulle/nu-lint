@@ -12,14 +12,16 @@ use crate::{
 };
 
 struct RowConditionFixData {
-    param_decl_span: Span,
+    /// Span of the entire closure argument (including braces): `{|x| $x > 2}`
+    closure_span: Span,
+    /// Block ID of the closure body for AST-based span extraction
+    block_id: BlockId,
     param_name: String,
-    var_usage_spans: Vec<Span>,
+    param_var_id: VarId,
 }
 
 struct ClosureParameter {
     name: String,
-    name_span: Span,
     var_id: VarId,
 }
 
@@ -43,53 +45,28 @@ fn extract_closure_parameter(block_id: BlockId, context: &LintContext) -> Option
     let var = context.working_set.get_variable(var_id);
     let name = context.plain_text(var.declaration_span).to_string();
 
-    Some(ClosureParameter {
-        name,
-        name_span: var.declaration_span,
-        var_id,
-    })
+    Some(ClosureParameter { name, var_id })
 }
 
-/// Find the span of the closure parameter declaration including pipes.
+/// Extract the body span from a closure block using AST structure.
 ///
-/// Given a parameter name span like the `x` in `{|x| $x > 2}`, this finds the
-/// full declaration span `|x|` by:
-/// 1. Scanning backward to find the opening `|`
-/// 2. Scanning forward to find the closing `|`
+/// The body span is computed from the block's pipeline elements, which
+/// represent the actual executable content of the closure.
 ///
-/// Uses character indices for UTF-8 safety rather than byte slicing.
-fn find_param_decl_span(
-    block_span: Span,
-    param_name_span: Span,
-    context: &LintContext,
-) -> Option<Span> {
-    // Ensure the parameter name is within the block
-    if param_name_span.start < block_span.start || param_name_span.end > block_span.end {
+/// Returns `None` if the block has no pipeline elements.
+fn extract_body_span_from_block(block_id: BlockId, context: &LintContext) -> Option<Span> {
+    let block = context.working_set.get_block(block_id);
+    let elements = block.all_elements();
+
+    if elements.is_empty() {
         return None;
     }
 
-    let block_text = context.plain_text(block_span);
-    let param_start = param_name_span.start - block_span.start;
-    let param_end = param_name_span.end - block_span.start;
+    // Get the combined span of all pipeline elements
+    let first_span = elements.first()?.expr.span;
+    let last_span = elements.last()?.expr.span;
 
-    // Collect character indices for UTF-8-safe iteration
-    let char_indices: Vec<_> = block_text.char_indices().collect();
-
-    // Find opening pipe before parameter
-    let opening_pipe_offset = char_indices
-        .iter()
-        .rev()
-        .find_map(|&(offset, ch)| (offset < param_start && ch == '|').then_some(offset))?;
-
-    // Find closing pipe after parameter
-    let closing_pipe_offset = char_indices
-        .iter()
-        .find_map(|&(offset, ch)| (offset >= param_end && ch == '|').then_some(offset))?;
-
-    Some(Span::new(
-        block_span.start + opening_pipe_offset,
-        block_span.start + closing_pipe_offset + 1, // +1 to include the pipe itself
-    ))
+    Some(Span::new(first_span.start, last_span.end))
 }
 
 /// Check if a `where` or `filter` call uses a named parameter closure that
@@ -116,9 +93,6 @@ fn check_where_or_filter_call(
         _ => return None,
     };
 
-    let block = context.working_set.get_block(block_id);
-    let block_span = block.span?;
-
     // Extract the single parameter
     let param = extract_closure_parameter(block_id, context)?;
 
@@ -133,12 +107,6 @@ fn check_where_or_filter_call(
         return None;
     }
 
-    // Find the full parameter declaration span including pipes
-    let param_decl_span = find_param_decl_span(block_span, param.name_span, context)?;
-
-    // Collect all variable usages
-    let var_usage_spans = block.find_var_usage_spans(param.var_id, context, |_, _, _| true);
-
     let violation = Detection::from_global_span(
         "Use `$it` instead of closure parameter for more concise code",
         arg_expr.span,
@@ -147,9 +115,10 @@ fn check_where_or_filter_call(
     .with_extra_label(format!("{command_name} command"), call.span());
 
     let fix_data = RowConditionFixData {
-        param_decl_span,
+        closure_span: arg_expr.span,
+        block_id,
         param_name: param.name,
-        var_usage_spans,
+        param_var_id: param.var_id,
     };
 
     Some((violation, fix_data))
@@ -242,21 +211,52 @@ impl DetectFix for WhereClosureToIt {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let mut replacements = vec![
-            // Remove the parameter declaration (|param_name|)
-            Replacement::new(fix_data.param_decl_span, String::new()),
-        ];
+        // Extract body span and variable usages from the block (AST-based)
+        let block = context.working_set.get_block(fix_data.block_id);
+        let body_span = extract_body_span_from_block(fix_data.block_id, context)?;
+        let var_usage_spans =
+            block.find_var_usage_spans(fix_data.param_var_id, context, |_, _, _| true);
 
-        // Deduplicate and filter nested variable usage spans
-        let var_spans = deduplicate_spans(&fix_data.var_usage_spans);
+        // Build the new body by replacing all parameter usages with $it
+        let var_spans = deduplicate_spans(&var_usage_spans);
         let filtered_spans = filter_nested_spans(&var_spans);
 
-        // Replace each variable usage
-        for &span in &filtered_spans {
-            let var_text = context.plain_text(span);
-            let replacement = replace_param_with_it(var_text, &fix_data.param_name);
-            replacements.push(Replacement::new(span, replacement));
+        // Sort spans by position and filter to body range
+        let mut sorted_spans: Vec<_> = filtered_spans
+            .into_iter()
+            .filter(|span| span.start >= body_span.start && span.end <= body_span.end)
+            .collect();
+        sorted_spans.sort_by_key(|s| s.start);
+
+        // Build the replacement text by processing the body from left to right
+        let mut result = String::new();
+        let mut last_end = body_span.start;
+
+        for span in &sorted_spans {
+            // Add text before this variable
+            if span.start > last_end {
+                let before_span = Span::new(last_end, span.start);
+                result.push_str(context.plain_text(before_span));
+            }
+            // Add the replacement for this variable
+            let var_text = context.plain_text(*span);
+            result.push_str(&replace_param_with_it(var_text, &fix_data.param_name));
+            last_end = span.end;
         }
+
+        // Add any remaining text after the last variable
+        if last_end < body_span.end {
+            let after_span = Span::new(last_end, body_span.end);
+            result.push_str(context.plain_text(after_span));
+        }
+
+        // If no variables were replaced, just use the original body
+        if sorted_spans.is_empty() {
+            result = context.plain_text(body_span).to_string();
+        }
+
+        // Replace the entire closure with just the body (row condition syntax)
+        let replacements = vec![Replacement::new(fix_data.closure_span, result)];
 
         Some(Fix::with_explanation(
             format!(

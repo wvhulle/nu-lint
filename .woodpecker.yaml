@@ -3,7 +3,10 @@
 #
 # Local usage:
 #   nu scripts/changelog.nu
-#   nu scripts/build.nu
+#   nu scripts/build.nu --targets [x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu]
+#
+# Binary naming follows cargo-binstall conventions:
+#   nu-lint-<target-triple>.tar.gz
 
 when:
   - event: tag
@@ -21,7 +24,8 @@ steps:
       CACHIX_AUTH_TOKEN:
         from_secret: cachix_auth_token
     commands:
-      - nix-shell -p nushell git cacert cachix --run "nu scripts/build.nu"
+      # Build for both x86_64 and aarch64 Linux using cross-compilation
+      - nix-shell -p nushell git cacert cachix --run "nu scripts/build.nu --targets [x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu]"
 
   - name: release
     image: woodpeckerci/plugin-gitea-release

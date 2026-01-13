@@ -18,18 +18,19 @@ steps:
 
   - name: build
     image: nixos/nix:latest
+    environment:
+      CACHIX_AUTH_TOKEN:
+        from_secret: cachix_auth_token
     commands:
-      - echo 'experimental-features = nix-command flakes' >> /etc/nix/nix.conf
-      - nix-shell -p nushell git cacert --run "nu scripts/build.nu"
+      - nix-shell -p nushell git cacert cachix --run "nu scripts/build.nu"
 
   - name: release
     image: nixos/nix:latest
     environment:
       CODEBERG_TOKEN:
         from_secret: codeberg_token
-      SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
     commands:
-      - nix-shell -p nushell git cacert curl --run "nu scripts/release.nu $CI_COMMIT_TAG"
+      - nix-shell -p nushell git cacert --run "nu scripts/release.nu $CI_COMMIT_TAG"
     depends_on:
       - changelog
       - build

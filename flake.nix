@@ -19,12 +19,11 @@
       let
         pkgs = import nixpkgs { inherit system; };
 
-        toolchain = fenix.packages.${system}.latest.toolchain;
+        # Use nixpkgs stable Rust for building (no fenix dependency in output)
+        naersk' = pkgs.callPackage naersk { };
 
-        naersk' = pkgs.callPackage naersk {
-          cargo = toolchain;
-          rustc = toolchain;
-        };
+        # Fenix toolchain only for dev shell
+        devToolchain = fenix.packages.${system}.latest.toolchain;
       in
       {
         packages.default = naersk'.buildPackage {
@@ -41,7 +40,7 @@
           nativeBuildInputs = [ pkgs.pkg-config ];
           buildInputs = [ pkgs.openssl ];
           LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [ pkgs.openssl ];
-          packages = [ toolchain ];
+          packages = [ devToolchain ];
         };
       }
     );

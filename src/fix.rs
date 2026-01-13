@@ -1,7 +1,5 @@
 use std::{collections::HashMap, fmt::Write, fs, io::Error as IoError, path::PathBuf, vec::Vec};
 
-use similar::{ChangeTag, TextDiff};
-
 use crate::{
     engine::LintEngine,
     violation::{Fix, Violation},
@@ -322,18 +320,34 @@ pub fn format_fix_results(results: &[FixResult], dry_run: bool) -> String {
     output
 }
 
-/// Generate a unified diff between original and fixed content
+/// Generate a simple diff between original and fixed content
 fn generate_diff(original: &str, fixed: &str, _file_path: &PathBuf) -> String {
-    let diff = TextDiff::from_lines(original, fixed);
+    let original_lines: Vec<&str> = original.lines().collect();
+    let fixed_lines: Vec<&str> = fixed.lines().collect();
+
+    if original_lines == fixed_lines {
+        return "No changes\n".to_string();
+    }
+
     let mut output = String::new();
+    let max_lines = original_lines.len().max(fixed_lines.len());
 
-    for (idx, group) in diff.grouped_ops(3).iter().enumerate() {
-        if idx > 0 {
-            writeln!(output, "{:-^1$}", "-", 80).unwrap();
-        }
+    for i in 0..max_lines {
+        let orig = original_lines.get(i);
+        let fixed = fixed_lines.get(i);
 
-        for op in group {
-            write_diff_changes(&diff, op, &mut output);
+        match (orig, fixed) {
+            (Some(o), Some(f)) if o != f => {
+                writeln!(output, "\x1b[31m-{:>4} {o}\x1b[0m", i + 1).unwrap();
+                writeln!(output, "\x1b[32m+{:>4} {f}\x1b[0m", i + 1).unwrap();
+            }
+            (Some(o), None) => {
+                writeln!(output, "\x1b[31m-{:>4} {o}\x1b[0m", i + 1).unwrap();
+            }
+            (None, Some(f)) => {
+                writeln!(output, "\x1b[32m+{:>4} {f}\x1b[0m", i + 1).unwrap();
+            }
+            _ => {}
         }
     }
 
@@ -341,27 +355,6 @@ fn generate_diff(original: &str, fixed: &str, _file_path: &PathBuf) -> String {
         "No changes\n".to_string()
     } else {
         output
-    }
-}
-
-/// Write diff changes for a single operation
-fn write_diff_changes(diff: &TextDiff<'_, '_, '_, str>, op: &similar::DiffOp, output: &mut String) {
-    for change in diff.iter_changes(op) {
-        let (sign, style) = match change.tag() {
-            ChangeTag::Delete => ("-", "\x1b[31m"), // Red
-            ChangeTag::Insert => ("+", "\x1b[32m"), // Green
-            ChangeTag::Equal => (" ", ""),
-        };
-
-        let line_number = change
-            .old_index()
-            .map_or("    ".to_string(), |idx| (idx + 1).to_string());
-
-        write!(output, "{style}{sign}{line_number:>4} {}", change.value()).unwrap();
-
-        if !style.is_empty() {
-            output.push_str("\x1b[0m"); // Reset color
-        }
     }
 }
 

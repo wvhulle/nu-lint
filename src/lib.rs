@@ -6,7 +6,8 @@ mod effect;
 mod engine;
 mod fix;
 mod format_conversions;
-mod log;
+pub mod log;
+#[cfg(feature = "lsp")]
 mod lsp;
 mod output;
 mod rule;
@@ -22,10 +23,10 @@ pub use fix::apply_fixes_iteratively;
 use toml::de;
 use violation::{Fix, Replacement};
 
-const NU_PARSER_VERSION: &str = env!("NU_PARSER_VERSION");
+pub const NU_PARSER_VERSION: &str = env!("NU_PARSER_VERSION");
 
 #[derive(Debug)]
-enum LintError {
+pub enum LintError {
     Io {
         path: PathBuf,
         source: io::Error,

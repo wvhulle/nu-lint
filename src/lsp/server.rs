@@ -14,7 +14,7 @@ use lsp_types::{
     request::{CodeActionRequest, Request as _},
 };
 
-use super::document::{ServerState, is_nushell_file};
+use super::document::{ServerState, is_nushell_file, is_nushell_language_id};
 use crate::{Config, config::find_config_file_from};
 
 fn load_config_from_workspace(params: &InitializeParams) -> Config {
@@ -123,7 +123,8 @@ fn handle_did_open(connection: &Connection, state: &mut ServerState, params: ser
         return;
     };
     let uri = params.text_document.uri;
-    if is_nushell_file(&uri) {
+    // Check language_id first (the LSP-correct way), fall back to extension check
+    if is_nushell_language_id(&params.text_document.language_id) || is_nushell_file(&uri) {
         let diagnostics = state.lint_document(&uri, &params.text_document.text);
         publish_diagnostics(connection, uri, diagnostics);
     }
@@ -138,7 +139,8 @@ fn handle_did_change(connection: &Connection, state: &mut ServerState, params: s
     let Some(change) = params.content_changes.into_iter().last() else {
         return;
     };
-    if is_nushell_file(&uri) {
+    // Check if document is tracked (was opened as nushell) or matches file extension
+    if state.has_document(&uri) || is_nushell_file(&uri) {
         let diagnostics = state.lint_document(&uri, &change.text);
         publish_diagnostics(connection, uri, diagnostics);
     }
@@ -160,7 +162,8 @@ fn handle_did_save(connection: &Connection, state: &mut ServerState, params: ser
         return;
     };
 
-    if is_nushell_file(&uri) {
+    // Check if document is tracked (was opened as nushell) or matches file extension
+    if state.has_document(&uri) || is_nushell_file(&uri) {
         let diagnostics = state.lint_document(&uri, &content);
         publish_diagnostics(connection, uri, diagnostics);
     }

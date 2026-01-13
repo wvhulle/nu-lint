@@ -189,6 +189,10 @@ impl ServerState {
         self.documents.get(uri)
     }
 
+    pub fn has_document(&self, uri: &Uri) -> bool {
+        self.documents.contains_key(uri)
+    }
+
     pub fn close_document(&mut self, uri: &Uri) {
         self.documents.remove(uri);
     }
@@ -236,17 +240,10 @@ pub fn violation_to_diagnostic(
 }
 
 fn build_message(violation: &Violation) -> String {
-    let base_message = violation.primary_label.as_ref().map_or_else(
+    violation.primary_label.as_ref().map_or_else(
         || violation.message.to_string(),
         |label| format!("{}: {label}", violation.message),
-    );
-
-    violation
-        .long_description
-        .as_ref()
-        .map_or(base_message.clone(), |help| {
-            format!("{base_message}\n\nHelp: {help}")
-        })
+    )
 }
 
 fn build_related_information(
@@ -371,8 +368,20 @@ pub const fn ranges_overlap(a: &Range, b: &Range) -> bool {
     a.start.line <= b.end.line && b.start.line <= a.end.line
 }
 
+/// Check if a language_id indicates nushell.
+#[must_use]
+pub const fn is_nushell_language_id(language_id: &str) -> bool {
+    language_id.eq_ignore_ascii_case("nushell") || language_id.eq_ignore_ascii_case("nu")
+}
+
+/// Check if a URI looks like a nushell file based on extension or scheme.
+/// This is a fallback for clients that don't set language_id properly.
 #[must_use]
 pub fn is_nushell_file(uri: &Uri) -> bool {
+    // Accept repl:// URIs for REPL integration
+    if uri.scheme().is_some_and(|s| s.as_str() == "repl") {
+        return true;
+    }
     Path::new(uri.path().as_str())
         .extension()
         .is_some_and(|ext| ext.eq_ignore_ascii_case("nu"))
@@ -392,6 +401,12 @@ mod tests {
     fn is_nushell_file_wrong_extension() {
         let uri: Uri = "file:///path/to/script.rs".parse().unwrap();
         assert!(!is_nushell_file(&uri));
+    }
+
+    #[test]
+    fn is_nushell_file_repl_uri() {
+        let uri: Uri = "repl:/session/repl".parse().unwrap();
+        assert!(is_nushell_file(&uri));
     }
 
     #[test]
@@ -507,7 +522,6 @@ mod tests {
         let diagnostic = violation_to_diagnostic(&violation, source, &line_index, &file_uri);
 
         assert!(diagnostic.message.contains("outer if"));
-        assert!(diagnostic.message.contains("Combine with 'and'"));
 
         let related = diagnostic
             .related_information

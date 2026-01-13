@@ -11,7 +11,11 @@ def main [
     let token = load-token
 
     if $token == "" and not $dry_run {
-        error make {msg: "CODEBERG_TOKEN not set. Create .env file or set environment variable."}
+        error make {msg: "CODEBERG_TOKEN not set. Add secret in Woodpecker CI settings or create .env file locally."}
+    }
+
+    if $token != "" {
+        print $"(ansi green)Token loaded \(($token | str length) chars\)(ansi reset)"
     }
 
     if not ("dist" | path exists) {
@@ -72,6 +76,13 @@ def main [
 }
 
 def load-token []: nothing -> string {
+    # CI environment variable takes priority
+    let env_token = $env.CODEBERG_TOKEN? | default ""
+    if $env_token != "" {
+        return $env_token
+    }
+
+    # Fall back to .env file for local development
     if (".env" | path exists) {
         try {
             open .env
@@ -83,7 +94,7 @@ def load-token []: nothing -> string {
                 | default ""
         } catch { "" }
     } else {
-        $env.CODEBERG_TOKEN? | default ""
+        ""
     }
 }
 

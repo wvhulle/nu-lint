@@ -19,7 +19,8 @@ steps:
   - name: build
     image: nixos/nix:latest
     commands:
-      - nix-shell -p nushell --run "nu scripts/build.nu"
+      - echo 'experimental-features = nix-command flakes' >> /etc/nix/nix.conf
+      - nix-shell -p nushell git --run "nu scripts/build.nu"
 
   - name: release
     image: nixos/nix:latest

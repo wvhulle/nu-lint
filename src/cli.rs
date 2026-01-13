@@ -347,4 +347,67 @@ mod tests {
         let violations = engine.lint_files(&files);
         assert!(violations.is_empty() || !violations.is_empty()); // Just ensure it runs
     }
+
+    #[test]
+    fn test_ignored_rule_produces_no_violations() {
+        use std::collections::HashSet;
+
+        // Code that triggers snake_case_variables rule
+        let source = "let fooBar = 1";
+
+        // First verify the rule triggers without ignoring
+        let default_config = Config::default();
+        let engine = LintEngine::new(default_config);
+        let violations = engine.lint_stdin(source);
+        let has_snake_case_violation = violations
+            .iter()
+            .any(|v| v.rule_id.as_deref() == Some("snake_case_variables"));
+        assert!(
+            has_snake_case_violation,
+            "Expected snake_case_variables violation without ignore"
+        );
+
+        // Now ignore the rule and verify no violation
+        let mut ignored = HashSet::new();
+        ignored.insert("snake_case_variables".to_string());
+        let config_with_ignore = Config {
+            ignored,
+            ..Config::default()
+        };
+        let engine = LintEngine::new(config_with_ignore);
+        let violations = engine.lint_stdin(source);
+        let has_snake_case_violation = violations
+            .iter()
+            .any(|v| v.rule_id.as_deref() == Some("snake_case_variables"));
+        assert!(
+            !has_snake_case_violation,
+            "Expected no snake_case_variables violation when ignored"
+        );
+    }
+
+    #[test]
+    fn test_ignored_rule_not_in_list_when_enabled_flag() {
+        use std::collections::HashSet;
+
+        let mut ignored = HashSet::new();
+        ignored.insert("snake_case_variables".to_string());
+        let config = Config {
+            ignored,
+            ..Config::default()
+        };
+
+        // Simulate --list --enabled behavior: filter rules by config
+        let enabled_rules: Vec<_> = crate::rules::USED_RULES
+            .iter()
+            .filter(|r| config.get_lint_level(**r).is_some())
+            .collect();
+
+        let has_snake_case = enabled_rules
+            .iter()
+            .any(|r| r.id() == "snake_case_variables");
+        assert!(
+            !has_snake_case,
+            "Ignored rule should not appear in enabled rules list"
+        );
+    }
 }

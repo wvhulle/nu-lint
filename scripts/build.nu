@@ -76,13 +76,13 @@ def setup-cachix [cache: string]: nothing -> nothing {
 }
 
 # Push build artifacts to Cachix
-def push-to-cachix [cache: string]: nothing -> nothing {
+def push-to-cachix [cache: string, result_link: string]: nothing -> nothing {
     if not (cachix-available) { return }
 
     log info "Pushing build closure to Cachix..."
     try {
         # Get all store paths in the closure and push them as arguments
-        let paths = ^nix-store --query --requisites ./result | lines
+        let paths = ^nix-store --query --requisites $result_link | lines
         if ($paths | is-not-empty) {
             log info $"Pushing ($paths | length) paths to Cachix..."
             ^cachix push $cache ...$paths
@@ -155,14 +155,20 @@ def build-nix [cache: string, target_triple: string]: nothing -> nothing {
         }
     }
 
-    log info $"Building with nix \(($nix_attr)\) for ($target_triple)..."
-    ^nix build $".#($nix_attr)" --print-build-logs
+    # Use unique result symlink per target to avoid conflicts
+    let result_link = $"result-($target_triple)"
 
-    push-to-cachix $cache
+    log info $"Building with nix \(($nix_attr)\) for ($target_triple)..."
+    ^nix build $".#($nix_attr)" --out-link $result_link --print-build-logs
+
+    push-to-cachix $cache $result_link
 
     log debug "Copying binary to dist/..."
-    let archive = copy-binary "result/bin/nu-lint" $target_triple
+    let archive = copy-binary $"($result_link)/bin/nu-lint" $target_triple
     log info $"Binary ready: ($archive)"
+
+    # Clean up result symlink
+    rm $result_link
 }
 
 # Build with Cargo for a specific target

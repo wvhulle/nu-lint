@@ -28,47 +28,74 @@
         # Native build using nixpkgs stable Rust
         naersk' = pkgs.callPackage naersk { };
 
-        # Fenix toolchain for dev shell
+        # Fenix toolchain for dev shell only
         devToolchain = fenix.packages.${system}.latest.toolchain;
 
-        # Cross-compilation helper
-        # Source: https://github.com/nix-community/fenix
-        mkCrossPackage = target: let
-          toolchain = with fenix.packages.${system};
-            combine [
-              minimal.cargo
-              minimal.rustc
-              targets.${target}.latest.rust-std
-            ];
-          naerskCross = naersk.lib.${system}.override {
-            cargo = toolchain;
-            rustc = toolchain;
-          };
-          # Get the cross-compilation toolchain for linking
-          crossPkgs = pkgs.pkgsCross.${
-            if target == "aarch64-unknown-linux-gnu" then "aarch64-multiplatform"
-            else if target == "x86_64-unknown-linux-gnu" then "gnu64"
-            else throw "Unsupported cross target: ${target}"
-          };
-          cc = crossPkgs.stdenv.cc;
-          linkerEnvVar = "CARGO_TARGET_${builtins.replaceStrings ["-"] ["_"] (pkgs.lib.toUpper target)}_LINKER";
-        in
+        # Native package for current system
+        nativePackage = naersk'.buildPackage {
+          src = ./.;
+          meta.mainProgram = "nu-lint";
+        };
+
+        # Cross-compilation helper using fenix + naersk
+        # Based on: https://github.com/nix-community/naersk/blob/master/examples/multi-target/flake.nix
+        mkCrossPackage =
+          target:
+          let
+            # Fenix toolchain with target's rust-std
+            toolchain =
+              with fenix.packages.${system};
+              combine [
+                minimal.cargo
+                minimal.rustc
+                targets.${target}.latest.rust-std
+              ];
+
+            naerskCross = naersk.lib.${system}.override {
+              cargo = toolchain;
+              rustc = toolchain;
+            };
+
+            # Cross-compilation toolchain from nixpkgs
+            crossPkgs =
+              pkgs.pkgsCross.${
+                if target == "aarch64-unknown-linux-gnu" then
+                  "aarch64-multiplatform"
+                else
+                  throw "Unsupported cross target: ${target}"
+              };
+
+            cc = crossPkgs.stdenv.cc;
+            targetUpper = builtins.replaceStrings [ "-" ] [ "_" ] (pkgs.lib.toUpper target);
+          in
           naerskCross.buildPackage {
             src = ./.;
+            strictDeps = true;
             CARGO_BUILD_TARGET = target;
-            "${linkerEnvVar}" = "${cc}/bin/${cc.targetPrefix}cc";
-            meta.mainProgram = "nu-lint";
-          };
-      in
-      {
-        packages = {
-          default = naersk'.buildPackage {
-            src = ./.;
+            depsBuildBuild = [ cc ];
+            "CARGO_TARGET_${targetUpper}_LINKER" = "${cc}/bin/${cc.targetPrefix}cc";
+            # Required by ring crate for cross-compiling assembly
+            TARGET_CC = "${cc}/bin/${cc.targetPrefix}cc";
             meta.mainProgram = "nu-lint";
           };
 
-          # Cross-compiled packages (from x86_64-linux)
-          # Usage: nix build .#aarch64-linux
+      in
+      {
+        # Available packages (from x86_64-linux):
+        #   nix build .#default              - Native x86_64-linux binary
+        #   nix build .#x86_64-linux         - Same as default
+        #   nix build .#aarch64-linux        - Cross-compiled ARM64 binary
+        #
+        # For cargo-binstall compatibility, binaries are named:
+        #   nu-lint-x86_64-unknown-linux-gnu.tar.gz
+        #   nu-lint-aarch64-unknown-linux-gnu.tar.gz
+        # TODO: simplify based on https://github.com/cargo-bins/cargo-binstall/blob/main/SUPPORT.md
+        packages = {
+          # Default: native build for current system
+          default = nativePackage;
+
+          # Explicit architecture aliases
+          x86_64-linux = nativePackage;
           aarch64-linux = mkCrossPackage "aarch64-unknown-linux-gnu";
         };
 

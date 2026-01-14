@@ -1,0 +1,21 @@
+# CI workflow for pull requests
+# Triggers on pull request events to run tests
+
+when:
+  - event: pull_request
+  - event: push
+    branch:
+      include:
+        - main
+        - main/*
+        - develop
+        - develop/*
+        - feature/**
+        - fix/**
+        - refactor/**
+
+steps:
+  - name: test
+    image: nixos/nix:latest
+    commands:
+      - nix develop .#crane -c cargo test

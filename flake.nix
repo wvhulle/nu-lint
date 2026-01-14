@@ -1,13 +1,10 @@
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    crane.url = "github:ipetkov/crane";
     flake-utils.url = "github:numtide/flake-utils";
-    naersk = {
-      url = "github:nix-community/naersk";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    fenix = {
-      url = "github:nix-community/fenix";
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -16,99 +13,110 @@
     {
       self,
       nixpkgs,
+      crane,
       flake-utils,
-      naersk,
-      fenix,
+      rust-overlay,
     }:
     flake-utils.lib.eachDefaultSystem (
-      system:
+      localSystem:
       let
-        pkgs = import nixpkgs { inherit system; };
+        pkgs = import nixpkgs {
+          system = localSystem;
+          overlays = [ (import rust-overlay) ];
+        };
 
-        # Native build using nixpkgs stable Rust
-        naersk' = pkgs.callPackage naersk { };
+        # Rust toolchain for native builds
+        rustToolchain = pkgs.rust-bin.stable.latest.default;
+        craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
 
-        # Fenix toolchain for dev shell only
-        devToolchain = fenix.packages.${system}.latest.toolchain;
+        # Common source filtering
+        src = craneLib.cleanCargoSource ./.;
 
-        # Native package for current system
-        nativePackage = naersk'.buildPackage {
-          src = ./.;
+        # Common build arguments
+        commonArgs = {
+          inherit src;
+          strictDeps = true;
           meta.mainProgram = "nu-lint";
         };
 
-        # Cross-compilation helper using fenix + naersk
-        # Based on: https://github.com/nix-community/naersk/blob/master/examples/multi-target/flake.nix
-        mkCrossPackage =
-          target:
-          let
-            # Fenix toolchain with target's rust-std
-            toolchain =
-              with fenix.packages.${system};
-              combine [
-                minimal.cargo
-                minimal.rustc
-                targets.${target}.latest.rust-std
-              ];
+        # Build dependencies separately (cached by Nix/Cachix)
+        cargoArtifacts = craneLib.buildDepsOnly commonArgs;
 
-            naerskCross = naersk.lib.${system}.override {
-              cargo = toolchain;
-              rustc = toolchain;
+        # Native package for current system
+        nativePackage = craneLib.buildPackage (
+          commonArgs
+          // {
+            inherit cargoArtifacts;
+          }
+        );
+
+        # Cross-compilation helper
+        mkCrossPackage =
+          crossSystem:
+          let
+            crossPkgs = import nixpkgs {
+              inherit crossSystem localSystem;
+              overlays = [ (import rust-overlay) ];
             };
 
-            # Cross-compilation toolchain from nixpkgs
-            crossPkgs =
-              pkgs.pkgsCross.${
-                if target == "aarch64-unknown-linux-gnu" then
-                  "aarch64-multiplatform"
-                else
-                  throw "Unsupported cross target: ${target}"
-              };
+            # Rust target triple from crossSystem
+            rustTarget =
+              if crossSystem == "aarch64-linux" then
+                "aarch64-unknown-linux-gnu"
+              else
+                throw "Unsupported cross target: ${crossSystem}";
 
-            cc = crossPkgs.stdenv.cc;
-            targetUpper = builtins.replaceStrings [ "-" ] [ "_" ] (pkgs.lib.toUpper target);
+            # Toolchain with cross-compilation target
+            crossToolchain = pkgs.rust-bin.stable.latest.default.override {
+              targets = [ rustTarget ];
+            };
+
+            crossCraneLib = (crane.mkLib crossPkgs).overrideToolchain crossToolchain;
+            crossSrc = crossCraneLib.cleanCargoSource ./.;
+
+            crossArgs = {
+              src = crossSrc;
+              strictDeps = true;
+              meta.mainProgram = "nu-lint";
+              CARGO_BUILD_TARGET = rustTarget;
+              # Required by ring crate for cross-compiling assembly
+              TARGET_CC = "${crossPkgs.stdenv.cc}/bin/${crossPkgs.stdenv.cc.targetPrefix}cc";
+              HOST_CC = "${pkgs.stdenv.cc}/bin/cc";
+            };
+
+            crossCargoArtifacts = crossCraneLib.buildDepsOnly (
+              crossArgs
+              // {
+                doCheck = false;
+              }
+            );
           in
-          naerskCross.buildPackage {
-            src = ./.;
-            strictDeps = true;
-            CARGO_BUILD_TARGET = target;
-            depsBuildBuild = [ cc ];
-            "CARGO_TARGET_${targetUpper}_LINKER" = "${cc}/bin/${cc.targetPrefix}cc";
-            # Required by ring crate for cross-compiling assembly
-            TARGET_CC = "${cc}/bin/${cc.targetPrefix}cc";
-            meta.mainProgram = "nu-lint";
-          };
-
+          crossCraneLib.buildPackage (
+            crossArgs
+            // {
+              cargoArtifacts = crossCargoArtifacts;
+              doCheck = false; # Can't run cross-compiled tests
+            }
+          );
       in
       {
-        # Available packages (from x86_64-linux):
-        #   nix build .#default              - Native x86_64-linux binary
-        #   nix build .#x86_64-linux         - Same as default
-        #   nix build .#aarch64-linux        - Cross-compiled ARM64 binary
-        #
-        # For cargo-binstall compatibility, binaries are named:
-        #   nu-lint-x86_64-unknown-linux-gnu.tar.gz
-        #   nu-lint-aarch64-unknown-linux-gnu.tar.gz
-        # TODO: simplify based on https://github.com/cargo-bins/cargo-binstall/blob/main/SUPPORT.md
         packages = {
-          # Default: native build for current system
           default = nativePackage;
-
-          # Explicit architecture aliases
           x86_64-linux = nativePackage;
-          aarch64-linux = mkCrossPackage "aarch64-unknown-linux-gnu";
+          aarch64-linux = mkCrossPackage "aarch64-linux";
+          # Expose deps for caching
+          deps = cargoArtifacts;
         };
 
         apps.default = {
           type = "app";
-          program = pkgs.lib.getExe self.packages.${system}.default;
+          program = pkgs.lib.getExe self.packages.${localSystem}.default;
         };
 
-        devShells.default = pkgs.mkShell {
-          nativeBuildInputs = [ pkgs.pkg-config ];
-          buildInputs = [ pkgs.openssl ];
-          LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [ pkgs.openssl ];
-          packages = [ devToolchain ];
+        devShells.default = craneLib.devShell {
+          packages = [
+            pkgs.rust-analyzer
+          ];
         };
       }
     );

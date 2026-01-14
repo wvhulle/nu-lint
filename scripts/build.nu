@@ -76,12 +76,13 @@ def setup-cachix [cache: string]: nothing -> nothing {
 }
 
 # Push build artifacts to Cachix
+# With crane, deps are built separately and cached automatically
 def push-to-cachix [cache: string, result_link: string]: nothing -> nothing {
     if not (cachix-available) { return }
 
-    log info "Pushing build closure to Cachix..."
+    log info "Pushing to Cachix..."
     try {
-        # Get all store paths in the closure and push them as arguments
+        # Push the result and its runtime closure
         let paths = ^nix-store --query --requisites $result_link | lines
         if ($paths | is-not-empty) {
             log info $"Pushing ($paths | length) paths to Cachix..."
@@ -90,6 +91,26 @@ def push-to-cachix [cache: string, result_link: string]: nothing -> nothing {
         }
     } catch {|e|
         log warning $"Failed to push to cache: ($e.msg)"
+    }
+}
+
+# Push dependency artifacts to Cachix (crane's buildDepsOnly output)
+def push-deps-to-cachix [cache: string]: nothing -> nothing {
+    if not (cachix-available) { return }
+
+    log info "Building and pushing deps to Cachix..."
+    try {
+        let deps_link = "result-deps"
+        ^nix build ".#deps" --out-link $deps_link --print-build-logs
+        let paths = ^nix-store --query --requisites $deps_link | lines
+        if ($paths | is-not-empty) {
+            log info $"Pushing ($paths | length) dep paths to Cachix..."
+            ^cachix push $cache ...$paths
+            log info "Deps push complete"
+        }
+        rm $deps_link
+    } catch {|e|
+        log warning $"Failed to push deps to cache: ($e.msg)"
     }
 }
 
@@ -143,7 +164,6 @@ def build-nix [cache: string, target_triple: string]: nothing -> nothing {
     setup-cachix $cache
 
     # Map target triple to nix package attribute
-    # See flake.nix packages for available targets
     let nix_attr = match $target_triple {
         "x86_64-unknown-linux-gnu" => "default"
         "aarch64-unknown-linux-gnu" => "aarch64-linux"
@@ -161,13 +181,14 @@ def build-nix [cache: string, target_triple: string]: nothing -> nothing {
     log info $"Building with nix \(($nix_attr)\) for ($target_triple)..."
     ^nix build $".#($nix_attr)" --out-link $result_link --print-build-logs
 
+    # Push deps first (crane's buildDepsOnly), then the package
+    push-deps-to-cachix $cache
     push-to-cachix $cache $result_link
 
     log debug "Copying binary to dist/..."
     let archive = copy-binary $"($result_link)/bin/nu-lint" $target_triple
     log info $"Binary ready: ($archive)"
 
-    # Clean up result symlink
     rm $result_link
 }
 

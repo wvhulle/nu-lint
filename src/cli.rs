@@ -1,6 +1,6 @@
 use std::{
     io::{self, Read},
-    path::PathBuf,
+    path::{Path, PathBuf},
     process,
 };
 
@@ -9,7 +9,7 @@ use clap::Parser;
 use crate::{
     LintLevel,
     ast::tree,
-    config::Config,
+    config::{Config, find_config_file_from},
     engine::{LintEngine, collect_nu_files},
     fix::{apply_fixes, apply_fixes_to_stdin, format_fix_results},
     log::init_log,
@@ -39,10 +39,6 @@ pub struct Cli {
     /// List all available lint rules
     #[arg(long, conflicts_with_all = ["fix", "lsp", "groups", "explain"], alias = "rules")]
     list: bool,
-
-    /// Only show rules that are enabled (use with --list)
-    #[arg(long, requires = "list")]
-    enabled: bool,
 
     /// List all available rule groups
     #[arg(long, conflicts_with_all = ["fix", "lsp", "list", "explain"], alias = "sets")]
@@ -77,13 +73,14 @@ pub struct Cli {
 
 impl Cli {
     fn load_config(path: Option<PathBuf>) -> Config {
-        path.map(|p| {
-            Config::load_from_file(&p).unwrap_or_else(|e| {
-                log::error!("Error loading config from {}: {e}", p.display());
-                Config::default()
-            })
-        })
-        .unwrap_or_default()
+        path.map_or_else(
+            || {
+                find_config_file_from(Path::new(".")).map_or_else(Config::default, |path| {
+                    Config::load_from_file(&path).unwrap()
+                })
+            },
+            |path| Config::load_from_file(&path).unwrap(),
+        )
     }
 
     fn read_stdin() -> String {
@@ -94,13 +91,12 @@ impl Cli {
         source
     }
 
-    fn lint(&self) {
-        let config = Self::load_config(self.config.clone());
+    fn lint(&self, config: &Config) {
         if let Err(e) = config.validate() {
             eprintln!("Error: {e}");
             process::exit(1);
         }
-        let engine = LintEngine::new(config);
+        let engine = LintEngine::new(config.clone());
 
         let violations = if self.stdin {
             let source = Self::read_stdin();
@@ -129,13 +125,12 @@ impl Cli {
         }
     }
 
-    fn fix(&self) {
-        let config = Self::load_config(self.config.clone());
+    fn fix(&self, config: &Config) {
         if let Err(e) = config.validate() {
             eprintln!("Error: {e}");
             process::exit(1);
         }
-        let engine = LintEngine::new(config);
+        let engine = LintEngine::new(config.clone());
 
         if self.stdin {
             Self::fix_stdin(&engine);
@@ -169,10 +164,10 @@ impl Cli {
         print!("{output}");
     }
 
-    fn list_rules(config: Option<&Config>) {
+    fn list_rules(config: &Config) {
         let mut sorted_rules: Vec<&dyn Rule> = USED_RULES
             .iter()
-            .filter(|r| config.is_none_or(|c| c.get_lint_level(**r).is_some()))
+            .filter(|r| config.get_lint_level(**r).is_some())
             .copied()
             .collect();
         sorted_rules.sort_by_key(|r| r.id());
@@ -183,12 +178,10 @@ impl Cli {
         }
 
         let max_id_len = sorted_rules.iter().map(|r| r.id().len()).max().unwrap_or(0);
-        let max_desc_len = 50; // Truncate descriptions to fit screen
+        let max_desc_len = 60; // Truncate descriptions to fit screen
 
         for rule in &sorted_rules {
-            let level = config
-                .and_then(|c| c.get_lint_level(*rule))
-                .unwrap_or_else(|| rule.level());
+            let level = config.get_lint_level(*rule).unwrap_or_else(|| rule.level());
             let level_char = match level {
                 LintLevel::Hint => 'H',
                 LintLevel::Warning => 'W',
@@ -210,9 +203,8 @@ impl Cli {
 
         let fixable_count = sorted_rules.iter().filter(|r| r.has_auto_fix()).count();
         println!(
-            "\n{n} rules{enabled}, {f} fixable. [H]int [W]arning [E]rror [F]ixable",
+            "\n{n} rules, {f} fixable. [H]int [W]arning [E]rror [F]ixable",
             n = sorted_rules.len(),
-            enabled = if config.is_some() { " enabled" } else { "" },
             f = fixable_count
         );
     }
@@ -257,9 +249,9 @@ pub fn run() {
         init_log();
     }
 
+    let config = Cli::load_config(cli.config.clone());
     if cli.list {
-        let config = cli.enabled.then(|| Cli::load_config(cli.config.clone()));
-        Cli::list_rules(config.as_ref());
+        Cli::list_rules(&config);
     } else if cli.groups {
         Cli::list_groups();
     } else if let Some(ref rule_id) = cli.explain {
@@ -269,9 +261,10 @@ pub fn run() {
     } else if cli.lsp {
         lsp::run_lsp_server();
     } else if cli.fix {
-        cli.fix();
+        cli.fix(&config);
     } else {
-        cli.lint();
+        log::debug!("No flags given, will lint workspace.");
+        cli.lint(&config);
     }
 }
 
@@ -281,7 +274,7 @@ mod tests {
 
     use clap::Parser;
 
-    use crate::{Config, LintEngine, cli::Cli, engine::collect_nu_files};
+    use crate::{Config, LintEngine, cli::Cli, engine::collect_nu_files, rules::USED_RULES};
 
     #[test]
     fn test_cli_parsing() {
@@ -397,7 +390,7 @@ mod tests {
         };
 
         // Simulate --list --enabled behavior: filter rules by config
-        let enabled_rules: Vec<_> = crate::rules::USED_RULES
+        let enabled_rules: Vec<_> = USED_RULES
             .iter()
             .filter(|r| config.get_lint_level(**r).is_some())
             .collect();

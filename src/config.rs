@@ -78,6 +78,7 @@ impl Config {
     /// Returns an error if the file cannot be read or if the TOML content is
     /// invalid.
     pub(crate) fn load_from_file(path: &Path) -> Result<Self, LintError> {
+        log::debug!("Loading configuration file at {}", path.display());
         let content = fs::read_to_string(path).map_err(|source| LintError::Io {
             path: path.to_path_buf(),
             source,
@@ -91,6 +92,7 @@ impl Config {
     ///
     /// Returns an error if two conflicting rules are both enabled.
     pub fn validate(&self) -> Result<(), LintError> {
+        log::debug!("Validating loaded configuration.");
         for rule in USED_RULES {
             if self.get_lint_level(*rule).is_none() {
                 continue;
@@ -114,6 +116,7 @@ impl Config {
         let rule_id = rule.id();
 
         if self.ignored.contains(rule_id) {
+            log::debug!("Rule {rule_id} is being ignored by config.");
             return None;
         }
 

@@ -110,7 +110,7 @@ impl DetectFix for CustomLogCommand {
                     .with_primary_label("custom log command");
 
                 let fix_data = FixData {
-                    name: def.name.clone(),
+                    name: def.name,
                     removal_span: context.expand_span_to_full_lines(expr.span),
                 };
 

@@ -63,6 +63,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `contains_to_like_regex_operators` (auto-fix)
 - `ansi_over_escape_codes` (auto-fix)
 - `append_to_concat_assign` (auto-fix)
+- `custom_log_command` (auto-fix)
 
 `parsing` - Better ways to parse and transform text data.
 
@@ -170,6 +171,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `unnecessary_accumulate`
 - `merge_multiline_print` (auto-fix)
 - `chained_str_replace` (auto-fix)
+- `streaming_hidden_by_complete` (auto-fix)
 
 `type-safety` - Annotate with type hints where possible.
 

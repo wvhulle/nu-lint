@@ -216,7 +216,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     upstream::nu_deprecated::RULE,
     upstream::nu_parse_error::RULE,
     use_regex_operators::RULE,
-    redundant_complete_streaming::RULE,
+    // redundant_complete_streaming::RULE, // TODO: test this new rule
     wrap_external_with_complete::RULE,
     stdlib_log::RULE,
 ];

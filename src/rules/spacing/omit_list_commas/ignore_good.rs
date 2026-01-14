@@ -9,7 +9,7 @@ fn comma_in_comment() {
       # Batch dedup (discard 2,3)   <-- flagged as list comma
       "item2"
   ]"#;
-    RULE.assert_ignores(code)
+    RULE.assert_ignores(code);
 }
 
 #[test]

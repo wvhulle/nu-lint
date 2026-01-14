@@ -3,3 +3,4 @@
 .direnv
 .env
 RELEASE_NOTES.md
+/.pre-commit-config.yaml

@@ -36,18 +36,46 @@ pub fn find_signature_span(call: &Call, _ctx: &LintContext) -> Option<Span> {
     Some(sig_arg.span)
 }
 
-/// Format a positional parameter (required, optional, or rest).
-fn format_positional(p: &PositionalArg, optional: bool, rest: bool) -> String {
-    let prefix = if rest { "..." } else { "" };
-    let suffix = if optional { "?" } else { "" };
+fn format_shape(name: &str, shape: &SyntaxShape) -> String {
+    match shape {
+        SyntaxShape::Any => name.to_string(),
+        s => format!("{name}: {s}"),
+    }
+}
+
+/// Format a required positional parameter: `name: type`
+pub fn format_required(p: &PositionalArg) -> String {
+    format_shape(&p.name, &p.shape)
+}
+
+/// Format an optional positional parameter: `name?: type`
+pub fn format_optional(p: &PositionalArg) -> String {
+    if matches!(p.shape, SyntaxShape::Any) {
+        format!("{}?", p.name)
+    } else {
+        format!("{}?: {}", p.name, p.shape)
+    }
+}
+
+/// Format a rest/variadic parameter: `...name: type`
+pub fn format_rest(p: &PositionalArg) -> String {
     match &p.shape {
-        SyntaxShape::Any => format!("{prefix}{}{suffix}", p.name),
-        shape => format!("{prefix}{}{suffix}: {shape}", p.name),
+        SyntaxShape::Any => format!("...{}", p.name),
+        s => format!("...{}: {s}", p.name),
+    }
+}
+
+/// Format a rest/variadic parameter with a custom shape (for list<T> -> T
+/// conversion)
+pub fn format_rest_with_shape(name: &str, shape: &SyntaxShape) -> String {
+    match shape {
+        SyntaxShape::Any => format!("...{name}"),
+        s => format!("...{name}: {s}"),
     }
 }
 
 /// Format a flag/named parameter.
-fn format_flag(f: &Flag) -> String {
+pub fn format_flag(f: &Flag) -> String {
     let short = f.short.map(|s| format!(" (-{s})")).unwrap_or_default();
     let arg_type = f.arg.as_ref().map(|s| format!(": {s}")).unwrap_or_default();
     format!("--{}{short}{arg_type}", f.long)
@@ -58,19 +86,9 @@ pub fn extract_parameters_text(signature: &nu_protocol::Signature) -> String {
     signature
         .required_positional
         .iter()
-        .map(|p| format_positional(p, false, false))
-        .chain(
-            signature
-                .optional_positional
-                .iter()
-                .map(|p| format_positional(p, true, false)),
-        )
-        .chain(
-            signature
-                .rest_positional
-                .iter()
-                .map(|p| format_positional(p, false, true)),
-        )
+        .map(format_required)
+        .chain(signature.optional_positional.iter().map(format_optional))
+        .chain(signature.rest_positional.iter().map(format_rest))
         .chain(
             signature
                 .named

@@ -33,6 +33,7 @@ pub mod hardcoded_math_constants;
 pub mod ignore_over_dev_null;
 pub mod inline_single_use_function;
 pub mod items_instead_of_transpose_each;
+pub mod list_param_to_variadic;
 pub mod max_function_body_length;
 pub mod max_positional_params;
 pub mod merge_get_cell_path;
@@ -151,6 +152,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     parsing::split_row_first_last::RULE,
     parsing::split_row_get_inline::RULE,
     positional_to_pipeline::RULE,
+    list_param_to_variadic::RULE,
     prefer_long_flags::RULE,
     use_over_source::RULE,
     posix_tools::awk::RULE,

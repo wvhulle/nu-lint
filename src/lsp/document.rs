@@ -1,15 +1,16 @@
 use std::{
     collections::{HashMap, HashSet},
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 use lsp_types::{
-    CodeAction, CodeActionKind, CodeActionOrCommand, CodeDescription, Diagnostic,
+    CodeAction, CodeActionKind, CodeActionOrCommand, CodeDescription, Command, Diagnostic,
     DiagnosticRelatedInformation, DiagnosticSeverity, Location, NumberOrString, Position, Range,
     TextEdit, Uri, WorkspaceEdit,
 };
 
-use crate::{Config, LintEngine, LintLevel, violation::Violation};
+use super::server::DISABLE_RULE_COMMAND;
+use crate::{Config, LintEngine, LintLevel, config::find_config_file_from, violation::Violation};
 
 #[allow(
     clippy::cast_possible_truncation,
@@ -80,14 +81,37 @@ pub struct DocumentState {
 pub struct ServerState {
     engine: LintEngine,
     documents: HashMap<Uri, DocumentState>,
+    workspace_root: Option<PathBuf>,
 }
 
 impl ServerState {
-    pub fn new(config: Config) -> Self {
+    pub fn new(config: Config, workspace_root: Option<PathBuf>) -> Self {
         Self {
             engine: LintEngine::new(config),
             documents: HashMap::new(),
+            workspace_root,
         }
+    }
+
+    /// Reload configuration from the workspace config file
+    pub fn reload_config(&mut self) {
+        let config = self
+            .workspace_root
+            .as_ref()
+            .and_then(|root| {
+                find_config_file_from(root).and_then(|path| {
+                    log::info!("Reloading config from {}", path.display());
+                    Config::load_from_file(&path).ok()
+                })
+            })
+            .unwrap_or_default();
+        self.engine = LintEngine::new(config);
+    }
+
+    /// Get the workspace root path
+    #[must_use]
+    pub fn workspace_root(&self) -> Option<&Path> {
+        self.workspace_root.as_deref()
     }
 
     pub fn lint_document(&mut self, uri: &Uri, content: &str) -> Vec<Diagnostic> {
@@ -129,23 +153,25 @@ impl ServerState {
             return vec![];
         };
 
-        doc_state
-            .violations
-            .iter()
-            .filter_map(|violation| {
-                let fix = violation.fix.as_ref()?;
-                let file_span = violation.file_span();
-                let violation_range = doc_state.line_index.span_to_range(
-                    &doc_state.content,
-                    file_span.start,
-                    file_span.end,
-                );
+        let mut actions = Vec::new();
 
-                let overlaps = ranges_overlap(&range, &violation_range);
-                if !overlaps {
-                    return None;
-                }
+        for violation in &doc_state.violations {
+            let file_span = violation.file_span();
+            let violation_range = doc_state.line_index.span_to_range(
+                &doc_state.content,
+                file_span.start,
+                file_span.end,
+            );
 
+            if !ranges_overlap(&range, &violation_range) {
+                continue;
+            }
+
+            let diagnostic =
+                violation_to_diagnostic(violation, &doc_state.content, &doc_state.line_index, uri);
+
+            // Add fix action if available
+            if let Some(fix) = &violation.fix {
                 let edits: Vec<TextEdit> = fix
                     .replacements
                     .iter()
@@ -162,15 +188,10 @@ impl ServerState {
                     })
                     .collect();
 
-                Some(CodeActionOrCommand::CodeAction(CodeAction {
+                actions.push(CodeActionOrCommand::CodeAction(CodeAction {
                     title: fix.explanation.to_string(),
                     kind: Some(CodeActionKind::QUICKFIX),
-                    diagnostics: Some(vec![violation_to_diagnostic(
-                        violation,
-                        &doc_state.content,
-                        &doc_state.line_index,
-                        uri,
-                    )]),
+                    diagnostics: Some(vec![diagnostic.clone()]),
                     edit: Some(WorkspaceEdit {
                         changes: Some(HashMap::from([(uri.clone(), edits)])),
                         document_changes: None,
@@ -180,9 +201,31 @@ impl ServerState {
                     is_preferred: Some(true),
                     disabled: None,
                     data: None,
-                }))
-            })
-            .collect()
+                }));
+            }
+
+            // Add "ignore rule in config" action if we have a rule_id and workspace root
+            if let Some(rule_id) = violation.rule_id.as_deref()
+                && self.workspace_root.is_some()
+            {
+                actions.push(CodeActionOrCommand::CodeAction(CodeAction {
+                    title: format!("Disable rule '{rule_id}' in .nu-lint.toml"),
+                    kind: Some(CodeActionKind::QUICKFIX),
+                    diagnostics: Some(vec![diagnostic]),
+                    edit: None,
+                    command: Some(Command {
+                        title: format!("Disable rule '{rule_id}'"),
+                        command: DISABLE_RULE_COMMAND.to_string(),
+                        arguments: Some(vec![serde_json::Value::String(rule_id.to_string())]),
+                    }),
+                    is_preferred: Some(false),
+                    disabled: None,
+                    data: None,
+                }));
+            }
+        }
+
+        actions
     }
 
     pub fn get_document(&self, uri: &Uri) -> Option<&DocumentState> {
@@ -195,6 +238,12 @@ impl ServerState {
 
     pub fn close_document(&mut self, uri: &Uri) {
         self.documents.remove(uri);
+    }
+
+    /// Get all currently open document URIs
+    #[must_use]
+    pub fn open_document_uris(&self) -> Vec<Uri> {
+        self.documents.keys().cloned().collect()
     }
 }
 
@@ -440,7 +489,7 @@ mod tests {
     #[test]
     fn server_state_lint_document_stores_state() {
         let config = Config::default();
-        let mut state = ServerState::new(config);
+        let mut state = ServerState::new(config, None);
         let uri: Uri = "file:///test.nu".parse().unwrap();
 
         let diagnostics = state.lint_document(&uri, "let x = 5");
@@ -453,7 +502,7 @@ mod tests {
     #[test]
     fn server_state_close_document_removes_state() {
         let config = Config::default();
-        let mut state = ServerState::new(config);
+        let mut state = ServerState::new(config, None);
         let uri: Uri = "file:///test.nu".parse().unwrap();
 
         state.lint_document(&uri, "let x = 5");
@@ -466,7 +515,7 @@ mod tests {
     #[test]
     fn server_state_get_code_actions_empty_for_unknown_uri() {
         let config = Config::default();
-        let state = ServerState::new(config);
+        let state = ServerState::new(config, None);
         let uri: Uri = "file:///unknown.nu".parse().unwrap();
         let range = Range::default();
 
@@ -708,7 +757,7 @@ mod tests {
     #[test]
     fn lint_document_returns_main_and_hint_diagnostics() {
         let config = Config::default();
-        let mut state = ServerState::new(config);
+        let mut state = ServerState::new(config, None);
         let uri: Uri = "file:///test.nu".parse().unwrap();
 
         let source = "def foo [] {\n    [1, 2, 3]\n}";
@@ -784,5 +833,22 @@ mod tests {
 
         assert_eq!(extra_diagnostics.len(), 1);
         assert_eq!(extra_diagnostics[0].message, "Capture of mutable variable");
+    }
+
+    #[test]
+    fn server_state_with_workspace_root() {
+        let config = Config::default();
+        let workspace_root = Some(PathBuf::from("/tmp/test"));
+        let state = ServerState::new(config, workspace_root);
+
+        assert_eq!(state.workspace_root(), Some(Path::new("/tmp/test")));
+    }
+
+    #[test]
+    fn server_state_without_workspace_root() {
+        let config = Config::default();
+        let state = ServerState::new(config, None);
+
+        assert!(state.workspace_root().is_none());
     }
 }

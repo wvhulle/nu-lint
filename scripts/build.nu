@@ -38,7 +38,7 @@ def main [
       $available | columns
     } else {
       # Validate all targets upfront
-      let invalid = $targets | where ($available | get -o $it | is-empty)
+      let invalid = $targets | where {|t| $available | get -i $t | is-empty }
       if ($invalid | is-not-empty) {
         error make {
           msg: $"Invalid target\(s\): ($invalid | str join ', ')"
@@ -208,7 +208,7 @@ def build-nix [cache: string target_triple: string]: nothing -> nothing {
 
   # Look up nix attribute from flake's releaseTargets
   let targets = get-flake-targets
-  let nix_attr = $targets | get -o $target_triple
+  let nix_attr = $targets | get -i $target_triple
   if ($nix_attr | is-empty) {
     error make {msg: $"Unknown target '($target_triple)'. Available: ($targets | columns | str join ', ')"}
   }

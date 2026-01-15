@@ -18,4 +18,4 @@ steps:
   - name: test
     image: nixos/nix:latest
     commands:
-      - nix develop .#crane -c cargo test
+      - nix develop -c cargo test

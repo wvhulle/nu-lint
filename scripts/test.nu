@@ -12,8 +12,8 @@ def main [
         print "Running cargo test..."
         ^cargo test --all-targets
     } else {
-        print "Running tests with nix-shell..."
-        ^nix-shell -p rustc cargo --run "cargo test --all-targets"
+        print "Running tests with nix develop..."
+        ^nix develop ".#crane" -c cargo test --all-targets
     }
 
     print "Tests complete!"

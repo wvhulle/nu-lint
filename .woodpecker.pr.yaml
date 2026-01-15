@@ -18,4 +18,4 @@ steps:
   - name: test
     image: nixos/nix:latest
     commands:
-      - nix-shell -p nushell git cacert --run "nu scripts/test.nu --cargo"
+      - nix develop .#crane -c cargo test

@@ -14,6 +14,8 @@ pub mod chained_append;
 pub mod chained_str_replace;
 pub mod check_complete_exit_code;
 pub mod collapsible_if;
+pub mod columns_in_to_has;
+pub mod columns_not_in_to_not_has;
 pub mod dangerous_file_operations;
 pub mod dispatch_with_subcommands;
 pub mod documentation;
@@ -28,6 +30,8 @@ pub mod filesystem;
 pub mod filtering;
 pub mod flag_compare_null;
 pub mod forbid_excessive_nesting;
+pub mod get_optional_to_has;
+pub mod get_optional_to_not_has;
 pub mod glob_may_drop_quotes;
 pub mod hardcoded_math_constants;
 pub mod ignore_over_dev_null;
@@ -89,6 +93,10 @@ pub const USED_RULES: &[&dyn Rule] = &[
     builtin_not_empty::RULE,
     chained_append::RULE,
     chained_str_replace::RULE,
+    columns_in_to_has::RULE,
+    columns_not_in_to_not_has::RULE,
+    get_optional_to_has::RULE,
+    get_optional_to_not_has::RULE,
     glob_may_drop_quotes::RULE,
     hardcoded_math_constants::RULE,
     check_complete_exit_code::RULE,

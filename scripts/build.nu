@@ -14,6 +14,7 @@ def main [
   --list # List available targets and exit
   ...targets: string # Target triples to build (empty = all from flake, or native for cargo)
 ]: nothing -> nothing {
+  print $"Running nushell (nu --version)"
   if $list {
     let available = get-flake-targets | columns
     print $"Available targets for this system:"

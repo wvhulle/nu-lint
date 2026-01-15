@@ -177,6 +177,11 @@ pub trait BlockExt {
         context: &LintContext,
         check_pipeline: impl Fn(&Pipeline, &LintContext) -> Vec<T> + Copy,
     ) -> Vec<T>;
+
+    /// Checks if this block is a pipeline ending with `columns` command and
+    /// returns the span of the record expression (everything before `columns`).
+    /// Example: `($record | columns)` returns span of `$record`
+    fn find_columns_record_span(&self, context: &LintContext) -> Option<Span>;
 }
 
 impl BlockExt for Block {
@@ -376,6 +381,33 @@ impl BlockExt for Block {
         }
 
         results
+    }
+
+    fn find_columns_record_span(&self, context: &LintContext) -> Option<Span> {
+        let pipeline = self.pipelines.first()?;
+
+        if pipeline.elements.len() < 2 {
+            return None;
+        }
+
+        let last_elem = pipeline.elements.last()?;
+        let Expr::Call(call) = &last_elem.expr.expr else {
+            return None;
+        };
+
+        let decl = context.working_set.get_decl(call.decl_id);
+        if decl.name() != "columns" {
+            return None;
+        }
+
+        let elements_before_columns = &pipeline.elements[..pipeline.elements.len() - 1];
+        if elements_before_columns.is_empty() {
+            return None;
+        }
+
+        let start = elements_before_columns.first()?.expr.span.start;
+        let end = elements_before_columns.last()?.expr.span.end;
+        Some(Span::new(start, end))
     }
 }
 

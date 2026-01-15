@@ -70,6 +70,16 @@ pub trait ExpressionExt: Traverse {
     /// "ls"
     fn extract_external_command_name(&self, context: &LintContext) -> Option<String>;
 
+    /// Extracts integer value from expression, unwrapping
+    /// blocks/subexpressions. Example: `5` returns 5, `(5)` returns 5
+    fn extract_int_value(&self, context: &LintContext) -> Option<i64>;
+    /// Unwraps block/subexpression to get inner expression.
+    /// Example: `(5)` returns the `5` expression
+    fn unwrap_block_expr<'a>(&'a self, context: &'a LintContext) -> &'a Self;
+    /// Checks if expression is a counter increment pattern.
+    /// Example: `$i = $i + 1` or `$i += 1` returns true for counter_name "i"
+    fn is_counter_increment(&self, counter_name: &str, context: &LintContext) -> bool;
+
     /// Traverse expression and all descendants with parent tracking.
     /// Calls the callback for each expression with its immediate parent.
     fn traverse_with_parent<'a, F>(
@@ -149,6 +159,8 @@ impl ExpressionExt for Expression {
             Expr::Block(block_id) | Expr::Closure(block_id) | Expr::Subexpression(block_id) => {
                 Some(*block_id)
             }
+            // Handle FullCellPath wrapping a subexpression (common parser pattern)
+            Expr::FullCellPath(fcp) if fcp.tail.is_empty() => fcp.head.extract_block_id(),
             _ => None,
         }
     }
@@ -540,6 +552,71 @@ impl ExpressionExt for Expression {
             }
         })
     }
+
+    fn extract_int_value(&self, context: &LintContext) -> Option<i64> {
+        match &self.expr {
+            Expr::Int(n) => Some(*n),
+            Expr::Block(block_id) | Expr::Subexpression(block_id) => {
+                let block = context.working_set.get_block(*block_id);
+                block
+                    .pipelines
+                    .first()
+                    .and_then(|pipeline| pipeline.elements.first())
+                    .and_then(|elem| elem.expr.extract_int_value(context))
+            }
+            _ => None,
+        }
+    }
+
+    fn unwrap_block_expr<'a>(&'a self, context: &'a LintContext) -> &'a Self {
+        match &self.expr {
+            Expr::Block(block_id) | Expr::Subexpression(block_id) => {
+                let block = context.working_set.get_block(*block_id);
+                block
+                    .pipelines
+                    .first()
+                    .and_then(|pipeline| pipeline.elements.first())
+                    .map_or(self, |elem| &elem.expr)
+            }
+            _ => self,
+        }
+    }
+
+    fn is_counter_increment(&self, counter_name: &str, context: &LintContext) -> bool {
+        use nu_protocol::ast::{Assignment, Math};
+
+        let Expr::BinaryOp(lhs, op, rhs) = &self.expr else {
+            return false;
+        };
+
+        let Expr::Operator(Operator::Assignment(assignment_op)) = &op.expr else {
+            return false;
+        };
+
+        if lhs.extract_variable_name(context).as_deref() != Some(counter_name) {
+            return false;
+        }
+
+        let is_add_one = |left: &Expression, op: &Expression, right: &Expression| -> bool {
+            left.extract_variable_name(context).as_deref() == Some(counter_name)
+                && matches!(&op.expr, Expr::Operator(Operator::Math(Math::Add)))
+                && matches!(&right.expr, Expr::Int(1))
+        };
+
+        match assignment_op {
+            Assignment::Assign => {
+                let rhs_unwrapped = rhs.unwrap_block_expr(context);
+                matches!(
+                    &rhs_unwrapped.expr,
+                    Expr::BinaryOp(add_left, add_op, add_right)
+                        if is_add_one(add_left, add_op, add_right)
+                )
+            }
+            Assignment::AddAssign => rhs.extract_int_value(context) == Some(1),
+            _ => false,
+        }
+    }
+
     #[allow(clippy::excessive_nesting, reason = "Recursive")]
     fn traverse_with_parent<'a, F>(
         &'a self,

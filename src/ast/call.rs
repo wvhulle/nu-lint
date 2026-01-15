@@ -60,6 +60,9 @@ pub trait CallExt {
     fn is_filesystem_command(&self, context: &LintContext) -> bool;
     /// Checks if call has a named flag. Example: `ls --all` has flag "all"
     fn has_named_flag(&self, flag_name: &str) -> bool;
+    /// Checks if call is `get` with optional/ignore-errors flag.
+    /// Example: `get -o key`, `get --optional key`, `get -i key`
+    fn is_get_optional(&self, context: &LintContext) -> bool;
     /// Extracts iterator expression from for loop call. Example: `for x in
     /// $list { }` returns `$list`
     fn get_for_loop_iterator(&self) -> Option<&Expression>;
@@ -254,6 +257,14 @@ impl CallExt for Call {
                 Argument::Named(named) if named.0.item == flag_name
             )
         })
+    }
+
+    fn is_get_optional(&self, context: &LintContext) -> bool {
+        self.is_call_to_command("get", context)
+            && (self.has_named_flag("optional")
+                || self.has_named_flag("o")
+                || self.has_named_flag("ignore-errors")
+                || self.has_named_flag("i"))
     }
 
     fn get_for_loop_iterator(&self) -> Option<&Expression> {

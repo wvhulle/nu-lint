@@ -55,7 +55,11 @@ const IDIOMATIC: Group = Group {
     description: "Simplifications unique to the Nu language.",
     rules: &[
         super::builtin_not_empty::RULE,
+        super::columns_in_to_has::RULE,
+        super::columns_not_in_to_not_has::RULE,
         super::dispatch_with_subcommands::RULE,
+        super::get_optional_to_has::RULE,
+        super::get_optional_to_not_has::RULE,
         super::hardcoded_math_constants::RULE,
         super::items_instead_of_transpose_each::RULE,
         super::merge_get_cell_path::RULE,

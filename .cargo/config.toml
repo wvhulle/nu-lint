@@ -1,0 +1,8 @@
+# Static linking configuration for musl targets
+# Linker paths are set by Nix at build time via environment variables
+
+[target.x86_64-unknown-linux-musl]
+rustflags = ["-C", "target-feature=+crt-static"]
+
+[target.aarch64-unknown-linux-musl]
+rustflags = ["-C", "target-feature=+crt-static"]

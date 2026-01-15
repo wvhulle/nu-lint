@@ -23,160 +23,145 @@
       git-hooks,
     }:
     flake-utils.lib.eachDefaultSystem (
-      localSystem:
+      system:
       let
         pkgs = import nixpkgs {
-          system = localSystem;
+          inherit system;
           overlays = [ (import rust-overlay) ];
         };
 
-        # Stable toolchain for LLVM backend (default)
-        rustToolchainLLVM = pkgs.rust-bin.stable.latest.default;
-        craneLibLLVM = (crane.mkLib pkgs).overrideToolchain rustToolchainLLVM;
+        src = pkgs.lib.cleanSource ./.;
 
-        # Nightly toolchain with Cranelift backend component
-        rustToolchainCranelift = pkgs.rust-bin.nightly.latest.default.override {
+        #
+        # Toolchains
+        #
+        stableToolchain = pkgs.rust-bin.stable.latest.default;
+        nightlyToolchain = pkgs.rust-bin.nightly.latest.default.override {
           extensions = [ "rustc-codegen-cranelift-preview" ];
         };
-        craneLibCranelift = (crane.mkLib pkgs).overrideToolchain rustToolchainCranelift;
 
-        src = craneLibLLVM.cleanCargoSource ./.;
+        stableCrane = (crane.mkLib pkgs).overrideToolchain stableToolchain;
+        nightlyCrane = (crane.mkLib pkgs).overrideToolchain nightlyToolchain;
 
-        # Release targets: rust triple -> nix package name
-        # Only targets buildable on current system
-        releaseTargets =
-          if pkgs.stdenv.isLinux then
-            {
-              "x86_64-unknown-linux-gnu" = "default";
-              "aarch64-unknown-linux-gnu" = "aarch64-linux";
-            }
-          else if pkgs.stdenv.isDarwin then
-            {
-              "aarch64-apple-darwin" = "default";
-            }
-          else
-            { };
-
+        #
+        # Native builds
+        #
         commonArgs = {
           inherit src;
           strictDeps = true;
           meta.mainProgram = "nu-lint";
         };
 
-        # LLVM backend (default, optimized)
-        cargoArtifactsLLVM = craneLibLLVM.buildDepsOnly commonArgs;
-        nativePackageLLVM = craneLibLLVM.buildPackage (
-          commonArgs
-          // {
-            cargoArtifacts = cargoArtifactsLLVM;
-          }
-        );
+        llvmDeps = stableCrane.buildDepsOnly commonArgs;
+        llvmPackage = stableCrane.buildPackage (commonArgs // { cargoArtifacts = llvmDeps; });
 
-        # Cranelift backend (faster compilation, slower runtime)
-        craneliftArgs = commonArgs // {
+        craneliftDeps = nightlyCrane.buildDepsOnly (
+          commonArgs // { RUSTFLAGS = "-Zcodegen-backend=cranelift"; }
+        );
+        craneliftPackage = nightlyCrane.buildPackage (commonArgs // {
+          cargoArtifacts = craneliftDeps;
           RUSTFLAGS = "-Zcodegen-backend=cranelift";
-        };
-        cargoArtifactsCranelift = craneLibCranelift.buildDepsOnly craneliftArgs;
-        nativePackageCranelift = craneLibCranelift.buildPackage (
-          craneliftArgs
-          // {
-            cargoArtifacts = cargoArtifactsCranelift;
-          }
-        );
+        });
 
-        mkCrossPackage =
-          crossSystem:
+        #
+        # Static musl builds (portable Linux binaries)
+        #
+        mkMuslPackage =
+          arch:
           let
-            crossPkgs = import nixpkgs {
-              inherit crossSystem localSystem;
-              overlays = [ (import rust-overlay) ];
-            };
+            target = "${arch}-unknown-linux-musl";
+            muslPkgs =
+              if arch == "x86_64" then
+                pkgs.pkgsCross.musl64
+              else
+                pkgs.pkgsCross.aarch64-multiplatform-musl;
 
-            rustTarget =
-              releaseTargets.${crossSystem}.rustTriple
-                or (throw "Unsupported cross target: ${crossSystem}. Add it to releaseTargets.");
+            toolchain = pkgs.rust-bin.stable.latest.default.override { targets = [ target ]; };
+            muslCrane = (crane.mkLib pkgs).overrideToolchain (p: toolchain);
 
-            crossToolchain = pkgs.rust-bin.stable.latest.default.override {
-              targets = [ rustTarget ];
-            };
+            cc = "${muslPkgs.stdenv.cc}/bin/${muslPkgs.stdenv.cc.targetPrefix}cc";
+            ar = "${muslPkgs.stdenv.cc.bintools}/bin/${muslPkgs.stdenv.cc.targetPrefix}ar";
+            targetEnv = builtins.replaceStrings [ "-" ] [ "_" ] target;
 
-            crossCraneLib = (crane.mkLib crossPkgs).overrideToolchain (p: crossToolchain);
-            crossSrc = crossCraneLib.cleanCargoSource ./.;
-
-            crossArgs = {
-              src = crossSrc;
+            args = {
+              inherit src;
               strictDeps = true;
+              pname = "nu-lint-static";
               meta.mainProgram = "nu-lint";
-              CARGO_BUILD_TARGET = rustTarget;
-              TARGET_CC = "${crossPkgs.stdenv.cc}/bin/${crossPkgs.stdenv.cc.targetPrefix}cc";
-              HOST_CC = "${pkgs.stdenv.cc}/bin/cc";
+              doCheck = false;
+              CARGO_BUILD_TARGET = target;
+              "CARGO_TARGET_${pkgs.lib.toUpper targetEnv}_LINKER" = cc;
+              "CC_${targetEnv}" = cc;
+              "AR_${targetEnv}" = ar;
             };
 
-            crossCargoArtifacts = crossCraneLib.buildDepsOnly (
-              crossArgs
-              // {
-                doCheck = false;
-              }
-            );
+            deps = muslCrane.buildDepsOnly args;
           in
-          crossCraneLib.buildPackage (
-            crossArgs
-            // {
-              cargoArtifacts = crossCargoArtifacts;
-              doCheck = false;
-            }
-          );
+          muslCrane.buildPackage (args // { cargoArtifacts = deps; });
 
-        preCommitHooks = git-hooks.lib.${localSystem}.run {
-          src = ./.;
-          hooks = {
-            nixfmt.enable = false;
-            convco.enable = true;
-          };
+        #
+        # Pre-commit hooks
+        #
+        preCommitHooks = git-hooks.lib.${system}.run {
+          inherit src;
+          hooks.convco.enable = true;
         };
+
+        #
+        # Release targets (queried by build.nu)
+        #
+        releaseTargets =
+          if pkgs.stdenv.isLinux then
+            {
+              "x86_64-unknown-linux-musl" = "x86_64-linux-musl";
+              "aarch64-unknown-linux-musl" = "aarch64-linux-musl";
+            }
+          else if pkgs.stdenv.isDarwin then
+            { "aarch64-apple-darwin" = "default"; }
+          else
+            { };
       in
       {
-        # Run pre-commit hooks with `nix fmt`
+        inherit releaseTargets;
+
+        packages =
+          {
+            default = llvmPackage;
+            llvm = llvmPackage;
+            cranelift = craneliftPackage;
+            deps = llvmDeps;
+            deps-cranelift = craneliftDeps;
+          }
+          // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
+            x86_64-linux-musl = mkMuslPackage "x86_64";
+            aarch64-linux-musl = mkMuslPackage "aarch64";
+          };
+
+        checks = {
+          inherit llvmPackage craneliftPackage;
+          pre-commit = preCommitHooks;
+        };
+
+        apps = {
+          default = {
+            type = "app";
+            program = pkgs.lib.getExe self.packages.${system}.default;
+          };
+          cranelift = {
+            type = "app";
+            program = pkgs.lib.getExe self.packages.${system}.cranelift;
+          };
+        };
+
         formatter =
           let
-            config = preCommitHooks.config;
-            inherit (config) package configFile;
+            inherit (preCommitHooks.config) package configFile;
           in
           pkgs.writeShellScriptBin "pre-commit-run" ''
             ${pkgs.lib.getExe package} run --all-files --config ${configFile}
           '';
 
-        packages = {
-          default = nativePackageLLVM;
-          llvm = nativePackageLLVM;
-          cranelift = nativePackageCranelift;
-          x86_64-linux = nativePackageLLVM;
-          aarch64-linux = mkCrossPackage "aarch64-linux";
-          deps = cargoArtifactsLLVM;
-          deps-cranelift = cargoArtifactsCranelift;
-        };
-
-        checks = {
-          inherit nativePackageLLVM nativePackageCranelift;
-          pre-commit = preCommitHooks;
-        };
-
-        # Export release targets for build.nu and CI to query
-        inherit releaseTargets;
-
-        apps = {
-          default = {
-            type = "app";
-            program = pkgs.lib.getExe self.packages.${localSystem}.default;
-          };
-          cranelift = {
-            type = "app";
-            program = pkgs.lib.getExe self.packages.${localSystem}.cranelift;
-          };
-        };
-
         devShells = {
-          # I prefer to use the toolchain provided by my ~/.rustup installation for ease of use with the cargo commands
           default = pkgs.mkShell {
             inherit (preCommitHooks) shellHook;
             packages = [
@@ -184,21 +169,13 @@
               pkgs.convco
             ];
           };
-          # LLVM toolchain dev shell
-          llvm = craneLibLLVM.devShell {
-            checks = self.checks;
+          llvm = stableCrane.devShell {
             inherit (preCommitHooks) shellHook;
-            packages = [
-              pkgs.convco
-            ];
+            packages = [ pkgs.convco ];
           };
-          # Cranelift toolchain dev shell (for faster dev builds)
-          cranelift = craneLibCranelift.devShell {
-            checks = self.checks;
+          cranelift = nightlyCrane.devShell {
             inherit (preCommitHooks) shellHook;
-            packages = [
-              pkgs.convco
-            ];
+            packages = [ pkgs.convco ];
           };
         };
       }

@@ -30,10 +30,17 @@
           overlays = [ (import rust-overlay) ];
         };
 
-        rustToolchain = pkgs.rust-bin.stable.latest.default;
-        craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
+        # Stable toolchain for LLVM backend (default)
+        rustToolchainLLVM = pkgs.rust-bin.stable.latest.default;
+        craneLibLLVM = (crane.mkLib pkgs).overrideToolchain rustToolchainLLVM;
 
-        src = craneLib.cleanCargoSource ./.;
+        # Nightly toolchain with Cranelift backend component
+        rustToolchainCranelift = pkgs.rust-bin.nightly.latest.default.override {
+          extensions = [ "rustc-codegen-cranelift-preview" ];
+        };
+        craneLibCranelift = (crane.mkLib pkgs).overrideToolchain rustToolchainCranelift;
+
+        src = craneLibLLVM.cleanCargoSource ./.;
 
         commonArgs = {
           inherit src;
@@ -41,12 +48,24 @@
           meta.mainProgram = "nu-lint";
         };
 
-        cargoArtifacts = craneLib.buildDepsOnly commonArgs;
-
-        nativePackage = craneLib.buildPackage (
+        # LLVM backend (default, optimized)
+        cargoArtifactsLLVM = craneLibLLVM.buildDepsOnly commonArgs;
+        nativePackageLLVM = craneLibLLVM.buildPackage (
           commonArgs
           // {
-            inherit cargoArtifacts;
+            cargoArtifacts = cargoArtifactsLLVM;
+          }
+        );
+
+        # Cranelift backend (faster compilation, slower runtime)
+        craneliftArgs = commonArgs // {
+          RUSTFLAGS = "-Zcodegen-backend=cranelift";
+        };
+        cargoArtifactsCranelift = craneLibCranelift.buildDepsOnly craneliftArgs;
+        nativePackageCranelift = craneLibCranelift.buildPackage (
+          craneliftArgs
+          // {
+            cargoArtifacts = cargoArtifactsCranelift;
           }
         );
 
@@ -115,20 +134,29 @@
           '';
 
         packages = {
-          default = nativePackage;
-          x86_64-linux = nativePackage;
+          default = nativePackageLLVM;
+          llvm = nativePackageLLVM;
+          cranelift = nativePackageCranelift;
+          x86_64-linux = nativePackageLLVM;
           aarch64-linux = mkCrossPackage "aarch64-linux";
-          deps = cargoArtifacts;
+          deps = cargoArtifactsLLVM;
+          deps-cranelift = cargoArtifactsCranelift;
         };
 
         checks = {
-          inherit nativePackage;
+          inherit nativePackageLLVM nativePackageCranelift;
           pre-commit = preCommitHooks;
         };
 
-        apps.default = {
-          type = "app";
-          program = pkgs.lib.getExe self.packages.${localSystem}.default;
+        apps = {
+          default = {
+            type = "app";
+            program = pkgs.lib.getExe self.packages.${localSystem}.default;
+          };
+          cranelift = {
+            type = "app";
+            program = pkgs.lib.getExe self.packages.${localSystem}.cranelift;
+          };
         };
 
         devShells = {
@@ -140,8 +168,16 @@
               pkgs.convco
             ];
           };
-          # In case you want the exact same toolchain as the build
-          crane = craneLib.devShell {
+          # LLVM toolchain dev shell
+          llvm = craneLibLLVM.devShell {
+            checks = self.checks;
+            inherit (preCommitHooks) shellHook;
+            packages = [
+              pkgs.convco
+            ];
+          };
+          # Cranelift toolchain dev shell (for faster dev builds)
+          cranelift = craneLibCranelift.devShell {
             checks = self.checks;
             inherit (preCommitHooks) shellHook;
             packages = [

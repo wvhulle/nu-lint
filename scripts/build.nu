@@ -67,8 +67,8 @@ def setup-cachix [cache: string]: nothing -> nothing {
 
     log info $"Setting up Cachix cache: ($cache)"
     try {
-        ^cachix authtoken (get-cachix-token)
-        ^cachix use $cache
+        cachix authtoken (get-cachix-token)
+        cachix use $cache
         log info "Cachix configured"
     } catch {
         log warning "Cachix setup failed, continuing without cache"
@@ -83,10 +83,10 @@ def push-to-cachix [cache: string, result_link: string]: nothing -> nothing {
     log info "Pushing to Cachix..."
     try {
         # Push the result and its runtime closure
-        let paths = ^nix-store --query --requisites $result_link | lines
+        let paths = nix-store --query --requisites $result_link | lines
         if ($paths | is-not-empty) {
             log info $"Pushing ($paths | length) paths to Cachix..."
-            ^cachix push $cache ...$paths
+            cachix push $cache $paths
             log info "Push complete"
         }
     } catch {|e|

@@ -58,6 +58,7 @@ pub mod script_export_main;
 pub mod shorten_with_compound_assignment;
 pub mod side_effects;
 pub mod spacing;
+pub mod spread_list_to_external;
 pub mod stdlib_log;
 pub mod structured_data_to_csv_tool;
 pub mod structured_data_to_json_tool;
@@ -112,6 +113,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     external_tools::jq::RULE,
     remove_hat_not_builtin::RULE,
     always_annotate_ext_hat::RULE,
+    spread_list_to_external::RULE,
     external_tools::wget::RULE,
     external_tools::which::RULE,
     filtering::each_if_to_where::RULE,

@@ -31,6 +31,7 @@ const ERROR_HANDLING: Group = Group {
         super::unchecked_first_last::RULE,
         super::wrap_external_with_complete::RULE,
         super::use_over_source::RULE,
+        super::spread_list_to_external::RULE,
     ],
 };
 

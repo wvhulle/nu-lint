@@ -415,111 +415,11 @@ impl ExpressionExt for Expression {
     }
 
     fn infer_output_type(&self, context: &LintContext) -> Option<Type> {
-        log::debug!(
-            "Inferring output type for expression: '{}'",
-            self.span_text(context)
-        );
-
         let inner_expr = match &self.expr {
-            Expr::Collect(_, inner) => {
-                log::debug!(
-                    "Replacing Expr::Collect with inner expression: '{}'",
-                    inner.span_text(context)
-                );
-                &inner.expr
-            }
+            Expr::Collect(_, inner) => &inner.expr,
             _ => &self.expr,
         };
-
-        log::debug!("About to match against expression variant");
-
-        match inner_expr {
-            expr if check_filepath_output(expr).is_some() => check_filepath_output(expr),
-            Expr::Bool(_)
-            | Expr::Int(_)
-            | Expr::Float(_)
-            | Expr::String(_)
-            | Expr::StringInterpolation(_)
-            | Expr::RawString(_)
-            | Expr::Record(_)
-            | Expr::Table(_) => {
-                log::debug!("Matched literal expression, using AST type: {:?}", self.ty);
-                Some(self.ty.clone())
-            }
-            Expr::BinaryOp(left, _op, right) => {
-                if !matches!(self.ty, Type::Any) {
-                    return Some(self.ty.clone());
-                }
-
-                infer_binary_op_type(
-                    left.infer_output_type(context).as_ref(),
-                    right.infer_output_type(context).as_ref(),
-                )
-                .or_else(|| Some(self.ty.clone()))
-            }
-            Expr::List(items) => {
-                log::debug!("Matched List literal with {} items", items.len());
-                Some(infer_list_element_type(items))
-            }
-            Expr::Nothing => {
-                log::debug!("Matched Nothing");
-                Some(Type::Nothing)
-            }
-            Expr::FullCellPath(path) => {
-                log::debug!("Matched FullCellPath, checking head");
-                if let Expr::List(items) = &path.head.expr {
-                    log::debug!("FullCellPath contains List with {} items", items.len());
-                    return Some(infer_list_element_type(items));
-                }
-
-                if !path.tail.is_empty() {
-                    log::debug!("Using head type for FullCellPath: {:?}", path.head.ty);
-                    return Some(path.head.ty.clone());
-                }
-
-                log::debug!("FullCellPath has empty tail, inferring head type recursively");
-                let inferred = path.head.infer_output_type(context);
-                log::debug!("FullCellPath inferred type from head: {inferred:?}");
-                inferred.or_else(|| Some(path.head.ty.clone()))
-            }
-            Expr::Subexpression(block_id) | Expr::Block(block_id) => {
-                log::debug!("Encountered Subexpression");
-                Some(
-                    context
-                        .working_set
-                        .get_block(*block_id)
-                        .infer_output_type(context),
-                )
-            }
-            Expr::ExternalCall(call, args) => {
-                let cmd_name = context.plain_text(call.span);
-                log::debug!("Encountered ExternalCall: '{cmd_name}'");
-                if has_external_side_effect(cmd_name, ExternEffect::NoDataInStdout, context, args) {
-                    Some(Type::Nothing)
-                } else {
-                    Some(Type::String)
-                }
-            }
-            Expr::Call(call) => {
-                let decl = context.working_set.get_decl(call.decl_id);
-                let cmd_name = decl.name();
-                log::debug!("Encountered Call: '{cmd_name}'");
-                if matches!(cmd_name, "if" | "match" | "try" | "do")
-                    && let Some(unified_type) = call.infer_from_blocks(context)
-                {
-                    log::debug!(
-                        "Inferred unified type from blocks for '{cmd_name}': {unified_type:?}"
-                    );
-                    return Some(unified_type);
-                }
-
-                Some(call.get_output_type(context, None))
-            }
-            _other => {
-                log::debug!("No specific match, using default case");
-                None
-            }
-        }
+        infer_expr_output_type(inner_expr, &self.ty, context)
     }
 
     fn infer_input_type(&self, in_var: Option<VarId>, context: &LintContext) -> Option<Type> {
@@ -816,6 +716,76 @@ fn check_filepath_output(expr: &Expr) -> Option<Type> {
         expr if is_filepath_expr(expr) || is_glob_pattern_expr(expr) => {
             log::debug!("check_filepath_output: filepath expr: {expr:?}");
             Some(ty)
+        }
+        _ => None,
+    }
+}
+
+fn infer_expr_output_type(expr: &Expr, ty: &Type, context: &LintContext) -> Option<Type> {
+    match expr {
+        expr if check_filepath_output(expr).is_some() => check_filepath_output(expr),
+        Expr::Bool(_)
+        | Expr::Int(_)
+        | Expr::Float(_)
+        | Expr::String(_)
+        | Expr::StringInterpolation(_)
+        | Expr::RawString(_)
+        | Expr::Record(_)
+        | Expr::Table(_) => Some(ty.clone()),
+        Expr::BinaryOp(left, _op, right) => {
+            if !matches!(ty, Type::Any) {
+                return Some(ty.clone());
+            }
+            infer_binary_op_type(
+                left.infer_output_type(context).as_ref(),
+                right.infer_output_type(context).as_ref(),
+            )
+            .or_else(|| Some(ty.clone()))
+        }
+        Expr::List(items) => Some(infer_list_element_type(items)),
+        Expr::Nothing => Some(Type::Nothing),
+        Expr::FullCellPath(path) => {
+            if let Expr::List(items) = &path.head.expr {
+                return Some(infer_list_element_type(items));
+            }
+            if !path.tail.is_empty() {
+                return Some(path.head.ty.clone());
+            }
+            path.head
+                .infer_output_type(context)
+                .or_else(|| Some(path.head.ty.clone()))
+        }
+        Expr::Subexpression(block_id) | Expr::Block(block_id) => Some(
+            context
+                .working_set
+                .get_block(*block_id)
+                .infer_output_type(context),
+        ),
+        Expr::ExternalCall(call, args) => {
+            let cmd_name = context.plain_text(call.span);
+            if has_external_side_effect(cmd_name, ExternEffect::NoDataInStdout, context, args) {
+                Some(Type::Nothing)
+            } else {
+                Some(Type::String)
+            }
+        }
+        Expr::Call(call) => {
+            let decl = context.working_set.get_decl(call.decl_id);
+            let cmd_name = decl.name();
+            if matches!(cmd_name, "if" | "match" | "try" | "do")
+                && let Some(unified_type) = call.infer_from_blocks(context)
+            {
+                return Some(unified_type);
+            }
+            Some(call.get_output_type(context, None))
+        }
+        Expr::Var(var_id) => {
+            let var = context.working_set.get_variable(*var_id);
+            if matches!(var.ty, Type::Any) {
+                None
+            } else {
+                Some(var.ty.clone())
+            }
         }
         _ => None,
     }

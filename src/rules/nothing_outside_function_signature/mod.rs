@@ -40,8 +40,8 @@ To represent the absence of a value in a function body, use 'null' instead."#,
         )
     }
 
-    fn level(&self) -> LintLevel {
-        LintLevel::Error
+    fn level(&self) -> Option<LintLevel> {
+        Some(LintLevel::Error)
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

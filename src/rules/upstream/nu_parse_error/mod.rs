@@ -56,8 +56,8 @@ impl DetectFix for NuParseError {
         Some("https://www.nushell.sh/blog/")
     }
 
-    fn level(&self) -> LintLevel {
-        LintLevel::Error
+    fn level(&self) -> Option<LintLevel> {
+        Some(LintLevel::Error)
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

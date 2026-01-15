@@ -19,8 +19,8 @@ impl DetectFix for MaxPositionalParams {
         "Custom commands should have ≤ 2 positional parameters"
     }
 
-    fn level(&self) -> LintLevel {
-        LintLevel::Warning
+    fn level(&self) -> Option<LintLevel> {
+        Some(LintLevel::Warning)
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

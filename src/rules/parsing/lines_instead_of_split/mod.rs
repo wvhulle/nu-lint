@@ -39,8 +39,8 @@ impl DetectFix for LinesInsteadOfSplit {
         Some("https://www.nushell.sh/commands/docs/lines.html")
     }
 
-    fn level(&self) -> LintLevel {
-        LintLevel::Warning
+    fn level(&self) -> Option<LintLevel> {
+        Some(LintLevel::Warning)
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

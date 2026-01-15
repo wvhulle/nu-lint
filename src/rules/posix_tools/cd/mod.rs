@@ -112,8 +112,8 @@ impl DetectFix for UseBuiltinCd {
         Some("https://www.nushell.sh/commands/docs/cd.html")
     }
 
-    fn level(&self) -> LintLevel {
-        LintLevel::Warning
+    fn level(&self) -> Option<LintLevel> {
+        Some(LintLevel::Warning)
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

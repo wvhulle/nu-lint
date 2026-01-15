@@ -9,14 +9,14 @@ Learning to use a new shell is a radical change that can use some assistance. Th
 The rule `turn_positional_into_stream_input` recommends to use pipelines instead of positional arguments:
 
 ```nu
-def filter-positive [numbers] { 
-    $numbers | where $it > 0 
+def filter-positive [numbers] {
+    $numbers | where $it > 0
 }
 ```
 
 ```nu
-def filter-positive [] { 
-    where $it > 0 
+def filter-positive [] {
+    where $it > 0
 }
 ```
 
@@ -49,6 +49,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 +120 rules are defined and most have automatic fixes available (list may be out-of-date):
 
 <!-- start-rule-groups -->
+
 `idioms` - Simplifications unique to the Nu language.
 
 - `use_is_not_empty` (auto-fix)
@@ -338,12 +339,11 @@ You can also implement your own editor extensions using the `--lsp` flag as in: 
 
 ## Configuration
 
-You can configure some of the behaviour by tweaking options. For this you need to create a configuration file `.nu-lint.toml` in your project root. It may look like this:
+Some rules are deactivated by default. Usually because they are too noisy or annoy people. You should activate them with the config file and a level override.
+
+A configuration file is optional and should be named `.nu-lint.toml` in your project root. It may look like this:
 
 ```toml
-# This rule is ignored
-ignored = ["snake_case_variables"]
-
 # Some rules are configurable
 max_pipeline_length = 80
 pipeline_placement = "start"

@@ -53,8 +53,8 @@ impl DetectFix for CollapsibleIf {
         Some("https://www.nushell.sh/book/control_flow.html")
     }
 
-    fn level(&self) -> LintLevel {
-        LintLevel::Warning
+    fn level(&self) -> Option<LintLevel> {
+        Some(LintLevel::Warning)
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

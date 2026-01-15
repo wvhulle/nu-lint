@@ -123,8 +123,8 @@ impl DetectFix for PrintAndReturnData {
         "Functions should not both print to stdout and return data. This is confusing."
     }
 
-    fn level(&self) -> LintLevel {
-        LintLevel::Hint
+    fn level(&self) -> Option<LintLevel> {
+        Some(LintLevel::Hint)
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

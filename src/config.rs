@@ -4,12 +4,12 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de::IntoDeserializer};
 
 use crate::{
     LintError,
     rule::Rule,
-    rules::{self, USED_RULES, groups::ALL_GROUPS},
+    rules::{USED_RULES, groups::ALL_GROUPS},
 };
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Default, PartialEq, Eq, PartialOrd, Ord)]
@@ -19,6 +19,29 @@ pub enum LintLevel {
     #[default]
     Warning,
     Error,
+}
+
+/// Wrapper for `Option<LintLevel>` that serializes `None` as `"off"`.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct ToggledLevel(pub Option<LintLevel>);
+
+impl Serialize for ToggledLevel {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self.0 {
+            Some(level) => level.serialize(serializer),
+            None => serializer.serialize_str("off"),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for ToggledLevel {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(deserializer)?;
+        match s.as_str() {
+            "off" => Ok(Self(None)),
+            _ => LintLevel::deserialize(s.into_deserializer()).map(|l| Self(Some(l))),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Default, PartialEq, Eq)]
@@ -33,8 +56,7 @@ pub enum PipelinePlacement {
 #[serde(default)]
 pub struct Config {
     pub groups: HashMap<String, LintLevel>,
-    pub rules: HashMap<String, LintLevel>,
-    pub ignored: HashSet<String>,
+    pub rules: HashMap<String, ToggledLevel>,
     pub additional: HashSet<String>,
     pub sequential: bool,
     pub pipeline_placement: PipelinePlacement,
@@ -47,12 +69,6 @@ impl Default for Config {
         Self {
             groups: HashMap::new(),
             rules: HashMap::new(),
-            ignored: HashSet::from([
-                rules::always_annotate_ext_hat::RULE.id().into(),
-                rules::upstream::nu_parse_error::RULE.id().into(),
-                rules::error_make::add_url::RULE.id().into(),
-                rules::error_make::add_label::RULE.id().into(),
-            ]),
             additional: HashSet::new(),
             sequential: false,
             pipeline_placement: PipelinePlacement::default(),
@@ -115,17 +131,12 @@ impl Config {
     pub fn get_lint_level(&self, rule: &dyn Rule) -> Option<LintLevel> {
         let rule_id = rule.id();
 
-        if self.ignored.contains(rule_id) {
-            log::debug!("Rule {rule_id} is being ignored by config.");
-            return None;
-        }
-
-        if let Some(level) = self.rules.get(rule_id) {
+        if let Some(ToggledLevel(level)) = self.rules.get(rule_id) {
             log::debug!(
                 "Rule '{rule_id}' has individual level '{level:?}' in config, overriding set \
                  levels"
             );
-            return Some(*level);
+            return *level;
         }
 
         for (set_name, level) in &self.groups {
@@ -141,7 +152,7 @@ impl Config {
             return Some(*level);
         }
 
-        Some(rule.level())
+        rule.level()
     }
 }
 
@@ -168,71 +179,27 @@ pub fn find_config_file_from(start_dir: &Path) -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rules::USED_RULES;
 
     #[test]
     fn test_load_config_simple_str() {
         let toml_str = r#"
         [rules]
         snake_case_variables = "error"
+        other_rule = "off"
     "#;
 
         let config = Config::load_from_str(toml_str).unwrap();
         assert_eq!(
-            config.rules.get("snake_case_variables"),
-            Some(&LintLevel::Error)
+            config.rules["snake_case_variables"],
+            ToggledLevel(Some(LintLevel::Error))
         );
-    }
 
-    #[test]
-    fn test_load_config_simple_str_set() {
-        let toml_str = r#"
-        ignored = [ "snake_case_variables" ]
-        [groups]
-        naming = "error"
-    "#;
-
-        let config = Config::load_from_str(toml_str).unwrap();
-        let found_set_level = config.groups.iter().find(|(k, _)| **k == "naming");
-        assert!(matches!(found_set_level, Some((_, LintLevel::Error))));
-        let ignored_rule = USED_RULES
-            .iter()
-            .find(|r| r.id() == "snake_case_variables")
-            .unwrap();
-        assert_eq!(config.get_lint_level(*ignored_rule), None);
+        assert_eq!(config.rules["other_rule"], ToggledLevel(None));
     }
 
     #[test]
     fn test_validate_passes_with_default_config() {
         let result = Config::default().validate();
         assert!(result.is_ok());
-    }
-
-    #[test]
-    fn test_validate_passes_when_one_conflicting_rule_ignored() {
-        // Enable add_hat but ignore remove_hat
-        let mut ignored = Config::default().ignored;
-        ignored.remove("add_hat_external_commands"); // enable add_hat
-        ignored.insert("remove_hat_not_builtin".into()); // ignore remove_hat
-
-        let config = Config {
-            ignored,
-            ..Config::default()
-        };
-
-        assert!(config.validate().is_ok());
-    }
-
-    #[test]
-    fn test_validate_conflict_from_toml() {
-        let toml_str = r#"
-            ignored = []
-        "#;
-
-        let config = Config::load_from_str(toml_str).unwrap();
-        let result = config.validate();
-
-        assert!(result.is_err());
-        assert!(matches!(result, Err(LintError::RuleConflict { .. })));
     }
 }

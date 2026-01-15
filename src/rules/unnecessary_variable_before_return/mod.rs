@@ -147,8 +147,8 @@ impl DetectFix for UnnecessaryVariableBeforeReturn {
         Some("https://www.nushell.sh/book/thinking_in_nu.html#implicit-return")
     }
 
-    fn level(&self) -> LintLevel {
-        LintLevel::Warning
+    fn level(&self) -> Option<LintLevel> {
+        Some(LintLevel::Warning)
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

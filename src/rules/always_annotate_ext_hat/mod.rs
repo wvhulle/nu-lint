@@ -32,8 +32,8 @@ impl DetectFix for AlwaysHatExtCall {
         Some("https://www.nushell.sh/book/running_externals.html")
     }
 
-    fn level(&self) -> LintLevel {
-        LintLevel::Warning
+    fn level(&self) -> Option<LintLevel> {
+        None
     }
 
     fn conflicts_with(&self) -> &'static [&'static dyn Rule] {

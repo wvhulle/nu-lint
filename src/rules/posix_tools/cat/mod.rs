@@ -164,8 +164,8 @@ impl DetectFix for UseBuiltinCat {
         Some("https://www.nushell.sh/commands/docs/open.html")
     }
 
-    fn level(&self) -> LintLevel {
-        LintLevel::Warning
+    fn level(&self) -> Option<LintLevel> {
+        Some(LintLevel::Warning)
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

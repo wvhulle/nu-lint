@@ -108,8 +108,8 @@ impl DetectFix for ChainedAppend {
         Some("https://www.nushell.sh/book/operators.html#spread-operator")
     }
 
-    fn level(&self) -> LintLevel {
-        LintLevel::Hint
+    fn level(&self) -> Option<LintLevel> {
+        Some(LintLevel::Hint)
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

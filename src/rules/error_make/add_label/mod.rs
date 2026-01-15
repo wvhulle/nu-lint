@@ -19,15 +19,22 @@ impl DetectFix for AddLabelToError {
     }
 
     fn short_description(&self) -> &'static str {
-        "error make should include 'labels' field with span to show error location in user code"
+        "error make should include 'label'"
+    }
+
+    fn long_description(&self) -> Option<&'static str> {
+        Some(
+            "Errors created with `error make` are more useful if you attach a label (with a span) \
+             to signify the part of the code that caused the error.",
+        )
     }
 
     fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/commands/docs/error_make.html")
     }
 
-    fn level(&self) -> LintLevel {
-        LintLevel::Hint
+    fn level(&self) -> Option<LintLevel> {
+        Some(LintLevel::Hint)
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

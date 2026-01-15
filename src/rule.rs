@@ -22,7 +22,7 @@ pub trait DetectFix: Send + Sync + 'static {
     fn id(&self) -> &'static str;
 
     /// Default lint level of rule
-    fn level(&self) -> LintLevel;
+    fn level(&self) -> Option<LintLevel>;
 
     /// Create a vector of detections of violations of the rule
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)>;
@@ -73,7 +73,7 @@ pub trait Rule: Send + Sync {
     fn id(&self) -> &'static str;
     fn short_description(&self) -> &'static str;
     fn source_link(&self) -> Option<&'static str>;
-    fn level(&self) -> LintLevel;
+    fn level(&self) -> Option<LintLevel>;
     fn has_auto_fix(&self) -> bool;
     fn conflicts_with(&self) -> &'static [&'static dyn Rule];
     fn check(&self, context: &LintContext) -> Vec<Violation>;
@@ -92,7 +92,7 @@ impl<T: DetectFix> Rule for T {
         DetectFix::source_link(self)
     }
 
-    fn level(&self) -> LintLevel {
+    fn level(&self) -> Option<LintLevel> {
         DetectFix::level(self)
     }
 

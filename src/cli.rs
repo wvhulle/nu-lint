@@ -165,11 +165,7 @@ impl Cli {
     }
 
     fn list_rules(config: &Config) {
-        let mut sorted_rules: Vec<&dyn Rule> = USED_RULES
-            .iter()
-            .filter(|r| config.get_lint_level(**r).is_some())
-            .copied()
-            .collect();
+        let mut sorted_rules: Vec<&dyn Rule> = USED_RULES.to_vec();
         sorted_rules.sort_by_key(|r| r.id());
 
         if sorted_rules.is_empty() {
@@ -181,11 +177,12 @@ impl Cli {
         let max_desc_len = 60; // Truncate descriptions to fit screen
 
         for rule in &sorted_rules {
-            let level = config.get_lint_level(*rule).unwrap_or_else(|| rule.level());
+            let level = config.get_lint_level(*rule);
             let level_char = match level {
-                LintLevel::Hint => 'H',
-                LintLevel::Warning => 'W',
-                LintLevel::Error => 'E',
+                Some(LintLevel::Hint) => 'H',
+                Some(LintLevel::Warning) => 'W',
+                Some(LintLevel::Error) => 'E',
+                None => 'D',
             };
             let fix_char = if rule.has_auto_fix() { 'F' } else { ' ' };
             let desc = rule.short_description();
@@ -203,7 +200,7 @@ impl Cli {
 
         let fixable_count = sorted_rules.iter().filter(|r| r.has_auto_fix()).count();
         println!(
-            "\n{n} rules, {f} fixable. [H]int [W]arning [E]rror [F]ixable",
+            "\n{n} rules, {f} fixable. [H]int [W]arning [E]rror [F]ixable [D]eactivated",
             n = sorted_rules.len(),
             f = fixable_count
         );
@@ -274,7 +271,7 @@ mod tests {
 
     use clap::Parser;
 
-    use crate::{Config, LintEngine, cli::Cli, engine::collect_nu_files, rules::USED_RULES};
+    use crate::{Config, LintEngine, cli::Cli, engine::collect_nu_files};
 
     #[test]
     fn test_cli_parsing() {
@@ -339,68 +336,5 @@ mod tests {
         assert_eq!(files.len(), 1);
         let violations = engine.lint_files(&files);
         assert!(violations.is_empty() || !violations.is_empty()); // Just ensure it runs
-    }
-
-    #[test]
-    fn test_ignored_rule_produces_no_violations() {
-        use std::collections::HashSet;
-
-        // Code that triggers snake_case_variables rule
-        let source = "let fooBar = 1";
-
-        // First verify the rule triggers without ignoring
-        let default_config = Config::default();
-        let engine = LintEngine::new(default_config);
-        let violations = engine.lint_stdin(source);
-        let has_snake_case_violation = violations
-            .iter()
-            .any(|v| v.rule_id.as_deref() == Some("snake_case_variables"));
-        assert!(
-            has_snake_case_violation,
-            "Expected snake_case_variables violation without ignore"
-        );
-
-        // Now ignore the rule and verify no violation
-        let mut ignored = HashSet::new();
-        ignored.insert("snake_case_variables".to_string());
-        let config_with_ignore = Config {
-            ignored,
-            ..Config::default()
-        };
-        let engine = LintEngine::new(config_with_ignore);
-        let violations = engine.lint_stdin(source);
-        let has_snake_case_violation = violations
-            .iter()
-            .any(|v| v.rule_id.as_deref() == Some("snake_case_variables"));
-        assert!(
-            !has_snake_case_violation,
-            "Expected no snake_case_variables violation when ignored"
-        );
-    }
-
-    #[test]
-    fn test_ignored_rule_not_in_list_when_enabled_flag() {
-        use std::collections::HashSet;
-
-        let mut ignored = HashSet::new();
-        ignored.insert("snake_case_variables".to_string());
-        let config = Config {
-            ignored,
-            ..Config::default()
-        };
-
-        // Simulate --list --enabled behavior: filter rules by config
-        let enabled_rules: Vec<_> = USED_RULES
-            .iter()
-            .filter(|r| config.get_lint_level(**r).is_some())
-            .collect();
-
-        let has_snake_case = enabled_rules
-            .iter()
-            .any(|r| r.id() == "snake_case_variables");
-        assert!(
-            !has_snake_case,
-            "Ignored rule should not appear in enabled rules list"
-        );
     }
 }

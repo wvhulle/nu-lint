@@ -34,8 +34,8 @@ impl DetectFix for UseOverSource {
         Some("https://www.nushell.sh/book/modules/using_modules.html")
     }
 
-    fn level(&self) -> LintLevel {
-        LintLevel::Hint
+    fn level(&self) -> Option<LintLevel> {
+        Some(LintLevel::Hint)
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

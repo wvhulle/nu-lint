@@ -50,7 +50,11 @@ impl fmt::Display for LintError {
             Self::RuleConflict { rule_a, rule_b } => {
                 write!(
                     f,
-                    "conflicting rules: '{rule_a}' and '{rule_b}' cannot both be enabled"
+                    "Based on the defaults merged with any configuration file (if present), the \
+                     following two rules are both enabled and conclicting: '{rule_a}' and \
+                     '{rule_b}'. The linter will not be able to start until you make sure at most \
+                     one of both is active. Use the configuration file to override the lint \
+                     levels."
                 )
             }
         }

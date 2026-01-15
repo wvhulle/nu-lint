@@ -21,8 +21,8 @@ impl DetectFix for AvoidSelfImport {
         "Avoid importing the current script from itself; functions are already available in scope"
     }
 
-    fn level(&self) -> LintLevel {
-        LintLevel::Error
+    fn level(&self) -> Option<LintLevel> {
+        Some(LintLevel::Error)
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

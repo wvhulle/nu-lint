@@ -24,8 +24,8 @@ impl DetectFix for UseBuiltinWhich {
         Some("https://www.nushell.sh/commands/docs/which.html")
     }
 
-    fn level(&self) -> LintLevel {
-        LintLevel::Hint
+    fn level(&self) -> Option<LintLevel> {
+        Some(LintLevel::Hint)
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

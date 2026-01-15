@@ -22,9 +22,10 @@ impl DetectFix for UseBuiltinCut {
         Some("https://www.nushell.sh/commands/docs/select.html")
     }
 
-    fn level(&self) -> LintLevel {
-        LintLevel::Warning
-    }
+    fn level(&self) -> Option<LintLevel> {
+            Some(LintLevel::Warning)
+        }
+    
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         // Don't detect cut at all - select is for structured data, cut is for text processing

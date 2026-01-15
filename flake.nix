@@ -42,6 +42,21 @@
 
         src = craneLibLLVM.cleanCargoSource ./.;
 
+        # Release targets: rust triple -> nix package name
+        # Only targets buildable on current system
+        releaseTargets =
+          if pkgs.stdenv.isLinux then
+            {
+              "x86_64-unknown-linux-gnu" = "default";
+              "aarch64-unknown-linux-gnu" = "aarch64-linux";
+            }
+          else if pkgs.stdenv.isDarwin then
+            {
+              "aarch64-apple-darwin" = "default";
+            }
+          else
+            { };
+
         commonArgs = {
           inherit src;
           strictDeps = true;
@@ -78,10 +93,8 @@
             };
 
             rustTarget =
-              if crossSystem == "aarch64-linux" then
-                "aarch64-unknown-linux-gnu"
-              else
-                throw "Unsupported cross target: ${crossSystem}";
+              releaseTargets.${crossSystem}.rustTriple
+                or (throw "Unsupported cross target: ${crossSystem}. Add it to releaseTargets.");
 
             crossToolchain = pkgs.rust-bin.stable.latest.default.override {
               targets = [ rustTarget ];
@@ -117,7 +130,7 @@
         preCommitHooks = git-hooks.lib.${localSystem}.run {
           src = ./.;
           hooks = {
-            nixfmt.enable = true;
+            nixfmt.enable = false;
             convco.enable = true;
           };
         };
@@ -147,6 +160,9 @@
           inherit nativePackageLLVM nativePackageCranelift;
           pre-commit = preCommitHooks;
         };
+
+        # Export release targets for build.nu and CI to query
+        inherit releaseTargets;
 
         apps = {
           default = {

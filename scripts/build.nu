@@ -3,20 +3,50 @@
 use std/log
 
 # Build release binaries for nu-lint
-# Usage: ./build.nu [--cargo] [--cache <name>] [--targets <list>]
+# Usage: ./build.nu [--cargo] [--cache <name>] [target...]
+#
+# When using nix (default), targets are discovered from flake.nix releaseTargets.
+# When using cargo, you must specify targets manually.
 
 def main [
     --cargo  # Use cargo instead of nix build (for local development)
     --cache: string = "wvhulle"  # Cachix cache name
-    --targets: list<string> = []  # Target triples to build (empty = native only)
+    --list  # List available targets and exit
+    ...targets: string  # Target triples to build (empty = all from flake, or native for cargo)
 ]: nothing -> nothing {
+    if $list {
+        let available = get-flake-targets | columns
+        print $"Available targets for this system:"
+        $available | each {|t| print $"  ($t)" }
+        return
+    }
+
     mkdir dist
     load-dotenv
 
-    let build_targets = if ($targets | is-empty) {
-        [( get-target-triple )]
+    let build_targets = if $cargo {
+        # Cargo mode: use specified targets or native
+        if ($targets | is-empty) {
+            [( get-target-triple )]
+        } else {
+            $targets
+        }
     } else {
-        $targets
+        # Nix mode: discover targets from flake or use specified
+        let available = get-flake-targets
+        if ($targets | is-empty) {
+            $available | columns
+        } else {
+            # Validate all targets upfront
+            let invalid = $targets | where {|t| ($available | get -o $t | is-empty) }
+            if ($invalid | is-not-empty) {
+                error make {
+                    msg: $"Invalid target\(s\): ($invalid | str join ', ')"
+                    help: $"Available targets: ($available | columns | str join ', ')"
+                }
+            }
+            $targets
+        }
     }
 
     for target in $build_targets {
@@ -47,6 +77,19 @@ def --env load-dotenv []: nothing -> nothing {
         }
         | reduce --fold {} {|it, acc| $acc | merge $it }
         | load-env
+}
+
+# Query release targets from flake.nix (single source of truth)
+# Returns: { "x86_64-unknown-linux-gnu": "default", ... }
+def get-flake-targets []: nothing -> record {
+    let system = get-nix-system
+    log debug $"Querying release targets from flake for ($system)..."
+    ^nix eval $".#releaseTargets.($system)" --json | from json
+}
+
+# Get the current nix system (e.g., x86_64-linux)
+def get-nix-system []: nothing -> string {
+    ^nix eval --raw --impure --expr "builtins.currentSystem"
 }
 
 # Get Cachix token from environment (CI or local .env)
@@ -83,10 +126,10 @@ def push-to-cachix [cache: string, result_link: string]: nothing -> nothing {
     log info "Pushing to Cachix..."
     try {
         # Push the result and its runtime closure
-        let paths = nix-store --query --requisites $result_link | lines
+        let paths = ^nix-store --query --requisites $result_link | lines
         if ($paths | is-not-empty) {
             log info $"Pushing ($paths | length) paths to Cachix..."
-            cachix push $cache $paths
+            ^cachix push $cache ...$paths
             log info "Push complete"
         }
     } catch {|e|
@@ -163,16 +206,11 @@ def build-nix [cache: string, target_triple: string]: nothing -> nothing {
     enable-flakes
     setup-cachix $cache
 
-    # Map target triple to nix package attribute
-    let nix_attr = match $target_triple {
-        "x86_64-unknown-linux-gnu" => "default"
-        "aarch64-unknown-linux-gnu" => "aarch64-linux"
-        "x86_64-apple-darwin" => "default"
-        "aarch64-apple-darwin" => "default"
-        _ => {
-            log warning $"Unknown target ($target_triple), using default"
-            "default"
-        }
+    # Look up nix attribute from flake's releaseTargets
+    let targets = get-flake-targets
+    let nix_attr = $targets | get -o $target_triple
+    if ($nix_attr | is-empty) {
+        error make { msg: $"Unknown target '($target_triple)'. Available: ($targets | columns | str join ', ')" }
     }
 
     # Use unique result symlink per target to avoid conflicts

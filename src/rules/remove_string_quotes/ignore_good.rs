@@ -295,3 +295,38 @@ fn ignores_tilde_with_path() {
     let code = r#"echo "~/documents""#;
     RULE.assert_ignores(code);
 }
+
+#[test]
+fn ignores_scientific_notation() {
+    // Without quotes, 1e5 becomes a float
+    let code = r#"echo "1e5""#;
+    RULE.assert_ignores(code);
+}
+
+#[test]
+fn ignores_scientific_notation_negative() {
+    // Without quotes, 1e-5 becomes a float
+    let code = r#"echo "1e-5""#;
+    RULE.assert_ignores(code);
+}
+
+#[test]
+fn ignores_infinity() {
+    // Without quotes, inf becomes float infinity
+    let code = r#"echo "inf""#;
+    RULE.assert_ignores(code);
+}
+
+#[test]
+fn ignores_nan() {
+    // Without quotes, nan becomes float NaN
+    let code = r#"echo "nan""#;
+    RULE.assert_ignores(code);
+}
+
+#[test]
+fn ignores_iso_date() {
+    // Without quotes, 2024-01-15 becomes a datetime
+    let code = r#"echo "2024-01-15""#;
+    RULE.assert_ignores(code);
+}

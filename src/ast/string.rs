@@ -1,250 +1,115 @@
 use std::str::from_utf8;
 
+use nu_parser::parse;
 use nu_protocol::{
     Span,
-    ast::{Call, Expr, Expression},
+    ast::{Argument, Call, Expr, Expression},
+    engine::StateWorkingSet,
 };
 
-use crate::context::LintContext;
+use crate::{context::LintContext, engine::LintEngine};
 
-/// Characters that have special meaning at the start of a token in Nushell.
-/// These would cause the parser to interpret the token differently.
-const SPECIAL_START_CHARS: &[char] = &[
-    '-',  // Flag/option prefix
-    '$',  // Variable reference
-    '(',  // Subexpression/closure start
-    '[',  // List start
-    '{',  // Record/closure start
-    '`',  // Backtick string start
-    '\'', // Single quote string start
-    '"',  // Double quote string start
-    '#',  // Comment start
-];
-
-/// Characters that cannot appear in bare words (they have syntactic meaning).
+/// Characters that cannot appear in bare words.
 const BARE_WORD_FORBIDDEN: &[char] = &[
-    ' ', '\t', '\n', '\r', // Whitespace separates tokens
-    '|',  // Pipeline separator
-    ';',  // Statement separator
-    '(',  // Subexpression
-    ')',  // Subexpression end
-    '[',  // List/cell path
-    ']',  // List end
-    '{',  // Record/closure
-    '}',  // Record/closure end
-    '`',  // Backtick string delimiter
-    '\'', // Single quote delimiter
-    '"',  // Double quote delimiter
-    '#',  // Comment start - anywhere in string would make rest a comment
-];
-
-/// Reserved words that would be parsed as different types or cause errors if
-/// unquoted.
-const RESERVED_LITERALS: &[&str] = &[
-    "true", "false", "null", // Parsed as different types
-    "&&",   // Rejected by parser (suggests using ; or and)
+    ' ', '\t', '\n', '\r', '|', ';', '(', ')', '[', ']', '{', '}', '`', '\'', '"', '#',
 ];
 
 /// Checks if a string can be represented as a bare word in Nushell.
 ///
-/// A bare word is a string without quotes that Nushell interprets literally.
-/// This function returns `false` if the string can safely be a bare word,
-/// and `true` if quotes are needed.
+/// Returns `true` if quotes are needed, `false` if the string can be bare.
 pub fn bare_word_needs_quotes(content: &str) -> bool {
     if content.is_empty() {
         return true;
     }
 
-    // Check for reserved literals that would change meaning
-    if RESERVED_LITERALS.contains(&content) {
+    if content.chars().any(|ch| BARE_WORD_FORBIDDEN.contains(&ch)) {
         return true;
     }
 
-    // Check if it would be parsed as a number
-    if looks_like_number(content) {
+    if content.starts_with('-')
+        || content.starts_with('$')
+        || content.starts_with('~')
+        || content.contains('*')
+        || content.contains('?')
+    {
         return true;
     }
 
-    // Check if it looks like a range expression (e.g., "0..10", "1..2..10")
-    if looks_like_range(content) {
-        return true;
-    }
-
-    // Check first character for special meaning
-    let first_char = content.chars().next().unwrap();
-    if SPECIAL_START_CHARS.contains(&first_char) {
-        return true;
-    }
-
-    // Tilde at start expands to home directory
-    if content.starts_with('~') {
-        return true;
-    }
-
-    // Check for forbidden characters anywhere in the string
-    for ch in content.chars() {
-        if BARE_WORD_FORBIDDEN.contains(&ch) {
-            return true;
-        }
-    }
-
-    // Check for glob metacharacters - these would be interpreted as patterns
-    if contains_glob_chars(content) {
-        return true;
-    }
-
-    false
+    parses_as_non_string(content)
 }
 
-/// Checks if content contains glob metacharacters that would cause it to be
-/// interpreted as a glob pattern when unquoted.
-///
-/// In Nushell, bare words (unquoted strings) containing `*` or `?` are
-/// interpreted as glob patterns that match files. Quoted strings preserve
-/// these characters literally.
-fn contains_glob_chars(content: &str) -> bool {
-    content.contains('*') || content.contains('?')
-}
+fn parses_as_non_string(content: &str) -> bool {
+    let engine_state = LintEngine::new_state();
+    let mut working_set = StateWorkingSet::new(engine_state);
+    let _ = working_set.add_file("check".to_string(), content.as_bytes());
 
-/// Checks if content looks like a range expression.
-///
-/// Nushell range syntax: `start..end` or `start..step..end`
-/// Examples: `0..10`, `1..2..10`, `0..`
-fn looks_like_range(content: &str) -> bool {
-    // Must contain .. to be a range
-    if !content.contains("..") {
-        return false;
-    }
+    let source = format!("echo {content}");
+    let block = parse(&mut working_set, None, source.as_bytes(), false);
 
-    // Split by .. and check if parts look numeric
-    let parts: Vec<&str> = content.split("..").collect();
-
-    // Valid range forms: "a..b", "a..b..c", "a.." (unbounded)
-    if parts.len() < 2 || parts.len() > 3 {
-        return false;
-    }
-
-    // Check that non-empty parts are numeric (integers or floats)
-    parts.iter().all(|part| {
-        part.is_empty() || part.parse::<i64>().is_ok() || part.parse::<f64>().is_ok()
-    })
-}
-
-/// Checks if a glob pattern can be used as a bare (unquoted) glob.
-///
-/// This is similar to `bare_word_needs_quotes`, but allows glob metacharacters
-/// (`*` and `?`), which are expected in glob patterns. Returns `false` if the
-/// pattern can be used unquoted, `true` if it needs quotes or the `| into glob`
-/// conversion.
-pub fn bare_glob_needs_quotes(content: &str) -> bool {
-    if content.is_empty() {
+    if !working_set.parse_errors.is_empty() {
         return true;
     }
 
-    // Check for reserved literals that would change meaning
-    if RESERVED_LITERALS.contains(&content) {
-        return true;
-    }
-
-    // Check if it would be parsed as a number (but allow patterns like "2*" as
-    // globs)
-    if looks_like_number(content) {
-        return true;
-    }
-
-    // Check first character for special meaning
-    let first_char = content.chars().next().unwrap();
-    if SPECIAL_START_CHARS.contains(&first_char) {
-        return true;
-    }
-
-    // Check for forbidden characters anywhere in the string
-    for ch in content.chars() {
-        if BARE_WORD_FORBIDDEN.contains(&ch) {
-            return true;
-        }
-    }
-
-    // Unlike bare_word_needs_quotes, we DON'T check for glob chars
-    // because they're expected in glob patterns
-
-    false
-}
-
-/// Checks if content looks like a number literal (int, float, hex, binary,
-/// octal, filesize, or duration).
-fn looks_like_number(content: &str) -> bool {
-    // Integer
-    if content.parse::<i64>().is_ok() {
-        return true;
-    }
-
-    // Float (including those starting with .)
-    if content.parse::<f64>().is_ok() {
-        return true;
-    }
-
-    // Hex (0x...), binary (0b...), octal (0o...)
-    if content.starts_with("0x") || content.starts_with("0b") || content.starts_with("0o") {
-        return true;
-    }
-
-    // Filesize suffixes
-    let filesize_suffixes = [
-        "b", "kb", "mb", "gb", "tb", "pb", "kib", "mib", "gib", "tib", "pib",
-    ];
-    for suffix in filesize_suffixes {
-        if content.to_lowercase().ends_with(suffix) {
-            let prefix = &content[..content.len() - suffix.len()];
-            if prefix.parse::<f64>().is_ok() {
-                return true;
+    block
+        .pipelines
+        .first()
+        .and_then(|p| p.elements.first())
+        .map_or(true, |elem| {
+            if let Expr::Call(call) = &elem.expr.expr {
+                call.arguments.first().is_none_or(|arg| match arg {
+                    Argument::Positional(e) => !matches!(e.expr, Expr::String(_)),
+                    _ => true,
+                })
+            } else {
+                true
             }
-        }
-    }
-
-    // Duration suffixes
-    let duration_suffixes = ["ns", "us", "µs", "ms", "sec", "min", "hr", "day", "wk"];
-    for suffix in duration_suffixes {
-        if let Some(prefix) = content.strip_suffix(suffix)
-            && prefix.parse::<f64>().is_ok()
-        {
-            return true;
-        }
-    }
-
-    false
+        })
 }
 
-/// Checks if a string needs quotes when used as a cell path member (record
-/// field access).
-///
-/// Cell path members have stricter requirements than general bare words:
-/// - They appear after a dot in expressions like `$record.field`
-/// - Numeric strings would be interpreted as list indices
-/// - Spaces require quotes for proper parsing
+/// Like `bare_word_needs_quotes`, but allows glob metacharacters.
+pub fn bare_glob_needs_quotes(content: &str) -> bool {
+    if content.is_empty()
+        || content.chars().any(|ch| BARE_WORD_FORBIDDEN.contains(&ch))
+        || content.starts_with('-')
+        || content.starts_with('$')
+    {
+        return true;
+    }
+
+    let engine_state = LintEngine::new_state();
+    let mut working_set = StateWorkingSet::new(engine_state);
+    let _ = working_set.add_file("check".to_string(), content.as_bytes());
+
+    let source = format!("echo {content}");
+    let block = parse(&mut working_set, None, source.as_bytes(), false);
+
+    block
+        .pipelines
+        .first()
+        .and_then(|p| p.elements.first())
+        .map_or(true, |elem| {
+            if let Expr::Call(call) = &elem.expr.expr {
+                call.arguments.first().is_none_or(|arg| match arg {
+                    Argument::Positional(e) => {
+                        !matches!(e.expr, Expr::String(_) | Expr::GlobPattern(_, _))
+                    }
+                    _ => true,
+                })
+            } else {
+                true
+            }
+        })
+}
+
+/// Checks if a string needs quotes when used as a cell path member.
 pub fn cell_path_member_needs_quotes(content: &str) -> bool {
-    if content.is_empty() {
+    if content.is_empty() || content.parse::<i64>().is_ok() || content.contains(' ') {
         return true;
     }
 
-    // Numeric strings would be interpreted as list indices
-    if content.parse::<i64>().is_ok() {
-        return true;
-    }
-
-    // Spaces always need quotes in cell paths
-    if content.contains(' ') {
-        return true;
-    }
-
-    // Check for characters that would break cell path parsing
-    for ch in content.chars() {
-        if matches!(ch, '.' | '[' | ']' | '(' | ')' | '"' | '\'' | '`') {
-            return true;
-        }
-    }
-
-    false
+    content
+        .chars()
+        .any(|ch| matches!(ch, '.' | '[' | ']' | '(' | ')' | '"' | '\'' | '`'))
 }
 
 /// The type and content of a string in Nushell.

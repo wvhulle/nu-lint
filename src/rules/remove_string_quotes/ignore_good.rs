@@ -260,3 +260,38 @@ fn ignores_glob_pattern_asterisk_in_middle() {
     let code = r#"echo "test*file""#;
     RULE.assert_ignores(code);
 }
+
+#[test]
+fn ignores_range_expression() {
+    // Without quotes, "0..10" becomes a range type
+    let code = r#"echo "0..10""#;
+    RULE.assert_ignores(code);
+}
+
+#[test]
+fn ignores_range_expression_with_step() {
+    // Without quotes, "1..2..10" becomes a range with step
+    let code = r#"echo "1..2..10""#;
+    RULE.assert_ignores(code);
+}
+
+#[test]
+fn ignores_unbounded_range() {
+    // Without quotes, "0.." becomes an unbounded range
+    let code = r#"echo "0..""#;
+    RULE.assert_ignores(code);
+}
+
+#[test]
+fn ignores_tilde_path() {
+    // Without quotes, ~ expands to home directory
+    let code = r#"echo "~""#;
+    RULE.assert_ignores(code);
+}
+
+#[test]
+fn ignores_tilde_with_path() {
+    // Without quotes, ~/foo expands to home/foo
+    let code = r#"echo "~/documents""#;
+    RULE.assert_ignores(code);
+}

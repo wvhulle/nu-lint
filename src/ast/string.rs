@@ -65,9 +65,19 @@ pub fn bare_word_needs_quotes(content: &str) -> bool {
         return true;
     }
 
+    // Check if it looks like a range expression (e.g., "0..10", "1..2..10")
+    if looks_like_range(content) {
+        return true;
+    }
+
     // Check first character for special meaning
     let first_char = content.chars().next().unwrap();
     if SPECIAL_START_CHARS.contains(&first_char) {
+        return true;
+    }
+
+    // Tilde at start expands to home directory
+    if content.starts_with('~') {
         return true;
     }
 
@@ -94,6 +104,30 @@ pub fn bare_word_needs_quotes(content: &str) -> bool {
 /// these characters literally.
 fn contains_glob_chars(content: &str) -> bool {
     content.contains('*') || content.contains('?')
+}
+
+/// Checks if content looks like a range expression.
+///
+/// Nushell range syntax: `start..end` or `start..step..end`
+/// Examples: `0..10`, `1..2..10`, `0..`
+fn looks_like_range(content: &str) -> bool {
+    // Must contain .. to be a range
+    if !content.contains("..") {
+        return false;
+    }
+
+    // Split by .. and check if parts look numeric
+    let parts: Vec<&str> = content.split("..").collect();
+
+    // Valid range forms: "a..b", "a..b..c", "a.." (unbounded)
+    if parts.len() < 2 || parts.len() > 3 {
+        return false;
+    }
+
+    // Check that non-empty parts are numeric (integers or floats)
+    parts.iter().all(|part| {
+        part.is_empty() || part.parse::<i64>().is_ok() || part.parse::<f64>().is_ok()
+    })
 }
 
 /// Checks if a glob pattern can be used as a bare (unquoted) glob.

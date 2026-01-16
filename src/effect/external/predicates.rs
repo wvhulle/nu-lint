@@ -3,7 +3,7 @@ use nu_protocol::ast::ExternalArgument;
 use super::has_external_recursive_flag;
 use crate::{
     context::LintContext,
-    effect::{is_dangerous_path, is_unvalidated_variable, matches_long_flag, matches_short_flag},
+    effect::{is_dangerous_path, matches_long_flag, matches_short_flag},
 };
 
 pub type Predicate = fn(&LintContext<'_>, &[ExternalArgument]) -> bool;
@@ -47,7 +47,7 @@ pub fn get_subcommand<'a>(args: &[ExternalArgument], context: &'a LintContext) -
 pub fn has_dangerous_path_arg(context: &LintContext, args: &[ExternalArgument]) -> bool {
     args.iter()
         .map(|arg| extract_external_arg_text(arg, context))
-        .any(|path| is_dangerous_path(path) || is_unvalidated_variable(path))
+        .any(is_dangerous_path)
 }
 
 pub fn rm_is_dangerous(context: &LintContext, args: &[ExternalArgument]) -> bool {

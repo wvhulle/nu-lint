@@ -1,9 +1,6 @@
 use nu_protocol::ast::{Argument, Call};
 
-use crate::{
-    context::LintContext,
-    effect::{CommonEffect, is_dangerous_path, is_unvalidated_variable},
-};
+use crate::{context::LintContext, effect::CommonEffect, effect::is_dangerous_path};
 /// Things that may happen at runtime for built-in Nu commands
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BuiltinEffect {
@@ -119,7 +116,7 @@ fn rm_is_dangerous(context: &LintContext, call: &Call) -> bool {
     call.arguments
         .iter()
         .map(|arg| extract_arg_text(arg, context))
-        .any(|path| is_dangerous_path(path) || is_unvalidated_variable(path))
+        .any(is_dangerous_path)
         || has_recursive_flag(call, context)
 }
 
@@ -127,7 +124,7 @@ fn mv_cp_is_dangerous(context: &LintContext, call: &Call) -> bool {
     call.arguments
         .iter()
         .map(|arg| extract_arg_text(arg, context))
-        .any(|path| is_dangerous_path(path) || is_unvalidated_variable(path))
+        .any(is_dangerous_path)
 }
 
 fn exit_is_dangerous(context: &LintContext, call: &Call) -> bool {

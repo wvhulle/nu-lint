@@ -12,10 +12,6 @@ pub enum CommonEffect {
     Dangerous,
 }
 
-pub fn is_unvalidated_variable(path: &str) -> bool {
-    path.starts_with('$') && !path.starts_with("$in")
-}
-
 pub fn matches_short_flag(arg_text: &str, flag_char: char) -> bool {
     arg_text
         .strip_prefix('-')

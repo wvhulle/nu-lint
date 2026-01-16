@@ -11,11 +11,6 @@ fn detect_rm_rf_wildcard() {
 }
 
 #[test]
-fn detect_rm_with_unchecked_variable() {
-    RULE.assert_detects("let path = $env.HOME; rm -rf $path");
-}
-
-#[test]
 fn detect_dangerous_parent_directory() {
     RULE.assert_detects("rm -rf ../");
 }
@@ -23,15 +18,6 @@ fn detect_dangerous_parent_directory() {
 #[test]
 fn detect_mv_to_dangerous_path() {
     RULE.assert_detects("mv important_file /");
-}
-
-#[test]
-fn detect_rm_variable_without_validation() {
-    let bad_code = r"
-def cleanup [path] {
-    rm -rf $path
-}";
-    RULE.assert_detects(bad_code);
 }
 
 #[test]
@@ -86,12 +72,4 @@ fn detect_copy_move_to_system_dirs() {
     RULE.assert_detects("mv /home /tmp");
     RULE.assert_detects("cp kernel.img /boot/vmlinuz");
     RULE.assert_detects("mv myconfig /etc/config");
-}
-
-#[test]
-fn detect_variable_home_path() {
-    let bad_code = r"
-let home = '/home/user'
-rm -rf $home";
-    RULE.assert_detects(bad_code);
 }

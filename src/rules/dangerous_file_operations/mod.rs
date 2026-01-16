@@ -5,8 +5,6 @@ use nu_protocol::{
 
 use crate::{
     LintLevel,
-    ast::call::CallExt,
-    context::LintContext,
     effect::{
         CommonEffect,
         builtin::{BuiltinEffect, extract_arg_text, has_builtin_side_effect, has_recursive_flag},
@@ -19,36 +17,6 @@ use crate::{
     rule::{DetectFix, Rule},
     violation::Detection,
 };
-
-fn is_if_block_containing(expr: &Expression, command_span: Span, context: &LintContext) -> bool {
-    let Expr::Call(call) = &expr.expr else {
-        return false;
-    };
-
-    call.is_call_to_command("if", context)
-        && expr.span.start <= command_span.start
-        && expr.span.end >= command_span.end
-}
-
-fn is_inside_if_block(context: &LintContext, command_span: Span) -> bool {
-    use nu_protocol::ast::Traverse;
-
-    let mut found_in_if = Vec::new();
-
-    context.ast.flat_map(
-        context.working_set,
-        &|expr| {
-            if is_if_block_containing(expr, command_span, context) {
-                vec![()]
-            } else {
-                vec![]
-            }
-        },
-        &mut found_in_if,
-    );
-
-    !found_in_if.is_empty()
-}
 
 enum DangerousCommand<'a> {
     External {
@@ -65,7 +33,7 @@ enum DangerousCommand<'a> {
 
 fn extract_dangerous_command<'a>(
     expr: &'a Expression,
-    context: &'a LintContext,
+    context: &'a crate::context::LintContext,
 ) -> Option<DangerousCommand<'a>> {
     match &expr.expr {
         Expr::ExternalCall(head, args) => {
@@ -87,7 +55,7 @@ fn extract_dangerous_command<'a>(
             })
         }
         Expr::Call(call) => {
-            let decl_name = call.get_call_name(context);
+            let decl_name = context.working_set.get_decl(call.decl_id).name().to_string();
 
             if !has_builtin_side_effect(
                 &decl_name,
@@ -129,33 +97,11 @@ fn create_dangerous_path_violation(
     .with_primary_label(label)
 }
 
-fn create_variable_validation_violation(
-    cmd_name: &str,
-    path_str: &str,
-    command_span: Span,
-) -> Detection {
-    Detection::from_global_span(
-        format!("Variable '{path_str}' used in '{cmd_name}' command without visible validation"),
-        command_span,
-    )
-    .with_primary_label("unvalidated variable")
-}
-
-fn is_pipeline_variable(path: &str) -> bool {
-    path.starts_with("$in")
-}
-
-fn is_unvalidated_variable(path: &str, command_span: Span, context: &LintContext) -> bool {
-    path.starts_with('$')
-        && !is_pipeline_variable(path)
-        && !is_inside_if_block(context, command_span)
-}
-
 fn check_external_command(
     cmd_name: &str,
     args: &[ExternalArgument],
     command_span: Span,
-    context: &LintContext,
+    context: &crate::context::LintContext,
     violations: &mut Vec<Detection>,
 ) {
     let is_recursive = cmd_name == "rm" && has_external_recursive_flag(args, context);
@@ -171,14 +117,6 @@ fn check_external_command(
                 is_recursive,
             ));
         }
-
-        if is_unvalidated_variable(path_str, command_span, context) {
-            violations.push(create_variable_validation_violation(
-                cmd_name,
-                path_str,
-                command_span,
-            ));
-        }
     }
 }
 
@@ -186,7 +124,7 @@ fn check_builtin_command(
     cmd_name: &str,
     call: &Call,
     command_span: Span,
-    context: &LintContext,
+    context: &crate::context::LintContext,
     violations: &mut Vec<Detection>,
 ) {
     let is_recursive = cmd_name == "rm" && has_recursive_flag(call, context);
@@ -202,14 +140,6 @@ fn check_builtin_command(
                 is_recursive,
             ));
         }
-
-        if is_unvalidated_variable(path_str, command_span, context) {
-            violations.push(create_variable_validation_violation(
-                cmd_name,
-                path_str,
-                command_span,
-            ));
-        }
     }
 }
 
@@ -223,14 +153,17 @@ impl DetectFix for DangerousFileOperations {
     }
 
     fn short_description(&self) -> &'static str {
-        "Detect dangerous file operations that could cause data loss"
+        "Detect file operations on dangerous system paths that could cause data loss"
     }
 
     fn level(&self) -> Option<LintLevel> {
         Some(LintLevel::Warning)
     }
 
-    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
+    fn detect<'a>(
+        &self,
+        context: &'a crate::context::LintContext,
+    ) -> Vec<(Detection, Self::FixInput<'a>)> {
         use nu_protocol::ast::Traverse;
 
         let mut violations = Vec::new();

@@ -137,6 +137,14 @@ fn ignores_string_starting_with_hash() {
 }
 
 #[test]
+fn ignores_string_with_hash_in_middle() {
+    // Hash anywhere in string would make rest a comment if unquoted
+    // e.g., `foo#bar` without quotes → `foo` with `#bar` as comment
+    let code = r#"echo "foo#bar""#;
+    RULE.assert_ignores(code);
+}
+
+#[test]
 fn ignores_string_starting_with_paren() {
     // Opening paren starts a subexpression
     let code = r#"echo "(1 + 2)""#;

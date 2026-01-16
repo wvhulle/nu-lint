@@ -35,6 +35,7 @@ const BARE_WORD_FORBIDDEN: &[char] = &[
     '`',  // Backtick string delimiter
     '\'', // Single quote delimiter
     '"',  // Double quote delimiter
+    '#',  // Comment start - anywhere in string would make rest a comment
 ];
 
 /// Reserved words that would be parsed as different types or cause errors if

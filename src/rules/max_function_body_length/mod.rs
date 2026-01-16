@@ -20,7 +20,7 @@ fn function_violation(
 ) -> Option<Detection> {
     let block = context.working_set.get_block(def.body);
     let block_span = block.span?;
-    let line_count = context.plain_text(block_span).lines().count();
+    let line_count = context.span_text(block_span).lines().count();
     (line_count > MAX_LINES).then(|| {
         let message = format!(
             "Function `{}` has {line_count} lines, which exceeds the maximum of {MAX_LINES} lines",

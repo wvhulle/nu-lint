@@ -128,8 +128,8 @@ impl DetectFix for UseRegexOperators {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let string_text = context.plain_text(fix_data.string_span);
-        let pattern_text = context.plain_text(fix_data.pattern_span);
+        let string_text = context.span_text(fix_data.string_span);
+        let pattern_text = context.span_text(fix_data.pattern_span);
 
         let operator = if fix_data.is_negated { "!~" } else { "=~" };
         let fixed_text = format!("{string_text} {operator} {pattern_text}");

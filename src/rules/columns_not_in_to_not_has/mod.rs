@@ -100,8 +100,8 @@ impl DetectFix for ColumnsNotInToNotHas {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let key_text = context.plain_text(fix_data.key_span).trim();
-        let record_text = context.plain_text(fix_data.record_span).trim();
+        let key_text = context.span_text(fix_data.key_span).trim();
+        let record_text = context.span_text(fix_data.record_span).trim();
 
         let replacement = format!("{record_text} not-has {key_text}");
 

@@ -1,8 +1,7 @@
-use nu_protocol::ast::{Expr, Traverse};
+use nu_protocol::ast::{Expr, ExternalArgument, Traverse};
 
 use crate::{
     LintLevel,
-    ast::expression::ExpressionExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -15,6 +14,16 @@ struct HeadFixData<'a> {
 }
 
 struct UseBuiltinHead;
+
+fn is_lines_arg(a: &ExternalArgument, ctx: &LintContext) -> bool {
+    let t = ctx.expr_text(a.expr());
+    t == "--lines" || t == "-n"
+}
+
+fn is_file_arg(a: &ExternalArgument, ctx: &LintContext) -> bool {
+    let t = ctx.expr_text(a.expr());
+    t.chars().next().is_some_and(|f| f != '-')
+}
 
 impl DetectFix for UseBuiltinHead {
     type FixInput<'a> = HeadFixData<'a>;
@@ -45,8 +54,8 @@ impl DetectFix for UseBuiltinHead {
                     return vec![];
                 };
 
-                let cmd_text = context.plain_text(head.span);
-                if cmd_text != "head" {
+                let cmd_text = context.span_text(head.span);
+                if cmd_text != "head" || args.len() <= 2 {
                     return vec![];
                 }
 
@@ -56,26 +65,25 @@ impl DetectFix for UseBuiltinHead {
                     filename: None,
                 };
 
-                let mut count_it = args.iter().peekable();
-                while let Some(el) = count_it.next() {
-                    let current = context.plain_text(el.expr().span);
-                    if current == "-n"
-                        && let Some(number) = count_it.peek()
-                    {
-                        let number = number.expr().span_text(context).parse::<isize>().unwrap();
-                        fix_data.count = Some(number);
-                    }
+                let count_it = args.iter().position(|e| is_lines_arg(e, context));
+
+                if let Some(count_it) = count_it
+                    && count_it < args.len()
+                    && let Ok(count) = context
+                        .expr_text(args[count_it + 1].expr())
+                        .parse::<isize>()
+                {
+                    fix_data.count = Some(count);
                 }
 
-                let mut file_name_it = args.iter().rev().peekable();
-                while let Some(el) = file_name_it.next() {
-                    let current = context.plain_text(el.expr().span);
-                    if current != "-n"
-                        && let Some(flag) = file_name_it.peek()
-                        && flag.expr().span_text(context) != "-n"
-                    {
-                        fix_data.filename = Some(current);
-                    }
+                if let Some((_, file_arg)) = args
+                    .iter()
+                    .zip(args.iter().skip(1))
+                    .find(|(i, n)| !is_lines_arg(i, context) && is_file_arg(n, context))
+                {
+                    fix_data.filename = Some(context.expr_text(file_arg.expr()));
+                } else {
+                    return vec![];
                 }
 
                 let detection = Detection::from_global_span(

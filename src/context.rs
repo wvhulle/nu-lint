@@ -33,7 +33,7 @@ impl ExternalCmdFixData<'_> {
     pub fn arg_texts<'b>(&'b self, context: &'b LintContext<'b>) -> impl Iterator<Item = &'b str> {
         self.args.iter().map(move |expr| match &expr.expr {
             Expr::String(s) | Expr::RawString(s) => s.as_str(),
-            _ => context.plain_text(expr.span),
+            _ => context.span_text(expr.span),
         })
     }
 
@@ -123,9 +123,14 @@ impl<'a> LintContext<'a> {
 
     /// Get text for an AST span
     #[must_use]
-    pub fn plain_text(&self, span: Span) -> &str {
+    pub fn span_text(&self, span: Span) -> &str {
         from_utf8(self.working_set.get_span_contents(span))
             .expect("span contents should be valid UTF-8")
+    }
+
+    #[must_use]
+    pub fn expr_text(&self, expr: &Expression) -> &str {
+        self.span_text(expr.span)
     }
 
     /// Get source text before an AST span
@@ -362,7 +367,7 @@ impl<'a> LintContext<'a> {
                     return vec![];
                 };
 
-                let cmd_text = self.plain_text(head.span);
+                let cmd_text = self.span_text(head.span);
                 if cmd_text != external_cmd {
                     return vec![];
                 }

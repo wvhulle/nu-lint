@@ -120,7 +120,7 @@ impl DetectFix for UncheckedCellPathIndex {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let base_text = context.plain_text(fix_data.base_span);
+        let base_text = context.span_text(fix_data.base_span);
         let replacement = format!("{base_text} | get -o {}", fix_data.index_value);
 
         Some(Fix::with_explanation(

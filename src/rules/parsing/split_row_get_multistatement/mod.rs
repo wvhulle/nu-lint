@@ -376,7 +376,7 @@ Example:
             index,
         } = fix_data;
 
-        let input_text = context.plain_text(*input_span);
+        let input_text = context.span_text(*input_span);
 
         // Calculate the number of fields by counting delimiters in the input
         // This gives us the actual field count from the original split

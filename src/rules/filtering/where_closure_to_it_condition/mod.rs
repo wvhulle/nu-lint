@@ -43,7 +43,7 @@ fn extract_closure_parameter(block_id: BlockId, context: &LintContext) -> Option
 
     let var_id = param.var_id?;
     let var = context.working_set.get_variable(var_id);
-    let name = context.plain_text(var.declaration_span).to_string();
+    let name = context.span_text(var.declaration_span).to_string();
 
     Some(ClosureParameter { name, var_id })
 }
@@ -102,7 +102,7 @@ fn check_where_or_filter_call(
     }
 
     // Verify the closure has explicit pipe syntax (not a block)
-    let arg_text = context.plain_text(arg_expr.span);
+    let arg_text = context.span_text(arg_expr.span);
     if !arg_text.contains(&format!("|{}|", param.name)) {
         return None;
     }
@@ -236,10 +236,10 @@ impl DetectFix for WhereClosureToIt {
             // Add text before this variable
             if span.start > last_end {
                 let before_span = Span::new(last_end, span.start);
-                result.push_str(context.plain_text(before_span));
+                result.push_str(context.span_text(before_span));
             }
             // Add the replacement for this variable
-            let var_text = context.plain_text(*span);
+            let var_text = context.span_text(*span);
             result.push_str(&replace_param_with_it(var_text, &fix_data.param_name));
             last_end = span.end;
         }
@@ -247,12 +247,12 @@ impl DetectFix for WhereClosureToIt {
         // Add any remaining text after the last variable
         if last_end < body_span.end {
             let after_span = Span::new(last_end, body_span.end);
-            result.push_str(context.plain_text(after_span));
+            result.push_str(context.span_text(after_span));
         }
 
         // If no variables were replaced, just use the original body
         if sorted_spans.is_empty() {
-            result = context.plain_text(body_span).to_string();
+            result = context.span_text(body_span).to_string();
         }
 
         // Replace the entire closure with just the body (row condition syntax)

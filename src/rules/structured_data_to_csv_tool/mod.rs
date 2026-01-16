@@ -40,7 +40,7 @@ impl DetectFix for StructuredDataToCsvTool {
     }
 
     fn fix(&self, context: &LintContext, data_span: &Self::FixInput<'_>) -> Option<Fix> {
-        let original_text = context.plain_text(*data_span);
+        let original_text = context.span_text(*data_span);
         let new_text = format!("{original_text} | to csv");
 
         Some(Fix::with_explanation(

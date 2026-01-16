@@ -35,7 +35,7 @@ fn check_list_commas(
     if items.len() < 2 {
         return violations;
     }
-    let list_text = context.plain_text(span);
+    let list_text = context.span_text(span);
     if !list_text.trim_start().starts_with('[') {
         return violations;
     }
@@ -50,7 +50,7 @@ fn check_list_commas(
             continue;
         }
         let between_span = Span::new(current_expr.span.end, next_expr.span.start);
-        let between_text = context.plain_text(between_span);
+        let between_text = context.span_text(between_span);
         if let Some(comma_pos) = find_comma_outside_comment(between_text) {
             let comma_span = Span::new(
                 between_span.start + comma_pos,

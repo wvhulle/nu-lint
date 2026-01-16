@@ -75,7 +75,7 @@ fn extract_command_name(cmd_expr: &Expression, context: &LintContext) -> String 
     match &cmd_expr.expr {
         Expr::String(s) => s.clone(),
         Expr::GlobPattern(pattern, _) => pattern.clone(),
-        _ => context.plain_text(cmd_expr.span).to_string(),
+        _ => context.span_text(cmd_expr.span).to_string(),
     }
 }
 

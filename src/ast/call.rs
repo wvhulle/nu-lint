@@ -212,7 +212,7 @@ impl CallExt for Call {
         let var_arg = self.get_first_positional_arg()?;
 
         if let Expr::VarDecl(var_id) = &var_arg.expr {
-            let var_name = context.plain_text(var_arg.span);
+            let var_name = context.span_text(var_arg.span);
             Some((*var_id, var_name.to_string(), var_arg.span))
         } else {
             None

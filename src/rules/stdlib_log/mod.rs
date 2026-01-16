@@ -33,7 +33,7 @@ fn has_stdlib_log_import(context: &LintContext) -> bool {
 
         for arg in &call.arguments {
             if let Argument::Positional(e) = arg {
-                let text = ctx.plain_text(e.span);
+                let text = ctx.span_text(e.span);
                 if text == "std/log" || text == "std log" || text.starts_with("std/log ") {
                     found.set(true);
                 }

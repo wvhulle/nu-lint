@@ -56,7 +56,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection,
 
             let fix_data = FixData {
                 full_span: Span::new(first.expr.span.start, second.expr.span.end),
-                external_text: context.plain_text(first.expr.span).to_owned(),
+                external_text: context.span_text(first.expr.span).to_owned(),
             };
 
             Some((detection, fix_data))

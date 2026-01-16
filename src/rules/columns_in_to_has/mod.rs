@@ -20,8 +20,8 @@ mod ignore_good;
 
 struct FixData {
     full_span: Span,
-    key_span: Span,
-    record_span: Span,
+    record_key: Span,
+    record: Span,
 }
 
 fn check_in_columns(expr: &Expression, ctx: &LintContext) -> Vec<(Detection, FixData)> {
@@ -43,7 +43,7 @@ fn check_in_columns(expr: &Expression, ctx: &LintContext) -> Vec<(Detection, Fix
     };
 
     let block = ctx.working_set.get_block(block_id);
-    let Some(record_span) = block.find_columns_record_span(ctx) else {
+    let Some(record) = block.find_columns_record_span(ctx) else {
         return vec![];
     };
 
@@ -59,8 +59,8 @@ fn check_in_columns(expr: &Expression, ctx: &LintContext) -> Vec<(Detection, Fix
         detection,
         FixData {
             full_span: expr.span,
-            key_span: left.span,
-            record_span,
+            record_key: left.span,
+            record,
         },
     )]
 }
@@ -75,7 +75,7 @@ impl DetectFix for ColumnsInToHas {
     }
 
     fn short_description(&self) -> &'static str {
-        "Use 'has' operator instead of 'in ($record | columns)' for checking record key existence"
+        "Use 'has' operator instead of 'in ($record | columns)'"
     }
 
     fn long_description(&self) -> Option<&'static str> {
@@ -98,8 +98,8 @@ impl DetectFix for ColumnsInToHas {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let key_text = context.plain_text(fix_data.key_span).trim();
-        let record_text = context.plain_text(fix_data.record_span).trim();
+        let key_text = context.span_text(fix_data.record_key).trim();
+        let record_text = context.span_text(fix_data.record).trim();
 
         let replacement = format!("{record_text} has {key_text}");
 

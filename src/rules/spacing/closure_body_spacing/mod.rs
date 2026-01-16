@@ -54,7 +54,7 @@ fn check_closure(
     closure_span: Span,
     block_id: BlockId,
 ) -> Option<(Detection, Span)> {
-    let text = ctx.plain_text(closure_span);
+    let text = ctx.span_text(closure_span);
     let pipe_idx = closing_pipe_char_index(text)?;
     let (needs_after, needs_before) = check_body_spacing(text, pipe_idx);
 
@@ -124,7 +124,7 @@ impl DetectFix for ClosureBodySpacing {
     }
 
     fn fix(&self, context: &LintContext, &closure_span: &Self::FixInput<'_>) -> Option<Fix> {
-        let text = context.plain_text(closure_span);
+        let text = context.span_text(closure_span);
         let pipe_idx = closing_pipe_char_index(text)?;
 
         Some(Fix::with_explanation(

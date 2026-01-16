@@ -83,7 +83,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection,
         return vec![];
     };
 
-    let cmd_name = context.plain_text(head.span);
+    let cmd_name = context.span_text(head.span);
 
     let (message, replacement_suffix) = match redirect_type {
         DevNullRedirect::StderrOnly => (
@@ -102,7 +102,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection,
 
     let violation_span = first_element.expr.span;
 
-    let external_cmd_text = context.plain_text(first_element.expr.span);
+    let external_cmd_text = context.span_text(first_element.expr.span);
     let mut replacement_parts = vec![
         external_cmd_text.to_string(),
         replacement_suffix.to_string(),
@@ -110,7 +110,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection,
 
     for element in &pipeline.elements[1..] {
         replacement_parts.push("|".to_string());
-        replacement_parts.push(context.plain_text(element.expr.span).to_string());
+        replacement_parts.push(context.span_text(element.expr.span).to_string());
     }
 
     let replacement_text = replacement_parts.join(" ");

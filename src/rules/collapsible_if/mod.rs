@@ -106,9 +106,9 @@ impl DetectFix for CollapsibleIf {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let outer_cond = context.plain_text(fix_data.outer_condition).trim();
-        let inner_cond = context.plain_text(fix_data.inner_condition).trim();
-        let body = context.plain_text(fix_data.inner_body).trim();
+        let outer_cond = context.span_text(fix_data.outer_condition).trim();
+        let inner_cond = context.span_text(fix_data.inner_condition).trim();
+        let body = context.span_text(fix_data.inner_body).trim();
 
         let fix_text = format!("if {outer_cond} and {inner_cond} {body}");
 

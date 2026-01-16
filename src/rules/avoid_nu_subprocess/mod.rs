@@ -35,7 +35,7 @@ impl AvoidNuSubprocess {
             return vec![];
         };
 
-        let cmd_name = ctx.plain_text(head.span);
+        let cmd_name = ctx.span_text(head.span);
 
         if !Self::is_nu_with_c_flag(cmd_name, args, ctx) {
             return vec![];
@@ -59,7 +59,7 @@ impl AvoidNuSubprocess {
             let ExternalArgument::Regular(expr) = arg else {
                 return false;
             };
-            let arg_text = ctx.plain_text(expr.span);
+            let arg_text = ctx.span_text(expr.span);
             arg_text == "-c" || arg_text == "--commands"
         })
     }

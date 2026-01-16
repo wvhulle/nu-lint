@@ -53,13 +53,13 @@ impl DetectFix for AlwaysHatExtCall {
                     Detection::from_global_span(
                         format!(
                             "External command '{}' is missing '^' prefix",
-                            ctx.plain_text(head.span)
+                            ctx.span_text(head.span)
                         ),
                         expr.span,
                     )
                     .with_primary_label("missing '^' prefix"),
                     FixData {
-                        cmd: ctx.plain_text(head.span).into(),
+                        cmd: ctx.span_text(head.span).into(),
                         args: args.to_vec().into_boxed_slice(),
                         expr_span: expr.span,
                     },
@@ -75,7 +75,7 @@ impl DetectFix for AlwaysHatExtCall {
             .iter()
             .map(|arg| match arg {
                 ExternalArgument::Regular(e) | ExternalArgument::Spread(e) => {
-                    context.plain_text(e.span)
+                    context.span_text(e.span)
                 }
             })
             .collect::<Vec<_>>()

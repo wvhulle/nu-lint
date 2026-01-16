@@ -45,7 +45,7 @@ impl DetectFix for UseBuiltinTail {
                     return vec![];
                 };
 
-                let cmd_text = context.plain_text(head.span);
+                let cmd_text = context.span_text(head.span);
                 if cmd_text != "tail" {
                     return vec![];
                 }
@@ -57,7 +57,7 @@ impl DetectFix for UseBuiltinTail {
                                 ExternalArgument::Regular(expr)
                                 | ExternalArgument::Spread(expr) => expr.span,
                             };
-                            (context.plain_text(span), span)
+                            (context.span_text(span), span)
                         })
                         .collect();
 

@@ -16,7 +16,7 @@ fn check_closure_param_spacing(
     context: &LintContext,
     closure_span: Span,
 ) -> Vec<(Detection, ClosureParamSpacingFixData)> {
-    let text = context.plain_text(closure_span);
+    let text = context.span_text(closure_span);
 
     // Validate basic structure: must start with '{' and end with '}'
     let mut chars = text.chars();

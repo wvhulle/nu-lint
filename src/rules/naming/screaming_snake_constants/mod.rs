@@ -57,7 +57,7 @@ impl DetectFix for ScreamingSnakeConstants {
                 return vec![];
             };
 
-            let const_name = ctx.plain_text(var_arg.span);
+            let const_name = ctx.span_text(var_arg.span);
 
             if is_valid_screaming_snake(const_name) {
                 vec![]

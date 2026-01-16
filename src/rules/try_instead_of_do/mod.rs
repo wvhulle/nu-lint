@@ -24,7 +24,7 @@ enum ErrorSource {
 fn find_error_prone_command(expr: &Expression, context: &LintContext) -> Option<ErrorSource> {
     expr.find_map(context.working_set, &|inner_expr| match &inner_expr.expr {
         Expr::ExternalCall(head, args) => {
-            let cmd_name = context.plain_text(head.span);
+            let cmd_name = context.span_text(head.span);
             if has_external_side_effect(
                 cmd_name,
                 ExternEffect::CommonEffect(CommonEffect::LikelyErrors),

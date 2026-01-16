@@ -20,7 +20,7 @@ struct ShortFlagInfo {
 /// Checks if the span represents a short flag (starts with single dash and is
 /// short)
 fn is_short_flag_span(context: &LintContext, span: Span) -> bool {
-    let text = context.plain_text(span);
+    let text = context.span_text(span);
     // Short flags are like "-a", "-f", etc. (2-3 chars with single dash)
     // Long flags are like "--all", "--force", etc.
     text.starts_with('-') && !text.starts_with("--") && text.len() <= 3

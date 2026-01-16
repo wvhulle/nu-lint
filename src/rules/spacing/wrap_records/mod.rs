@@ -138,14 +138,14 @@ impl DetectFix for WrapWideRecords {
                     key_span,
                     value_span,
                 } => {
-                    let key_text = context.plain_text(*key_span);
-                    let value_text = context.plain_text(*value_span);
+                    let key_text = context.span_text(*key_span);
+                    let value_text = context.span_text(*value_span);
                     result.push_str(key_text);
                     result.push_str(": ");
                     result.push_str(value_text);
                 }
                 RecordFieldData::Spread { spread_span } => {
-                    let spread_text = context.plain_text(*spread_span);
+                    let spread_text = context.span_text(*spread_span);
                     result.push_str(spread_text);
                 }
             }

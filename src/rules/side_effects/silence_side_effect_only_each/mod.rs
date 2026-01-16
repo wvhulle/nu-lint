@@ -169,10 +169,10 @@ impl DetectFix for UseForOverEach {
             let list = if fix_data.list_span.is_empty() {
                 return None;
             } else {
-                context.plain_text(fix_data.list_span).trim()
+                context.span_text(fix_data.list_span).trim()
             };
 
-            let body = context.plain_text(fix_data.body_span).trim();
+            let body = context.span_text(fix_data.body_span).trim();
             let fix_text = format!("for {} in {} {{ {} }}", fix_data.param_name, list, body);
 
             Some(Fix::with_explanation(
@@ -187,7 +187,7 @@ impl DetectFix for UseForOverEach {
                     format!(
                         "each {{|{}| {} }} | ignore",
                         fix_data.param_name,
-                        context.plain_text(fix_data.body_span).trim()
+                        context.span_text(fix_data.body_span).trim()
                     ),
                 )],
             ))

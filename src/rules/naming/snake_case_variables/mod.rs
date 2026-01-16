@@ -51,7 +51,7 @@ fn check_call(call: &Call, ctx: &LintContext) -> Option<(Detection, SnakeCaseFix
         return None;
     };
 
-    let var_name = ctx.plain_text(name_expr.span);
+    let var_name = ctx.span_text(name_expr.span);
     let snake_case_name = var_name.to_snake_case();
 
     if var_name == snake_case_name {
@@ -62,7 +62,7 @@ fn check_call(call: &Call, ctx: &LintContext) -> Option<(Detection, SnakeCaseFix
     let mut replacements = vec![(name_expr.span, snake_case_name.clone())];
 
     for usage_span in find_variable_usages(*var_id, ctx) {
-        if ctx.plain_text(usage_span).starts_with('$') {
+        if ctx.span_text(usage_span).starts_with('$') {
             replacements.push((usage_span, format!("${snake_case_name}")));
         }
     }

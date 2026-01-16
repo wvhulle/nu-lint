@@ -23,7 +23,7 @@ fn detect_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<(Detect
     }
 
     let span = pipeline_span(pipeline)?;
-    let text = context.plain_text(span);
+    let text = context.span_text(span);
     let max_length = context.config.max_pipeline_length;
 
     if text.contains('\n') || text.len() <= max_length {
@@ -58,7 +58,7 @@ fn generate_multiline_pipeline(
     match placement {
         PipelinePlacement::Start => {
             for (i, span) in element_spans.iter().enumerate() {
-                let element_text = context.plain_text(*span);
+                let element_text = context.span_text(*span);
                 if i == 0 {
                     parts.push(element_text.to_string());
                 } else {
@@ -68,7 +68,7 @@ fn generate_multiline_pipeline(
         }
         PipelinePlacement::End => {
             for (i, span) in element_spans.iter().enumerate() {
-                let element_text = context.plain_text(*span);
+                let element_text = context.span_text(*span);
                 if i == element_spans.len() - 1 {
                     parts.push(element_text.to_string());
                 } else {

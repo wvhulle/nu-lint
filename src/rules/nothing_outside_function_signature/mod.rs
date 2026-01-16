@@ -52,7 +52,7 @@ To represent the absence of a value in a function body, use 'null' instead."#,
             .collect();
 
         let results = context.detect_with_fix_data(|expr, context| {
-            let expr_text = context.plain_text(expr.span).trim();
+            let expr_text = context.span_text(expr.span).trim();
 
             if expr_text != "nothing" {
                 return vec![];

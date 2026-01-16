@@ -107,7 +107,7 @@ fn closure_only_uses_fields(
         if let Expr::FullCellPath(cell_path) = &expr.expr
             && cell_path.tail.len() == 1
         {
-            let field_name = context.plain_text(cell_path.tail[0].span());
+            let field_name = context.span_text(cell_path.tail[0].span());
             log::debug!("Field access: {field_name} (expecting {field1} or {field2})");
             if field_name == field1 || field_name == field2 {
                 replacements.push(CellPathReplacement {
@@ -322,7 +322,7 @@ impl DetectFix for ItemsInsteadOfTransposeEach {
         // 2. Replace the closure parameter declaration `|row|` with `|col1, col2|`
         // Find the parameter span in the closure - it's between the first { and the
         // body
-        let closure_text = context.plain_text(closure_expr.span);
+        let closure_text = context.span_text(closure_expr.span);
 
         // Find parameter declaration span: from after `{` to before body
         // The parameter is at param.name with its span

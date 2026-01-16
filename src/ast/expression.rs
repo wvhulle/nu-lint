@@ -77,7 +77,7 @@ pub trait ExpressionExt: Traverse {
     /// Example: `(5)` returns the `5` expression
     fn unwrap_block_expr<'a>(&'a self, context: &'a LintContext) -> &'a Self;
     /// Checks if expression is a counter increment pattern.
-    /// Example: `$i = $i + 1` or `$i += 1` returns true for counter_name "i"
+    /// Example: `$i = $i + 1` or `$i += 1` returns true for `counter_name` "i"
     fn is_counter_increment(&self, counter_name: &str, context: &LintContext) -> bool;
 
     /// Traverse expression and all descendants with parent tracking.
@@ -129,7 +129,7 @@ impl ExpressionExt for Expression {
         match &self.expr {
             Expr::Var(var_id) | Expr::VarDecl(var_id) => {
                 let var = context.working_set.get_variable(*var_id);
-                Some(context.plain_text(var.declaration_span).to_string())
+                Some(context.span_text(var.declaration_span).to_string())
             }
             Expr::FullCellPath(cell_path) => cell_path.head.extract_variable_name(context),
             _ => None,
@@ -166,7 +166,7 @@ impl ExpressionExt for Expression {
     }
 
     fn span_text<'a>(&self, context: &'a LintContext) -> &'a str {
-        context.plain_text(self.span)
+        context.span_text(self.span)
     }
 
     fn extract_assigned_variable(&self) -> Option<VarId> {
@@ -597,7 +597,7 @@ impl ExpressionExt for Expression {
             return false;
         }
 
-        let is_add_one = |left: &Expression, op: &Expression, right: &Expression| -> bool {
+        let is_add_one = |left: &Self, op: &Self, right: &Self| -> bool {
             left.extract_variable_name(context).as_deref() == Some(counter_name)
                 && matches!(&op.expr, Expr::Operator(Operator::Math(Math::Add)))
                 && matches!(&right.expr, Expr::Int(1))
@@ -839,7 +839,7 @@ fn infer_expr_output_type(expr: &Expr, ty: &Type, context: &LintContext) -> Opti
                 .infer_output_type(context),
         ),
         Expr::ExternalCall(call, args) => {
-            let cmd_name = context.plain_text(call.span);
+            let cmd_name = context.span_text(call.span);
             if has_external_side_effect(cmd_name, ExternEffect::NoDataInStdout, context, args) {
                 Some(Type::Nothing)
             } else {

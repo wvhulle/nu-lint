@@ -114,7 +114,7 @@ fn check_plain_string(
         return None;
     }
 
-    let source_text = ctx.plain_text(span);
+    let source_text = ctx.span_text(span);
 
     let escapes = find_source_escapes(source_text, span.start);
 

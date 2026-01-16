@@ -52,7 +52,7 @@ impl DetectFix for SpreadListToExternal {
                         Detection::from_global_span(
                             format!(
                                 "List '{}' passed to external command without spread",
-                                ctx.plain_text(arg_expr.span)
+                                ctx.span_text(arg_expr.span)
                             ),
                             arg_expr.span,
                         )
@@ -69,7 +69,7 @@ impl DetectFix for SpreadListToExternal {
     }
 
     fn fix(&self, context: &LintContext, span: &Self::FixInput<'_>) -> Option<Fix> {
-        let var_text = context.plain_text(*span);
+        let var_text = context.span_text(*span);
         Some(Fix::with_explanation(
             "Add spread operator",
             vec![Replacement::new(*span, format!("...{var_text}"))],

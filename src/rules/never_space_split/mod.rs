@@ -36,7 +36,7 @@ fn is_single_variable_interpolation(exprs: &[Expression], context: &LintContext)
 
             match &pipeline_expr.expr {
                 Expr::Var(_) | Expr::VarDecl(_) | Expr::FullCellPath(_) => {
-                    let var_text = context.plain_text(pipeline_expr.span);
+                    let var_text = context.span_text(pipeline_expr.span);
                     Some(var_text.to_string())
                 }
                 _ => None,

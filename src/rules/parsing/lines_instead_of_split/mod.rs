@@ -16,7 +16,7 @@ pub struct FixData {
 }
 
 fn is_newline_string(expr: &Expression, context: &LintContext) -> bool {
-    let text = context.plain_text(expr.span);
+    let text = context.span_text(expr.span);
     // Only double-quoted strings interpret \n as newline in Nushell
     // Single-quoted strings are raw and treat \n literally
     matches!(text, "\"\\n\"" | "\"\\r\\n\"")

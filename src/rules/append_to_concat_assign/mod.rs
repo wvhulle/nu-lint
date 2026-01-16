@@ -45,7 +45,7 @@ fn create_violation(
     append_value_span: Span,
     ctx: &LintContext,
 ) -> Detection {
-    let var_text = ctx.plain_text(var_span);
+    let var_text = ctx.span_text(var_span);
     Detection::from_global_span(
         format!("Use ++= operator: {var_text} ++= instead of {var_text} = {var_text} | append ..."),
         var_span,
@@ -239,8 +239,8 @@ impl DetectFix for AppendToConcatAssign {
     }
 
     fn fix(&self, ctx: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let var_text = ctx.plain_text(fix_data.var_span);
-        let value_text = ctx.plain_text(fix_data.append_value_span);
+        let var_text = ctx.span_text(fix_data.var_span);
+        let value_text = ctx.span_text(fix_data.append_value_span);
 
         // If value is already a list, don't wrap it
         let wrapped_value = if fix_data.value_is_list {

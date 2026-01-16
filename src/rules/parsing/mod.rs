@@ -30,7 +30,7 @@ pub fn is_indexed_access_call(call: &Call, context: &LintContext) -> bool {
 
 pub fn extract_index_from_call(call: &Call, context: &LintContext) -> Option<usize> {
     call.get_first_positional_arg()
-        .and_then(|arg| context.plain_text(arg.span).parse().ok())
+        .and_then(|arg| context.span_text(arg.span).parse().ok())
 }
 
 pub fn extract_delimiter_from_split_call(call: &Call, context: &LintContext) -> Option<String> {

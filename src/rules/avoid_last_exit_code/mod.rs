@@ -41,7 +41,7 @@ fn find_external_command(pipeline: &Pipeline, context: &LintContext) -> Option<(
         matches!(&element.expr.expr, Expr::ExternalCall(_, _)).then(|| {
             (
                 element.expr.span,
-                context.plain_text(element.expr.span).to_string(),
+                context.span_text(element.expr.span).to_string(),
             )
         })
     })

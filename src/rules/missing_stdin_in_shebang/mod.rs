@@ -132,7 +132,7 @@ fn has_explicit_type_annotation(
     signature_span: Option<nu_protocol::Span>,
     ctx: &LintContext,
 ) -> bool {
-    signature_span.is_some_and(|span| ctx.plain_text(span).contains("->"))
+    signature_span.is_some_and(|span| ctx.span_text(span).contains("->"))
 }
 
 fn find_signature_span(call: &Call, _ctx: &LintContext) -> Option<nu_protocol::Span> {

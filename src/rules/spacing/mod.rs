@@ -24,7 +24,7 @@ use crate::context::LintContext;
 /// This is needed because Nu's AST doesn't distinguish between a block and a
 /// closure with empty pipes - both have no parameters in the signature.
 pub fn has_explicit_pipe_delimiters(context: &LintContext, span: Span) -> bool {
-    let text = context.plain_text(span);
+    let text = context.span_text(span);
     let mut chars = text.chars();
 
     if chars.next() != Some('{') {

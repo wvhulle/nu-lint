@@ -62,7 +62,7 @@ impl DetectFix for RemoveHatNotBuiltin {
                 return vec![];
             }
 
-            let cmd = ctx.span_text(head.span);
+            let cmd = ctx.expr_text(head);
             if has_builtin(cmd, ctx) {
                 return vec![];
             }
@@ -91,9 +91,7 @@ impl DetectFix for RemoveHatNotBuiltin {
             .args
             .iter()
             .map(|arg| match arg {
-                ExternalArgument::Regular(e) | ExternalArgument::Spread(e) => {
-                    context.span_text(e.span)
-                }
+                ExternalArgument::Regular(e) | ExternalArgument::Spread(e) => context.expr_text(e),
             })
             .collect::<Vec<_>>()
             .join(" ");

@@ -322,7 +322,7 @@ impl DetectFix for ItemsInsteadOfTransposeEach {
         // 2. Replace the closure parameter declaration `|row|` with `|col1, col2|`
         // Find the parameter span in the closure - it's between the first { and the
         // body
-        let closure_text = context.span_text(closure_expr.span);
+        let closure_text = context.expr_text(closure_expr);
 
         // Find parameter declaration span: from after `{` to before body
         // The parameter is at param.name with its span

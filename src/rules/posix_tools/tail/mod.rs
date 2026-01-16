@@ -45,7 +45,7 @@ impl DetectFix for UseBuiltinTail {
                     return vec![];
                 };
 
-                let cmd_text = context.span_text(head.span);
+                let cmd_text = context.expr_text(head);
                 if cmd_text != "tail" {
                     return vec![];
                 }

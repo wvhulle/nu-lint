@@ -54,7 +54,7 @@ fn extract_echo_args_span(element: &PipelineElement, context: &LintContext) -> O
             }
         }
         Expr::ExternalCall(head, args) => {
-            if context.span_text(head.span) != "echo" {
+            if context.expr_text(head) != "echo" {
                 return None;
             }
             // For external calls, get the span of arguments
@@ -75,7 +75,7 @@ fn extract_echo_args_span(element: &PipelineElement, context: &LintContext) -> O
 fn uses_echo(element: &PipelineElement, context: &LintContext) -> bool {
     match &element.expr.expr {
         Expr::Call(call) => call.is_call_to_command("echo", context),
-        Expr::ExternalCall(head, _) => context.span_text(head.span) == "echo",
+        Expr::ExternalCall(head, _) => context.expr_text(head) == "echo",
         _ => false,
     }
 }

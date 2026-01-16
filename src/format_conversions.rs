@@ -104,7 +104,7 @@ fn check_pipeline_pair<FixData>(
     };
 
     // Get command name and check if it matches
-    let cmd_name = context.span_text(head.span);
+    let cmd_name = context.expr_text(head);
     let clean_name = cmd_name.trim_start_matches('^');
 
     if !(spec.matches_command)(clean_name) {

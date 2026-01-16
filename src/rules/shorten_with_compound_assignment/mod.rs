@@ -90,7 +90,7 @@ fn detect_compound_assignment(
 
     let compound_op = get_compound_operator(*operator)?;
 
-    let var_text = ctx.span_text(left.span);
+    let var_text = ctx.expr_text(left);
     let op_symbol = get_operator_symbol(*operator);
 
     let violation = Detection::from_global_span(

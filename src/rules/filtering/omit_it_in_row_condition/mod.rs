@@ -14,7 +14,7 @@ struct ItFieldAccess {
 
 fn is_it_variable(expr: &Expression, context: &LintContext) -> bool {
     if let Expr::Var(_var_id) = &expr.expr {
-        let var_text = context.span_text(expr.span);
+        let var_text = context.expr_text(expr);
         log::debug!("Checking if var is 'it': {var_text}");
         return var_text == "$it";
     }

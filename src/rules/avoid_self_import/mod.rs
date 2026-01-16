@@ -51,7 +51,7 @@ impl AvoidSelfImport {
                 Argument::Named(_) => return false,
             };
 
-            let arg_text = ctx.span_text(arg_expr.span);
+            let arg_text = ctx.expr_text(arg_expr);
             Self::contains_current_file_reference(arg_text)
         });
 

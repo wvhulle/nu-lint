@@ -51,7 +51,7 @@ fn check_call(call: &Call, ctx: &LintContext) -> Option<(Detection, SnakeCaseFix
         return None;
     };
 
-    let var_name = ctx.span_text(name_expr.span);
+    let var_name = ctx.expr_text(name_expr);
     let snake_case_name = var_name.to_snake_case();
 
     if var_name == snake_case_name {

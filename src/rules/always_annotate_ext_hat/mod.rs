@@ -74,9 +74,7 @@ impl DetectFix for AlwaysHatExtCall {
             .args
             .iter()
             .map(|arg| match arg {
-                ExternalArgument::Regular(e) | ExternalArgument::Spread(e) => {
-                    context.span_text(e.span)
-                }
+                ExternalArgument::Regular(e) | ExternalArgument::Spread(e) => context.expr_text(e),
             })
             .collect::<Vec<_>>()
             .join(" ");

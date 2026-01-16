@@ -28,7 +28,7 @@ fn extract_compared_variable(expr: &Expression, context: &LintContext) -> Option
     }
 
     if let Expr::FullCellPath(cell_path) = &left.expr {
-        return Some(context.span_text(cell_path.head.span).to_string());
+        return Some(context.expr_text(&cell_path.head).to_string());
     }
 
     if let Some(var_name) = right.extract_variable_name(context) {
@@ -36,7 +36,7 @@ fn extract_compared_variable(expr: &Expression, context: &LintContext) -> Option
     }
 
     if let Expr::FullCellPath(cell_path) = &right.expr {
-        Some(context.span_text(cell_path.head.span).to_string())
+        Some(context.expr_text(&cell_path.head).to_string())
     } else {
         None
     }
@@ -49,9 +49,9 @@ fn extract_comparison_value(expr: &Expression, context: &LintContext) -> Option<
 
     if left.extract_variable_name(context).is_some() || matches!(&left.expr, Expr::FullCellPath(_))
     {
-        Some(context.span_text(right.span).to_string())
+        Some(context.expr_text(right).to_string())
     } else {
-        Some(context.span_text(left.span).to_string())
+        Some(context.expr_text(left).to_string())
     }
 }
 

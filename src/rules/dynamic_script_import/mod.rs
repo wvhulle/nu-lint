@@ -52,7 +52,7 @@ impl DynamicScriptImport {
         // Check if any positional argument is a dynamic expression (not a literal)
         let has_dynamic_path = call.arguments.iter().any(|arg| match arg {
             Argument::Positional(e) | Argument::Unknown(e) | Argument::Spread(e) => {
-                let argument = ctx.span_text(e.span);
+                let argument = ctx.expr_text(e);
                 log::debug!("Checking whether argument `{argument}` is dynamic.");
                 is_dynamic_expression(e)
             }

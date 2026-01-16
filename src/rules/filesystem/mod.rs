@@ -44,7 +44,7 @@ pub fn find_open_from_patterns<'a>(
             let format = from_name.strip_prefix("from ")?;
 
             let filename_arg = pair.first.get_first_positional_arg()?;
-            let filename = context.span_text(filename_arg.span);
+            let filename = context.expr_text(filename_arg);
 
             let filename_content = match &filename_arg.expr {
                 Expr::String(s) | Expr::RawString(s) | Expr::GlobPattern(s, _) => s.as_str(),

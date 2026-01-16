@@ -166,7 +166,7 @@ impl ExpressionExt for Expression {
     }
 
     fn span_text<'a>(&self, context: &'a LintContext) -> &'a str {
-        context.span_text(self.span)
+        context.expr_text(self)
     }
 
     fn extract_assigned_variable(&self) -> Option<VarId> {
@@ -839,7 +839,7 @@ fn infer_expr_output_type(expr: &Expr, ty: &Type, context: &LintContext) -> Opti
                 .infer_output_type(context),
         ),
         Expr::ExternalCall(call, args) => {
-            let cmd_name = context.span_text(call.span);
+            let cmd_name = context.expr_text(call);
             if has_external_side_effect(cmd_name, ExternEffect::NoDataInStdout, context, args) {
                 Some(Type::Nothing)
             } else {

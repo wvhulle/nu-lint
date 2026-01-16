@@ -102,7 +102,7 @@ fn check_where_or_filter_call(
     }
 
     // Verify the closure has explicit pipe syntax (not a block)
-    let arg_text = context.span_text(arg_expr.span);
+    let arg_text = context.expr_text(arg_expr);
     if !arg_text.contains(&format!("|{}|", param.name)) {
         return None;
     }

@@ -14,9 +14,7 @@ pub const fn always(_context: &LintContext, _args: &[ExternalArgument]) -> bool 
 
 pub fn extract_external_arg_text<'a>(arg: &ExternalArgument, context: &'a LintContext) -> &'a str {
     match arg {
-        ExternalArgument::Regular(expr) | ExternalArgument::Spread(expr) => {
-            context.span_text(expr.span)
-        }
+        ExternalArgument::Regular(expr) | ExternalArgument::Spread(expr) => context.expr_text(expr),
     }
 }
 

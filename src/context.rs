@@ -33,7 +33,7 @@ impl ExternalCmdFixData<'_> {
     pub fn arg_texts<'b>(&'b self, context: &'b LintContext<'b>) -> impl Iterator<Item = &'b str> {
         self.args.iter().map(move |expr| match &expr.expr {
             Expr::String(s) | Expr::RawString(s) => s.as_str(),
-            _ => context.span_text(expr.span),
+            _ => context.expr_text(expr),
         })
     }
 

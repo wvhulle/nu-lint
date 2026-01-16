@@ -41,7 +41,7 @@ fn find_external_command(pipeline: &Pipeline, context: &LintContext) -> Option<(
         matches!(&element.expr.expr, Expr::ExternalCall(_, _)).then(|| {
             (
                 element.expr.span,
-                context.span_text(element.expr.span).to_string(),
+                context.expr_text(&element.expr).to_string(),
             )
         })
     })
@@ -134,8 +134,8 @@ impl DetectFix for AvoidLastExitCode {
             "$env.LAST_EXIT_CODE is fragile because it can be overwritten by any subsequent \
              external command or shell hook before you check it. Instead, pipe the command to \
              'complete' and check the exit_code field inline: (cmd | complete).exit_code != 0. \
-             This pattern tightly couples the exit code to its specific command, making it \
-             impossible for hooks or other commands to interfere.",
+             Commands that stream output interactively that you want to watch are an exception to \
+             this rule, since you don't want to hide it behind a complete.",
         )
     }
 
@@ -144,7 +144,7 @@ impl DetectFix for AvoidLastExitCode {
     }
 
     fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Error)
+        Some(LintLevel::Warning)
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

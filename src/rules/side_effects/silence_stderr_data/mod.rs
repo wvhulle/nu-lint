@@ -57,7 +57,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<Detection> 
                 return None;
             }
 
-            let cmd_name = context.span_text(head.span);
+            let cmd_name = context.expr_text(head);
 
             if !has_external_side_effect(cmd_name, ExternEffect::WritesDataToStdErr, context, args)
             {

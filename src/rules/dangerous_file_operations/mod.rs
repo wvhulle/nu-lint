@@ -69,7 +69,7 @@ fn extract_dangerous_command<'a>(
 ) -> Option<DangerousCommand<'a>> {
     match &expr.expr {
         Expr::ExternalCall(head, args) => {
-            let cmd_name = context.span_text(head.span);
+            let cmd_name = context.expr_text(head);
 
             if !has_external_side_effect(
                 cmd_name,

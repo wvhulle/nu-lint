@@ -72,7 +72,7 @@ impl CustomCommandDef {
         let name_arg = call.get_first_positional_arg()?;
         let name = match &name_arg.expr {
             Expr::String(s) | Expr::RawString(s) => s.clone(),
-            _ => context.span_text(name_arg.span).to_string(),
+            _ => context.expr_text(name_arg).to_string(),
         };
 
         let signature_expr = call.get_positional_arg(1)?;

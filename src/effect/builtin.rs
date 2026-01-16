@@ -211,13 +211,8 @@ pub const BUILTIN_COMMAND_SIDE_EFFECTS: &[(&str, &[(BuiltinEffect, EffectWhenFla
             exit_is_dangerous,
         )],
     ),
-    (
-        "error",
-        &[(
-            BuiltinEffect::CommonEffect(CommonEffect::LikelyErrors),
-            always,
-        )],
-    ),
+    // NOTE: `error make` intentionally throws errors - it doesn't need try/catch.
+    // Removed from LikelyErrors because it's designed to fail, not accidentally failing.
     // 'to' commands rarely error at runtime - serialization usually works
     // Removed from LikelyErrors
     (

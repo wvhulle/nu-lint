@@ -131,3 +131,10 @@ fn ignore_exit_nonzero() {
 fn ignore_http_help() {
     RULE.assert_ignores("http");
 }
+
+// error make is intentionally throwing - doesn't need try/catch warning
+#[test]
+fn ignore_error_make() {
+    // error make is designed to throw errors, not accidentally failing
+    RULE.assert_ignores(r#"error make { msg: "intentional error" }"#);
+}

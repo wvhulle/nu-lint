@@ -106,11 +106,9 @@ fn detect_from_toml() {
     RULE.assert_detects(r#"$input | from toml"#);
 }
 
-// error make - by design throws catchable errors
-#[test]
-fn detect_error_make() {
-    RULE.assert_detects(r#"error make { msg: "something went wrong" }"#);
-}
+// NOTE: `error make` is intentionally not detected here.
+// It's designed to throw errors, not accidentally failing.
+// See ignore_good.rs for the test that confirms this.
 
 // ls with path argument - can fail if path doesn't exist
 #[test]

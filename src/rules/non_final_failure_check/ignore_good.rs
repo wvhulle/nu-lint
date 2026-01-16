@@ -51,3 +51,19 @@ fn complete_stor() {
     init_env_log();
     RULE.assert_ignores("stor open | query db 'select'");
 }
+
+#[test]
+fn test_external_with_ignore() {
+    init_env_log();
+    // Using `ignore` explicitly signals intentional discard of output and exit code
+    let good_code = r"^curl https://api.example.com | ignore";
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
+fn test_external_with_ignore_in_pipeline() {
+    init_env_log();
+    // External piped to ignore should not trigger warning
+    let good_code = r"^git fetch origin | ignore";
+    RULE.assert_ignores(good_code);
+}

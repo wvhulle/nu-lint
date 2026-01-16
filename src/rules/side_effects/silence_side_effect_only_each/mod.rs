@@ -145,7 +145,7 @@ impl DetectFix for UseForOverEach {
                     .unwrap_or_else(|| (Span::new(call.span().start, call.span().start), 0));
 
                 let violation = Detection::from_global_span(
-                    "Use 'for' loop or '| ignore' for side effects only",
+                    "Consider using a 'for' loop for side effects only",
                     call.span(),
                 )
                 .with_primary_label("closure returns nothing");
@@ -165,33 +165,26 @@ impl DetectFix for UseForOverEach {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        if fix_data.pipeline_elements_before_each == 1 {
-            let list = if fix_data.list_span.is_empty() {
-                return None;
-            } else {
-                context.span_text(fix_data.list_span).trim()
-            };
-
-            let body = context.span_text(fix_data.body_span).trim();
-            let fix_text = format!("for {} in {} {{ {} }}", fix_data.param_name, list, body);
-
-            Some(Fix::with_explanation(
-                "Convert each to for loop",
-                vec![Replacement::new(fix_data.replace_span, fix_text)],
-            ))
-        } else {
-            Some(Fix::with_explanation(
-                "Add ignore to suppress empty output",
-                vec![Replacement::new(
-                    fix_data.replace_span,
-                    format!(
-                        "each {{|{}| {} }} | ignore",
-                        fix_data.param_name,
-                        context.span_text(fix_data.body_span).trim()
-                    ),
-                )],
-            ))
+        // Only provide auto-fix when clean conversion to for loop is possible
+        // (single pipeline element before each). Multi-stage pipelines are more
+        // complex and require manual refactoring.
+        if fix_data.pipeline_elements_before_each != 1 {
+            return None;
         }
+
+        let list = if fix_data.list_span.is_empty() {
+            return None;
+        } else {
+            context.span_text(fix_data.list_span).trim()
+        };
+
+        let body = context.span_text(fix_data.body_span).trim();
+        let fix_text = format!("for {} in {} {{ {} }}", fix_data.param_name, list, body);
+
+        Some(Fix::with_explanation(
+            "Convert each to for loop",
+            vec![Replacement::new(fix_data.replace_span, fix_text)],
+        ))
     }
 }
 

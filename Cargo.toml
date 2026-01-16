@@ -128,3 +128,8 @@ name = "speed"
 pkg-url = "{ repo }/releases/download/v{ version }/nu-lint-{ target }.tar.gz"
 pkg-fmt = "tgz"
 bin-dir = "nu-lint"
+
+[patch.crates-io]
+# Fork with fix for macOS cross-compilation (build.rs incorrectly requires libproc on build host)
+# PR: https://github.com/andrewdavidmackenzie/libproc-rs/pull/XXX
+libproc = { git = "https://github.com/wvhulle/libproc-rs", branch = "fix-bug-macos" }

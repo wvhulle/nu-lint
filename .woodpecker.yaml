@@ -4,11 +4,13 @@
 # Local usage:
 #   nu scripts/changelog.nu
 #   nu scripts/build.nu
+#   nu scripts/build-darwin.nu (in darwin-builder container)
 #
 # Binary naming follows cargo-binstall conventions:
 #   nu-lint-<target-triple>.tar.gz
 #
 # Build targets are defined in flake.nix releaseTargets (single source of truth)
+# Darwin targets cross-compiled from Linux using osxcross
 
 when:
   - event: tag
@@ -20,7 +22,7 @@ steps:
     commands:
       - nix-shell -p git-cliff nushell git cacert --run "nu scripts/changelog.nu"
 
-  - name: build
+  - name: build-linux
     image: nixos/nix:latest
     environment:
       CACHIX_AUTH_TOKEN:
@@ -28,6 +30,11 @@ steps:
     commands:
       # Targets discovered automatically from flake.nix releaseTargets
       - nix-shell -p nushell git cacert cachix --run "nu scripts/build.nu"
+
+  - name: build-darwin
+    image: codeberg.org/wvhulle/darwin-builder:latest
+    commands:
+      - ./scripts/build-darwin.nu
 
   - name: release
     image: woodpeckerci/plugin-gitea-release
@@ -42,4 +49,5 @@ steps:
       title: ${CI_COMMIT_TAG}
     depends_on:
       - changelog
-      - build
+      - build-linux
+      - build-darwin

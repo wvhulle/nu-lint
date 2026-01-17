@@ -34,6 +34,9 @@ pub enum LintError {
     Config {
         source: de::Error,
     },
+    RuleDoesNotExist {
+        non_existing_id: String,
+    },
     RuleConflict {
         rule_a: &'static str,
         rule_b: &'static str,
@@ -46,6 +49,11 @@ impl fmt::Display for LintError {
             Self::Io { path, source } => {
                 write!(f, "failed to read '{}': {source}", path.display())
             }
+            Self::RuleDoesNotExist { non_existing_id } => write!(
+                f,
+                "Rule declared in config with id `{non_existing_id}` does not exist in this \
+                 version."
+            ),
             Self::Config { source } => write!(f, "invalid configuration: {source}"),
             Self::RuleConflict { rule_a, rule_b } => {
                 write!(
@@ -67,6 +75,7 @@ impl Error for LintError {
             Self::Io { source, .. } => Some(source),
             Self::Config { source } => Some(source),
             Self::RuleConflict { .. } => None,
+            Self::RuleDoesNotExist { non_existing_id: _ } => None,
         }
     }
 }

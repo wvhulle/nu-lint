@@ -109,6 +109,19 @@ impl Config {
     /// Returns an error if two conflicting rules are both enabled.
     pub fn validate(&self) -> Result<(), LintError> {
         log::debug!("Validating loaded configuration.");
+
+        for rule_id_in_config_file in self.rules.keys() {
+            if USED_RULES
+                .iter()
+                .find(|rule| rule.id() == rule_id_in_config_file)
+                .is_none()
+            {
+                return Err(LintError::RuleDoesNotExist {
+                    non_existing_id: rule_id_in_config_file.clone(),
+                });
+            }
+        }
+
         for rule in USED_RULES {
             if self.get_lint_level(*rule).is_none() {
                 continue;

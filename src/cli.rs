@@ -76,7 +76,12 @@ impl Cli {
         path.map_or_else(
             || {
                 find_config_file_from(Path::new(".")).map_or_else(Config::default, |path| {
-                    Config::load_from_file(&path).unwrap()
+                    Config::load_from_file(&path).unwrap_or_else(|e| {
+                        panic!(
+                            "Loading of configuration file failed. Probably bacause the format \
+                             was not as expected. Deserialization error:\n{e:#?}"
+                        )
+                    })
                 })
             },
             |path| Config::load_from_file(&path).unwrap(),

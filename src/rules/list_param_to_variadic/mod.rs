@@ -1,6 +1,8 @@
+use std::iter::once;
+
 use nu_protocol::{
-    BlockId, Span, SyntaxShape,
-    ast::{Call, Expr},
+    BlockId, DeclId, Span, SyntaxShape,
+    ast::{Argument, Call, Expr, Expression, ListItem, Traverse},
 };
 
 use crate::{
@@ -15,6 +17,103 @@ use crate::{
 struct FixData {
     signature_span: Span,
     body_block_id: BlockId,
+    decl_id: DeclId,
+    param_index: usize,
+}
+
+struct ListItemSpan {
+    span: Span,
+    is_spread: bool,
+}
+
+/// Find all call sites and return replacements for their list arguments
+fn find_call_site_replacements(
+    decl_id: DeclId,
+    param_index: usize,
+    ctx: &LintContext,
+) -> Vec<Replacement> {
+    let mut replacements = Vec::new();
+
+    ctx.ast.flat_map(
+        ctx.working_set,
+        &|expr| {
+            let Expr::Call(call) = &expr.expr else {
+                return vec![];
+            };
+            if call.decl_id != decl_id {
+                return vec![];
+            }
+
+            // Get nth positional argument (Some(expr) for regular, None for spread)
+            call.arguments
+                .iter()
+                .filter_map(|arg| match arg {
+                    Argument::Positional(e) | Argument::Unknown(e) => Some(Some(e)),
+                    Argument::Spread(_) => Some(None), // counts as positional slot but skip
+                    // transform
+                    Argument::Named(_) => None,
+                })
+                .nth(param_index)
+                .flatten()
+                .map(|e| vec![transform_arg(e, ctx)])
+                .unwrap_or_default()
+        },
+        &mut replacements,
+    );
+
+    replacements
+}
+
+/// Transform an argument expression to variadic format
+fn transform_arg(expr: &Expression, ctx: &LintContext) -> Replacement {
+    let replacement_text = extract_list_items(expr).map_or_else(
+        || format!("...{}", ctx.span_text(expr.span)),
+        |items| {
+            items
+                .iter()
+                .map(|item| {
+                    let text = ctx.span_text(item.span);
+                    if item.is_spread {
+                        format!("...{text}")
+                    } else {
+                        text.to_string()
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join(" ")
+        },
+    );
+    Replacement::new(expr.span, replacement_text)
+}
+
+/// Extract list items if expression is a list literal
+fn extract_list_items(expr: &Expression) -> Option<Vec<ListItemSpan>> {
+    let items = match &expr.expr {
+        Expr::List(items) => items,
+        Expr::FullCellPath(fcp) if fcp.tail.is_empty() => {
+            if let Expr::List(items) = &fcp.head.expr {
+                items
+            } else {
+                return None;
+            }
+        }
+        _ => return None,
+    };
+    Some(
+        items
+            .iter()
+            .map(|item| match item {
+                ListItem::Item(e) => ListItemSpan {
+                    span: e.span,
+                    is_spread: false,
+                },
+                ListItem::Spread(_, e) => ListItemSpan {
+                    span: e.span,
+                    is_spread: true,
+                },
+            })
+            .collect(),
+    )
 }
 
 fn inner_list_type(shape: &SyntaxShape) -> Option<SyntaxShape> {
@@ -26,68 +125,65 @@ fn inner_list_type(shape: &SyntaxShape) -> Option<SyntaxShape> {
     }
 }
 
-fn detect_in_def(call: &Call, ctx: &LintContext) -> Vec<(Detection, FixData)> {
-    let Some(_) = call.custom_command_def(ctx) else {
-        return vec![];
-    };
-    let Some(sig_expr) = call.get_positional_arg(1) else {
-        return vec![];
-    };
-    let Some(body_expr) = call.get_positional_arg(2) else {
-        return vec![];
-    };
+fn detect_in_def(call: &Call, ctx: &LintContext) -> Option<(Detection, FixData)> {
+    let cmd_def = call.custom_command_def(ctx)?;
+    let sig_expr = call.get_positional_arg(1)?;
     let Expr::Signature(sig) = &sig_expr.expr else {
-        return vec![];
+        return None;
     };
-    let Some(body_block_id) = body_expr.extract_block_id() else {
-        return vec![];
-    };
+    let body_block_id = call.get_positional_arg(2)?.extract_block_id()?;
+    sig.rest_positional.is_none().then_some(())?;
 
-    // Skip if already has variadic
-    if sig.rest_positional.is_some() {
-        return vec![];
-    }
-
-    // Get last positional (optional takes precedence over required)
-    let last_positional = sig
+    // Find last positional with list type (optional takes precedence over required)
+    let (param, param_index) = sig
         .optional_positional
         .last()
-        .or_else(|| sig.required_positional.last());
+        .filter(|p| inner_list_type(&p.shape).is_some())
+        .map(|p| {
+            (
+                p,
+                sig.required_positional.len() + sig.optional_positional.len() - 1,
+            )
+        })
+        .or_else(|| {
+            sig.optional_positional.is_empty().then_some(())?;
+            let p = sig
+                .required_positional
+                .last()
+                .filter(|p| inner_list_type(&p.shape).is_some())?;
+            Some((p, sig.required_positional.len() - 1))
+        })?;
 
-    let Some(param) = last_positional else {
-        return vec![];
-    };
-
-    // Must be a simple list type (not nested)
-    let Some(inner_type) = inner_list_type(&param.shape) else {
-        return vec![];
-    };
-
+    let inner_type = inner_list_type(&param.shape)?;
+    let decl_id = ctx.working_set.find_decl(cmd_def.name.as_bytes())?;
     let signature_span = sig_expr.span;
-    let param_span = signature_span.find_substring_span(&param.name, ctx);
-    let type_span = signature_span.find_substring_span(&param.shape.to_string(), ctx);
 
     let detection = Detection::from_global_span(
         format!(
             "Parameter `{}` could be variadic `...{}` for better CLI ergonomics",
             param.name, param.name
         ),
-        param_span,
+        signature_span.find_substring_span(&param.name, ctx),
     )
     .with_primary_label("last positional parameter")
-    .with_extra_label(format!("has list type `{}`", param.shape), type_span)
+    .with_extra_label(
+        format!("has list type `{}`", param.shape),
+        signature_span.find_substring_span(&param.shape.to_string(), ctx),
+    )
     .with_extra_label(
         format!("use `...{}: {inner_type}` instead", param.name),
         signature_span,
     );
 
-    vec![(
+    Some((
         detection,
         FixData {
             signature_span,
             body_block_id,
+            decl_id,
+            param_index,
         },
-    )]
+    ))
 }
 
 struct ListParamToVariadic;
@@ -123,64 +219,60 @@ impl DetectFix for ListParamToVariadic {
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context.detect_with_fix_data(|expr, ctx| match &expr.expr {
-            Expr::Call(call) => detect_in_def(call, ctx),
+            Expr::Call(call) => detect_in_def(call, ctx).into_iter().collect(),
             _ => vec![],
         })
     }
 
     fn fix(&self, ctx: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let fix_data: &FixData = fix_data;
-        let block = ctx.working_set.get_block(fix_data.body_block_id);
-        let sig = &block.signature;
+        let sig = &ctx.working_set.get_block(fix_data.body_block_id).signature;
 
-        let last_required_is_list = sig.optional_positional.is_empty()
-            && sig
-                .required_positional
-                .last()
-                .is_some_and(|p| inner_list_type(&p.shape).is_some());
-
-        let last_optional_is_list = sig
-            .optional_positional
-            .last()
-            .is_some_and(|p| inner_list_type(&p.shape).is_some());
-
-        let mut parts = Vec::new();
-
-        // Format required params (convert last one if it's the list param)
-        for (i, p) in sig.required_positional.iter().enumerate() {
-            let is_last = i == sig.required_positional.len() - 1;
-            if is_last && last_required_is_list {
+        let format_positional = |i: usize, p: &nu_protocol::PositionalArg, is_optional: bool| {
+            if i == fix_data.param_index {
                 let inner = inner_list_type(&p.shape).unwrap_or(SyntaxShape::Any);
-                parts.push(format_rest_with_shape(&p.name, &inner));
+                format_rest_with_shape(&p.name, &inner)
+            } else if is_optional {
+                format_optional(p)
             } else {
-                parts.push(format_required(p));
+                format_required(p)
             }
-        }
+        };
 
-        // Format optional params (convert last one if it's the list param)
-        for (i, p) in sig.optional_positional.iter().enumerate() {
-            let is_last = i == sig.optional_positional.len() - 1;
-            if is_last && last_optional_is_list {
-                let inner = inner_list_type(&p.shape).unwrap_or(SyntaxShape::Any);
-                parts.push(format_rest_with_shape(&p.name, &inner));
-            } else {
-                parts.push(format_optional(p));
-            }
-        }
+        let parts: Vec<_> =
+            sig.required_positional
+                .iter()
+                .enumerate()
+                .map(|(i, p)| format_positional(i, p, false))
+                .chain(
+                    sig.optional_positional.iter().enumerate().map(|(i, p)| {
+                        format_positional(sig.required_positional.len() + i, p, true)
+                    }),
+                )
+                .chain(
+                    sig.named
+                        .iter()
+                        .filter(|f| f.long != "help")
+                        .map(format_flag),
+                )
+                .collect();
 
-        // Format flags (skip auto-generated --help)
-        for f in &sig.named {
-            if f.long != "help" {
-                parts.push(format_flag(f));
-            }
-        }
+        let call_site_replacements =
+            find_call_site_replacements(fix_data.decl_id, fix_data.param_index, ctx);
 
-        let new_signature = format!("[{}]", parts.join(", "));
-
-        Some(Fix::with_explanation(
-            "Convert list parameter to variadic",
-            vec![Replacement::new(fix_data.signature_span, new_signature)],
+        let replacements: Vec<_> = once(Replacement::new(
+            fix_data.signature_span,
+            format!("[{}]", parts.join(", ")),
         ))
+        .chain(call_site_replacements.iter().cloned())
+        .collect();
+
+        let explanation = if call_site_replacements.is_empty() {
+            "Convert list parameter to variadic"
+        } else {
+            "Convert list parameter to variadic and update call sites"
+        };
+
+        Some(Fix::with_explanation(explanation, replacements))
     }
 }
 

@@ -1,16 +1,16 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
 
-id: long-descriptions
+id: short-descriptions
 message: Short rule descriptions should not be too long. Move longer explanations to the long description.
 severity: warning # error, warning, info, hint
 language: Rust
 rule:
-    kind: string_literal
-    inside:
-        stopBy:
-          kind: function_item
-        pattern: fn short_description
-    has:
-      kind: string_content
-      not:
-            regex: ^.{30,70}$
+  kind: string_literal
+  inside:
+    stopBy:
+      kind: function_item
+    pattern: fn short_description
+  has:
+    kind: string_content
+    not:
+      regex: ^.{30,70}$

@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
+
+id: long-description-to-short
+message: When including a long description, use at least a few sentences. For short descriptions you can use the short_description.
+severity: warning # error, warning, info, hint
+language: rust
+rule:
+  kind: string_literal
+  inside:
+    kind: function_item
+    stopBy: end
+    has:
+      kind: identifier
+      regex: "^long_description$"
+  not:
+    any:
+      # Has a line with 81+ characters
+      - has:
+          kind: string_content
+          regex: ".{81}"
+      # Has line continuations (multiline string)
+      - has:
+          kind: escape_sequence

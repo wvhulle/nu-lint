@@ -1,20 +1,19 @@
-
 # yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
 
-id: description
+id: vague-description
 message: Rule descriptions should straightforward. Do not use vague or imprecise words.
 
 severity: warning # error, warning, info, hint
 language: Rust
 rule:
-    kind: string_literal
-    inside:
-        stopBy:
-          kind: function_item
-        any:
-          - pattern: fn short_description
-          - pattern: fn long_description
-    has:
-      kind: string_content
-      any:
-        - regex: (?i).*prefer.*
+  kind: string_literal
+  inside:
+    stopBy:
+      kind: function_item
+    any:
+      - pattern: fn short_description
+      - pattern: fn long_description
+  has:
+    kind: string_content
+    any:
+      - regex: (?i).*prefer.*

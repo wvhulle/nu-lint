@@ -92,10 +92,10 @@ fn check_parse_regex(expr: &Expr, ctx: &LintContext) -> Option<(Detection, FixDa
     let simplified = can_simplify_regex_pattern(&pattern)?;
 
     let violation = Detection::from_global_span(
-        "Complex 'parse --regex' can be simplified to 'parse' with pattern syntax",
+        "Simplify 'parse --regex' to 'parse' with pattern syntax",
         call.span(),
     )
-    .with_primary_label("complex regex pattern");
+    .with_primary_label("regex not needed for simple delimiters");
 
     Some((
         violation,
@@ -116,7 +116,15 @@ impl DetectFix for SimplifyRegexRule {
     }
 
     fn short_description(&self) -> &'static str {
-        "You can rewrite 'parse --regex' for simple delimiters using simpler capture group syntax."
+        "Simplify 'parse --regex' to 'parse' with pattern syntax"
+    }
+
+    fn long_description(&self) -> Option<&'static str> {
+        Some(
+            "When a 'parse --regex' pattern only uses simple capture groups like '(?P<name>.*)' \
+             separated by literal delimiters, it can be rewritten using the simpler '{name}' \
+             pattern syntax without the --regex flag.",
+        )
     }
 
     fn source_link(&self) -> Option<&'static str> {

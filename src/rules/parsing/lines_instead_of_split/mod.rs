@@ -32,7 +32,14 @@ impl DetectFix for LinesInsteadOfSplit {
     }
 
     fn short_description(&self) -> &'static str {
-        r#"Use 'lines' instead of 'split row "\n"' for better performance and clarity"#
+        "Use 'lines' command for splitting by newlines"
+    }
+
+    fn long_description(&self) -> Option<&'static str> {
+        Some(
+            "The 'lines' command is optimized for splitting text by newlines and handles both \
+             Unix (\\n) and Windows (\\r\\n) line endings automatically.",
+        )
     }
 
     fn source_link(&self) -> Option<&'static str> {
@@ -62,10 +69,10 @@ impl DetectFix for LinesInsteadOfSplit {
             }
 
             let detected = Detection::from_global_span(
-                "Use 'lines' instead of 'split row \"\\n\"' for splitting by newlines",
+                "Use 'lines' command for splitting by newlines",
                 expr.span,
             )
-            .with_primary_label("inefficient newline split");
+            .with_primary_label("use dedicated 'lines' command");
 
             let fix_data = FixData {
                 replace_span: expr.span,

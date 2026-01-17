@@ -265,10 +265,12 @@ fn create_violation(match_info: &MatchInfo, _context: &LintContext) -> (Detectio
         .expect("create_violation should only be called when delimiter is available");
 
     let violation = Detection::from_global_span(
-        "Use 'parse' instead of storing 'split row' result in a variable for indexed access",
+        "Extract field directly with 'parse' instead of storing split result",
         full_span,
     )
-    .with_primary_label("split row stored in variable, then accessed by index");
+    .with_primary_label("intermediate variable can be eliminated")
+    .with_extra_label("split stored here", match_info.split_info.split_span)
+    .with_extra_label("accessed by index here", match_info.access_span);
 
     let fix_data = WithDelimiter {
         full_span,
@@ -317,32 +319,19 @@ impl DetectFix for SplitRowGetMultistatement {
     }
 
     fn short_description(&self) -> &'static str {
-        "Replace the pattern where 'split row' is assigned to a variable and later accessed by \
-         index with 'parse' for structured text extraction"
-    }
-
-    fn source_link(&self) -> Option<&'static str> {
-        Some("https://www.nushell.sh/commands/docs/parse.html")
+        "Extract field directly with 'parse' instead of storing split result"
     }
 
     fn long_description(&self) -> Option<&'static str> {
         Some(
-            r#"Storing 'split row' results in a variable and then accessing by index is problematic:
-- The variable name doesn't indicate what fields are available
-- Accessing by index requires counting positions manually
-- The relationship between the split and access is hidden across statements
-- Maintenance is harder when field positions change
-
-Instead, use 'parse' directly for structured text extraction.
-
-The 'parse' command creates records with named fields that you can access by name
-instead of by index. The parsing and field extraction happen in one clear operation.
-
-Example:
-  Before: let parts = ("a:b:c" | split row ":")
-          $parts | get 0
-  After:  "a:b:c" | parse "{first}:{second}:{third}" | get first"#,
+            "Storing 'split row' in a variable and later accessing by index spreads related \
+             logic across statements. Use 'parse' to extract fields directly with named access \
+             in a single expression.",
         )
+    }
+
+    fn source_link(&self) -> Option<&'static str> {
+        Some("https://www.nushell.sh/commands/docs/parse.html")
     }
 
     fn level(&self) -> Option<LintLevel> {

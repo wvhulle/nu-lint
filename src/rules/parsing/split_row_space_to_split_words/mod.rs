@@ -6,7 +6,7 @@ use nu_protocol::{
 use super::{extract_delimiter_from_split_call, is_split_row_call};
 use crate::{
     Fix, LintLevel, Replacement,
-    ast::{block::BlockExt, call::CallExt, pipeline::PipelineExt, regex::escape_regex},
+    ast::{block::BlockExt, call::CallExt, pipeline::PipelineExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
@@ -19,7 +19,6 @@ enum AccessType {
 
 struct FixData {
     span: Span,
-    delimiter: String,
     access_type: AccessType,
 }
 
@@ -54,27 +53,28 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection,
 
             let delimiter = extract_delimiter_from_split_call(pair.first, context)?;
 
-            let (message, label) = match access_type {
-                AccessType::First => (
-                    "Use 'parse' instead of 'split row | first'",
-                    "split + first pattern",
-                ),
-                AccessType::Last => (
-                    "Use 'parse' instead of 'split row | last'",
-                    "split + last pattern",
-                ),
+            // Only handle space delimiter
+            if delimiter != " " {
+                return None;
+            }
+
+            let accessor = match access_type {
+                AccessType::First => "first",
+                AccessType::Last => "last",
             };
 
-            let violation = Detection::from_global_span(message, pair.span)
-                .with_primary_label(label)
-                .with_extra_label("split row call", pair.first.span())
-                .with_extra_label("access call", pair.second.span());
+            let violation = Detection::from_global_span(
+                format!("Use 'split words | {accessor}' for whitespace splitting"),
+                pair.span,
+            )
+            .with_primary_label("can be simplified")
+            .with_extra_label("splits on space character", pair.first.span())
+            .with_extra_label(format!("takes {accessor} element"), pair.second.span());
 
             Some((
                 violation,
                 FixData {
                     span: pair.span,
-                    delimiter,
                     access_type,
                 },
             ))
@@ -82,33 +82,36 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection,
         .collect()
 }
 
-fn generate_replacement(delimiter: &str, access_type: &AccessType) -> String {
-    let escaped = escape_regex(delimiter);
+const fn generate_replacement(access_type: &AccessType) -> &'static str {
     match access_type {
-        AccessType::First => {
-            format!("parse --regex '(?P<first>[^{escaped}]*).*' | get first")
-        }
-        AccessType::Last => {
-            format!("parse --regex '.*{escaped}(?P<last>.*)' | get last")
-        }
+        AccessType::First => "split words | first",
+        AccessType::Last => "split words | last",
     }
 }
 
-struct SplitFirstLastRule;
+struct SplitRowSpaceToSplitWords;
 
-impl DetectFix for SplitFirstLastRule {
+impl DetectFix for SplitRowSpaceToSplitWords {
     type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
-        "split_row_first_last"
+        "split_row_space_to_split_words"
     }
 
     fn short_description(&self) -> &'static str {
-        "Use 'parse' instead of 'split row | first' or 'split row | last'"
+        "Use 'split words' for whitespace splitting"
+    }
+
+    fn long_description(&self) -> Option<&'static str> {
+        Some(
+            "The command 'split words' is optimized for splitting on whitespace. It handles \
+             multiple spaces and different whitespace characters better than 'split row \" \"', \
+             which only splits on single space characters.",
+        )
     }
 
     fn source_link(&self) -> Option<&'static str> {
-        Some("https://www.nushell.sh/commands/docs/parse.html")
+        Some("https://www.nushell.sh/commands/docs/split_words.html")
     }
 
     fn level(&self) -> Option<LintLevel> {
@@ -120,15 +123,15 @@ impl DetectFix for SplitFirstLastRule {
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let replacement = generate_replacement(&fix_data.delimiter, &fix_data.access_type);
+        let replacement = generate_replacement(&fix_data.access_type);
         Some(Fix::with_explanation(
             format!("Replace with '{replacement}'"),
-            vec![Replacement::new(fix_data.span, replacement)],
+            vec![Replacement::new(fix_data.span, replacement.to_string())],
         ))
     }
 }
 
-pub static RULE: &dyn Rule = &SplitFirstLastRule;
+pub static RULE: &dyn Rule = &SplitRowSpaceToSplitWords;
 
 #[cfg(test)]
 mod detect_bad;

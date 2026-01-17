@@ -83,8 +83,9 @@ const PARSING: Group = Group {
         super::parsing::lines_each_to_parse::RULE,
         super::parsing::simplify_regex::RULE,
         super::parsing::split_row_get_multistatement::RULE,
-        super::parsing::split_row_first_last::RULE,
+        super::parsing::split_first_to_parse::RULE,
         super::parsing::split_row_get_inline::RULE,
+        super::parsing::split_row_space_to_split_words::RULE,
     ],
 };
 

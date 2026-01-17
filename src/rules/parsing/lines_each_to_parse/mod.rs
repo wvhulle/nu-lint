@@ -121,12 +121,13 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection,
                 extract_parse_from_closure(closure_block, param_id, context)?;
 
             let violation = Detection::from_global_span(
-                "Simplify 'lines | each { parse }' to 'lines | parse'",
+                "Remove redundant 'each' wrapper around 'parse'",
                 pair.span,
             )
-            .with_primary_label("redundant each with parse")
+            .with_primary_label("can be simplified")
+            .with_extra_label("lines command", pair.first.span())
             .with_extra_label(
-                "each closure can be removed",
+                "each closure just calls parse",
                 Span::new(pair.second.head.start, pair.second.span().end),
             );
 
@@ -152,7 +153,14 @@ impl DetectFix for LinesEachParseRule {
     }
 
     fn short_description(&self) -> &'static str {
-        "Simplify 'lines | each { parse }' to 'lines | parse'"
+        "Remove redundant 'each' wrapper around 'parse'"
+    }
+
+    fn long_description(&self) -> Option<&'static str> {
+        Some(
+            "The 'parse' command already operates on each line when used after 'lines'. Wrapping \
+             it in 'each { |l| $l | parse ... }' is redundant. Use 'lines | parse ...' directly.",
+        )
     }
 
     fn source_link(&self) -> Option<&'static str> {

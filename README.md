@@ -41,12 +41,12 @@ nu-lint --help
 All rules are optional and can be disabled with a configuration file. The rule definitions are compatible with:
 
 - The official Nu parser [nu-parser](https://crates.io/crates/nu-parser).
-- The TreeSitter-based Nu formatter [topiary-nushell](https://github.com/blindFS/topiary-nushell).
+- The Tree-sitter-based Nu formatter [topiary-nushell](https://github.com/blindFS/topiary-nushell).
 - The official Nu [style guide](https://www.nushell.sh/book/style_guide.html)
 
 Some of the rules need further testing and improvement. Please make an issue on the issue tracker to report any bugs. In early stages of development some rules may be replaced or renamed.
 
-+120 rules are defined and most have automatic fixes available (list may be out-of-date):
++140 rules are defined and most have automatic fixes available (list may be out-of-date):
 
 <!-- start-rule-groups -->
 `idioms` - Simplifications unique to the Nu language.
@@ -76,8 +76,9 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `lines_each_to_parse` (auto-fix)
 - `simplify_regex_parse` (auto-fix)
 - `split_row_get_multistatement` (auto-fix)
-- `split_row_first_last` (auto-fix)
+- `split_first_to_parse` (auto-fix)
 - `split_row_get_inline` (auto-fix)
+- `split_row_space_to_split_words` (auto-fix)
 
 `filesystem` - Simplify file and path operations.
 
@@ -90,6 +91,8 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `avoid_self_import`
 - `unnecessary_accumulate`
 - `unnecessary_variable_before_return` (auto-fix)
+- `do_not_compare_booleans` (auto-fix)
+- `if_null_to_default` (auto-fix)
 - `redundant_ignore` (auto-fix)
 - `unnecessary_mut` (auto-fix)
 - `unused_helper_functions` (auto-fix)
@@ -253,7 +256,9 @@ Some of the rules need further testing and improvement. Please make an issue on 
 
 ## Installation
 
-From crates.io:
+### Recommended
+
+The type installation that will always work on your system. From crates.io:
 
 ```bash
 cargo install nu-lint
@@ -269,11 +274,15 @@ cargo install --path .
 
 ### Nix
 
-Run without installing (using flakes):
+Run without installing permanently (using flakes):
 
 ```bash
 nix run git+https://codeberg.org/wvhulle/nu-lint
 ```
+
+### Pre-Compiled Pinaries
+
+Download the appropriate binary from the releases subpage.
 
 ## Editor extension
 

@@ -12,9 +12,10 @@ use crate::{
 pub mod lines_each_to_parse;
 pub mod lines_instead_of_split;
 pub mod simplify_regex;
-pub mod split_row_first_last;
+pub mod split_first_to_parse;
 pub mod split_row_get_inline;
 pub mod split_row_get_multistatement;
+pub mod split_row_space_to_split_words;
 
 pub fn is_split_row_call(call: &Call, context: &LintContext) -> bool {
     call.is_call_to_command("split row", context)

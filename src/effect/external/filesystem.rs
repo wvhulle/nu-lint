@@ -86,10 +86,6 @@ pub const COMMANDS: &[CommandEffects] = &[
     (
         "touch",
         &[
-            (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-                always,
-            ),
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::NoDataInStdout, always),
         ],
@@ -255,22 +251,24 @@ pub const COMMANDS: &[CommandEffects] = &[
             ),
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
-            (ExternEffect::StreamingOutput, always),
-        ],
-    ),
-    (
-        "tee",
-        &[
-            (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-                always,
-            ),
-            (ExternEffect::ModifiesFileSystem, always),
+            (ExternEffect::SlowStreamingOutput, always),
         ],
     ),
     // Modern alternatives
-    ("exa", &[]),
-    ("eza", &[]),
+    (
+        "exa",
+        &[(
+            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            always,
+        )],
+    ),
+    (
+        "eza",
+        &[(
+            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            always,
+        )],
+    ),
     (
         "duf",
         &[(
@@ -288,11 +286,8 @@ pub const COMMANDS: &[CommandEffects] = &[
     (
         "ncdu",
         &[
-            (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-                always,
-            ),
             (ExternEffect::NoDataInStdout, always),
+            (ExternEffect::SlowStreamingOutput, always),
         ],
     ),
 ];

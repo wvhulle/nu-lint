@@ -24,7 +24,6 @@ fn git_likely_errors(context: &LintContext, args: &[ExternalArgument]) -> bool {
             | "add"
             | "rm"
             | "mv"
-            | "stash"
             | "restore"
             | "revert"
             | "remote"
@@ -63,8 +62,8 @@ fn git_modifies_filesystem(context: &LintContext, args: &[ExternalArgument]) -> 
     let subcommand = get_subcommand(args, context);
     match subcommand {
         "clone" | "pull" | "checkout" | "switch" | "reset" | "clean" | "merge" | "rebase"
-        | "cherry-pick" | "apply" | "stash" | "restore" | "revert" | "commit" | "add" | "rm"
-        | "mv" | "worktree" | "submodule" => true,
+        | "cherry-pick" | "apply" | "stash" | "restore" | "revert" | "commit" | "rm" | "mv"
+        | "worktree" | "submodule" => true,
         "config" => {
             let second_arg = args
                 .get(1)
@@ -80,12 +79,12 @@ fn git_modifies_filesystem(context: &LintContext, args: &[ExternalArgument]) -> 
 
 fn git_has_streaming_output(context: &LintContext, args: &[ExternalArgument]) -> bool {
     let subcommand = get_subcommand(args, context);
-    matches!(subcommand, "clone" | "pull" | "push" | "fetch" | "gc")
+    matches!(subcommand, "clone" | "pull" | "push" | "fetch")
 }
 
 fn git_modifies_network(context: &LintContext, args: &[ExternalArgument]) -> bool {
     let subcommand = get_subcommand(args, context);
-    matches!(subcommand, "clone" | "pull" | "push" | "fetch" | "remote")
+    matches!(subcommand, "push")
 }
 
 pub const COMMANDS: &[CommandEffects] = &[
@@ -102,7 +101,7 @@ pub const COMMANDS: &[CommandEffects] = &[
                 ExternEffect::CommonEffect(CommonEffect::Dangerous),
                 git_is_dangerous,
             ),
-            (ExternEffect::StreamingOutput, git_has_streaming_output),
+            (ExternEffect::SlowStreamingOutput, git_has_streaming_output),
         ],
     ),
     // Git-related tools
@@ -135,7 +134,7 @@ pub const COMMANDS: &[CommandEffects] = &[
             ),
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::StreamingOutput, always),
+            (ExternEffect::SlowStreamingOutput, always),
         ],
     ),
 ];

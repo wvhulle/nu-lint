@@ -30,7 +30,7 @@ pub enum ExternEffect {
     /// This command performs network I/O operations
     ModifiesNetworkState,
     /// Output is useful to see in real-time (progress bars, build output, etc.)
-    StreamingOutput,
+    SlowStreamingOutput,
 }
 
 pub type CommandEffects = (

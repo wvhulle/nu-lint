@@ -8,45 +8,20 @@ use crate::{context::LintContext, effect::CommonEffect};
 
 fn cargo_has_streaming_output(context: &LintContext, args: &[ExternalArgument]) -> bool {
     let subcommand = get_subcommand(args, context);
-    matches!(
-        subcommand,
-        "build"
-            | "test"
-            | "run"
-            | "check"
-            | "clippy"
-            | "doc"
-            | "install"
-            | "publish"
-            | "bench"
-            | "fmt"
-    )
+    matches!(subcommand, "build" | "test" | "run" | "install" | "bench")
 }
 
 fn cargo_modifies_fs(context: &LintContext, args: &[ExternalArgument]) -> bool {
     let subcommand = get_subcommand(args, context);
     matches!(
         subcommand,
-        "build"
-            | "install"
-            | "publish"
-            | "new"
-            | "init"
-            | "add"
-            | "remove"
-            | "update"
-            | "clean"
-            | "doc"
-            | "fmt"
+        "build" | "install" | "new" | "init" | "add" | "remove" | "update" | "clean" | "fmt"
     )
 }
 
 fn cargo_modifies_network(context: &LintContext, args: &[ExternalArgument]) -> bool {
     let subcommand = get_subcommand(args, context);
-    matches!(
-        subcommand,
-        "build" | "install" | "publish" | "update" | "fetch" | "search"
-    )
+    matches!(subcommand, "publish")
 }
 
 pub const COMMANDS: &[CommandEffects] = &[
@@ -60,7 +35,10 @@ pub const COMMANDS: &[CommandEffects] = &[
             ),
             (ExternEffect::ModifiesFileSystem, cargo_modifies_fs),
             (ExternEffect::ModifiesNetworkState, cargo_modifies_network),
-            (ExternEffect::StreamingOutput, cargo_has_streaming_output),
+            (
+                ExternEffect::SlowStreamingOutput,
+                cargo_has_streaming_output,
+            ),
         ],
     ),
     (
@@ -71,7 +49,7 @@ pub const COMMANDS: &[CommandEffects] = &[
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
-            (ExternEffect::StreamingOutput, always),
+            (ExternEffect::SlowStreamingOutput, always),
         ],
     ),
     (
@@ -82,8 +60,8 @@ pub const COMMANDS: &[CommandEffects] = &[
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
-            (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::StreamingOutput, always),
+            // (ExternEffect::ModifiesNetworkState, always),
+            (ExternEffect::SlowStreamingOutput, always),
         ],
     ),
     (
@@ -105,7 +83,7 @@ pub const COMMANDS: &[CommandEffects] = &[
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
-            (ExternEffect::StreamingOutput, always),
+            (ExternEffect::SlowStreamingOutput, always),
         ],
     ),
     (
@@ -116,7 +94,7 @@ pub const COMMANDS: &[CommandEffects] = &[
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
-            (ExternEffect::StreamingOutput, always),
+            (ExternEffect::SlowStreamingOutput, always),
         ],
     ),
     (
@@ -127,7 +105,7 @@ pub const COMMANDS: &[CommandEffects] = &[
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
-            (ExternEffect::StreamingOutput, always),
+            (ExternEffect::SlowStreamingOutput, always),
         ],
     ),
     (
@@ -138,7 +116,7 @@ pub const COMMANDS: &[CommandEffects] = &[
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
-            (ExternEffect::StreamingOutput, always),
+            (ExternEffect::SlowStreamingOutput, always),
         ],
     ),
     (
@@ -191,7 +169,7 @@ pub const COMMANDS: &[CommandEffects] = &[
             ),
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::StreamingOutput, always),
+            (ExternEffect::SlowStreamingOutput, always),
         ],
     ),
     // Java/JVM
@@ -221,7 +199,7 @@ pub const COMMANDS: &[CommandEffects] = &[
             ),
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::StreamingOutput, always),
+            (ExternEffect::SlowStreamingOutput, always),
         ],
     ),
     (
@@ -233,7 +211,7 @@ pub const COMMANDS: &[CommandEffects] = &[
             ),
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::StreamingOutput, always),
+            (ExternEffect::SlowStreamingOutput, always),
         ],
     ),
     (
@@ -245,7 +223,7 @@ pub const COMMANDS: &[CommandEffects] = &[
             ),
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::StreamingOutput, always),
+            (ExternEffect::SlowStreamingOutput, always),
         ],
     ),
     // .NET
@@ -258,7 +236,7 @@ pub const COMMANDS: &[CommandEffects] = &[
             ),
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::StreamingOutput, always),
+            (ExternEffect::SlowStreamingOutput, always),
         ],
     ),
     // Media processing
@@ -271,7 +249,7 @@ pub const COMMANDS: &[CommandEffects] = &[
             ),
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::WritesDataToStdErr, always),
-            (ExternEffect::StreamingOutput, always),
+            (ExternEffect::SlowStreamingOutput, always),
         ],
     ),
     (

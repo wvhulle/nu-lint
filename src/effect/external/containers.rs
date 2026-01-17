@@ -82,7 +82,10 @@ pub const COMMANDS: &[CommandEffects] = &[
             ),
             (ExternEffect::ModifiesFileSystem, docker_modifies_fs),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::StreamingOutput, docker_has_streaming_output),
+            (
+                ExternEffect::SlowStreamingOutput,
+                docker_has_streaming_output,
+            ),
             (
                 ExternEffect::CommonEffect(CommonEffect::Dangerous),
                 docker_is_dangerous,
@@ -98,7 +101,10 @@ pub const COMMANDS: &[CommandEffects] = &[
             ),
             (ExternEffect::ModifiesFileSystem, docker_modifies_fs),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::StreamingOutput, docker_has_streaming_output),
+            (
+                ExternEffect::SlowStreamingOutput,
+                docker_has_streaming_output,
+            ),
             (
                 ExternEffect::CommonEffect(CommonEffect::Dangerous),
                 docker_is_dangerous,
@@ -114,7 +120,7 @@ pub const COMMANDS: &[CommandEffects] = &[
             ),
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::StreamingOutput, always),
+            (ExternEffect::SlowStreamingOutput, always),
         ],
     ),
     (
@@ -139,7 +145,7 @@ pub const COMMANDS: &[CommandEffects] = &[
                 always,
             ),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::StreamingOutput, always),
+            (ExternEffect::SlowStreamingOutput, always),
         ],
     ),
     (
@@ -151,7 +157,7 @@ pub const COMMANDS: &[CommandEffects] = &[
             ),
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::StreamingOutput, always),
+            (ExternEffect::SlowStreamingOutput, always),
         ],
     ),
     (
@@ -174,7 +180,7 @@ pub const COMMANDS: &[CommandEffects] = &[
             ),
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::StreamingOutput, always),
+            (ExternEffect::SlowStreamingOutput, always),
         ],
     ),
     // Infrastructure as Code
@@ -187,7 +193,7 @@ pub const COMMANDS: &[CommandEffects] = &[
             ),
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::StreamingOutput, always),
+            (ExternEffect::SlowStreamingOutput, always),
             (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
         ],
     ),
@@ -200,7 +206,7 @@ pub const COMMANDS: &[CommandEffects] = &[
             ),
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::StreamingOutput, always),
+            (ExternEffect::SlowStreamingOutput, always),
             (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
         ],
     ),
@@ -213,7 +219,7 @@ pub const COMMANDS: &[CommandEffects] = &[
             ),
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::StreamingOutput, always),
+            (ExternEffect::SlowStreamingOutput, always),
         ],
     ),
     (
@@ -225,7 +231,7 @@ pub const COMMANDS: &[CommandEffects] = &[
             ),
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::StreamingOutput, always),
+            (ExternEffect::SlowStreamingOutput, always),
         ],
     ),
     (
@@ -237,7 +243,7 @@ pub const COMMANDS: &[CommandEffects] = &[
             ),
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::StreamingOutput, always),
+            (ExternEffect::SlowStreamingOutput, always),
         ],
     ),
 ];

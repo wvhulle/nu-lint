@@ -10,15 +10,7 @@ fn systemctl_is_dangerous(context: &LintContext, args: &[ExternalArgument]) -> b
     let subcommand = get_subcommand(args, context);
     matches!(
         subcommand,
-        "stop"
-            | "disable"
-            | "mask"
-            | "kill"
-            | "reset-failed"
-            | "daemon-reload"
-            | "reboot"
-            | "poweroff"
-            | "halt"
+        "stop" | "disable" | "mask" | "kill" | "reboot" | "poweroff" | "halt"
     )
 }
 
@@ -36,13 +28,6 @@ fn find_is_dangerous(context: &LintContext, args: &[ExternalArgument]) -> bool {
 
 pub const COMMANDS: &[CommandEffects] = &[
     // Process management
-    (
-        "ps",
-        &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-            always,
-        )],
-    ),
     (
         "kill",
         &[
@@ -94,15 +79,6 @@ pub const COMMANDS: &[CommandEffects] = &[
             always,
         )],
     ),
-    ("uptime", &[]),
-    ("uname", &[]),
-    (
-        "hostname",
-        &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-            always,
-        )],
-    ),
     // Service management
     (
         "systemctl",
@@ -116,30 +92,6 @@ pub const COMMANDS: &[CommandEffects] = &[
                 systemctl_is_dangerous,
             ),
         ],
-    ),
-    (
-        "service",
-        &[
-            (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-                always,
-            ),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
-        ],
-    ),
-    (
-        "journalctl",
-        &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-            always,
-        )],
-    ),
-    (
-        "dmesg",
-        &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
-            always,
-        )],
     ),
     // Power management (extremely dangerous)
     (

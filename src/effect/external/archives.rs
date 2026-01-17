@@ -27,7 +27,7 @@ pub const COMMANDS: &[CommandEffects] = &[
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, tar_modifies_fs),
-            (ExternEffect::StreamingOutput, tar_has_streaming),
+            (ExternEffect::SlowStreamingOutput, tar_has_streaming),
         ],
     ),
     (

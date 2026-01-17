@@ -41,7 +41,7 @@ pub const COMMANDS: &[CommandEffects] = &[
             ),
             (ExternEffect::ModifiesFileSystem, curl_modifies_fs),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::StreamingOutput, curl_has_streaming),
+            (ExternEffect::SlowStreamingOutput, curl_has_streaming),
         ],
     ),
     (
@@ -53,7 +53,7 @@ pub const COMMANDS: &[CommandEffects] = &[
             ),
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::StreamingOutput, always),
+            (ExternEffect::SlowStreamingOutput, always),
         ],
     ),
     (
@@ -65,7 +65,7 @@ pub const COMMANDS: &[CommandEffects] = &[
             ),
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::StreamingOutput, always),
+            (ExternEffect::SlowStreamingOutput, always),
             (
                 ExternEffect::CommonEffect(CommonEffect::Dangerous),
                 rsync_is_dangerous,
@@ -81,7 +81,7 @@ pub const COMMANDS: &[CommandEffects] = &[
             ),
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::StreamingOutput, always),
+            (ExternEffect::SlowStreamingOutput, always),
         ],
     ),
     (
@@ -124,8 +124,8 @@ pub const COMMANDS: &[CommandEffects] = &[
                 ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
                 always,
             ),
-            (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::StreamingOutput, always),
+            // (ExternEffect::ModifiesNetworkState, always),
+            (ExternEffect::SlowStreamingOutput, always),
         ],
     ),
     (
@@ -136,7 +136,7 @@ pub const COMMANDS: &[CommandEffects] = &[
                 always,
             ),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::StreamingOutput, always),
+            (ExternEffect::SlowStreamingOutput, always),
         ],
     ),
     (
@@ -147,7 +147,7 @@ pub const COMMANDS: &[CommandEffects] = &[
                 always,
             ),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::StreamingOutput, always),
+            (ExternEffect::SlowStreamingOutput, always),
         ],
     ),
     (
@@ -157,7 +157,7 @@ pub const COMMANDS: &[CommandEffects] = &[
                 ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
                 always,
             ),
-            (ExternEffect::ModifiesNetworkState, always),
+            // (ExternEffect::ModifiesNetworkState, always),
         ],
     ),
     (
@@ -167,7 +167,7 @@ pub const COMMANDS: &[CommandEffects] = &[
                 ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
                 always,
             ),
-            (ExternEffect::ModifiesNetworkState, always),
+            // (ExternEffect::ModifiesNetworkState, always),
         ],
     ),
     (
@@ -188,7 +188,7 @@ pub const COMMANDS: &[CommandEffects] = &[
                 ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
                 always,
             ),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            // (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
         ],
     ),
     (

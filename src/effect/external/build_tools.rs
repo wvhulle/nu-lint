@@ -30,7 +30,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "cargo",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, cargo_modifies_fs),
@@ -45,7 +45,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "rustc",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -56,7 +56,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "rustup",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -68,7 +68,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "rustfmt",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -79,7 +79,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "make",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -90,7 +90,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "cmake",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -101,7 +101,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "ninja",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -112,7 +112,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "meson",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -123,7 +123,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "gcc",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -133,7 +133,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "g++",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -143,7 +143,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "clang",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -153,7 +153,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "clang++",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -164,7 +164,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "go",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -177,7 +177,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "javac",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -186,7 +186,7 @@ pub const COMMANDS: &[CommandEffects] = &[
     (
         "java",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
@@ -194,7 +194,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "mvn",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -206,7 +206,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "gradle",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -218,7 +218,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "gradlew",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -231,7 +231,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "dotnet",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -244,7 +244,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "ffmpeg",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -255,7 +255,7 @@ pub const COMMANDS: &[CommandEffects] = &[
     (
         "ffprobe",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
@@ -263,7 +263,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "convert",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -273,7 +273,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "magick",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),

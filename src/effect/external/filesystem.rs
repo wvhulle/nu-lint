@@ -9,13 +9,13 @@ pub const COMMANDS: &[CommandEffects] = &[
         "rm",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::NoDataInStdout, always),
             (
-                ExternEffect::CommonEffect(CommonEffect::Dangerous),
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
                 rm_is_dangerous,
             ),
         ],
@@ -24,13 +24,13 @@ pub const COMMANDS: &[CommandEffects] = &[
         "mv",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::NoDataInStdout, always),
             (
-                ExternEffect::CommonEffect(CommonEffect::Dangerous),
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
                 has_dangerous_path_arg,
             ),
         ],
@@ -39,13 +39,13 @@ pub const COMMANDS: &[CommandEffects] = &[
         "cp",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::NoDataInStdout, always),
             (
-                ExternEffect::CommonEffect(CommonEffect::Dangerous),
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
                 has_dangerous_path_arg,
             ),
         ],
@@ -54,7 +54,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "chmod",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -65,7 +65,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "chown",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -76,7 +76,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "ln",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -94,7 +94,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "mkdir",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -105,7 +105,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "rmdir",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -116,59 +116,59 @@ pub const COMMANDS: &[CommandEffects] = &[
         "truncate",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::NoDataInStdout, always),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     (
         "shred",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::NoDataInStdout, always),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     // Read-only filesystem commands
     (
         "ls",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "stat",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "file",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "readlink",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "realpath",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
@@ -176,14 +176,14 @@ pub const COMMANDS: &[CommandEffects] = &[
     (
         "df",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "du",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
@@ -191,66 +191,66 @@ pub const COMMANDS: &[CommandEffects] = &[
         "mount",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     (
         "umount",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     (
         "fdisk",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     (
         "parted",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     (
         "mkfs",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     (
         "dd",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
             (ExternEffect::SlowStreamingOutput, always),
         ],
     ),
@@ -258,28 +258,28 @@ pub const COMMANDS: &[CommandEffects] = &[
     (
         "exa",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "eza",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "duf",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "dust",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),

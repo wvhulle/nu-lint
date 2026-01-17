@@ -14,35 +14,35 @@ pub const COMMANDS: &[CommandEffects] = &[
     (
         "cat",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "head",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "tail",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "grep",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "awk",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
@@ -50,12 +50,12 @@ pub const COMMANDS: &[CommandEffects] = &[
         "sed",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, sed_has_inplace),
             (
-                ExternEffect::CommonEffect(CommonEffect::Dangerous),
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
                 sed_has_inplace,
             ),
         ],
@@ -63,49 +63,49 @@ pub const COMMANDS: &[CommandEffects] = &[
     (
         "sort",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "uniq",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "wc",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "cut",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "tr",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "xargs",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "diff",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
@@ -113,7 +113,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "patch",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -123,14 +123,14 @@ pub const COMMANDS: &[CommandEffects] = &[
     (
         "rg",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "fd",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
@@ -138,7 +138,7 @@ pub const COMMANDS: &[CommandEffects] = &[
     (
         "sd",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
@@ -146,28 +146,28 @@ pub const COMMANDS: &[CommandEffects] = &[
     (
         "jq",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "yq",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "mlr",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "csvtool",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),

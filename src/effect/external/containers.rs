@@ -77,7 +77,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "docker",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, docker_modifies_fs),
@@ -87,7 +87,7 @@ pub const COMMANDS: &[CommandEffects] = &[
                 docker_has_streaming_output,
             ),
             (
-                ExternEffect::CommonEffect(CommonEffect::Dangerous),
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
                 docker_is_dangerous,
             ),
         ],
@@ -96,7 +96,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "podman",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, docker_modifies_fs),
@@ -106,7 +106,7 @@ pub const COMMANDS: &[CommandEffects] = &[
                 docker_has_streaming_output,
             ),
             (
-                ExternEffect::CommonEffect(CommonEffect::Dangerous),
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
                 docker_is_dangerous,
             ),
         ],
@@ -115,7 +115,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "docker-compose",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -127,12 +127,12 @@ pub const COMMANDS: &[CommandEffects] = &[
         "kubectl",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesNetworkState, kubectl_modifies_state),
             (
-                ExternEffect::CommonEffect(CommonEffect::Dangerous),
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
                 kubectl_is_dangerous,
             ),
         ],
@@ -141,7 +141,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "helm",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesNetworkState, always),
@@ -152,7 +152,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "minikube",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -164,7 +164,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "kind",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -175,7 +175,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "vagrant",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -188,33 +188,33 @@ pub const COMMANDS: &[CommandEffects] = &[
         "terraform",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::ModifiesNetworkState, always),
             (ExternEffect::SlowStreamingOutput, always),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     (
         "tofu",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::ModifiesNetworkState, always),
             (ExternEffect::SlowStreamingOutput, always),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     (
         "pulumi",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -226,7 +226,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "ansible",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -238,7 +238,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "ansible-playbook",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),

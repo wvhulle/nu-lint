@@ -25,7 +25,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "npm",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -37,7 +37,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "npx",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             // (ExternEffect::ModifiesFileSystem, always),
@@ -49,7 +49,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "yarn",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -61,7 +61,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "pnpm",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -73,7 +73,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "bun",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -85,7 +85,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "deno",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -97,7 +97,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "node",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesNetworkState, always),
@@ -109,7 +109,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "pip",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -121,7 +121,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "pip3",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -133,7 +133,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "pipx",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             // (ExternEffect::ModifiesFileSystem, always),
@@ -145,7 +145,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "uv",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             // (ExternEffect::ModifiesFileSystem, always),
@@ -157,7 +157,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "poetry",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             // (ExternEffect::ModifiesFileSystem, always),
@@ -169,7 +169,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "conda",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -180,14 +180,14 @@ pub const COMMANDS: &[CommandEffects] = &[
     (
         "python",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "python3",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
@@ -195,7 +195,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "pytest",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::SlowStreamingOutput, always),
@@ -204,14 +204,14 @@ pub const COMMANDS: &[CommandEffects] = &[
     (
         "mypy",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "ruff",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
@@ -219,7 +219,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "black",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -229,7 +229,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "isort",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -239,7 +239,7 @@ pub const COMMANDS: &[CommandEffects] = &[
     (
         "ruby",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
@@ -247,7 +247,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "gem",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -258,7 +258,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "bundle",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -270,7 +270,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "bundler",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -282,7 +282,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "rake",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -293,7 +293,7 @@ pub const COMMANDS: &[CommandEffects] = &[
     (
         "php",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
@@ -301,7 +301,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "composer",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -313,14 +313,14 @@ pub const COMMANDS: &[CommandEffects] = &[
     (
         "perl",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "lua",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
@@ -328,7 +328,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "luarocks",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -340,7 +340,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "nix",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             // (ExternEffect::ModifiesFileSystem, always),
@@ -352,7 +352,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "nix-build",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -364,7 +364,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "nix-shell",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             // (ExternEffect::ModifiesFileSystem, always),
@@ -376,7 +376,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "nix-env",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -387,19 +387,19 @@ pub const COMMANDS: &[CommandEffects] = &[
         "nixos-rebuild",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             // (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::SlowStreamingOutput, always),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     (
         "home-manager",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             // (ExternEffect::ModifiesFileSystem, always),

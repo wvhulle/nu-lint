@@ -7,9 +7,9 @@ pub mod external;
 pub enum CommonEffect {
     /// Likely to fail under normal circumstances. Probably needs error
     /// handling.
-    LikelyErrors,
+    FailsInNormalCircumstances,
     /// Dangerous command that may cause data loss.
-    Dangerous,
+    MayCauseDataLoss,
 }
 
 pub fn matches_short_flag(arg_text: &str, flag_char: char) -> bool {

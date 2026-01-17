@@ -11,56 +11,56 @@ pub const COMMANDS: &[CommandEffects] = &[
     (
         "bash",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "sh",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "zsh",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "fish",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "dash",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "ksh",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "tcsh",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "csh",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
@@ -68,42 +68,42 @@ pub const COMMANDS: &[CommandEffects] = &[
     (
         "cmd",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "cmd.exe",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "powershell",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "powershell.exe",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "pwsh",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "pwsh.exe",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
@@ -111,7 +111,7 @@ pub const COMMANDS: &[CommandEffects] = &[
     (
         "expect",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
@@ -120,7 +120,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "mysql",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesNetworkState, always),
@@ -130,7 +130,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "psql",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesNetworkState, always),
@@ -140,7 +140,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "sqlite3",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -150,7 +150,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "mongo",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesNetworkState, always),
@@ -160,7 +160,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "mongosh",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesNetworkState, always),
@@ -170,7 +170,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "redis-cli",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesNetworkState, always),

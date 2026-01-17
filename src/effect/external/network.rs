@@ -36,7 +36,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "curl",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, curl_modifies_fs),
@@ -48,7 +48,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "wget",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -60,14 +60,14 @@ pub const COMMANDS: &[CommandEffects] = &[
         "rsync",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::ModifiesNetworkState, always),
             (ExternEffect::SlowStreamingOutput, always),
             (
-                ExternEffect::CommonEffect(CommonEffect::Dangerous),
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
                 rsync_is_dangerous,
             ),
         ],
@@ -76,7 +76,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "scp",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -88,7 +88,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "sftp",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -99,7 +99,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "ssh",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesNetworkState, always),
@@ -109,7 +109,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "ftp",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -121,7 +121,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "ping",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             // (ExternEffect::ModifiesNetworkState, always),
@@ -132,7 +132,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "traceroute",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesNetworkState, always),
@@ -143,7 +143,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "mtr",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesNetworkState, always),
@@ -154,7 +154,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "dig",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             // (ExternEffect::ModifiesNetworkState, always),
@@ -164,7 +164,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "nslookup",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             // (ExternEffect::ModifiesNetworkState, always),
@@ -174,7 +174,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "host",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesNetworkState, always),
@@ -185,7 +185,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "ip",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             // (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
@@ -195,30 +195,30 @@ pub const COMMANDS: &[CommandEffects] = &[
         "ifconfig",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     (
         "netstat",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "ss",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "lsof",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
@@ -227,44 +227,44 @@ pub const COMMANDS: &[CommandEffects] = &[
         "nc",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     (
         "netcat",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     (
         "ncat",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     (
         "socat",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     // Firewall
@@ -272,40 +272,40 @@ pub const COMMANDS: &[CommandEffects] = &[
         "iptables",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     (
         "nft",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     (
         "ufw",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     (
         "firewall-cmd",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
 ];

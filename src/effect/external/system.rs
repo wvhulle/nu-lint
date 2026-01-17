@@ -32,11 +32,11 @@ pub const COMMANDS: &[CommandEffects] = &[
         "kill",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (
-                ExternEffect::CommonEffect(CommonEffect::Dangerous),
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
                 kill_is_dangerous,
             ),
         ],
@@ -45,26 +45,26 @@ pub const COMMANDS: &[CommandEffects] = &[
         "killall",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     (
         "pkill",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     (
         "pgrep",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
@@ -75,7 +75,7 @@ pub const COMMANDS: &[CommandEffects] = &[
     (
         "free",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
@@ -84,11 +84,11 @@ pub const COMMANDS: &[CommandEffects] = &[
         "systemctl",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (
-                ExternEffect::CommonEffect(CommonEffect::Dangerous),
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
                 systemctl_is_dangerous,
             ),
         ],
@@ -98,40 +98,40 @@ pub const COMMANDS: &[CommandEffects] = &[
         "reboot",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     (
         "shutdown",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     (
         "poweroff",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     (
         "halt",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     // User management
@@ -139,70 +139,70 @@ pub const COMMANDS: &[CommandEffects] = &[
         "sudo",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     (
         "su",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     (
         "doas",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     (
         "useradd",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     (
         "userdel",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     (
         "usermod",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     (
         "groupadd",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -212,7 +212,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "groupdel",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -222,11 +222,11 @@ pub const COMMANDS: &[CommandEffects] = &[
         "passwd",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
-            (ExternEffect::CommonEffect(CommonEffect::Dangerous), always),
+            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
         ],
     ),
     // Scheduling
@@ -234,7 +234,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "crontab",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -244,7 +244,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "at",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -255,12 +255,12 @@ pub const COMMANDS: &[CommandEffects] = &[
         "find",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, find_modifies_fs),
             (
-                ExternEffect::CommonEffect(CommonEffect::Dangerous),
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
                 find_is_dangerous,
             ),
         ],
@@ -272,21 +272,21 @@ pub const COMMANDS: &[CommandEffects] = &[
     (
         "which",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "whereis",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "type",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
@@ -300,7 +300,7 @@ pub const COMMANDS: &[CommandEffects] = &[
     (
         "evtest",
         &[(
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
@@ -309,7 +309,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "openssl",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -319,7 +319,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "gpg",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -329,7 +329,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "ssh-keygen",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
@@ -340,7 +340,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "aws",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesNetworkState, always),
@@ -351,7 +351,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "gcloud",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesNetworkState, always),
@@ -362,7 +362,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "az",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesNetworkState, always),

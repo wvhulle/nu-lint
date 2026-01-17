@@ -92,13 +92,13 @@ pub const COMMANDS: &[CommandEffects] = &[
         "git",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 git_likely_errors,
             ),
             (ExternEffect::ModifiesFileSystem, git_modifies_filesystem),
             (ExternEffect::ModifiesNetworkState, git_modifies_network),
             (
-                ExternEffect::CommonEffect(CommonEffect::Dangerous),
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
                 git_is_dangerous,
             ),
             (ExternEffect::SlowStreamingOutput, git_has_streaming_output),
@@ -109,7 +109,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "gh",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesNetworkState, always),
@@ -119,7 +119,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "hub",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesNetworkState, always),
@@ -129,7 +129,7 @@ pub const COMMANDS: &[CommandEffects] = &[
         "git-lfs",
         &[
             (
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),

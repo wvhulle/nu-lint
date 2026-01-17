@@ -71,7 +71,7 @@ pub fn extract_arg_text<'a>(arg: &Argument, context: &'a LintContext) -> &'a str
 pub fn can_error(command_name: &str, context: &LintContext, call: &Call) -> bool {
     has_builtin_side_effect(
         command_name,
-        BuiltinEffect::CommonEffect(CommonEffect::LikelyErrors),
+        BuiltinEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
         context,
         call,
     )
@@ -146,11 +146,11 @@ pub const BUILTIN_COMMAND_SIDE_EFFECTS: &[(&str, &[(BuiltinEffect, EffectWhenFla
         "rm",
         &[
             (
-                BuiltinEffect::CommonEffect(CommonEffect::LikelyErrors),
+                BuiltinEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (
-                BuiltinEffect::CommonEffect(CommonEffect::Dangerous),
+                BuiltinEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
                 rm_is_dangerous,
             ),
         ],
@@ -159,11 +159,11 @@ pub const BUILTIN_COMMAND_SIDE_EFFECTS: &[(&str, &[(BuiltinEffect, EffectWhenFla
         "mv",
         &[
             (
-                BuiltinEffect::CommonEffect(CommonEffect::LikelyErrors),
+                BuiltinEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (
-                BuiltinEffect::CommonEffect(CommonEffect::Dangerous),
+                BuiltinEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
                 mv_cp_is_dangerous,
             ),
         ],
@@ -172,11 +172,11 @@ pub const BUILTIN_COMMAND_SIDE_EFFECTS: &[(&str, &[(BuiltinEffect, EffectWhenFla
         "cp",
         &[
             (
-                BuiltinEffect::CommonEffect(CommonEffect::LikelyErrors),
+                BuiltinEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
             (
-                BuiltinEffect::CommonEffect(CommonEffect::Dangerous),
+                BuiltinEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
                 mv_cp_is_dangerous,
             ),
         ],
@@ -184,21 +184,21 @@ pub const BUILTIN_COMMAND_SIDE_EFFECTS: &[(&str, &[(BuiltinEffect, EffectWhenFla
     (
         "open",
         &[(
-            BuiltinEffect::CommonEffect(CommonEffect::LikelyErrors),
+            BuiltinEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             io_category_can_error,
         )],
     ),
     (
         "save",
         &[(
-            BuiltinEffect::CommonEffect(CommonEffect::LikelyErrors),
+            BuiltinEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             io_category_can_error,
         )],
     ),
     (
         "from",
         &[(
-            BuiltinEffect::CommonEffect(CommonEffect::LikelyErrors),
+            BuiltinEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
@@ -207,35 +207,35 @@ pub const BUILTIN_COMMAND_SIDE_EFFECTS: &[(&str, &[(BuiltinEffect, EffectWhenFla
     (
         "exit",
         &[(
-            BuiltinEffect::CommonEffect(CommonEffect::Dangerous),
+            BuiltinEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
             exit_is_dangerous,
         )],
     ),
     (
         "http",
         &[(
-            BuiltinEffect::CommonEffect(CommonEffect::LikelyErrors),
+            BuiltinEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             http_can_error,
         )],
     ),
     (
         "mkdir",
         &[(
-            BuiltinEffect::CommonEffect(CommonEffect::LikelyErrors),
+            BuiltinEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "touch",
         &[(
-            BuiltinEffect::CommonEffect(CommonEffect::LikelyErrors),
+            BuiltinEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
     (
         "cd",
         &[(
-            BuiltinEffect::CommonEffect(CommonEffect::LikelyErrors),
+            BuiltinEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             always,
         )],
     ),
@@ -243,7 +243,7 @@ pub const BUILTIN_COMMAND_SIDE_EFFECTS: &[(&str, &[(BuiltinEffect, EffectWhenFla
     (
         "ls",
         &[(
-            BuiltinEffect::CommonEffect(CommonEffect::LikelyErrors),
+            BuiltinEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             ls_can_error,
         )],
     ),

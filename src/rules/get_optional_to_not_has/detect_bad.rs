@@ -35,3 +35,15 @@ fn detect_with_pipeline_before_get() {
     let code = r#"$data | select field | get -o key | is-empty"#;
     RULE.assert_detects(code);
 }
+
+#[test]
+fn detect_inside_where_closure() {
+    let code = r#"$targets | where {|t| $available | get -i $t | is-empty }"#;
+    RULE.assert_detects(code);
+}
+
+#[test]
+fn detect_inside_each_closure() {
+    let code = r#"$items | each {|it| $record | get -o $it | is-empty }"#;
+    RULE.assert_detects(code);
+}

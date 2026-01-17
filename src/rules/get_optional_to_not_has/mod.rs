@@ -45,9 +45,12 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection,
                 pipeline.elements[get_idx - 1].expr.span.end,
             );
 
+            // Span covering the entire pattern: $record | get -i $key | is-empty
+            let full_span = Span::new(pipeline.elements[0].expr.span.start, pair.span.end);
+
             let detection = Detection::from_global_span(
                 "Use 'not-has' operator instead of 'get -o | is-empty' for record key membership",
-                pair.span,
+                full_span,
             )
             .with_primary_label("non-idiomatic key check")
             .with_extra_label("get -o call", pair.first.span())
@@ -56,7 +59,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection,
             Some((
                 detection,
                 FixData {
-                    span: pair.span,
+                    span: full_span,
                     record_span,
                     key_span: key_arg.span,
                 },

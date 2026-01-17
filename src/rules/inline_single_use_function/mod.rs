@@ -194,8 +194,7 @@ impl DetectFix for InlineSingleUseFunction {
                             .chain(&def.signature.optional_positional)
                             .position(|p| p.name == param.name)?;
                         let var_id = block.signature.get_positional(idx)?.var_id?;
-                        let usage_spans =
-                            block.var_usages(var_id, context, |_, _, _| true);
+                        let usage_spans = block.var_usages(var_id, context, |_, _, _| true);
                         Some(
                             usage_spans
                                 .into_iter()

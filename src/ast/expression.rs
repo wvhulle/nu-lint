@@ -165,9 +165,10 @@ impl ExpressionExt for Expression {
 
     fn extract_block_id(&self) -> Option<BlockId> {
         match &self.expr {
-            Expr::Block(block_id) | Expr::Closure(block_id) | Expr::Subexpression(block_id) => {
-                Some(*block_id)
-            }
+            Expr::Block(block_id)
+            | Expr::Closure(block_id)
+            | Expr::Subexpression(block_id)
+            | Expr::RowCondition(block_id) => Some(*block_id),
             // Handle FullCellPath wrapping a subexpression (common parser pattern)
             Expr::FullCellPath(fcp) if fcp.tail.is_empty() => fcp.head.extract_block_id(),
             _ => None,

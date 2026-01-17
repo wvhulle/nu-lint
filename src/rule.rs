@@ -239,6 +239,15 @@ impl dyn Rule {
     }
 
     #[track_caller]
+    pub fn assert_fixed_not_contains(&self, code: &str, unexpected_text: &str) {
+        let fixed = self.apply_first_fix(code);
+        assert!(
+            !fixed.contains(unexpected_text),
+            "Expected fixed code NOT to contain `{unexpected_text}`, but it did: `{fixed}`"
+        );
+    }
+
+    #[track_caller]
     pub fn assert_fixed_is(&self, bad_code: &str, expected_code: &str) {
         let fixed = self.apply_first_fix(bad_code);
         assert!(

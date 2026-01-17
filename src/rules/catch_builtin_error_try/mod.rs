@@ -38,7 +38,7 @@ fn check_call(expr: &Expression, context: &LintContext) -> Option<Detection> {
     let name = call.get_call_name(context);
     let can_error = has_builtin_side_effect(
         &name,
-        BuiltinEffect::CommonEffect(CommonEffect::LikelyErrors),
+        BuiltinEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
         context,
         call,
     );

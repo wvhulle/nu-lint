@@ -88,7 +88,7 @@ pub trait ExpressionExt: Traverse {
         F: FnMut(&'a Expression, Option<&'a Expression>);
 
     /// Find variable usages within this expression, without descending into
-    /// closures. For FullCellPath expressions, returns the head's span
+    /// closures. For `FullCellPath` expressions, returns the head's span
     /// (just the variable).
     fn find_var_in_expr<F>(
         &self,
@@ -692,7 +692,7 @@ impl ExpressionExt for Expression {
         predicate: &F,
         results: &mut Vec<Span>,
     ) where
-        F: Fn(&Expression, VarId, &LintContext) -> bool,
+        F: Fn(&Self, VarId, &LintContext) -> bool,
     {
         if self.matches_var(var_id) && predicate(self, var_id, context) {
             // For FullCellPath, use the head's span only (not the path)
@@ -919,7 +919,7 @@ pub fn expr_children(expr: &Expr) -> (Vec<&Expression>, Vec<BlockId>) {
         Expr::BinaryOp(l, op, r) => children.extend([l.as_ref(), op.as_ref(), r.as_ref()]),
         Expr::UnaryNot(e) | Expr::Collect(_, e) => children.push(e),
         Expr::Call(call) => children.extend(call.arguments.iter().filter_map(|a| a.expr())),
-        Expr::List(items) => children.extend(items.iter().map(|i| i.expr())),
+        Expr::List(items) => children.extend(items.iter().map(nu_protocol::ast::ListItem::expr)),
         Expr::Record(items) => {
             for item in items {
                 match item {
@@ -934,7 +934,7 @@ pub fn expr_children(expr: &Expr) -> (Vec<&Expression>, Vec<BlockId>) {
         Expr::Range(r) => children.extend([&r.from, &r.next, &r.to].into_iter().flatten()),
         Expr::ExternalCall(h, args) => {
             children.push(h);
-            children.extend(args.iter().map(|a| a.expr()));
+            children.extend(args.iter().map(nu_protocol::ast::ExternalArgument::expr));
         }
         _ => {}
     }

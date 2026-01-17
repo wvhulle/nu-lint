@@ -41,7 +41,7 @@ fn extract_dangerous_command<'a>(
 
             if !has_external_side_effect(
                 cmd_name,
-                ExternEffect::CommonEffect(CommonEffect::Dangerous),
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
                 context,
                 args,
             ) {
@@ -63,7 +63,7 @@ fn extract_dangerous_command<'a>(
 
             if !has_builtin_side_effect(
                 &decl_name,
-                BuiltinEffect::CommonEffect(CommonEffect::Dangerous),
+                BuiltinEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
                 context,
                 call,
             ) {

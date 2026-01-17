@@ -90,7 +90,7 @@ fn has_external_command_with_likely_errors(expr: &Expression, context: &LintCont
         let cmd_name = extract_command_name(cmd_expr, context);
         if has_external_side_effect(
             &cmd_name,
-            ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+            ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             context,
             args,
         ) {

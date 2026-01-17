@@ -52,6 +52,7 @@ pub mod positional_to_pipeline;
 pub mod posix_tools;
 pub mod prefer_long_flags;
 pub mod range_for_iteration;
+pub mod redundant_boolean_comparison;
 pub mod redundant_complete_streaming;
 pub mod redundant_ignore;
 pub mod remove_hat_not_builtin;
@@ -191,6 +192,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     posix_tools::who::RULE,
     range_for_iteration::loop_counter::RULE,
     range_for_iteration::while_counter::RULE,
+    redundant_boolean_comparison::RULE,
     redundant_ignore::RULE,
     remove_redundant_in::RULE,
     replace_else_if_with_match::RULE,

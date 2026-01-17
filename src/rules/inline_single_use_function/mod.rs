@@ -186,7 +186,7 @@ impl DetectFix for InlineSingleUseFunction {
                     .chain(&def.signature.optional_positional);
                 let substitutions: Vec<_> = params
                     .zip(&call_args)
-                    .flat_map(|(param, &arg_span)| {
+                    .filter_map(|(param, &arg_span)| {
                         let idx = def
                             .signature
                             .required_positional

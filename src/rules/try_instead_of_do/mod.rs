@@ -27,7 +27,7 @@ fn find_error_prone_command(expr: &Expression, context: &LintContext) -> Option<
             let cmd_name = context.expr_text(head);
             if has_external_side_effect(
                 cmd_name,
-                ExternEffect::CommonEffect(CommonEffect::LikelyErrors),
+                ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 context,
                 args,
             ) {

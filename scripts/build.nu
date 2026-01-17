@@ -2,6 +2,9 @@
 
 use std/log
 
+# Enable nix flakes globally for this script
+$env.NIX_CONFIG = "experimental-features = nix-command flakes"
+
 # Build release binaries for nu-lint
 # Usage: ./build.nu [--cargo] [--cache <name>] [target...]
 #
@@ -39,7 +42,7 @@ def main [
       $available | columns
     } else {
       # Validate all targets upfront
-      let invalid = $targets | where {|t| $available | get -i $t | is-empty }
+      let invalid = $targets | where $available | $targets | where $available not-has $it
       if ($invalid | is-not-empty) {
         error make {
           msg: $"Invalid target\(s\): ($invalid | str join ', ')"
@@ -71,7 +74,7 @@ def --env load-dotenv []: nothing -> nothing {
   log debug "Loading .env file..."
   open .env
   | lines
-  | where {|line| ($line | str trim | str starts-with "#" | not $in) and ($line | str contains "=") }
+  | where ($it | str trim | str starts-with "#" | not $in) and $it =~ "="
   | each {|line|
     let idx = $line | str index-of "="
     {($line | str substring ..<$idx): ($line | str substring ($idx + 1)..)}
@@ -83,15 +86,11 @@ def --env load-dotenv []: nothing -> nothing {
 # Query release targets from flake.nix (single source of truth)
 # Returns: { "x86_64-unknown-linux-gnu": "default", ... }
 def get-flake-targets []: nothing -> record {
-  let system = get-nix-system
+  let system = ^nix eval --raw --impure --expr "builtins.currentSystem"
   log debug $"Querying release targets from flake for ($system)..."
-  ^nix eval $".#releaseTargets.($system)" --json | from json
+  nix eval $".#releaseTargets.($system)" --json | from json
 }
 
-# Get the current nix system (e.g., x86_64-linux)
-def get-nix-system []: nothing -> string {
-  ^nix eval --raw --impure --expr "builtins.currentSystem"
-}
 
 # Get Cachix token from environment (CI or local .env)
 def get-cachix-token []: nothing -> string {
@@ -127,10 +126,10 @@ def push-to-cachix [cache: string result_link: string]: nothing -> nothing {
   log info "Pushing to Cachix..."
   try {
     # Push the result and its runtime closure
-    let paths = ^nix-store --query --requisites $result_link | lines
+    let paths = nix-store --query --requisites $result_link | lines
     if ($paths | is-not-empty) {
       log info $"Pushing ($paths | length) paths to Cachix..."
-      cachix push $cache $paths
+      cachix push $cache ...$paths
       log info "Push complete"
     }
   } catch {|e|
@@ -149,19 +148,13 @@ def push-deps-to-cachix [cache: string]: nothing -> nothing {
     let paths = nix-store --query --requisites $deps_link | lines
     if ($paths | is-not-empty) {
       log info $"Pushing ($paths | length) dep paths to Cachix..."
-      ^cachix push $cache ...$paths
+      cachix push $cache ...$paths
       log info "Deps push complete"
     }
     rm $deps_link
   } catch {|e|
     log warning $"Failed to push deps to cache: ($e.msg)"
   }
-}
-
-# Enable nix flakes in CI environment
-def enable-flakes []: nothing -> nothing {
-  if not ("/etc/nix/nix.conf" | path exists) { return }
-  try { "experimental-features = nix-command flakes\n" | save --append /etc/nix/nix.conf }
 }
 
 # Get Rust target triple for binstall compatibility
@@ -177,7 +170,7 @@ def get-target-triple []: nothing -> string {
   }
 
   # Map to Rust target triples (binstall expects these)
-  let target = match [$os $arch] {
+  match [$os $arch] {
     ["linux" "x86_64"] => "x86_64-unknown-linux-gnu"
     ["linux" "aarch64"] => "aarch64-unknown-linux-gnu"
     ["darwin" "x86_64"] => "x86_64-apple-darwin"
@@ -185,8 +178,6 @@ def get-target-triple []: nothing -> string {
     ["darwin" "aarch64"] => "aarch64-apple-darwin"
     _ => $"($arch)-unknown-($os)-gnu"
   }
-
-  $target
 }
 
 # Copy binary to dist as tarball with binstall-compatible name
@@ -196,7 +187,7 @@ def copy-binary [src: string target_triple: string]: nothing -> string {
 
   # Create tarball with binary inside (binstall expects this)
   log debug $"Creating archive ($archive_name)..."
-  ^tar -czf $archive_path -C ($src | path dirname) ($src | path basename)
+  tar -czf $archive_path -C ($src | path dirname) ($src | path basename)
 
   $archive_path
 }
@@ -204,7 +195,6 @@ def copy-binary [src: string target_triple: string]: nothing -> string {
 # Build with Nix for a specific target
 def build-nix [cache: string target_triple: string]: nothing -> nothing {
   log debug "Configuring nix..."
-  enable-flakes
   setup-cachix $cache
 
   # Look up nix attribute from flake's releaseTargets
@@ -218,7 +208,7 @@ def build-nix [cache: string target_triple: string]: nothing -> nothing {
   let result_link = $"result-($target_triple)"
 
   log info $"Building with nix \(($nix_attr)\) for ($target_triple)..."
-  ^nix build $".#($nix_attr)" --out-link $result_link --print-build-logs
+  nix build $".#($nix_attr)" --out-link $result_link --print-build-logs
 
   # Push deps first (crane's buildDepsOnly), then the package
   push-deps-to-cachix $cache
@@ -237,13 +227,13 @@ def build-cargo [target_triple: string]: nothing -> nothing {
 
   let native = get-target-triple
   if $target_triple == $native {
-    ^cargo build --release
-    let archive = copy-binary "target/release/nu-lint" $target_triple
+    cargo build --release
+    let archive = copy-binary target/release/nu-lint $target_triple
     log info $"Binary ready: ($archive)"
   } else {
     # Cross-compilation requires the target to be installed
-    ^rustup target add $target_triple
-    ^cargo build --release --target $target_triple
+    rustup target add $target_triple
+    cargo build --release --target $target_triple
     let archive = copy-binary $"target/($target_triple)/release/nu-lint" $target_triple
     log info $"Binary ready: ($archive)"
   }
@@ -263,5 +253,5 @@ def create-checksums []: nothing -> nothing {
     $"($hash)  ($f)"
   }
   | str join "\n"
-  | save -f checksums-sha256.txt
+  | save --force checksums-sha256.txt
 }

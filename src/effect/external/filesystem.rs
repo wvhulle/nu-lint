@@ -121,7 +121,10 @@ pub const COMMANDS: &[CommandEffects] = &[
             ),
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::NoDataInStdout, always),
-            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
+            (
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
+                always,
+            ),
         ],
     ),
     (
@@ -133,7 +136,10 @@ pub const COMMANDS: &[CommandEffects] = &[
             ),
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::NoDataInStdout, always),
-            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
+            (
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
+                always,
+            ),
         ],
     ),
     // Read-only filesystem commands
@@ -195,7 +201,10 @@ pub const COMMANDS: &[CommandEffects] = &[
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
-            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
+            (
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
+                always,
+            ),
         ],
     ),
     (
@@ -206,7 +215,10 @@ pub const COMMANDS: &[CommandEffects] = &[
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
-            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
+            (
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
+                always,
+            ),
         ],
     ),
     (
@@ -217,7 +229,10 @@ pub const COMMANDS: &[CommandEffects] = &[
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
-            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
+            (
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
+                always,
+            ),
         ],
     ),
     (
@@ -228,7 +243,10 @@ pub const COMMANDS: &[CommandEffects] = &[
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
-            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
+            (
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
+                always,
+            ),
         ],
     ),
     (
@@ -239,7 +257,10 @@ pub const COMMANDS: &[CommandEffects] = &[
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
-            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
+            (
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
+                always,
+            ),
         ],
     ),
     (
@@ -250,7 +271,10 @@ pub const COMMANDS: &[CommandEffects] = &[
                 always,
             ),
             (ExternEffect::ModifiesFileSystem, always),
-            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
+            (
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
+                always,
+            ),
             (ExternEffect::SlowStreamingOutput, always),
         ],
     ),

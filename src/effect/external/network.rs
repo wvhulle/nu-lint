@@ -198,7 +198,10 @@ pub const COMMANDS: &[CommandEffects] = &[
                 ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
-            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
+            (
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
+                always,
+            ),
         ],
     ),
     (
@@ -231,7 +234,10 @@ pub const COMMANDS: &[CommandEffects] = &[
                 always,
             ),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
+            (
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
+                always,
+            ),
         ],
     ),
     (
@@ -242,7 +248,10 @@ pub const COMMANDS: &[CommandEffects] = &[
                 always,
             ),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
+            (
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
+                always,
+            ),
         ],
     ),
     (
@@ -253,7 +262,10 @@ pub const COMMANDS: &[CommandEffects] = &[
                 always,
             ),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
+            (
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
+                always,
+            ),
         ],
     ),
     (
@@ -264,7 +276,10 @@ pub const COMMANDS: &[CommandEffects] = &[
                 always,
             ),
             (ExternEffect::ModifiesNetworkState, always),
-            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
+            (
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
+                always,
+            ),
         ],
     ),
     // Firewall
@@ -275,7 +290,10 @@ pub const COMMANDS: &[CommandEffects] = &[
                 ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
-            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
+            (
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
+                always,
+            ),
         ],
     ),
     (
@@ -285,7 +303,10 @@ pub const COMMANDS: &[CommandEffects] = &[
                 ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
-            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
+            (
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
+                always,
+            ),
         ],
     ),
     (
@@ -295,7 +316,10 @@ pub const COMMANDS: &[CommandEffects] = &[
                 ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
-            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
+            (
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
+                always,
+            ),
         ],
     ),
     (
@@ -305,7 +329,10 @@ pub const COMMANDS: &[CommandEffects] = &[
                 ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 always,
             ),
-            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
+            (
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
+                always,
+            ),
         ],
     ),
 ];

@@ -194,7 +194,10 @@ pub const COMMANDS: &[CommandEffects] = &[
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::ModifiesNetworkState, always),
             (ExternEffect::SlowStreamingOutput, always),
-            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
+            (
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
+                always,
+            ),
         ],
     ),
     (
@@ -207,7 +210,10 @@ pub const COMMANDS: &[CommandEffects] = &[
             (ExternEffect::ModifiesFileSystem, always),
             (ExternEffect::ModifiesNetworkState, always),
             (ExternEffect::SlowStreamingOutput, always),
-            (ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss), always),
+            (
+                ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
+                always,
+            ),
         ],
     ),
     (

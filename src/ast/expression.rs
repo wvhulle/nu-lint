@@ -43,6 +43,9 @@ pub trait ExpressionExt: Traverse {
     /// Checks if expression matches a specific variable. Example: `$var` or
     /// `$var.field`
     fn matches_var(&self, var_id: VarId) -> bool;
+    /// Extracts `VarId` only from direct variable references (no field access).
+    /// Returns `Some(var_id)` for `$x`, `None` for `$x.field`.
+    fn extract_direct_var(&self) -> Option<VarId>;
     /// Checks if expression contains a specific variable. Example: `$x + 1`
     /// contains `$x`
     fn contains_variable(&self, var_id: VarId) -> bool;
@@ -280,6 +283,20 @@ impl ExpressionExt for Expression {
                 extract_var_from_full_cell_path(cell_path) == Some(var_id)
             }
             _ => false,
+        }
+    }
+
+    fn extract_direct_var(&self) -> Option<VarId> {
+        match &self.expr {
+            Expr::Var(var_id) => Some(*var_id),
+            Expr::FullCellPath(fcp) if fcp.tail.is_empty() => {
+                if let Expr::Var(var_id) = &fcp.head.expr {
+                    Some(*var_id)
+                } else {
+                    None
+                }
+            }
+            _ => None,
         }
     }
 

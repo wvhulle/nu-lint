@@ -121,9 +121,10 @@ fn detect_signature(
             .with_primary_label("add type annotation");
 
             if let Some(usage_spans) = usage_span
-                && let Some(&first_span) = usage_spans.first() {
-                    violation = violation.with_extra_label("used here", first_span);
-                }
+                && let Some(&first_span) = usage_spans.first()
+            {
+                violation = violation.with_extra_label("used here", first_span);
+            }
 
             let fix_data = FixData {
                 signature_span,

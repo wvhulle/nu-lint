@@ -17,6 +17,12 @@ struct FixData {
     fallback: Span,
 }
 
+struct NullComparison {
+    var_id: VarId,
+    var_span: Span,
+    is_equal: bool,
+}
+
 /// Get the single expression from a block, if it contains exactly one.
 fn get_single_block_expr(block: &Block) -> Option<&Expression> {
     let [pipeline] = block.pipelines.as_slice() else {
@@ -28,8 +34,8 @@ fn get_single_block_expr(block: &Block) -> Option<&Expression> {
     Some(&element.expr)
 }
 
-/// Extract `(var_id, var_span, is_equal)` from a null comparison.
-fn extract_null_comparison(expr: &Expression) -> Option<(VarId, Span, bool)> {
+/// Extract null comparison info from `$var == null` or `null != $var` patterns.
+fn extract_null_comparison(expr: &Expression) -> Option<NullComparison> {
     let Expr::BinaryOp(left, op, right) = &expr.expr else {
         return None;
     };
@@ -44,14 +50,22 @@ fn extract_null_comparison(expr: &Expression) -> Option<(VarId, Span, bool)> {
     if matches!(&right.expr, Expr::Nothing)
         && let Some(var_id) = left.extract_direct_var()
     {
-        return Some((var_id, left.span, is_equal));
+        return Some(NullComparison {
+            var_id,
+            var_span: left.span,
+            is_equal,
+        });
     }
 
     // `null == $var` or `null != $var`
     if matches!(&left.expr, Expr::Nothing)
         && let Some(var_id) = right.extract_direct_var()
     {
-        return Some((var_id, right.span, is_equal));
+        return Some(NullComparison {
+            var_id,
+            var_span: right.span,
+            is_equal,
+        });
     }
 
     None
@@ -63,7 +77,7 @@ fn detect(call: &Call, expr_span: Span, context: &LintContext) -> Option<(Detect
     }
 
     let condition = call.get_first_positional_arg()?;
-    let (var_id, var_span, is_equal) = extract_null_comparison(condition)?;
+    let cmp = extract_null_comparison(condition)?;
 
     let then_block_id = call.get_positional_arg(1)?.extract_block_id()?;
     let then_block = context.working_set.get_block(then_block_id);
@@ -78,14 +92,14 @@ fn detect(call: &Call, expr_span: Span, context: &LintContext) -> Option<(Detect
 
     // Pattern 1: `if $x == null { default } else { $x }`
     // Pattern 2: `if $x != null { $x } else { default }`
-    let (var_block, default_block) = if is_equal {
+    let (var_block, default_block) = if cmp.is_equal {
         (else_block, then_block)
     } else {
         (then_block, else_block)
     };
 
     // var_block must return only the variable
-    if !get_single_block_expr(var_block)?.matches_var(var_id) {
+    if !get_single_block_expr(var_block)?.matches_var(cmp.var_id) {
         return None;
     }
 
@@ -101,7 +115,7 @@ fn detect(call: &Call, expr_span: Span, context: &LintContext) -> Option<(Detect
         detection,
         FixData {
             full_span: expr_span,
-            variable: var_span,
+            variable: cmp.var_span,
             fallback: default_span,
         },
     ))

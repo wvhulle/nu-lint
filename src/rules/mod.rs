@@ -34,6 +34,7 @@ pub mod get_optional_to_has;
 pub mod get_optional_to_not_has;
 pub mod glob_may_drop_quotes;
 pub mod hardcoded_math_constants;
+pub mod if_null_to_default;
 pub mod ignore_over_dev_null;
 pub mod inline_single_use_function;
 pub mod items_instead_of_transpose_each;
@@ -100,6 +101,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     get_optional_to_not_has::RULE,
     glob_may_drop_quotes::RULE,
     hardcoded_math_constants::RULE,
+    if_null_to_default::RULE,
     check_complete_exit_code::RULE,
     collapsible_if::RULE,
     dangerous_file_operations::RULE,

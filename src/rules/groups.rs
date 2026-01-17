@@ -131,6 +131,7 @@ const DEAD_CODE: Group = Group {
         super::unnecessary_accumulate::RULE,
         super::unnecessary_variable_before_return::RULE,
         super::redundant_boolean_comparison::RULE,
+        super::if_null_to_default::RULE,
         super::redundant_ignore::RULE,
         super::unnecessary_mut::RULE,
         super::unused_helper_functions::RULE,

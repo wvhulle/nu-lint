@@ -82,7 +82,7 @@ impl DetectFix for TypeCommandOutput {
     }
 
     fn short_description(&self) -> &'static str {
-        "Custom commands that produce output should have specific output type annotations"
+        "Command missing output type annotation"
     }
 
     fn source_link(&self) -> Option<&'static str> {

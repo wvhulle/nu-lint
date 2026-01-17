@@ -75,7 +75,7 @@ impl DetectFix for ClosureParamSpacing {
     }
 
     fn short_description(&self) -> &'static str {
-        "Closure parameter pipe should directly follow opening brace: `{|` not `{ |`"
+        "Space between `{` and `|` in closure"
     }
 
     fn source_link(&self) -> Option<&'static str> {

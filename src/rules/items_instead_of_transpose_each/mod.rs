@@ -244,7 +244,7 @@ impl DetectFix for ItemsInsteadOfTransposeEach {
     }
 
     fn short_description(&self) -> &'static str {
-        "Use 'items' instead of 'transpose | each' when iterating over record entries"
+        "Simplify `transpose | each` to `items`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

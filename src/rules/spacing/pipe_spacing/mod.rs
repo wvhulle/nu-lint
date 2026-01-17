@@ -191,7 +191,7 @@ impl DetectFix for PipeSpacing {
     }
 
     fn short_description(&self) -> &'static str {
-        "Pipes should have exactly one space before and after when on the same line"
+        "Inconsistent spacing around `|`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

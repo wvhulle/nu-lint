@@ -213,7 +213,7 @@ impl DetectFix for MissingStdinInShebang {
     }
 
     fn short_description(&self) -> &'static str {
-        "Scripts with main functions that expect pipeline input must have --stdin in shebang"
+        "Shebang missing `--stdin` for input"
     }
 
     fn source_link(&self) -> Option<&'static str> {

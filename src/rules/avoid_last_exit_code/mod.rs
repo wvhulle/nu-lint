@@ -122,11 +122,11 @@ impl DetectFix for AvoidLastExitCode {
     type FixInput<'a> = Option<FixData>;
 
     fn id(&self) -> &'static str {
-        "avoid_last_exit_code"
+        "fragile_last_exit_code"
     }
 
     fn short_description(&self) -> &'static str {
-        "Avoid fragile $env.LAST_EXIT_CODE checks; use 'complete' with inline exit_code checks"
+        "Fragile `LAST_EXIT_CODE` check"
     }
 
     fn long_description(&self) -> Option<&'static str> {

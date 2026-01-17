@@ -19,7 +19,7 @@ impl DetectFix for StructuredDataToCsvTool {
     }
 
     fn short_description(&self) -> &'static str {
-        "Don't pipe tables directly into CSV tools without converting to CSV first."
+        "Table piped to CSV tool without `to csv`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

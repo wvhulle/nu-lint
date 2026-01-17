@@ -74,17 +74,16 @@ impl DetectFix for WrapExternalWithComplete {
     }
 
     fn short_description(&self) -> &'static str {
-        "External commands should be wrapped with 'complete' for proper error handling"
+        "External command missing `complete` wrapper"
     }
 
     fn long_description(&self) -> Option<&'static str> {
         Some(
-            "External commands can fail and return non-zero exit codes without raising Nushell \
-             errors. Unlike builtin commands, 'try' blocks do not catch external command failures \
-             based on exit code. Use '| complete' to capture stdout, stderr, and exit_code in a \
-             record, then check the exit_code field to handle errors properly. Without this, \
-             failures may go unnoticed and cause silent data corruption or unexpected behavior \
-             downstream.",
+            "External commands can fail and return non-zero exit codes without raising errors. \
+             Unlike builtin commands, 'try' blocks do not catch external command failures based \
+             on exit code. Use '| complete' to capture stdout, stderr, and exit_code in a record, \
+             then check the exit_code field to handle errors properly. Without this, failures may \
+             go unnoticed and cause silent data corruption or unexpected behavior downstream.",
         )
     }
 

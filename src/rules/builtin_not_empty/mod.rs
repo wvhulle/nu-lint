@@ -120,11 +120,11 @@ impl DetectFix for UseBuiltinIsNotEmpty {
     type FixInput<'a> = IsNotEmptyFixData;
 
     fn id(&self) -> &'static str {
-        "use_is_not_empty"
+        "not_is_empty_to_is_not_empty"
     }
 
     fn short_description(&self) -> &'static str {
-        "Use 'is-not-empty' instead of 'not ... is-empty' for better readability"
+        "Simplify `not ... is-empty` to `is-not-empty`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

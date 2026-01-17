@@ -265,11 +265,11 @@ impl DetectFix for ReplaceJqWithNuGet {
     type FixInput<'a> = JqFixData;
 
     fn id(&self) -> &'static str {
-        "replace_jq_with_nu_get"
+        "jq_to_nu_pipeline"
     }
 
     fn short_description(&self) -> &'static str {
-        "Use Nushell built-ins for data operations with direct equivalents"
+        "Simple `jq` filter replaceable with pipeline"
     }
 
     fn source_link(&self) -> Option<&'static str> {

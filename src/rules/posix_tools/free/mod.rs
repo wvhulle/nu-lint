@@ -91,11 +91,11 @@ impl DetectFix for UseSysMemInsteadOfFree {
     type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
-        "use_sys_mem_instead_of_free"
+        "free_to_sys_mem"
     }
 
     fn short_description(&self) -> &'static str {
-        "Use Nu's 'sys mem' command instead of 'free' for memory information"
+        "`free` replaceable with `sys mem` for memory info"
     }
 
     fn source_link(&self) -> Option<&'static str> {

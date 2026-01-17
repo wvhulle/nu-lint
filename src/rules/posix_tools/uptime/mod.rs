@@ -15,11 +15,11 @@ impl DetectFix for UseSysHostInsteadOfUptime {
     type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
-        "use_sys_host_instead_of_uptime"
+        "uptime_to_sys_host"
     }
 
     fn short_description(&self) -> &'static str {
-        "Use Nu's 'sys host | get uptime' command instead of 'uptime'"
+        "`uptime` replaceable with `sys host`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

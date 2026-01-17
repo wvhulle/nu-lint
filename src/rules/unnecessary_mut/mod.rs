@@ -72,7 +72,7 @@ impl DetectFix for UnnecessaryMut {
     }
 
     fn short_description(&self) -> &'static str {
-        "Variables should only be marked 'mut' when they are actually reassigned"
+        "Variable marked `mut` but never reassigned"
     }
 
     fn source_link(&self) -> Option<&'static str> {

@@ -78,7 +78,7 @@ impl DetectFix for GetOptionalToNotHas {
     }
 
     fn short_description(&self) -> &'static str {
-        "Use 'not-has' operator instead of 'get -o | is-empty' for checking record key absence"
+        "Simplify `get -o | is-empty` to `not-has`"
     }
 
     fn long_description(&self) -> Option<&'static str> {

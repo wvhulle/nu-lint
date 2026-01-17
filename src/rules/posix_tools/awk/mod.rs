@@ -185,11 +185,11 @@ impl DetectFix for UseBuiltinAwk {
     type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
-        "use_builtin_awk"
+        "awk_to_pipeline"
     }
 
     fn short_description(&self) -> &'static str {
-        "Use Nushell pipelines (where/split column/select/each) instead of awk"
+        "`awk` replaceable with structured pipeline"
     }
 
     fn source_link(&self) -> Option<&'static str> {

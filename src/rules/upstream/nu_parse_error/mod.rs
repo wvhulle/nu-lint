@@ -42,14 +42,14 @@ impl DetectFix for NuParseError {
 
     fn long_description(&self) -> Option<&'static str> {
         Some(
-            "nu-lint expects a specific Nushell version. If your installed version differs, this \
-             may cause false positives. Check that your Nushell version matches the expected \
-             version to avoid incorrect warnings.",
+            "nu-lint expects a specific version. If your installed version differs, this may \
+             cause false positives. Check that your version matches the expected version to avoid \
+             incorrect warnings.",
         )
     }
 
     fn short_description(&self) -> &'static str {
-        "Nushell parser encountered a syntax error"
+        "Parser encountered a syntax error"
     }
 
     fn source_link(&self) -> Option<&'static str> {

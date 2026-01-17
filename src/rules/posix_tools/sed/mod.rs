@@ -13,11 +13,11 @@ impl DetectFix for UseBuiltinSed {
     type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
-        "sed_to_str_replace"
+        "sed_to_str_transform"
     }
 
     fn short_description(&self) -> &'static str {
-        "Use Nu's 'str replace' instead of 'sed'"
+        "`sed` replaceable with `str replace`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

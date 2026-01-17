@@ -13,11 +13,11 @@ impl DetectFix for UseBuiltinWc {
     type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
-        "use_builtin_wc"
+        "wc_to_length"
     }
 
     fn short_description(&self) -> &'static str {
-        "Use 'length' instead of external wc"
+        "`wc` replaceable with `length`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

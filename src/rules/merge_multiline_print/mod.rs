@@ -213,7 +213,7 @@ impl DetectFix for MergeMultilinePrint {
     }
 
     fn short_description(&self) -> &'static str {
-        "Consecutive print statements can be merged into a single print with a multiline string"
+        "Consecutive prints mergeable into one"
     }
 
     fn source_link(&self) -> Option<&'static str> {

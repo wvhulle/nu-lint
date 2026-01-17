@@ -19,13 +19,11 @@ impl DetectFix for NothingOutsideFunctionSignature {
     type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
-        "nothing_outside_function_signature"
+        "nothing_outside_signature"
     }
 
     fn short_description(&self) -> &'static str {
-        "The keyword 'nothing' should only appear in function signatures (as return type \
-         annotations), not in function bodies or other expressions. Using 'nothing' outside of \
-         signatures is a programming error."
+        "`nothing` type used outside signature"
     }
 
     fn source_link(&self) -> Option<&'static str> {

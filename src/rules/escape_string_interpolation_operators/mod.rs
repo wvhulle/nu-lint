@@ -247,11 +247,11 @@ impl DetectFix for EscapeStringInterpolationOperators {
     type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
-        "escape_string_interpolation_operators"
+        "unescaped_interpolation"
     }
 
     fn short_description(&self) -> &'static str {
-        "Escape braces in string interpolations to avoid runtime errors"
+        "Unescaped braces in string interpolation"
     }
 
     fn source_link(&self) -> Option<&'static str> {

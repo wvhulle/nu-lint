@@ -137,11 +137,11 @@ impl DetectFix for UseBuiltinUniq {
     type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
-        "use_builtin_uniq"
+        "external_uniq_to_builtin"
     }
 
     fn short_description(&self) -> &'static str {
-        "Use Nu's 'uniq' command for structured data support"
+        "External `uniq` replaceable with built-in"
     }
 
     fn source_link(&self) -> Option<&'static str> {

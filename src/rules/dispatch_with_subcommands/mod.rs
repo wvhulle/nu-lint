@@ -85,7 +85,7 @@ impl DetectFix for DispatchWithSubcommands {
     }
 
     fn short_description(&self) -> &'static str {
-        "Use native 'def \"main subcommand\"' instead of match-based command dispatch in main"
+        "Match dispatch replaceable with subcommands"
     }
 
     fn source_link(&self) -> Option<&'static str> {

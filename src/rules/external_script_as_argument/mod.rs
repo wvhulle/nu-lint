@@ -62,8 +62,7 @@ impl DetectFix for ExternalScriptAsArgument {
     }
 
     fn short_description(&self) -> &'static str {
-        "Avoid passing external scripts as arguments to custom commands; define them as functions \
-         instead"
+        "Script path passed as command argument"
     }
 
     fn source_link(&self) -> Option<&'static str> {

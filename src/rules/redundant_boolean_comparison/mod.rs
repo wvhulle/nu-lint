@@ -117,7 +117,7 @@ impl DetectFix for RedundantBooleanComparison {
     }
 
     fn short_description(&self) -> &'static str {
-        "Comparing a value with `true` or `false` using `==` or `!=` is redundant"
+        "Redundant comparison with boolean literal"
     }
 
     fn source_link(&self) -> Option<&'static str> {

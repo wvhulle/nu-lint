@@ -165,7 +165,7 @@ impl DetectFix for UseBuiltinFind {
     }
 
     fn short_description(&self) -> &'static str {
-        "Use Nu's 'glob' or 'ls' instead of external 'find'"
+        "`find` replaceable with `glob` or `ls`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

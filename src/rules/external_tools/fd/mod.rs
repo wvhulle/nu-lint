@@ -101,11 +101,11 @@ impl DetectFix for UseBuiltinFd {
     type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
-        "use_builtin_fd"
+        "fd_to_glob"
     }
 
     fn short_description(&self) -> &'static str {
-        "Use Nu's 'glob' or 'ls' instead of 'fd'"
+        "`fd` replaceable with `glob` or `ls`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

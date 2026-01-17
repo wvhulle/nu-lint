@@ -13,11 +13,11 @@ impl DetectFix for AvoidNuSubprocess {
     type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
-        "avoid_nu_subprocess"
+        "redundant_nu_subprocess"
     }
 
     fn short_description(&self) -> &'static str {
-        "Spawning `nu -c` from within a Nu script is redundant; call functions directly instead"
+        "Redundant `nu -c` subprocess call"
     }
 
     fn level(&self) -> Option<LintLevel> {

@@ -218,7 +218,7 @@ impl DetectFix for CheckCompleteExitCode {
     }
 
     fn short_description(&self) -> &'static str {
-        "Check exit codes when using 'complete' to handle failed external command properly."
+        "Unchecked exit code after `complete`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

@@ -151,11 +151,11 @@ impl DetectFix for UseBuiltinSort {
     type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
-        "use_builtin_sort"
+        "external_sort_to_builtin"
     }
 
     fn short_description(&self) -> &'static str {
-        "Use Nu's 'sort' command for better data type support"
+        "External `sort` replaceable with built-in"
     }
 
     fn source_link(&self) -> Option<&'static str> {

@@ -76,7 +76,7 @@ impl DetectFix for TypeNuPipelineInput {
     }
 
     fn short_description(&self) -> &'static str {
-        "Custom commands that use $in should have specific input type annotations"
+        "Command using `$in` missing input type"
     }
 
     fn source_link(&self) -> Option<&'static str> {

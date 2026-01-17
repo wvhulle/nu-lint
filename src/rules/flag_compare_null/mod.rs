@@ -157,9 +157,7 @@ impl DetectFix for FlagCompareNull {
     }
 
     fn short_description(&self) -> &'static str {
-        "Typed flags (--flag: type) in custom commands are optional and should be checked for null \
-         before use. Boolean switches (--flag without type) are always true/false and don't need \
-         null checks."
+        "Typed flag used without null check"
     }
 
     fn source_link(&self) -> Option<&'static str> {

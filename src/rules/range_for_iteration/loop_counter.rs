@@ -92,11 +92,11 @@ impl DetectFix for LoopCounter {
     type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
-        "replace_loop_counter_with_range"
+        "loop_counter_to_range"
     }
 
     fn short_description(&self) -> &'static str {
-        "Replace infinite loop with counter and break with range iteration"
+        "Loop counter to range iteration"
     }
 
     fn source_link(&self) -> Option<&'static str> {

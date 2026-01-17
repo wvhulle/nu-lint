@@ -123,11 +123,11 @@ impl DetectFix for ChainedStrReplace {
     type FixInput<'a> = Option<FixData>;
 
     fn id(&self) -> &'static str {
-        "chained_str_replace"
+        "chained_str_transform"
     }
 
     fn short_description(&self) -> &'static str {
-        "Multiple sequential 'str replace' calls can often be combined"
+        "Consecutive `str replace` combinable"
     }
 
     fn long_description(&self) -> Option<&'static str> {

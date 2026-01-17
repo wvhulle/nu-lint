@@ -120,7 +120,7 @@ impl DetectFix for ShortenWithCompoundAssignment {
     type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
-        "shorten_with_compound_assignment"
+        "compound_assignment"
     }
 
     fn short_description(&self) -> &'static str {

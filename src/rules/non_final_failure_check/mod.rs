@@ -81,7 +81,7 @@ impl DetectFix for NonFinalFailureCheck {
     }
 
     fn short_description(&self) -> &'static str {
-        "Only the exit code of the last external command in a pipeline is reported."
+        "Non-final pipeline command exit code ignored"
     }
 
     fn source_link(&self) -> Option<&'static str> {

@@ -232,11 +232,11 @@ impl DetectFix for UseBuiltinCurl {
     type FixInput<'a> = CurlFixData;
 
     fn id(&self) -> &'static str {
-        "use_builtin_curl"
+        "curl_to_http"
     }
 
     fn short_description(&self) -> &'static str {
-        "Use Nushell's http commands instead of curl for better data handling"
+        "`curl` replaceable with `http` commands"
     }
 
     fn source_link(&self) -> Option<&'static str> {

@@ -87,12 +87,11 @@ impl DetectFix for WhileCounter {
     type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
-        "replace_counter_while_with_each"
+        "while_counter_to_range"
     }
 
     fn short_description(&self) -> &'static str {
-        "Replace while loop over a numerical counter with range iteration and functional style \
-         pipe into each."
+        "Counter while-loop to range iteration"
     }
 
     fn source_link(&self) -> Option<&'static str> {

@@ -108,7 +108,7 @@ impl DetectFix for UseRegexOperators {
     type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
-        "contains_to_like_regex_operators"
+        "contains_to_regex_op"
     }
 
     fn short_description(&self) -> &'static str {

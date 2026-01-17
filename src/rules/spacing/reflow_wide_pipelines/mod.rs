@@ -100,8 +100,7 @@ impl DetectFix for ReflowWidePipelines {
     }
 
     fn short_description(&self) -> &'static str {
-        "Pipelines exceeding the configured character limit should be split across multiple lines \
-         for readability"
+        "Pipeline exceeds line length limit"
     }
 
     fn source_link(&self) -> Option<&'static str> {

@@ -56,7 +56,7 @@ impl DetectFix for OpenRawFromToOpen {
     }
 
     fn short_description(&self) -> &'static str {
-        "Simplify 'open --raw | from X' to just 'open' - Nu recognizes known formats"
+        "Simplify `open --raw | from` to `open`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

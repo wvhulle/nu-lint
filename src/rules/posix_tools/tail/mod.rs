@@ -24,7 +24,7 @@ impl DetectFix for UseBuiltinTail {
     }
 
     fn short_description(&self) -> &'static str {
-        "Use Nu's 'last' command instead of 'tail' for cleaner syntax"
+        "`tail` replaceable with `last`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

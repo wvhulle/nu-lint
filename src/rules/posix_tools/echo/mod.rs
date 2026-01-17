@@ -155,11 +155,11 @@ impl DetectFix for UseBuiltinEcho {
     type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
-        "echo_just_identity"
+        "redundant_echo"
     }
 
     fn short_description(&self) -> &'static str {
-        "Do not use the built-in (or external) 'echo' as it's just an identity function in Nushell."
+        "Redundant `echo` (identity function)"
     }
 
     fn source_link(&self) -> Option<&'static str> {

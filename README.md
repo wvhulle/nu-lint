@@ -51,206 +51,206 @@ Some of the rules need further testing and improvement. Please make an issue on 
 <!-- start-rule-groups -->
 `idioms` - Simplifications unique to the Nu language.
 
-- `use_is_not_empty` (auto-fix)
-- `columns_in_to_has` (auto-fix)
-- `columns_not_in_to_not_has` (auto-fix)
-- `dispatch_with_subcommands`
-- `get_optional_to_has` (auto-fix)
-- `get_optional_to_not_has` (auto-fix)
-- `hardcoded_math_constants` (auto-fix)
-- `transpose_items` (auto-fix)
-- `merge_get_cell_path` (auto-fix)
-- `merge_multiline_print` (auto-fix)
-- `turn_positional_into_stream_input` (auto-fix)
-- `use_over_source`
-- `shorten_with_compound_assignment` (auto-fix)
-- `contains_to_like_regex_operators` (auto-fix)
-- `ansi_over_escape_codes` (auto-fix)
-- `append_to_concat_assign` (auto-fix)
-- `custom_log_command` (auto-fix)
+- `not_is_empty_to_is_not_empty` (auto-fix): Simplify `not ... is-empty` to `is-not-empty`
+- `columns_in_to_has` (auto-fix): Use 'has' operator instead of 'in ($record | columns)'
+- `columns_not_in_to_not_has` (auto-fix): Simplify `not-in columns` to `not-has`
+- `dispatch_with_subcommands`: Match dispatch replaceable with subcommands
+- `get_optional_to_has` (auto-fix): Simplify `get -o | is-not-empty` to `has`
+- `get_optional_to_not_has` (auto-fix): Simplify `get -o | is-empty` to `not-has`
+- `hardcoded_math_constants` (auto-fix): Hardcoded mathematical constants should use std/math constants instead
+- `transpose_items` (auto-fix): Simplify `transpose | each` to `items`
+- `merge_get_cell_path` (auto-fix): Combine chained 'get' commands into cell paths
+- `merge_multiline_print` (auto-fix): Consecutive prints mergeable into one
+- `positional_to_pipeline` (auto-fix): Data parameter convertible to pipeline input
+- `source_to_use`: `source` replaceable with `use`
+- `compound_assignment` (auto-fix): Compound assignment operators simplify simple arithmetic.
+- `contains_to_regex_op` (auto-fix): Use =~ and !~ operators instead of verbose 'str contains' checks
+- `ansi_over_escape_codes` (auto-fix): Raw ANSI escape replaceable with `ansi`
+- `append_to_concat_assign` (auto-fix): Use ++= operator instead of verbose append in assignment
+- `custom_log_command` (auto-fix): Custom log command shadows stdlib. Use `use std/log` instead
 
 `parsing` - Better ways to parse and transform text data.
 
-- `lines_instead_of_split` (auto-fix)
-- `never_space_split` (auto-fix)
-- `lines_each_to_parse` (auto-fix)
-- `simplify_regex_parse` (auto-fix)
-- `split_row_get_multistatement` (auto-fix)
-- `split_first_to_parse` (auto-fix)
-- `split_row_get_inline` (auto-fix)
-- `split_row_space_to_split_words` (auto-fix)
+- `lines_instead_of_split` (auto-fix): Use 'lines' command for splitting by newlines
+- `never_space_split` (auto-fix): Unnecessary quotes around variable
+- `lines_each_to_parse` (auto-fix): Remove redundant 'each' wrapper around 'parse'
+- `simplify_regex_parse` (auto-fix): Simplify 'parse --regex' to 'parse' with pattern syntax
+- `split_row_get_multistatement` (auto-fix): Extract field directly with 'parse' instead of storing split result
+- `split_first_to_parse` (auto-fix): Extract first field with 'parse' pattern
+- `split_row_get_inline` (auto-fix): Extract field by name with 'parse' pattern
+- `split_row_space_to_split_words` (auto-fix): Use 'split words' for whitespace splitting
 
 `filesystem` - Simplify file and path operations.
 
-- `from_after_parsed_open` (auto-fix)
-- `open_raw_from_to_open` (auto-fix)
-- `string_param_as_path` (auto-fix)
+- `from_after_parsed_open` (auto-fix): `open` already parses known formats into structured data
+- `open_raw_from_to_open` (auto-fix): Simplify `open --raw | from` to `open`
+- `string_param_as_path` (auto-fix): Parameter typed as string but used as filesystem path
 
 `dead-code` - Remove unused or redundant code
 
-- `avoid_self_import`
-- `unnecessary_accumulate`
-- `unnecessary_variable_before_return` (auto-fix)
-- `do_not_compare_booleans` (auto-fix)
-- `if_null_to_default` (auto-fix)
-- `redundant_ignore` (auto-fix)
-- `unnecessary_mut` (auto-fix)
-- `unused_helper_functions` (auto-fix)
-- `script_export_main` (auto-fix)
-- `string_may_be_bare` (auto-fix)
-- `inline_single_use_function` (auto-fix)
-- `append_to_concat_assign` (auto-fix)
+- `self_import`: Circular import: script imports itself
+- `unnecessary_accumulate`: Redundant accumulator pattern: can be simplified
+- `assign_then_return` (auto-fix): Redundant variable before return
+- `do_not_compare_booleans` (auto-fix): Redundant comparison with boolean literal
+- `if_null_to_default` (auto-fix): Simplify if-null pattern to `| default`
+- `redundant_ignore` (auto-fix): Commands producing output that is discarded with '| ignore'
+- `unnecessary_mut` (auto-fix): Variable marked `mut` but never reassigned
+- `unused_helper_functions` (auto-fix): Function unreachable from entry points
+- `script_export_main` (auto-fix): In scripts, 'def main' is the entry point and doesn't need 'export'
+- `string_may_be_bare` (auto-fix): Quoted string can be bare word
+- `single_call_command` (auto-fix): Single-line command called only once
+- `append_to_concat_assign` (auto-fix): Use ++= operator instead of verbose append in assignment
 
 `posix` - Replace common bash/POSIX patterns.
 
-- `ignore_over_dev_null` (auto-fix)
-- `use_builtin_awk` (auto-fix)
-- `use_builtin_bat` (auto-fix)
-- `use_builtin_cat` (auto-fix)
-- `use_builtin_date` (auto-fix)
-- `use_sys_disks_instead_of_df` (auto-fix)
-- `echo_just_identity` (auto-fix)
-- `find_to_glob` (auto-fix)
-- `use_sys_mem_instead_of_free` (auto-fix)
-- `use_builtin_grep` (auto-fix)
-- `head_to_first` (auto-fix)
-- `use_sys_host_instead_of_hostname` (auto-fix)
-- `use_builtin_cd` (auto-fix)
-- `use_builtin_ls` (auto-fix)
-- `use_builtin_pager` (auto-fix)
-- `use_builtin_read` (auto-fix)
-- `sed_to_str_replace` (auto-fix)
-- `use_builtin_sort` (auto-fix)
-- `use_builtin_tac` (auto-fix)
-- `tail_to_last` (auto-fix)
-- `use_sys_host_instead_of_uname` (auto-fix)
-- `use_builtin_uniq` (auto-fix)
-- `use_sys_host_instead_of_uptime` (auto-fix)
-- `use_sys_users_instead_of_users` (auto-fix)
-- `use_sys_users_instead_of_w` (auto-fix)
-- `use_builtin_wc` (auto-fix)
-- `use_sys_users_instead_of_who` (auto-fix)
+- `ignore_over_dev_null` (auto-fix): Use '| ignore' instead of redirecting to /dev/null
+- `awk_to_pipeline` (auto-fix): `awk` replaceable with structured pipeline
+- `bat_to_open` (auto-fix): `bat` replaceable with `open` for file viewing
+- `cat_to_open` (auto-fix): External `cat` replaceable with `open`
+- `date_to_date_now` (auto-fix): External `date` replaceable with `date now`
+- `df_to_sys_disks` (auto-fix): `df` replaceable with `sys disks`
+- `redundant_echo` (auto-fix): Redundant `echo` (identity function)
+- `find_to_glob` (auto-fix): `find` replaceable with `glob` or `ls`
+- `free_to_sys_mem` (auto-fix): `free` replaceable with `sys mem` for memory info
+- `grep_to_find_or_where` (auto-fix): `grep` replaceable with `find` or `where`
+- `head_to_first` (auto-fix): `head` replaceable with `first`
+- `hostname_to_sys_host` (auto-fix): `hostname` replaceable with `sys host`
+- `external_cd_to_builtin` (auto-fix): External `cd` replaceable with built-in `cd`
+- `external_ls_to_builtin` (auto-fix): External `ls` replaceable with built-in
+- `pager_to_explore` (auto-fix): Pager replaceable with `explore`
+- `read_to_input` (auto-fix): `read` replaceable with `input`
+- `sed_to_str_transform` (auto-fix): `sed` replaceable with `str replace`
+- `external_sort_to_builtin` (auto-fix): External `sort` replaceable with built-in
+- `tac_to_reverse` (auto-fix): `tac` replaceable with `lines | reverse`
+- `tail_to_last` (auto-fix): `tail` replaceable with `last`
+- `uname_to_sys_host` (auto-fix): `uname` replaceable with `sys host`
+- `external_uniq_to_builtin` (auto-fix): External `uniq` replaceable with built-in
+- `uptime_to_sys_host` (auto-fix): `uptime` replaceable with `sys host`
+- `users_to_sys_users` (auto-fix): `users` replaceable with `sys users`
+- `w_to_sys_users` (auto-fix): `w` replaceable with `sys users`
+- `wc_to_length` (auto-fix): `wc` replaceable with `length`
+- `who_to_sys_users` (auto-fix): `who` replaceable with `sys users`
 
 `iteration` - Better patterns for loops and iteration.
 
-- `replace_loop_counter_with_range`
-- `replace_counter_while_with_each`
+- `loop_counter_to_range`: Loop counter to range iteration
+- `while_counter_to_range`: Counter while-loop to range iteration
 
 `runtime-errors` - Preventing unexpected runtime behaviour.
 
-- `avoid_last_exit_code` (auto-fix)
-- `check_complete_exit_code`
-- `descriptive_error_messages`
-- `escape_string_interpolation_operators`
-- `exit_only_in_main`
-- `check_typed_flag_before_use`
-- `non_final_failure_check`
-- `error_make_for_non_fatal` (auto-fix)
-- `try_instead_of_do`
-- `unsafe_dynamic_record_access` (auto-fix)
-- `missing_stdin_in_shebang` (auto-fix)
-- `dynamic_script_import`
-- `catch_builtin_error_try`
-- `unchecked_cell_path_index` (auto-fix)
-- `unchecked_get_index` (auto-fix)
-- `unchecked_first_last` (auto-fix)
-- `wrap_external_with_complete`
-- `use_over_source`
-- `spread_list_to_external` (auto-fix)
+- `fragile_last_exit_code` (auto-fix): Fragile `LAST_EXIT_CODE` check
+- `check_complete_exit_code`: Unchecked exit code after `complete`
+- `descriptive_error_messages`: Error messages should be descriptive and actionable
+- `unescaped_interpolation`: Unescaped braces in string interpolation
+- `exit_only_in_main`: Avoid using 'exit' in functions other than 'main'
+- `check_typed_flag_before_use`: Typed flag used without null check
+- `non_final_failure_check`: Non-final pipeline command exit code ignored
+- `error_make_for_non_fatal` (auto-fix): Use 'error make' for catchable errors in functions and try blocks
+- `try_instead_of_do`: Use 'try' blocks instead of 'do' blocks for error-prone operations
+- `unsafe_dynamic_record_access` (auto-fix): Use 'get -o' for dynamic keys to handle missing keys safely
+- `missing_stdin_in_shebang` (auto-fix): Shebang missing `--stdin` for input
+- `dynamic_script_import`: Dynamic import path not statically validated
+- `catch_builtin_error_try`: Catch runtime errors from built-in commands using 'try' blocks
+- `unchecked_cell_path_index` (auto-fix): Cell path numeric index access may panic on empty lists
+- `unchecked_get_index` (auto-fix): List access with 'get' requires -o flag for safety
+- `unchecked_first_last` (auto-fix): Using 'first' or 'last' without count may panic on empty lists
+- `wrap_external_with_complete`: External command missing `complete` wrapper
+- `source_to_use`: `source` replaceable with `use`
+- `spread_list_to_external` (auto-fix): List variables passed to external commands should be spread with `...`
 
 `filtering` - Better patterns for filtering and selecting data.
 
-- `each_if_to_where` (auto-fix)
-- `for_filter_to_where`
-- `omit_it_in_row_condition` (auto-fix)
-- `slice_to_drop` (auto-fix)
-- `slice_to_last` (auto-fix)
-- `slice_to_skip` (auto-fix)
-- `slice_to_take` (auto-fix)
-- `where_closure_drop_parameter` (auto-fix)
-- `remove_redundant_in` (auto-fix)
+- `each_if_to_where` (auto-fix): Use 'where' for filtering instead of 'each' with 'if'
+- `for_filter_to_where`: Use 'where' filter instead of for loop with if and append
+- `omit_it_in_row_condition` (auto-fix): Field names in 'where' row conditions don't need `$it.` prefix
+- `slice_to_drop` (auto-fix): Use 'drop' instead of 'slice ..-N' to drop last N-1 elements
+- `slice_to_last` (auto-fix): Use 'last' instead of 'slice (-N)..' to get last N elements
+- `slice_to_skip` (auto-fix): Use 'skip' instead of 'slice N..' to skip first N elements
+- `slice_to_take` (auto-fix): Use 'take' instead of 'slice 0..N' to take first N elements
+- `where_closure_drop_parameter` (auto-fix): You can drop the closure and its parameter in 'where' and 'filter'.
+- `remove_redundant_in` (auto-fix): Redundant `$in` at pipeline start
 
 `performance` - Rules with potential performance impact
 
-- `avoid_nu_subprocess`
-- `dispatch_with_subcommands`
-- `avoid_self_import`
-- `turn_positional_into_stream_input` (auto-fix)
-- `unnecessary_accumulate`
-- `merge_multiline_print` (auto-fix)
-- `chained_str_replace` (auto-fix)
-- `streaming_hidden_by_complete` (auto-fix)
+- `redundant_nu_subprocess`: Redundant `nu -c` subprocess call
+- `dispatch_with_subcommands`: Match dispatch replaceable with subcommands
+- `self_import`: Circular import: script imports itself
+- `positional_to_pipeline` (auto-fix): Data parameter convertible to pipeline input
+- `unnecessary_accumulate`: Redundant accumulator pattern: can be simplified
+- `merge_multiline_print` (auto-fix): Consecutive prints mergeable into one
+- `chained_str_transform` (auto-fix): Consecutive `str replace` combinable
+- `streaming_hidden_by_complete` (auto-fix): Streaming commands should not be wrapped with 'complete'
 
 `type-safety` - Annotate with type hints where possible.
 
-- `external_script_as_argument`
-- `nothing_outside_function_signature` (auto-fix)
-- `add_type_hints_arguments` (auto-fix)
-- `string_param_as_path` (auto-fix)
-- `missing_output_type` (auto-fix)
-- `missing_in_type` (auto-fix)
-- `avoid_nu_subprocess`
-- `dynamic_script_import`
+- `external_script_as_argument`: Script path passed as command argument
+- `nothing_outside_signature` (auto-fix): `nothing` type used outside signature
+- `add_type_hints_arguments` (auto-fix): Arguments of custom commands should have type annotations
+- `string_param_as_path` (auto-fix): Parameter typed as string but used as filesystem path
+- `missing_output_type` (auto-fix): Command missing output type annotation
+- `missing_in_type` (auto-fix): Command using `$in` missing input type
+- `redundant_nu_subprocess`: Redundant `nu -c` subprocess call
+- `dynamic_script_import`: Dynamic import path not statically validated
 
-`documentation` - Improve actionability of user-facing messages.
+`documentation` - Improve usefullness user-facing messages.
 
-- `add_doc_comment_exported_fn`
-- `descriptive_error_messages`
-- `add_label_to_error`
-- `add_help_to_error`
-- `add_span_to_label`
-- `add_url_to_error`
-- `main_positional_args_docs`
-- `main_named_args_docs`
-- `max_positional_params`
-- `explicit_long_flags` (auto-fix)
+- `add_doc_comment_exported_fn`: Exported functions should have documentation comments
+- `descriptive_error_messages`: Error messages should be descriptive and actionable
+- `add_label_to_error`: error make should include 'label'
+- `add_help_to_error`: `error make` missing `help` field
+- `add_span_to_label`: labels should include 'span' to highlight error location in user code
+- `add_url_to_error`: error make should include 'url' field to link to documentation
+- `main_positional_args_docs`: Missing docs on main positional parameter
+- `main_named_args_docs`: Missing docs on main flag parameter
+- `max_positional_params`: Custom commands should have ≤ 2 positional parameters
+- `explicit_long_flags` (auto-fix): Replace short flags (-f) with long flags (--flag)
 
 `effects` - Handle built-in and external commands with side-effects.
 
-- `dangerous_file_operations`
-- `errors_to_stderr`
-- `dont_mix_different_effects`
-- `print_and_return_data`
-- `each_nothing_to_for_loop` (auto-fix)
-- `silence_stderr_data`
+- `dangerous_file_operations`: File operation on dangerous system path
+- `errors_to_stderr`: Error messages should go to stderr, not stdout
+- `dont_mix_different_effects`: Functions should not mix different types of I/O operations or effects.
+- `print_and_return_data`: Function prints and returns data
+- `each_nothing_to_for_loop` (auto-fix): `each` mappings with no output should be written as `for` loops.
+- `silence_stderr_data`: External commands that write data to stderr should not be silenced
 
 `external` - Replace common external CLI tools.
 
-- `use_builtin_curl` (auto-fix)
-- `use_builtin_fd` (auto-fix)
-- `replace_jq_with_nu_get` (auto-fix)
-- `use_builtin_wget` (auto-fix)
-- `use_builtin_which` (auto-fix)
+- `curl_to_http` (auto-fix): `curl` replaceable with `http` commands
+- `fd_to_glob` (auto-fix): `fd` replaceable with `glob` or `ls`
+- `jq_to_nu_pipeline` (auto-fix): Simple `jq` filter replaceable with pipeline
+- `wget_to_http_get` (auto-fix): `wget` replaceable with `http get`
+- `external_which_to_builtin` (auto-fix): External `which` replaceable with built-in
 
-`formatting` - Formatting according to Nushell guidelines.
+`formatting` - Formatting according to style-guide.
 
-- `ansi_over_escape_codes` (auto-fix)
-- `collapsible_if` (auto-fix)
-- `forbid_excessive_nesting`
-- `max_function_body_length`
-- `replace_if_else_chain_with_match` (auto-fix)
-- `block_brace_spacing` (auto-fix)
-- `closure_brace_pipe_spacing` (auto-fix)
-- `no_trailing_spaces` (auto-fix)
-- `omit_list_commas` (auto-fix)
-- `pipe_spacing` (auto-fix)
-- `record_brace_spacing` (auto-fix)
-- `reflow_wide_pipelines` (auto-fix)
-- `reflow_wide_lists` (auto-fix)
-- `wrap_wide_records` (auto-fix)
+- `ansi_over_escape_codes` (auto-fix): Raw ANSI escape replaceable with `ansi`
+- `collapsible_if` (auto-fix): Nested if-statements collapsible with `and`
+- `forbid_excessive_nesting`: Avoid excessive nesting (more than 4 levels deep)
+- `max_function_body_length`: Function bodies should be short to maintain readability
+- `if_else_chain_to_match` (auto-fix): Use 'match' for value-based branching instead of if-else-if chains
+- `block_brace_spacing` (auto-fix): Block body needs spaces inside braces: `{ body }` not `{body}`
+- `closure_brace_pipe_spacing` (auto-fix): Space between `{` and `|` in closure
+- `no_trailing_spaces` (auto-fix): Eliminate trailing spaces at the end of lines
+- `omit_list_commas` (auto-fix): Omit commas between list items.
+- `pipe_spacing` (auto-fix): Inconsistent spacing around `|`
+- `record_brace_spacing` (auto-fix): Record braces should touch content: `{a: 1}` not `{ a: 1 }`
+- `reflow_wide_pipelines` (auto-fix): Pipeline exceeds line length limit
+- `reflow_wide_lists` (auto-fix): Wrap wide lists vertically across multiple lines.
+- `wrap_wide_records` (auto-fix): Wrap records exceeding 80 chars or with deeply nested structures
 
 `naming` - Follow official naming conventions
 
-- `kebab_case_commands`
-- `screaming_snake_constants`
-- `snake_case_variables` (auto-fix)
-- `add_label_to_error`
+- `kebab_case_commands`: Custom commands should use kebab-case naming convention
+- `screaming_snake_constants`: Constants should use SCREAMING_SNAKE_CASE naming convention
+- `snake_case_variables` (auto-fix): Variables should use snake_case naming convention
+- `add_label_to_error`: error make should include 'label'
 
-`upstream` - Forward warnings and errors of the upstream Nushell parser.
+`upstream` - Forward warnings and errors of the Nu parser.
 
-- `dynamic_script_import`
-- `nu_deprecated` (auto-fix)
-- `nu_parse_error`
+- `dynamic_script_import`: Dynamic import path not statically validated
+- `nu_deprecated` (auto-fix): Parser detected deprecated command or flag usage
+- `nu_parse_error`: Parser encountered a syntax error
 
 <!-- end-rule-groups -->
 

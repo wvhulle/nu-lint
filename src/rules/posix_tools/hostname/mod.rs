@@ -14,11 +14,11 @@ impl DetectFix for UseSysHostInsteadOfHostname {
     type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
-        "use_sys_host_instead_of_hostname"
+        "hostname_to_sys_host"
     }
 
     fn short_description(&self) -> &'static str {
-        "Use Nu's 'sys host | get hostname' command instead of 'hostname'"
+        "`hostname` replaceable with `sys host`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

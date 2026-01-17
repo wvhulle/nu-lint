@@ -75,11 +75,11 @@ impl DetectFix for UseSysDisksInsteadOfDf {
     type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
-        "use_sys_disks_instead_of_df"
+        "df_to_sys_disks"
     }
 
     fn short_description(&self) -> &'static str {
-        "Use Nu's 'sys disks' command instead of 'df' for disk usage information"
+        "`df` replaceable with `sys disks`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

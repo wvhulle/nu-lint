@@ -180,7 +180,7 @@ impl DetectFix for AnsiOverEscapeCodes {
     }
 
     fn short_description(&self) -> &'static str {
-        "Use `ansi` command instead of raw ANSI escape sequences for colored output"
+        "Raw ANSI escape replaceable with `ansi`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

@@ -61,7 +61,7 @@ impl DetectFix for FromAfterParsedOpen {
     }
 
     fn short_description(&self) -> &'static str {
-        "Nu's 'open' already parses known formats into structured data"
+        "`open` already parses known formats into structured data"
     }
 
     fn source_link(&self) -> Option<&'static str> {

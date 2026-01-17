@@ -101,11 +101,11 @@ impl DetectFix for UseBuiltinCd {
     type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
-        "use_builtin_cd"
+        "external_cd_to_builtin"
     }
 
     fn short_description(&self) -> &'static str {
-        "Use Nu's built-in 'cd' instead of external cd command"
+        "External `cd` replaceable with built-in `cd`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

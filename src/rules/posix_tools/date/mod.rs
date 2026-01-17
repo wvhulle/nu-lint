@@ -105,11 +105,11 @@ impl DetectFix for UseBuiltinDate {
     type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
-        "use_builtin_date"
+        "date_to_date_now"
     }
 
     fn short_description(&self) -> &'static str {
-        "Use 'date now' instead of external date"
+        "External `date` replaceable with `date now`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

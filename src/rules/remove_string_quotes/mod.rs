@@ -43,7 +43,7 @@ impl DetectFix for UnnecessaryStringQuotes {
     }
 
     fn short_description(&self) -> &'static str {
-        "Quoted strings that can be written as bare words should omit the quotes for readability"
+        "Quoted string can be bare word"
     }
 
     fn source_link(&self) -> Option<&'static str> {

@@ -14,11 +14,11 @@ impl DetectFix for UseSysUsersInsteadOfWho {
     type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
-        "use_sys_users_instead_of_who"
+        "who_to_sys_users"
     }
 
     fn short_description(&self) -> &'static str {
-        "Use Nu's 'sys users' command instead of 'who' for user information"
+        "`who` replaceable with `sys users`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

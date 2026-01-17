@@ -122,11 +122,11 @@ impl DetectFix for InlineSingleUseFunction {
     type FixInput<'a> = Option<FixData>;
 
     fn id(&self) -> &'static str {
-        "inline_single_use_function"
+        "single_call_command"
     }
 
     fn short_description(&self) -> &'static str {
-        "Detect single-line custom commands used only once that could be inlined"
+        "Single-line command called only once"
     }
 
     fn source_link(&self) -> Option<&'static str> {

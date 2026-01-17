@@ -324,9 +324,9 @@ impl DetectFix for SplitRowGetMultistatement {
 
     fn long_description(&self) -> Option<&'static str> {
         Some(
-            "Storing 'split row' in a variable and later accessing by index spreads related \
-             logic across statements. Use 'parse' to extract fields directly with named access \
-             in a single expression.",
+            "Storing 'split row' in a variable and later accessing by index spreads related logic \
+             across statements. Use 'parse' to extract fields directly with named access in a \
+             single expression.",
         )
     }
 

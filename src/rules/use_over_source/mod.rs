@@ -14,11 +14,11 @@ impl DetectFix for UseOverSource {
     type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
-        "use_over_source"
+        "source_to_use"
     }
 
     fn short_description(&self) -> &'static str {
-        "Use 'use' instead of 'source' for importing modules"
+        "`source` replaceable with `use`"
     }
 
     fn long_description(&self) -> Option<&'static str> {

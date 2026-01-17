@@ -76,7 +76,7 @@ impl DetectFix for RemoveRedundantIn {
     }
 
     fn short_description(&self) -> &'static str {
-        "Remove redundant $in at the start of pipelines - it's implicit in Nushell"
+        "Redundant `$in` at pipeline start"
     }
 
     fn source_link(&self) -> Option<&'static str> {

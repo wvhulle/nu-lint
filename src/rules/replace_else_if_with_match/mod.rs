@@ -289,7 +289,7 @@ impl DetectFix for ReplaceIfElseChainWithMatch {
     type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
-        "replace_if_else_chain_with_match"
+        "if_else_chain_to_match"
     }
 
     fn short_description(&self) -> &'static str {

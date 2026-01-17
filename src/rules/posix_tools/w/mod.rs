@@ -15,11 +15,11 @@ impl DetectFix for UseSysUsersInsteadOfW {
     type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
-        "use_sys_users_instead_of_w"
+        "w_to_sys_users"
     }
 
     fn short_description(&self) -> &'static str {
-        "Use Nu's 'sys users' command instead of 'w' for user information"
+        "`w` replaceable with `sys users`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

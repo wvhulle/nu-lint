@@ -194,12 +194,11 @@ impl DetectFix for TurnPositionalIntoStreamInput {
     type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
-        "turn_positional_into_stream_input"
+        "positional_to_pipeline"
     }
 
     fn short_description(&self) -> &'static str {
-        "Custom commands with data parameters used as pipeline input should receive that data via \
-         pipeline input ($in) instead."
+        "Data parameter convertible to pipeline input"
     }
 
     fn source_link(&self) -> Option<&'static str> {

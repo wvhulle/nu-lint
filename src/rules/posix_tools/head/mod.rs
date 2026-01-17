@@ -33,7 +33,7 @@ impl DetectFix for UseBuiltinHead {
     }
 
     fn short_description(&self) -> &'static str {
-        "Use Nu's 'first' command instead of 'head' for cleaner syntax"
+        "`head` replaceable with `first`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

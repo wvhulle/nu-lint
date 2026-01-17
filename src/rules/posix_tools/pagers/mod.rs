@@ -63,11 +63,11 @@ impl DetectFix for UseBuiltinPager {
     type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
-        "use_builtin_pager"
+        "pager_to_explore"
     }
 
     fn short_description(&self) -> &'static str {
-        "Use Nu's 'explore' for interactive viewing or 'watch' for monitoring file changes"
+        "Pager replaceable with `explore`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

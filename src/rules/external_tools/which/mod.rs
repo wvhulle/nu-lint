@@ -13,11 +13,11 @@ impl DetectFix for UseBuiltinWhich {
     type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
-        "use_builtin_which"
+        "external_which_to_builtin"
     }
 
     fn short_description(&self) -> &'static str {
-        "Use built-in 'which'"
+        "External `which` replaceable with built-in"
     }
 
     fn source_link(&self) -> Option<&'static str> {

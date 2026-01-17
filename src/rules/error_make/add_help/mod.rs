@@ -48,7 +48,7 @@ impl DetectFix for AddHelpToError {
     }
 
     fn short_description(&self) -> &'static str {
-        "error make should include 'help' field to guide users toward a solution"
+        "`error make` missing `help` field"
     }
 
     fn source_link(&self) -> Option<&'static str> {

@@ -194,7 +194,7 @@ const POSIX_TOOLS: Group = Group {
 
 const DOCUMENTATION: Group = Group {
     name: "documentation",
-    description: "Improve actionability of user-facing messages.",
+    description: "Improve usefullness user-facing messages.",
     rules: &[
         super::documentation::exported_function::RULE,
         super::documentation::descriptive_error_messages::RULE,
@@ -223,7 +223,7 @@ const EXTERNAL_TOOLS: Group = Group {
 
 const FORMATTING: Group = Group {
     name: "formatting",
-    description: "Formatting according to Nushell guidelines.",
+    description: "Formatting according to style-guide.",
     rules: &[
         super::ansi_over_escape_codes::RULE,
         super::collapsible_if::RULE,
@@ -268,7 +268,7 @@ const SIDE_EFFECTS: Group = Group {
 
 const UPSTREAM: Group = Group {
     name: "upstream",
-    description: "Forward warnings and errors of the upstream Nushell parser.",
+    description: "Forward warnings and errors of the Nu parser.",
     rules: &[
         super::dynamic_script_import::RULE,
         super::upstream::nu_deprecated::RULE,

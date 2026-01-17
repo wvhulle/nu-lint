@@ -158,11 +158,11 @@ impl DetectFix for UseBuiltinLs {
     type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
-        "use_builtin_ls"
+        "external_ls_to_builtin"
     }
 
     fn short_description(&self) -> &'static str {
-        "Use Nu's built-in 'ls' instead of external ls command for structured data"
+        "External `ls` replaceable with built-in"
     }
 
     fn source_link(&self) -> Option<&'static str> {

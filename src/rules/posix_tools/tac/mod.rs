@@ -15,11 +15,11 @@ impl DetectFix for UseBuiltinTac {
     type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
-        "use_builtin_tac"
+        "tac_to_reverse"
     }
 
     fn short_description(&self) -> &'static str {
-        "Use Nu's 'open --raw | lines | reverse' instead of 'tac' for reversing file content"
+        "`tac` replaceable with `lines | reverse`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

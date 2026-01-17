@@ -11,11 +11,11 @@ impl DetectFix for UseBuiltinCut {
     type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
-        "use_builtin_cut"
+        "cut_to_select"
     }
 
     fn explanation(&self) -> &'static str {
-        "Use 'select' instead of external cut"
+        "`cut` replaceable with `select`"
     }
 
     fn doc_url(&self) -> Option<&'static str> {

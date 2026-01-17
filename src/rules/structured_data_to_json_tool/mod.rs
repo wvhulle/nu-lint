@@ -19,8 +19,7 @@ impl DetectFix for StructuredDataToJsonTool {
     }
 
     fn short_description(&self) -> &'static str {
-        "Don't pipe structured data directly into JSON tools like jq without converting to JSON \
-         first."
+        "Data piped to JSON tool without `to json`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

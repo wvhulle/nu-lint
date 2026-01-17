@@ -120,7 +120,7 @@ impl DetectFix for PrintAndReturnData {
     }
 
     fn short_description(&self) -> &'static str {
-        "Functions should not both print to stdout and return data. This is confusing."
+        "Function prints and returns data"
     }
 
     fn level(&self) -> Option<LintLevel> {

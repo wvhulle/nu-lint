@@ -18,7 +18,7 @@ impl DetectFix for DynamicScriptImport {
     }
 
     fn short_description(&self) -> &'static str {
-        "Dynamic import paths cannot be statically validated and may lead to runtime errors."
+        "Dynamic import path not statically validated"
     }
 
     fn source_link(&self) -> Option<&'static str> {

@@ -84,7 +84,7 @@ impl DetectFix for MainPositionalArgsDocs {
     }
 
     fn short_description(&self) -> &'static str {
-        "Positional parameters in main functions should have documentation comments"
+        "Missing docs on main positional parameter"
     }
 
     fn long_description(&self) -> Option<&'static str> {

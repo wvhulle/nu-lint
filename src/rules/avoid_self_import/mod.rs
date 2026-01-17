@@ -14,11 +14,11 @@ impl DetectFix for AvoidSelfImport {
     type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
-        "avoid_self_import"
+        "self_import"
     }
 
     fn short_description(&self) -> &'static str {
-        "Avoid importing the current script from itself; functions are already available in scope"
+        "Circular import: script imports itself"
     }
 
     fn level(&self) -> Option<LintLevel> {

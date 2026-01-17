@@ -79,8 +79,7 @@ impl DetectFix for GlobMayDropQuotes {
     }
 
     fn short_description(&self) -> &'static str {
-        "Glob patterns in quotes are treated as literal strings. Commands expecting glob patterns \
-         work better with bare (unquoted) glob expressions for automatic file matching."
+        "Quoted glob pattern treated as literal"
     }
 
     fn source_link(&self) -> Option<&'static str> {

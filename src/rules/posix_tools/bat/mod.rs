@@ -25,11 +25,11 @@ impl DetectFix for UseBuiltinBat {
     type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
-        "use_builtin_bat"
+        "bat_to_open"
     }
 
     fn short_description(&self) -> &'static str {
-        "Use Nu's 'open' command instead of 'bat' for file viewing"
+        "`bat` replaceable with `open` for file viewing"
     }
 
     fn source_link(&self) -> Option<&'static str> {

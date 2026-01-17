@@ -60,11 +60,11 @@ impl DetectFix for UseBuiltinWget {
     type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
-        "use_builtin_wget"
+        "wget_to_http_get"
     }
 
     fn short_description(&self) -> &'static str {
-        "Use 'http get | save' instead of wget"
+        "`wget` replaceable with `http get`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

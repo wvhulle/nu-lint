@@ -77,8 +77,7 @@ impl DetectFix for NeverSpaceSplit {
     }
 
     fn short_description(&self) -> &'static str {
-        "Nushell never splits variables on whitespace; quotes around single variables are \
-         unnecessary"
+        "Unnecessary quotes around variable"
     }
 
     fn source_link(&self) -> Option<&'static str> {

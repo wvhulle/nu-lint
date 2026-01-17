@@ -62,7 +62,7 @@ impl DetectFix for MainNamedArgsDocs {
     }
 
     fn short_description(&self) -> &'static str {
-        "Named parameters (flags) in main functions should have documentation comments"
+        "Missing docs on main flag parameter"
     }
 
     fn source_link(&self) -> Option<&'static str> {

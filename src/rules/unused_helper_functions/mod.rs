@@ -172,8 +172,7 @@ impl DetectFix for UnusedHelperFunctions {
     }
 
     fn short_description(&self) -> &'static str {
-        "Detect helper functions that are never called from entry points (main or exported \
-         functions)"
+        "Function unreachable from entry points"
     }
 
     fn source_link(&self) -> Option<&'static str> {

@@ -136,11 +136,11 @@ impl DetectFix for UnnecessaryVariableBeforeReturn {
     type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
-        "unnecessary_variable_before_return"
+        "assign_then_return"
     }
 
     fn short_description(&self) -> &'static str {
-        "Variable assigned and immediately returned adds unnecessary verbosity"
+        "Redundant variable before return"
     }
 
     fn source_link(&self) -> Option<&'static str> {

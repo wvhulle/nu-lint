@@ -210,11 +210,11 @@ impl DetectFix for UseBuiltinGrep {
     type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
-        "use_builtin_grep"
+        "grep_to_find_or_where"
     }
 
     fn short_description(&self) -> &'static str {
-        "Use Nu's 'find' or 'where' instead of 'grep' for better data handling"
+        "`grep` replaceable with `find` or `where`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

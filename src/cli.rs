@@ -61,7 +61,7 @@ pub struct Cli {
     #[arg(long, short)]
     config: Option<PathBuf>,
 
-    /// Read from stdin
+    /// Read from standard input
     #[arg(long)]
     stdin: bool,
 
@@ -174,7 +174,6 @@ impl Cli {
         }
 
         let max_id_len = sorted_rules.iter().map(|r| r.id().len()).max().unwrap_or(0);
-        let max_desc_len = 60; // Truncate descriptions to fit screen
 
         for rule in &sorted_rules {
             let level = config.get_lint_level(*rule);
@@ -186,13 +185,8 @@ impl Cli {
             };
             let fix_char = if rule.has_auto_fix() { 'F' } else { ' ' };
             let desc = rule.short_description();
-            let desc_truncated = if desc.len() > max_desc_len {
-                format!("{}...", &desc[..max_desc_len - 3])
-            } else {
-                desc.to_string()
-            };
             println!(
-                "{level_char}{fix_char} {:<width$}  {desc_truncated}",
+                "{level_char}{fix_char} {:<width$}  {desc}",
                 rule.id(),
                 width = max_id_len
             );
@@ -217,7 +211,8 @@ impl Cli {
         for set in ALL_GROUPS {
             println!("`{}` - {}\n", set.name, set.description);
             for rule in set.rules {
-                println!("- `{}`{}", rule.id(), auto_fix_suffix(*rule));
+                let desc = rule.short_description();
+                println!("- `{}`{}: {}", rule.id(), auto_fix_suffix(*rule), desc);
             }
             println!();
         }

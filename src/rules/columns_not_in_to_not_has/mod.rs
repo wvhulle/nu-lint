@@ -75,8 +75,7 @@ impl DetectFix for ColumnsNotInToNotHas {
     }
 
     fn short_description(&self) -> &'static str {
-        "Use 'not-has' operator instead of 'not-in ($record | columns)' for checking record key \
-         absence"
+        "Simplify `not-in columns` to `not-has`"
     }
 
     fn long_description(&self) -> Option<&'static str> {

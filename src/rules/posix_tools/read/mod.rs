@@ -13,11 +13,11 @@ impl DetectFix for UseBuiltinRead {
     type FixInput<'a> = ExternalCmdFixData<'a>;
 
     fn id(&self) -> &'static str {
-        "use_builtin_read"
+        "read_to_input"
     }
 
     fn short_description(&self) -> &'static str {
-        "Use 'input' instead of 'read'"
+        "`read` replaceable with `input`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

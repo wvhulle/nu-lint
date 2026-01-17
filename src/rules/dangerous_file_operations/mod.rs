@@ -157,7 +157,7 @@ impl DetectFix for DangerousFileOperations {
     }
 
     fn short_description(&self) -> &'static str {
-        "Detect file operations on dangerous system paths that could cause data loss"
+        "File operation on dangerous system path"
     }
 
     fn level(&self) -> Option<LintLevel> {

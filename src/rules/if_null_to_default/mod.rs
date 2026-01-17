@@ -131,7 +131,7 @@ impl DetectFix for IfNullToDefault {
     }
 
     fn short_description(&self) -> &'static str {
-        "Replace `if $x == null { default } else { $x }` with `$x | default default`"
+        "Simplify if-null pattern to `| default`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

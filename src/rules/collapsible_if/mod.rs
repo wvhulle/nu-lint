@@ -45,8 +45,7 @@ impl DetectFix for CollapsibleIf {
     }
 
     fn short_description(&self) -> &'static str {
-        "Collapse nested if statements without else clauses into a single if with combined \
-         conditions"
+        "Nested if-statements collapsible with `and`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

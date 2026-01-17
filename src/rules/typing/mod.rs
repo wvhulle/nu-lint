@@ -5,7 +5,7 @@ use nu_protocol::{
 
 use crate::{ast::call::CallExt, context::LintContext};
 
-pub mod missing_argument_type;
+pub mod add_type_hints_arguments;
 pub mod missing_in_type;
 pub mod missing_output_type;
 

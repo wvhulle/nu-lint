@@ -1,13 +1,13 @@
-pub mod block_body_spacing;
-pub mod closure_body_spacing;
-pub mod closure_param_spacing;
+pub mod block_brace_spacing;
+pub mod closure_brace_pipe_spacing;
+pub mod closure_pipe_body_spacing;
 pub mod no_trailing_spaces;
 pub mod omit_list_commas;
 pub mod pipe_spacing;
 pub mod record_brace_spacing;
+pub mod reflow_wide_lists;
 pub mod reflow_wide_pipelines;
-pub mod wrap_long_lists;
-pub mod wrap_records;
+pub mod wrap_wide_records;
 
 use nu_protocol::Span;
 

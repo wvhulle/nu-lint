@@ -5,11 +5,11 @@ use crate::{
     context::LintContext,
 };
 
-pub mod add_help;
-pub mod add_label;
+pub mod add_help_to_error;
+pub mod add_label_to_error;
 pub mod add_span_to_label;
-pub mod add_url;
-pub mod non_fatal_catch;
+pub mod add_url_to_error;
+pub mod error_make_for_non_fatal;
 
 pub fn extract_field_name(key: &Expression, context: &LintContext) -> String {
     StringFormat::from_expression(key, context).map_or_else(

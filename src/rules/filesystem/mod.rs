@@ -10,7 +10,7 @@ use crate::{
 
 pub mod from_after_parsed_open;
 pub mod open_raw_from_to_open;
-pub mod string_as_path;
+pub mod string_param_as_path;
 
 /// Data extracted from an `open FILE | from FORMAT` pipeline pattern
 pub struct OpenFromPattern<'a> {

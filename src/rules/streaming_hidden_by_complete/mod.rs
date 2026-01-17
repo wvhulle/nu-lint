@@ -92,7 +92,7 @@ impl DetectFix for RedundantCompleteStreaming {
     }
 
     fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Warning)
+        None
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

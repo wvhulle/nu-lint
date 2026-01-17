@@ -11,7 +11,7 @@ use crate::{
 
 pub mod lines_each_to_parse;
 pub mod lines_instead_of_split;
-pub mod simplify_regex;
+pub mod simplify_regex_parse;
 pub mod split_first_to_parse;
 pub mod split_row_get_inline;
 pub mod split_row_get_multistatement;

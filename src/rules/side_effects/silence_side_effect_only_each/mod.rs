@@ -99,11 +99,11 @@ impl DetectFix for UseForOverEach {
     type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
-        "silence_side_effect_only_each"
+        "each_nothing_to_for_loop"
     }
 
     fn short_description(&self) -> &'static str {
-        "Silence loops that only have side effects and no pipeline output."
+        "`each` mappings with no output should be written as `for` loops."
     }
 
     fn source_link(&self) -> Option<&'static str> {

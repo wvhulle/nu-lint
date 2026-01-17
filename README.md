@@ -49,11 +49,14 @@ Some of the rules need further testing and improvement. Please make an issue on 
 +120 rules are defined and most have automatic fixes available (list may be out-of-date):
 
 <!-- start-rule-groups -->
-
 `idioms` - Simplifications unique to the Nu language.
 
 - `use_is_not_empty` (auto-fix)
+- `columns_in_to_has` (auto-fix)
+- `columns_not_in_to_not_has` (auto-fix)
 - `dispatch_with_subcommands`
+- `get_optional_to_has` (auto-fix)
+- `get_optional_to_not_has` (auto-fix)
 - `hardcoded_math_constants` (auto-fix)
 - `transpose_items` (auto-fix)
 - `merge_get_cell_path` (auto-fix)
@@ -92,7 +95,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `unused_helper_functions` (auto-fix)
 - `script_export_main` (auto-fix)
 - `string_may_be_bare` (auto-fix)
-- `inline_single_use_function`
+- `inline_single_use_function` (auto-fix)
 - `append_to_concat_assign` (auto-fix)
 
 `posix` - Replace common bash/POSIX patterns.
@@ -150,6 +153,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `unchecked_first_last` (auto-fix)
 - `wrap_external_with_complete`
 - `use_over_source`
+- `spread_list_to_external` (auto-fix)
 
 `filtering` - Better patterns for filtering and selecting data.
 
@@ -204,7 +208,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `errors_to_stderr`
 - `dont_mix_different_effects`
 - `print_and_return_data`
-- `silence_side_effect_only_each` (auto-fix)
+- `each_nothing_to_for_loop` (auto-fix)
 - `silence_stderr_data`
 
 `external` - Replace common external CLI tools.
@@ -242,7 +246,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 `upstream` - Forward warnings and errors of the upstream Nushell parser.
 
 - `dynamic_script_import`
-- `nu_deprecated`
+- `nu_deprecated` (auto-fix)
 - `nu_parse_error`
 
 <!-- end-rule-groups -->

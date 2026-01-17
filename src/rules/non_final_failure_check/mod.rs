@@ -38,7 +38,8 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<Detection> 
 
             let next_pipeline_element = &pipeline.elements[i + 1].expr.expr;
 
-            // Skip if piped to `complete` (captures exit code) or `ignore` (intentional discard)
+            // Skip if piped to `complete` (captures exit code) or `ignore` (intentional
+            // discard)
             if let Expr::Call(call) = &next_pipeline_element
                 && (call.is_call_to_command("complete", context)
                     || call.is_call_to_command("ignore", context))

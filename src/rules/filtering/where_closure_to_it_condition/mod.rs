@@ -215,7 +215,7 @@ impl DetectFix for WhereClosureToIt {
         let block = context.working_set.get_block(fix_data.block_id);
         let body_span = extract_body_span_from_block(fix_data.block_id, context)?;
         let var_usage_spans =
-            block.find_var_usage_spans(fix_data.param_var_id, context, |_, _, _| true);
+            block.var_usages(fix_data.param_var_id, context, |_, _, _| true);
 
         // Build the new body by replacing all parameter usages with $it
         let var_spans = deduplicate_spans(&var_usage_spans);

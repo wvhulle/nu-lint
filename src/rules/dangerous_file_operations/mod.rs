@@ -55,7 +55,11 @@ fn extract_dangerous_command<'a>(
             })
         }
         Expr::Call(call) => {
-            let decl_name = context.working_set.get_decl(call.decl_id).name().to_string();
+            let decl_name = context
+                .working_set
+                .get_decl(call.decl_id)
+                .name()
+                .to_string();
 
             if !has_builtin_side_effect(
                 &decl_name,

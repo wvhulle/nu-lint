@@ -32,7 +32,8 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection,
                 return None;
             };
             let cmd_name = cmd_expr.span_text(context);
-            if !has_external_side_effect(cmd_name, ExternEffect::StreamingOutput, context, args) {
+            if !has_external_side_effect(cmd_name, ExternEffect::SlowStreamingOutput, context, args)
+            {
                 return None;
             }
 

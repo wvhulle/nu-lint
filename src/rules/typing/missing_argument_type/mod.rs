@@ -98,7 +98,9 @@ fn detect_signature(
         .map(|param| {
             (
                 param,
-                param.var_id.and_then(|var_id| block.find_var_usage(var_id)),
+                param
+                    .var_id
+                    .map(|var_id| block.var_usages(var_id, ctx, |_, _, _| true)),
             )
         })
         .collect();
@@ -118,8 +120,10 @@ fn detect_signature(
             )
             .with_primary_label("add type annotation");
 
-            if let Some(usage_span) = usage_span {
-                violation = violation.with_extra_label("used here", usage_span);
+            if let Some(usage_spans) = usage_span {
+                if let Some(&first_span) = usage_spans.first() {
+                    violation = violation.with_extra_label("used here", first_span);
+                }
             }
 
             let fix_data = FixData {

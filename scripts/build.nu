@@ -130,7 +130,7 @@ def push-to-cachix [cache: string result_link: string]: nothing -> nothing {
     let paths = ^nix-store --query --requisites $result_link | lines
     if ($paths | is-not-empty) {
       log info $"Pushing ($paths | length) paths to Cachix..."
-      ^cachix push $cache ...$paths
+      cachix push $cache $paths
       log info "Push complete"
     }
   } catch {|e|
@@ -145,8 +145,8 @@ def push-deps-to-cachix [cache: string]: nothing -> nothing {
   log info "Building and pushing deps to Cachix..."
   try {
     let deps_link = "result-deps"
-    ^nix build ".#deps" --out-link $deps_link --print-build-logs
-    let paths = ^nix-store --query --requisites $deps_link | lines
+    nix build ".#deps" --out-link $deps_link --print-build-logs
+    let paths = nix-store --query --requisites $deps_link | lines
     if ($paths | is-not-empty) {
       log info $"Pushing ($paths | length) dep paths to Cachix..."
       ^cachix push $cache ...$paths

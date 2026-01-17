@@ -64,12 +64,7 @@ pub trait BlockExt {
 
     /// Finds spans of variable usages matching a predicate. Example: finding
     /// all usages of `$x` that are inside null checks
-    fn find_var_usage_spans<F>(
-        &self,
-        var_id: VarId,
-        context: &LintContext,
-        predicate: F,
-    ) -> Vec<Span>
+    fn var_usages<F>(&self, var_id: VarId, context: &LintContext, predicate: F) -> Vec<Span>
     where
         F: Fn(&Expression, VarId, &LintContext) -> bool;
 
@@ -290,12 +285,7 @@ impl BlockExt for Block {
             .collect()
     }
 
-    fn find_var_usage_spans<F>(
-        &self,
-        var_id: VarId,
-        context: &LintContext,
-        predicate: F,
-    ) -> Vec<Span>
+    fn var_usages<F>(&self, var_id: VarId, context: &LintContext, predicate: F) -> Vec<Span>
     where
         F: Fn(&Expression, VarId, &LintContext) -> bool,
     {

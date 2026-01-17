@@ -239,7 +239,7 @@ impl DetectFix for TurnPositionalIntoStreamInput {
 
         // Find all usages of the parameter variable in the block
         let mut var_spans =
-            block.find_var_usage_spans(fix_data.param_var_id, context, |_, _, _| true);
+            block.var_usages(fix_data.param_var_id, context, |_, _, _| true);
 
         if var_spans.is_empty() {
             return None;

@@ -41,7 +41,7 @@ fn check_flag_usage_in_body(call: &Call, context: &LintContext) -> Vec<(Detectio
             });
 
             let all_usage_spans =
-                body_block.find_var_usage_spans(var_id, context, |_expr, _var_id, _ctx| true);
+                body_block.var_usages(var_id, context, |_expr, _var_id, _ctx| true);
 
             let usage_span = all_usage_spans
                 .iter()

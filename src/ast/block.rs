@@ -10,89 +10,6 @@ use crate::{ast::expression::ExpressionExt, context::LintContext};
 
 const MAX_TYPE_INFERENCE_DEPTH: usize = 100;
 
-fn find_transitively_called_functions_impl(
-    block: &Block,
-    context: &LintContext,
-    available_functions: &HashSet<BlockId>,
-    visited: &mut HashSet<BlockId>,
-) -> HashSet<BlockId> {
-    let mut result = HashSet::new();
-
-    for callee_block_id in block.collect_user_function_call_block_ids(context) {
-        if !available_functions.contains(&callee_block_id) {
-            continue;
-        }
-
-        if !visited.insert(callee_block_id) {
-            log::debug!("Cycle detected in function calls");
-            continue;
-        }
-
-        result.insert(callee_block_id);
-
-        let callee_block = context.working_set.get_block(callee_block_id);
-        let transitive = find_transitively_called_functions_impl(
-            callee_block,
-            context,
-            available_functions,
-            visited,
-        );
-        result.extend(transitive);
-    }
-
-    result
-}
-
-fn infer_output_type_with_depth(block: &Block, context: &LintContext, depth: usize) -> Type {
-    if depth >= MAX_TYPE_INFERENCE_DEPTH {
-        log::warn!(
-            "Type inference depth limit ({MAX_TYPE_INFERENCE_DEPTH}) reached, returning Any"
-        );
-        return Type::Any;
-    }
-
-    log::debug!("Inferring output type for block (depth={depth})");
-
-    let Some(pipeline) = block.pipelines.last() else {
-        return block.output_type();
-    };
-
-    let block_input_type = block
-        .all_elements()
-        .iter()
-        .find_map(|element| element.expr.find_pipeline_input(context))
-        .and_then(|(in_var, _)| {
-            block
-                .all_elements()
-                .iter()
-                .find_map(|element| element.expr.infer_input_type(Some(in_var), context))
-        })
-        .unwrap_or(Type::Any);
-    log::debug!("Block inferred input type: {block_input_type:?}");
-    let mut current_type = Some(block_input_type);
-
-    for (idx, element) in pipeline.elements.iter().enumerate() {
-        log::debug!("Pipeline element {idx}: current_type before = {current_type:?}");
-
-        if let Expr::Call(call) = &element.expr.expr {
-            let output = call.get_output_type(context, current_type);
-            log::debug!("Pipeline element {idx} (Call): output type = {output:?}");
-            current_type = Some(output);
-            continue;
-        }
-
-        let inferred = element.expr.infer_output_type(context);
-        log::debug!("Pipeline element {idx} (Expression): inferred type = {inferred:?}");
-        if inferred.is_some() {
-            current_type = inferred;
-        }
-    }
-
-    let final_type = current_type.unwrap_or_else(|| block.output_type());
-    log::debug!("Block final output type: {final_type:?}");
-    final_type
-}
-
 pub trait BlockExt {
     /// Checks if block is an empty list. Example: `{ [] }`
     fn is_empty_list_block(&self) -> bool;
@@ -114,6 +31,13 @@ pub trait BlockExt {
         context: &LintContext,
         available_functions: &HashSet<BlockId>,
     ) -> HashSet<BlockId>;
+    /// Helper for recursive transitive function search with cycle detection
+    fn find_transitively_called_functions_impl(
+        &self,
+        context: &LintContext,
+        available_functions: &HashSet<BlockId>,
+        visited: &mut HashSet<BlockId>,
+    ) -> HashSet<BlockId>;
     /// Checks if block uses pipeline input variable. Example: `{ $in | length
     /// }`
     fn uses_pipeline_input(&self, context: &LintContext) -> bool;
@@ -127,11 +51,10 @@ pub trait BlockExt {
     /// Finds the actual `$in` variable usage and its span. Example: `{ $in |
     /// length }` returns span of `$in`. Does not match closure parameters.
     fn find_dollar_in_usage(&self) -> Option<Span>;
-    /// Finds the first usage span of a specific variable in this block.
-    /// Example: `{ $x + 1 }` with `var_id` of x returns span of `$x`
-    fn find_var_usage(&self, var_id: VarId) -> Option<Span>;
     /// Infers the output type of a block. Example: `{ ls }` returns "table"
     fn infer_output_type(&self, context: &LintContext) -> Type;
+    /// Helper for recursive type inference with depth limit
+    fn infer_output_type_with_depth(&self, context: &LintContext, depth: usize) -> Type;
     /// Infers the input type expected by a block. Example: `{ $in | length }`
     /// expects "list"
     fn infer_input_type(&self, context: &LintContext) -> Type;
@@ -233,8 +156,40 @@ impl BlockExt for Block {
         context: &LintContext,
         available_functions: &HashSet<BlockId>,
     ) -> HashSet<BlockId> {
-        let mut visited: HashSet<BlockId> = HashSet::new();
-        find_transitively_called_functions_impl(self, context, available_functions, &mut visited)
+        let mut visited = HashSet::new();
+        self.find_transitively_called_functions_impl(context, available_functions, &mut visited)
+    }
+
+    fn find_transitively_called_functions_impl(
+        &self,
+        context: &LintContext,
+        available_functions: &HashSet<BlockId>,
+        visited: &mut HashSet<BlockId>,
+    ) -> HashSet<BlockId> {
+        let mut result = HashSet::new();
+
+        for callee_block_id in self.collect_user_function_call_block_ids(context) {
+            if !available_functions.contains(&callee_block_id) {
+                continue;
+            }
+
+            if !visited.insert(callee_block_id) {
+                log::debug!("Cycle detected in function calls");
+                continue;
+            }
+
+            result.insert(callee_block_id);
+
+            let callee_block = context.working_set.get_block(callee_block_id);
+            let transitive = callee_block.find_transitively_called_functions_impl(
+                context,
+                available_functions,
+                visited,
+            );
+            result.extend(transitive);
+        }
+
+        result
     }
 
     fn uses_pipeline_input(&self, context: &LintContext) -> bool {
@@ -264,14 +219,57 @@ impl BlockExt for Block {
             .find_map(|element| element.expr.find_dollar_in_usage())
     }
 
-    fn find_var_usage(&self, var_id: VarId) -> Option<Span> {
-        self.all_elements()
-            .iter()
-            .find_map(|element| element.expr.find_var_usage(var_id))
+    fn infer_output_type(&self, context: &LintContext) -> Type {
+        self.infer_output_type_with_depth(context, 0)
     }
 
-    fn infer_output_type(&self, context: &LintContext) -> Type {
-        infer_output_type_with_depth(self, context, 0)
+    fn infer_output_type_with_depth(&self, context: &LintContext, depth: usize) -> Type {
+        if depth >= MAX_TYPE_INFERENCE_DEPTH {
+            log::warn!(
+                "Type inference depth limit ({MAX_TYPE_INFERENCE_DEPTH}) reached, returning Any"
+            );
+            return Type::Any;
+        }
+
+        log::debug!("Inferring output type for block (depth={depth})");
+
+        let Some(pipeline) = self.pipelines.last() else {
+            return self.output_type();
+        };
+
+        let block_input_type = self
+            .all_elements()
+            .iter()
+            .find_map(|element| element.expr.find_pipeline_input(context))
+            .and_then(|(in_var, _)| {
+                self.all_elements()
+                    .iter()
+                    .find_map(|element| element.expr.infer_input_type(Some(in_var), context))
+            })
+            .unwrap_or(Type::Any);
+        log::debug!("Block inferred input type: {block_input_type:?}");
+        let mut current_type = Some(block_input_type);
+
+        for (idx, element) in pipeline.elements.iter().enumerate() {
+            log::debug!("Pipeline element {idx}: current_type before = {current_type:?}");
+
+            if let Expr::Call(call) = &element.expr.expr {
+                let output = call.get_output_type(context, current_type);
+                log::debug!("Pipeline element {idx} (Call): output type = {output:?}");
+                current_type = Some(output);
+                continue;
+            }
+
+            let inferred = element.expr.infer_output_type(context);
+            log::debug!("Pipeline element {idx} (Expression): inferred type = {inferred:?}");
+            if inferred.is_some() {
+                current_type = inferred;
+            }
+        }
+
+        let final_type = current_type.unwrap_or_else(|| self.output_type());
+        log::debug!("Block final output type: {final_type:?}");
+        final_type
     }
 
     fn infer_input_type(&self, context: &LintContext) -> Type {
@@ -301,21 +299,15 @@ impl BlockExt for Block {
     where
         F: Fn(&Expression, VarId, &LintContext) -> bool,
     {
-        use nu_protocol::ast::Expression;
-
-        let mut matching_spans = Vec::new();
-        self.flat_map(
-            context.working_set,
-            &|expr: &Expression| {
-                if expr.matches_var(var_id) && predicate(expr, var_id, context) {
-                    vec![expr.span]
-                } else {
-                    vec![]
-                }
-            },
-            &mut matching_spans,
-        );
-        matching_spans
+        let mut results = Vec::new();
+        for pipeline in &self.pipelines {
+            for element in &pipeline.elements {
+                element
+                    .expr
+                    .find_var_in_expr(var_id, context, &predicate, &mut results);
+            }
+        }
+        results
     }
 
     fn find_expr_spans<F>(&self, context: &LintContext, predicate: F) -> Vec<Span>

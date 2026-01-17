@@ -54,7 +54,7 @@ fn parses_as_non_string(content: &str) -> bool {
         .pipelines
         .first()
         .and_then(|p| p.elements.first())
-        .map_or(true, |elem| {
+        .is_none_or(|elem| {
             if let Expr::Call(call) = &elem.expr.expr {
                 call.arguments.first().is_none_or(|arg| match arg {
                     Argument::Positional(e) => !matches!(e.expr, Expr::String(_)),
@@ -87,7 +87,7 @@ pub fn bare_glob_needs_quotes(content: &str) -> bool {
         .pipelines
         .first()
         .and_then(|p| p.elements.first())
-        .map_or(true, |elem| {
+        .is_none_or(|elem| {
             if let Expr::Call(call) = &elem.expr.expr {
                 call.arguments.first().is_none_or(|arg| match arg {
                     Argument::Positional(e) => {

@@ -46,9 +46,6 @@ pub trait ExpressionExt: Traverse {
     /// Checks if expression contains a specific variable. Example: `$x + 1`
     /// contains `$x`
     fn contains_variable(&self, var_id: VarId) -> bool;
-    /// Finds the first usage span of a specific variable. Example: `$x + 1`
-    /// with `var_id` of x returns span of `$x`
-    fn find_var_usage(&self, var_id: VarId) -> Option<Span>;
 
     /// Checks if expression uses pipeline input variable. Example: `$in` or
     /// `$in | length`
@@ -89,6 +86,18 @@ pub trait ExpressionExt: Traverse {
         callback: &mut F,
     ) where
         F: FnMut(&'a Expression, Option<&'a Expression>);
+
+    /// Find variable usages within this expression, without descending into
+    /// closures. For FullCellPath expressions, returns the head's span
+    /// (just the variable).
+    fn find_var_in_expr<F>(
+        &self,
+        var_id: VarId,
+        context: &LintContext,
+        predicate: &F,
+        results: &mut Vec<Span>,
+    ) where
+        F: Fn(&Expression, VarId, &LintContext) -> bool;
 }
 
 pub const fn is_dollar_in_var(var_id: VarId) -> bool {
@@ -311,50 +320,6 @@ impl ExpressionExt for Expression {
                 RecordItem::Spread(_, expr) => expr.contains_variable(var_id),
             }),
             _ => false,
-        }
-    }
-
-    fn find_var_usage(&self, var_id: VarId) -> Option<Span> {
-        match &self.expr {
-            Expr::Var(id) if *id == var_id => Some(self.span),
-            Expr::FullCellPath(cell_path) => cell_path.head.find_var_usage(var_id),
-            Expr::BinaryOp(left, _op, right) => left
-                .find_var_usage(var_id)
-                .or_else(|| right.find_var_usage(var_id)),
-            Expr::UnaryNot(inner) | Expr::Collect(_, inner) => inner.find_var_usage(var_id),
-            Expr::Call(call) => call.arguments.iter().find_map(|arg| match arg {
-                Argument::Positional(expr)
-                | Argument::Named((_, _, Some(expr)))
-                | Argument::Unknown(expr)
-                | Argument::Spread(expr) => expr.find_var_usage(var_id),
-                Argument::Named(_) => None,
-            }),
-            Expr::List(items) => items.iter().find_map(|item| {
-                let expr = match item {
-                    ListItem::Item(e) | ListItem::Spread(_, e) => e,
-                };
-                expr.find_var_usage(var_id)
-            }),
-            Expr::Table(table) => table
-                .columns
-                .iter()
-                .find_map(|col| col.find_var_usage(var_id))
-                .or_else(|| {
-                    table
-                        .rows
-                        .iter()
-                        .find_map(|row| row.iter().find_map(|cell| cell.find_var_usage(var_id)))
-                }),
-            Expr::Record(items) => items.iter().find_map(|item| match item {
-                RecordItem::Pair(key, val) => key
-                    .find_var_usage(var_id)
-                    .or_else(|| val.find_var_usage(var_id)),
-                RecordItem::Spread(_, expr) => expr.find_var_usage(var_id),
-            }),
-            Expr::StringInterpolation(items) => {
-                items.iter().find_map(|item| item.find_var_usage(var_id))
-            }
-            _ => None,
         }
     }
 
@@ -718,6 +683,43 @@ impl ExpressionExt for Expression {
             _ => (),
         }
     }
+
+    fn find_var_in_expr<F>(
+        &self,
+        var_id: VarId,
+        context: &LintContext,
+        predicate: &F,
+        results: &mut Vec<Span>,
+    ) where
+        F: Fn(&Expression, VarId, &LintContext) -> bool,
+    {
+        if self.matches_var(var_id) && predicate(self, var_id, context) {
+            // For FullCellPath, use the head's span only (not the path)
+            let span = if let Expr::FullCellPath(fcp) = &self.expr {
+                fcp.head.span
+            } else {
+                self.span
+            };
+            results.push(span);
+            return;
+        }
+
+        let (children, blocks) = expr_children(&self.expr);
+
+        for child in children {
+            child.find_var_in_expr(var_id, context, predicate, results);
+        }
+        for block_id in blocks {
+            let block = context.working_set.get_block(block_id);
+            for pipeline in &block.pipelines {
+                for element in &pipeline.elements {
+                    element
+                        .expr
+                        .find_var_in_expr(var_id, context, predicate, results);
+                }
+            }
+        }
+    }
 }
 
 fn infer_from_call(
@@ -901,4 +903,40 @@ fn infer_list_element_type(items: &[ListItem]) -> Type {
         log::debug!("List has mixed types, using Any");
         Type::List(Box::new(Type::Any))
     }
+}
+
+/// Extract child expressions and block IDs from an expression, skipping
+/// closures. Used for scope-aware traversal where closures create new variable
+/// scopes.
+pub fn expr_children(expr: &Expr) -> (Vec<&Expression>, Vec<BlockId>) {
+    let mut children = Vec::new();
+    let mut blocks = Vec::new();
+
+    match expr {
+        Expr::Closure(_) => {} // Don't descend - different scope
+        Expr::Subexpression(id) | Expr::Block(id) | Expr::RowCondition(id) => blocks.push(*id),
+        Expr::BinaryOp(l, op, r) => children.extend([l.as_ref(), op.as_ref(), r.as_ref()]),
+        Expr::UnaryNot(e) | Expr::Collect(_, e) => children.push(e),
+        Expr::Call(call) => children.extend(call.arguments.iter().filter_map(|a| a.expr())),
+        Expr::List(items) => children.extend(items.iter().map(|i| i.expr())),
+        Expr::Record(items) => {
+            for item in items {
+                match item {
+                    RecordItem::Pair(k, v) => children.extend([k, v]),
+                    RecordItem::Spread(_, e) => children.push(e),
+                }
+            }
+        }
+        Expr::Table(t) => children.extend(t.columns.iter().chain(t.rows.iter().flatten())),
+        Expr::StringInterpolation(v) | Expr::GlobInterpolation(v, _) => children.extend(v),
+        Expr::FullCellPath(fcp) => children.push(&fcp.head),
+        Expr::Range(r) => children.extend([&r.from, &r.next, &r.to].into_iter().flatten()),
+        Expr::ExternalCall(h, args) => {
+            children.push(h);
+            children.extend(args.iter().map(|a| a.expr()));
+        }
+        _ => {}
+    }
+
+    (children, blocks)
 }

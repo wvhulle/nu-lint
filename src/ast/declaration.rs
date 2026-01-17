@@ -19,6 +19,10 @@ pub struct CustomCommandDef {
     pub signature_span: Span,
     pub export_span: Option<Span>,
     pub signature: nu_protocol::Signature,
+    /// Span of the entire definition (from `def`/`export def` to closing `}`)
+    pub definition_span: Span,
+    /// Span of the body expression (the block argument)
+    pub body_expr_span: Span,
 }
 
 impl PartialEq for CustomCommandDef {
@@ -42,24 +46,6 @@ impl Ord for CustomCommandDef {
 }
 
 impl CustomCommandDef {
-    pub(crate) const fn new(
-        body: BlockId,
-        name: String,
-        name_span: Span,
-        signature_span: Span,
-        export_span: Option<Span>,
-        signature: nu_protocol::Signature,
-    ) -> Self {
-        Self {
-            body,
-            name,
-            name_span,
-            signature_span,
-            export_span,
-            signature,
-        }
-    }
-
     pub fn try_from_call(call: &Call, context: &LintContext) -> Option<Self> {
         let decl_name = call.get_call_name(context);
 
@@ -86,14 +72,19 @@ impl CustomCommandDef {
 
         let export_span = is_exported.then(|| Span::new(call.head.start, call.head.start + 7));
 
-        Some(Self::new(
-            block_id,
+        // The definition span is the span of the entire call expression
+        let definition_span = call.span();
+
+        Some(Self {
+            body: block_id,
             name,
-            name_arg.span,
+            name_span: name_arg.span,
             signature_span,
             export_span,
             signature,
-        ))
+            definition_span,
+            body_expr_span: body_expr.span,
+        })
     }
 
     pub fn is_main(&self) -> bool {
@@ -109,5 +100,40 @@ impl CustomCommandDef {
     /// file-relative positions
     pub const fn declaration_span(&self, context: &LintContext) -> FileSpan {
         context.normalize_span(self.name_span)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::context::LintContext;
+
+    #[test]
+    fn test_custom_command_spans() {
+        let code = r#"
+def get_first [] {
+    $in | first
+}
+
+def main [] {
+    [1 2 3] | get_first
+}
+"#;
+        LintContext::test_with_parsed_source(code, |context| {
+            let commands = context.custom_commands();
+            assert_eq!(commands.len(), 2);
+
+            // Verify the get_first command has correct spans
+            let get_first = commands.iter().find(|c| c.name == "get_first").unwrap();
+            assert!(
+                context
+                    .span_text(get_first.definition_span)
+                    .starts_with("def get_first")
+            );
+            assert!(
+                context
+                    .span_text(get_first.body_expr_span)
+                    .contains("$in | first")
+            );
+        });
     }
 }

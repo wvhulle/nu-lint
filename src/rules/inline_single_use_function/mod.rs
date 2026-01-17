@@ -1,63 +1,125 @@
-use nu_protocol::ast::{Expr, Pipeline, Traverse};
+use std::cmp::Ordering;
+
+use nu_protocol::{
+    Span,
+    ast::{Argument, Block, Expr, Expression, Pipeline, PipelineElement, Traverse},
+};
 
 use crate::{
-    LintLevel,
+    Fix, LintLevel, Replacement,
+    ast::{block::BlockExt, declaration::CustomCommandDef, expression::ExpressionExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
 };
-fn is_non_comment_statement(pipeline: &Pipeline) -> bool {
-    pipeline
-        .elements
-        .iter()
-        .any(|elem| !matches!(&elem.expr.expr, Expr::Nothing))
-}
-fn is_single_line_in_source(block_span: nu_protocol::Span, context: &LintContext) -> bool {
-    let source_text = context.span_text(block_span);
-    source_text.lines().count() <= 3
-}
-fn has_single_statement_body(block_id: nu_protocol::BlockId, context: &LintContext) -> bool {
-    let block = context.working_set.get_block(block_id);
-    let has_single_pipeline = block
+
+/// Check if a block has a single pipeline suitable for inlining.
+fn is_inlinable_body(block: &Block, context: &LintContext) -> bool {
+    let pipelines: Vec<_> = block
         .pipelines
         .iter()
-        .filter(|p| is_non_comment_statement(p))
-        .count()
-        == 1;
-    let has_single_element = block
-        .pipelines
-        .iter()
-        .find(|p| is_non_comment_statement(p))
-        .is_some_and(|p| p.elements.len() == 1);
-    has_single_pipeline
-        && has_single_element
-        && block
-            .span
-            .is_none_or(|span| is_single_line_in_source(span, context))
+        .filter(|p| {
+            p.elements
+                .iter()
+                .any(|e| !matches!(&e.expr.expr, Expr::Nothing))
+        })
+        .collect();
+
+    // Must have exactly one non-empty pipeline
+    if pipelines.len() != 1 {
+        return false;
+    }
+
+    // Body must fit within 3 lines
+    block
+        .span
+        .is_none_or(|span| context.span_text(span).lines().count() <= 3)
 }
-fn count_function_calls(function_name: &str, context: &LintContext) -> usize {
-    let Some(function_decl_id) = context.working_set.find_decl(function_name.as_bytes()) else {
-        log::debug!("Function '{function_name}' not found in working set, skipping");
-        return 0;
-    };
-    let mut all_calls = Vec::new();
+
+/// Extract the actual pipeline elements from a body.
+/// Handles the `Collect(Subexpression(...))` pattern used for `$in | ...`
+/// bodies.
+fn unwrap_body_pipeline<'a>(
+    pipeline: &'a Pipeline,
+    context: &'a LintContext,
+) -> Option<(&'a [PipelineElement], &'a Expression, bool)> {
+    let first = pipeline.elements.first()?;
+
+    // Detect Collect(Subexpression) pattern: `{ $in | something }`
+    if let Expr::Collect(_, inner) = &first.expr.expr
+        && let Expr::Subexpression(block_id) = &inner.expr
+    {
+        let inner_pipeline = context.working_set.get_block(*block_id).pipelines.first()?;
+        return Some((&inner_pipeline.elements, &first.expr, true));
+    }
+
+    Some((&pipeline.elements, &first.expr, false))
+}
+
+/// Find the single call site for a function by declaration ID.
+fn find_single_call(
+    decl_id: nu_protocol::DeclId,
+    context: &LintContext,
+) -> Option<(Span, Vec<Span>)> {
+    let mut calls = Vec::new();
     context.ast.flat_map(
         context.working_set,
         &|expr| {
-            matches!(&expr.expr, Expr::Call(call) if call.decl_id == function_decl_id)
-                .then_some(function_decl_id)
-                .into_iter()
-                .collect()
+            let Expr::Call(call) = &expr.expr else {
+                return vec![];
+            };
+            if call.decl_id != decl_id {
+                return vec![];
+            }
+
+            let args = call
+                .arguments
+                .iter()
+                .filter_map(|a| match a {
+                    Argument::Positional(e) | Argument::Unknown(e) => Some(e.span),
+                    _ => None,
+                })
+                .collect();
+            vec![(expr.span, args)]
         },
-        &mut all_calls,
+        &mut calls,
     );
-    all_calls.len()
+
+    (calls.len() == 1).then(|| calls.into_iter().next())?
+}
+
+/// A text substitution to apply when inlining. Ordered by span start.
+#[derive(Eq, PartialEq)]
+struct Substitution<'a> {
+    span: Span,
+    replacement: &'a str,
+}
+
+impl PartialOrd for Substitution<'_> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Substitution<'_> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.span.start.cmp(&other.span.start)
+    }
+}
+
+/// Data needed to generate the inline fix
+struct FixData {
+    definition_span: Span,
+    call_span: Span,
+    body_span: Span,
+    body_start: usize,
+    substitutions: Vec<(Span, Span)>, // (usage_span, arg_span)
 }
 
 struct InlineSingleUseFunction;
 
 impl DetectFix for InlineSingleUseFunction {
-    type FixInput<'a> = ();
+    type FixInput<'a> = Option<FixData>;
 
     fn id(&self) -> &'static str {
         "inline_single_use_function"
@@ -76,42 +138,137 @@ impl DetectFix for InlineSingleUseFunction {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let function_definitions = context.custom_commands();
-        let has_main = function_definitions
-            .iter()
-            .any(super::super::ast::declaration::CustomCommandDef::is_main);
-        if !has_main {
+        let commands = context.custom_commands();
+        if !commands.iter().any(CustomCommandDef::is_main) {
             return vec![];
         }
-        let violations = function_definitions
+
+        commands
             .iter()
-            .filter(|def| !def.is_main())
-            .filter(|def| !def.is_exported())
-            .filter(|def| has_single_statement_body(def.body, context))
-            .filter(|def| count_function_calls(&def.name, context) == 1)
-            .map(|def| {
-                let name_span = def.declaration_span(context);
+            .filter(|def| !def.is_main() && !def.is_exported())
+            .filter_map(|def| {
                 let block = context.working_set.get_block(def.body);
-                // body_span is global (AST), name_span is file-relative - use AST span or
-                // convert
-                let body_span = block.span.unwrap_or_else(|| name_span.into());
-                Detection::from_file_span(
+                if !is_inlinable_body(block, context) {
+                    return None;
+                }
+
+                let decl_id = context.working_set.find_decl(def.name.as_bytes())?;
+                let (call_span, call_args) = find_single_call(decl_id, context)?;
+
+                let pipeline = block.pipelines.iter().find(|p| {
+                    p.elements
+                        .iter()
+                        .any(|e| !matches!(&e.expr.expr, Expr::Nothing))
+                })?;
+
+                let (elements, _, has_dollar_in) = unwrap_body_pipeline(pipeline, context)?;
+                let first = elements.first()?;
+                let last = elements.last()?;
+                let body_span = Span::new(first.expr.span.start, last.expr.span.end);
+
+                // Skip `$in | ` prefix if present
+                let body_start = if has_dollar_in {
+                    elements.get(1).map(|e| e.expr.span.start)
+                } else {
+                    first
+                        .expr
+                        .find_dollar_in_usage()
+                        .filter(|s| s.start == first.expr.span.start)
+                        .and_then(|_| elements.get(1).map(|e| e.expr.span.start))
+                }
+                .unwrap_or(body_span.start);
+
+                // Map parameters to their argument spans (all usages)
+                let params = def
+                    .signature
+                    .required_positional
+                    .iter()
+                    .chain(&def.signature.optional_positional);
+                let substitutions: Vec<_> = params
+                    .zip(&call_args)
+                    .flat_map(|(param, &arg_span)| {
+                        let idx = def
+                            .signature
+                            .required_positional
+                            .iter()
+                            .chain(&def.signature.optional_positional)
+                            .position(|p| p.name == param.name)?;
+                        let var_id = block.signature.get_positional(idx)?.var_id?;
+                        let usage_spans =
+                            block.find_var_usage_spans(var_id, context, |_, _, _| true);
+                        Some(
+                            usage_spans
+                                .into_iter()
+                                .map(move |usage_span| (usage_span, arg_span)),
+                        )
+                    })
+                    .flatten()
+                    .collect();
+
+                let detection = Detection::from_file_span(
                     format!(
                         "Function `{}` has a single-line body and is only used once",
                         def.name
                     ),
-                    name_span,
+                    def.declaration_span(context),
                 )
                 .with_primary_label("single-use function")
-                .with_extra_label("could be inlined", body_span)
+                .with_extra_label("could be inlined", block.span?);
+
+                Some((
+                    detection,
+                    Some(FixData {
+                        definition_span: context.expand_span_to_full_lines(def.definition_span),
+                        call_span,
+                        body_span,
+                        body_start,
+                        substitutions,
+                    }),
+                ))
+            })
+            .collect()
+    }
+
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let data = fix_data.as_ref()?;
+        let body_span = Span::new(data.body_start, data.body_span.end);
+        let body_text = context.span_text(body_span);
+
+        // Collect and sort substitutions, apply in reverse order to preserve span
+        // validity
+        let mut subs: Vec<_> = data
+            .substitutions
+            .iter()
+            .filter(|(usage, _)| usage.start >= body_span.start && usage.end <= body_span.end)
+            .map(|(usage, arg)| Substitution {
+                span: Span::new(usage.start - body_span.start, usage.end - body_span.start),
+                replacement: context.span_text(*arg),
             })
             .collect();
-        Self::no_fix(violations)
+        subs.sort();
+
+        let inlined = subs
+            .iter()
+            .rev()
+            .fold(body_text.to_string(), |mut text, sub| {
+                text.replace_range(sub.span.start..sub.span.end, sub.replacement);
+                text
+            });
+
+        Some(Fix::with_explanation(
+            "Inline function body and remove definition",
+            vec![
+                Replacement::new(data.call_span, inlined),
+                Replacement::new(data.definition_span, String::new()),
+            ],
+        ))
     }
 }
 
 pub static RULE: &dyn Rule = &InlineSingleUseFunction;
 #[cfg(test)]
 mod detect_bad;
+#[cfg(test)]
+mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

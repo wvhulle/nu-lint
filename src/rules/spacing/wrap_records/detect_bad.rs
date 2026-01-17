@@ -16,8 +16,15 @@ fn detects_record_exceeding_80_chars() {
 }
 
 #[test]
-fn detects_nested_record() {
+fn detects_deeply_nested_record() {
     init_env_log();
-    let code = r"let data = { id: 1, config: {nested: true} }";
+    let code = r"let data = {a: 1, b: {c: 2, d: {e: 3}}}";
+    RULE.assert_count(code, 1);
+}
+
+#[test]
+fn detects_nested_record_over_60_chars() {
+    init_env_log();
+    let code = r#"let data = {name: "long name here", config: {option1: true, option2: false}}"#;
     RULE.assert_count(code, 1);
 }

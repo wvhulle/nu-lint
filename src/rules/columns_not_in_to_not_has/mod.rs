@@ -19,9 +19,9 @@ mod generated_fix;
 mod ignore_good;
 
 struct FixData {
-    full_span: Span,
-    key_span: Span,
-    record_span: Span,
+    full: Span,
+    key: Span,
+    record: Span,
 }
 
 fn check_not_in_columns(expr: &Expression, ctx: &LintContext) -> Vec<(Detection, FixData)> {
@@ -58,9 +58,9 @@ fn check_not_in_columns(expr: &Expression, ctx: &LintContext) -> Vec<(Detection,
     vec![(
         detection,
         FixData {
-            full_span: expr.span,
-            key_span: left.span,
-            record_span,
+            full: expr.span,
+            key: left.span,
+            record: record_span,
         },
     )]
 }
@@ -100,14 +100,14 @@ impl DetectFix for ColumnsNotInToNotHas {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let key_text = context.span_text(fix_data.key_span).trim();
-        let record_text = context.span_text(fix_data.record_span).trim();
+        let key_text = context.span_text(fix_data.key).trim();
+        let record_text = context.span_text(fix_data.record).trim();
 
         let replacement = format!("{record_text} not-has {key_text}");
 
         Some(Fix::with_explanation(
             "Replace with 'not-has' operator",
-            vec![Replacement::new(fix_data.full_span, replacement)],
+            vec![Replacement::new(fix_data.full, replacement)],
         ))
     }
 }

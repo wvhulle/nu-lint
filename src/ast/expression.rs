@@ -1,8 +1,8 @@
 use nu_protocol::{
     BlockId, Span, Type, VarId,
     ast::{
-        Argument, Call, Expr, Expression, FindMapResult, FullCellPath, ListItem, Operator,
-        PathMember, RecordItem, Traverse,
+        Argument, Call, Expr, Expression, ExternalArgument, FindMapResult, FullCellPath, ListItem,
+        Operator, PathMember, RecordItem, Traverse,
     },
     engine::Variable,
 };
@@ -924,19 +924,17 @@ fn infer_list_element_type(items: &[ListItem]) -> Type {
 }
 
 /// Extract child expressions and block IDs from an expression, skipping
-/// closures. Used for scope-aware traversal where closures create new variable
-/// scopes.
+/// closures (they have their own variable scope).
 pub fn expr_children(expr: &Expr) -> (Vec<&Expression>, Vec<BlockId>) {
     let mut children = Vec::new();
     let mut blocks = Vec::new();
 
     match expr {
-        Expr::Closure(_) => {} // Don't descend - different scope
         Expr::Subexpression(id) | Expr::Block(id) | Expr::RowCondition(id) => blocks.push(*id),
         Expr::BinaryOp(l, op, r) => children.extend([l.as_ref(), op.as_ref(), r.as_ref()]),
         Expr::UnaryNot(e) | Expr::Collect(_, e) => children.push(e),
         Expr::Call(call) => children.extend(call.arguments.iter().filter_map(|a| a.expr())),
-        Expr::List(items) => children.extend(items.iter().map(nu_protocol::ast::ListItem::expr)),
+        Expr::List(items) => children.extend(items.iter().map(ListItem::expr)),
         Expr::Record(items) => {
             for item in items {
                 match item {
@@ -951,7 +949,7 @@ pub fn expr_children(expr: &Expr) -> (Vec<&Expression>, Vec<BlockId>) {
         Expr::Range(r) => children.extend([&r.from, &r.next, &r.to].into_iter().flatten()),
         Expr::ExternalCall(h, args) => {
             children.push(h);
-            children.extend(args.iter().map(nu_protocol::ast::ExternalArgument::expr));
+            children.extend(args.iter().map(ExternalArgument::expr));
         }
         _ => {}
     }

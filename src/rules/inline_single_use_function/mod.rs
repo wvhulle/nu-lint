@@ -15,7 +15,8 @@ use crate::{
 
 /// Check if a block has a single pipeline suitable for inlining.
 fn is_inlinable_body(block: &Block, context: &LintContext) -> bool {
-    let pipelines: Vec<_> = block
+    // Must have exactly one non-empty pipeline
+    let non_empty_pipeline_count = block
         .pipelines
         .iter()
         .filter(|p| {
@@ -23,10 +24,9 @@ fn is_inlinable_body(block: &Block, context: &LintContext) -> bool {
                 .iter()
                 .any(|e| !matches!(&e.expr.expr, Expr::Nothing))
         })
-        .collect();
+        .count();
 
-    // Must have exactly one non-empty pipeline
-    if pipelines.len() != 1 {
+    if non_empty_pipeline_count != 1 {
         return false;
     }
 

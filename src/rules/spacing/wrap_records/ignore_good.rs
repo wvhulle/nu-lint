@@ -1,5 +1,12 @@
 use super::RULE;
+use crate::log::init_log;
 
+#[test]
+fn nested_record() {
+    init_log();
+    let code = r"let data = { id: 1, config: {nested: true} }";
+    RULE.assert_ignores(code);
+}
 #[test]
 fn ignores_short_single_line_record() {
     let code = "let point = {x: 1, y: 2}";

@@ -25,11 +25,21 @@ fn fix_record_exceeding_80_chars() {
 }
 
 #[test]
-fn fix_nested_record() {
-    let code = r"let data = { id: 1, config: {nested: true} }";
+fn fix_deeply_nested_record() {
+    let code = r"let data = {a: 1, b: {c: 2, d: {e: 3}}}";
     let expected = r#"{
-    id: 1
-    config: {nested: true}
+    a: 1
+    b: {c: 2, d: {e: 3}}
+}"#;
+    RULE.assert_fixed_contains(code, expected);
+}
+
+#[test]
+fn fix_long_nested_record() {
+    let code = r#"let data = {name: "long name here", config: {option1: true, option2: false}}"#;
+    let expected = r#"{
+    name: "long name here"
+    config: {option1: true, option2: false}
 }"#;
     RULE.assert_fixed_contains(code, expected);
 }

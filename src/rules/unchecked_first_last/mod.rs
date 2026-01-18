@@ -8,18 +8,14 @@ use crate::{
     ast::{call::CallExt, span::SpanExt},
     context::LintContext,
     rule::{DetectFix, Rule},
-    violation::{Detection, Fix, Replacement},
+    violation::Detection,
 };
-
-struct FirstLastFixData {
-    insert_span: Span,
-}
 
 fn check_first_last_call(
     expr: &Expression,
     try_block_spans: &[Span],
     context: &LintContext,
-) -> Option<(Detection, FirstLastFixData)> {
+) -> Option<Detection> {
     let Expr::Call(call) = &expr.expr else {
         return None;
     };
@@ -40,9 +36,6 @@ fn check_first_last_call(
         return None;
     }
 
-    // Insert " 1" after the command name
-    let insert_span = Span::new(call.head.end, call.head.end);
-
     let violation = Detection::from_global_span(
         format!(
             "'{cmd_name}' without count argument may panic if list is empty, use 'try' or check \
@@ -52,15 +45,13 @@ fn check_first_last_call(
     )
     .with_primary_label("unchecked access");
 
-    let fix_data = FirstLastFixData { insert_span };
-
-    Some((violation, fix_data))
+    Some(violation)
 }
 
 struct UncheckedFirstLast;
 
 impl DetectFix for UncheckedFirstLast {
-    type FixInput<'a> = FirstLastFixData;
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "unchecked_first_last"
@@ -88,18 +79,11 @@ impl DetectFix for UncheckedFirstLast {
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let try_block_spans = context.collect_command_spans(&["try"]);
-        context.detect_with_fix_data(|expr, ctx| {
+        Self::no_fix(context.detect(|expr, ctx| {
             check_first_last_call(expr, &try_block_spans, ctx)
                 .into_iter()
                 .collect()
-        })
-    }
-
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        Some(Fix {
-            explanation: "Add count argument of 1 for safe access".into(),
-            replacements: vec![Replacement::new(fix_data.insert_span, " 1")],
-        })
+        }))
     }
 }
 
@@ -107,7 +91,5 @@ pub static RULE: &dyn Rule = &UncheckedFirstLast;
 
 #[cfg(test)]
 mod detect_bad;
-#[cfg(test)]
-mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

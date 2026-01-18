@@ -94,10 +94,10 @@ impl DetectFix for SplitFirstToParse {
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let replacement = generate_replacement(&fix_data.delimiter);
-        Some(Fix::with_explanation(
-            format!("Replace with '{replacement}'"),
-            vec![Replacement::new(fix_data.span, replacement)],
-        ))
+        Some(Fix {
+            explanation: "replace".into(),
+            replacements: vec![Replacement::new(fix_data.span, replacement)],
+        })
     }
 }
 

@@ -1,3 +1,4 @@
+use lsp_types::DiagnosticTag;
 use nu_protocol::{
     Span,
     ast::{Expr, Expression},
@@ -52,6 +53,10 @@ impl DetectFix for UnnecessaryStringQuotes {
 
     fn level(&self) -> Option<LintLevel> {
         Some(LintLevel::Hint)
+    }
+
+    fn diagnostic_tags(&self) -> &'static [DiagnosticTag] {
+        &[DiagnosticTag::UNNECESSARY]
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
@@ -117,13 +122,13 @@ impl DetectFix for UnnecessaryStringQuotes {
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        Some(Fix::with_explanation(
-            format!("Remove quotes from '{}'", fix_data.unquoted_content),
-            vec![Replacement::new(
+        Some(Fix {
+            explanation: format!("Remove quotes from '{}'", fix_data.unquoted_content).into(),
+            replacements: vec![Replacement::new(
                 fix_data.quoted_span,
                 fix_data.unquoted_content.clone(),
             )],
-        ))
+        })
     }
 }
 

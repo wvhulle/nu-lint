@@ -379,7 +379,10 @@ mod tests {
             Replacement::with_file_span(FileSpan::new(4, 5), "a"),
             Replacement::with_file_span(FileSpan::new(15, 16), "b"),
         ];
-        let fix = Fix::with_explanation("Rename variables", replacements);
+        let fix = Fix {
+            explanation: "Rename variables".into(),
+            replacements,
+        };
 
         let violation = Violation {
             rule_id: Some(Cow::Borrowed("test_rule")),
@@ -393,6 +396,8 @@ mod tests {
             file: Some(SourceFile::from("test.nu")),
             source: None,
             doc_url: None,
+            short_description: None,
+            diagnostic_tags: vec![],
             external_detections: vec![],
         };
 
@@ -525,7 +530,10 @@ mod tests {
 
     #[test]
     fn test_count_applicable_fixes() {
-        let fix = Fix::with_explanation("Test fix", vec![]);
+        let fix = Fix {
+            explanation: "Test fix".into(),
+            replacements: vec![],
+        };
 
         let with_fix = Violation {
             rule_id: Some(Cow::Borrowed("test_rule")),
@@ -539,6 +547,8 @@ mod tests {
             file: Some(SourceFile::from("test.nu")),
             source: None,
             doc_url: None,
+            short_description: None,
+            diagnostic_tags: vec![],
             external_detections: vec![],
         };
 
@@ -554,6 +564,8 @@ mod tests {
             file: Some(SourceFile::from("test.nu")),
             source: None,
             doc_url: None,
+            short_description: None,
+            diagnostic_tags: vec![],
             external_detections: vec![],
         };
 
@@ -576,6 +588,8 @@ mod tests {
             file: Some(SourceFile::from("file1.nu")),
             source: None,
             doc_url: None,
+            short_description: None,
+            diagnostic_tags: vec![],
             external_detections: vec![],
         };
 
@@ -591,6 +605,8 @@ mod tests {
             file: Some(SourceFile::from("file2.nu")),
             source: None,
             doc_url: None,
+            short_description: None,
+            diagnostic_tags: vec![],
             external_detections: vec![],
         };
 
@@ -606,6 +622,8 @@ mod tests {
             file: Some(SourceFile::from("file1.nu")),
             source: None,
             doc_url: None,
+            short_description: None,
+            diagnostic_tags: vec![],
             external_detections: vec![],
         };
 

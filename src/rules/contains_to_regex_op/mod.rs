@@ -140,10 +140,10 @@ impl DetectFix for UseRegexOperators {
             "Replace str contains check with =~ operator"
         };
 
-        Some(Fix::with_explanation(
-            explanation,
-            vec![Replacement::new(fix_data.full_expr_span, fixed_text)],
-        ))
+        Some(Fix {
+            explanation: explanation.into(),
+            replacements: vec![Replacement::new(fix_data.full_expr_span, fixed_text)],
+        })
     }
 }
 

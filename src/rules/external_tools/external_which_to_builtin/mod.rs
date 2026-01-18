@@ -38,10 +38,10 @@ impl DetectFix for UseBuiltinWhich {
         let repl = arg_texts
             .first()
             .map_or_else(|| "which".to_string(), |arg| format!("which {arg}"));
-        Some(Fix::with_explanation(
-            "Use built-in which",
-            vec![Replacement::new(fix_data.expr_span, repl)],
-        ))
+        Some(Fix {
+            explanation: "Use built-in which".into(),
+            replacements: vec![Replacement::new(fix_data.expr_span, repl)],
+        })
     }
 }
 

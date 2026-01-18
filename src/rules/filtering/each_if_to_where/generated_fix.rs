@@ -37,17 +37,6 @@ open data.json | get items | each {|item| if ($item.status == 'active' and $item
 }
 
 #[test]
-fn test_fix_explanation_mentions_where() {
-    init_env_log();
-
-    let bad_code = r"
-ls | each {|f| if $f.size > 100kb { $f } }
-";
-
-    RULE.assert_fix_explanation_contains(bad_code, "where");
-}
-
-#[test]
 fn test_fix_removes_each_and_if() {
     init_env_log();
 

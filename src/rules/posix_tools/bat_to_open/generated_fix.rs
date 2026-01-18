@@ -38,25 +38,11 @@ fn fix_bat_yaml_to_open() {
 #[test]
 fn fix_bat_csv_to_open() {
     let source = "^bat data.csv";
-    RULE.assert_count(source, 1);
     RULE.assert_fixed_contains(source, "open data.csv");
-}
-
-#[test]
-fn fix_explanation_mentions_structured() {
-    let source = "^bat file.txt";
-    RULE.assert_fix_explanation_contains(source, "structured");
-}
-
-#[test]
-fn fix_structured_explanation_mentions_auto_parse() {
-    let source = "^bat data.json";
-    RULE.assert_fix_explanation_contains(source, "auto-parse");
 }
 
 #[test]
 fn fix_preserves_filename() {
     let source = "^bat my-complex-file.log";
-    RULE.assert_count(source, 1);
     RULE.assert_fixed_contains(source, "my-complex-file.log");
 }

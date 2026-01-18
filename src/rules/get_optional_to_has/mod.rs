@@ -104,10 +104,10 @@ impl DetectFix for GetOptionalToHas {
 
         let replacement = format!("{record_text} has {key_text}");
 
-        Some(Fix::with_explanation(
-            "Replace with 'has' operator",
-            vec![Replacement::new(fix_data.span, replacement)],
-        ))
+        Some(Fix {
+            explanation: "Replace with 'has' operator".into(),
+            replacements: vec![Replacement::new(fix_data.span, replacement)],
+        })
     }
 }
 

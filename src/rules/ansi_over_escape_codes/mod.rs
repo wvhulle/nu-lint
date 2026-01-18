@@ -238,12 +238,13 @@ impl DetectFix for AnsiOverEscapeCodes {
             replacements.push(Replacement::new(escape.span, replacement));
         }
 
-        Some(Fix::with_explanation(
-            format!(
+        Some(Fix {
+            explanation: format!(
                 "Replace ANSI escape sequences with `ansi {color_name}` and `ansi reset` commands"
-            ),
+            )
+            .into(),
             replacements,
-        ))
+        })
     }
 }
 

@@ -156,13 +156,15 @@ impl DetectFix for AvoidLastExitCode {
 
         let inline_complete = format!("({} | complete).exit_code", fix_data.external_cmd_text);
 
-        Some(Fix::with_explanation(
-            "Replace fragile $env.LAST_EXIT_CODE check with inline complete pattern".to_string(),
-            vec![
+        Some(Fix {
+            explanation: "Replace fragile $env.LAST_EXIT_CODE check with inline complete pattern"
+                .to_string()
+                .into(),
+            replacements: vec![
                 Replacement::new(fix_data.external_cmd_span, String::new()),
                 Replacement::new(fix_data.last_exit_code_span, inline_complete),
             ],
-        ))
+        })
     }
 }
 

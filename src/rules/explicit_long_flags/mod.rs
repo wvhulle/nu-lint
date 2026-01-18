@@ -138,13 +138,14 @@ impl DetectFix for PreferLongFlags {
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let replacement_text = format!("--{}", fix_data.long_name);
-        Some(Fix::with_explanation(
-            format!(
+        Some(Fix {
+            explanation: format!(
                 "Replace '-{}' with '--{}'",
                 fix_data.short_char, fix_data.long_name
-            ),
-            vec![Replacement::new(fix_data.flag_span, replacement_text)],
-        ))
+            )
+            .into(),
+            replacements: vec![Replacement::new(fix_data.flag_span, replacement_text)],
+        })
     }
 }
 

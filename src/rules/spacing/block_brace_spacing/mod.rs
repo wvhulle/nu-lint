@@ -106,10 +106,10 @@ impl DetectFix for BlockBodySpacing {
         let trimmed = inner.trim();
         let fixed = format!("{{ {trimmed} }}");
 
-        Some(Fix::with_explanation(
-            "Add spaces inside block braces",
-            vec![Replacement::new(fix_data.block_span, fixed)],
-        ))
+        Some(Fix {
+            explanation: "Add spaces inside block braces".into(),
+            replacements: vec![Replacement::new(fix_data.block_span, fixed)],
+        })
     }
 }
 

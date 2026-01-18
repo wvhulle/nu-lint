@@ -219,10 +219,10 @@ impl DetectFix for PipeSpacing {
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        Some(Fix::with_explanation(
-            "Fix pipe spacing to ' | '",
-            vec![Replacement::new(fix_data.fix_span, " | ")],
-        ))
+        Some(Fix {
+            explanation: "Fix pipe spacing to ' | '".into(),
+            replacements: vec![Replacement::new(fix_data.fix_span, " | ")],
+        })
     }
 }
 

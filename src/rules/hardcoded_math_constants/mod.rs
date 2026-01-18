@@ -130,13 +130,13 @@ impl DetectFix for HardcodedMathConstants {
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        Some(Fix::with_explanation(
-            format!("Replace with $math.{}", fix_data.constant_name),
-            vec![Replacement::new(
+        Some(Fix {
+            explanation: format!("Replace with $math.{}", fix_data.constant_name).into(),
+            replacements: vec![Replacement::new(
                 fix_data.span,
                 format!("$math.{}", fix_data.constant_name),
             )],
-        ))
+        })
     }
 }
 

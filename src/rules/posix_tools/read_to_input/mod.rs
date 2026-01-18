@@ -45,10 +45,10 @@ impl DetectFix for UseBuiltinRead {
                 "Use 'input' to read user input".to_string(),
             )
         };
-        Some(Fix::with_explanation(
-            desc,
-            vec![Replacement::new(fix_data.expr_span, repl)],
-        ))
+        Some(Fix {
+            explanation: desc.into(),
+            replacements: vec![Replacement::new(fix_data.expr_span, repl)],
+        })
     }
 }
 
@@ -68,6 +68,5 @@ mod tests {
     fn converts_read_silent_to_input_secure() {
         let source = "^read -s";
         RULE.assert_fixed_contains(source, "input -s");
-        RULE.assert_fix_explanation_contains(source, "password");
     }
 }

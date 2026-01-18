@@ -90,10 +90,10 @@ impl DetectFix for SliceToLast {
             LastCount::Constant(n) => format!("last {n}"),
         };
 
-        Some(Fix::with_explanation(
-            "Replace with 'last'",
-            vec![Replacement::new(fix_data.slice_span, replacement_text)],
-        ))
+        Some(Fix {
+            explanation: "Replace with 'last'".into(),
+            replacements: vec![Replacement::new(fix_data.slice_span, replacement_text)],
+        })
     }
 }
 

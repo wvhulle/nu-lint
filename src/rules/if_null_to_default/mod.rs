@@ -157,10 +157,10 @@ impl DetectFix for IfNullToDefault {
         let default_text = context.span_text(fix_data.fallback);
         let replacement = format!("{var_text} | default {default_text}");
 
-        Some(Fix::with_explanation(
-            format!("Simplify to: {replacement}"),
-            vec![Replacement::new(fix_data.full_span, replacement)],
-        ))
+        Some(Fix {
+            explanation: "simplify".into(),
+            replacements: vec![Replacement::new(fix_data.full_span, replacement)],
+        })
     }
 }
 

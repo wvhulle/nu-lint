@@ -383,13 +383,14 @@ impl DetectFix for SplitRowGetMultistatement {
         // e.g., "input" | parse "{field0}:{field1}:{field2}" | get 0.field{index}
         let replacement = format!("{input_text} | {parse_cmd} | get 0.field{index}");
 
-        Some(Fix::with_explanation(
-            format!(
+        Some(Fix {
+            explanation: format!(
                 "Replace multi-statement 'split row | get' pattern with '{parse_cmd} | get \
                  0.field{index}'"
-            ),
-            vec![Replacement::new(*full_span, replacement)],
-        ))
+            )
+            .into(),
+            replacements: vec![Replacement::new(*full_span, replacement)],
+        })
     }
 }
 

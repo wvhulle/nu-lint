@@ -106,10 +106,10 @@ impl DetectFix for UncheckedGetIndex {
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        Some(Fix::with_explanation(
-            "Add -o flag for safe optional access",
-            vec![Replacement::new(fix_data.insert_span, " -o")],
-        ))
+        Some(Fix {
+            explanation: "Add -o flag for safe optional access".into(),
+            replacements: vec![Replacement::new(fix_data.insert_span, " -o")],
+        })
     }
 }
 

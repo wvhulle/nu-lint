@@ -123,10 +123,10 @@ impl DetectFix for ReflowWidePipelines {
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let placement = context.config.pipeline_placement;
         let fixed = generate_multiline_pipeline(&fix_data.element_spans, context, placement);
-        Some(Fix::with_explanation(
-            "Format as multiline",
-            vec![Replacement::new(fix_data.pipeline_span, fixed)],
-        ))
+        Some(Fix {
+            explanation: "Format as multiline".into(),
+            replacements: vec![Replacement::new(fix_data.pipeline_span, fixed)],
+        })
     }
 }
 

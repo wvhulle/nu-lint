@@ -337,10 +337,10 @@ impl DetectFix for ReplaceIfElseChainWithMatch {
 
         let match_text = format!("match {} {{\n{match_arms}\n}}", fix_data.compared_var);
 
-        Some(Fix::with_explanation(
-            format!("Convert to match expression on {}", fix_data.compared_var),
-            vec![Replacement::new(fix_data.call_span, match_text)],
-        ))
+        Some(Fix {
+            explanation: format!("Convert to match expression on {}", fix_data.compared_var).into(),
+            replacements: vec![Replacement::new(fix_data.call_span, match_text)],
+        })
     }
 }
 

@@ -281,6 +281,8 @@ impl LintEngine {
                     violation.set_rule_id(rule.id());
                     violation.set_lint_level(lint_level);
                     violation.set_doc_url(rule.source_link());
+                    violation.set_short_description(rule.short_description());
+                    violation.set_diagnostic_tags(rule.diagnostic_tags());
                 }
 
                 (!violations.is_empty()).then_some(violations)

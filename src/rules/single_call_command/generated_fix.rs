@@ -14,7 +14,6 @@ def main [] {
     // Function body `42` replaces call site `helper`
     RULE.assert_fixed_contains(code, "    42\n}");
     // Definition is removed
-    RULE.assert_fix_explanation_contains(code, "Inline function body");
 }
 
 #[test]

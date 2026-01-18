@@ -126,9 +126,9 @@ impl DetectFix for ChainedAppend {
 
         let fix = format!("[{}]", elements.join(", "));
 
-        Some(Fix::with_explanation(
-            "Replace chained appends with spread syntax",
-            vec![Replacement::new(fix_data.replace_span, fix)],
-        ))
+        Some(Fix {
+            explanation: "Replace chained appends with spread syntax".into(),
+            replacements: vec![Replacement::new(fix_data.replace_span, fix)],
+        })
     }
 }

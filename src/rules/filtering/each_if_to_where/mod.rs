@@ -177,10 +177,11 @@ impl DetectFix for WhereInsteadEachThenIf {
         let condition = context.span_text(fix_data.condition_span);
         let fix_text = format!("where {condition}");
 
-        Some(Fix::with_explanation(
-            "Replace 'each' with 'if' pattern with 'where' for cleaner filtering",
-            vec![Replacement::new(fix_data.each_span, fix_text)],
-        ))
+        Some(Fix {
+            explanation: "Replace 'each' with 'if' pattern with 'where' for cleaner filtering"
+                .into(),
+            replacements: vec![Replacement::new(fix_data.each_span, fix_text)],
+        })
     }
 }
 

@@ -180,10 +180,10 @@ impl DetectFix for StringAsPath {
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let optional_marker = if fix_data.is_optional { "?" } else { "" };
         let new_param_text = format!("{}{optional_marker}: path", fix_data.param_name);
-        Some(Fix::with_explanation(
-            format!("Change `{}` type to `path`", fix_data.param_name),
-            vec![Replacement::new(fix_data.replace_span, new_param_text)],
-        ))
+        Some(Fix {
+            explanation: format!("Change `{}` type to `path`", fix_data.param_name).into(),
+            replacements: vec![Replacement::new(fix_data.replace_span, new_param_text)],
+        })
     }
 }
 

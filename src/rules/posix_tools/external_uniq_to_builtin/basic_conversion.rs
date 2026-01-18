@@ -4,7 +4,6 @@ use super::RULE;
 fn replaces_simple_uniq() {
     let source = "^uniq";
     RULE.assert_fixed_contains(source, "uniq");
-    RULE.assert_fix_explanation_contains(source, "structured data");
 }
 
 #[test]

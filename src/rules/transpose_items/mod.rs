@@ -364,10 +364,12 @@ impl DetectFix for ItemsInsteadOfTransposeEach {
             ));
         }
 
-        Some(Fix::with_explanation(
-            "Replace 'transpose ... | each' with 'items' for cleaner iteration over record entries",
+        Some(Fix {
+            explanation: "Replace 'transpose ... | each' with 'items' for cleaner iteration over \
+                          record entries"
+                .into(),
             replacements,
-        ))
+        })
     }
 }
 

@@ -144,13 +144,14 @@ impl DetectFix for SimplifyRegexRule {
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let replacement = format!("parse \"{}\"", fix_data.simplified_pattern);
 
-        Some(Fix::with_explanation(
-            format!(
+        Some(Fix {
+            explanation: format!(
                 "Simplify 'parse --regex' to 'parse \"{}\"'",
                 fix_data.simplified_pattern
-            ),
-            vec![Replacement::new(fix_data.span, replacement)],
-        ))
+            )
+            .into(),
+            replacements: vec![Replacement::new(fix_data.span, replacement)],
+        })
     }
 }
 

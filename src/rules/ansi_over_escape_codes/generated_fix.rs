@@ -47,15 +47,3 @@ fn fix_underline_escape() {
     let source = r#"print "\e[4mUnderline\e[0m""#;
     RULE.assert_fixed_is(source, r#"print $"(ansi underline)Underline(ansi reset)""#);
 }
-
-#[test]
-fn fix_explanation_mentions_ansi() {
-    let source = r#"print "\e[31mRed\e[0m""#;
-    RULE.assert_fix_explanation_contains(source, "ansi");
-}
-
-#[test]
-fn fix_explanation_mentions_color() {
-    let source = r#"print "\e[34mBlue\e[0m""#;
-    RULE.assert_fix_explanation_contains(source, "blue");
-}

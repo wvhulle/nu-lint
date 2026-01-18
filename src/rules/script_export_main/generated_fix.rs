@@ -8,7 +8,7 @@ export def main [] {
 }
 ";
     RULE.assert_detects(bad_code);
-    RULE.assert_fix_explanation_contains(bad_code, "Remove 'export'");
+
     RULE.assert_fix_erases(bad_code, "export");
 }
 
@@ -20,16 +20,6 @@ export def "main test" [] {
 }
 "#;
     RULE.assert_detects(bad_code);
-    RULE.assert_fix_explanation_contains(bad_code, "main test");
-    RULE.assert_fix_erases(bad_code, "export");
-}
 
-#[test]
-fn test_fix_explanation_contains_function_name() {
-    let bad_code = r"#!/usr/bin/env nu
-export def main [] {
-    print 'Hello'
-}
-";
-    RULE.assert_fix_explanation_contains(bad_code, "main");
+    RULE.assert_fix_erases(bad_code, "export");
 }

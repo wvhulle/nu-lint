@@ -146,10 +146,10 @@ impl DetectFix for ShortenWithCompoundAssignment {
         let right_text = ctx.span_text(fix_data.right_operand_span);
         let new_text = format!("{var_text} {} {right_text}", fix_data.compound_op);
 
-        Some(Fix::with_explanation(
-            format!("Replace with compound assignment: {new_text}"),
-            vec![Replacement::new(fix_data.full_span, new_text)],
-        ))
+        Some(Fix {
+            explanation: format!("Replace with compound assignment: {new_text}").into(),
+            replacements: vec![Replacement::new(fix_data.full_span, new_text)],
+        })
     }
 }
 

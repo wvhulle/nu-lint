@@ -98,10 +98,10 @@ impl DetectFix for ClosureParamSpacing {
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         // Simply remove the whitespace between the opening brace and the pipe
-        Some(Fix::with_explanation(
-            "Remove space before closure parameters",
-            vec![Replacement::new(fix_data.whitespace_span, String::new())],
-        ))
+        Some(Fix {
+            explanation: "Remove space before closure parameters".into(),
+            replacements: vec![Replacement::new(fix_data.whitespace_span, String::new())],
+        })
     }
 }
 

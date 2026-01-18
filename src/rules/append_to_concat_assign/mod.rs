@@ -251,10 +251,10 @@ impl DetectFix for AppendToConcatAssign {
 
         let new_text = format!("{var_text} ++= {wrapped_value}");
 
-        Some(Fix::with_explanation(
-            format!("Replace with concat assignment: {new_text}"),
-            vec![Replacement::new(fix_data.full_span, new_text)],
-        ))
+        Some(Fix {
+            explanation: format!("Replace with concat assignment: {new_text}").into(),
+            replacements: vec![Replacement::new(fix_data.full_span, new_text)],
+        })
     }
 }
 

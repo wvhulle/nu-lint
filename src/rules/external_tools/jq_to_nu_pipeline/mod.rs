@@ -350,20 +350,21 @@ impl DetectFix for ReplaceJqWithNuGet {
         let has_file = fix_data.file_arg.is_some();
 
         if filter.is_empty() {
-            return Some(Fix::with_explanation(
-                "Use 'from json' to parse JSON data instead of bare jq",
-                vec![Replacement::new(fix_data.expr_span, "from json")],
-            ));
+            return Some(Fix {
+                explanation: "Use 'from json' to parse JSON data instead of bare jq".into(),
+                replacements: vec![Replacement::new(fix_data.expr_span, "from json")],
+            });
         }
 
         let term = parse_jq_filter(filter)?;
         let nu_cmd = jq_term_to_nushell(&term, has_file)?;
 
-        Some(Fix::with_explanation(
-            "Replace jq filter with equivalent Nushell pipeline for better performance and \
-             integration",
-            vec![Replacement::new(fix_data.expr_span, nu_cmd)],
-        ))
+        Some(Fix {
+            explanation: "Replace jq filter with equivalent Nushell pipeline for better \
+                          performance and integration"
+                .into(),
+            replacements: vec![Replacement::new(fix_data.expr_span, nu_cmd)],
+        })
     }
 }
 

@@ -179,16 +179,17 @@ impl DetectFix for OmitItInRowCondition {
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        Some(Fix::with_explanation(
-            format!(
+        Some(Fix {
+            explanation: format!(
                 "Remove `$it.` prefix from field name `{}`",
                 fix_data.field_name
-            ),
-            vec![Replacement::new(
+            )
+            .into(),
+            replacements: vec![Replacement::new(
                 fix_data.full_span,
                 fix_data.field_name.clone(),
             )],
-        ))
+        })
     }
 }
 

@@ -107,10 +107,10 @@ impl DetectFix for GetOptionalToNotHas {
 
         let replacement = format!("{record_text} not-has {key_text}");
 
-        Some(Fix::with_explanation(
-            "Replace with 'not-has' operator",
-            vec![Replacement::new(fix_data.span, replacement)],
-        ))
+        Some(Fix {
+            explanation: "Replace with 'not-has' operator".into(),
+            replacements: vec![Replacement::new(fix_data.span, replacement)],
+        })
     }
 }
 

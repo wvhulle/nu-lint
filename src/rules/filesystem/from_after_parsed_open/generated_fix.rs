@@ -15,12 +15,6 @@ fn fix_removes_from_toml() {
 }
 
 #[test]
-fn fix_explanation_mentions_already_parses() {
-    let source = "open data.json | from json";
-    RULE.assert_fix_explanation_contains(source, "already parses");
-}
-
-#[test]
 fn fix_preserves_double_quotes() {
     let source = r#"open "my file.json" | from json"#;
     RULE.assert_count(source, 1);

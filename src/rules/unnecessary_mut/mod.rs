@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
+use lsp_types::DiagnosticTag;
 use nu_protocol::{
     Span, VarId,
     ast::{Expr, Expression},
@@ -83,6 +84,10 @@ impl DetectFix for UnnecessaryMut {
         Some(LintLevel::Warning)
     }
 
+    fn diagnostic_tags(&self) -> &'static [DiagnosticTag] {
+        &[DiagnosticTag::UNNECESSARY]
+    }
+
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         use nu_protocol::ast::Traverse;
 
@@ -130,10 +135,11 @@ impl DetectFix for UnnecessaryMut {
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        Some(Fix::with_explanation(
-            format!("Remove 'mut' keyword from variable '{}'", fix_data.var_name),
-            vec![Replacement::new(fix_data.mut_span, "")],
-        ))
+        Some(Fix {
+            explanation: format!("Remove 'mut' keyword from variable '{}'", fix_data.var_name)
+                .into(),
+            replacements: vec![Replacement::new(fix_data.mut_span, "")],
+        })
     }
 }
 

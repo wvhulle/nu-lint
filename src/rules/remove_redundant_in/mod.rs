@@ -1,3 +1,4 @@
+use lsp_types::DiagnosticTag;
 use nu_protocol::{
     Span,
     ast::{Expr, Pipeline},
@@ -87,6 +88,10 @@ impl DetectFix for RemoveRedundantIn {
         Some(LintLevel::Hint)
     }
 
+    fn diagnostic_tags(&self) -> &'static [DiagnosticTag] {
+        &[DiagnosticTag::UNNECESSARY]
+    }
+
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context
             .custom_commands()
@@ -130,10 +135,10 @@ impl DetectFix for RemoveRedundantIn {
             .map(|span| Replacement::new(*span, String::new()))
             .collect();
 
-        Some(Fix::with_explanation(
-            "Remove redundant $in at pipeline start",
+        Some(Fix {
+            explanation: "Remove redundant $in at pipeline start".into(),
             replacements,
-        ))
+        })
     }
 }
 

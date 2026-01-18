@@ -254,13 +254,13 @@ impl DetectFix for InlineSingleUseFunction {
                 text
             });
 
-        Some(Fix::with_explanation(
-            "Inline function body and remove definition",
-            vec![
+        Some(Fix {
+            explanation: "Inline function body and remove definition".into(),
+            replacements: vec![
                 Replacement::new(data.call_span, inlined),
                 Replacement::new(data.definition_span, String::new()),
             ],
-        ))
+        })
     }
 }
 

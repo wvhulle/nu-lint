@@ -82,10 +82,10 @@ To represent the absence of a value in a function body, use 'null' instead."#,
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        Some(Fix::with_explanation(
-            "Replace 'nothing' with 'null'",
-            vec![Replacement::new(fix_data.span, "null".to_string())],
-        ))
+        Some(Fix {
+            explanation: "Replace 'nothing' with 'null'".into(),
+            replacements: vec![Replacement::new(fix_data.span, "null".to_string())],
+        })
     }
 }
 

@@ -89,13 +89,3 @@ def test [config] {
 "#;
     RULE.assert_fixed_is(bad_code, expected);
 }
-
-#[test]
-fn test_fix_explanation() {
-    let bad_code = r#"
-def test [x] {
-    if $x == null { "default" } else { $x }
-}
-"#;
-    RULE.assert_fix_explanation_contains(bad_code, "Simplify to:");
-}

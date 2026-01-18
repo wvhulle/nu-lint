@@ -293,10 +293,10 @@ impl DetectFix for UseBuiltinCurl {
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let (replacement, description) = fix_data.options.to_nushell();
 
-        Some(Fix::with_explanation(
-            description,
-            vec![Replacement::new(fix_data.expr_span, replacement)],
-        ))
+        Some(Fix {
+            explanation: description.into(),
+            replacements: vec![Replacement::new(fix_data.expr_span, replacement)],
+        })
     }
 }
 

@@ -257,13 +257,14 @@ impl DetectFix for WhereClosureToIt {
         // Replace the entire closure with just the body (row condition syntax)
         let replacements = vec![Replacement::new(fix_data.closure_span, result)];
 
-        Some(Fix::with_explanation(
-            format!(
+        Some(Fix {
+            explanation: format!(
                 "Replace closure parameter ${} with row condition using $it",
                 fix_data.param_name
-            ),
+            )
+            .into(),
             replacements,
-        ))
+        })
     }
 }
 

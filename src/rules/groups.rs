@@ -295,6 +295,15 @@ pub const ALL_GROUPS: &[Group] = &[
     UPSTREAM,
 ];
 
+/// Find all groups that contain the given rule_id
+pub fn groups_for_rule(rule_id: &str) -> Vec<&'static str> {
+    ALL_GROUPS
+        .iter()
+        .filter(|g| g.rules.iter().any(|r| r.id() == rule_id))
+        .map(|g| g.name)
+        .collect()
+}
+
 impl Display for Group {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name)

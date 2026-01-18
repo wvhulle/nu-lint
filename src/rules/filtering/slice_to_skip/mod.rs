@@ -95,10 +95,10 @@ impl DetectFix for SliceToSkip {
             SkipCount::Constant(n) => format!("skip {n}"),
         };
 
-        Some(Fix::with_explanation(
-            "Replace with 'skip'",
-            vec![Replacement::new(fix_data.slice_span, replacement_text)],
-        ))
+        Some(Fix {
+            explanation: "Replace with 'skip'".into(),
+            replacements: vec![Replacement::new(fix_data.slice_span, replacement_text)],
+        })
     }
 }
 

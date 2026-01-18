@@ -53,18 +53,6 @@ def message [] {
 }
 
 #[test]
-fn test_fix_explanation() {
-    let bad_code = r"
-def foo [] {
-  let result = (some | pipeline)
-  $result
-}
-";
-
-    RULE.assert_fix_explanation_contains(bad_code, "Return expression directly");
-}
-
-#[test]
 fn test_fix_record_expression() {
     let bad_code = r"
 def config [] {

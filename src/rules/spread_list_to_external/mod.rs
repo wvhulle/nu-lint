@@ -70,10 +70,10 @@ impl DetectFix for SpreadListToExternal {
 
     fn fix(&self, context: &LintContext, span: &Self::FixInput<'_>) -> Option<Fix> {
         let var_text = context.span_text(*span);
-        Some(Fix::with_explanation(
-            "Add spread operator",
-            vec![Replacement::new(*span, format!("...{var_text}"))],
-        ))
+        Some(Fix {
+            explanation: "Add spread operator".into(),
+            replacements: vec![Replacement::new(*span, format!("...{var_text}"))],
+        })
     }
 }
 

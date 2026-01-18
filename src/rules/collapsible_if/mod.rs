@@ -111,10 +111,10 @@ impl DetectFix for CollapsibleIf {
 
         let fix_text = format!("if {outer_cond} and {inner_cond} {body}");
 
-        Some(Fix::with_explanation(
-            "Collapse nested if statements",
-            vec![Replacement::new(fix_data.replace_span, fix_text)],
-        ))
+        Some(Fix {
+            explanation: "Collapse nested if statements".into(),
+            replacements: vec![Replacement::new(fix_data.replace_span, fix_text)],
+        })
     }
 }
 

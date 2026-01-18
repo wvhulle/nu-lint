@@ -114,10 +114,10 @@ impl DetectFix for GlobMayDropQuotes {
             format!("Convert quoted pattern to glob using '{replacement_text}'")
         };
 
-        Some(Fix::with_explanation(
-            explanation,
-            vec![Replacement::new(fix_data.quoted_span, replacement_text)],
-        ))
+        Some(Fix {
+            explanation: explanation.into(),
+            replacements: vec![Replacement::new(fix_data.quoted_span, replacement_text)],
+        })
     }
 }
 

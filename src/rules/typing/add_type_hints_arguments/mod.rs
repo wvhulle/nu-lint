@@ -218,10 +218,10 @@ impl DetectFix for MissingTypeAnnotation {
             .join(", ");
 
         let new_sig = { format!("[{params}]") };
-        Some(Fix::with_explanation(
-            "Add type annotations to parameters",
-            vec![Replacement::new(fix_data.signature_span, new_sig)],
-        ))
+        Some(Fix {
+            explanation: "Add type annotations to parameters".into(),
+            replacements: vec![Replacement::new(fix_data.signature_span, new_sig)],
+        })
     }
 }
 

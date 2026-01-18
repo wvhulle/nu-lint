@@ -1,20 +1,6 @@
 use super::RULE;
 
 #[test]
-fn fix_removes_unused_function() {
-    let bad_code = r#"
-def main [] {
-  print "hello"
-}
-
-def helper [] {
-  print "unused"
-}
-"#;
-    RULE.assert_fix_explanation_contains(bad_code, "Remove unused function");
-}
-
-#[test]
 fn fix_erases_function_definition() {
     let bad_code = r#"
 def main [] {

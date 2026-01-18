@@ -1,3 +1,4 @@
+use lsp_types::DiagnosticTag;
 use nu_protocol::ast::{Expr, Expression, Pipeline};
 
 use crate::{
@@ -110,6 +111,10 @@ impl DetectFix for RedundantIgnore {
         Some(LintLevel::Hint)
     }
 
+    fn diagnostic_tags(&self) -> &'static [DiagnosticTag] {
+        &[DiagnosticTag::UNNECESSARY]
+    }
+
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let mut violations: Vec<_> = context
             .ast
@@ -136,13 +141,13 @@ impl DetectFix for RedundantIgnore {
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        Some(Fix::with_explanation(
-            "Remove unnecessary '| ignore'",
-            vec![Replacement::new(
+        Some(Fix {
+            explanation: "Remove unnecessary '| ignore'".into(),
+            replacements: vec![Replacement::new(
                 fix_data.pipeline_span,
                 fix_data.pipeline_text.clone(),
             )],
-        ))
+        })
     }
 }
 

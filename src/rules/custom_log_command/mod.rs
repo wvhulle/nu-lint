@@ -123,13 +123,17 @@ impl DetectFix for CustomLogCommand {
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        Some(Fix::with_explanation(
-            format!(
+        Some({
+            let explanation = format!(
                 "Remove custom '{}' function (add `use std/log` manually)",
                 fix_data.name
-            ),
-            vec![Replacement::new(fix_data.removal_span, String::new())],
-        ))
+            );
+            let replacements = vec![Replacement::new(fix_data.removal_span, String::new())];
+            Fix {
+                explanation: explanation.into(),
+                replacements,
+            }
+        })
     }
 }
 

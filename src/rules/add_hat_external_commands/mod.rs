@@ -81,10 +81,10 @@ impl DetectFix for AlwaysHatExtCall {
 
         let replacement = format!("^{} {args_text}", fix_data.cmd);
 
-        Some(Fix::with_explanation(
-            "Add missing '^' prefix",
-            vec![Replacement::new(fix_data.expr_span, replacement)],
-        ))
+        Some(Fix {
+            explanation: "Add missing '^' prefix".into(),
+            replacements: vec![Replacement::new(fix_data.expr_span, replacement)],
+        })
     }
 }
 

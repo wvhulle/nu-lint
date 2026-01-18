@@ -232,11 +232,9 @@ impl DetectFix for MissingStdinInShebang {
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        fix_data.as_ref().map(|data| {
-            Fix::with_explanation(
-                "Add --stdin flag to shebang",
-                vec![Replacement::new(data.fix_span, data.new_shebang.clone())],
-            )
+        fix_data.as_ref().map(|data| Fix {
+            explanation: "Add --stdin flag to shebang".into(),
+            replacements: vec![Replacement::new(data.fix_span, data.new_shebang.clone())],
         })
     }
 }

@@ -20,13 +20,6 @@ fn test_prefer_is_not_empty_fix_complex_expr() {
 }
 
 #[test]
-fn test_prefer_is_not_empty_fix_description() {
-    let bad_code = "not ($list | is-empty)";
-    RULE.assert_fix_explanation_contains(bad_code, "Replace");
-    RULE.assert_fix_explanation_contains(bad_code, "is-not-empty");
-}
-
-#[test]
 fn test_prefer_is_not_empty_fix_multiple_patterns() {
     let bad_code = r#"
 if not ($list | is-empty) and not ($other | is-empty) {

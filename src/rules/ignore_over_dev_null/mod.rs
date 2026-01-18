@@ -164,13 +164,13 @@ impl DetectFix for IgnoreOverDevNull {
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        Some(Fix::with_explanation(
-            "Use pipe to ignore",
-            vec![Replacement::new(
+        Some(Fix {
+            explanation: "Use pipe to ignore".into(),
+            replacements: vec![Replacement::new(
                 fix_data.replace_span,
                 fix_data.replacement_text.clone(),
             )],
-        ))
+        })
     }
 }
 

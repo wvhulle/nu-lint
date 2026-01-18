@@ -305,7 +305,10 @@ impl DetectFix for TurnPositionalIntoStreamInput {
 
         replacements.push(Replacement::new(param_list_span, new_params_str));
 
-        Some(Fix::with_explanation(explanation, replacements))
+        Some(Fix {
+            explanation: explanation.into(),
+            replacements,
+        })
     }
 }
 

@@ -146,10 +146,10 @@ impl DetectFix for UseBuiltinIsNotEmpty {
 
         let fix_text = generate_fix_from_subexpression(block_id, context)?;
 
-        Some(Fix::with_explanation(
-            "Replace 'not ... is-empty' with 'is-not-empty'",
-            vec![Replacement::new(fix_data.span, fix_text)],
-        ))
+        Some(Fix {
+            explanation: "Replace 'not ... is-empty' with 'is-not-empty'".into(),
+            replacements: vec![Replacement::new(fix_data.span, fix_text)],
+        })
     }
 }
 

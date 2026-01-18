@@ -72,10 +72,10 @@ impl DetectFix for NoTrailingSpaces {
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        Some(Fix::with_explanation(
-            "Remove trailing whitespace",
-            vec![Replacement::new(fix_data.span, String::new())],
-        ))
+        Some(Fix {
+            explanation: "Remove trailing whitespace".into(),
+            replacements: vec![Replacement::new(fix_data.span, String::new())],
+        })
     }
 }
 

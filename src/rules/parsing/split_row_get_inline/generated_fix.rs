@@ -72,15 +72,3 @@ fn test_fix_tab_delimiter() {
     RULE.assert_fixed_contains(bad_code, "parse");
     RULE.assert_fixed_contains(bad_code, "{field0}");
 }
-
-#[test]
-fn test_fix_explanation_mentions_parse() {
-    let bad_code = r#""hello world" | split row " " | get 0"#;
-    RULE.assert_fix_explanation_contains(bad_code, "parse");
-}
-
-#[test]
-fn test_fix_explanation_mentions_replace() {
-    let bad_code = r#""hello world" | split row " " | get 0"#;
-    RULE.assert_fix_explanation_contains(bad_code, "Replace");
-}

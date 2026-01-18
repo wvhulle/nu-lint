@@ -187,10 +187,10 @@ impl DetectFix for WrapWideRecords {
 
         let result = format!("{{\n{fields}}}");
 
-        Some(Fix::with_explanation(
-            "Wrap record fields on separate lines",
-            vec![Replacement::new(fix_data.span, result)],
-        ))
+        Some(Fix {
+            explanation: "Wrap record fields on separate lines".into(),
+            replacements: vec![Replacement::new(fix_data.span, result)],
+        })
     }
 }
 

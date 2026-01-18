@@ -127,13 +127,13 @@ impl DetectFix for ClosureBodySpacing {
         let text = context.span_text(closure_span);
         let pipe_idx = closing_pipe_char_index(text)?;
 
-        Some(Fix::with_explanation(
-            "Add spaces around closure body",
-            vec![Replacement::new(
+        Some(Fix {
+            explanation: "Add spaces around closure body".into(),
+            replacements: vec![Replacement::new(
                 closure_span,
                 format_closure(text, pipe_idx),
             )],
-        ))
+        })
     }
 }
 

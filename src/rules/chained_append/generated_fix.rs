@@ -41,12 +41,6 @@ fn test_fix_mixed_expressions() {
 }
 
 #[test]
-fn test_fix_explanation_mentions_spread() {
-    let bad_code = r#"$x | append $y | append $z"#;
-    RULE.assert_fix_explanation_contains(bad_code, "spread");
-}
-
-#[test]
 fn test_fix_in_assignment() {
     let bad_code = r#"
 let result = $a | append $b | append $c

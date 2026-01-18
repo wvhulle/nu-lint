@@ -151,10 +151,10 @@ impl DetectFix for UseErrorMakeForCatch {
 
         let replacement = format!("error make {{ msg: {msg_text} }}");
 
-        Some(Fix::with_explanation(
-            "Replace with 'error make'",
-            vec![Replacement::new(fix_data.call_span, replacement)],
-        ))
+        Some(Fix {
+            explanation: "Replace with 'error make'".into(),
+            replacements: vec![Replacement::new(fix_data.call_span, replacement)],
+        })
     }
 }
 

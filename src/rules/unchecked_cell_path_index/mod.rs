@@ -123,10 +123,10 @@ impl DetectFix for UncheckedCellPathIndex {
         let base_text = context.span_text(fix_data.base_span);
         let replacement = format!("{base_text} | get -o {}", fix_data.index_value);
 
-        Some(Fix::with_explanation(
-            "Convert to safe 'get -o' access",
-            vec![Replacement::new(fix_data.full_span, replacement)],
-        ))
+        Some(Fix {
+            explanation: "Convert to safe 'get -o' access".into(),
+            replacements: vec![Replacement::new(fix_data.full_span, replacement)],
+        })
     }
 }
 

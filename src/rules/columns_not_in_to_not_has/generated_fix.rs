@@ -11,9 +11,3 @@ fn fix_with_variable_key() {
     let code = r#"$key not-in ($record | columns)"#;
     RULE.assert_fixed_contains(code, "$record not-has $key");
 }
-
-#[test]
-fn fix_explanation() {
-    let code = r#"$key not-in ($record | columns)"#;
-    RULE.assert_fix_explanation_contains(code, "not-has");
-}

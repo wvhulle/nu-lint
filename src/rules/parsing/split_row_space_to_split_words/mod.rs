@@ -124,10 +124,10 @@ impl DetectFix for SplitRowSpaceToSplitWords {
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let replacement = generate_replacement(&fix_data.access_type);
-        Some(Fix::with_explanation(
-            format!("Replace with '{replacement}'"),
-            vec![Replacement::new(fix_data.span, replacement.to_string())],
-        ))
+        Some(Fix {
+            explanation: "replace".into(),
+            replacements: vec![Replacement::new(fix_data.span, replacement.to_string())],
+        })
     }
 }
 

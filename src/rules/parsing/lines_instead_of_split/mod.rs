@@ -83,10 +83,10 @@ impl DetectFix for LinesInsteadOfSplit {
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        Some(Fix::with_explanation(
-            "Replace with 'lines'",
-            vec![Replacement::new(fix_data.replace_span, "lines")],
-        ))
+        Some(Fix {
+            explanation: "Replace with 'lines'".into(),
+            replacements: vec![Replacement::new(fix_data.replace_span, "lines")],
+        })
     }
 }
 

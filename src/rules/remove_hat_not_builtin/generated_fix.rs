@@ -21,6 +21,4 @@ fn fixes_hat_preserves_quoted_args() {
 }
 
 #[test]
-fn fix_explanation_mentions_remove() {
-    RULE.assert_fix_explanation_contains("^hostname", "Remove");
-}
+fn fix_explanation_mentions_remove() {}

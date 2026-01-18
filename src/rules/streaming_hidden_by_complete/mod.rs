@@ -100,13 +100,13 @@ impl DetectFix for RedundantCompleteStreaming {
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        Some(Fix::with_explanation(
-            "Remove 'complete' to see streaming output",
-            vec![Replacement::new(
+        Some(Fix {
+            explanation: "Remove 'complete' to see streaming output".into(),
+            replacements: vec![Replacement::new(
                 fix_data.full_span,
                 fix_data.external_text.clone(),
             )],
-        ))
+        })
     }
 }
 

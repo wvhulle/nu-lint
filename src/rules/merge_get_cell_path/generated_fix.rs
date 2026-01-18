@@ -33,15 +33,6 @@ fn test_fix_nested_list_access() {
 }
 
 #[test]
-fn test_fix_explanation() {
-    let bad_code = r#"
-[[name]; [foo]] | get name | get 0
-"#;
-    RULE.assert_fix_explanation_contains(bad_code, "Combine");
-    RULE.assert_fix_explanation_contains(bad_code, "cell path");
-}
-
-#[test]
 fn test_fix_count_single_violation() {
     let bad_code = r#"
 {a: {b: 1}} | get a | get b

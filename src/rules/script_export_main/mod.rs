@@ -80,10 +80,10 @@ impl DetectFix for ScriptExportMain {
 
     fn fix(&self, _context: &LintContext, func_def: &Self::FixInput<'_>) -> Option<Fix> {
         let export_span = func_def.export_span?;
-        Some(Fix::with_explanation(
-            format!("Remove 'export' keyword from '{}'", func_def.name),
-            vec![Replacement::new(export_span, "")],
-        ))
+        Some(Fix {
+            explanation: format!("Remove 'export' keyword from '{}'", func_def.name).into(),
+            replacements: vec![Replacement::new(export_span, "")],
+        })
     }
 }
 

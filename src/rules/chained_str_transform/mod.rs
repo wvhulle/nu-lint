@@ -158,10 +158,10 @@ impl DetectFix for ChainedStrReplace {
         let d = data.as_ref()?;
         let pattern = d.patterns.join("|");
         let replacement = format!("str replace -ar \"{}\" \"{}\"", pattern, d.replacement);
-        Some(Fix::with_explanation(
-            format!("Combine into: {replacement}"),
-            vec![Replacement::new(d.span, replacement)],
-        ))
+        Some(Fix {
+            explanation: "combine".into(),
+            replacements: vec![Replacement::new(d.span, replacement)],
+        })
     }
 }
 

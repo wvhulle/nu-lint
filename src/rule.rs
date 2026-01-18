@@ -6,6 +6,8 @@ use std::{
     hash::{Hash, Hasher},
 };
 
+use lsp_types::DiagnosticTag;
+
 use crate::{
     Fix, LintLevel,
     context::LintContext,
@@ -52,6 +54,12 @@ pub trait DetectFix: Send + Sync + 'static {
         None
     }
 
+    /// Diagnostic tags to apply to violations from this rule.
+    /// Returns an empty slice by default.
+    fn diagnostic_tags(&self) -> &'static [DiagnosticTag] {
+        &[]
+    }
+
     /// Pairs violations with default fix input (for rules with `FixInput =
     /// ()`).
     fn no_fix<'a>(detections: Vec<Detection>) -> Vec<(Detection, Self::FixInput<'a>)>
@@ -76,6 +84,7 @@ pub trait Rule: Send + Sync {
     fn level(&self) -> Option<LintLevel>;
     fn has_auto_fix(&self) -> bool;
     fn conflicts_with(&self) -> &'static [&'static dyn Rule];
+    fn diagnostic_tags(&self) -> &'static [DiagnosticTag];
     fn check(&self, context: &LintContext) -> Vec<Violation>;
 }
 
@@ -102,6 +111,10 @@ impl<T: DetectFix> Rule for T {
 
     fn conflicts_with(&self) -> &'static [&'static dyn Rule] {
         DetectFix::conflicts_with(self)
+    }
+
+    fn diagnostic_tags(&self) -> &'static [DiagnosticTag] {
+        DetectFix::diagnostic_tags(self)
     }
 
     fn check(&self, context: &LintContext) -> Vec<Violation> {
@@ -253,19 +266,6 @@ impl dyn Rule {
         assert!(
             fixed == expected_code,
             "Expected fix to be `{fixed}` but received `{expected_code}`"
-        );
-    }
-
-    #[track_caller]
-    pub fn assert_fix_explanation_contains(&self, code: &str, expected_text: &str) {
-        let fix = self
-            .first_violation(code)
-            .fix
-            .expect("Expected violation to have a fix");
-        assert!(
-            fix.explanation.contains(expected_text),
-            "Expected fix explanation to contain '{expected_text}', but got: {}",
-            fix.explanation
         );
     }
 

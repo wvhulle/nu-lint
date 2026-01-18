@@ -102,10 +102,10 @@ impl DetectFix for RemoveHatNotBuiltin {
             format!("{} {args_text}", fix_data.cmd)
         };
 
-        Some(Fix::with_explanation(
-            "Remove unnecessary '^' prefix",
-            vec![Replacement::new(fix_data.expr_span, replacement)],
-        ))
+        Some(Fix {
+            explanation: "Remove unnecessary '^' prefix".into(),
+            replacements: vec![Replacement::new(fix_data.expr_span, replacement)],
+        })
     }
 }
 

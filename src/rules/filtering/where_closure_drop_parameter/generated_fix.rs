@@ -78,24 +78,6 @@ fn fix_closure_with_regex() {
 }
 
 #[test]
-fn fix_explanation_mentions_it() {
-    let source = r"[1, 2, 3] | where {|x| $x > 2}";
-    RULE.assert_fix_explanation_contains(source, "$it");
-}
-
-#[test]
-fn fix_explanation_mentions_parameter_name() {
-    let source = r"[1, 2, 3] | where {|num| $num > 2}";
-    RULE.assert_fix_explanation_contains(source, "$num");
-}
-
-#[test]
-fn fix_explanation_mentions_row_condition() {
-    let source = r"[1, 2, 3] | where {|x| $x > 2}";
-    RULE.assert_fix_explanation_contains(source, "row condition");
-}
-
-#[test]
 fn fix_closure_with_string_operation() {
     let source = r#"ls | where {|f| ($f.name | str downcase) =~ "readme"}"#;
     let expected = r#"ls | where ($it.name | str downcase) =~ "readme""#;

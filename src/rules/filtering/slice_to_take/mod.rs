@@ -98,10 +98,10 @@ impl DetectFix for SliceToTake {
             TakeCount::Constant(n) => format!("take {n}"),
         };
 
-        Some(Fix::with_explanation(
-            "Replace with 'take'",
-            vec![Replacement::new(fix_data.slice_span, replacement_text)],
-        ))
+        Some(Fix {
+            explanation: "Replace with 'take'".into(),
+            replacements: vec![Replacement::new(fix_data.slice_span, replacement_text)],
+        })
     }
 }
 

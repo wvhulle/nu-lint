@@ -184,13 +184,13 @@ impl DetectFix for UseBuiltinEcho {
         let args_text = context.span_text(args_span);
 
         let code_snippet = context.span_text(fix_data.element_span);
-        Some(Fix::with_explanation(
-            format!("Replace '{code_snippet}' with '{args_text}'"),
-            vec![Replacement::new(
+        Some(Fix {
+            explanation: format!("Replace '{code_snippet}' with '{args_text}'").into(),
+            replacements: vec![Replacement::new(
                 fix_data.element_span,
                 args_text.to_string(),
             )],
-        ))
+        })
     }
 }
 

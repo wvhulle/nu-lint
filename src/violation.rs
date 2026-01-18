@@ -1,5 +1,6 @@
 use std::{borrow::Cow, error::Error, fmt, iter::once, path::Path, string::ToString};
 
+use lsp_types::DiagnosticTag;
 use miette::{Diagnostic, LabeledSpan, Severity};
 use nu_protocol::Span;
 
@@ -201,6 +202,10 @@ pub struct Violation {
     pub(crate) file: Option<SourceFile>,
     pub(crate) source: Option<Cow<'static, str>>,
     pub doc_url: Option<&'static str>,
+    /// Short description of the rule (for hover documentation)
+    pub short_description: Option<&'static str>,
+    /// Diagnostic tags for LSP (Unnecessary, Deprecated)
+    pub diagnostic_tags: Vec<DiagnosticTag>,
     /// Related detections in external files
     pub external_detections: Vec<ExternalDetection>,
 }
@@ -223,6 +228,8 @@ impl Violation {
             file: None,
             source: None,
             doc_url: None,
+            short_description: None,
+            diagnostic_tags: Vec::new(),
             external_detections: detected.external_detections,
         }
     }
@@ -240,6 +247,16 @@ impl Violation {
     /// Set the documentation URL for this violation (used by the engine)
     pub(crate) const fn set_doc_url(&mut self, url: Option<&'static str>) {
         self.doc_url = url;
+    }
+
+    /// Set the short description for this violation (used by the engine)
+    pub(crate) const fn set_short_description(&mut self, desc: &'static str) {
+        self.short_description = Some(desc);
+    }
+
+    /// Set diagnostic tags for this violation (used by the engine)
+    pub(crate) fn set_diagnostic_tags(&mut self, tags: &[DiagnosticTag]) {
+        self.diagnostic_tags = tags.to_vec();
     }
 
     /// Get the span as file-relative. Panics if not normalized.
@@ -330,20 +347,6 @@ pub struct Fix {
 
     /// The actual code replacements to apply to the file
     pub replacements: Vec<Replacement>,
-}
-
-impl Fix {
-    /// Create a fix with an explanation and code replacements
-    #[must_use]
-    pub fn with_explanation(
-        explanation: impl Into<Cow<'static, str>>,
-        replacements: Vec<Replacement>,
-    ) -> Self {
-        Self {
-            explanation: explanation.into(),
-            replacements,
-        }
-    }
 }
 
 /// A single code replacement to apply when fixing a violation

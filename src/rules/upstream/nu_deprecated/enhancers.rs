@@ -35,10 +35,10 @@ pub fn enhance(warning: &ParseWarning, context: &LintContext) -> Option<Enhancem
         return Some(Enhancement {
             notes: vec!["The --optional (-o) flag requires nushell >= 0.106.0".into()],
             extra_labels: vec![],
-            fix: Some(Fix::with_explanation(
-                "Replace with --optional (-o)",
-                vec![Replacement::new(*span, replacement)],
-            )),
+            fix: Some(Fix {
+                explanation: "Replace with --optional (-o)".into(),
+                replacements: vec![Replacement::new(*span, replacement)],
+            }),
         });
     }
 

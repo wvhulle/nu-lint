@@ -75,8 +75,7 @@ impl Error for LintError {
         match self {
             Self::Io { source, .. } => Some(source),
             Self::Config { source } => Some(source),
-            Self::RuleConflict { .. } => None,
-            Self::RuleDoesNotExist { non_existing_id: _ } => None,
+            Self::RuleConflict { .. } | Self::RuleDoesNotExist { non_existing_id: _ } => None,
         }
     }
 }

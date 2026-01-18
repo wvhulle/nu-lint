@@ -96,10 +96,10 @@ impl DetectFix for UncheckedFirstLast {
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        Some(Fix::with_explanation(
-            "Add count argument of 1 for safe access",
-            vec![Replacement::new(fix_data.insert_span, " 1")],
-        ))
+        Some(Fix {
+            explanation: "Add count argument of 1 for safe access".into(),
+            replacements: vec![Replacement::new(fix_data.insert_span, " 1")],
+        })
     }
 }
 

@@ -4,7 +4,6 @@ use super::RULE;
 fn replaces_simple_sort() {
     let source = "^sort file.txt";
     RULE.assert_fixed_contains(source, "sort");
-    RULE.assert_fix_explanation_contains(source, "any data type");
 }
 
 #[test]

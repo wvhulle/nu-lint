@@ -122,10 +122,10 @@ impl DetectFix for ReflowWideLists {
 
         result.push(']');
 
-        Some(Fix::with_explanation(
-            "Wrap list items on separate lines",
-            vec![Replacement::new(fix_data.span, result)],
-        ))
+        Some(Fix {
+            explanation: "Wrap list items on separate lines".into(),
+            replacements: vec![Replacement::new(fix_data.span, result)],
+        })
     }
 }
 

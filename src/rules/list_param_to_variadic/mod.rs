@@ -272,7 +272,10 @@ impl DetectFix for ListParamToVariadic {
             "Convert list parameter to variadic and update call sites"
         };
 
-        Some(Fix::with_explanation(explanation, replacements))
+        Some(Fix {
+            explanation: explanation.into(),
+            replacements,
+        })
     }
 }
 

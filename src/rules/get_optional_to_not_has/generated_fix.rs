@@ -19,12 +19,6 @@ fn fix_with_inline_record() {
 }
 
 #[test]
-fn fix_explanation() {
-    let code = r#"$record | get -o key | is-empty"#;
-    RULE.assert_fix_explanation_contains(code, "not-has");
-}
-
-#[test]
 fn fix_inside_where_closure() {
     let code = r#"$targets | where {|t| $available | get -i $t | is-empty }"#;
     RULE.assert_fixed_contains(code, "$available not-has $t");

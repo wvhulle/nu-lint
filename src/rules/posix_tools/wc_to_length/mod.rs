@@ -71,10 +71,10 @@ impl DetectFix for UseBuiltinWc {
                 "Use 'length' for item count or 'str length' for character count".to_string(),
             )
         };
-        Some(Fix::with_explanation(
-            description,
-            vec![Replacement::new(fix_data.expr_span, replacement)],
-        ))
+        Some(Fix {
+            explanation: description.into(),
+            replacements: vec![Replacement::new(fix_data.expr_span, replacement)],
+        })
     }
 }
 
@@ -88,6 +88,5 @@ mod tests {
     fn converts_wc_lines_to_lines_length() {
         let source = "^wc -l";
         RULE.assert_fixed_contains(source, "lines | length");
-        RULE.assert_fix_explanation_contains(source, "count");
     }
 }

@@ -19,18 +19,6 @@ fn replaces_wget_long_output_flag() {
 }
 
 #[test]
-fn explains_save_for_downloads() {
-    let source = r"^wget https://example.com/file.tar.gz";
-    RULE.assert_fix_explanation_contains(source, "save");
-}
-
-#[test]
-fn explains_structured_data() {
-    let source = r"^wget -O file.json https://api.example.com/data";
-    RULE.assert_fix_explanation_contains(source, "structured data");
-}
-
-#[test]
 fn preserves_url_in_replacement() {
     let source = r"^wget https://github.com/user/repo/archive/main.zip";
     RULE.assert_fixed_contains(

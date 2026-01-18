@@ -20,13 +20,6 @@ fn test_simple_echo_ignore() {
 }
 
 #[test]
-fn test_fix_description_mentions_removal() {
-    let bad_code = "ls | ignore";
-    RULE.assert_fix_explanation_contains(bad_code, "Remove");
-    RULE.assert_fix_explanation_contains(bad_code, "ignore");
-}
-
-#[test]
 fn test_each_with_string_output() {
     let bad_code = r#"
 [1 2 3] | each {|x| $"Item ($x)" } | ignore

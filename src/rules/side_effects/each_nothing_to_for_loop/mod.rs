@@ -181,10 +181,10 @@ impl DetectFix for UseForOverEach {
         let body = context.span_text(fix_data.body_span).trim();
         let fix_text = format!("for {} in {} {{ {} }}", fix_data.param_name, list, body);
 
-        Some(Fix::with_explanation(
-            "Convert each to for loop",
-            vec![Replacement::new(fix_data.replace_span, fix_text)],
-        ))
+        Some(Fix {
+            explanation: "Convert each to for loop".into(),
+            replacements: vec![Replacement::new(fix_data.replace_span, fix_text)],
+        })
     }
 }
 

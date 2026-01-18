@@ -43,10 +43,10 @@ impl DetectFix for StructuredDataToJsonTool {
         let original_text = context.span_text(*data_span);
         let new_text = format!("{original_text} | to json");
 
-        Some(Fix::with_explanation(
-            "Add 'to json' to convert to JSON before piping to JSON tool",
-            vec![Replacement::new(*data_span, new_text)],
-        ))
+        Some(Fix {
+            explanation: "Add 'to json' to convert to JSON before piping to JSON tool".into(),
+            replacements: vec![Replacement::new(*data_span, new_text)],
+        })
     }
 }
 

@@ -110,10 +110,10 @@ impl DetectFix for TypeCommandOutput {
 
         let new_signature = format!("[{params}]: {input_type} -> {output_type}");
 
-        Some(Fix::with_explanation(
-            format!("Add output type annotation: {new_signature}"),
-            vec![Replacement::new(fix_data.sig_span, new_signature)],
-        ))
+        Some(Fix {
+            explanation: format!("Add output type annotation: {new_signature}").into(),
+            replacements: vec![Replacement::new(fix_data.sig_span, new_signature)],
+        })
     }
 }
 

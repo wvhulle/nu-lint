@@ -248,13 +248,14 @@ impl DetectFix for MergeMultilinePrint {
 
         let replacement_text = build_replacement_text(&merged_content, quote_style, stderr_flag);
 
-        Some(Fix::with_explanation(
-            format!(
+        Some(Fix {
+            explanation: format!(
                 "Merge {} consecutive print statements into a single multiline print",
                 prints.len()
-            ),
-            vec![Replacement::new(fix_data.combined_span, replacement_text)],
-        ))
+            )
+            .into(),
+            replacements: vec![Replacement::new(fix_data.combined_span, replacement_text)],
+        })
     }
 }
 

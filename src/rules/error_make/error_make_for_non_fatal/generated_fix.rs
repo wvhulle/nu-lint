@@ -44,13 +44,3 @@ fn test_fix_in_try_block() {
     RULE.assert_fixed_contains(code, "error make");
     RULE.assert_fixed_contains(code, "Operation failed");
 }
-
-#[test]
-fn test_fix_explanation() {
-    let code = r#"
-        def helper [] {
-            print --stderr "Error"
-        }
-    "#;
-    RULE.assert_fix_explanation_contains(code, "error make");
-}

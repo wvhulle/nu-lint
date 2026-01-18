@@ -35,10 +35,3 @@ fn test_fix_with_computation() {
     RULE.assert_fixed_contains(bad_code, "|name, values|");
     RULE.assert_fixed_contains(bad_code, "$values");
 }
-
-#[test]
-fn test_fix_explanation() {
-    let bad_code = r#"{a: [1], b: [2]} | transpose k v | each {|row| $row.k}"#;
-    RULE.assert_fix_explanation_contains(bad_code, "items");
-    RULE.assert_fix_explanation_contains(bad_code, "transpose");
-}

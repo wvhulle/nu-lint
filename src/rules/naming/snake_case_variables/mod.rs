@@ -125,13 +125,14 @@ impl DetectFix for SnakeCaseVariables {
             .iter()
             .map(|(span, text)| Replacement::new(*span, text.clone()))
             .collect();
-        Some(Fix::with_explanation(
-            format!(
+        Some(Fix {
+            explanation: format!(
                 "Rename variable '{}' to '{}'",
                 fix_data.var_name, fix_data.snake_case_name
-            ),
+            )
+            .into(),
             replacements,
-        ))
+        })
     }
 }
 

@@ -1,3 +1,4 @@
+use lsp_types::DiagnosticTag;
 use nu_protocol::{
     Span, VarId,
     ast::{Block, Call, Expr, Expression, Pipeline},
@@ -151,6 +152,10 @@ impl DetectFix for UnnecessaryVariableBeforeReturn {
         Some(LintLevel::Warning)
     }
 
+    fn diagnostic_tags(&self) -> &'static [DiagnosticTag] {
+        &[DiagnosticTag::UNNECESSARY]
+    }
+
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let mut violations = Vec::new();
 
@@ -173,10 +178,10 @@ impl DetectFix for UnnecessaryVariableBeforeReturn {
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let replacement_text = context.span_text(fix_data.value_span).to_string();
-        Some(Fix::with_explanation(
-            format!("Return expression directly: {replacement_text}"),
-            vec![Replacement::new(fix_data.combined_span, replacement_text)],
-        ))
+        Some(Fix {
+            explanation: "Return expression directly".into(),
+            replacements: vec![Replacement::new(fix_data.combined_span, replacement_text)],
+        })
     }
 }
 

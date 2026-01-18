@@ -89,10 +89,10 @@ impl DetectFix for SplitGetRule {
                 index,
             } => {
                 let replacement = generate_parse_replacement(delimiter, &[*index]);
-                Some(Fix::with_explanation(
-                    format!("Replace 'split row | get/skip' with '{replacement}'"),
-                    vec![Replacement::new(*span, replacement)],
-                ))
+                Some(Fix {
+                    explanation: "replace".into(),
+                    replacements: vec![Replacement::new(*span, replacement)],
+                })
             }
             FixData::NoFix => None,
         }

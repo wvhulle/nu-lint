@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use lsp_types::DiagnosticTag;
 use nu_protocol::{
     BlockId, Completion, Span,
     ast::{Expr, Traverse},
@@ -183,6 +184,10 @@ impl DetectFix for UnusedHelperFunctions {
         Some(LintLevel::Warning)
     }
 
+    fn diagnostic_tags(&self) -> &'static [DiagnosticTag] {
+        &[DiagnosticTag::UNNECESSARY]
+    }
+
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let function_definitions = collect_function_definitions(context);
 
@@ -217,10 +222,10 @@ impl DetectFix for UnusedHelperFunctions {
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        Some(Fix::with_explanation(
-            format!("Remove unused function '{}'", fix_data.name),
-            vec![Replacement::new(fix_data.removal_span, String::new())],
-        ))
+        Some(Fix {
+            explanation: format!("Remove unused function '{}'", fix_data.name).into(),
+            replacements: vec![Replacement::new(fix_data.removal_span, String::new())],
+        })
     }
 }
 

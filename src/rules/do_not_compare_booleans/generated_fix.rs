@@ -62,9 +62,3 @@ fn test_fix_let_binding() {
     let expected = "let result = $check";
     RULE.assert_fixed_is(bad_code, expected);
 }
-
-#[test]
-fn test_fix_explanation() {
-    let bad_code = "if $flag == true { x }";
-    RULE.assert_fix_explanation_contains(bad_code, "Simplify to:");
-}

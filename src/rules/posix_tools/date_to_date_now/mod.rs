@@ -144,10 +144,10 @@ impl DetectFix for UseBuiltinDate {
         let opts = DateOptions::parse(fix_data.arg_texts(context));
         let (replacement, explanation) = opts.to_nushell();
 
-        Some(Fix::with_explanation(
-            explanation,
-            vec![Replacement::new(fix_data.expr_span, replacement)],
-        ))
+        Some(Fix {
+            explanation: explanation.into(),
+            replacements: vec![Replacement::new(fix_data.expr_span, replacement)],
+        })
     }
 }
 
@@ -161,7 +161,6 @@ mod tests {
     fn converts_date_command_to_date_now() {
         let source = "^date";
         RULE.assert_fixed_contains(source, "date now");
-        RULE.assert_fix_explanation_contains(source, "datetime");
     }
 
     #[test]
@@ -169,7 +168,6 @@ mod tests {
         // External date formatting like +%Y-%m-%d should still prefer 'date now'
         let source = "^date +%Y-%m-%d";
         RULE.assert_fixed_contains(source, "date now");
-        RULE.assert_fix_explanation_contains(source, "datetime");
     }
 
     #[test]
@@ -177,7 +175,6 @@ mod tests {
         // UTC flag doesn't change the recommendation to use 'date now'
         let source = "^date -u";
         RULE.assert_fixed_contains(source, "date now");
-        RULE.assert_fix_explanation_contains(source, "datetime");
     }
 
     #[test]

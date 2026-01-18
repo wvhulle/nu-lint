@@ -94,16 +94,17 @@ impl DetectFix for NeverSpaceSplit {
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        Some(Fix::with_explanation(
-            format!(
+        Some(Fix {
+            explanation: format!(
                 "Remove unnecessary interpolation around '{}'",
                 fix_data.variable_text
-            ),
-            vec![Replacement::new(
+            )
+            .into(),
+            replacements: vec![Replacement::new(
                 fix_data.interpolation_span,
                 fix_data.variable_text.clone(),
             )],
-        ))
+        })
     }
 }
 

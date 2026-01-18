@@ -104,10 +104,10 @@ impl DetectFix for ColumnsNotInToNotHas {
 
         let replacement = format!("{record_text} not-has {key_text}");
 
-        Some(Fix::with_explanation(
-            "Replace with 'not-has' operator",
-            vec![Replacement::new(fix_data.full, replacement)],
-        ))
+        Some(Fix {
+            explanation: "Replace with 'not-has' operator".into(),
+            replacements: vec![Replacement::new(fix_data.full, replacement)],
+        })
     }
 }
 

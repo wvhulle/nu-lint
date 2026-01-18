@@ -43,10 +43,10 @@ impl DetectFix for StructuredDataToCsvTool {
         let original_text = context.span_text(*data_span);
         let new_text = format!("{original_text} | to csv");
 
-        Some(Fix::with_explanation(
-            "Add 'to csv' to convert to CSV before piping to CSV tool",
-            vec![Replacement::new(*data_span, new_text)],
-        ))
+        Some(Fix {
+            explanation: "Add 'to csv' to convert to CSV before piping to CSV tool".into(),
+            replacements: vec![Replacement::new(*data_span, new_text)],
+        })
     }
 }
 

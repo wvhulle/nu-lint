@@ -182,10 +182,10 @@ impl DetectFix for LinesEachParseRule {
             format!("lines | parse \"{}\"", fix_data.parse_pattern)
         };
 
-        Some(Fix::with_explanation(
-            format!("Simplify to '{replacement}'"),
-            vec![Replacement::new(fix_data.span, replacement)],
-        ))
+        Some(Fix {
+            explanation: "simplify".into(),
+            replacements: vec![Replacement::new(fix_data.span, replacement)],
+        })
     }
 }
 

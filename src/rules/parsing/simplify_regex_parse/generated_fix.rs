@@ -23,9 +23,3 @@ fn test_fix_simple_regex_equals() {
     let bad_code = r#"'key=value' | parse --regex '(?P<key>.*)=(?P<value>.*)'"#;
     RULE.assert_fixed_contains(bad_code, r#"parse "{key}={value}""#);
 }
-
-#[test]
-fn test_fix_explanation_mentions_simplify() {
-    let bad_code = r#"'ip:port' | parse --regex '(?P<ip>.*):(?P<port>.*)'"#;
-    RULE.assert_fix_explanation_contains(bad_code, "Simplify");
-}

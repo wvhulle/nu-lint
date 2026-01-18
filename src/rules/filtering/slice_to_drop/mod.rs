@@ -107,10 +107,10 @@ impl DetectFix for SliceToDrop {
             DropCount::Constant(n) => format!("drop {n}"),
         };
 
-        Some(Fix::with_explanation(
-            "Replace with 'drop'",
-            vec![Replacement::new(fix_data.slice_span, replacement_text)],
-        ))
+        Some(Fix {
+            explanation: "Replace with 'drop'".into(),
+            replacements: vec![Replacement::new(fix_data.slice_span, replacement_text)],
+        })
     }
 }
 

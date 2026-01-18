@@ -153,10 +153,10 @@ impl DetectFix for MergeGetCellPath {
         let combined_path = format_cell_path(&fix_data.combined_members);
         let replacement_text = format!("get {combined_path}");
 
-        Some(Fix::with_explanation(
-            format!("Combine into single cell path: {replacement_text}"),
-            vec![Replacement::new(fix_data.full_span, replacement_text)],
-        ))
+        Some(Fix {
+            explanation: "Combine into single cell path".into(),
+            replacements: vec![Replacement::new(fix_data.full_span, replacement_text)],
+        })
     }
 }
 

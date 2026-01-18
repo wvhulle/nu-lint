@@ -118,10 +118,10 @@ impl DetectFix for RecordBraceSpacing {
         let trimmed = inner.trim();
         let fixed = format!("{{{trimmed}}}");
 
-        Some(Fix::with_explanation(
-            "Remove spaces inside record braces",
-            vec![Replacement::new(fix_data.record_span, fixed)],
-        ))
+        Some(Fix {
+            explanation: "Remove spaces inside record braces".into(),
+            replacements: vec![Replacement::new(fix_data.record_span, fixed)],
+        })
     }
 }
 

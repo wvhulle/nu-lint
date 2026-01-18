@@ -1,3 +1,4 @@
+use lsp_types::DiagnosticTag;
 use nu_protocol::{
     Span,
     ast::{Comparison, Expr, Expression, Operator},
@@ -128,6 +129,10 @@ impl DetectFix for RedundantBooleanComparison {
         Some(LintLevel::Warning)
     }
 
+    fn diagnostic_tags(&self) -> &'static [DiagnosticTag] {
+        &[DiagnosticTag::UNNECESSARY]
+    }
+
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context.detect_with_fix_data(|expr, ctx| detect_redundant_bool_comparison(expr, ctx))
     }
@@ -141,10 +146,10 @@ impl DetectFix for RedundantBooleanComparison {
             operand_text.to_string()
         };
 
-        Some(Fix::with_explanation(
-            format!("Simplify to: {replacement_text}"),
-            vec![Replacement::new(fix_data.full_expr, replacement_text)],
-        ))
+        Some(Fix {
+            explanation: "simplify".into(),
+            replacements: vec![Replacement::new(fix_data.full_expr, replacement_text)],
+        })
     }
 }
 

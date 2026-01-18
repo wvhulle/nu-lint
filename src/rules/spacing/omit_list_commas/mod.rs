@@ -94,10 +94,10 @@ impl DetectFix for OmitListCommas {
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        Some(Fix::with_explanation(
-            "Remove comma",
-            vec![Replacement::new(fix_data.comma_span, String::new())],
-        ))
+        Some(Fix {
+            explanation: "Remove comma".into(),
+            replacements: vec![Replacement::new(fix_data.comma_span, String::new())],
+        })
     }
 }
 

@@ -88,18 +88,6 @@ def main [] {
 }
 
 #[test]
-fn test_fix_explanation() {
-    let source = r"#!/usr/bin/env nu
-
-def main [] {
-    $in | str upcase
-}
-";
-
-    RULE.assert_fix_explanation_contains(source, "Add --stdin flag");
-}
-
-#[test]
 fn test_fix_produces_valid_code() {
     // Test that the fix only replaces the shebang line, not the entire file
     let source = r"#!/usr/bin/env nu

@@ -18,7 +18,10 @@ use lsp_types::{
     request::{CodeActionRequest, ExecuteCommand, Request as _},
 };
 
-use super::document::{ServerState, is_nushell_file, is_nushell_language_id};
+use super::{
+    diagnostic::{is_nushell_language_id, is_nushell_uri},
+    state::ServerState,
+};
 use crate::{Config, config::find_config_file_from};
 
 /// Command to disable a rule in the config file
@@ -155,7 +158,7 @@ fn handle_did_open(connection: &Connection, state: &mut ServerState, params: ser
     };
     let uri = params.text_document.uri;
     // Check language_id first (the LSP-correct way), fall back to extension check
-    if is_nushell_language_id(&params.text_document.language_id) || is_nushell_file(&uri) {
+    if is_nushell_language_id(&params.text_document.language_id) || is_nushell_uri(&uri) {
         let diagnostics = state.lint_document(&uri, &params.text_document.text);
         publish_diagnostics(connection, uri, diagnostics);
     }
@@ -174,7 +177,7 @@ fn handle_did_change(connection: &Connection, state: &mut ServerState, params: s
     if is_config_file(&uri, state.workspace_root()) {
         log::info!("Config file changed, reloading configuration");
         reload_config_and_relint(connection, state);
-    } else if state.has_document(&uri) || is_nushell_file(&uri) {
+    } else if state.has_document(&uri) || is_nushell_uri(&uri) {
         let diagnostics = state.lint_document(&uri, &change.text);
         publish_diagnostics(connection, uri, diagnostics);
     }
@@ -198,7 +201,7 @@ fn handle_did_save(connection: &Connection, state: &mut ServerState, params: ser
         .or_else(|| state.get_document(&uri).map(|d| d.content.clone()));
 
     if let Some(content) = content
-        && (state.has_document(&uri) || is_nushell_file(&uri))
+        && (state.has_document(&uri) || is_nushell_uri(&uri))
     {
         let diagnostics = state.lint_document(&uri, &content);
         publish_diagnostics(connection, uri, diagnostics);

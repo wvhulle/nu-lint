@@ -91,7 +91,6 @@ def get-flake-targets []: nothing -> record {
   nix eval $".#releaseTargets.($system)" --json | from json
 }
 
-
 # Get Cachix token from environment (CI or local .env)
 def get-cachix-token []: nothing -> string {
   $env.CACHIX_AUTH_TOKEN? | default ($env.CACHIX_TOKEN? | default "")
@@ -243,15 +242,18 @@ def build-cargo [target_triple: string]: nothing -> nothing {
 def create-checksums []: nothing -> nothing {
   log debug "Creating checksums..."
 
+  # nu-lint-ignore: catch_builtin_error_try
   cd dist
   let files = try { ls *.tar.gz | get name } catch { return }
 
   $files
   | each {|f|
+    # nu-lint-ignore: catch_builtin_error_try
     let hash = open --raw $f | hash sha256
     log debug $"  ($f): ($hash | str substring 0..16)..."
     $"($hash)  ($f)"
   }
   | str join "\n"
+  #  nu-lint-ignore: catch_builtin_error_try
   | save --force checksums-sha256.txt
 }

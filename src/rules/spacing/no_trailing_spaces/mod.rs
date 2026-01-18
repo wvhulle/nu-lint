@@ -64,7 +64,7 @@ impl DetectFix for NoTrailingSpaces {
     }
 
     fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Hint)
+        None
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

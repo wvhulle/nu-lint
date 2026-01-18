@@ -40,6 +40,7 @@ steps:
       target: main
       note: RELEASE_NOTES.md
       title: ${CI_COMMIT_TAG}
+      prerelease: true
     depends_on:
       - changelog
       - build

@@ -18,6 +18,7 @@ use crate::{
     LintError,
     config::Config,
     context::LintContext,
+    inline_ignore,
     rules::USED_RULES,
     violation::{SourceFile, Violation},
 };
@@ -251,6 +252,19 @@ impl LintEngine {
         for violation in &mut violations {
             violation.normalize_spans(file_offset);
         }
+
+        // Filter out ignored violations (after normalization so spans are
+        // file-relative)
+        let mut violations: Vec<Violation> = violations
+            .into_iter()
+            .filter(|v| {
+                let rule_id = v.rule_id.as_deref().unwrap_or("");
+                !inline_ignore::should_ignore(source, v.file_span().start, rule_id)
+            })
+            .collect();
+
+        // Add warnings for unknown rule IDs in ignore comments
+        violations.extend(inline_ignore::validate_ignores(source));
 
         violations
     }

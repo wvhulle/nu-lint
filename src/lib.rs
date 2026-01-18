@@ -6,6 +6,7 @@ mod effect;
 mod engine;
 mod fix;
 mod format_conversions;
+mod inline_ignore;
 pub mod log;
 #[cfg(feature = "lsp")]
 mod lsp;

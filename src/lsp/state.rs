@@ -98,6 +98,7 @@ impl ServerState {
         };
 
         let mut actions = Vec::new();
+        let is_repl = uri.scheme().is_some_and(|s| s.as_str() == "repl");
 
         for violation in &doc_state.violations {
             let file_span = violation.file_span();
@@ -148,7 +149,10 @@ impl ServerState {
                 }));
             }
 
-            if let Some(rule_id) = violation.rule_id.as_deref() {
+            // Skip inline ignore action for REPL content (no persistent file to add comment to)
+            if !is_repl
+                && let Some(rule_id) = violation.rule_id.as_deref()
+            {
                 let edit = ignore_comment_edit(&doc_state.content, file_span.start, rule_id);
                 actions.push(CodeActionOrCommand::CodeAction(CodeAction {
                     title: format!("Ignore '{rule_id}' on this line"),

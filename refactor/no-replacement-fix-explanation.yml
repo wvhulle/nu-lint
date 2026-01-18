@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
+
+id: no-replacement-fix-explanation
+message: Do not include replacement in the fix explanation as this will be duplicating other data.
+severity: error # error, warning, info, hint
+language: Rust
+rule:
+  kind: string_content
+  regex: .*replacement.*
+  inside:
+    kind: macro_invocation
+    regex: format
+    stopBy: end
+    inside:
+      pattern: "Fix { explanation: $_, $$$}"
+      stopBy: end
+note: Replacement is already in the replacements field

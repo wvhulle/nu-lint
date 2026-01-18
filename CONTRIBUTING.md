@@ -15,7 +15,7 @@ Experiment with different variations of the anti-pattern. For example, you want 
 - Can this anti-pattern be fixed? When can it not be fixed?
 - Should we offer different fixes depending on the situation? Preferably, you split a rule and anti-pattern in different sub-rules when the fixes are wide apart.
 
-## Testing locally
+## Testing Locally
 
 If you are a human, you should launch a Nushell with the `nu` command and try commands interactively. Otherwise, if you are an AI agent you should you should specify Nu test commands in a string and pass them to the interpreter directly.
 
@@ -33,7 +33,7 @@ Make it executable and run it with `/tmp/test.nu` and observe the output in the 
 
 You can compare differences between shells by running `nu -c 'TEST_NU_CODE'` (for Nu test code) and `bash -c 'TEST_BASH_CODE'` (for Bash test code).
 
-## Rule implementation structure
+## Rule Implementation Structure
 
 Each rule lives in its own directory under `src/rules/`. A typical rule consists of:
 
@@ -48,60 +48,15 @@ A test file for fixes may be added when the false negative and false positive te
 
 Rules can also be grouped into submodules (e.g., `parsing/`, `filesystem/`, `typing/`) when they share common functionality.
 
-## Implementing the DetectFix trait
+## Implementing the `DetectFix` Trait
 
 Before you actually start implementing, you need to do some scaffolding. Don't start implementing yet, but this step is important to hook up your new rule in the linter and run its tests with the other rules.
 
-Every rule implements the `DetectFix` trait from `src/rule.rs`:
+Every rule implements the `DetectFix` trait from `src/rule.rs`.
 
-```rust
-use crate::{
-    Fix, LintLevel, Replacement,
-    context::LintContext,
-    rule::{DetectFix, Rule},
-    violation::Detection,
-};
+You are not required to implement a `fix`, it has a default trait implementation.
 
-struct YourRule;
-
-impl DetectFix for YourRule {
-    type FixInput<'a> = YourFixData; // Data needed for the fix, or () if no fix
-
-    fn id(&self) -> &'static str {
-        "your_rule_id"  // Unique identifier, used in config files, should be at least 3 descriptive words long with underscores and lower case
-    }
-
-    fn explanation(&self) -> &'static str {
-        "Brief description of what this rule detects" // This will be displayed in the `--help` output and users should immediately know what this rule is doing in which situation in concise sentence.
-    }
-
-    fn doc_url(&self) -> Option<&'static str> {
-        Some("https://www.nushell.sh/commands/docs/relevant_command.html") // Optional, don't add if you don't find a good resource that documents this anti-pattern.
-    }
-
-    fn level(&self) -> LintLevel {
-        LintLevel::Warning  // Or Hint, Error
-    }
-
-    fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        // Detection logic - return violations with fix data
-        context.detect_with_fix_data(|expr, ctx| {
-            // Check each expression in the AST
-            vec![]
-        })
-    }
-
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        // Generate the fix using fix_data. This method is optional and should only be implemented if fix generation is reliable.
-        Some(Fix::with_explanation(
-            "Description of the fix",
-            vec![Replacement::new(fix_data.span, "replacement text")],
-        ))
-    }
-}
-```
-
-You are not required to implement `Fix`, it has a default trait implementation. After using the default `FixData = ()` (or coming up with your own) you should erase the associated type `FixData` by casting it to a dynamic dispatch object:
+After using the default `FixData = ()` (or coming up with your own) you should erase the associated type `FixData` by casting it to a dynamic dispatch object:
 
 ```rs
 pub static RULE: &dyn Rule = &YourRule;
@@ -109,7 +64,7 @@ pub static RULE: &dyn Rule = &YourRule;
 
 This allows the rule to appear in an array without heap allocation.
 
-## Registering your rule
+## Registering Your Rule
 
 After implementing your rule, register it in two places:
 

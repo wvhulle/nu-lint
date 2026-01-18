@@ -97,7 +97,11 @@ pub fn violation_to_diagnostic(
         } else {
             Some(related_info)
         },
-        tags: None,
+        tags: if violation.diagnostic_tags.is_empty() {
+            None
+        } else {
+            Some(violation.diagnostic_tags.clone())
+        },
         data: None,
     }
 }

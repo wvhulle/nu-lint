@@ -8,14 +8,14 @@ use lsp_types::{
     CodeActionKind, CodeActionOptions, CodeActionParams, CodeActionProviderCapability, Diagnostic,
     DidChangeTextDocumentParams, DidChangeWatchedFilesParams, DidCloseTextDocumentParams,
     DidOpenTextDocumentParams, DidSaveTextDocumentParams, ExecuteCommandOptions,
-    ExecuteCommandParams, InitializeParams, PublishDiagnosticsParams, ServerCapabilities,
-    TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions,
-    TextDocumentSyncSaveOptions, Uri, WorkDoneProgressOptions,
+    ExecuteCommandParams, HoverParams, HoverProviderCapability, InitializeParams,
+    PublishDiagnosticsParams, ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind,
+    TextDocumentSyncOptions, TextDocumentSyncSaveOptions, Uri, WorkDoneProgressOptions,
     notification::{
         DidChangeTextDocument, DidChangeWatchedFiles, DidCloseTextDocument, DidOpenTextDocument,
         DidSaveTextDocument, Notification as _, PublishDiagnostics,
     },
-    request::{CodeActionRequest, ExecuteCommand, Request as _},
+    request::{CodeActionRequest, ExecuteCommand, HoverRequest, Request as _},
 };
 
 use super::{
@@ -87,7 +87,10 @@ pub fn run_lsp_server() {
             },
         )),
         code_action_provider: Some(CodeActionProviderCapability::Options(CodeActionOptions {
-            code_action_kinds: Some(vec![CodeActionKind::QUICKFIX]),
+            code_action_kinds: Some(vec![
+                CodeActionKind::QUICKFIX,
+                CodeActionKind::SOURCE_FIX_ALL,
+            ]),
             work_done_progress_options: WorkDoneProgressOptions::default(),
             resolve_provider: None,
         })),
@@ -95,6 +98,7 @@ pub fn run_lsp_server() {
             commands: vec![DISABLE_RULE_COMMAND.to_string()],
             work_done_progress_options: WorkDoneProgressOptions::default(),
         }),
+        hover_provider: Some(HoverProviderCapability::Simple(true)),
         ..Default::default()
     };
 
@@ -270,6 +274,17 @@ fn handle_request(connection: &Connection, state: &mut ServerState, request: Req
             } else {
                 serde_json::to_value(actions).unwrap_or(serde_json::Value::Null)
             }
+        }
+        HoverRequest::METHOD => {
+            let Ok(params) = serde_json::from_value::<HoverParams>(request.params) else {
+                log::warn!("Failed to parse hover params");
+                send_response(connection, request.id, serde_json::Value::Null);
+                return;
+            };
+            state
+                .get_hover(&params.text_document_position_params)
+                .and_then(|h| serde_json::to_value(h).ok())
+                .unwrap_or(serde_json::Value::Null)
         }
         ExecuteCommand::METHOD => {
             let Ok(params) = serde_json::from_value::<ExecuteCommandParams>(request.params) else {

@@ -3,7 +3,7 @@
 
 # replace_by_builtin: Use builtin commands instead of external commands
 
-# nu-lint-ignore: missing_output_type
+@category 'edit'
 @category 'edit'
 def list-files [] {
   ^ls | lines

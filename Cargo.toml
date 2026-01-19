@@ -15,7 +15,7 @@ license = "MIT"
 name = "nu-lint"
 repository = "https://codeberg.org/wvhulle/nu-lint"
 # Find latest published version with `cargo search nu-lint`
-version = "0.0.134"
+version = "0.0.135"
 
 [lints.clippy]
 # https://rust-lang.github.io/rust-clippy/master/index.html
@@ -125,6 +125,6 @@ name = "speed"
 [package.metadata.binstall]
 # cargo-binstall configuration for binary releases on Codeberg
 # See: https://github.com/cargo-bins/cargo-binstall
-pkg-url = "{ repo }/releases/download/v{ version }/nu-lint-{ target }.tar.gz"
-pkg-fmt = "tgz"
 bin-dir = "nu-lint"
+pkg-fmt = "tgz"
+pkg-url = "{ repo }/releases/download/v{ version }/nu-lint-{ target }.tar.gz"

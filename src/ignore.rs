@@ -32,8 +32,10 @@ pub struct IgnoreIndex {
 
 impl IgnoreIndex {
     /// Build an ignore index from source code.
-    /// Scans for `# nu-lint-ignore:` comments and maps them to their target
-    /// lines, skipping over attribute lines (`@...`) and empty lines.
+    /// Scans for `# nu-lint-ignore:` comments in two forms:
+    /// 1. Inline comments on the same line as code
+    /// 2. Standalone comments on previous line (skipping attributes and empty
+    ///    lines)
     pub fn new(source: &str) -> Self {
         let lines: Vec<&str> = source.lines().collect();
         let mut ignored_lines = HashMap::new();
@@ -47,14 +49,27 @@ impl IgnoreIndex {
         }
 
         for (line_num, line) in lines.iter().enumerate() {
+            // First, try to parse the whole line (for standalone comments)
             if let Some(rules) = parse_ignore_comment(line) {
-                // Find the target line (skip attributes and empty lines)
+                let rule_set: HashSet<String> = rules.iter().map(|&s| String::from(s)).collect();
+                // Standalone comment - find the target line (skip attributes and empty lines)
                 let target = find_target_line(&lines, line_num + 1);
-                let rule_set: HashSet<String> = rules.into_iter().map(String::from).collect();
                 ignored_lines
                     .entry(target)
                     .or_insert_with(HashSet::new)
                     .extend(rule_set);
+            } else if let Some(comment_start) = line.find('#') {
+                // Check if there's an inline ignore comment
+                let comment_part = &line[comment_start..];
+                if let Some(rules) = parse_ignore_comment(comment_part) {
+                    let rule_set: HashSet<String> =
+                        rules.iter().map(|&s| String::from(s)).collect();
+                    // Inline comment - ignore violations on the same line
+                    ignored_lines
+                        .entry(line_num)
+                        .or_insert_with(HashSet::new)
+                        .extend(rule_set);
+                }
             }
         }
 
@@ -84,13 +99,15 @@ impl IgnoreIndex {
 /// Find the target line for an ignore comment, skipping attributes and empty
 /// lines.
 fn find_target_line(lines: &[&str], start: usize) -> usize {
-    for (i, line) in lines.iter().enumerate().skip(start) {
-        let trimmed = line.trim();
-        if !trimmed.is_empty() && !trimmed.starts_with('@') {
-            return i;
-        }
-    }
-    start
+    lines
+        .iter()
+        .enumerate()
+        .skip(start)
+        .find(|(_, line)| {
+            let trimmed = line.trim();
+            !trimmed.is_empty() && !trimmed.starts_with('@')
+        })
+        .map_or(start, |(i, _)| i)
 }
 
 /// Validate ignore comments and return warnings for unknown rule IDs
@@ -188,5 +205,24 @@ mod tests {
         let index = IgnoreIndex::new(source);
         let def_offset = source.find("def").unwrap();
         assert!(index.should_ignore(def_offset, "my_rule"));
+    }
+
+    #[test]
+    fn ignore_inline_comment() {
+        let source = "let x = 1 # nu-lint-ignore: my_rule";
+        let index = IgnoreIndex::new(source);
+        // Violation at the beginning of the line should be ignored
+        assert!(index.should_ignore(0, "my_rule"));
+        // Violation in the middle should also be ignored
+        assert!(index.should_ignore(4, "my_rule"));
+    }
+
+    #[test]
+    fn ignore_inline_with_multiple_rules() {
+        let source = "let x = 1 # nu-lint-ignore: rule_a, rule_b";
+        let index = IgnoreIndex::new(source);
+        assert!(index.should_ignore(0, "rule_a"));
+        assert!(index.should_ignore(0, "rule_b"));
+        assert!(!index.should_ignore(0, "rule_c"));
     }
 }

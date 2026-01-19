@@ -12,64 +12,28 @@ use super::{
 };
 use crate::violation::Fix;
 
-/// Create a `TextEdit` that inserts an ignore comment before the violation.
-///
-/// Handles nushell attributes by placing the comment before any `@` attribute
-/// lines.
+/// Create a `TextEdit` that inserts an ignore comment inline at the end of the
+/// line containing the violation.
 pub fn ignore_comment_edit(content: &str, byte_offset: usize, rule_id: &str) -> TextEdit {
     let line_index = LineIndex::new(content);
 
     // Find line number containing the violation
     let violation_line = line_index.offset_to_line(byte_offset);
 
-    // Scan backwards to find insertion line (before any attributes)
-    let insert_line = find_insert_line_before_attributes(content, &line_index, violation_line);
+    // Get the end of the line
+    let line_start = line_index.line_start(violation_line);
+    let line_content = line_index.line_content(content, violation_line);
+    let line_end_offset = line_start + line_content.trim_end().len();
 
-    // Get byte offset and indentation for the insertion line
-    let insert_offset = line_index.line_start(insert_line);
-    let indentation: String = content
-        .get(insert_offset..)
-        .unwrap_or("")
-        .chars()
-        .take_while(|c| c.is_whitespace() && *c != '\n')
-        .collect();
-
-    let insert_position = line_index.offset_to_position(insert_offset, content);
+    let insert_position = line_index.offset_to_position(line_end_offset, content);
 
     TextEdit {
         range: Range {
             start: insert_position,
             end: insert_position,
         },
-        new_text: format!("{indentation}# nu-lint-ignore: {rule_id}\n"),
+        new_text: format!(" # nu-lint-ignore: {rule_id}"),
     }
-}
-
-/// Scan backwards from a line to find the insertion point before any attribute
-/// block.
-fn find_insert_line_before_attributes(
-    content: &str,
-    line_index: &LineIndex,
-    start_line: usize,
-) -> usize {
-    let mut insert_line = start_line;
-
-    for line_num in (0..start_line).rev() {
-        let line_content = line_index.line_content(content, line_num);
-        let trimmed = line_content.trim();
-
-        if trimmed.is_empty() {
-            continue; // Skip empty lines between attributes
-        }
-
-        if trimmed.starts_with('@') {
-            insert_line = line_num; // Move insertion point before this attribute
-        } else {
-            break; // Non-attribute line, stop scanning
-        }
-    }
-
-    insert_line
 }
 
 /// Create a hierarchical quickfix kind for a specific rule.
@@ -108,7 +72,7 @@ pub fn quickfix_action(
             change_annotations: None,
         }),
         command: None,
-        is_preferred: Some(true),
+        is_preferred: None,
         disabled: None,
         data: None,
     })
@@ -134,7 +98,7 @@ pub fn ignore_line_action(
             change_annotations: None,
         }),
         command: None,
-        is_preferred: Some(false),
+        is_preferred: None,
         disabled: None,
         data: None,
     })
@@ -152,7 +116,7 @@ pub fn disable_rule_action(rule_id: &str, diagnostic: Diagnostic) -> CodeActionO
             command: DISABLE_RULE_COMMAND.to_string(),
             arguments: Some(vec![serde_json::Value::String(rule_id.to_string())]),
         }),
-        is_preferred: Some(false),
+        is_preferred: None,
         disabled: None,
         data: None,
     })
@@ -180,8 +144,8 @@ pub fn build_code_actions(
         actions.push(action);
     }
 
-    // Filter to violations in range, partition by fixable (fixable first)
-    let (fixable, non_fixable): (Vec<_>, Vec<_>) = doc_state
+    // Filter to violations in range, collect and sort by position in document
+    let mut violations_in_range: Vec<_> = doc_state
         .violations
         .iter()
         .filter(|v| {
@@ -192,19 +156,34 @@ pub fn build_code_actions(
                     .span_to_range(&doc_state.content, span.start, span.end);
             ranges_overlap(range, &v_range)
         })
-        .partition(|v| v.fix.is_some());
+        .collect();
 
-    // Process fixable violations first, then non-fixable
-    for violation in fixable.into_iter().chain(non_fixable) {
+    // Sort by position in document first, then by whether it has a fix (fixable
+    // first)
+    violations_in_range.sort_by(|a, b| {
+        let span_a = a.file_span();
+        let span_b = b.file_span();
+        span_a.start.cmp(&span_b.start).then_with(|| {
+            // Within same position, put fixable violations first
+            b.fix.is_some().cmp(&a.fix.is_some())
+        })
+    });
+
+    // Process violations in sorted order, creating action groups per violation
+    for violation in violations_in_range {
         let file_span = violation.file_span();
         let rule_id = violation.rule_id.as_deref().unwrap_or("unknown");
 
         let diagnostic =
             violation_to_diagnostic(violation, &doc_state.content, &doc_state.line_index, uri);
 
-        // Add fix action if available
+        // Build actions for this violation in order: fix first, then ignore, then
+        // disable
+        let mut violation_actions = Vec::new();
+
+        // Add fix action if available (highest priority)
         if let Some(fix) = &violation.fix {
-            actions.push(quickfix_action(
+            violation_actions.push(quickfix_action(
                 uri,
                 rule_id,
                 fix,
@@ -215,7 +194,7 @@ pub fn build_code_actions(
         }
 
         if options.include_ignore {
-            actions.push(ignore_line_action(
+            violation_actions.push(ignore_line_action(
                 uri,
                 rule_id,
                 file_span.start,
@@ -225,8 +204,11 @@ pub fn build_code_actions(
         }
 
         if options.include_disable {
-            actions.push(disable_rule_action(rule_id, diagnostic));
+            violation_actions.push(disable_rule_action(rule_id, diagnostic));
         }
+
+        // Add all actions for this violation together
+        actions.extend(violation_actions);
     }
 
     actions

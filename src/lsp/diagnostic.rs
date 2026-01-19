@@ -112,61 +112,40 @@ fn collect_related_info(
     line_index: &LineIndex,
     file_uri: &Uri,
 ) -> Vec<DiagnosticRelatedInformation> {
-    let mut related_info = Vec::new();
-    let mut seen_ranges = HashSet::new();
+    let primary = violation
+        .primary_label
+        .as_ref()
+        .filter(|l| !l.is_empty())
+        .map(|label| (violation.file_span(), label.as_ref()));
 
-    if let Some(ref label) = violation.primary_label
-        && !label.is_empty()
-    {
-        let file_span = violation.file_span();
-        let range = line_index.span_to_range(source, file_span.start, file_span.end);
-        let range_key = (
-            range.start.line,
-            range.start.character,
-            range.end.line,
-            range.end.character,
-        );
-        seen_ranges.insert(range_key);
-        related_info.push(DiagnosticRelatedInformation {
-            location: Location {
-                uri: file_uri.clone(),
-                range,
-            },
-            message: label.to_string(),
-        });
-    }
+    let extras = violation.extra_labels.iter().filter_map(|(span, label)| {
+        label
+            .as_deref()
+            .filter(|l| !l.is_empty())
+            .map(|l| (span.file_span(), l))
+    });
 
-    for (span, label) in &violation.extra_labels {
-        let Some(label_text) = label.as_deref() else {
-            continue;
-        };
-        if label_text.is_empty() {
-            continue;
-        }
-
-        let file_span = span.file_span();
-        let range = line_index.span_to_range(source, file_span.start, file_span.end);
-
-        let range_key = (
-            range.start.line,
-            range.start.character,
-            range.end.line,
-            range.end.character,
-        );
-        if !seen_ranges.insert(range_key) {
-            continue;
-        }
-
-        related_info.push(DiagnosticRelatedInformation {
-            location: Location {
-                uri: file_uri.clone(),
-                range,
-            },
-            message: label_text.to_string(),
-        });
-    }
-
-    related_info
+    primary
+        .into_iter()
+        .chain(extras)
+        .scan(HashSet::new(), |seen, (file_span, label)| {
+            let range = line_index.span_to_range(source, file_span.start, file_span.end);
+            let key = (
+                range.start.line,
+                range.start.character,
+                range.end.line,
+                range.end.character,
+            );
+            Some(seen.insert(key).then(|| DiagnosticRelatedInformation {
+                location: Location {
+                    uri: file_uri.clone(),
+                    range,
+                },
+                message: label.to_string(),
+            }))
+        })
+        .flatten()
+        .collect()
 }
 
 pub fn extra_labels_to_hint_diagnostics(

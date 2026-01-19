@@ -107,7 +107,7 @@ impl ServerState {
         let is_repl = uri.scheme().is_some_and(|s| s.as_str() == "repl");
 
         // Add source.fixAll action if there are any fixes
-        if let Some(fix_all) = self.get_fix_all_action(uri, doc_state) {
+        if let Some(fix_all) = get_fix_all_action(uri, doc_state) {
             actions.push(fix_all);
         }
 
@@ -202,63 +202,6 @@ impl ServerState {
         actions
     }
 
-    /// Get a source.fixAll code action that applies all available fixes
-    fn get_fix_all_action(
-        &self,
-        uri: &Uri,
-        doc_state: &DocumentState,
-    ) -> Option<CodeActionOrCommand> {
-        let fixable: Vec<_> = doc_state
-            .violations
-            .iter()
-            .filter(|v| v.fix.is_some())
-            .collect();
-
-        if fixable.is_empty() {
-            return None;
-        }
-
-        let diagnostics: Vec<_> = fixable
-            .iter()
-            .map(|v| violation_to_diagnostic(v, &doc_state.content, &doc_state.line_index, uri))
-            .collect();
-
-        let mut edits: Vec<_> = fixable
-            .iter()
-            .flat_map(|v| &v.fix.as_ref().unwrap().replacements)
-            .map(|r| {
-                let span = r.file_span();
-                TextEdit {
-                    range: doc_state.line_index.span_to_range(
-                        &doc_state.content,
-                        span.start,
-                        span.end,
-                    ),
-                    new_text: r.replacement_text.to_string(),
-                }
-            })
-            .collect();
-
-        // Sort by position descending, deduplicate overlapping
-        edits.sort_by(|a, b| {
-            (b.range.start.line, b.range.start.character)
-                .cmp(&(a.range.start.line, a.range.start.character))
-        });
-        edits.dedup_by(|a, b| ranges_overlap(&a.range, &b.range));
-
-        Some(CodeActionOrCommand::CodeAction(CodeAction {
-            title: format!("Fix all auto-fixable problems ({} fixes)", edits.len()),
-            kind: Some(CodeActionKind::SOURCE_FIX_ALL),
-            diagnostics: Some(diagnostics),
-            edit: Some(WorkspaceEdit {
-                changes: Some(HashMap::from([(uri.clone(), edits)])),
-                ..Default::default()
-            }),
-            is_preferred: Some(false),
-            ..Default::default()
-        }))
-    }
-
     pub fn get_document(&self, uri: &Uri) -> Option<&DocumentState> {
         self.documents.get(uri)
     }
@@ -307,14 +250,65 @@ impl ServerState {
     }
 }
 
+/// Get a source.fixAll code action that applies all available fixes
+fn get_fix_all_action(uri: &Uri, doc_state: &DocumentState) -> Option<CodeActionOrCommand> {
+    let fixable: Vec<_> = doc_state
+        .violations
+        .iter()
+        .filter(|v| v.fix.is_some())
+        .collect();
+
+    if fixable.is_empty() {
+        return None;
+    }
+
+    let diagnostics: Vec<_> = fixable
+        .iter()
+        .map(|v| violation_to_diagnostic(v, &doc_state.content, &doc_state.line_index, uri))
+        .collect();
+
+    let mut edits: Vec<_> = fixable
+        .iter()
+        .flat_map(|v| &v.fix.as_ref().unwrap().replacements)
+        .map(|r| {
+            let span = r.file_span();
+            TextEdit {
+                range: doc_state
+                    .line_index
+                    .span_to_range(&doc_state.content, span.start, span.end),
+                new_text: r.replacement_text.to_string(),
+            }
+        })
+        .collect();
+
+    // Sort by position descending, deduplicate overlapping
+    edits.sort_by(|a, b| {
+        (b.range.start.line, b.range.start.character)
+            .cmp(&(a.range.start.line, a.range.start.character))
+    });
+    edits.dedup_by(|a, b| ranges_overlap(&a.range, &b.range));
+
+    Some(CodeActionOrCommand::CodeAction(CodeAction {
+        title: format!("Fix all auto-fixable problems ({} fixes)", edits.len()),
+        kind: Some(CodeActionKind::SOURCE_FIX_ALL),
+        diagnostics: Some(diagnostics),
+        edit: Some(WorkspaceEdit {
+            changes: Some(HashMap::from([(uri.clone(), edits)])),
+            ..Default::default()
+        }),
+        is_preferred: Some(false),
+        ..Default::default()
+    }))
+}
+
 fn violation_to_hover_markdown(v: &Violation) -> String {
     let mut lines = Vec::new();
 
     // Header with rule ID and category badges
     if let Some(rule_id) = v.rule_id.as_deref() {
         let categories = groups_for_rule(rule_id);
-        let badges: String = categories.iter().map(|c| format!(" `[{c}]`")).collect();
-        lines.push(format!("### `{rule_id}`{badges}"));
+        let badges = format!("({})", categories.join(", "));
+        lines.push(format!("### `{rule_id} `{badges}"));
     }
 
     // Short description as subtitle

@@ -112,6 +112,16 @@ pub fn cell_path_member_needs_quotes(content: &str) -> bool {
         .any(|ch| matches!(ch, '.' | '[' | ']' | '(' | ')' | '"' | '\'' | '`'))
 }
 
+/// Checks if a string needs quotes when used as a record key.
+///
+/// Record keys can be bare if they contain only alphanumeric characters,
+/// underscores, or hyphens, and don't start with a digit.
+pub fn record_key_needs_quotes(name: &str) -> bool {
+    name.is_empty()
+        || name.starts_with(|c: char| c.is_ascii_digit())
+        || name.contains(|c: char| !c.is_alphanumeric() && c != '_' && c != '-')
+}
+
 /// The type and content of a string in Nushell.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StringFormat {

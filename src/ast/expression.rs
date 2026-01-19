@@ -408,7 +408,6 @@ impl ExpressionExt for Expression {
                 .working_set
                 .get_block(*block_id)
                 .find_pipeline_input(context),
-            Expr::Closure(_) => None,
             Expr::StringInterpolation(items) => items
                 .iter()
                 .find_map(|item| item.find_pipeline_input(context)),

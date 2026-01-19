@@ -39,3 +39,26 @@ def process []: string -> any {
 ";
     RULE.assert_ignores(good_code);
 }
+
+#[test]
+fn ignore_function_with_closure_containing_in() {
+    // The $in inside the closure belongs to the closure's scope, not the function
+    let good_code = r"
+def create-processor [] {
+    {|| $in | str upcase }
+}
+";
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
+fn ignore_function_returning_closure_with_in_usage() {
+    // Another variation: assigning closure to variable
+    let good_code = r"
+def make-formatter [] {
+    let formatter = {|| $in | str trim }
+    $formatter
+}
+";
+    RULE.assert_ignores(good_code);
+}

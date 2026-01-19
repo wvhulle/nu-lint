@@ -377,12 +377,12 @@ impl ExpressionExt for Expression {
                 .find_pipeline_input(context)
                 .or_else(|| rhs.find_pipeline_input(context)),
             Expr::UnaryNot(e) | Expr::Collect(_, e) => e.find_pipeline_input(context),
-            Expr::Subexpression(block_id) | Expr::Block(block_id) | Expr::Closure(block_id) => {
-                context
-                    .working_set
-                    .get_block(*block_id)
-                    .find_pipeline_input(context)
-            }
+            // Don't recurse into closures - they have their own $in scope
+            Expr::Subexpression(block_id) | Expr::Block(block_id) => context
+                .working_set
+                .get_block(*block_id)
+                .find_pipeline_input(context),
+            Expr::Closure(_) => None,
             Expr::StringInterpolation(items) => items
                 .iter()
                 .find_map(|item| item.find_pipeline_input(context)),

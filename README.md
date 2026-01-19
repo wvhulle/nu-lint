@@ -68,6 +68,11 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `ansi_over_escape_codes` (auto-fix): Raw ANSI escape replaceable with `ansi`
 - `append_to_concat_assign` (auto-fix): Use ++= operator instead of verbose append in assignment
 - `custom_log_command` (auto-fix): Custom log command shadows stdlib. Use `use std/log` instead
+- `chained_append` (auto-fix): Use spread syntax instead of chained 'append' commands
+- `merge_flat_upsert` (auto-fix): Merge consecutive flat field assignments with upsert
+- `merge_nested_upsert` (auto-fix): Merge consecutive nested field assignments with upsert
+- `use_load_env` (auto-fix): Use load-env for multiple $env assignments
+- `remove_hat_not_builtin` (auto-fix): Detect unnecessary '^' prefix on external commands
 
 `parsing` - Better ways to parse and transform text data.
 
@@ -138,6 +143,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 
 `runtime-errors` - Preventing unexpected runtime behaviour.
 
+- `add_hat_external_commands` (auto-fix): Always use the '^' prefix on external commands
 - `fragile_last_exit_code` (auto-fix): Fragile `LAST_EXIT_CODE` check
 - `check_complete_exit_code`: Unchecked exit code after `complete`
 - `descriptive_error_messages`: Error messages should be descriptive and actionable
@@ -153,10 +159,12 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `catch_builtin_error_try`: Catch runtime errors from built-in commands using 'try' blocks
 - `unchecked_cell_path_index` (auto-fix): Cell path numeric index access may panic on empty lists
 - `unchecked_get_index` (auto-fix): List access with 'get' requires -o flag for safety
-- `unchecked_first_last` (auto-fix): Using 'first' or 'last' without count may panic on empty lists
+- `unchecked_first_last`: Using 'first' or 'last' without count may panic on empty lists
 - `wrap_external_with_complete`: External command missing `complete` wrapper
 - `source_to_use`: `source` replaceable with `use`
 - `spread_list_to_external` (auto-fix): List variables passed to external commands should be spread with `...`
+- `glob_may_drop_quotes` (auto-fix): Quoted glob pattern treated as literal
+- `require_main_with_stdin`: Scripts using $in must define a main function
 
 `filtering` - Better patterns for filtering and selecting data.
 
@@ -180,6 +188,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `merge_multiline_print` (auto-fix): Consecutive prints mergeable into one
 - `chained_str_transform` (auto-fix): Consecutive `str replace` combinable
 - `streaming_hidden_by_complete` (auto-fix): Streaming commands should not be wrapped with 'complete'
+- `chained_append` (auto-fix): Use spread syntax instead of chained 'append' commands
 
 `type-safety` - Annotate with type hints where possible.
 
@@ -204,6 +213,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `main_named_args_docs`: Missing docs on main flag parameter
 - `max_positional_params`: Custom commands should have ≤ 2 positional parameters
 - `explicit_long_flags` (auto-fix): Replace short flags (-f) with long flags (--flag)
+- `list_param_to_variadic` (auto-fix): Use variadic `...args` instead of a single list parameter
 
 `effects` - Handle built-in and external commands with side-effects.
 
@@ -221,6 +231,8 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `jq_to_nu_pipeline` (auto-fix): Simple `jq` filter replaceable with pipeline
 - `wget_to_http_get` (auto-fix): `wget` replaceable with `http get`
 - `external_which_to_builtin` (auto-fix): External `which` replaceable with built-in
+- `structured_data_to_csv_tool` (auto-fix): Table piped to CSV tool without `to csv`
+- `structured_data_to_json_tool` (auto-fix): Data piped to JSON tool without `to json`
 
 `formatting` - Formatting according to style-guide.
 
@@ -231,6 +243,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `if_else_chain_to_match` (auto-fix): Use 'match' for value-based branching instead of if-else-if chains
 - `block_brace_spacing` (auto-fix): Block body needs spaces inside braces: `{ body }` not `{body}`
 - `closure_brace_pipe_spacing` (auto-fix): Space between `{` and `|` in closure
+- `closure_pipe_body_spacing` (auto-fix): Closure body needs spaces: `{|x| body }` not `{|x|body}`
 - `no_trailing_spaces` (auto-fix): Eliminate trailing spaces at the end of lines
 - `omit_list_commas` (auto-fix): Omit commas between list items.
 - `pipe_spacing` (auto-fix): Inconsistent spacing around `|`

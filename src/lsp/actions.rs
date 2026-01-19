@@ -12,27 +12,39 @@ use super::{
 };
 use crate::violation::Fix;
 
-/// Create a `TextEdit` that inserts an ignore comment inline at the end of the
-/// line containing the violation.
+/// Create a `TextEdit` that inserts or appends to an ignore comment inline at
+/// the end of the line containing the violation.
 pub fn ignore_comment_edit(content: &str, byte_offset: usize, rule_id: &str) -> TextEdit {
     let line_index = LineIndex::new(content);
 
     // Find line number containing the violation
     let violation_line = line_index.offset_to_line(byte_offset);
 
-    // Get the end of the line
+    // Get the line content
     let line_start = line_index.line_start(violation_line);
     let line_content = line_index.line_content(content, violation_line);
-    let line_end_offset = line_start + line_content.trim_end().len();
+    let trimmed_line = line_content.trim_end();
 
-    let insert_position = line_index.offset_to_position(line_end_offset, content);
+    // Check if there's already an ignore comment on this line
+    let has_ignore_comment = trimmed_line.contains("# nu-lint-ignore:");
+
+    let edit_offset = line_start + trimmed_line.len();
+    let edit_position = line_index.offset_to_position(edit_offset, content);
+
+    let new_text = if has_ignore_comment {
+        // Append to existing ignore comment
+        format!(", {rule_id}")
+    } else {
+        // Add a new ignore comment
+        format!(" # nu-lint-ignore: {rule_id}")
+    };
 
     TextEdit {
         range: Range {
-            start: insert_position,
-            end: insert_position,
+            start: edit_position,
+            end: edit_position,
         },
-        new_text: format!(" # nu-lint-ignore: {rule_id}"),
+        new_text,
     }
 }
 

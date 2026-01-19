@@ -60,3 +60,27 @@ def main [] {
 "#,
     );
 }
+
+#[test]
+fn ignores_in_var_in_closure_assignment() {
+    RULE.assert_ignores(
+        r#"
+$env.config.color_config.string = {
+  if $in =~ '^#[a-fA-F\d]{6}' {
+    $in
+  } else {
+    'default'
+  }
+}
+"#,
+    );
+}
+
+#[test]
+fn ignores_in_var_in_nested_closure() {
+    RULE.assert_ignores(
+        r#"
+let formatter = {|| $in | str upcase }
+"#,
+    );
+}

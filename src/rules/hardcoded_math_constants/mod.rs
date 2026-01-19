@@ -1,4 +1,4 @@
-use std::f64::consts;
+use std::{f64::consts, ops::ControlFlow};
 
 use nu_protocol::{
     Span,
@@ -124,6 +124,7 @@ impl DetectFix for HardcodedMathConstants {
                 };
                 results.push((detection, fix_data));
             }
+            ControlFlow::Continue(())
         });
 
         results

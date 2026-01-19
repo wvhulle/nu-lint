@@ -1,3 +1,5 @@
+use std::ops::ControlFlow;
+
 use lsp_types::DiagnosticTag;
 use nu_protocol::{
     Span,
@@ -65,7 +67,7 @@ impl DetectFix for UnnecessaryStringQuotes {
         context.traverse_with_parent(|expr, parent| {
             // Only look at string expressions
             let Expr::String(_) = &expr.expr else {
-                return;
+                return ControlFlow::Continue(());
             };
 
             // Skip strings in command position - they would be interpreted as external
@@ -75,12 +77,12 @@ impl DetectFix for UnnecessaryStringQuotes {
                     "Skipping {} - in command position",
                     context.span_text(expr.span)
                 );
-                return;
+                return ControlFlow::Continue(());
             }
 
             // Extract the string content and quote type
             let Some(string_format) = StringFormat::from_expression(expr, context) else {
-                return;
+                return ControlFlow::Continue(());
             };
 
             let (unquoted_content, quote_type) = match &string_format {
@@ -91,13 +93,13 @@ impl DetectFix for UnnecessaryStringQuotes {
                 | StringFormat::InterpolationDouble(_)
                 | StringFormat::InterpolationSingle(_)
                 | StringFormat::Backtick(_)
-                | StringFormat::Raw(_) => return,
+                | StringFormat::Raw(_) => return ControlFlow::Continue(()),
             };
 
             // Check if the string actually needs quotes
             if bare_word_needs_quotes(unquoted_content) {
                 log::debug!("String '{unquoted_content}' needs quotes");
-                return;
+                return ControlFlow::Continue(());
             }
 
             log::debug!("String '{unquoted_content}' can be a bare word");
@@ -116,6 +118,7 @@ impl DetectFix for UnnecessaryStringQuotes {
                     unquoted_content: unquoted_content.clone(),
                 },
             ));
+            ControlFlow::Continue(())
         });
 
         results

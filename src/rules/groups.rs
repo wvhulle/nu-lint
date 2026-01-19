@@ -295,7 +295,7 @@ pub const ALL_GROUPS: &[Group] = &[
     UPSTREAM,
 ];
 
-/// Find all groups that contain the given rule_id
+/// Find all groups that contain the given `rule_id`
 pub fn groups_for_rule(rule_id: &str) -> Vec<&'static str> {
     ALL_GROUPS
         .iter()

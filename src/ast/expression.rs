@@ -1,3 +1,5 @@
+use std::ops::ControlFlow;
+
 use nu_protocol::{
     BlockId, Span, Type, VarId,
     ast::{
@@ -82,13 +84,16 @@ pub trait ExpressionExt: Traverse {
 
     /// Traverse expression and all descendants with parent tracking.
     /// Calls the callback for each expression with its immediate parent.
+    /// The callback returns `ControlFlow::Continue(())` to recurse into
+    /// children, or `ControlFlow::Break(())` to skip this expression's
+    /// children.
     fn traverse_with_parent<'a, F>(
         &'a self,
         context: &'a LintContext,
         parent: Option<&'a Expression>,
         callback: &mut F,
     ) where
-        F: FnMut(&'a Expression, Option<&'a Expression>);
+        F: FnMut(&'a Expression, Option<&'a Expression>) -> ControlFlow<()>;
 
     /// Find variable usages within this expression, without descending into
     /// closures. For `FullCellPath` expressions, returns the head's span
@@ -607,10 +612,12 @@ impl ExpressionExt for Expression {
         parent: Option<&'a Expression>,
         callback: &mut F,
     ) where
-        F: FnMut(&'a Self, Option<&'a Self>),
+        F: FnMut(&'a Self, Option<&'a Self>) -> ControlFlow<()>,
     {
-        // Call callback for this expression
-        callback(self, parent);
+        // Call callback for this expression - if it returns Break, skip children
+        if callback(self, parent).is_break() {
+            return;
+        }
 
         // Recursively process children, marking self as their parent
         let mut recur = |child: &'a Self| {

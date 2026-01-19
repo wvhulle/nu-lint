@@ -1,4 +1,4 @@
-use std::{collections::BTreeSet, str::from_utf8, vec::Vec};
+use std::{collections::BTreeSet, ops::ControlFlow, str::from_utf8, vec::Vec};
 
 use nu_protocol::{
     Span,
@@ -306,9 +306,13 @@ impl<'a> LintContext<'a> {
     /// This builds on top of the `Traverse` trait but adds parent tracking,
     /// which is useful for rules that need to know the context of an
     /// expression (e.g., whether a string is in command position).
+    ///
+    /// The callback returns `ControlFlow::Continue(())` to recurse into
+    /// children, or `ControlFlow::Break(())` to skip this expression's
+    /// children.
     pub(crate) fn traverse_with_parent<F>(&self, mut callback: F)
     where
-        F: FnMut(&Expression, Option<&Expression>),
+        F: FnMut(&Expression, Option<&Expression>) -> ControlFlow<()>,
     {
         use crate::ast::block::BlockExt;
 

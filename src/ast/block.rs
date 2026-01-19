@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, ops::ControlFlow};
 
 use nu_protocol::{
     BlockId, Span, Type, VarId,
@@ -76,13 +76,16 @@ pub trait BlockExt {
 
     /// Traverse block and all descendants with parent tracking.
     /// Calls the callback for each expression with its immediate parent.
+    /// The callback returns `ControlFlow::Continue(())` to recurse into
+    /// children, or `ControlFlow::Break(())` to skip this expression's
+    /// children.
     fn traverse_with_parent<'a, F>(
         &'a self,
         context: &'a LintContext,
         parent: Option<&'a Expression>,
         callback: &mut F,
     ) where
-        F: FnMut(&'a Expression, Option<&'a Expression>);
+        F: FnMut(&'a Expression, Option<&'a Expression>) -> ControlFlow<()>;
 
     /// Recursively detect violations in all pipelines of this block and nested
     /// blocks. This is a common pattern used by many lint rules.
@@ -327,7 +330,7 @@ impl BlockExt for Block {
         parent: Option<&'a Expression>,
         callback: &mut F,
     ) where
-        F: FnMut(&'a Expression, Option<&'a Expression>),
+        F: FnMut(&'a Expression, Option<&'a Expression>) -> ControlFlow<()>,
     {
         use crate::ast::expression::ExpressionExt;
 

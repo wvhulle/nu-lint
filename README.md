@@ -4,7 +4,33 @@ Linter for the innovative [Nu](https://www.nushell.sh/) shell.
 
 Learning to use a new shell is a radical change that can use some assistance. This project is aimed at helping new and intermediate users of the [Nu](https://www.nushell.sh/) shell. Nu shell has a lot of useful features not found in other scripting languages. This linter will give you hints to use all of them and even offer automatic fixes.
 
-## Example
+## Usage
+
+Lint all Nu files in working directory with:
+
+```bash
+nu-lint
+```
+
+To see all options and get help:
+
+```bash
+nu-lint --help
+```
+
+## Screenshots
+
+Following screenshots were taking in Helix with `nu-lint` set-up as LSP (`nu-lint --lsp`).
+
+- Automatic fixes and ignore actions (with keybinding `space a` in Helix): ![(Screenshot of code action menu)](./screenshots/code-actions.png)
+- Explanations in popup (with keybinding with `space k` in Helix): ![(Screenshot of explanations)](./screenshots/explanations.png)
+- Inline hints (opt-in in most editors) ![(Screenshot of inline hints)](./screenshots/inline-hints.png)
+
+Currently in testing phase: live diagnostics while typing in Nushell prompt (follow [Reedline PR](https://github.com/nushell/reedline/pull/1004)):
+
+![(Screenshot of prompt real-time diagnostics)](./screenshots/prompt.png)
+
+## Rule example
 
 The rule `turn_positional_into_stream_input` recommends to use pipelines instead of positional arguments:
 
@@ -21,20 +47,6 @@ def filter-positive [] {
 ```
 
 This encourages lazy pipeline input: a positional list argument loads all data into memory at once, while implicit pipeline input processes elements one at a time.
-
-## Usage
-
-Lint all Nu files in working directory with:
-
-```bash
-nu-lint
-```
-
-To see all options and get help:
-
-```bash
-nu-lint --help
-```
 
 ## Rules
 

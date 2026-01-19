@@ -76,10 +76,7 @@ impl CatOptions {
             format!("open --raw {file_arg}")
         };
 
-        let description = "Use 'open --raw' for plain text, or just 'open' to auto-parse \
-                           structured files (JSON, TOML, CSV, etc.). Nu's open returns data you \
-                           can immediately manipulate in pipelines."
-            .to_string();
+        let description = "Use 'open --raw' for plain text".to_string();
 
         (replacement, description)
     }
@@ -88,11 +85,7 @@ impl CatOptions {
         let file_list = self.files.join(" ");
         let replacement = format!("[{file_list}] | each {{|f| open --raw $f}} | str join");
 
-        let description = format!(
-            "Use 'each' with 'open --raw' to read multiple files ({}). The results are joined \
-             into a single string. This provides more control than cat.",
-            self.files.len()
-        );
+        let description = "Use 'each' with 'open --raw' to read multiple files.".to_string();
 
         (replacement, description)
     }

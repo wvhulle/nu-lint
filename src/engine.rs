@@ -5,7 +5,7 @@ use std::{
     sync::{LazyLock, Mutex},
 };
 
-use ignore::WalkBuilder;
+use ::ignore::WalkBuilder;
 use nu_parser::parse;
 use nu_protocol::{
     Span, Value,
@@ -18,7 +18,7 @@ use crate::{
     LintError,
     config::Config,
     context::LintContext,
-    inline_ignore,
+    ignore,
     rules::USED_RULES,
     violation::{SourceFile, Violation},
 };
@@ -61,7 +61,7 @@ fn is_nushell_file(path: &Path) -> bool {
             .unwrap_or(false)
 }
 
-/// Collect .nu files from a directory, respecting .gitignore files
+/// Collect .nu files from a directory, respecting git ignore files
 #[must_use]
 pub fn collect_nu_files_from_dir(dir: &Path) -> Vec<PathBuf> {
     WalkBuilder::new(dir)
@@ -219,7 +219,7 @@ impl LintEngine {
             .expect("Failed to unwrap violations mutex")
     }
 
-    /// Lint content from stdin
+    /// Lint content from standard input
     #[must_use]
     pub fn lint_stdin(&self, source: &str) -> Vec<Violation> {
         let mut violations = self.lint_str(source);
@@ -255,16 +255,17 @@ impl LintEngine {
 
         // Filter out ignored violations (after normalization so spans are
         // file-relative)
+        let ignore_index = ignore::IgnoreIndex::new(source);
         let mut violations: Vec<Violation> = violations
             .into_iter()
             .filter(|v| {
                 let rule_id = v.rule_id.as_deref().unwrap_or("");
-                !inline_ignore::should_ignore(source, v.file_span().start, rule_id)
+                !ignore_index.should_ignore(v.file_span().start, rule_id)
             })
             .collect();
 
         // Add warnings for unknown rule IDs in ignore comments
-        violations.extend(inline_ignore::validate_ignores(source));
+        violations.extend(ignore::validate_ignores(source));
 
         violations
     }

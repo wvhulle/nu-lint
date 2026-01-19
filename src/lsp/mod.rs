@@ -1,4 +1,6 @@
+mod actions;
 mod diagnostic;
+mod docs;
 mod server;
 mod state;
 

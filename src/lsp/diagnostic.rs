@@ -2,7 +2,7 @@ use std::{collections::HashSet, path::Path};
 
 use lsp_types::{
     CodeDescription, Diagnostic, DiagnosticRelatedInformation, DiagnosticSeverity, Location,
-    NumberOrString, Position, Range, TextEdit, Uri,
+    NumberOrString, Position, Range, Uri,
 };
 
 use crate::{LintLevel, violation::Violation};
@@ -59,6 +59,29 @@ impl LineIndex {
             start: self.offset_to_position(start, source),
             end: self.offset_to_position(end, source),
         }
+    }
+
+    /// Get the line number for a byte offset
+    pub fn offset_to_line(&self, offset: usize) -> usize {
+        self.line_offsets
+            .partition_point(|&start| start <= offset)
+            .saturating_sub(1)
+    }
+
+    /// Get the byte offset of a line's start
+    pub fn line_start(&self, line: usize) -> usize {
+        self.line_offsets.get(line).copied().unwrap_or(0)
+    }
+
+    /// Get the content of a specific line (without trailing newline)
+    pub fn line_content<'a>(&self, source: &'a str, line: usize) -> &'a str {
+        let start = self.line_start(line);
+        let end = self
+            .line_offsets
+            .get(line + 1)
+            .copied()
+            .unwrap_or(source.len());
+        source.get(start..end).unwrap_or("").trim_end_matches('\n')
     }
 }
 
@@ -198,31 +221,6 @@ pub fn extra_labels_to_hint_diagnostics(
             })
         })
         .collect()
-}
-
-pub fn ignore_comment_edit(content: &str, byte_offset: usize, rule_id: &str) -> TextEdit {
-    let line_index = LineIndex::new(content);
-    let line_start = content
-        .get(..byte_offset)
-        .and_then(|s| s.rfind('\n'))
-        .map_or(0, |pos| pos + 1);
-
-    let indentation: String = content
-        .get(line_start..)
-        .unwrap_or("")
-        .chars()
-        .take_while(|c| c.is_whitespace() && *c != '\n')
-        .collect();
-
-    let insert_position = line_index.offset_to_position(line_start, content);
-
-    TextEdit {
-        range: Range {
-            start: insert_position,
-            end: insert_position,
-        },
-        new_text: format!("{indentation}# nu-lint-ignore: {rule_id}\n"),
-    }
 }
 
 #[must_use]

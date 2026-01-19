@@ -13,6 +13,7 @@ const ERROR_HANDLING: Group = Group {
     name: "runtime-errors",
     description: "Preventing unexpected runtime behaviour.",
     rules: &[
+        super::add_hat_external_commands::RULE,
         super::fragile_last_exit_code::RULE,
         super::check_complete_exit_code::RULE,
         super::documentation::descriptive_error_messages::RULE,
@@ -32,6 +33,8 @@ const ERROR_HANDLING: Group = Group {
         super::wrap_external_with_complete::RULE,
         super::source_to_use::RULE,
         super::spread_list_to_external::RULE,
+        super::glob_may_drop_quotes::RULE,
+        super::require_main_with_stdin::RULE,
     ],
 };
 
@@ -71,6 +74,11 @@ const IDIOMATIC: Group = Group {
         super::ansi_over_escape_codes::RULE,
         super::append_to_concat_assign::RULE,
         super::custom_log_command::RULE,
+        super::chained_append::RULE,
+        super::record_assignments::MERGE_FLAT_UPSERT,
+        super::record_assignments::MERGE_NESTED_UPSERT,
+        super::record_assignments::USE_LOAD_ENV,
+        super::remove_hat_not_builtin::RULE,
     ],
 };
 
@@ -155,6 +163,7 @@ const PERFORMANCE: Group = Group {
         super::merge_multiline_print::RULE,
         super::chained_str_transform::RULE,
         super::streaming_hidden_by_complete::RULE,
+        super::chained_append::RULE,
     ],
 };
 
@@ -206,6 +215,7 @@ const DOCUMENTATION: Group = Group {
         super::documentation::main_named_args_docs::RULE,
         super::max_positional_params::RULE,
         super::explicit_long_flags::RULE,
+        super::list_param_to_variadic::RULE,
     ],
 };
 
@@ -218,6 +228,8 @@ const EXTERNAL_TOOLS: Group = Group {
         super::external_tools::jq_to_nu_pipeline::RULE,
         super::external_tools::wget_to_http_get::RULE,
         super::external_tools::external_which_to_builtin::RULE,
+        super::structured_data_to_csv_tool::RULE,
+        super::structured_data_to_json_tool::RULE,
     ],
 };
 
@@ -232,6 +244,7 @@ const FORMATTING: Group = Group {
         super::if_else_chain_to_match::RULE,
         super::spacing::block_brace_spacing::RULE,
         super::spacing::closure_brace_pipe_spacing::RULE,
+        super::spacing::closure_pipe_body_spacing::RULE,
         super::spacing::no_trailing_spaces::RULE,
         super::spacing::omit_list_commas::RULE,
         super::spacing::pipe_spacing::RULE,

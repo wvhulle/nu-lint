@@ -1,7 +1,7 @@
 use std::ops::ControlFlow;
 
 use nu_protocol::{
-    BlockId, Span, Type, VarId,
+    BlockId, ENV_VARIABLE_ID, IN_VARIABLE_ID, NU_VARIABLE_ID, Span, Type, VarId,
     ast::{
         Argument, Call, Expr, Expression, ExternalArgument, FindMapResult, FullCellPath, ListItem,
         Operator, PathMember, RecordItem, Traverse,
@@ -139,6 +139,32 @@ const fn extract_var_from_full_cell_path(cell_path: &FullCellPath) -> Option<Var
         Expr::Var(var_id) => Some(*var_id),
         _ => None,
     }
+}
+
+const fn builtin_var_name(var_id: VarId) -> Option<&'static str> {
+    match var_id.get() {
+        id if id == NU_VARIABLE_ID.get() => Some("nu"),
+        id if id == IN_VARIABLE_ID.get() => Some("in"),
+        id if id == ENV_VARIABLE_ID.get() => Some("env"),
+        _ => None,
+    }
+}
+
+/// Extracts variable name from `Expr::Var`, handling both built-ins and
+/// user-defined.
+pub fn var_name_from_expr(expr: &Expression, context: &LintContext) -> Option<String> {
+    let Expr::Var(var_id) = &expr.expr else {
+        return None;
+    };
+
+    if let Some(name) = builtin_var_name(*var_id) {
+        return Some(name.to_string());
+    }
+
+    context
+        .span_text(expr.span)
+        .strip_prefix('$')
+        .map(String::from)
 }
 
 impl ExpressionExt for Expression {

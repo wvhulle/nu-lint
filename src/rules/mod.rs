@@ -54,6 +54,7 @@ pub mod parsing;
 pub mod positional_to_pipeline;
 pub mod posix_tools;
 pub mod range_for_iteration;
+pub mod record_assignments;
 pub mod redundant_ignore;
 pub mod redundant_nu_subprocess;
 pub mod remove_hat_not_builtin;
@@ -147,6 +148,9 @@ pub const USED_RULES: &[&dyn Rule] = &[
     max_function_body_length::RULE,
     max_positional_params::RULE,
     merge_get_cell_path::RULE,
+    record_assignments::MERGE_FLAT_UPSERT,
+    record_assignments::MERGE_NESTED_UPSERT,
+    record_assignments::USE_LOAD_ENV,
     merge_multiline_print::RULE,
     missing_stdin_in_shebang::RULE,
     naming::kebab_case_commands::RULE,

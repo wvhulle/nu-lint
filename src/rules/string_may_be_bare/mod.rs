@@ -21,10 +21,6 @@ struct FixData {
 
 /// Check if an expression is in command position where a bare word would be
 /// interpreted as a command to execute.
-///
-/// Per Nushell docs: "if you use a bare word plainly on the command line (that
-/// is, not inside a data structure or used as a command parameter) or inside
-/// round brackets ( ), it will be interpreted as an external command"
 fn is_in_command_position(expr: &Expression, parent: Option<&Expression>) -> bool {
     parent.is_none_or(|parent| match &parent.expr {
         // If parent is an ExternalCall and this is the head, it's in command position
@@ -49,6 +45,13 @@ impl DetectFix for UnnecessaryStringQuotes {
         "Quoted string can be bare word"
     }
 
+    fn long_description(&self) -> Option<&'static str> {
+        Some(
+            r#"If you use a bare word plainly on the command line (that
+is, not inside a data structure or used as a command parameter) or inside
+round brackets ( ), it will be interpreted as an external command."#,
+        )
+    }
     fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/working_with_strings.html#bare-word-strings")
     }

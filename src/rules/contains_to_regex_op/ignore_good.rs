@@ -65,3 +65,26 @@ let has_a = 'a' in $items
 
     RULE.assert_ignores(good_code);
 }
+
+#[test]
+fn test_ignore_str_contains_with_ignore_case_flag() {
+    // Bug fix: str contains --ignore-case is NOT equivalent to =~ operator
+    // The =~ operator doesn't support case-insensitive matching
+    let good_code = r#"
+if ([foo bar baz] | str join | str contains --ignore-case OOB) {
+    "found"
+}
+"#;
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
+fn test_ignore_str_contains_with_short_ignore_case_flag() {
+    // Same as above but with -i short flag
+    let good_code = r#"
+if ($text | str contains -i needle) {
+    "found"
+}
+"#;
+    RULE.assert_ignores(good_code);
+}

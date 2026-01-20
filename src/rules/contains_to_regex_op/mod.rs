@@ -60,6 +60,12 @@ fn extract_str_contains_data<'a>(
         return None;
     }
 
+    // Don't suggest replacement when --ignore-case or -i is used, as =~ doesn't
+    // support case-insensitive matching
+    if call.has_named_flag("ignore-case") || call.has_named_flag("i") {
+        return None;
+    }
+
     let pattern_arg = call.get_first_positional_arg()?;
     let first_element = pipeline.elements.first()?;
 

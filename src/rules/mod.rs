@@ -75,7 +75,6 @@ pub mod transpose_items;
 pub mod try_instead_of_do;
 pub mod typing;
 pub mod unchecked_cell_path_index;
-pub mod unchecked_first_last;
 pub mod unchecked_get_index;
 pub mod unescaped_interpolation;
 pub mod unnecessary_accumulate;
@@ -230,7 +229,6 @@ pub const USED_RULES: &[&dyn Rule] = &[
     typing::missing_in_type::RULE,
     typing::missing_output_type::RULE,
     unchecked_cell_path_index::RULE,
-    unchecked_first_last::RULE,
     unchecked_get_index::RULE,
     unescaped_interpolation::RULE,
     unnecessary_accumulate::RULE,

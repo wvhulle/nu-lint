@@ -19,6 +19,7 @@ fn check_get_call(
     expr: &Expression,
     try_block_spans: &[Span],
     context: &LintContext,
+    explicit_optional: bool,
 ) -> Option<(Detection, GetIndexFixData)> {
     let Expr::Call(call) = &expr.expr else {
         return None;
@@ -56,12 +57,21 @@ fn check_get_call(
     let get_keyword_end = call.head.end;
     let insert_span = Span::new(get_keyword_end, get_keyword_end);
 
-    let violation = Detection::from_global_span(
-        "List access with 'get' without -o flag may panic if index is out of bounds",
-        call.head,
-    )
-    .with_primary_label("add -o flag for safe access")
-    .with_extra_label("numeric index", key_arg.span);
+    let (message, label) = if explicit_optional {
+        (
+            "Add -o flag to `get` for safe optional access",
+            "add `-o` flag",
+        )
+    } else {
+        (
+            "Use optional cell path `$list.0?` or add -o flag to avoid panic",
+            "unsafe index access",
+        )
+    };
+
+    let violation = Detection::from_global_span(message, call.head)
+        .with_primary_label(label)
+        .with_extra_label("numeric index", key_arg.span);
 
     let fix_data = GetIndexFixData { insert_span };
 
@@ -78,13 +88,14 @@ impl DetectFix for UncheckedGetIndex {
     }
 
     fn short_description(&self) -> &'static str {
-        "List access with 'get' requires -o flag for safety"
+        "Prefer optional cell path `$list.0?` over `get` for index access"
     }
 
     fn long_description(&self) -> Option<&'static str> {
         Some(
-            "Using 'get' with numeric indices without the -o (optional) flag causes a panic if \
-             the index is out of bounds. Add -o to return null instead of panicking.",
+            "Using 'get' with numeric indices may panic if the index is out of bounds. Prefer \
+             optional cell path syntax (e.g., `$list.0?`) which is more concise and returns null \
+             instead of panicking. Alternatively, add the -o flag to 'get' for safe access.",
         )
     }
 
@@ -98,8 +109,9 @@ impl DetectFix for UncheckedGetIndex {
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let try_block_spans = context.collect_command_spans(&["try"]);
+        let explicit_optional = context.config.explicit_optional_access;
         context.detect_with_fix_data(|expr, ctx| {
-            check_get_call(expr, &try_block_spans, ctx)
+            check_get_call(expr, &try_block_spans, ctx, explicit_optional)
                 .into_iter()
                 .collect()
         })

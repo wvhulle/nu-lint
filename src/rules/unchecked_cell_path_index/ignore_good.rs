@@ -32,3 +32,21 @@ fn ignore_string_after_validation() {
     "#,
     );
 }
+
+#[test]
+fn ignore_optional_numeric_access() {
+    // Bug fix: [].0? uses optional access which returns null instead of panicking
+    RULE.assert_ignores("[].0?");
+}
+
+#[test]
+fn ignore_optional_access_on_variable() {
+    // Optional access with ? should not trigger warning
+    RULE.assert_ignores("$list.0?");
+}
+
+#[test]
+fn ignore_optional_access_nested() {
+    // Optional access in nested path
+    RULE.assert_ignores("$data.items.0?");
+}

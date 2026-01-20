@@ -13,34 +13,30 @@ use crate::{
 
 struct CellPathIndexFixData {
     full_span: Span,
-    base_span: Span,
-    index_value: usize,
-}
-
-struct NumericIndexInfo {
-    member_idx: usize,
-    index_value: usize,
     index_span: Span,
 }
 
-/// Returns info about the first numeric index in the cell path
+struct NumericIndexInfo {
+    index_span: Span,
+}
+
+/// Returns info about the first non-optional numeric index in the cell path
 fn find_first_numeric_index(members: &[PathMember]) -> Option<NumericIndexInfo> {
-    members
-        .iter()
-        .enumerate()
-        .find_map(|(member_idx, m)| match m {
-            PathMember::Int { val, span, .. } => Some(NumericIndexInfo {
-                member_idx,
-                index_value: *val,
-                index_span: *span,
-            }),
-            PathMember::String { .. } => None,
-        })
+    members.iter().find_map(|m| match m {
+        // Skip optional indices (with ?) as they return null instead of panicking
+        PathMember::Int {
+            span,
+            optional: false,
+            ..
+        } => Some(NumericIndexInfo { index_span: *span }),
+        PathMember::Int { optional: true, .. } | PathMember::String { .. } => None,
+    })
 }
 
 fn check_cell_path_access(
     expr: &Expression,
     safe_context_spans: &[Span],
+    explicit_optional: bool,
 ) -> Option<(Detection, CellPathIndexFixData)> {
     let Expr::FullCellPath(cell_path) = &expr.expr else {
         return None;
@@ -52,29 +48,24 @@ fn check_cell_path_access(
         return None;
     }
 
-    // Calculate the span of the base expression (everything before the first
-    // numeric index) If member_idx is 0, the base is just the head
-    let base_span = if index_info.member_idx == 0 {
-        cell_path.head.span
+    let (message, label) = if explicit_optional {
+        (
+            "Rewrite as `| get -o <index>` to avoid panic on empty list",
+            "rewrite with `get -o`",
+        )
     } else {
-        // Include head and members up to (but not including) the numeric index
-        let last_string_member = &cell_path.tail[index_info.member_idx - 1];
-        let last_span = match last_string_member {
-            PathMember::String { span, .. } | PathMember::Int { span, .. } => *span,
-        };
-        Span::new(cell_path.head.span.start, last_span.end)
+        (
+            "Use optional access `?` to avoid panic on empty list",
+            "add `?` for safe access",
+        )
     };
 
-    let violation = Detection::from_global_span(
-        "List index access without bounds check may panic if list is empty",
-        index_info.index_span,
-    )
-    .with_primary_label("unchecked index access");
+    let violation =
+        Detection::from_global_span(message, index_info.index_span).with_primary_label(label);
 
     let fix_data = CellPathIndexFixData {
         full_span: expr.span,
-        base_span,
-        index_value: index_info.index_value,
+        index_span: index_info.index_span,
     };
 
     Some((violation, fix_data))
@@ -96,9 +87,9 @@ impl DetectFix for UncheckedCellPathIndex {
     fn long_description(&self) -> Option<&'static str> {
         Some(
             "Accessing list elements by numeric index using cell paths (e.g., $list.0) without \
-             checking if the list is empty can cause a runtime panic. Consider wrapping the \
-             access in a 'try' block or checking with 'is-empty' first. Alternatively, use 'get \
-             -o 0' for safe optional access.",
+             checking if the list is empty can cause a runtime panic. Use optional access with \
+             `?` (e.g., $list.0?) which returns null instead of panicking. Alternatively, wrap in \
+             a 'try' block or check with 'is-empty' first.",
         )
     }
 
@@ -112,19 +103,29 @@ impl DetectFix for UncheckedCellPathIndex {
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let safe_context_spans = context.collect_command_spans(&["try", "if"]);
+        let explicit_optional = context.config.explicit_optional_access;
         context.detect_with_fix_data(|expr, _ctx| {
-            check_cell_path_access(expr, &safe_context_spans)
+            check_cell_path_access(expr, &safe_context_spans, explicit_optional)
                 .into_iter()
                 .collect()
         })
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let base_text = context.span_text(fix_data.base_span);
-        let replacement = format!("{base_text} | get -o {}", fix_data.index_value);
+        if context.config.explicit_optional_access {
+            // When explicit_optional_access is true, don't auto-fix with `?`
+            // The user prefers `get --optional` which requires manual transformation
+            return None;
+        }
+
+        // Insert `?` after the numeric index to make it optional
+        let full_text = context.span_text(fix_data.full_span);
+        let index_end_offset = fix_data.index_span.end - fix_data.full_span.start;
+        let (before, after) = full_text.split_at(index_end_offset);
+        let replacement = format!("{before}?{after}");
 
         Some(Fix {
-            explanation: "Convert to safe 'get -o' access".into(),
+            explanation: "Add `?` for safe optional access".into(),
             replacements: vec![Replacement::new(fix_data.full_span, replacement)],
         })
     }

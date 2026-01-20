@@ -29,3 +29,19 @@ if not ($list | is-empty) and not ($other | is-empty) {
     RULE.assert_count(bad_code, 2);
     RULE.assert_fixed_contains(bad_code, "| is-not-empty");
 }
+
+#[test]
+fn test_prefer_is_not_empty_fix_preserves_parentheses() {
+    // Bug fix: the fix should preserve parentheses for correct precedence
+    // `if not ($path | is-empty)` should become `if ($path | is-not-empty)`, not
+    // `if $path | is-not-empty`
+    let bad_code = "if not ($path | is-empty) { }";
+    RULE.assert_fixed_contains(bad_code, "($path | is-not-empty)");
+}
+
+#[test]
+fn test_prefer_is_not_empty_fix_parentheses_in_condition() {
+    // Ensure parentheses are added in condition context
+    let bad_code = "let result = not ($data | is-empty)";
+    RULE.assert_fixed_contains(bad_code, "($data | is-not-empty)");
+}

@@ -7,15 +7,18 @@ use crate::{
     violation::Detection,
 };
 
-enum InnerExprKind {
-    Subexpression(nu_protocol::BlockId),
-    FullCellPath { block_id: nu_protocol::BlockId },
+struct IsEmptyPatternMatch {
+    block_id: nu_protocol::BlockId,
+    /// True if the inner expression is a `FullCellPath` with a non-empty tail
+    /// (which would make the fix incorrect since we'd drop the tail)
+    has_unfixable_tail: bool,
 }
 
 struct IsNotEmptyFixData {
     span: nu_protocol::Span,
-    inner: InnerExprKind,
+    pattern: IsEmptyPatternMatch,
 }
+
 fn check_subexpression_for_is_empty(block_id: nu_protocol::BlockId, context: &LintContext) -> bool {
     let block = context.working_set.get_block(block_id);
     let Some(pipeline) = block.pipelines.first() else {
@@ -24,22 +27,31 @@ fn check_subexpression_for_is_empty(block_id: nu_protocol::BlockId, context: &Li
     check_pipeline_for_is_empty(pipeline, context)
 }
 /// Check if an expression represents a "not ... is-empty" pattern
-fn is_not_is_empty_pattern(expr: &Expression, context: &LintContext) -> bool {
+fn is_not_is_empty_pattern(
+    expr: &Expression,
+    context: &LintContext,
+) -> Option<IsEmptyPatternMatch> {
     // Look for: not (expr | is-empty)
     let Expr::UnaryNot(inner_expr) = &expr.expr else {
-        return false;
+        return None;
     };
-    match &inner_expr.expr {
-        Expr::Subexpression(block_id) => check_subexpression_for_is_empty(*block_id, context),
+
+    let (block_id, has_unfixable_tail) = match &inner_expr.expr {
+        Expr::Subexpression(block_id) => (*block_id, false),
         Expr::FullCellPath(path) => {
-            if let Expr::Subexpression(block_id) = &path.head.expr {
-                check_subexpression_for_is_empty(*block_id, context)
-            } else {
-                false
-            }
+            let Expr::Subexpression(block_id) = &path.head.expr else {
+                return None;
+            };
+            // If there's a tail (e.g., `.foo`), we can't safely fix it
+            (*block_id, !path.tail.is_empty())
         }
-        _ => false,
-    }
+        _ => return None,
+    };
+
+    check_subexpression_for_is_empty(block_id, context).then_some(IsEmptyPatternMatch {
+        block_id,
+        has_unfixable_tail,
+    })
 }
 fn check_pipeline_for_is_empty(pipeline: &Pipeline, context: &LintContext) -> bool {
     if pipeline.elements.len() >= 2 {
@@ -65,7 +77,8 @@ fn extract_pipeline_text(pipeline: &Pipeline, context: &LintContext) -> Option<S
     let end_span = elements_before_is_empty.last().unwrap().expr.span;
     let combined_span = nu_protocol::Span::new(start_span.start, end_span.end);
     let expr_text = context.span_text(combined_span);
-    Some(format!("{} | is-not-empty", expr_text.trim()))
+    // Preserve parentheses to maintain correct precedence/grouping
+    Some(format!("({} | is-not-empty)", expr_text.trim()))
 }
 fn generate_fix_from_subexpression(
     block_id: nu_protocol::BlockId,
@@ -77,26 +90,12 @@ fn generate_fix_from_subexpression(
 }
 
 fn check_not_is_empty(expr: &Expression, ctx: &LintContext) -> Vec<(Detection, IsNotEmptyFixData)> {
-    if !is_not_is_empty_pattern(expr, ctx) {
-        return vec![];
-    }
-
-    let Expr::UnaryNot(inner_expr) = &expr.expr else {
+    let Some(pattern) = is_not_is_empty_pattern(expr, ctx) else {
         return vec![];
     };
 
-    let inner = match &inner_expr.expr {
-        Expr::Subexpression(block_id) => InnerExprKind::Subexpression(*block_id),
-        Expr::FullCellPath(path) => {
-            if let Expr::Subexpression(block_id) = &path.head.expr {
-                InnerExprKind::FullCellPath {
-                    block_id: *block_id,
-                }
-            } else {
-                return vec![];
-            }
-        }
-        _ => return vec![],
+    let Expr::UnaryNot(inner_expr) = &expr.expr else {
+        return vec![];
     };
 
     let not_span = nu_protocol::Span::new(expr.span.start, expr.span.start + 3);
@@ -108,7 +107,7 @@ fn check_not_is_empty(expr: &Expression, ctx: &LintContext) -> Vec<(Detection, I
 
     let fix_data = IsNotEmptyFixData {
         span: expr.span,
-        inner,
+        pattern,
     };
 
     vec![(violation, fix_data)]
@@ -140,11 +139,12 @@ impl DetectFix for UseBuiltinIsNotEmpty {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let block_id = match fix_data.inner {
-            InnerExprKind::Subexpression(id) | InnerExprKind::FullCellPath { block_id: id } => id,
-        };
+        // Don't provide fix if there's a cell path tail - it would be dropped
+        if fix_data.pattern.has_unfixable_tail {
+            return None;
+        }
 
-        let fix_text = generate_fix_from_subexpression(block_id, context)?;
+        let fix_text = generate_fix_from_subexpression(fix_data.pattern.block_id, context)?;
 
         Some(Fix {
             explanation: "Replace 'not ... is-empty' with 'is-not-empty'".into(),

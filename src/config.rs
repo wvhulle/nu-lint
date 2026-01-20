@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     fs,
     path::{Path, PathBuf},
 };
@@ -57,11 +57,13 @@ pub enum PipelinePlacement {
 pub struct Config {
     pub groups: HashMap<String, LintLevel>,
     pub rules: HashMap<String, ToggledLevel>,
-    pub additional: HashSet<String>,
     pub sequential: bool,
     pub pipeline_placement: PipelinePlacement,
     pub max_pipeline_length: usize,
     pub skip_external_parse_errors: bool,
+    /// When true, rules recommend `get --optional` instead of `$list.0?` for
+    /// safe access. Default is false (prefer `?` syntax).
+    pub explicit_optional_access: bool,
 }
 
 impl Default for Config {
@@ -69,11 +71,11 @@ impl Default for Config {
         Self {
             groups: HashMap::new(),
             rules: HashMap::new(),
-            additional: HashSet::new(),
             sequential: false,
             pipeline_placement: PipelinePlacement::default(),
             max_pipeline_length: 80,
             skip_external_parse_errors: true,
+            explicit_optional_access: false,
         }
     }
 }

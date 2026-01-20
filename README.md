@@ -50,7 +50,7 @@ This encourages lazy pipeline input: a positional list argument loads all data i
 
 ## Rules
 
-All rules are optional and can be disabled with a configuration file. The rule definitions are compatible with:
+All rules are optional and can be disabled with a configuration file or comment. The rule definitions are compatible with:
 
 - The official Nu parser [nu-parser](https://crates.io/crates/nu-parser).
 - The Tree-sitter-based Nu formatter [topiary-nushell](https://github.com/blindFS/topiary-nushell).
@@ -58,7 +58,7 @@ All rules are optional and can be disabled with a configuration file. The rule d
 
 Some of the rules need further testing and improvement. Please make an issue on the issue tracker to report any bugs. In early stages of development some rules may be replaced or renamed.
 
-+140 rules are defined and most have automatic fixes available (list may be out-of-date):
++150 rules are defined and most have automatic fixes available (list may be out-of-date):
 
 <!-- start-rule-groups -->
 `idioms` - Simplifications unique to the Nu language.
@@ -170,8 +170,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `dynamic_script_import`: Dynamic import path not statically validated
 - `catch_builtin_error_try`: Catch runtime errors from built-in commands using 'try' blocks
 - `unchecked_cell_path_index` (auto-fix): Cell path numeric index access may panic on empty lists
-- `unchecked_get_index` (auto-fix): List access with 'get' requires -o flag for safety
-- `unchecked_first_last`: Using 'first' or 'last' without count may panic on empty lists
+- `unchecked_get_index` (auto-fix): Prefer optional cell path `$list.0?` over `get` for index access
 - `wrap_external_with_complete`: External command missing `complete` wrapper
 - `source_to_use`: `source` replaceable with `use`
 - `spread_list_to_external` (auto-fix): List variables passed to external commands should be spread with `...`
@@ -289,6 +288,8 @@ The type installation that will always work on your system. From crates.io:
 cargo install nu-lint
 ```
 
+No system dependencies are required.
+
 ### Source
 
 Build from source:
@@ -296,6 +297,13 @@ Build from source:
 ```bash
 cargo install --path .
 ```
+
+From latest git main branch:
+
+```bash
+cargo install --git https://codeberg.org/wvhulle/nu-lint
+```
+
 
 ### Nix
 
@@ -305,7 +313,7 @@ Run without installing permanently (using flakes):
 nix run git+https://codeberg.org/wvhulle/nu-lint
 ```
 
-### Pre-Compiled Pinaries
+### Pre-Compiled Binaries
 
 Download the appropriate binary from the releases subpage.
 
@@ -379,12 +387,13 @@ You can also implement your own editor extensions using the `--lsp` flag as in: 
 
 Some rules are deactivated by default. Usually because they are too noisy or annoy people. You should activate them with the config file and a level override.
 
-A configuration file is optional and should be named `.nu-lint.toml` in your project root. It may look like this:
+A configuration file at the top of the workspace is optional and should be named `.nu-lint.toml` in your project root. It may look like this:
 
 ```toml
 # Some rules are configurable
 max_pipeline_length = 80
 pipeline_placement = "start"
+explicit_optional_access = true
 
 # Set lint level of a set of rules at once.
 [groups]
@@ -394,8 +403,19 @@ type-safety = "error"
 # Override a single rule level
 [rules]
 dispatch_with_subcommands = "hint"
+unchecked_cell_path_index = "off"
 ```
 
 In this particular case, the user overrides the 'level' of certain groups and individual rules.
 
-For any setting you don't set in that file, the defaults set in [./src/config.rs](./src/config.rs) will be used. If you specify the option in the configuration file, it will override the defaults.
+You can also turn of a rule violation on a particular lien by appending a comment to the line:
+
+```nu
+$data | each {|row|
+    $row.values.0 # nu-lint-ignore: unchecked_cell_path_index
+}
+```
+
+There is a shortcut to do this by selecting the "ignore line violation" code action in the code action menu of your editor.
+
+For any setting you don't set in the optional workspace configuration file, the defaults set in [`./src/config.rs`](./src/config.rs) will be used. If you specify the option in the configuration file, it will override the defaults.

@@ -27,6 +27,9 @@ fn is_in_command_position(expr: &Expression, parent: Option<&Expression>) -> boo
         Expr::ExternalCall(head, _args) => head.span == expr.span,
         // If parent is a MatchBlock, this expression is a match arm body (command position)
         Expr::Block(_) | Expr::Closure(_) | Expr::Subexpression(_) | Expr::MatchBlock(_) => true,
+        // If parent is a BinaryOp and this is the LHS, removing quotes could make it
+        // be interpreted as a command (e.g., "bar" + baz -> bar + baz where bar is a command)
+        Expr::BinaryOp(lhs, _, _) => lhs.span == expr.span,
         // Otherwise, not in command position
         _ => false,
     })

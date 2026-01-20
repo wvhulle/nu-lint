@@ -330,3 +330,18 @@ fn ignores_iso_date() {
     let code = r#"echo "2024-01-15""#;
     RULE.assert_ignores(code);
 }
+
+#[test]
+fn ignores_string_as_lhs_of_binary_expression() {
+    // Bug fix: "bar" + baz - removing quotes would make `bar` be interpreted as a
+    // command with `+ baz` as arguments, not as a string concatenation
+    let code = r#"let foo = "bar" + baz"#;
+    RULE.assert_ignores(code);
+}
+
+#[test]
+fn ignores_string_as_lhs_of_binary_expression_comparison() {
+    // Same issue with comparison operators
+    let code = r#"if "test" == $var { }"#;
+    RULE.assert_ignores(code);
+}

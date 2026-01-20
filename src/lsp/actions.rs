@@ -119,7 +119,7 @@ pub fn ignore_line_action(
 /// Build a `CodeAction` that disables a rule via command.
 pub fn disable_rule_action(rule_id: &str, diagnostic: Diagnostic) -> CodeActionOrCommand {
     CodeActionOrCommand::CodeAction(CodeAction {
-        title: format!("[{rule_id}] Disable in .nu-lint.toml"),
+        title: format!("[{rule_id}] Disable in workspace"),
         kind: Some(quickfix_kind(rule_id)),
         diagnostics: Some(vec![diagnostic]),
         edit: None,

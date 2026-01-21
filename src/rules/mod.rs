@@ -81,6 +81,7 @@ pub mod unnecessary_accumulate;
 pub mod unnecessary_mut;
 pub mod unsafe_dynamic_record_access;
 pub mod unused_helper_functions;
+pub mod unused_variable;
 pub mod upstream;
 pub mod wrap_external_with_complete;
 
@@ -235,6 +236,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     unnecessary_mut::RULE,
     unsafe_dynamic_record_access::RULE,
     unused_helper_functions::RULE,
+    unused_variable::RULE,
     upstream::nu_deprecated::RULE,
     upstream::nu_parse_error::RULE,
     wrap_external_with_complete::RULE,

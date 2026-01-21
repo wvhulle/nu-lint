@@ -170,7 +170,7 @@ fn check_parameter(
     let var_id = var_id?;
 
     // Check if parameter is used in the function body
-    let usages = ctx.block.var_usages(var_id, ctx.context, |_, _, _| true);
+    let usages = ctx.block.var_usages(var_id, ctx.context);
 
     if !usages.is_empty() {
         return None;

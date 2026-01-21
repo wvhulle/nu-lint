@@ -100,7 +100,7 @@ fn detect_signature(
                 param,
                 param
                     .var_id
-                    .map(|var_id| block.var_usages(var_id, ctx, |_, _, _| true)),
+                    .map(|var_id| block.var_usages(var_id, ctx)),
             )
         })
         .collect();

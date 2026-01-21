@@ -60,11 +60,9 @@ pub trait BlockExt {
     /// $x = 5; $y += 1 }` returns [x, y]
     fn extract_assigned_vars(&self) -> Vec<VarId>;
 
-    /// Finds spans of variable usages matching a predicate. Example: finding
-    /// all usages of `$x` that are inside null checks
-    fn var_usages<F>(&self, var_id: VarId, context: &LintContext, predicate: F) -> Vec<Span>
-    where
-        F: Fn(&Expression, VarId, &LintContext) -> bool;
+    /// Finds spans of all usages of a variable in this block.
+    /// Example: finding all usages of `$x`
+    fn var_usages(&self, var_id: VarId, context: &LintContext) -> Vec<Span>;
 
     /// Finds spans of expressions matching a predicate. Example: finding all
     /// expressions that contain null checks for a variable
@@ -227,12 +225,12 @@ impl BlockExt for Block {
             return self.output_type();
         };
 
-        let block_input_type = self
-            .all_elements()
+        let elements = self.all_elements();
+        let block_input_type = elements
             .iter()
             .find_map(|element| element.expr.find_pipeline_input(context))
             .and_then(|(in_var, _)| {
-                self.all_elements()
+                elements
                     .iter()
                     .find_map(|element| element.expr.infer_input_type(Some(in_var), context))
             })
@@ -280,10 +278,7 @@ impl BlockExt for Block {
             .collect()
     }
 
-    fn var_usages<F>(&self, var_id: VarId, context: &LintContext, predicate: F) -> Vec<Span>
-    where
-        F: Fn(&Expression, VarId, &LintContext) -> bool,
-    {
+    fn var_usages(&self, var_id: VarId, context: &LintContext) -> Vec<Span> {
         let mut results = Vec::new();
         self.flat_map(
             context.working_set,
@@ -292,7 +287,6 @@ impl BlockExt for Block {
                 // FullCellPath too, so we avoid duplicates by not matching FullCellPath
                 if let Expr::Var(id) = &expr.expr
                     && *id == var_id
-                    && predicate(expr, var_id, context)
                 {
                     vec![expr.span]
                 } else {

@@ -3,8 +3,8 @@ use std::ops::ControlFlow;
 use nu_protocol::{
     BlockId, ENV_VARIABLE_ID, IN_VARIABLE_ID, NU_VARIABLE_ID, Span, Type, VarId,
     ast::{
-        Argument, Call, Expr, Expression, ExternalArgument, FindMapResult, FullCellPath, ListItem,
-        Operator, PathMember, RecordItem, Traverse,
+        Argument, Call, Expr, Expression, FindMapResult, FullCellPath, ListItem, Operator,
+        PathMember, RecordItem, Traverse,
     },
     engine::Variable,
 };
@@ -94,18 +94,6 @@ pub trait ExpressionExt: Traverse {
         callback: &mut F,
     ) where
         F: FnMut(&'a Expression, Option<&'a Expression>) -> ControlFlow<()>;
-
-    /// Find variable usages within this expression, without descending into
-    /// closures. For `FullCellPath` expressions, returns the head's span
-    /// (just the variable).
-    fn find_var_in_expr<F>(
-        &self,
-        var_id: VarId,
-        context: &LintContext,
-        predicate: &F,
-        results: &mut Vec<Span>,
-    ) where
-        F: Fn(&Expression, VarId, &LintContext) -> bool;
 }
 
 pub const fn is_dollar_in_var(var_id: VarId) -> bool {
@@ -733,43 +721,6 @@ impl ExpressionExt for Expression {
             _ => (),
         }
     }
-
-    fn find_var_in_expr<F>(
-        &self,
-        var_id: VarId,
-        context: &LintContext,
-        predicate: &F,
-        results: &mut Vec<Span>,
-    ) where
-        F: Fn(&Self, VarId, &LintContext) -> bool,
-    {
-        if self.matches_var(var_id) && predicate(self, var_id, context) {
-            // For FullCellPath, use the head's span only (not the path)
-            let span = if let Expr::FullCellPath(fcp) = &self.expr {
-                fcp.head.span
-            } else {
-                self.span
-            };
-            results.push(span);
-            return;
-        }
-
-        let (children, blocks) = expr_children(&self.expr);
-
-        for child in children {
-            child.find_var_in_expr(var_id, context, predicate, results);
-        }
-        for block_id in blocks {
-            let block = context.working_set.get_block(block_id);
-            for pipeline in &block.pipelines {
-                for element in &pipeline.elements {
-                    element
-                        .expr
-                        .find_var_in_expr(var_id, context, predicate, results);
-                }
-            }
-        }
-    }
 }
 
 fn infer_from_call(
@@ -953,38 +904,4 @@ fn infer_list_element_type(items: &[ListItem]) -> Type {
         log::debug!("List has mixed types, using Any");
         Type::List(Box::new(Type::Any))
     }
-}
-
-/// Extract child expressions and block IDs from an expression, skipping
-/// closures (they have their own variable scope).
-pub fn expr_children(expr: &Expr) -> (Vec<&Expression>, Vec<BlockId>) {
-    let mut children = Vec::new();
-    let mut blocks = Vec::new();
-
-    match expr {
-        Expr::Subexpression(id) | Expr::Block(id) | Expr::RowCondition(id) => blocks.push(*id),
-        Expr::BinaryOp(l, op, r) => children.extend([l.as_ref(), op.as_ref(), r.as_ref()]),
-        Expr::UnaryNot(e) | Expr::Collect(_, e) => children.push(e),
-        Expr::Call(call) => children.extend(call.arguments.iter().filter_map(|a| a.expr())),
-        Expr::List(items) => children.extend(items.iter().map(ListItem::expr)),
-        Expr::Record(items) => {
-            for item in items {
-                match item {
-                    RecordItem::Pair(k, v) => children.extend([k, v]),
-                    RecordItem::Spread(_, e) => children.push(e),
-                }
-            }
-        }
-        Expr::Table(t) => children.extend(t.columns.iter().chain(t.rows.iter().flatten())),
-        Expr::StringInterpolation(v) | Expr::GlobInterpolation(v, _) => children.extend(v),
-        Expr::FullCellPath(fcp) => children.push(&fcp.head),
-        Expr::Range(r) => children.extend([&r.from, &r.next, &r.to].into_iter().flatten()),
-        Expr::ExternalCall(h, args) => {
-            children.push(h);
-            children.extend(args.iter().map(ExternalArgument::expr));
-        }
-        _ => {}
-    }
-
-    (children, blocks)
 }

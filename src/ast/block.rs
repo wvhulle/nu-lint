@@ -293,13 +293,22 @@ impl BlockExt for Block {
         F: Fn(&Expression, VarId, &LintContext) -> bool,
     {
         let mut results = Vec::new();
-        for pipeline in &self.pipelines {
-            for element in &pipeline.elements {
-                element
-                    .expr
-                    .find_var_in_expr(var_id, context, &predicate, &mut results);
-            }
-        }
+        self.flat_map(
+            context.working_set,
+            &|expr: &Expression| {
+                // Only match Expr::Var directly - Traverse will visit it inside
+                // FullCellPath too, so we avoid duplicates by not matching FullCellPath
+                if let Expr::Var(id) = &expr.expr
+                    && *id == var_id
+                    && predicate(expr, var_id, context)
+                {
+                    vec![expr.span]
+                } else {
+                    vec![]
+                }
+            },
+            &mut results,
+        );
         results
     }
 

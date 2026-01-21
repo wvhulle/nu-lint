@@ -113,6 +113,8 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `redundant_ignore` (auto-fix): Commands producing output that is discarded with '| ignore'
 - `unnecessary_mut` (auto-fix): Variable marked `mut` but never reassigned
 - `unused_helper_functions` (auto-fix): Function unreachable from entry points
+- `unused_parameter` (auto-fix): Function parameter declared but never used
+- `unused_variable` (auto-fix): Variable declared but never used
 - `script_export_main` (auto-fix): In scripts, 'def main' is the entry point and doesn't need 'export'
 - `string_may_be_bare` (auto-fix): Quoted string can be bare word
 - `single_call_command` (auto-fix): Single-line command called only once

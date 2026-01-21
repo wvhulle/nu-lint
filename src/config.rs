@@ -171,21 +171,20 @@ impl Config {
     }
 }
 
-/// Search for .nu-lint.toml starting from the given directory and walking up to
-/// parent directories
+/// Search for .nu-lint.toml in the given directory, falling back to home
+/// directory
 #[must_use]
 pub fn find_config_file_from(start_dir: &Path) -> Option<PathBuf> {
-    let mut current_dir = start_dir.to_path_buf();
+    // Check active directory first
+    let config_path = start_dir.join(".nu-lint.toml");
+    if config_path.exists() && config_path.is_file() {
+        return Some(config_path);
+    }
 
-    loop {
-        let config_path = current_dir.join(".nu-lint.toml");
-        if config_path.exists() && config_path.is_file() {
-            return Some(config_path);
-        }
-
-        if !current_dir.pop() {
-            break;
-        }
+    // Fall back to home directory
+    let home_config = dirs::home_dir()?.join(".nu-lint.toml");
+    if home_config.exists() && home_config.is_file() {
+        return Some(home_config);
     }
 
     None

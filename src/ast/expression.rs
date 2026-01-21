@@ -234,58 +234,14 @@ impl ExpressionExt for Expression {
     }
 
     fn contains_variables(&self, context: &LintContext) -> bool {
-        match &self.expr {
-            Expr::Var(_) | Expr::VarDecl(_) => true,
-
-            Expr::FullCellPath(path) => path.head.contains_variables(context),
-
-            Expr::Subexpression(block_id) | Expr::Block(block_id) | Expr::Closure(block_id) => {
-                context
-                    .working_set
-                    .get_block(*block_id)
-                    .contains_variables(context)
+        self.find_map(context.working_set, &|expr| {
+            if matches!(&expr.expr, Expr::Var(_) | Expr::VarDecl(_)) {
+                FindMapResult::Found(())
+            } else {
+                FindMapResult::Continue
             }
-
-            Expr::BinaryOp(left, _, right) => {
-                left.contains_variables(context) || right.contains_variables(context)
-            }
-
-            Expr::UnaryNot(inner) => inner.contains_variables(context),
-
-            Expr::List(items) => items.iter().any(|item| match item {
-                ListItem::Item(expr) | ListItem::Spread(_, expr) => {
-                    expr.contains_variables(context)
-                }
-            }),
-
-            Expr::Table(table) => {
-                table
-                    .columns
-                    .iter()
-                    .any(|col| col.contains_variables(context))
-                    || table
-                        .rows
-                        .iter()
-                        .any(|row| row.iter().any(|cell| cell.contains_variables(context)))
-            }
-
-            Expr::Record(fields) => fields.iter().any(|field| match field {
-                RecordItem::Pair(key, val) => {
-                    key.contains_variables(context) || val.contains_variables(context)
-                }
-                RecordItem::Spread(_, expr) => expr.contains_variables(context),
-            }),
-
-            Expr::Call(call) => call.arguments.iter().any(|arg| match arg {
-                Argument::Positional(expr)
-                | Argument::Unknown(expr)
-                | Argument::Spread(expr)
-                | Argument::Named((_, _, Some(expr))) => expr.contains_variables(context),
-                Argument::Named(_) => false,
-            }),
-
-            _ => false,
-        }
+        })
+        .is_some()
     }
 
     fn is_external_call_with_variable(&self, var_id: VarId) -> bool {

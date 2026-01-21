@@ -43,8 +43,14 @@ fn test_fix_one_of_multiple_unused() {
     let code = r#"let x = 1
 let y = 2
 print "done""#;
-    // After one fix, either x or y is removed (order depends on HashMap iteration)
-    RULE.assert_fix_erases(code, "let x = 1");
+    // After one fix, either x or y is removed (order is non-deterministic)
+    let fixed = RULE.apply_first_fix(code);
+    let x_removed = !fixed.contains("let x = 1");
+    let y_removed = !fixed.contains("let y = 2");
+    assert!(
+        x_removed || y_removed,
+        "Expected at least one of 'let x = 1' or 'let y = 2' to be removed, but got: {fixed}"
+    );
 }
 
 #[test]

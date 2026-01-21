@@ -19,8 +19,6 @@ pub trait BlockExt {
     fn contains_span(&self, span: Span) -> bool;
     /// All pipeline elements: `{ ls | where size > 1kb }`
     fn all_elements(&self) -> Vec<&PipelineElement>;
-    /// Checks if block contains variable references. Example: `{ $x + 1 }`
-    fn contains_variables(&self, context: &LintContext) -> bool;
     /// Collects all user function call block IDs in block. Returns the
     /// `BlockId` of each called custom command's body.
     fn collect_user_function_call_block_ids(&self, context: &LintContext) -> Vec<BlockId>;
@@ -122,12 +120,6 @@ impl BlockExt for Block {
 
     fn all_elements(&self) -> Vec<&PipelineElement> {
         self.pipelines.iter().flat_map(|p| &p.elements).collect()
-    }
-
-    fn contains_variables(&self, context: &LintContext) -> bool {
-        self.all_elements()
-            .iter()
-            .any(|elem| elem.expr.contains_variables(context))
     }
 
     fn collect_user_function_call_block_ids(&self, context: &LintContext) -> Vec<BlockId> {

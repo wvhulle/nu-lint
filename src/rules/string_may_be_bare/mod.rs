@@ -1,6 +1,5 @@
 use std::ops::ControlFlow;
 
-use lsp_types::DiagnosticTag;
 use nu_protocol::{
     Span,
     ast::{Expr, Expression},
@@ -61,10 +60,6 @@ round brackets ( ), it will be interpreted as an external command."#,
 
     fn level(&self) -> Option<LintLevel> {
         Some(LintLevel::Hint)
-    }
-
-    fn diagnostic_tags(&self) -> &'static [DiagnosticTag] {
-        &[DiagnosticTag::UNNECESSARY]
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

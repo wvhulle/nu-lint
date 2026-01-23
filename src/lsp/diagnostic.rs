@@ -93,6 +93,12 @@ const fn lint_level_to_severity(level: LintLevel) -> DiagnosticSeverity {
     }
 }
 
+type RangeKey = (u32, u32, u32, u32);
+
+const fn range_key(r: &Range) -> RangeKey {
+    (r.start.line, r.start.character, r.end.line, r.end.character)
+}
+
 pub fn violation_to_diagnostic(
     violation: &Violation,
     source: &str,
@@ -115,17 +121,9 @@ pub fn violation_to_diagnostic(
             .map(|href| CodeDescription { href }),
         source: Some(String::from("nu-lint")),
         message: violation.message.to_string(),
-        related_information: if related_info.is_empty() {
-            None
-        } else {
-            Some(related_info)
-        },
-        tags: if violation.diagnostic_tags.is_empty() {
-            None
-        } else {
-            Some(violation.diagnostic_tags.clone())
-        },
-        data: None,
+        related_information: (!related_info.is_empty()).then_some(related_info),
+        tags: (!violation.diagnostic_tags.is_empty()).then(|| violation.diagnostic_tags.clone()),
+        ..Default::default()
     }
 }
 
@@ -153,19 +151,16 @@ fn collect_related_info(
         .chain(extras)
         .scan(HashSet::new(), |seen, (file_span, label)| {
             let range = line_index.span_to_range(source, file_span.start, file_span.end);
-            let key = (
-                range.start.line,
-                range.start.character,
-                range.end.line,
-                range.end.character,
-            );
-            Some(seen.insert(key).then(|| DiagnosticRelatedInformation {
-                location: Location {
-                    uri: file_uri.clone(),
-                    range,
-                },
-                message: label.to_string(),
-            }))
+            Some(
+                seen.insert(range_key(&range))
+                    .then(|| DiagnosticRelatedInformation {
+                        location: Location {
+                            uri: file_uri.clone(),
+                            range,
+                        },
+                        message: label.to_string(),
+                    }),
+            )
         })
         .flatten()
         .collect()
@@ -178,7 +173,7 @@ pub fn extra_labels_to_hint_diagnostics(
 ) -> Vec<Diagnostic> {
     let primary_span = violation.file_span();
     let primary_range = line_index.span_to_range(source, primary_span.start, primary_span.end);
-    let mut seen_ranges = HashSet::new();
+    let mut seen_ranges: HashSet<RangeKey> = HashSet::new();
 
     violation
         .extra_labels
@@ -187,17 +182,7 @@ pub fn extra_labels_to_hint_diagnostics(
             let file_span = span.file_span();
             let range = line_index.span_to_range(source, file_span.start, file_span.end);
 
-            if range == primary_range {
-                return None;
-            }
-
-            let range_key = (
-                range.start.line,
-                range.start.character,
-                range.end.line,
-                range.end.character,
-            );
-            if !seen_ranges.insert(range_key) {
+            if range == primary_range || !seen_ranges.insert(range_key(&range)) {
                 return None;
             }
 
@@ -212,12 +197,9 @@ pub fn extra_labels_to_hint_diagnostics(
                     .rule_id
                     .as_deref()
                     .map(|id| NumberOrString::String(id.to_string())),
-                code_description: None,
                 source: Some(String::from("nu-lint")),
                 message,
-                related_information: None,
-                tags: None,
-                data: None,
+                ..Default::default()
             })
         })
         .collect()

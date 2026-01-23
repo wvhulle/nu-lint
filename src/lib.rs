@@ -23,7 +23,7 @@ use std::{error::Error, fmt, io, path::PathBuf};
 pub use config::{Config, LintLevel};
 pub use engine::LintEngine;
 pub use fix::apply_fixes_iteratively;
-use toml::de;
+use toml::{de, ser};
 use violation::{Fix, Replacement};
 
 pub const NU_PARSER_VERSION: &str = env!("NU_PARSER_VERSION");
@@ -37,6 +37,9 @@ pub enum LintError {
     Config {
         source: de::Error,
     },
+    ConfigSerialize {
+        source: ser::Error,
+    },
     RuleDoesNotExist {
         non_existing_id: String,
     },
@@ -44,6 +47,7 @@ pub enum LintError {
         rule_a: &'static str,
         rule_b: &'static str,
     },
+    NoConfigLocation,
 }
 
 impl fmt::Display for LintError {
@@ -58,6 +62,9 @@ impl fmt::Display for LintError {
                  version."
             ),
             Self::Config { source } => write!(f, "invalid configuration: {source}"),
+            Self::ConfigSerialize { source } => {
+                write!(f, "failed to serialize configuration: {source}")
+            }
             Self::RuleConflict { rule_a, rule_b } => {
                 write!(
                     f,
@@ -68,6 +75,9 @@ impl fmt::Display for LintError {
                      levels."
                 )
             }
+            Self::NoConfigLocation => {
+                write!(f, "no workspace root or home directory available")
+            }
         }
     }
 }
@@ -77,7 +87,10 @@ impl Error for LintError {
         match self {
             Self::Io { source, .. } => Some(source),
             Self::Config { source } => Some(source),
-            Self::RuleConflict { .. } | Self::RuleDoesNotExist { non_existing_id: _ } => None,
+            Self::ConfigSerialize { source } => Some(source),
+            Self::RuleConflict { .. } | Self::RuleDoesNotExist { .. } | Self::NoConfigLocation => {
+                None
+            }
         }
     }
 }

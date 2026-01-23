@@ -6,7 +6,7 @@ use std::{
 use lsp_types::{CodeActionOrCommand, Diagnostic, Hover, Range, TextDocumentPositionParams, Uri};
 
 use super::{
-    actions::{CodeActionOptions, build_code_actions},
+    completion::{CodeActionOptions, DisableScope, build_code_actions},
     diagnostic::{LineIndex, extra_labels_to_hint_diagnostics, violation_to_diagnostic},
     docs::build_hover,
 };
@@ -33,18 +33,25 @@ impl ServerState {
         }
     }
 
-    /// Reload configuration from the workspace config file
+    /// Reload configuration from workspace or home config file
     pub fn reload_config(&mut self) {
-        let config = self
+        let config_path = self
             .workspace_root
             .as_ref()
-            .and_then(|root| {
-                find_config_file_from(root).and_then(|path| {
+            .and_then(|root| find_config_file_from(root))
+            .or_else(|| dirs::home_dir().map(|h| h.join(".nu-lint.toml")));
+
+        let config = config_path
+            .and_then(|path| {
+                if path.exists() {
                     log::info!("Reloading config from {}", path.display());
                     Config::load_from_file(&path).ok()
-                })
+                } else {
+                    None
+                }
             })
             .unwrap_or_default();
+
         self.engine = LintEngine::new(config);
     }
 
@@ -94,13 +101,19 @@ impl ServerState {
 
         let is_repl = uri.scheme().is_some_and(|s| s.as_str() == "repl");
 
+        let disable_scope = if self.workspace_root.is_some() {
+            DisableScope::Workspace
+        } else {
+            DisableScope::Global
+        };
+
         build_code_actions(
             uri,
             &range,
             doc_state,
             &CodeActionOptions {
                 include_ignore: !is_repl,
-                include_disable: self.workspace_root.is_some(),
+                disable_scope,
             },
         )
     }

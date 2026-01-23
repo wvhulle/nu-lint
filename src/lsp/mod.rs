@@ -1,4 +1,5 @@
 mod actions;
+mod completion;
 mod diagnostic;
 mod docs;
 mod server;

@@ -217,7 +217,7 @@ impl DetectFix for InlineSingleUseFunction {
                 Some((
                     detection,
                     Some(FixData {
-                        definition_span: context.expand_span_to_full_lines(def.definition_span),
+                        definition_span: context.expand_span_to_statement(def.definition_span),
                         call_span,
                         body_span,
                         body_start,

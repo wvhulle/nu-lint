@@ -23,6 +23,14 @@ fn quickfix_kind(rule_id: &str) -> CodeActionKind {
     CodeActionKind::from(format!("quickfix.nu-lint.{rule_id}"))
 }
 
+fn ignore_kind(rule_id: &str) -> CodeActionKind {
+    CodeActionKind::from(format!("quickfix.nu-lint.ignore.{rule_id}"))
+}
+
+fn disable_kind(rule_id: &str) -> CodeActionKind {
+    CodeActionKind::from(format!("quickfix.nu-lint.disable.{rule_id}"))
+}
+
 pub fn ignore_comment_edit(content: &str, byte_offset: usize, rule_id: &str) -> TextEdit {
     let line_index = LineIndex::new(content);
     let violation_line = line_index.offset_to_line(byte_offset);
@@ -88,7 +96,7 @@ fn ignore_line_action(
 
     CodeActionOrCommand::CodeAction(CodeAction {
         title: format!("[{rule_id}] Ignore on this line"),
-        kind: Some(quickfix_kind(rule_id)),
+        kind: Some(ignore_kind(rule_id)),
         diagnostics: Some(vec![diagnostic]),
         edit: Some(workspace_edit(uri, vec![edit])),
         ..Default::default()
@@ -107,7 +115,7 @@ fn disable_rule_action(
 
     CodeActionOrCommand::CodeAction(CodeAction {
         title: format!("[{rule_id}] Disable in {scope_str}"),
-        kind: Some(quickfix_kind(rule_id)),
+        kind: Some(disable_kind(rule_id)),
         diagnostics: Some(vec![diagnostic]),
         command: Some(Command {
             title: format!("Disable rule '{rule_id}'"),

@@ -26,9 +26,10 @@ Following screenshots were taking in Helix with `nu-lint` set-up as LSP (`nu-lin
 - Explanations in popup (with keybinding with `space k` in Helix): ![(Screenshot of explanations)](./screenshots/explanations.png)
 - Inline hints (opt-in in most editors) ![(Screenshot of inline hints)](./screenshots/inline-hints.png)
 
-Currently in testing phase: live diagnostics while typing in Nushell prompt (follow [Reedline PR](https://github.com/nushell/reedline/pull/1004)):
+Features being tested (use appropriate branch of [my fork of Nu](https://github.com/wvhulle/nushell):
 
-![(Screenshot of prompt real-time diagnostics)](./screenshots/prompt.png)
+- Real-time diagnostics while typing in Nushell prompt: ![(Screenshot of prompt real-time diagnostics)](./screenshots/prompt.png)
+- Fixes (and ignore actions) offered in Nushell prompt ![(Screenshot of fixes in prompt)](./screenshots/ignore.png)
 
 ## Rule example
 
@@ -61,6 +62,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 +150 rules are defined and most have automatic fixes available (list may be out-of-date):
 
 <!-- start-rule-groups -->
+
 `idioms` - Simplifications unique to the Nu language.
 
 - `not_is_empty_to_is_not_empty` (auto-fix): Simplify `not ... is-empty` to `is-not-empty`
@@ -305,7 +307,6 @@ From latest git main branch:
 ```bash
 cargo install --git https://codeberg.org/wvhulle/nu-lint
 ```
-
 
 ### Nix
 

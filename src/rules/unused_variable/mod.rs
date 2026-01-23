@@ -98,7 +98,7 @@ impl DetectFix for UnusedVariable {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let removal_span = context.expand_span_to_full_lines(fix_data.declaration_span);
+        let removal_span = context.expand_span_to_statement(fix_data.declaration_span);
 
         Some(Fix {
             explanation: format!("Remove unused variable '{}'", fix_data.var_name).into(),

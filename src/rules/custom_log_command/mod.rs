@@ -111,7 +111,7 @@ impl DetectFix for CustomLogCommand {
 
                 let fix_data = FixData {
                     name: def.name,
-                    removal_span: context.expand_span_to_full_lines(expr.span),
+                    removal_span: context.expand_span_to_statement(expr.span),
                 };
 
                 vec![(detection, fix_data)]

@@ -263,6 +263,50 @@ impl<'a> LintContext<'a> {
         Span::new(start + self.file_offset, end + self.file_offset)
     }
 
+    /// Expand a statement span to include its separator (semicolon or newline).
+    /// Uses AST pipeline boundaries - no string parsing needed.
+    ///
+    /// - If there's a next pipeline: span extends to next pipeline's start
+    /// - If last pipeline but has previous: span starts from previous
+    ///   pipeline's end
+    /// - If only pipeline: expand to full line
+    #[must_use]
+    pub fn expand_span_to_statement(&self, span: Span) -> Span {
+        let pipelines = &self.ast.pipelines;
+
+        // Find which pipeline contains this span
+        let Some(idx) = pipelines.iter().position(|p| {
+            p.elements
+                .first()
+                .is_some_and(|e| e.expr.span.start <= span.start)
+                && p.elements
+                    .last()
+                    .is_some_and(|e| e.expr.span.end >= span.end)
+        }) else {
+            return self.expand_span_to_full_lines(span);
+        };
+
+        // If there's a next pipeline, remove from span.start to next pipeline's
+        // start
+        if let Some(next) = pipelines.get(idx + 1)
+            && let Some(first_elem) = next.elements.first()
+        {
+            return Span::new(span.start, first_elem.expr.span.start);
+        }
+
+        // If there's a previous pipeline, remove from previous pipeline's end to
+        // span.end
+        if idx > 0
+            && let Some(prev) = pipelines.get(idx - 1)
+            && let Some(last_elem) = prev.elements.last()
+        {
+            return Span::new(last_elem.expr.span.end, span.end);
+        }
+
+        // Only pipeline - expand to full line
+        self.expand_span_to_full_lines(span)
+    }
+
     /// Collect detected violations with associated fix data using a closure
     /// over expressions
     pub(crate) fn detect_with_fix_data<F, D>(&self, collector: F) -> Vec<(Detection, D)>

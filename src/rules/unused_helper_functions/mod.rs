@@ -144,7 +144,7 @@ fn create_violation(
     context: &LintContext,
     f: &LocatedFunction,
 ) -> (Detection, UnusedFunctionFixData) {
-    let removal_span = context.expand_span_to_full_lines(f.location);
+    let removal_span = context.expand_span_to_statement(f.location);
 
     let violation = Detection::from_file_span(
         format!(

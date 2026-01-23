@@ -78,3 +78,32 @@ print "done""#;
     let expected = r#"print "done""#;
     RULE.assert_fixed_is(code, expected);
 }
+
+#[test]
+fn test_fix_semicolon_first_statement_unused() {
+    // When first statement on a semicolon line is unused, remove it and the
+    // trailing semicolon
+    let code = r#"let unused = 1; let used = 2
+print $used"#;
+    let expected = r#"let used = 2
+print $used"#;
+    RULE.assert_fixed_is(code, expected);
+}
+
+#[test]
+fn test_fix_semicolon_second_statement_unused() {
+    // When second statement on a semicolon line is unused, remove the leading
+    // semicolon and the statement. The result keeps the first statement on its
+    // own line.
+    let code = "let used = 1; let unused = 2; print $used";
+    let expected = "let used = 1; print $used";
+    RULE.assert_fixed_is(code, expected);
+}
+
+#[test]
+fn test_fix_semicolon_preserves_following_command() {
+    // Critical test: ensure following command is NOT removed
+    let code = r#"let unused = [1 2]; head -n 10 README.md"#;
+    let expected = r#"head -n 10 README.md"#;
+    RULE.assert_fixed_is(code, expected);
+}

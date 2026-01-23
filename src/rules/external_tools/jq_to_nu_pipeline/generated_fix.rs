@@ -54,7 +54,7 @@ fn fix_pipeline_functions() {
 #[test]
 fn fix_preserves_file_context() {
     let source = "^jq '.name' /path/to/user.json";
-    RULE.assert_fixed_contains(source, "open $file");
+    RULE.assert_fixed_contains(source, "open /path/to/user.json");
     RULE.assert_fixed_contains(source, "get name");
 }
 
@@ -83,4 +83,34 @@ fn fix_interpolated_index() {
 #[test]
 fn fix_interpolated_field_then_index() {
     RULE.assert_fixed_contains(r#"^jq $".items[($idx)]" data.json"#, "get items | get $idx");
+}
+
+#[test]
+fn fix_bracket_notation_with_dots() {
+    // Keys containing dots must be quoted in Nushell
+    RULE.assert_fixed_contains(
+        r#"^jq '.["test.write"]' settings.json"#,
+        r#"get "test.write""#,
+    );
+    RULE.assert_fixed_contains(
+        r#"^jq '.["my.nested.key"]' config.json"#,
+        r#"get "my.nested.key""#,
+    );
+}
+
+#[test]
+fn fix_bracket_notation_with_spaces() {
+    RULE.assert_fixed_contains(
+        r#"^jq '.["key with space"]' data.json"#,
+        r#"get "key with space""#,
+    );
+}
+
+#[test]
+fn fix_mixed_field_and_bracket() {
+    // Normal field followed by bracketed field with dot
+    RULE.assert_fixed_contains(
+        r#"^jq '.config["db.host"]' settings.json"#,
+        r#"get config."db.host""#,
+    );
 }

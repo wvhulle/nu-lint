@@ -77,7 +77,7 @@ fn quickfix_action(
         .collect();
 
     CodeActionOrCommand::CodeAction(CodeAction {
-        title: format!("[{rule_id}] {}", fix.explanation),
+        title: format!("{} [{rule_id}]", fix.explanation),
         kind: Some(quickfix_kind(rule_id)),
         diagnostics: Some(vec![diagnostic]),
         edit: Some(workspace_edit(uri, edits)),
@@ -95,7 +95,7 @@ fn ignore_line_action(
     let edit = ignore_comment_edit(content, byte_offset, rule_id);
 
     CodeActionOrCommand::CodeAction(CodeAction {
-        title: format!("[{rule_id}] Ignore on this line"),
+        title: format!("Ignore `{rule_id}` on this line"),
         kind: Some(ignore_kind(rule_id)),
         diagnostics: Some(vec![diagnostic]),
         edit: Some(workspace_edit(uri, vec![edit])),
@@ -114,7 +114,7 @@ fn disable_rule_action(
     };
 
     CodeActionOrCommand::CodeAction(CodeAction {
-        title: format!("[{rule_id}] Disable in {scope_str}"),
+        title: format!("Disable `{rule_id}` in {scope_str}"),
         kind: Some(disable_kind(rule_id)),
         diagnostics: Some(vec![diagnostic]),
         command: Some(Command {

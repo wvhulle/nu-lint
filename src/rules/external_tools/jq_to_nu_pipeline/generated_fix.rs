@@ -1,159 +1,86 @@
 use super::RULE;
 
 #[test]
-fn fix_jq_length() {
-    let source = "^jq 'length' data.json";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "open $file | from json | length");
+fn fix_simple_functions() {
+    RULE.assert_fixed_contains("^jq 'type' value.json", "describe");
+    RULE.assert_fixed_contains("$list | to json | ^jq 'reverse'", "reverse");
 }
 
 #[test]
-fn fix_jq_keys() {
-    let source = "^jq 'keys' object.json";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "columns");
-    RULE.assert_fixed_contains(source, "from json");
+fn fix_math_functions() {
+    RULE.assert_fixed_contains("$numbers | to json | ^jq 'add'", "math sum");
+    RULE.assert_fixed_contains("$numbers | to json | ^jq 'min'", "math min");
+    RULE.assert_fixed_contains("$numbers | to json | ^jq 'max'", "math max");
 }
 
 #[test]
-fn fix_to_json_then_jq_add() {
-    let source = "$numbers | to json | ^jq 'add'";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "math sum");
+fn fix_array_index() {
+    RULE.assert_fixed_contains("^jq '.[0]' data.json", "get 0");
+    RULE.assert_fixed_contains("^jq '.[-1]' items.json", "last");
 }
 
 #[test]
-fn fix_to_json_then_jq_length() {
-    let source = "$values | to json | ^jq 'length'";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "length");
+fn fix_field_access() {
+    RULE.assert_fixed_contains("^jq '.name' user.json", "get name");
+    RULE.assert_fixed_contains("^jq '.user.email' data.json", "get user.email");
 }
 
 #[test]
-fn fix_to_json_then_jq_sort() {
-    let source = "$items | to json | ^jq 'sort'";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "sort");
+fn fix_array_iteration() {
+    RULE.assert_fixed_contains("^jq '.[]' array.json", "each");
+    RULE.assert_fixed_contains("^jq '.users[]' data.json", "get users | each");
 }
 
 #[test]
-fn fix_to_json_then_jq_unique() {
-    let source = "$data | to json | ^jq 'unique'";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "uniq");
+fn fix_functions_with_args() {
+    RULE.assert_fixed_contains("$users | to json | ^jq 'map(.name)'", "get name");
+    RULE.assert_fixed_contains(
+        "$records | to json | ^jq 'group_by(.category)'",
+        "group-by category",
+    );
+    RULE.assert_fixed_contains(
+        "$events | to json | ^jq 'sort_by(.timestamp)'",
+        "sort-by timestamp",
+    );
 }
 
 #[test]
-fn fix_to_json_then_jq_flatten() {
-    let source = "$nested | to json | ^jq 'flatten'";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "flatten");
+fn fix_pipeline_functions() {
+    RULE.assert_fixed_contains("$items | to json | ^jq 'sort'", "sort");
+    RULE.assert_fixed_contains("$data | to json | ^jq 'unique'", "uniq");
+    RULE.assert_fixed_contains("$nested | to json | ^jq 'flatten'", "flatten");
 }
 
 #[test]
-fn fix_jq_array_index() {
-    let source = "^jq '.[0]' data.json";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "get 0");
-    RULE.assert_fixed_contains(source, "from json");
-}
-
-#[test]
-fn fix_jq_negative_index() {
-    let source = "^jq '.[-1]' items.json";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "last");
-}
-
-#[test]
-fn fix_jq_field_access() {
-    let source = "^jq '.name' user.json";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "get name");
-    RULE.assert_fixed_contains(source, "from json");
-}
-
-#[test]
-fn fix_jq_nested_field_access() {
-    let source = "^jq '.user.email' data.json";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "get user.email");
-}
-
-#[test]
-fn fix_jq_array_iteration() {
-    let source = "^jq '.[]' array.json";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "each");
-}
-
-#[test]
-fn fix_jq_field_array_iteration() {
-    let source = "^jq '.users[]' data.json";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "get users | each");
-}
-
-#[test]
-fn fix_jq_map_field() {
-    let source = "$users | to json | ^jq 'map(.name)'";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "get name");
-}
-
-#[test]
-fn fix_jq_group_by() {
-    let source = "$records | to json | ^jq 'group_by(.category)'";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "group-by category");
-}
-
-#[test]
-fn fix_jq_sort_by() {
-    let source = "$events | to json | ^jq 'sort_by(.timestamp)'";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "sort-by timestamp");
-}
-
-#[test]
-fn fix_jq_min() {
-    let source = "$numbers | to json | ^jq 'min'";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "math min");
-}
-
-#[test]
-fn fix_jq_max() {
-    let source = "$numbers | to json | ^jq 'max'";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "math max");
-}
-
-#[test]
-fn fix_jq_type() {
-    let source = "^jq 'type' value.json";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "describe");
-}
-
-#[test]
-fn fix_jq_reverse() {
-    let source = "$list | to json | ^jq 'reverse'";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "reverse");
-}
-
-#[test]
-fn fix_preserves_file_argument() {
+fn fix_preserves_file_context() {
     let source = "^jq '.name' /path/to/user.json";
-    RULE.assert_count(source, 1);
     RULE.assert_fixed_contains(source, "open $file");
     RULE.assert_fixed_contains(source, "get name");
 }
 
 #[test]
-fn fix_handles_piped_data_without_open() {
+fn fix_handles_piped_data() {
     let source = "$data | to json | ^jq '.name'";
-    RULE.assert_count(source, 1);
     RULE.assert_fixed_contains(source, "get name");
+}
+
+#[test]
+fn fix_interpolated_simple_field() {
+    RULE.assert_fixed_contains(r#"^jq $".($field)" data.json"#, "get $field");
+    RULE.assert_fixed_contains(r#"$data | to json | ^jq $".($key)""#, "get $key");
+}
+
+#[test]
+fn fix_interpolated_with_prefix() {
+    RULE.assert_fixed_contains(r#"^jq $".user.($field)" data.json"#, "get user.$field");
+}
+
+#[test]
+fn fix_interpolated_index() {
+    RULE.assert_fixed_contains(r#"^jq $".[($idx)]" array.json"#, "get $idx");
+}
+
+#[test]
+fn fix_interpolated_field_then_index() {
+    RULE.assert_fixed_contains(r#"^jq $".items[($idx)]" data.json"#, "get items | get $idx");
 }

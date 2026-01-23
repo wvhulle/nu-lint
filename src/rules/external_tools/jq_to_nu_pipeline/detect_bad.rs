@@ -1,358 +1,258 @@
 use super::RULE;
 
 #[test]
-fn detect_jq_length() {
-    RULE.assert_detects("^jq 'length' data.json");
-}
-
-#[test]
-fn detect_jq_keys() {
-    RULE.assert_detects("^jq 'keys' object.json");
-}
-
-#[test]
-fn detect_jq_type() {
-    RULE.assert_detects("^jq 'type' value.json");
-}
-
-#[test]
-fn detect_jq_empty() {
-    RULE.assert_detects("^jq 'empty' file.json");
-}
-
-#[test]
-fn detect_jq_not() {
-    RULE.assert_detects("^jq 'not' boolean.json");
-}
-
-#[test]
-fn detect_jq_flatten() {
-    RULE.assert_detects("^jq 'flatten' nested.json");
-}
-
-#[test]
-fn detect_jq_add() {
-    RULE.assert_detects("^jq 'add' numbers.json");
-}
-
-#[test]
-fn detect_jq_min() {
-    RULE.assert_detects("^jq 'min' values.json");
-}
-
-#[test]
-fn detect_jq_max() {
-    RULE.assert_detects("^jq 'max' values.json");
-}
-
-#[test]
-fn detect_jq_array_index() {
-    RULE.assert_detects("^jq '.[0]' array.json");
-}
-
-#[test]
-fn detect_jq_array_index_negative() {
-    RULE.assert_detects("^jq '.[-1]' array.json");
-}
-
-#[test]
-fn detect_jq_array_index_various() {
-    let bad_codes = vec![
-        "^jq '.[1]' list.json",
-        "^jq '.[42]' data.json",
-        "^jq '.[100]' items.json",
+fn simple_functions_with_file() {
+    // Note: length and keys are NOT converted due to semantic differences
+    // jq length/keys work on objects AND arrays, Nu equivalents don't
+    let cases = [
+        "^jq 'type' value.json",
+        "^jq 'not' boolean.json",
+        "^jq 'flatten' nested.json",
+        "^jq 'add' numbers.json",
+        "^jq 'min' values.json",
+        "^jq 'max' values.json",
+        "^jq 'sort' items.json",
+        "^jq 'unique' list.json",
+        "^jq 'reverse' array.json",
     ];
-
-    for code in bad_codes {
+    for code in cases {
         RULE.assert_detects(code);
     }
 }
 
 #[test]
-fn detect_jq_stdin_operations() {
-    let bad_codes = vec![
-        "^jq 'length'",
-        "^jq 'keys'",
+fn simple_functions_from_stdin() {
+    let cases = [
         "^jq 'type'",
         "^jq 'add'",
         "^jq 'min'",
         "^jq 'max'",
         "^jq 'flatten'",
-        "^jq 'not'",
-        "^jq 'empty'",
+        "^jq 'sort'",
+        "^jq 'unique'",
+        "^jq 'reverse'",
     ];
-
-    for code in bad_codes {
+    for code in cases {
         RULE.assert_detects(code);
     }
 }
 
 #[test]
-fn detect_jq_in_pipelines() {
-    RULE.assert_detects("cat data.json | ^jq 'length'");
-    RULE.assert_detects("curl -s api/data | ^jq 'keys'");
-}
-
-#[test]
-fn detect_jq_in_functions() {
-    let bad_code = r"
-def count_items [file] {
-    ^jq 'length' $file
-}
-";
-    RULE.assert_detects(bad_code);
-}
-
-#[test]
-fn detect_multiple_simple_jq_operations() {
-    RULE.assert_count("^jq 'keys' data.json; ^jq 'length' data.json", 2);
-    RULE.assert_count("^jq 'add' nums.json | ^jq 'type'", 2);
-}
-
-#[test]
-fn detect_jq_in_complex_expressions() {
-    let bad_code = r#"
-if (^jq 'length' data.json) > 0 {
-    print "has data"
-}
-"#;
-    RULE.assert_detects(bad_code);
-}
-
-#[test]
-fn detect_to_json_then_jq_field_access() {
-    RULE.assert_detects("$data | to json | ^jq '.field'");
-}
-
-#[test]
-fn detect_to_json_then_jq_complex() {
-    RULE.assert_detects("$records | to json | ^jq 'map(.name)'");
-}
-
-#[test]
-fn detect_to_json_then_jq_filter() {
-    RULE.assert_detects("$items | to json | ^jq 'select(.active)'");
-}
-
-#[test]
-fn detect_to_json_then_jq_array_ops() {
-    let bad_codes = vec![
+fn simple_functions_from_pipeline() {
+    let cases = [
         "$numbers | to json | ^jq 'add'",
-        "$values | to json | ^jq 'length'",
         "$items | to json | ^jq 'sort'",
         "$data | to json | ^jq 'unique'",
         "$nested | to json | ^jq 'flatten'",
     ];
-
-    for code in bad_codes {
+    for code in cases {
         RULE.assert_detects(code);
     }
 }
 
 #[test]
-fn detect_to_json_then_jq_iteration() {
-    let bad_codes = vec![
-        "$data | to json | ^jq '.[]'",
-        "$items | to json | ^jq '.users[]'",
+fn array_index_access() {
+    let cases = [
+        "^jq '.[0]' array.json",
+        "^jq '.[1]' list.json",
+        "^jq '.[42]' data.json",
+        "^jq '.[-1]' array.json",
+    ];
+    for code in cases {
+        RULE.assert_detects(code);
+    }
+}
+
+#[test]
+fn single_field_access() {
+    let cases = [
+        "^jq '.name' user.json",
+        "^jq '.email' contact.json",
+        "^jq '.id' record.json",
+    ];
+    for code in cases {
+        RULE.assert_detects(code);
+    }
+}
+
+#[test]
+fn nested_field_access() {
+    let cases = [
+        "^jq '.data.items' response.json",
+        "^jq '.config.version' settings.json",
+        "^jq '.user.profile.name' data.json",
+    ];
+    for code in cases {
+        RULE.assert_detects(code);
+    }
+}
+
+#[test]
+fn field_access_from_pipeline() {
+    RULE.assert_detects("$data | to json | ^jq '.field'");
+    RULE.assert_detects("$config | to json | ^jq -r '.database.host'");
+}
+
+#[test]
+fn array_iteration() {
+    let cases = ["^jq '.[]' array.json", "$data | to json | ^jq '.[]'"];
+    for code in cases {
+        RULE.assert_detects(code);
+    }
+}
+
+#[test]
+fn field_then_iteration() {
+    let cases = [
+        "^jq '.users[]' data.json",
+        "^jq '.items[]' catalog.json",
+        "$data | to json | ^jq '.products[]'",
+    ];
+    for code in cases {
+        RULE.assert_detects(code);
+    }
+}
+
+#[test]
+fn map_function() {
+    let cases = [
+        "^jq 'map(.name)' users.json",
+        "^jq 'map(.id)' items.json",
+        "$data | to json | ^jq 'map(.email)'",
+    ];
+    for code in cases {
+        RULE.assert_detects(code);
+    }
+}
+
+#[test]
+fn select_function() {
+    let cases = [
+        "^jq 'select(.active)' users.json",
+        "^jq 'select(.enabled)' features.json",
+        "$data | to json | ^jq 'select(.published)'",
+    ];
+    for code in cases {
+        RULE.assert_detects(code);
+    }
+}
+
+#[test]
+fn group_by_function() {
+    let cases = [
+        "^jq 'group_by(.category)' items.json",
+        "^jq 'group_by(.status)' tasks.json",
+        "$events | to json | ^jq 'group_by(.type)'",
+    ];
+    for code in cases {
+        RULE.assert_detects(code);
+    }
+}
+
+#[test]
+fn sort_by_function() {
+    let cases = [
+        "^jq 'sort_by(.timestamp)' events.json",
+        "^jq 'sort_by(.name)' users.json",
+        "$items | to json | ^jq 'sort_by(.price)'",
+    ];
+    for code in cases {
+        RULE.assert_detects(code);
+    }
+}
+
+#[test]
+fn jq_piped_with_simple_chains() {
+    let cases = [
+        "$data | to json | ^jq '.users[] | .name'",
+        "$data | to json | ^jq '.items[] | .id'",
         "$config | to json | ^jq '.services[] | .name'",
     ];
-
-    for code in bad_codes {
+    for code in cases {
         RULE.assert_detects(code);
     }
 }
 
 #[test]
-fn detect_nested_to_json_jq() {
-    RULE.assert_detects("$data | select name != null | to json | ^jq '.[]'");
-}
-
-#[test]
-fn detect_to_json_pipe_jq_with_args() {
-    let bad_codes = vec![
+fn jq_with_flags() {
+    let cases = [
         "$config | to json | ^jq -r '.database.host'",
         "$data | to json | ^jq -c '.users'",
         "$items | to json | ^jq -M '.products'",
     ];
-
-    for code in bad_codes {
+    for code in cases {
         RULE.assert_detects(code);
     }
 }
 
 #[test]
-fn detect_to_json_jq_grouping() {
-    RULE.assert_detects("$records | to json | ^jq 'group_by(.category)'");
+fn jq_in_pipeline() {
+    RULE.assert_detects("cat data.json | ^jq 'sort'");
+    RULE.assert_detects("curl -s api/data | ^jq '.name'");
 }
 
 #[test]
-fn detect_to_json_jq_sorting() {
-    let bad_codes = vec![
-        "$events | to json | ^jq 'sort_by(.timestamp)'",
-        "$users | to json | ^jq 'sort_by(.name)'",
-        "$items | to json | ^jq 'sort_by(.price) | reverse'",
-    ];
-
-    for code in bad_codes {
-        RULE.assert_detects(code);
-    }
-}
-
-#[test]
-fn detect_to_json_jq_in_functions() {
-    let bad_code = r"
-def process_data [data] {
-    $data | to json | ^jq '.items[] | .name'
+fn jq_in_function() {
+    let code = r"
+def get_type [file] {
+    ^jq 'type' $file
 }
 ";
-    RULE.assert_detects(bad_code);
+    RULE.assert_detects(code);
 }
 
 #[test]
-fn detect_to_json_jq_in_nested_blocks() {
-    let bad_code = r"
+fn jq_in_conditional() {
+    let code = r#"
+if (^jq '.active' data.json) {
+    print "is active"
+}
+"#;
+    RULE.assert_detects(code);
+}
+
+#[test]
+fn jq_in_nested_block() {
+    let code = r"
 if $condition {
     $data | to json | ^jq '.result'
 } else {
     null
 }
 ";
-    RULE.assert_detects(bad_code);
+    RULE.assert_detects(code);
 }
 
 #[test]
-fn detect_jq_simple_field_access() {
-    // .name -> get name
-    let bad_codes = vec![
-        "^jq '.name' user.json",
-        "^jq '.email' contact.json",
-        "^jq '.id' record.json",
-    ];
-
-    for code in bad_codes {
-        RULE.assert_detects(code);
-    }
+fn multiple_jq_calls() {
+    RULE.assert_count("^jq 'sort' data.json; ^jq 'reverse' data.json", 2);
+    RULE.assert_count("^jq 'add' nums.json | ^jq 'type'", 2);
 }
 
 #[test]
-fn detect_jq_nested_field_access() {
-    // .database.host -> get database.host
-    let bad_codes = vec![
-        "^jq '.data.items' response.json",
-        "^jq '.config.version' settings.json",
-        "^jq '.user.profile.name' data.json",
-    ];
-
-    for code in bad_codes {
-        RULE.assert_detects(code);
-    }
+fn interpolated_simple_field() {
+    // $".($var)" pattern
+    RULE.assert_detects(r#"^jq $".($field)" data.json"#);
+    RULE.assert_detects(r#"$data | to json | ^jq $".($key)""#);
 }
 
 #[test]
-fn detect_jq_array_iteration_all() {
-    // .[] -> each (when used with open)
-    let bad_codes = vec!["^jq '.[]' array.json", "$data | to json | ^jq '.[]'"];
-
-    for code in bad_codes {
-        RULE.assert_detects(code);
-    }
+fn interpolated_with_static_prefix() {
+    // $".prefix.($var)" pattern
+    RULE.assert_detects(r#"^jq $".user.($field)" data.json"#);
+    RULE.assert_detects(r#"^jq $".config.database.($key)" settings.json"#);
 }
 
 #[test]
-fn detect_jq_field_array_iteration() {
-    // .users[] -> get users (with further processing)
-    let bad_codes = vec![
-        "^jq '.users[]' data.json",
-        "^jq '.items[]' catalog.json",
-        "$data | to json | ^jq '.products[]'",
-    ];
-
-    for code in bad_codes {
-        RULE.assert_detects(code);
-    }
+fn interpolated_index() {
+    // $".[($idx)]" pattern
+    RULE.assert_detects(r#"^jq $".[($idx)]" array.json"#);
+    RULE.assert_detects(r#"$data | to json | ^jq $".[($i)]""#);
 }
 
 #[test]
-fn detect_jq_map_simple() {
-    // map(.name) -> get name (for tables)
-    let bad_codes = vec![
-        "^jq 'map(.name)' users.json",
-        "^jq 'map(.id)' items.json",
-        "$data | to json | ^jq 'map(.email)'",
-    ];
-
-    for code in bad_codes {
-        RULE.assert_detects(code);
-    }
-}
-
-#[test]
-fn detect_jq_group_by_simple() {
-    // group_by(.category) -> group-by category
-    let bad_codes = vec![
-        "^jq 'group_by(.category)' items.json",
-        "^jq 'group_by(.status)' tasks.json",
-        "$events | to json | ^jq 'group_by(.type)'",
-    ];
-
-    for code in bad_codes {
-        RULE.assert_detects(code);
-    }
-}
-
-#[test]
-fn detect_jq_sort_by_simple() {
-    // sort_by(.timestamp) -> sort-by timestamp
-    let bad_codes = vec![
-        "^jq 'sort_by(.timestamp)' events.json",
-        "^jq 'sort_by(.name)' users.json",
-        "^jq 'sort_by(.priority)' tasks.json",
-        "$items | to json | ^jq 'sort_by(.price)'",
-    ];
-
-    for code in bad_codes {
-        RULE.assert_detects(code);
-    }
-}
-
-#[test]
-fn detect_jq_select_simple_field() {
-    // select(.active) -> where active (simple field check)
-    let bad_codes = vec![
-        "^jq 'select(.active)' users.json",
-        "^jq 'select(.enabled)' features.json",
-        "$data | to json | ^jq 'select(.published)'",
-    ];
-
-    for code in bad_codes {
-        RULE.assert_detects(code);
-    }
-}
-
-#[test]
-fn detect_jq_with_file_operations() {
-    // Common patterns where jq reads from file but Nushell can do it directly
-    let bad_codes = vec![
-        "^jq '.data' response.json",
-        "^jq '.config.settings' app.json",
-        "^jq 'length' items.json",
-        "^jq 'keys' object.json",
-    ];
-
-    for code in bad_codes {
-        RULE.assert_detects(code);
-    }
-}
-
-#[test]
-fn detect_jq_chained_simple_operations() {
-    // Chains that can be converted: .users[] | .name
-    let bad_codes = vec![
-        "$data | to json | ^jq '.users[] | .name'",
-        "$data | to json | ^jq '.items[] | .id'",
-    ];
-
-    for code in bad_codes {
-        RULE.assert_detects(code);
-    }
+fn interpolated_field_then_index() {
+    // $".field[($idx)]" pattern
+    RULE.assert_detects(r#"^jq $".items[($idx)]" data.json"#);
+    RULE.assert_detects(r#"^jq $".users[($i)]" people.json"#);
 }

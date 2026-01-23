@@ -2,6 +2,7 @@ mod ast;
 pub mod cli;
 mod config;
 mod context;
+mod dsl;
 mod effect;
 mod engine;
 mod fix;

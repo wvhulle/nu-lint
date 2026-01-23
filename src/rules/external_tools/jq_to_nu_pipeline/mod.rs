@@ -1,262 +1,88 @@
-use std::string::ToString;
-
-use jaq_core::{
-    load::{
-        self,
-        lex::{Lexer, StrPart},
-        parse::{Parser, Term},
-    },
-    path::{self, Opt, Part},
+use nu_protocol::{
+    Span,
+    ast::{Expr, Expression, ExternalArgument},
 };
-use nu_protocol::Span;
 
 use crate::{
     LintLevel,
     context::LintContext,
+    dsl::{ConversionContext, jq},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
 
-/// Extract field name from a path like .field
-fn extract_field_from_path<'a>(term: &'a Term<&str>) -> Option<&'a str> {
-    if let Term::Path(inner, path) = term
-        && matches!(**inner, Term::Id)
-        && path.0.len() == 1
-        && let Part::Index(Term::Str(_, parts)) = &path.0[0].0
-        && parts.len() == 1
-        && let StrPart::Str(field) = &parts[0]
-    {
-        Some(field)
-    } else {
-        None
-    }
+struct JqFixData {
+    expr_span: Span,
+    conversion: jq::NuEquivalent,
+    context: ConversionContext,
 }
 
-/// Extract field name from a Part if it's a simple string index
-fn extract_field_from_part<'a>(part: &(Part<Term<&'a str>>, Opt)) -> Option<&'a str> {
-    if let Part::Index(Term::Str(_, parts)) = &part.0
-        && parts.len() == 1
-        && let load::lex::StrPart::Str(field) = &parts[0]
-    {
-        Some(*field)
-    } else {
-        None
-    }
-}
+fn try_convert_jq_call<'a>(
+    expr: &'a Expression,
+    ctx: &'a LintContext,
+) -> Option<(Detection, JqFixData)> {
+    let Expr::ExternalCall(head, args) = &expr.expr else {
+        return None;
+    };
 
-/// Parse a jq filter string into an AST using jaq-core
-fn parse_jq_filter(filter_str: &str) -> Option<Term<&str>> {
-    // Remove surrounding quotes if present
-    let trimmed = filter_str.trim();
-
-    // Safety check for too-short strings
-    if trimmed.len() < 2 {
+    if ctx.span_text(head.span) != "jq" {
         return None;
     }
 
-    let filter_content = if (trimmed.starts_with('\'') && trimmed.ends_with('\''))
-        || (trimmed.starts_with('"') && trimmed.ends_with('"'))
-    {
-        &trimmed[1..trimmed.len() - 1]
-    } else {
-        trimmed
-    };
-
-    // Parse using jaq-core
-    let tokens = Lexer::new(filter_content).lex().ok()?;
-    Parser::new(&tokens).parse(Parser::term).ok()
-}
-
-/// Convert a jq Term AST to equivalent Nushell command
-fn jq_term_to_nushell(term: &Term<&str>, has_file: bool) -> Option<String> {
-    let wrap_with_open = |cmd: &str| -> String {
-        if has_file {
-            format!("open $file | from json | {cmd}")
-        } else {
-            cmd.to_string()
-        }
-    };
-
-    match term {
-        // Simple function calls like length, keys, add, etc.
-        Term::Call(name, args) if args.is_empty() => convert_simple_call(name, &wrap_with_open),
-
-        // Functions with arguments: map(.field), select(.active), group_by(.category),
-        // sort_by(.field)
-        Term::Call(name, args) if args.len() == 1 => {
-            convert_call_with_arg(name, &args[0], &wrap_with_open)
-        }
-
-        // Path expressions: .[0], .[-1], .[], .field, .users[], .database.host
-        Term::Path(inner, path_parts) if matches!(**inner, Term::Id) => {
-            convert_path_expression(path_parts, &wrap_with_open)
-        }
-
-        // Pipe expressions: .users[] | .name
-        Term::Pipe(left, _, right) => {
-            let left_nu = jq_term_to_nushell(left, has_file)?;
-            let right_nu = jq_term_to_nushell(right, false)?;
-            Some(format!("{left_nu} | {right_nu}"))
-        }
-
-        _ => None,
-    }
-}
-
-/// Convert simple jq function calls (no arguments)
-fn convert_simple_call<F>(name: &str, wrap_with_open: &F) -> Option<String>
-where
-    F: Fn(&str) -> String,
-{
-    match name {
-        "length" => Some(wrap_with_open("length")),
-        "keys" => Some(wrap_with_open("columns")),
-        "type" => Some(wrap_with_open("describe")),
-        "empty" => Some("null".to_string()),
-        "not" => Some(wrap_with_open("not $in")),
-        "flatten" => Some(wrap_with_open("flatten")),
-        "add" => Some(wrap_with_open("math sum")),
-        "min" => Some(wrap_with_open("math min")),
-        "max" => Some(wrap_with_open("math max")),
-        "sort" => Some(wrap_with_open("sort")),
-        "unique" => Some(wrap_with_open("uniq")),
-        "reverse" => Some(wrap_with_open("reverse")),
-        _ => None,
-    }
-}
-
-/// Convert jq function calls with one argument
-fn convert_call_with_arg<F>(name: &str, arg: &Term<&str>, wrap_with_open: &F) -> Option<String>
-where
-    F: Fn(&str) -> String,
-{
-    match name {
-        "map" => {
-            // map(.field) -> get field
-            extract_field_from_path(arg).map(|field| wrap_with_open(&format!("get {field}")))
-        }
-        "select" => {
-            // select(.field) -> where field
-            // Only handle simple field access, not complex conditions
-            extract_field_from_path(arg).map(|field| wrap_with_open(&format!("where {field}")))
-        }
-        "group_by" => {
-            // group_by(.field) -> group-by field
-            extract_field_from_path(arg).map(|field| wrap_with_open(&format!("group-by {field}")))
-        }
-        "sort_by" => {
-            // sort_by(.field) -> sort-by field
-            extract_field_from_path(arg).map(|field| wrap_with_open(&format!("sort-by {field}")))
-        }
-        _ => None,
-    }
-}
-
-/// Convert jq path expressions to Nushell
-fn convert_path_expression<F>(
-    path_parts: &path::Path<Term<&str>>,
-    wrap_with_open: &F,
-) -> Option<String>
-where
-    F: Fn(&str) -> String,
-{
-    match path_parts.0.len() {
-        1 => convert_single_part_path(&path_parts.0[0].0, wrap_with_open),
-        2 => convert_two_part_path(&path_parts.0[0].0, &path_parts.0[1].0, wrap_with_open),
-        _ => convert_multi_part_path(path_parts, wrap_with_open),
-    }
-}
-
-/// Convert single-part path expressions
-fn convert_single_part_path<F>(part: &Part<Term<&str>>, wrap_with_open: &F) -> Option<String>
-where
-    F: Fn(&str) -> String,
-{
-    match part {
-        // Positive numeric index: .[0], .[1], etc.
-        Part::Index(Term::Num(n)) => Some(wrap_with_open(&format!("get {n}"))),
-        // Negative numeric index: .[-1] is parsed as Neg(Num("1"))
-        Part::Index(Term::Neg(inner_term)) => match &**inner_term {
-            Term::Num(n) if n == &"1" => Some(wrap_with_open("last")),
-            Term::Num(n) => Some(wrap_with_open(&format!("get -{n}"))),
-            _ => None,
-        },
-        // Array iteration: .[]
-        Part::Range(None, None) => Some(wrap_with_open("each")),
-        // Field access: .field is Index(Str(...))
-        Part::Index(Term::Str(_, parts)) if parts.len() == 1 => {
-            if let load::lex::StrPart::Str(field) = &parts[0] {
-                Some(wrap_with_open(&format!("get {field}")))
-            } else {
-                None
-            }
-        }
-        _ => None,
-    }
-}
-
-/// Convert two-part path expressions
-fn convert_two_part_path<F>(
-    part1: &Part<Term<&str>>,
-    part2: &Part<Term<&str>>,
-    wrap_with_open: &F,
-) -> Option<String>
-where
-    F: Fn(&str) -> String,
-{
-    // .users[] pattern: field access followed by array iteration
-    if let Part::Index(Term::Str(_, parts)) = part1
-        && parts.len() == 1
-        && let load::lex::StrPart::Str(field) = &parts[0]
-        && matches!(part2, Part::Range(None, None))
-    {
-        return Some(wrap_with_open(&format!("get {field} | each")));
-    }
-
-    // .database.host pattern: multiple field accesses
-    if let Part::Index(Term::Str(_, parts1)) = part1
-        && let Part::Index(Term::Str(_, parts2)) = part2
-        && parts1.len() == 1
-        && parts2.len() == 1
-        && let load::lex::StrPart::Str(field1) = &parts1[0]
-        && let load::lex::StrPart::Str(field2) = &parts2[0]
-    {
-        return Some(wrap_with_open(&format!("get {field1}.{field2}")));
-    }
-
-    None
-}
-
-/// Convert multi-part path expressions (3+ parts)
-fn convert_multi_part_path<F>(
-    path_parts: &path::Path<Term<&str>>,
-    wrap_with_open: &F,
-) -> Option<String>
-where
-    F: Fn(&str) -> String,
-{
-    // Try to extract all field names for longer paths like .a.b.c
-    let fields: Vec<_> = path_parts
-        .0
+    let arg_exprs: Vec<&Expression> = args
         .iter()
-        .filter_map(extract_field_from_part)
+        .map(|arg| match arg {
+            ExternalArgument::Regular(e) | ExternalArgument::Spread(e) => e,
+        })
         .collect();
 
-    (fields.len() == path_parts.0.len() && !fields.is_empty())
-        .then(|| wrap_with_open(&format!("get {}", fields.join("."))))
-}
+    let arg_texts: Vec<&str> = arg_exprs
+        .iter()
+        .map(|e| match &e.expr {
+            Expr::String(s) | Expr::RawString(s) => s.as_str(),
+            _ => ctx.expr_text(e),
+        })
+        .collect();
 
-const NOTE: &str =
-    "Use built-in Nushell commands for simple operations - they're faster and more idiomatic";
+    let filter_index = arg_texts
+        .iter()
+        .position(|arg| !arg.starts_with('-'))
+        .unwrap_or(0);
 
-struct JqFixData {
-    expr_span: Span,
-    filter: String,
-    file_arg: Option<String>,
-}
+    let filter_expr = arg_exprs.get(filter_index)?;
 
-fn is_convertible_jq_filter(filter: &str) -> bool {
-    parse_jq_filter(filter).is_some_and(|term| jq_term_to_nushell(&term, false).is_some())
+    let has_file = arg_texts.get(filter_index + 1).is_some();
+    let conv_ctx = if has_file {
+        ConversionContext::File
+    } else {
+        ConversionContext::Pipeline
+    };
+
+    // AST-based detection: if convert returns None, the pattern is unsupported
+    let conversion = if let Expr::StringInterpolation(exprs) = &filter_expr.expr {
+        jq::convert_interpolation(exprs, ctx)?
+    } else {
+        let filter = arg_texts.get(filter_index)?;
+        if filter.is_empty() {
+            return None;
+        }
+        jq::convert(filter)?
+    };
+
+    let detection = Detection::from_global_span(
+        "Use built-in Nushell commands for simple operations - they're faster and more idiomatic",
+        expr.span,
+    )
+    .with_primary_label("external `jq`");
+
+    Some((
+        detection,
+        JqFixData {
+            expr_span: expr.span,
+            conversion,
+            context: conv_ctx,
+        },
+    ))
 }
 
 struct ReplaceJqWithNuGet;
@@ -269,11 +95,19 @@ impl DetectFix for ReplaceJqWithNuGet {
     }
 
     fn short_description(&self) -> &'static str {
-        "Simple `jq` filter replaceable with pipeline"
+        "Simple `jq` filter replaceable with Nushell pipeline"
+    }
+
+    fn long_description(&self) -> Option<&'static str> {
+        Some(
+            "Detects external `jq` calls with filters that can be expressed as native Nushell \
+             pipelines. Uses the jaq parser to analyze jq filter syntax and only reports when an \
+             equivalent Nushell command exists.",
+        )
     }
 
     fn source_link(&self) -> Option<&'static str> {
-        Some("https://www.nushell.sh/commands/docs/from_json.html")
+        Some("https://www.nushell.sh/cookbook/jq_v_nushell.html")
     }
 
     fn level(&self) -> Option<LintLevel> {
@@ -282,87 +116,13 @@ impl DetectFix for ReplaceJqWithNuGet {
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context
-            .detect_external_with_validation("jq", |_, fix_data, ctx| {
-                // Only check the filter (first non-flag arg), not file arguments
-                let arg_texts: Vec<&str> = fix_data.arg_texts(ctx).collect();
-                let filter_arg = arg_texts.iter().find(|text| !text.starts_with('-'));
-
-                let has_complex_filter = filter_arg.is_some_and(|filter| {
-                    // These patterns suggest complex jq that won't translate well
-                    filter.contains("def ") ||          // Function definitions
-                    filter.contains("reduce") ||        // Reduce operations
-                    filter.contains("recurse") ||       // Recursion
-                    filter.contains("@base64") ||       // Format strings
-                    filter.contains("@uri") ||
-                    filter.contains("@csv") ||
-                    filter.contains("@tsv") ||
-                    filter.contains("@html") ||
-                    filter.contains("@json") ||
-                    filter.contains("try") ||           // Error handling
-                    filter.contains("catch") ||
-                    filter.contains("//") ||            // Alternative operator (could support)
-                    filter.contains(" and ") ||         // Complex boolean logic
-                    filter.contains(" or ") ||
-                    filter.contains(" not ") ||
-                    filter.contains("limit") ||         // Limit operations
-                    filter.contains("until") ||         // Until loops
-                    filter.contains("while") ||         // While loops
-                    filter.contains('$') ||             // jq Variables (not Nu variables in file args)
-                    filter.matches('|').count() > 2 // Complex pipelines
-                });
-                if has_complex_filter { None } else { Some(NOTE) }
-            })
-            .into_iter()
-            .filter_map(|(violation, fix_data)| {
-                let arg_texts: Vec<&str> = fix_data.arg_texts(context).collect();
-
-                let filter_index = arg_texts
-                    .iter()
-                    .position(|arg| !arg.starts_with('-'))
-                    .unwrap_or(0);
-
-                let (filter, file_arg) = if filter_index < arg_texts.len() {
-                    let filter = arg_texts[filter_index].to_string();
-                    let file_arg = arg_texts.get(filter_index + 1).map(|s| (*s).to_string());
-                    (filter, file_arg)
-                } else {
-                    (String::new(), None)
-                };
-
-                if filter.is_empty() || !is_convertible_jq_filter(&filter) {
-                    return None;
-                }
-
-                Some((
-                    violation,
-                    JqFixData {
-                        expr_span: fix_data.expr_span,
-                        filter,
-                        file_arg,
-                    },
-                ))
-            })
-            .collect()
+            .detect_with_fix_data(|expr, ctx| try_convert_jq_call(expr, ctx).into_iter().collect())
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let filter = &fix_data.filter;
-        let has_file = fix_data.file_arg.is_some();
-
-        if filter.is_empty() {
-            return Some(Fix {
-                explanation: "Use 'from json' to parse JSON data instead of bare jq".into(),
-                replacements: vec![Replacement::new(fix_data.expr_span, "from json")],
-            });
-        }
-
-        let term = parse_jq_filter(filter)?;
-        let nu_cmd = jq_term_to_nushell(&term, has_file)?;
-
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let nu_cmd = fix_data.conversion.format(fix_data.context, context);
         Some(Fix {
-            explanation: "Replace jq filter with equivalent Nushell pipeline for better \
-                          performance and integration"
-                .into(),
+            explanation: "Replace jq filter with equivalent Nushell pipeline".into(),
             replacements: vec![Replacement::new(fix_data.expr_span, nu_cmd)],
         })
     }

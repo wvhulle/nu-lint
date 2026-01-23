@@ -26,7 +26,7 @@ Following screenshots were taking in Helix with `nu-lint` set-up as LSP (`nu-lin
 - Explanations in popup (with keybinding with `space k` in Helix): ![(Screenshot of explanations)](./screenshots/explanations.png)
 - Inline hints (opt-in in most editors) ![(Screenshot of inline hints)](./screenshots/inline-hints.png)
 
-Features being tested (use appropriate branch of [my fork of Nu](https://github.com/wvhulle/nushell):
+To have `nu-lint` in your terminal directly (not just scripts), use [nushell-lsp](https://github.com/wvhulle/nushell):
 
 - Real-time diagnostics while typing in Nushell prompt: ![(Screenshot of prompt real-time diagnostics)](./screenshots/prompt.png)
 - Fixes (and ignore actions) offered in Nushell prompt ![(Screenshot of fixes in prompt)](./screenshots/ignore.png)

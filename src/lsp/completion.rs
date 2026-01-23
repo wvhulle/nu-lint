@@ -205,7 +205,8 @@ fn fix_all_action(uri: &Uri, doc_state: &DocumentState) -> Option<CodeActionOrCo
         .filter(|v| v.fix.is_some())
         .collect();
 
-    if fixable.is_empty() {
+    // Only show fix all action if there are at least two fixable violations.
+    if fixable.len() <= 1 {
         return None;
     }
 

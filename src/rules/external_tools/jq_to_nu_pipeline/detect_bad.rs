@@ -256,3 +256,14 @@ fn interpolated_field_then_index() {
     RULE.assert_detects(r#"^jq $".items[($idx)]" data.json"#);
     RULE.assert_detects(r#"^jq $".users[($i)]" people.json"#);
 }
+
+#[test]
+fn bracket_notation_with_special_chars() {
+    // Keys containing dots require bracket notation in jq
+    RULE.assert_detects(r#"^jq '.["test.write"]' settings.json"#);
+    RULE.assert_detects(r#"^jq '.["my.nested.key"]' config.json"#);
+    // Keys containing spaces
+    RULE.assert_detects(r#"^jq '.["key with space"]' data.json"#);
+    // Mixed: normal field then bracketed field with dot
+    RULE.assert_detects(r#"^jq '.config["db.host"]' settings.json"#);
+}

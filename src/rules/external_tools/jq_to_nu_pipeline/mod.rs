@@ -51,12 +51,11 @@ fn try_convert_jq_call<'a>(
 
     let filter_expr = arg_exprs.get(filter_index)?;
 
-    let has_file = arg_texts.get(filter_index + 1).is_some();
-    let conv_ctx = if has_file {
-        ConversionContext::File
-    } else {
-        ConversionContext::Pipeline
-    };
+    let conv_ctx = arg_exprs
+        .get(filter_index + 1)
+        .map_or(ConversionContext::Pipeline, |file| {
+            ConversionContext::File(ctx.expr_text(file).to_string())
+        });
 
     // AST-based detection: if convert returns None, the pattern is unsupported
     let conversion = if let Expr::StringInterpolation(exprs) = &filter_expr.expr {
@@ -120,7 +119,7 @@ impl DetectFix for ReplaceJqWithNuGet {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let nu_cmd = fix_data.conversion.format(fix_data.context, context);
+        let nu_cmd = fix_data.conversion.format(&fix_data.context, context);
         Some(Fix {
             explanation: "Replace jq filter with equivalent Nushell pipeline".into(),
             replacements: vec![Replacement::new(fix_data.expr_span, nu_cmd)],

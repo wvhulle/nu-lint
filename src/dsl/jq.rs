@@ -18,7 +18,7 @@ use nu_protocol::{
 };
 
 use super::ConversionContext;
-use crate::context::LintContext;
+use crate::{ast::string::cell_path_member_needs_quotes, context::LintContext};
 
 /// A static field path extracted from a jq filter (e.g., `.a.b.c`).
 #[derive(Debug, Clone)]
@@ -36,7 +36,20 @@ impl FieldPath {
     }
 
     fn as_dotted(&self) -> String {
-        self.segments.join(".")
+        self.segments
+            .iter()
+            .map(|s| maybe_quote_field(s))
+            .collect::<Vec<_>>()
+            .join(".")
+    }
+}
+
+/// Quote a field name if it contains special characters.
+fn maybe_quote_field(s: &str) -> String {
+    if cell_path_member_needs_quotes(s) {
+        format!("\"{s}\"")
+    } else {
+        s.to_string()
     }
 }
 
@@ -80,7 +93,7 @@ pub enum NuEquivalent {
 }
 
 impl NuEquivalent {
-    pub fn format(&self, ctx: ConversionContext, lint_ctx: &LintContext) -> Cow<'static, str> {
+    pub fn format(&self, ctx: &ConversionContext, lint_ctx: &LintContext) -> Cow<'static, str> {
         let cmd = self.to_nu_command(lint_ctx);
         ctx.wrap_str(&cmd)
     }
@@ -92,15 +105,25 @@ impl NuEquivalent {
             Self::GetThenIterate(path) => format!("get {} | each", path.as_dotted()),
             Self::GetIndex(IndexValue::Positive(n)) => format!("get {n}"),
             Self::GetIndex(IndexValue::Negative(n)) => format!("get -{n}"),
-            Self::CommandWithField { nu_cmd, field } => format!("{nu_cmd} {field}"),
+            Self::CommandWithField { nu_cmd, field } => {
+                format!("{nu_cmd} {}", maybe_quote_field(field))
+            }
             Self::DynamicGet { var_span } | Self::DynamicIndex { var_span } => {
                 format!("get {}", lint_ctx.span_text(*var_span))
             }
             Self::DynamicGetWithPrefix { prefix, var_span } => {
-                format!("get {}.{}", prefix, lint_ctx.span_text(*var_span))
+                format!(
+                    "get {}.{}",
+                    maybe_quote_field(prefix),
+                    lint_ctx.span_text(*var_span)
+                )
             }
             Self::FieldThenDynamicIndex { field, var_span } => {
-                format!("get {} | get {}", field, lint_ctx.span_text(*var_span))
+                format!(
+                    "get {} | get {}",
+                    maybe_quote_field(field),
+                    lint_ctx.span_text(*var_span)
+                )
             }
             Self::Pipe { left, right } => {
                 format!(

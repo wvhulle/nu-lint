@@ -1,18 +1,13 @@
-use std::{
-    collections::HashMap,
-    error::Error,
-    fmt::{self, Write},
-    iter,
-};
+use std::{collections::HashMap, fmt::Write};
 
-use miette::{Diagnostic, LabeledSpan, NamedSource, Report, Severity};
+use miette::{NamedSource, Report};
 
 use super::{Summary, read_source_code};
-use crate::violation::{ExternalDetection, Fix, Replacement, Violation};
+use crate::{
+    format::{format_clickable_url, format_diff_inline},
+    violation::{ExternalDetection, Fix, Replacement, Violation},
+};
 
-const RED: &str = "\x1b[31m";
-const GREEN: &str = "\x1b[32m";
-const RESET: &str = "\x1b[0m";
 const SEPARATOR_WIDTH: usize = 80;
 
 #[must_use]
@@ -39,22 +34,15 @@ pub fn format_text(violations: &[Violation]) -> String {
 }
 
 fn build_source_cache(violations: &[Violation]) -> HashMap<&str, String> {
-    let mut by_file: HashMap<&str, &Violation> = HashMap::new();
-    for v in violations {
+    violations.iter().fold(HashMap::new(), |mut cache, v| {
         let file_name = v.file.as_ref().map_or("<stdin>", |f| f.as_str());
-        by_file.entry(file_name).or_insert(v);
-    }
-
-    by_file
-        .into_iter()
-        .map(|(file_name, v)| {
-            let source = v
-                .source
+        cache.entry(file_name).or_insert_with(|| {
+            v.source
                 .as_ref()
-                .map_or_else(|| read_source_code(v.file.as_ref()), ToString::to_string);
-            (file_name, source)
-        })
-        .collect()
+                .map_or_else(|| read_source_code(v.file.as_ref()), ToString::to_string)
+        });
+        cache
+    })
 }
 
 fn format_violation(
@@ -85,62 +73,23 @@ fn format_external_detections(detections: &[ExternalDetection]) -> String {
         return String::new();
     }
 
-    let mut output = String::new();
-    output.push_str("\n  Related locations in external files:\n");
-
-    for detection in detections {
-        let source = NamedSource::new(&detection.file, detection.source.clone());
-        let label = LabeledSpan::at(
-            detection.span.start..detection.span.end,
-            detection.label.as_deref().unwrap_or("here"),
-        );
-
-        let diagnostic = ExternalDiagnostic {
-            message: detection.message.clone(),
-            label,
-        };
-
-        let report = Report::new(diagnostic).with_source_code(source);
-        let _ = write!(output, "{report:?}");
-    }
-
-    output
-}
-
-/// Helper diagnostic for rendering external file locations
-#[derive(Debug)]
-struct ExternalDiagnostic {
-    message: String,
-    label: LabeledSpan,
-}
-
-impl fmt::Display for ExternalDiagnostic {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.message)
-    }
-}
-
-impl Error for ExternalDiagnostic {}
-
-impl Diagnostic for ExternalDiagnostic {
-    fn severity(&self) -> Option<Severity> {
-        Some(Severity::Advice)
-    }
-
-    fn labels(&self) -> Option<Box<dyn Iterator<Item = LabeledSpan> + '_>> {
-        Some(Box::new(iter::once(self.label.clone())))
-    }
+    detections.iter().fold(
+        String::from("\n  Related locations in external files:\n"),
+        |mut output, detection| {
+            let source = NamedSource::new(&detection.file, detection.source.clone());
+            let report = Report::new(detection.clone()).with_source_code(source);
+            let _ = write!(output, "{report:?}");
+            output
+        },
+    )
 }
 
 fn with_extended_help(violation: &Violation, source_code: &str) -> Violation {
-    build_help_text(violation, source_code).map_or_else(
-        || violation.clone(),
-        |text| {
-            let mut v = violation.clone();
-            v.long_description = Some(text);
-            v
-        },
-    )
+    let mut v = violation.clone();
+    if let Some(text) = build_help_text(violation, source_code) {
+        v.long_description = Some(text);
+    }
+    v
 }
 
 fn build_help_text(violation: &Violation, source_code: &str) -> Option<String> {
@@ -164,19 +113,20 @@ fn build_help_text(violation: &Violation, source_code: &str) -> Option<String> {
 
 fn format_fix(fix: &Fix, source_code: &str, has_help: bool) -> String {
     let diff = format_combined_diff(source_code, &fix.replacements);
-    let diff = (!diff.is_empty()).then_some(diff);
 
-    match (diff, has_help) {
-        (Some(diff_text), true) => diff_text,
-        (Some(diff_text), false) => {
-            let short = fix
-                .explanation
-                .split_once(':')
-                .map_or(fix.explanation.as_ref(), |(prefix, _)| prefix.trim());
-            format!("Available fix: {short}\n{diff_text}")
-        }
-        (None, _) => format!("Available fix: {}", fix.explanation),
+    if diff.is_empty() {
+        return format!("Available fix: {}", fix.explanation);
     }
+
+    if has_help {
+        return diff;
+    }
+
+    let short = fix
+        .explanation
+        .split_once(':')
+        .map_or(fix.explanation.as_ref(), |(prefix, _)| prefix.trim());
+    format!("Available fix: {short}\n{diff}")
 }
 
 fn format_combined_diff(source_code: &str, replacements: &[Replacement]) -> String {
@@ -204,14 +154,13 @@ fn format_combined_diff(source_code: &str, replacements: &[Replacement]) -> Stri
     let old_text = source_code.get(min_start..max_end).unwrap_or("");
 
     // Apply all replacements to get the new text
-    let mut new_source = source_code.to_string();
-    for replacement in &sorted_replacements {
-        let file_span = replacement.file_span();
-        new_source.replace_range(
-            file_span.start..file_span.end,
-            &replacement.replacement_text,
-        );
-    }
+    let new_source = sorted_replacements
+        .iter()
+        .fold(source_code.to_string(), |mut s, r| {
+            let span = r.file_span();
+            s.replace_range(span.start..span.end, &r.replacement_text);
+            s
+        });
 
     // Calculate the new end position after replacements
     #[allow(
@@ -235,41 +184,5 @@ fn format_combined_diff(source_code: &str, replacements: &[Replacement]) -> Stri
 
     let new_text = new_source.get(min_start..new_end).unwrap_or("");
 
-    format_diff_text(old_text, new_text)
-}
-
-fn format_diff_text(old_text: &str, new_text: &str) -> String {
-    if old_text == new_text {
-        return String::new();
-    }
-
-    let old_lines: Vec<&str> = old_text.lines().collect();
-    let new_lines: Vec<&str> = new_text.lines().collect();
-
-    let format_removed = |line: &str| format!("{RED}  - {line}{RESET}");
-    let format_added = |line: &str| format!("{GREEN}  + {line}{RESET}");
-
-    if old_lines.len() > 1 || new_lines.len() > 1 {
-        let removed: String = old_lines
-            .iter()
-            .map(|l| format_removed(l))
-            .collect::<Vec<_>>()
-            .join("\n");
-        let added: String = new_lines
-            .iter()
-            .map(|l| format_added(l))
-            .collect::<Vec<_>>()
-            .join("\n");
-        format!("{removed}\n{added}")
-    } else {
-        format!(
-            "{}\n{}",
-            format_removed(old_text.trim()),
-            format_added(new_text.trim())
-        )
-    }
-}
-
-fn format_clickable_url(url: &str) -> String {
-    format!("\x1b]8;;{url}\x1b\\{url}\x1b]8;;\x1b\\")
+    format_diff_inline(old_text, new_text)
 }

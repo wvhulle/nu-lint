@@ -2,6 +2,7 @@ use std::{collections::HashMap, fmt::Write, fs, io::Error as IoError, path::Path
 
 use crate::{
     engine::LintEngine,
+    format::format_diff_context,
     violation::{Fix, Violation},
 };
 
@@ -288,11 +289,7 @@ pub fn format_fix_results(results: &[FixResult], dry_run: bool) -> String {
             writeln!(output, "Fixes to apply: {}\n", result.fixes_applied).unwrap();
 
             // Generate and display unified diff
-            let diff = generate_diff(
-                &result.original_content,
-                &result.fixed_content,
-                &result.file_path,
-            );
+            let diff = format_diff_context(&result.original_content, &result.fixed_content);
             output.push_str(&diff);
             output.push('\n');
         }
@@ -318,44 +315,6 @@ pub fn format_fix_results(results: &[FixResult], dry_run: bool) -> String {
     }
 
     output
-}
-
-/// Generate a simple diff between original and fixed content
-fn generate_diff(original: &str, fixed: &str, _file_path: &PathBuf) -> String {
-    let original_lines: Vec<&str> = original.lines().collect();
-    let fixed_lines: Vec<&str> = fixed.lines().collect();
-
-    if original_lines == fixed_lines {
-        return "No changes\n".to_string();
-    }
-
-    let mut output = String::new();
-    let max_lines = original_lines.len().max(fixed_lines.len());
-
-    for i in 0..max_lines {
-        let orig = original_lines.get(i);
-        let fixed = fixed_lines.get(i);
-
-        match (orig, fixed) {
-            (Some(o), Some(f)) if o != f => {
-                writeln!(output, "\x1b[31m-{:>4} {o}\x1b[0m", i + 1).unwrap();
-                writeln!(output, "\x1b[32m+{:>4} {f}\x1b[0m", i + 1).unwrap();
-            }
-            (Some(o), None) => {
-                writeln!(output, "\x1b[31m-{:>4} {o}\x1b[0m", i + 1).unwrap();
-            }
-            (None, Some(f)) => {
-                writeln!(output, "\x1b[32m+{:>4} {f}\x1b[0m", i + 1).unwrap();
-            }
-            _ => {}
-        }
-    }
-
-    if output.is_empty() {
-        "No changes\n".to_string()
-    } else {
-        output
-    }
 }
 
 #[cfg(test)]

@@ -116,6 +116,28 @@ impl ExternalDetection {
     }
 }
 
+impl fmt::Display for ExternalDetection {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}
+
+impl Error for ExternalDetection {}
+
+impl Diagnostic for ExternalDetection {
+    fn severity(&self) -> Option<Severity> {
+        Some(Severity::Advice)
+    }
+
+    fn labels(&self) -> Option<Box<dyn Iterator<Item = LabeledSpan> + '_>> {
+        let label = LabeledSpan::at(
+            self.span.start..self.span.end,
+            self.label.as_deref().unwrap_or("here"),
+        );
+        Some(Box::new(once(label)))
+    }
+}
+
 /// A detected violation from a lint rule (before fix is attached).
 ///
 /// This type is returned by `LintRule::detect()` and deliberately has no `fix`

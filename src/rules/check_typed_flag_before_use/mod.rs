@@ -40,8 +40,7 @@ fn check_flag_usage_in_body(call: &Call, context: &LintContext) -> Vec<(Detectio
                 has_null_comparison_for_var(expr, var_id, ctx)
             });
 
-            let all_usage_spans =
-                body_block.var_usages(var_id, context);
+            let all_usage_spans = body_block.var_usages(var_id, context);
 
             let usage_span = all_usage_spans
                 .iter()

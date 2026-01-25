@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::init_log;
+use crate::log::init_test_log;
 
 #[test]
 fn ignore_command_position() {
-    init_log();
+    init_test_log();
     let code = r#"
         def main [] {
             ".md"
@@ -14,13 +14,13 @@ fn ignore_command_position() {
 
 #[test]
 fn ignore_command_position_if() {
-    init_log();
+    init_test_log();
     let code = r#"
         def main [] {
             if $in {
-                ".md"    
+                ".md"
             }
-            
+
         }
      "#;
     RULE.assert_ignores(code);

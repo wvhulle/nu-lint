@@ -1,5 +1,5 @@
 use super::RULE;
-use crate::log::init_env_log;
+use crate::log::init_test_log;
 
 #[test]
 fn test_detect_print_exit_pattern() {
@@ -30,7 +30,7 @@ fn test_detect_various_error_messages() {
 
 #[test]
 fn test_detect_print_exit_with_invalid_message() {
-    init_env_log();
+    init_test_log();
     let bad_code = r#"
 if ($args | is-empty) {
     print "Invalid arguments provided"

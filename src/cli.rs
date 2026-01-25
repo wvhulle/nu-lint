@@ -12,7 +12,7 @@ use crate::{
     config::{Config, find_config_file_from},
     engine::{LintEngine, collect_nu_files},
     fix::{apply_fixes, apply_fixes_to_stdin, format_fix_results},
-    log::init_log,
+    log::{init_lsp_log, init_test_log},
     lsp,
     output::{Format, Summary, format_output},
     rule::Rule,
@@ -243,7 +243,7 @@ pub fn run() {
     let cli = Cli::parse();
 
     if cli.verbose {
-        init_log();
+        init_test_log();
     }
 
     let config = Cli::load_config(cli.config.clone());
@@ -256,6 +256,8 @@ pub fn run() {
     } else if let Some(ref source) = cli.ast {
         tree::print_ast(source);
     } else if cli.lsp {
+        let _log_guard = init_lsp_log();
+        tracing::info!("nu-lint LSP server started");
         lsp::run_lsp_server();
     } else if cli.fix {
         cli.fix(&config);

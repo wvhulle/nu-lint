@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::init_env_log;
+use crate::log::init_test_log;
 
 #[test]
 fn test_detect_equal_null_pattern() {
-    init_env_log();
+    init_test_log();
     let bad_code = r#"
 def test [x] {
     if $x == null { "default" } else { $x }

@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::init_env_log;
+use crate::log::init_test_log;
 
 #[test]
 fn test_detect_simple_regex_colon() {
-    init_env_log();
+    init_test_log();
     let bad_code = r#"'ip:port' | parse --regex '(?P<ip>.*):(?P<port>.*)'"#;
     RULE.assert_detects(bad_code);
 }

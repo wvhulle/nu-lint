@@ -44,7 +44,7 @@ impl ServerState {
         let config = config_path
             .and_then(|path| {
                 if path.exists() {
-                    log::info!("Reloading config from {}", path.display());
+                    tracing::info!("Reloading config from {}", path.display());
                     Config::load_from_file(&path).ok()
                 } else {
                     None

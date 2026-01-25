@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::init_env_log;
+use crate::log::init_test_log;
 
 #[test]
 fn test_fix_untyped_input_adds_any_for_output() {
-    init_env_log();
+    init_test_log();
     let bad_code = r"
 def double [] {
     $in * 2
@@ -14,7 +14,7 @@ def double [] {
 
 #[test]
 fn test_fix_refines_any_input_type() {
-    init_env_log();
+    init_test_log();
     let bad_code = r"
 def double []: any -> int {
     $in * 2
@@ -45,7 +45,7 @@ def transform []: any -> list<int> {
 
 #[test]
 fn test_infers_list_input_from_each() {
-    init_env_log();
+    init_test_log();
     let bad_code = r"
 def process_items [] {
     $in | each {|x| $x + 1}

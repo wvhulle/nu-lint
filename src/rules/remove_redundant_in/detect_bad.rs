@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::init_env_log;
+use crate::log::init_test_log;
 
 #[test]
 fn detect_redundant_in_at_pipeline_start() {
-    init_env_log();
+    init_test_log();
 
     let bad_codes = vec![
         "def get-field [field] { $in | get $field }",

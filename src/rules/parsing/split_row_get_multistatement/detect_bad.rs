@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::init_log;
+use crate::log::init_test_log;
 
 #[test]
 fn test_detect_simple_split_get_across_statements() {
-    init_log();
+    init_test_log();
     let bad_code = r#"
 let split = ("a:b:c" | split row ":")
 $split | get 0

@@ -15,7 +15,7 @@ license = "MIT"
 name = "nu-lint"
 repository = "https://codeberg.org/wvhulle/nu-lint"
 # Find latest published version with `cargo search nu-lint`
-version = "0.0.141"
+version = "0.0.142"
 
 [lints.clippy]
 # https://rust-lang.github.io/rust-clippy/master/index.html
@@ -86,13 +86,16 @@ verbose_file_reads = "deny"
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
 dirs = "6"
-env_logger = "0.11"
 heck = "0.5"
 ignore = "0.4"
 jaq-core = "2.2"
 log = "0.4"
 lsp-server = { version = "0.7", optional = true }
 lsp-types = { version = "0.97", optional = true }
+tracing = "0.1"
+tracing-appender = { version = "0.2", optional = true }
+tracing-log = "0.2"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 miette = { version = "7.6", features = ["fancy"] }
 nu-cli = "0.109.1"
 nu-cmd-extra = "0.109.1"
@@ -110,7 +113,7 @@ toml = "0.8"
 
 [features]
 default = ["lsp"]
-lsp = ["lsp-server", "lsp-types"]
+lsp = ["lsp-server", "lsp-types", "tracing-appender"]
 
 [dev-dependencies]
 criterion = { version = "0.7", features = ["html_reports", "csv_output"] }

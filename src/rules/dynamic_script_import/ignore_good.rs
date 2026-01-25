@@ -1,15 +1,15 @@
 use super::RULE;
-use crate::log::init_log;
+use crate::log::init_test_log;
 
 #[test]
 fn use_static_list() {
-    init_log();
+    init_test_log();
     let code = "use /path/to/utils.nu [foo bar]";
     RULE.assert_ignores(code);
 }
 #[test]
 fn use_static_list_std() {
-    init_log();
+    init_test_log();
     let code = "use std/math [PI]";
     RULE.assert_ignores(code);
 }

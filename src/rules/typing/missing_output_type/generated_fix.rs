@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::init_env_log;
+use crate::log::init_test_log;
 
 #[test]
 fn test_fix_untyped_output_adds_any_for_input() {
-    init_env_log();
+    init_test_log();
     let bad_code = r"
 def create-list [] {
     [1, 2, 3]
@@ -14,7 +14,7 @@ def create-list [] {
 
 #[test]
 fn test_fix_refines_any_output_type() {
-    init_env_log();
+    init_test_log();
     let bad_code = r"
 def create-list []: nothing -> any {
     [1, 2, 3]
@@ -65,7 +65,7 @@ def get_pi [] {
 
 #[test]
 fn test_infers_bool_output() {
-    init_env_log();
+    init_test_log();
     let bad_code = r"
 def is_ready [] {
     true

@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::init_env_log;
+use crate::log::init_test_log;
 
 #[test]
 fn test_ignore_where_usage() {
-    init_env_log();
+    init_test_log();
 
     let good_code = r"
 ls | where size > 10kb
@@ -14,7 +14,7 @@ ls | where size > 10kb
 
 #[test]
 fn test_ignore_each_with_side_effects() {
-    init_env_log();
+    init_test_log();
 
     let good_code = r"
 ls | each { |f| if $f.size > 100kb { print $f.name } }
@@ -25,7 +25,7 @@ ls | each { |f| if $f.size > 100kb { print $f.name } }
 
 #[test]
 fn test_ignore_each_without_if() {
-    init_env_log();
+    init_test_log();
 
     let good_code = r"
 seq 1 10 | each { |x| $x * 2 }
@@ -36,7 +36,7 @@ seq 1 10 | each { |x| $x * 2 }
 
 #[test]
 fn test_ignore_each_if_with_mutation() {
-    init_env_log();
+    init_test_log();
 
     let good_code = r"
 ls | each { |f| if $f.size > 100kb { mut name = $f.name; $name } }
@@ -47,7 +47,7 @@ ls | each { |f| if $f.size > 100kb { mut name = $f.name; $name } }
 
 #[test]
 fn test_ignore_each_if_with_else_clause() {
-    init_env_log();
+    init_test_log();
 
     let good_code = r"
 ls | each { |f| if $f.size > 100kb { $f } else { null } }

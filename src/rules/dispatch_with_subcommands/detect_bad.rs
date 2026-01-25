@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::init_env_log;
+use crate::log::init_test_log;
 
 #[test]
 fn test_detect_main_with_match_dispatch_three_branches() {
-    init_env_log();
+    init_test_log();
     let bad_code = r#"
 def main [
     command?: string
@@ -22,7 +22,7 @@ def main [
 
 #[test]
 fn test_detect_main_with_match_dispatch_four_branches() {
-    init_env_log();
+    init_test_log();
     let bad_code = r#"
 def main [
     cmd?: string
@@ -42,7 +42,7 @@ def main [
 
 #[test]
 fn test_detect_main_with_default_string_param() {
-    init_env_log();
+    init_test_log();
     let bad_code = r#"
 def main [
     action: string = "help"
@@ -61,7 +61,7 @@ def main [
 
 #[test]
 fn test_detect_main_with_flags_and_dispatch() {
-    init_env_log();
+    init_test_log();
     let bad_code = r#"
 def main [
     command?: string
@@ -81,7 +81,7 @@ def main [
 
 #[test]
 fn test_detect_only_one_violation_for_main() {
-    init_env_log();
+    init_test_log();
     let bad_code = r#"
 def main [
     command?: string

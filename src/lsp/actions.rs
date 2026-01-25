@@ -23,6 +23,7 @@ pub fn execute_disable_rule(
     let config_path = base_dir.join(".nu-lint.toml");
 
     let content = fs::read_to_string(&config_path).unwrap_or_default();
+
     let mut config = if content.is_empty() {
         Config::default()
     } else {
@@ -38,10 +39,18 @@ pub fn execute_disable_rule(
     let new_content =
         toml::to_string_pretty(&config).map_err(|source| LintError::ConfigSerialize { source })?;
 
-    fs::write(&config_path, new_content).map_err(|source| LintError::Io {
+    // Atomic write: write to temp file, then rename
+    let temp_path = config_path.with_extension("toml.tmp");
+    fs::write(&temp_path, &new_content).map_err(|source| LintError::Io {
+        path: temp_path.clone(),
+        source,
+    })?;
+    fs::rename(&temp_path, &config_path).map_err(|source| LintError::Io {
         path: config_path.clone(),
         source,
     })?;
+
+    tracing::info!("Disabled rule '{}' in {}", rule_id, config_path.display());
 
     Ok(config_path)
 }

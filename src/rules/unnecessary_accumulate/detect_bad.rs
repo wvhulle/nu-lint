@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::init_env_log;
+use crate::log::init_test_log;
 
 #[test]
 fn test_detect_append_loop_over_literal_list() {
-    init_env_log();
+    init_test_log();
 
     let bad_code = r"
 mut data = []

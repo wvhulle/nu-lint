@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::init_env_log;
+use crate::log::init_test_log;
 
 #[test]
 fn detects_function_with_print_and_return() {
-    init_env_log();
+    init_test_log();
     let bad_code = r#"
 def fetch-data [] {
     print "Fetching..."
@@ -15,7 +15,7 @@ def fetch-data [] {
 
 #[test]
 fn detects_function_with_print_in_conditional() {
-    init_env_log();
+    init_test_log();
     let bad_code = r#"
 def conditional-fetch [verbose: bool] {
     if $verbose {
@@ -29,7 +29,7 @@ def conditional-fetch [verbose: bool] {
 
 #[test]
 fn detects_function_returning_data_structure() {
-    init_env_log();
+    init_test_log();
     let bad_code = r#"
 def list-items [] {
     print "Generating list"

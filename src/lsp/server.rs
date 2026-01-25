@@ -31,13 +31,13 @@ fn get_workspace_root(params: &InitializeParams) -> Option<PathBuf> {
 fn load_config_from_workspace(workspace_root: Option<&Path>) -> Config {
     workspace_root.and_then(find_config_file_from).map_or_else(
         || {
-            log::debug!("No workspace root or config file found, using defaults");
+            tracing::debug!("No workspace root or config file found, using defaults");
             Config::default()
         },
         |path| {
-            log::info!("Loading config from {}", path.display());
+            tracing::info!("Loading config from {}", path.display());
             Config::load_from_file(&path).unwrap_or_else(|e| {
-                log::warn!("Failed to load config from {}: {e}", path.display());
+                tracing::warn!("Failed to load config from {}: {e}", path.display());
                 Config::default()
             })
         },
@@ -94,19 +94,19 @@ pub fn run_lsp_server() {
     let initialization_params = match connection.initialize(server_capabilities_json) {
         Ok(params) => params,
         Err(e) => {
-            log::error!("Failed to initialize LSP connection: {e}");
+            tracing::error!("Failed to initialize LSP connection: {e}");
             return;
         }
     };
 
     let Ok(params) = serde_json::from_value::<InitializeParams>(initialization_params) else {
-        log::error!("Failed to parse initialization params");
+        tracing::error!("Failed to parse initialization params");
         return;
     };
 
     let workspace_root = get_workspace_root(&params);
     let config = load_config_from_workspace(workspace_root.as_deref());
-    log::info!("nu-lint LSP server initialized");
+    tracing::info!("nu-lint LSP server initialized");
 
     let mut state = ServerState::new(config, workspace_root);
 
@@ -126,7 +126,7 @@ pub fn run_lsp_server() {
     }
 
     if let Err(e) = io_threads.join() {
-        log::error!("Error joining IO threads: {e}");
+        tracing::error!("Error joining IO threads: {e}");
     }
 }
 
@@ -140,7 +140,7 @@ fn publish_diagnostics(connection: &Connection, uri: Uri, diagnostics: Vec<Diagn
         },
     );
     if let Err(e) = connection.sender.send(Message::Notification(notification)) {
-        log::error!("Failed to send diagnostics: {e}");
+        tracing::error!("Failed to send diagnostics: {e}");
     }
 }
 
@@ -159,7 +159,7 @@ fn handle_notification(connection: &Connection, state: &mut ServerState, mut not
             return;
         };
         if is_config_file(&uri, state.workspace_root()) {
-            log::info!("Config file changed, reloading configuration");
+            tracing::info!("Config file changed, reloading configuration");
             reload_config_and_relint(connection, state);
         } else if state.has_document(&uri) || is_nushell_uri(&uri) {
             let diagnostics = state.lint_document(&uri, &change.text);
@@ -170,7 +170,7 @@ fn handle_notification(connection: &Connection, state: &mut ServerState, mut not
     notif = try_notif::<DidSaveTextDocument, _>(notif, |params| {
         let uri = params.text_document.uri;
         if is_config_file(&uri, state.workspace_root()) {
-            log::info!("Config file saved, reloading configuration");
+            tracing::info!("Config file saved, reloading configuration");
             reload_config_and_relint(connection, state);
             return;
         }
@@ -197,7 +197,7 @@ fn handle_notification(connection: &Connection, state: &mut ServerState, mut not
             .iter()
             .any(|change| is_config_file(&change.uri, state.workspace_root()))
         {
-            log::info!("Config file changed (watched files), reloading configuration");
+            tracing::info!("Config file changed (watched files), reloading configuration");
             reload_config_and_relint(connection, state);
         }
     });
@@ -215,7 +215,7 @@ where
         }
         Err(ExtractError::MethodMismatch(n)) => n,
         Err(ExtractError::JsonError { method, error }) => {
-            log::warn!("Failed to parse {method} params: {error}");
+            tracing::warn!("Failed to parse {method} params: {error}");
             Notification::new(String::new(), ())
         }
     }
@@ -244,7 +244,7 @@ fn handle_request(connection: &Connection, state: &mut ServerState, req: Request
             if params.command == DISABLE_RULE_COMMAND {
                 handle_disable_rule_command(connection, state, &params);
             } else {
-                log::warn!("Unknown command: {}", params.command);
+                tracing::warn!("Unknown command: {}", params.command);
             }
             None
         })
@@ -266,7 +266,7 @@ where
         Ok((id, params)) => Ok(handler(params, id)),
         Err(ExtractError::MethodMismatch(r)) => Err(r),
         Err(ExtractError::JsonError { method, error }) => {
-            log::warn!("Failed to parse {method} params: {error}");
+            tracing::warn!("Failed to parse {method} params: {error}");
             Ok(None)
         }
     }
@@ -278,16 +278,13 @@ fn handle_disable_rule_command(
     params: &ExecuteCommandParams,
 ) {
     let Some(rule_id) = params.arguments.first().and_then(|v| v.as_str()) else {
-        log::warn!("disableRule command missing rule_id argument");
+        tracing::warn!("disableRule command missing rule_id argument");
         return;
     };
 
     match execute_disable_rule(state.workspace_root(), rule_id) {
-        Ok(path) => {
-            log::info!("Disabled rule '{rule_id}' in {}", path.display());
-            reload_config_and_relint(connection, state);
-        }
-        Err(e) => log::error!("Failed to disable rule: {e}"),
+        Ok(_) => reload_config_and_relint(connection, state),
+        Err(e) => tracing::error!("Failed to disable rule: {e}"),
     }
 }
 
@@ -298,6 +295,6 @@ fn send_response(connection: &Connection, id: RequestId, result: serde_json::Val
         error: None,
     };
     if let Err(e) = connection.sender.send(Message::Response(response)) {
-        log::error!("Failed to send response: {e}");
+        tracing::error!("Failed to send response: {e}");
     }
 }

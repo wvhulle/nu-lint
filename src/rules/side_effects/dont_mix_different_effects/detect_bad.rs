@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::init_env_log;
+use crate::log::init_test_log;
 
 #[test]
 fn detects_file_and_network_io() {
-    init_env_log();
+    init_test_log();
     let bad_code = r"
 def main [] {}
 
@@ -16,7 +16,7 @@ def sync-data [] {
 
 #[test]
 fn detects_file_and_print() {
-    init_env_log();
+    init_test_log();
     let bad_code = r#"
 def main [] {}
 
@@ -30,7 +30,7 @@ def save-with-log [data] {
 
 #[test]
 fn detects_network_and_print() {
-    init_env_log();
+    init_test_log();
     let bad_code = r#"
 def main [] {}
 
@@ -44,7 +44,7 @@ def fetch-with-log [] {
 
 #[test]
 fn detects_all_three_io_types() {
-    init_env_log();
+    init_test_log();
     let bad_code = r#"
 def main [] {}
 
@@ -59,7 +59,7 @@ def process-all [] {
 
 #[test]
 fn detects_file_operations_mixed() {
-    init_env_log();
+    init_test_log();
     let bad_code = r#"
 def main [] {}
 
@@ -73,7 +73,7 @@ def backup-and-notify [] {
 
 #[test]
 fn detects_nested_mixed_io() {
-    init_env_log();
+    init_test_log();
     let bad_code = r#"
 def main [] {}
 
@@ -89,7 +89,7 @@ def complex-operation [] {
 
 #[test]
 fn detects_multiple_file_ops_with_network() {
-    init_env_log();
+    init_test_log();
     let bad_code = r"
 def main [] {}
 
@@ -102,7 +102,7 @@ def download-and-archive [] {
 
 #[test]
 fn detects_print_with_multiple_file_ops() {
-    init_env_log();
+    init_test_log();
     let bad_code = r#"
 def main [] {}
 
@@ -118,7 +118,7 @@ def setup-directories [] {
 
 #[test]
 fn detects_exported_functions_with_mixed_io() {
-    init_env_log();
+    init_test_log();
     let bad_code = r#"
 def main [] {}
 
@@ -132,7 +132,7 @@ export def sync [] {
 
 #[test]
 fn detects_function_without_main() {
-    init_env_log();
+    init_test_log();
     let bad_code = r#"
 def helper [] {
     print "Helper"
@@ -144,7 +144,7 @@ def helper [] {
 
 #[test]
 fn detects_multiple_functions_without_main() {
-    init_env_log();
+    init_test_log();
     let bad_code = r#"
 def fetch-data [] {
     print "Fetching..."
@@ -161,7 +161,7 @@ def save-result [data] {
 
 #[test]
 fn detects_library_function_mixing_io() {
-    init_env_log();
+    init_test_log();
     let bad_code = r#"
 export def sync-data [] {
     print "Syncing data..."
@@ -175,7 +175,7 @@ export def sync-data [] {
 
 #[test]
 fn detects_top_level_script_mixing_io() {
-    init_env_log();
+    init_test_log();
     let bad_code = r#"
 print "Fetching data..."
 let data = (http get https://api.example.com/data)
@@ -187,7 +187,7 @@ print "Done"
 
 #[test]
 fn detects_top_level_script_network_and_file() {
-    init_env_log();
+    init_test_log();
     let bad_code = r"
 http get https://api.example.com/file | save download.txt
 ";

@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::init_env_log;
+use crate::log::init_test_log;
 
 #[test]
 fn test_already_using_complete() {
-    init_env_log();
+    init_test_log();
     let good_code = r"let result = (^curl https://api.example.com | complete)
 if $result.exit_code != 0 { error make { msg: 'Failed' } }
 $result.stdout | from json";
@@ -12,7 +12,7 @@ $result.stdout | from json";
 
 #[test]
 fn safe_git() {
-    init_env_log();
+    init_test_log();
     let good_code = r#"git config get remote.origin.url
     | str replace "git@ssh.gitgud.io:" "https://gitgud.io/"
 "#;
@@ -48,13 +48,13 @@ fn test_complete_in_subexpression() {
 
 #[test]
 fn complete_stor() {
-    init_env_log();
+    init_test_log();
     RULE.assert_ignores("stor open | query db 'select'");
 }
 
 #[test]
 fn test_external_with_ignore() {
-    init_env_log();
+    init_test_log();
     // Using `ignore` explicitly signals intentional discard of output and exit code
     let good_code = r"^curl https://api.example.com | ignore";
     RULE.assert_ignores(good_code);
@@ -62,7 +62,7 @@ fn test_external_with_ignore() {
 
 #[test]
 fn test_external_with_ignore_in_pipeline() {
-    init_env_log();
+    init_test_log();
     // External piped to ignore should not trigger warning
     let good_code = r"^git fetch origin | ignore";
     RULE.assert_ignores(good_code);

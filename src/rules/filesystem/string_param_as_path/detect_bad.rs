@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::init_env_log;
+use crate::log::init_test_log;
 
 #[test]
 fn test_detect_various_path_parameter_names() {
-    init_env_log();
+    init_test_log();
 
     let test_cases = [
         ("source_path", "cp $source_path $dest"),
@@ -23,7 +23,7 @@ fn test_detect_various_path_parameter_names() {
 
 #[test]
 fn test_detect_path_parameters_without_type_annotation() {
-    init_env_log();
+    init_test_log();
 
     for param_name in [
         "file_path",
@@ -38,7 +38,7 @@ fn test_detect_path_parameters_without_type_annotation() {
 
 #[test]
 fn test_detect_multiple_path_parameters() {
-    init_env_log();
+    init_test_log();
     let code = r"
 def sync-files [source_path: string, target_path: string, backup_path: string] {
     cp $source_path $target_path
@@ -50,7 +50,7 @@ def sync-files [source_path: string, target_path: string, backup_path: string] {
 
 #[test]
 fn test_detect_optional_path_parameter() {
-    init_env_log();
+    init_test_log();
     let code = r"
 def read-file [file_path?: string] {
     if ($file_path != null) {
@@ -63,7 +63,7 @@ def read-file [file_path?: string] {
 
 #[test]
 fn test_detect_exported_function() {
-    init_env_log();
+    init_test_log();
     let code = r"
 export def save-data [output_path: string, data] {
     $data | save $output_path
@@ -74,7 +74,7 @@ export def save-data [output_path: string, data] {
 
 #[test]
 fn test_detect_different_case_variations() {
-    init_env_log();
+    init_test_log();
     for (param, body) in [
         ("filePath", "open $filePath"),
         ("SOURCE_PATH", "cp $SOURCE_PATH dest"),

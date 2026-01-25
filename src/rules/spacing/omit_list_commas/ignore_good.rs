@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::init_log;
+use crate::log::init_test_log;
 
 #[test]
 fn comma_in_comment() {
-    init_log();
+    init_test_log();
     let code = r#"let responses = [
       "item1"
       # Batch dedup (discard 2,3)   <-- flagged as list comma

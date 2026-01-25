@@ -1,9 +1,9 @@
 use super::RULE;
-use crate::log::init_log;
+use crate::log::init_test_log;
 
 #[test]
 fn nested_record() {
-    init_log();
+    init_test_log();
     let code = r"let data = { id: 1, config: {nested: true} }";
     RULE.assert_ignores(code);
 }

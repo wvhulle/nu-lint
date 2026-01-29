@@ -25,7 +25,7 @@ pub use tracing_appender::non_blocking::WorkerGuard as LogGuard;
 pub fn init_lsp_log() -> Option<LogGuard> {
     use tracing::subscriber::set_global_default;
     use tracing_appender::{non_blocking, rolling};
-    use tracing_subscriber::{fmt, layer::SubscriberExt};
+    use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt};
 
     // Set up log -> tracing bridge
     tracing_log::LogTracer::init().ok();
@@ -34,10 +34,13 @@ pub fn init_lsp_log() -> Option<LogGuard> {
     let file_appender = rolling::daily(log_dir, "lsp.log");
     let (non_blocking, guard) = non_blocking(file_appender);
 
-    let subscriber = tracing_subscriber::registry().with(
+    let filter = EnvFilter::new("nu_lint=debug");
+    let subscriber = tracing_subscriber::registry().with(filter).with(
         fmt::layer()
             .with_writer(non_blocking)
-            .with_ansi(false)
+            .with_ansi(true)
+            .with_file(true)
+            .with_line_number(true)
             .with_target(false),
     );
 

@@ -114,8 +114,8 @@ impl DetectFix for SplitRowSpaceToSplitWords {
         Some("https://www.nushell.sh/commands/docs/split_words.html")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Hint) // TODO: may have false positives
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint // TODO: may have false positives
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

@@ -28,7 +28,7 @@ fn extract_parse_from_closure(
 ) -> Option<(String, bool)> {
     // Must be single pipeline
     if closure_block.pipelines.len() != 1 {
-        log::debug!(
+        log::trace!(
             "Closure has {} pipelines, expected 1",
             closure_block.pipelines.len()
         );
@@ -38,7 +38,7 @@ fn extract_parse_from_closure(
 
     // Must be exactly 2 elements: $param | parse "..."
     if pipeline.elements.len() != 2 {
-        log::debug!(
+        log::trace!(
             "Closure pipeline has {} elements, expected 2",
             pipeline.elements.len()
         );
@@ -66,11 +66,11 @@ fn extract_parse_from_closure(
     // Second element must be a parse call
     let second = &pipeline.elements[1];
     let Expr::Call(parse_call) = &second.expr.expr else {
-        log::debug!("Second element is not a Call");
+        log::trace!("Second element is not a Call");
         return None;
     };
     if !parse_call.is_call_to_command("parse", ctx) {
-        log::debug!("Second element is not parse command");
+        log::trace!("Second element is not parse command");
         return None;
     }
 
@@ -167,8 +167,8 @@ impl DetectFix for LinesEachParseRule {
         Some("https://www.nushell.sh/commands/docs/parse.html")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Hint)
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

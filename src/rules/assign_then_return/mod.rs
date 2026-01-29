@@ -99,7 +99,7 @@ fn check_block(block: &Block, context: &LintContext, violations: &mut Vec<(Detec
         };
 
         if let Some(ref_span) = is_simple_var_reference(next_pipeline, let_decl.var_id) {
-            log::debug!(
+            log::trace!(
                 "Found unnecessary variable pattern: let {} = ... followed by ${}",
                 let_decl.var_name,
                 let_decl.var_name
@@ -148,8 +148,8 @@ impl DetectFix for UnnecessaryVariableBeforeReturn {
         Some("https://www.nushell.sh/book/thinking_in_nu.html#implicit-return")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Warning)
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
     }
 
     fn diagnostic_tags(&self) -> &'static [DiagnosticTag] {

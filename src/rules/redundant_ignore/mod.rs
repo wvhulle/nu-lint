@@ -43,7 +43,7 @@ fn command_produces_output(expr: &Expression, context: &LintContext) -> bool {
                 .get_output_type();
 
             if output_type != nu_protocol::Type::Nothing {
-                log::debug!(
+                log::trace!(
                     "Command '{}' has output type: {:?}",
                     call.get_call_name(context),
                     output_type
@@ -107,8 +107,8 @@ impl DetectFix for RedundantIgnore {
         Some("https://www.nushell.sh/commands/docs/ignore.html")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Hint)
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
     }
 
     fn diagnostic_tags(&self) -> &'static [DiagnosticTag] {

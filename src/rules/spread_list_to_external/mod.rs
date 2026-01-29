@@ -28,8 +28,8 @@ impl DetectFix for SpreadListToExternal {
         Some("https://www.nushell.sh/book/operators.html#spread-operator")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Warning)
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

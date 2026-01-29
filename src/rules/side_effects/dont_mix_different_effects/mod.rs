@@ -102,7 +102,7 @@ fn classify_external_io(
 ) {
     for io_type in [IoType::Network, IoType::FileSystem] {
         if matches_external_io_type(io_type, command_name, args, context) {
-            log::debug!(
+            log::trace!(
                 "External command '{command_name}' matches IoType::{io_type:?}, adding span \
                  {head_span:?}"
             );
@@ -223,8 +223,8 @@ impl DetectFix for SeparateLocalRemoteIo {
         "Functions should not mix different types of I/O operations or effects."
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Hint)
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

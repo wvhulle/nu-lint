@@ -19,8 +19,8 @@ impl DetectFix for MaxPositionalParams {
         "Custom commands should have ≤ 2 positional parameters"
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Warning)
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
@@ -29,12 +29,12 @@ impl DetectFix for MaxPositionalParams {
             .iter()
             .filter_map(|def| {
                 let signature = &def.signature;
-                log::debug!("Checking command '{}'", signature.name);
+                log::trace!("Checking command '{}'", signature.name);
                 // Count only positional parameters (not flags)
                 let positional_count = signature.required_positional.len()
                     + signature.optional_positional.len()
                     + usize::from(signature.rest_positional.is_some());
-                log::debug!(
+                log::trace!(
                     "Command '{}' has {positional_count} positional parameters",
                     signature.name
                 );

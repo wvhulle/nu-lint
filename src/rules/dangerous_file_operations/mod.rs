@@ -160,8 +160,8 @@ impl DetectFix for DangerousFileOperations {
         "File operation on dangerous system path"
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Warning)
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
     }
 
     fn detect<'a>(

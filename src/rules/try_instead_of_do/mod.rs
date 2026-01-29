@@ -38,7 +38,7 @@ fn find_error_prone_command(expr: &Expression, context: &LintContext) -> Option<
         Expr::Call(call) => {
             let cmd_name = call.get_call_name(context);
             if can_error(&cmd_name, context, call) {
-                log::debug!("Found error-prone builtin: {cmd_name}");
+                log::trace!("Found error-prone builtin: {cmd_name}");
                 return FindMapResult::Found(ErrorSource::Builtin(call.head, cmd_name));
             }
             FindMapResult::Continue
@@ -64,8 +64,8 @@ impl DetectFix for TryInsteadOfDo {
         Some("https://www.nushell.sh/commands/docs/try.html")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Warning)
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

@@ -94,10 +94,10 @@ fn closure_only_uses_fields(
         &mut field_accesses,
     );
 
-    log::debug!("Found {} field accesses", field_accesses.len());
+    log::trace!("Found {} field accesses", field_accesses.len());
 
     if field_accesses.is_empty() {
-        log::debug!("No field accesses found");
+        log::trace!("No field accesses found");
         return None;
     }
 
@@ -108,23 +108,23 @@ fn closure_only_uses_fields(
             && cell_path.tail.len() == 1
         {
             let field_name = context.span_text(cell_path.tail[0].span());
-            log::debug!("Field access: {field_name} (expecting {field1} or {field2})");
+            log::trace!("Field access: {field_name} (expecting {field1} or {field2})");
             if field_name == field1 || field_name == field2 {
                 replacements.push(CellPathReplacement {
                     span: expr.span,
                     field: field_name.to_string(),
                 });
             } else {
-                log::debug!("Invalid field name");
+                log::trace!("Invalid field name");
                 return None;
             }
         } else {
-            log::debug!("Invalid field access pattern");
+            log::trace!("Invalid field access pattern");
             return None;
         }
     }
 
-    log::debug!("All {} field accesses valid", replacements.len());
+    log::trace!("All {} field accesses valid", replacements.len());
     Some(replacements)
 }
 
@@ -132,11 +132,6 @@ fn detect_pattern_in_pipeline(
     pipeline: &Pipeline,
     context: &LintContext,
 ) -> Vec<TransposeEachPattern> {
-    log::debug!(
-        "Checking pipeline with {} elements",
-        pipeline.elements.len()
-    );
-
     pipeline
         .find_command_pairs(
             context,
@@ -145,57 +140,52 @@ fn detect_pattern_in_pipeline(
         )
         .into_iter()
         .filter_map(|pair| {
-            log::debug!("Found transpose | each pair");
+            let (col1, col2) = extract_transpose_column_names(pair.first)?;
 
-            let Some((col1, col2)) = extract_transpose_column_names(pair.first) else {
-                log::debug!("Failed to extract 2 column names");
-                return None;
-            };
-
-            log::debug!("Column names: {col1}, {col2}");
+            log::trace!("Column names: {col1}, {col2}");
 
             let Some(Argument::Positional(closure_arg) | Argument::Unknown(closure_arg)) =
                 pair.second.arguments.first()
             else {
-                log::debug!("Each doesn't have positional argument");
+                log::trace!("Each doesn't have positional argument");
                 return None;
             };
 
             let Expr::Closure(block_id) = &closure_arg.expr else {
-                log::debug!("Argument is not a closure");
+                log::trace!("Argument is not a closure");
                 return None;
             };
 
-            log::debug!("Closure found");
+            log::trace!("Closure found");
 
             let block = context.working_set.get_block(*block_id);
 
             if block.signature.required_positional.len() != 1 {
-                log::debug!(
+                log::trace!(
                     "Closure has {} parameters",
                     block.signature.required_positional.len()
                 );
                 return None;
             }
 
-            log::debug!("Closure has 1 parameter");
+            log::trace!("Closure has 1 parameter");
 
             let param = &block.signature.required_positional[0];
             let Some(closure_var_id) = param.var_id else {
-                log::debug!("Parameter doesn't have var_id");
+                log::trace!("Parameter doesn't have var_id");
                 return None;
             };
 
-            log::debug!("Checking field usage");
+            log::trace!("Checking field usage");
 
             let Some(cell_path_replacements) =
                 closure_only_uses_fields(*block_id, closure_var_id, &col1, &col2, context)
             else {
-                log::debug!("Closure doesn't only use the specified fields");
+                log::trace!("Closure doesn't only use the specified fields");
                 return None;
             };
 
-            log::debug!("Pattern matched!");
+            log::trace!("Pattern matched!");
 
             Some(TransposeEachPattern {
                 each_call: pair.second.clone(),
@@ -251,32 +241,23 @@ impl DetectFix for ItemsInsteadOfTransposeEach {
         Some("https://www.nushell.sh/commands/docs/items.html")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Hint)
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let context: &LintContext = context;
         let mut patterns = Vec::new();
 
-        log::debug!(
-            "Checking {} top-level pipelines",
-            context.ast.pipelines.len()
-        );
-
         for pipeline in &context.ast.pipelines {
             patterns.extend(detect_pattern_in_pipeline(pipeline, context));
         }
-
-        log::debug!("Found {} patterns in top-level pipelines", patterns.len());
 
         context.ast.flat_map(
             context.working_set,
             &|expr| detect_pattern(expr, context),
             &mut patterns,
         );
-
-        log::debug!("Found {} total patterns after traversal", patterns.len());
 
         patterns
             .into_iter()
@@ -325,7 +306,7 @@ impl DetectFix for ItemsInsteadOfTransposeEach {
         let closure_text = context.expr_text(closure_expr);
 
         // Find parameter declaration span: from after `{` to before body
-        // The parameter is at param.name with its span
+        // The parameter is at `param.name` with its span
         if param.var_id.is_some() {
             // Find where the parameter name is declared in the closure signature
             // The signature spans from `{|` to `|` before body

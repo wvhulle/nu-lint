@@ -65,7 +65,7 @@ fn requires_stdin_from_signature(context: &LintContext, call: &Call) -> bool {
         .iter()
         .all(|(input_type, _)| !matches!(input_type, nu_protocol::Type::Nothing));
 
-    log::debug!(
+    log::trace!(
         "Command '{}' (category: {:?}) requires stdin from signature: {}",
         decl.name(),
         sig.category,
@@ -220,8 +220,8 @@ impl DetectFix for MissingStdinInShebang {
         Some("https://www.nushell.sh/book/scripts.html")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Error)
+    fn level(&self) -> LintLevel {
+        LintLevel::Error
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

@@ -97,8 +97,8 @@ impl DetectFix for UncheckedCellPathIndex {
         Some("https://www.nushell.sh/book/navigating_structured_data.html")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Warning)
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

@@ -19,7 +19,7 @@ fn detect_def_call(call: &Call, ctx: &LintContext) -> Vec<(Detection, FixData)> 
         return vec![];
     };
 
-    log::debug!(
+    log::trace!(
         "Checking function definition for type_nu_pipeline_input: {}",
         def.name
     );
@@ -83,8 +83,8 @@ impl DetectFix for TypeNuPipelineInput {
         Some("https://www.nushell.sh/book/custom_commands.html#input-output-types")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Warning)
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

@@ -80,8 +80,8 @@ impl DetectFix for UnnecessaryMut {
         Some("https://www.nushell.sh/book/variables.html#mutable-variables")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Warning)
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
     }
 
     fn diagnostic_tags(&self) -> &'static [DiagnosticTag] {

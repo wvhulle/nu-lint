@@ -61,13 +61,13 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<Detection> 
 
             if !has_external_side_effect(cmd_name, ExternEffect::WritesDataToStdErr, context, args)
             {
-                log::debug!(
+                log::trace!(
                     "Command '{cmd_name}' does not have WritesDataToStdErr side effect, skipping"
                 );
                 return None;
             }
 
-            log::debug!(
+            log::trace!(
                 "Found stderr silencing for command '{cmd_name}' with WritesDataToStdErr at span \
                  {:?}",
                 element.expr.span
@@ -111,8 +111,8 @@ impl DetectFix for SilenceStderrData {
         "External commands that write data to stderr should not be silenced"
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Warning)
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

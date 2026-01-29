@@ -15,23 +15,23 @@ struct ItFieldAccess {
 fn is_it_variable(expr: &Expression, context: &LintContext) -> bool {
     if let Expr::Var(_var_id) = &expr.expr {
         let var_text = context.expr_text(expr);
-        log::debug!("Checking if var is 'it': {var_text}");
+        log::trace!("Checking if var is 'it': {var_text}");
         return var_text == "$it";
     }
-    log::debug!("Not a Var expression");
+    log::trace!("Not a Var expression");
     false
 }
 
 fn extract_it_field_access(expr: &Expression, context: &LintContext) -> Option<ItFieldAccess> {
-    log::debug!("extract_it_field_access called");
+    log::trace!("extract_it_field_access called");
     let Expr::FullCellPath(cell_path) = &expr.expr else {
-        log::debug!("Not a FullCellPath");
+        log::trace!("Not a FullCellPath");
         return None;
     };
 
-    log::debug!("Is FullCellPath, checking if head is $it");
+    log::trace!("Is FullCellPath, checking if head is $it");
     if !is_it_variable(&cell_path.head, context) {
-        log::debug!("Head is not $it");
+        log::trace!("Head is not $it");
         return None;
     }
 
@@ -57,15 +57,15 @@ fn check_binary_op_for_it_field(
     context: &LintContext,
     violations: &mut Vec<(Detection, ItFieldAccess)>,
 ) {
-    log::debug!("Checking expression: {:?}", expr.expr);
+    log::trace!("Checking expression: {:?}", expr.expr);
     match &expr.expr {
         Expr::BinaryOp(lhs, op, rhs) => {
             let is_comparison = matches!(&op.expr, Expr::Operator(Operator::Comparison(_)));
 
             if is_comparison {
-                log::debug!("Found comparison op, checking LHS for $it.field");
+                log::trace!("Found comparison op, checking LHS for $it.field");
                 if let Some(it_access) = extract_it_field_access(lhs, context) {
-                    log::debug!("Found $it.{} on LHS of comparison!", it_access.field_name);
+                    log::trace!("Found $it.{} on LHS of comparison!", it_access.field_name);
                     let violation = Detection::from_global_span(
                         "Field name can be used directly in row condition without `$it.` prefix",
                         it_access.full_span,
@@ -103,32 +103,32 @@ fn check_where_row_condition(
     };
 
     let decl = context.working_set.get_decl(call.decl_id);
-    log::debug!("Found call to: {}", decl.name());
+    log::trace!("Found call to: {}", decl.name());
 
     if decl.name() != "where" {
         return vec![];
     }
 
-    log::debug!("Found where command");
+    log::trace!("Found where command");
 
     let Some(arg_expr) = call.arguments.first() else {
-        log::debug!("No arguments to where");
+        log::trace!("No arguments to where");
         return vec![];
     };
 
     let (Argument::Positional(arg_expr) | Argument::Unknown(arg_expr)) = arg_expr else {
-        log::debug!("Argument is not positional");
+        log::trace!("Argument is not positional");
         return vec![];
     };
 
-    log::debug!("Checking argument type: {:?}", arg_expr.expr);
+    log::trace!("Checking argument type: {:?}", arg_expr.expr);
 
     let Expr::RowCondition(block_id) = &arg_expr.expr else {
-        log::debug!("Not a row condition");
+        log::trace!("Not a row condition");
         return vec![];
     };
 
-    log::debug!("Found row condition, checking for $it.field patterns");
+    log::trace!("Found row condition, checking for $it.field patterns");
 
     let block = context.working_set.get_block(*block_id);
     let mut violations = Vec::new();
@@ -163,8 +163,8 @@ impl DetectFix for OmitItInRowCondition {
         Some("https://www.nushell.sh/commands/docs/where.html")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Hint)
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

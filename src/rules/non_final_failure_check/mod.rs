@@ -23,7 +23,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<Detection> 
     {
         if let Expr::ExternalCall(command, external_arguments) = &element.expr.expr {
             let external_command = command.span_text(context);
-            log::debug!(
+            log::trace!(
                 "Found an external call to {external_command} in the pipeline at position {i}."
             );
             if !has_external_side_effect(
@@ -34,7 +34,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<Detection> 
             ) {
                 continue;
             }
-            log::debug!("External call to {external_command} is not safe");
+            log::trace!("External call to {external_command} is not safe");
 
             let next_pipeline_element = &pipeline.elements[i + 1].expr.expr;
 
@@ -88,8 +88,8 @@ impl DetectFix for NonFinalFailureCheck {
         Some("https://www.nushell.sh/blog/2025-10-15-nushell_v0_108_0.html#pipefail-16449-toc")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Warning)
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

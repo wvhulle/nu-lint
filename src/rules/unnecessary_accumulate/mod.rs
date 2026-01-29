@@ -212,8 +212,8 @@ impl DetectFix for UnnecessaryAccumulate {
         "Redundant accumulator pattern: can be simplified"
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Hint)
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
     }
 
     fn diagnostic_tags(&self) -> &'static [DiagnosticTag] {

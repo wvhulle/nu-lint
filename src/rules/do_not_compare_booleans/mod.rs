@@ -125,8 +125,8 @@ impl DetectFix for RedundantBooleanComparison {
         Some("https://www.nushell.sh/book/types_of_data.html#booleans")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Warning)
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
     }
 
     fn diagnostic_tags(&self) -> &'static [DiagnosticTag] {

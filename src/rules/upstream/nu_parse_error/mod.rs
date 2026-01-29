@@ -56,8 +56,8 @@ impl DetectFix for NuParseError {
         Some("https://www.nushell.sh/blog/")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Error)
+    fn level(&self) -> LintLevel {
+        LintLevel::Error
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
@@ -69,7 +69,7 @@ impl DetectFix for NuParseError {
             let in_external_file = !context.span_in_user_file(error_span);
 
             if in_external_file && context.config.skip_external_parse_errors {
-                log::debug!(
+                log::trace!(
                     "Skipping parse error in external file: {parse_error:?} (span {error_span:?})",
                 );
                 continue;
@@ -77,14 +77,14 @@ impl DetectFix for NuParseError {
 
             let error_key = (error_span.start, error_span.end, parse_error.to_string());
             if seen_errors.contains(&error_key) {
-                log::debug!(
+                log::trace!(
                     "Skipping duplicate parse error: {parse_error:?} (span {error_span:?})"
                 );
                 continue;
             }
             seen_errors.insert(error_key);
 
-            log::debug!("Found parse error in user file: {parse_error:?}");
+            log::trace!("Found parse error in user file: {parse_error:?}");
 
             // Collect labels
             let labels: Vec<_> = parse_error.labels().into_iter().flatten().collect();

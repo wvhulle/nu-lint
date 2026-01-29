@@ -61,8 +61,8 @@ impl DetectFix for KebabCaseCommands {
         Some("https://www.nushell.sh/book/style_guide.html#commands")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Hint)
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

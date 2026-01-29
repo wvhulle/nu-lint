@@ -25,8 +25,8 @@ impl DetectFix for DynamicScriptImport {
         Some("https://www.nushell.sh/book/modules.html")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Hint)
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
@@ -48,16 +48,16 @@ impl DynamicScriptImport {
             return vec![];
         }
         let text = ctx.span_text(call.span());
-        log::debug!("Checking of `{text}` has a dynamic path");
+        log::trace!("Checking of `{text}` has a dynamic path");
         // Check if any positional argument is a dynamic expression (not a literal)
         let has_dynamic_path = call.arguments.iter().any(|arg| match arg {
             Argument::Positional(e) | Argument::Unknown(e) | Argument::Spread(e) => {
                 let argument = ctx.expr_text(e);
-                log::debug!("Checking whether argument `{argument}` is dynamic.");
+                log::trace!("Checking whether argument `{argument}` is dynamic.");
                 is_dynamic_expression(e)
             }
             Argument::Named(e) => e.2.as_ref().is_some_and(|e| {
-                log::debug!("Checking whether named argument is dynamic.");
+                log::trace!("Checking whether named argument is dynamic.");
                 is_dynamic_expression(e)
             }),
         });
@@ -79,7 +79,7 @@ impl DynamicScriptImport {
     }
 }
 fn is_dynamic_expression(expr: &Expression) -> bool {
-    log::debug!(
+    log::trace!(
         "Checking whether expression of type `{:#?}` is dynamic.",
         expr.expr
     );
@@ -88,11 +88,11 @@ fn is_dynamic_expression(expr: &Expression) -> bool {
         // Variables, subexpressions, and pipelines are dynamic
         // String interpolation is dynamic if it contains expressions
         Expr::StringInterpolation(parts) => {
-            log::debug!("Encountered string interpolation.");
+            log::trace!("Encountered string interpolation.");
             parts.iter().any(is_dynamic_expression)
         }
         Expr::List(list) => list.iter().any(|e| {
-            log::debug!(
+            log::trace!(
                 "Encountered a list with element of the shape: {:#?}",
                 e.expr()
             );

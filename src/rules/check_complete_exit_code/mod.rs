@@ -49,7 +49,7 @@ fn has_exit_code_access(expr: &Expression, context: &LintContext) -> bool {
 
     expr.find_map(context.working_set, &|inner| {
         if is_exit_code_cell_path(&inner.expr) || is_get_exit_code_call(&inner.expr, context) {
-            log::debug!("Found exit_code access");
+            log::trace!("Found exit_code access");
             FindMapResult::Found(())
         } else {
             FindMapResult::Continue
@@ -122,7 +122,7 @@ fn try_extract_complete_assignment(
     }
 
     if !has_external_command_with_likely_errors(value_arg, context) {
-        log::debug!("Skipping '{var_name}' - external command not marked as likely to error");
+        log::trace!("Skipping '{var_name}' - external command not marked as likely to error");
         return None;
     }
 
@@ -187,7 +187,7 @@ fn is_exit_code_unchecked(
         } else {
             "exit_code checked via variable reference"
         };
-        log::debug!("Skipping variable {:?} - {reason}", assignment.var_id);
+        log::trace!("Skipping variable {:?} - {reason}", assignment.var_id);
     }
 
     !checked
@@ -225,8 +225,8 @@ impl DetectFix for CheckCompleteExitCode {
         Some("https://www.nushell.sh/commands/docs/complete.html")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Warning)
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

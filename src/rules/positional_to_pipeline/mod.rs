@@ -28,7 +28,7 @@ pub struct FixData {
 
 /// Check if a parameter is a data type that would benefit from pipeline input
 fn is_data_type_parameter(param: &nu_protocol::PositionalArg) -> bool {
-    log::debug!("Parameter '{}' has shape: {:?}", param.name, param.shape);
+    log::trace!("Parameter '{}' has shape: {:?}", param.name, param.shape);
     matches!(
         param.shape,
         SyntaxShape::List(_)
@@ -205,18 +205,12 @@ impl DetectFix for TurnPositionalIntoStreamInput {
         Some("https://www.nushell.sh/book/pipelines.html")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Hint)
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        log::debug!("prefer_pipeline_input: Starting rule check");
-
         let function_definitions = context.custom_commands();
-        log::debug!(
-            "Found {} function definitions in AST",
-            function_definitions.len()
-        );
 
         function_definitions
             .iter()

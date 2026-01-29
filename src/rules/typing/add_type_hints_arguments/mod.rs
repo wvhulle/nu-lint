@@ -26,40 +26,40 @@ fn infer_param_type(
     body_block_id: nu_protocol::BlockId,
     ctx: &LintContext,
 ) -> Type {
-    log::debug!("infer_param_type: param_var_id={param_var_id:?}, body_block_id={body_block_id:?}");
+    log::trace!("infer_param_type: param_var_id={param_var_id:?}, body_block_id={body_block_id:?}");
     let block = ctx.working_set.get_block(body_block_id);
 
     // First try pipeline-based inference
-    log::debug!("  Trying pipeline-based inference...");
+    log::trace!("  Trying pipeline-based inference...");
     let pipeline_type = block
         .pipelines
         .iter()
         .find_map(|pipeline| pipeline.infer_param_type(param_var_id, ctx));
 
     if let Some(ty) = &pipeline_type {
-        log::debug!("  -> Pipeline-based inference found: {ty:?}");
+        log::trace!("  -> Pipeline-based inference found: {ty:?}");
         return ty.clone();
     }
 
     // Fall back to expression-based inference (handles arguments, closures, binary
     // ops, etc.)
-    log::debug!("  Trying expression-based inference...");
+    log::trace!("  Trying expression-based inference...");
     let expr_type = block
         .pipelines
         .iter()
         .flat_map(|pipeline| &pipeline.elements)
         .find_map(|element| {
             let result = element.expr.infer_input_type(Some(param_var_id), ctx);
-            log::debug!("    Checked element, result: {result:?}");
+            log::trace!("    Checked element, result: {result:?}");
             result
         });
 
     if let Some(ty) = &expr_type {
-        log::debug!("  -> Expression-based inference found: {ty:?}");
+        log::trace!("  -> Expression-based inference found: {ty:?}");
         return ty.clone();
     }
 
-    log::debug!("  -> No type found, returning Type::Any");
+    log::trace!("  -> No type found, returning Type::Any");
     Type::Any
 }
 
@@ -70,7 +70,7 @@ fn get_param_type_str(
     ctx: &LintContext,
 ) -> String {
     if *shape == nu_protocol::SyntaxShape::Any {
-        log::debug!("Inferring type for parameter {var_id:?} with shape Any");
+        log::trace!("Inferring type for parameter {var_id:?} with shape Any");
         var_id.map_or_else(
             || Type::Any.to_string(),
             |var_id| infer_param_type(var_id, body_block_id, ctx).to_string(),
@@ -86,7 +86,7 @@ fn detect_signature(
     body_block_id: BlockId,
     ctx: &LintContext,
 ) -> Vec<(Detection, FixData)> {
-    log::debug!("Checking signature for missing type annotations: {sig:?}");
+    log::trace!("Checking signature for missing type annotations: {sig:?}");
     let block = ctx.working_set.get_block(body_block_id);
 
     let params_needing_types: Vec<_> = sig
@@ -104,7 +104,7 @@ fn detect_signature(
         .collect();
 
     if params_needing_types.is_empty() {
-        log::debug!("No parameters need type annotations");
+        log::trace!("No parameters need type annotations");
         return vec![];
     }
 
@@ -172,8 +172,8 @@ impl DetectFix for MissingTypeAnnotation {
         Some("https://www.nushell.sh/book/custom_commands.html#parameter-types")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Warning)
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

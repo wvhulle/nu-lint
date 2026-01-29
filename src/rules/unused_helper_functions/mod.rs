@@ -180,8 +180,8 @@ impl DetectFix for UnusedHelperFunctions {
         Some("https://www.nushell.sh/book/custom_commands.html")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Warning)
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
     }
 
     fn diagnostic_tags(&self) -> &'static [DiagnosticTag] {

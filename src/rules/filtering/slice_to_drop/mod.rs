@@ -41,8 +41,8 @@ impl DetectFix for SliceToDrop {
         Some("https://www.nushell.sh/commands/docs/drop.html")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Hint)
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

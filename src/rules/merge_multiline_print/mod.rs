@@ -228,8 +228,8 @@ impl DetectFix for MergeMultilinePrint {
         )
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Hint)
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
@@ -244,7 +244,7 @@ impl DetectFix for MergeMultilinePrint {
         let quote_style = determine_quote_style(first_type);
         let stderr_flag = if has_stderr_flag(prints) { " -e" } else { "" };
 
-        log::debug!("Merged content is: '{merged_content}'");
+        log::trace!("Merged content is: '{merged_content}'");
 
         let replacement_text = build_replacement_text(&merged_content, quote_style, stderr_flag);
 

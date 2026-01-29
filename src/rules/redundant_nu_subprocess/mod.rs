@@ -21,8 +21,8 @@ impl DetectFix for AvoidNuSubprocess {
         "Redundant `nu -c` subprocess call"
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Error)
+    fn level(&self) -> LintLevel {
+        LintLevel::Error
     }
 
     fn diagnostic_tags(&self) -> &'static [DiagnosticTag] {

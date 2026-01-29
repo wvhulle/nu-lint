@@ -35,8 +35,8 @@ impl DetectFix for NuDeprecated {
         Some("https://www.nushell.sh/book/")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Warning)
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
     }
 
     fn diagnostic_tags(&self) -> &'static [DiagnosticTag] {

@@ -74,7 +74,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection,
         return vec![];
     };
 
-    log::debug!(
+    log::trace!(
         "Found /dev/null redirect in pipeline at span {:?}",
         first_element.expr.span
     );
@@ -122,7 +122,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection,
         .map_or(first_element.expr.span.end, |e| e.expr.span.end);
     let replace_span = nu_protocol::Span::new(pipeline_start, pipeline_end);
 
-    log::debug!(
+    log::trace!(
         "Fix: pipeline_start={pipeline_start}, pipeline_end={pipeline_end}, \
          replace_text='{replacement_text}'"
     );
@@ -155,8 +155,8 @@ impl DetectFix for IgnoreOverDevNull {
         Some("https://www.nushell.sh/commands/docs/ignore.html")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Warning)
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

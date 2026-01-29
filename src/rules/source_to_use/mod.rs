@@ -35,8 +35,8 @@ impl DetectFix for UseOverSource {
         Some("https://www.nushell.sh/book/modules/using_modules.html")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Hint)
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
     }
 
     fn diagnostic_tags(&self) -> &'static [DiagnosticTag] {

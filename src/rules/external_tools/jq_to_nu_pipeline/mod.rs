@@ -109,8 +109,8 @@ impl DetectFix for ReplaceJqWithNuGet {
         Some("https://www.nushell.sh/cookbook/jq_v_nushell.html")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Warning)
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

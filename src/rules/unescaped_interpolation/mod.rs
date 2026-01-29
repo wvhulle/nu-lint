@@ -258,8 +258,8 @@ impl DetectFix for EscapeStringInterpolationOperators {
         Some("https://www.nushell.sh/book/working_with_strings.html#string-interpolation")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Error)
+    fn level(&self) -> LintLevel {
+        LintLevel::Error
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

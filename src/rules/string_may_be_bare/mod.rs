@@ -58,8 +58,8 @@ round brackets ( ), it will be interpreted as an external command."#,
         Some("https://www.nushell.sh/book/working_with_strings.html#bare-word-strings")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Hint)
+    fn level(&self) -> LintLevel {
+        LintLevel::Hint
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
@@ -74,7 +74,7 @@ round brackets ( ), it will be interpreted as an external command."#,
             // Skip strings in command position - they would be interpreted as external
             // commands
             if is_in_command_position(expr, parent) {
-                log::debug!(
+                log::trace!(
                     "Skipping {} - in command position",
                     context.span_text(expr.span)
                 );
@@ -99,11 +99,11 @@ round brackets ( ), it will be interpreted as an external command."#,
 
             // Check if the string actually needs quotes
             if bare_word_needs_quotes(unquoted_content) {
-                log::debug!("String '{unquoted_content}' needs quotes");
+                log::trace!("String '{unquoted_content}' needs quotes");
                 return ControlFlow::Continue(());
             }
 
-            log::debug!("String '{unquoted_content}' can be a bare word");
+            log::trace!("String '{unquoted_content}' can be a bare word");
 
             // Report unnecessary quotes
             let violation = Detection::from_global_span(

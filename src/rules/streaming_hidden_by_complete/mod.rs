@@ -91,8 +91,8 @@ impl DetectFix for RedundantCompleteStreaming {
         Some("https://www.nushell.sh/commands/docs/complete.html")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        None
+    fn level(&self) -> LintLevel {
+        LintLevel::Off
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

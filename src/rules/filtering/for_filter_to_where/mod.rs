@@ -14,7 +14,7 @@ fn contains_loop_var_append(expr: &Expression, context: &LintContext, loop_var_n
     match &expr.expr {
         Expr::Call(call) => {
             let decl_name = call.get_call_name(context);
-            log::debug!("Found call to: {decl_name}");
+            log::trace!("Found call to: {decl_name}");
 
             if decl_name == "append"
                 && let Some(arg_expr) = call.get_first_positional_arg()
@@ -22,7 +22,7 @@ fn contains_loop_var_append(expr: &Expression, context: &LintContext, loop_var_n
                 let is_loop_var = arg_expr
                     .extract_variable_name(context)
                     .is_some_and(|name| name == loop_var_name);
-                log::debug!("Append argument is loop var: {is_loop_var}");
+                log::trace!("Append argument is loop var: {is_loop_var}");
                 return is_loop_var;
             }
             false
@@ -47,7 +47,7 @@ fn has_append_without_transformation(
     loop_var_name: &str,
 ) -> bool {
     let block = context.working_set.get_block(block_id);
-    log::debug!(
+    log::trace!(
         "Checking append pattern: block has {} elements",
         block.all_elements().len()
     );
@@ -72,7 +72,7 @@ fn matches_append_assignment(
     }
 
     let result = contains_loop_var_append(rhs, context, loop_var_name);
-    log::debug!("Assignment RHS contains loop var append: {result}");
+    log::trace!("Assignment RHS contains loop var append: {result}");
     result
 }
 
@@ -82,18 +82,18 @@ fn is_filtering_only_pattern(
     loop_var_name: &str,
 ) -> bool {
     let block = context.working_set.get_block(block_id);
-    log::debug!(
+    log::trace!(
         "Checking filtering pattern: block has {} pipelines",
         block.pipelines.len()
     );
 
     let Some(pipeline) = block.pipelines.first() else {
-        log::debug!("Block has no pipelines");
+        log::trace!("Block has no pipelines");
         return false;
     };
 
     if pipeline.elements.len() != 1 {
-        log::debug!(
+        log::trace!(
             "Pipeline has {} elements, expected 1",
             pipeline.elements.len()
         );
@@ -103,19 +103,19 @@ fn is_filtering_only_pattern(
     let elem = &pipeline.elements[0];
 
     let Expr::Call(call) = &elem.expr.expr else {
-        log::debug!("Element is not a Call");
+        log::trace!("Element is not a Call");
         return false;
     };
 
     if !call.is_call_to_command("if", context) {
-        log::debug!("Command is not 'if'");
+        log::trace!("Command is not 'if'");
         return false;
     }
 
-    log::debug!("Found 'if' with {} arguments", call.arguments.len());
+    log::trace!("Found 'if' with {} arguments", call.arguments.len());
 
     if call.arguments.len() != 2 {
-        log::debug!(
+        log::trace!(
             "if statement has {} arguments, expected 2 (has else clause)",
             call.arguments.len()
         );
@@ -123,17 +123,17 @@ fn is_filtering_only_pattern(
     }
 
     let Some(then_block_expr) = call.get_positional_arg(1) else {
-        log::debug!("No then-block argument");
+        log::trace!("No then-block argument");
         return false;
     };
 
     let Some(then_block_id) = then_block_expr.extract_block_id() else {
-        log::debug!("Then-block is not a Block or Closure");
+        log::trace!("Then-block is not a Block or Closure");
         return false;
     };
 
     let result = has_append_without_transformation(then_block_id, context, loop_var_name);
-    log::debug!("has_append_without_transformation: {result}");
+    log::trace!("has_append_without_transformation: {result}");
     result
 }
 
@@ -146,25 +146,25 @@ fn extract_empty_list_vars(
     };
 
     let decl_name = call.get_call_name(context);
-    log::debug!("Checking call to: {decl_name}");
+    log::trace!("Checking call to: {decl_name}");
 
     if decl_name != "mut" {
         return vec![];
     }
 
-    log::debug!("Found 'mut' declaration");
+    log::trace!("Found 'mut' declaration");
 
     let Some((var_id, var_name, _var_span)) = call.extract_variable_declaration(context) else {
-        log::debug!("Could not extract variable declaration");
+        log::trace!("Could not extract variable declaration");
         return vec![];
     };
 
     let Some(init_expr) = call.get_positional_arg(1) else {
-        log::debug!("No init argument");
+        log::trace!("No init argument");
         return vec![];
     };
 
-    log::debug!("Init expr type: {:?}", init_expr.expr);
+    log::trace!("Init expr type: {:?}", init_expr.expr);
 
     let is_empty_list = if init_expr.is_empty_list() {
         true
@@ -177,10 +177,10 @@ fn extract_empty_list_vars(
         false
     };
 
-    log::debug!("is_empty_list: {is_empty_list}");
+    log::trace!("is_empty_list: {is_empty_list}");
 
     if is_empty_list {
-        log::debug!("Found empty list var: {var_name} (id: {var_id:?})");
+        log::trace!("Found empty list var: {var_name} (id: {var_id:?})");
         vec![(var_id, var_name, expr.span)]
     } else {
         vec![]
@@ -234,10 +234,10 @@ fn extract_filtering_vars(expr: &Expression, context: &LintContext) -> Vec<nu_pr
         return vec![];
     }
 
-    log::debug!("Found 'for' loop");
+    log::trace!("Found 'for' loop");
 
     let Some(loop_var_name) = call.loop_var_from_for(context) else {
-        log::debug!("Could not get loop var name");
+        log::trace!("Could not get loop var name");
         return vec![];
     };
 
@@ -245,21 +245,21 @@ fn extract_filtering_vars(expr: &Expression, context: &LintContext) -> Vec<nu_pr
         Argument::Positional(expr) | Argument::Unknown(expr) => Some(expr),
         _ => None,
     }) else {
-        log::debug!("No block argument");
+        log::trace!("No block argument");
         return vec![];
     };
 
     let Some(block_id) = block_expr.extract_block_id() else {
-        log::debug!("Loop body is not a block or closure");
+        log::trace!("Loop body is not a block or closure");
         return vec![];
     };
 
     if !is_filtering_only_pattern(block_id, context, &loop_var_name) {
-        log::debug!("Not a filtering-only pattern");
+        log::trace!("Not a filtering-only pattern");
         return vec![];
     }
 
-    log::debug!("Found filtering pattern, extracting assigned variables");
+    log::trace!("Found filtering pattern, extracting assigned variables");
 
     let block = context.working_set.get_block(block_id);
     extract_var_ids_from_if_statements(block, context)
@@ -306,8 +306,8 @@ impl DetectFix for FilterCollectWithWhere {
         Some("https://www.nushell.sh/commands/docs/where.html")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        Some(LintLevel::Warning)
+    fn level(&self) -> LintLevel {
+        LintLevel::Warning
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
@@ -318,7 +318,7 @@ impl DetectFix for FilterCollectWithWhere {
             &mut empty_list_vars,
         );
 
-        log::debug!("Found {} empty list vars", empty_list_vars.len());
+        log::trace!("Found {} empty list vars", empty_list_vars.len());
 
         let empty_list_vars_map: HashMap<nu_protocol::VarId, (String, nu_protocol::Span)> =
             empty_list_vars
@@ -333,14 +333,14 @@ impl DetectFix for FilterCollectWithWhere {
             &mut filtering_vars,
         );
 
-        log::debug!("Found {} filtering vars", filtering_vars.len());
+        log::trace!("Found {} filtering vars", filtering_vars.len());
 
         let filtering_set: HashSet<nu_protocol::VarId> = filtering_vars.into_iter().collect();
 
         let mut violations = Vec::new();
         for (var_id, (var_name, span)) in &empty_list_vars_map {
             if filtering_set.contains(var_id) {
-                log::debug!("Creating violation for var '{var_name}'");
+                log::trace!("Creating violation for var '{var_name}'");
                 let violation = Detection::from_global_span(
                     format!(
                         "Variable '{var_name}' accumulates filtered items - use 'where' instead"

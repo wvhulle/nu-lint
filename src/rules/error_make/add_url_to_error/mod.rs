@@ -26,8 +26,8 @@ impl DetectFix for AddUrlToError {
         Some("https://www.nushell.sh/commands/docs/error_make.html")
     }
 
-    fn level(&self) -> Option<LintLevel> {
-        None
+    fn level(&self) -> LintLevel {
+        LintLevel::Off
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

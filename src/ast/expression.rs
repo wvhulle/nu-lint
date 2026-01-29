@@ -393,7 +393,7 @@ impl ExpressionExt for Expression {
 
     fn infer_input_type(&self, in_var: Option<VarId>, context: &LintContext) -> Option<Type> {
         let in_var_id = in_var?;
-        log::debug!(
+        log::trace!(
             "infer_input_type: checking expr='{}', var_id={in_var_id:?}",
             self.span_text(context)
         );
@@ -401,7 +401,7 @@ impl ExpressionExt for Expression {
         let result = match &self.expr {
             Expr::FullCellPath(cell_path) if matches!(&cell_path.head.expr, Expr::Var(var_id) if *var_id == in_var_id) =>
             {
-                log::debug!(
+                log::trace!(
                     "  -> FullCellPath with matching var, tail_len={}",
                     cell_path.tail.len()
                 );
@@ -424,34 +424,34 @@ impl ExpressionExt for Expression {
                     Expr::Subexpression(_) | Expr::Block(_) | Expr::Closure(_)
                 ) =>
             {
-                log::debug!("  -> FullCellPath wrapping block-like expression");
+                log::trace!("  -> FullCellPath wrapping block-like expression");
                 cell_path.head.infer_input_type(in_var, context)
             }
             Expr::Call(call) => {
-                log::debug!("  -> Call expression, checking arguments");
+                log::trace!("  -> Call expression, checking arguments");
                 infer_from_call(call, in_var_id, in_var, context)
             }
             Expr::BinaryOp(left, op_expr, right) => {
-                log::debug!("  -> BinaryOp, checking if math/comparison with variable");
+                log::trace!("  -> BinaryOp, checking if math/comparison with variable");
                 if matches!(&op_expr.expr, Expr::Operator(op) if matches!(op, Operator::Math(_) | Operator::Comparison(_)))
                     && (left.contains_variable(in_var_id) || right.contains_variable(in_var_id))
                 {
-                    log::debug!("  -> Found math/comparison op with variable, returning Int");
+                    log::trace!("  -> Found math/comparison op with variable, returning Int");
                     return Some(Type::Int);
                 }
 
-                log::debug!("  -> Recursing into BinaryOp operands");
+                log::trace!("  -> Recursing into BinaryOp operands");
                 left.infer_input_type(in_var, context)
                     .or_else(|| right.infer_input_type(in_var, context))
             }
             Expr::Collect(_, inner) | Expr::UnaryNot(inner) => {
-                log::debug!("  -> Collect/UnaryNot, checking inner");
+                log::trace!("  -> Collect/UnaryNot, checking inner");
                 inner.infer_input_type(in_var, context)
             }
             Expr::Subexpression(block_id) | Expr::Block(block_id) | Expr::Closure(block_id) => {
-                log::debug!("  -> Subexpression/Block/Closure, block_id={block_id:?}");
+                log::trace!("  -> Subexpression/Block/Closure, block_id={block_id:?}");
                 let block = context.working_set.get_block(*block_id);
-                log::debug!("     Block has {} pipelines", block.pipelines.len());
+                log::trace!("     Block has {} pipelines", block.pipelines.len());
 
                 let pipeline_type = block
                     .pipelines
@@ -459,7 +459,7 @@ impl ExpressionExt for Expression {
                     .find_map(|pipeline| pipeline.infer_param_type(in_var_id, context));
 
                 if pipeline_type.is_some() {
-                    log::debug!("     Found type from pipeline analysis: {pipeline_type:?}");
+                    log::trace!("     Found type from pipeline analysis: {pipeline_type:?}");
                     return pipeline_type;
                 }
 
@@ -468,29 +468,29 @@ impl ExpressionExt for Expression {
                     .iter()
                     .flat_map(|pipeline| &pipeline.elements)
                     .find_map(|element| {
-                        log::debug!(
+                        log::trace!(
                             "    -> Checking pipeline element, expr='{}', variant={:?}",
                             element.expr.span_text(context),
                             &element.expr.expr
                         );
                         let result = element.expr.infer_input_type(in_var, context);
-                        log::debug!("       Result: {result:?}");
+                        log::trace!("       Result: {result:?}");
                         result
                     })
             }
             Expr::MatchBlock(patterns) => {
-                log::debug!("  -> MatchBlock, checking patterns");
+                log::trace!("  -> MatchBlock, checking patterns");
                 patterns
                     .iter()
                     .find_map(|(_, expr)| expr.infer_input_type(in_var, context))
             }
             _ => {
-                log::debug!("  -> No match for expression type");
+                log::trace!("  -> No match for expression type");
                 None
             }
         };
 
-        log::debug!("infer_input_type result: {result:?}");
+        log::trace!("infer_input_type result: {result:?}");
         result
     }
 
@@ -685,21 +685,21 @@ fn infer_from_call(
     in_var: Option<VarId>,
     context: &LintContext,
 ) -> Option<Type> {
-    log::debug!("infer_from_call: checking call for var_id={in_var_id:?}");
+    log::trace!("infer_from_call: checking call for var_id={in_var_id:?}");
 
     for (idx, arg) in call.arguments.iter().enumerate() {
         if let Argument::Positional(arg_expr) | Argument::Unknown(arg_expr) = arg {
-            log::debug!("  -> Checking positional arg {idx}");
+            log::trace!("  -> Checking positional arg {idx}");
             if !arg_expr.contains_variable(in_var_id) {
-                log::debug!("    -> Does not contain variable");
+                log::trace!("    -> Does not contain variable");
                 continue;
             }
 
-            log::debug!("    -> Contains variable! Checking signature");
+            log::trace!("    -> Contains variable! Checking signature");
             let decl = context.working_set.get_decl(call.decl_id);
             let signature = decl.signature();
 
-            log::debug!(
+            log::trace!(
                 "    -> Command: '{}', input_output_types: {:?}",
                 decl.name(),
                 signature.input_output_types
@@ -708,14 +708,14 @@ fn infer_from_call(
             if let Some((input_type, _)) = signature.input_output_types.first()
                 && !matches!(input_type, nu_protocol::Type::Any)
             {
-                log::debug!("    -> Found input type from signature: {input_type:?}");
+                log::trace!("    -> Found input type from signature: {input_type:?}");
                 return Some(input_type.clone());
             }
-            log::debug!("    -> Signature has no specific input type");
+            log::trace!("    -> Signature has no specific input type");
         }
     }
 
-    log::debug!("  -> Recursively checking call arguments");
+    log::trace!("  -> Recursively checking call arguments");
     let result = call.arguments.iter().find_map(|arg| match arg {
         Argument::Positional(arg_expr) | Argument::Unknown(arg_expr) => {
             arg_expr.infer_input_type(in_var, context)
@@ -723,7 +723,7 @@ fn infer_from_call(
         _ => None,
     });
 
-    log::debug!("infer_from_call result: {result:?}");
+    log::trace!("infer_from_call result: {result:?}");
     result
 }
 
@@ -739,18 +739,18 @@ fn check_filepath_output(expr: &Expr) -> Option<Type> {
     let ty = Type::Custom("path".into());
     match expr {
         Expr::ExternalCall(head, _) if matches!(&head.expr, Expr::Filepath(..)) => {
-            log::debug!(
+            log::trace!(
                 "check_filepath_output: ExternalCall with filepath head: {:?}",
                 head.expr
             );
             Some(ty)
         }
         Expr::Collect(_, inner) if is_filepath_expr(&inner.expr) => {
-            log::debug!("check_filepath_output: Collect with filepath inner");
+            log::trace!("check_filepath_output: Collect with filepath inner");
             Some(ty)
         }
         expr if is_filepath_expr(expr) || is_glob_pattern_expr(expr) => {
-            log::debug!("check_filepath_output: filepath expr: {expr:?}");
+            log::trace!("check_filepath_output: filepath expr: {expr:?}");
             Some(ty)
         }
         _ => None,
@@ -854,10 +854,10 @@ fn infer_list_element_type(items: &[ListItem]) -> Type {
     }
 
     if element_types.iter().all(|t| t == &element_types[0]) {
-        log::debug!("All list elements have type: {:?}", element_types[0]);
+        log::trace!("All list elements have type: {:?}", element_types[0]);
         Type::List(Box::new(element_types[0].clone()))
     } else {
-        log::debug!("List has mixed types, using Any");
+        log::trace!("List has mixed types, using Any");
         Type::List(Box::new(Type::Any))
     }
 }

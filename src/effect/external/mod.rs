@@ -58,22 +58,22 @@ pub fn has_external_side_effect(
     context: &LintContext,
     args: &[ExternalArgument],
 ) -> bool {
-    log::debug!("Checking external side effect '{side_effect:?}' for command '{command_name}'");
+    log::trace!("Checking external side effect '{side_effect:?}' for command '{command_name}'");
 
     for commands in ALL_COMMANDS {
         if let Some((_, effects)) = commands.iter().find(|(name, _)| *name == command_name)
             && let Some((_, predicate)) = effects.iter().find(|(effect, _)| *effect == side_effect)
         {
-            log::debug!("Checking external predicate for side effect '{side_effect:?}'");
+            log::trace!("Checking external predicate for side effect '{side_effect:?}'");
             let result = predicate(context, args);
             if result {
-                log::debug!("External predicate matched for side effect '{side_effect:?}'");
+                log::trace!("External predicate matched for side effect '{side_effect:?}'");
             }
             return result;
         }
     }
 
-    log::debug!(
+    log::trace!(
         "No matching external side effect '{side_effect:?}' found for command '{command_name}'"
     );
     false

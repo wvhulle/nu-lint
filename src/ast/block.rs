@@ -162,7 +162,7 @@ impl BlockExt for Block {
             }
 
             if !visited.insert(callee_block_id) {
-                log::debug!("Cycle detected in function calls");
+                log::trace!("Cycle detected in function calls");
                 continue;
             }
 
@@ -219,7 +219,7 @@ impl BlockExt for Block {
             return Type::Any;
         }
 
-        log::debug!("Inferring output type for block (depth={depth})");
+        log::trace!("Inferring output type for block (depth={depth})");
 
         let Some(pipeline) = self.pipelines.last() else {
             return self.output_type();
@@ -235,28 +235,28 @@ impl BlockExt for Block {
                     .find_map(|element| element.expr.infer_input_type(Some(in_var), context))
             })
             .unwrap_or(Type::Any);
-        log::debug!("Block inferred input type: {block_input_type:?}");
+        log::trace!("Block inferred input type: {block_input_type:?}");
         let mut current_type = Some(block_input_type);
 
         for (idx, element) in pipeline.elements.iter().enumerate() {
-            log::debug!("Pipeline element {idx}: current_type before = {current_type:?}");
+            log::trace!("Pipeline element {idx}: current_type before = {current_type:?}");
 
             if let Expr::Call(call) = &element.expr.expr {
                 let output = call.get_output_type(context, current_type);
-                log::debug!("Pipeline element {idx} (Call): output type = {output:?}");
+                log::trace!("Pipeline element {idx} (Call): output type = {output:?}");
                 current_type = Some(output);
                 continue;
             }
 
             let inferred = element.expr.infer_output_type(context);
-            log::debug!("Pipeline element {idx} (Expression): inferred type = {inferred:?}");
+            log::trace!("Pipeline element {idx} (Expression): inferred type = {inferred:?}");
             if inferred.is_some() {
                 current_type = inferred;
             }
         }
 
         let final_type = current_type.unwrap_or_else(|| self.output_type());
-        log::debug!("Block final output type: {final_type:?}");
+        log::trace!("Block final output type: {final_type:?}");
         final_type
     }
 

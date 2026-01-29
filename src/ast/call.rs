@@ -102,12 +102,12 @@ impl CallExt for Call {
         let decl = context.working_set.get_decl(self.decl_id);
         let sig = decl.signature();
 
-        log::debug!(
+        log::trace!(
             "get_output_type called for '{}': pipeline_input={pipeline_input:?}",
             self.get_call_name(context)
         );
 
-        log::debug!(
+        log::trace!(
             "Nu parser parsed output type for call '{}': {:?}",
             self.get_call_name(context),
             sig.get_output_type()
@@ -115,14 +115,14 @@ impl CallExt for Call {
 
         let has_pipeline_input = pipeline_input.is_some();
         let input_type = pipeline_input.unwrap_or_else(|| sig.get_input_type());
-        log::debug!(
+        log::trace!(
             "Final input_type used for call '{}': {:?} (from pipeline_input: {})",
             self.get_call_name(context),
             input_type,
             has_pipeline_input
         );
 
-        log::debug!(
+        log::trace!(
             "Command '{}' input_output_types: {:?}",
             self.get_call_name(context),
             sig.input_output_types
@@ -130,7 +130,7 @@ impl CallExt for Call {
 
         for (in_ty, out_ty) in &sig.input_output_types {
             if is_type_compatible(in_ty, &input_type) && !matches!(out_ty, nu_protocol::Type::Any) {
-                log::debug!(
+                log::trace!(
                     "Found compatible type mapping for '{}': {:?} -> {:?} (actual input: {:?})",
                     self.get_call_name(context),
                     in_ty,
@@ -139,7 +139,7 @@ impl CallExt for Call {
                 );
                 return out_ty.clone();
             }
-            log::debug!(
+            log::trace!(
                 "The signature with input type {:?} is not compatible with actual input type {:?} \
                  for command '{}'",
                 in_ty,
@@ -147,7 +147,7 @@ impl CallExt for Call {
                 self.get_call_name(context)
             );
         }
-        log::debug!(
+        log::trace!(
             "Could not find compatible type mapping for '{}'",
             self.get_call_name(context)
         );
@@ -155,7 +155,7 @@ impl CallExt for Call {
         if self.is_branching_control_flow(context)
             && let Some(inferred) = self.infer_from_blocks(context)
         {
-            log::debug!(
+            log::trace!(
                 "Branching control flow '{}' inferred output type from blocks: {:?}",
                 self.get_call_name(context),
                 inferred
@@ -312,7 +312,7 @@ impl CallExt for Call {
     }
 
     fn infer_from_blocks(&self, context: &LintContext) -> Option<nu_protocol::Type> {
-        log::debug!("Inferring type from call with blocks");
+        log::trace!("Inferring type from call with blocks");
 
         let mut block_types = self.positional_iter().filter_map(|arg| {
             arg.extract_block_id().map(|block_id| {
@@ -320,24 +320,24 @@ impl CallExt for Call {
                     .working_set
                     .get_block(block_id)
                     .infer_output_type(context);
-                log::debug!("Block {block_id:?} output type: {output:?}");
+                log::trace!("Block {block_id:?} output type: {output:?}");
                 output
             })
         });
 
         let first = block_types.next()?;
-        log::debug!("First block type: {first:?}");
+        log::trace!("First block type: {first:?}");
 
         let unified = block_types.try_fold(first, |acc, ty| {
             if acc == ty {
                 Some(acc)
             } else {
-                log::debug!("Block types differ: {acc:?} vs {ty:?}");
+                log::trace!("Block types differ: {acc:?} vs {ty:?}");
                 None
             }
         })?;
 
-        log::debug!("Unified block type: {unified:?}");
+        log::trace!("Unified block type: {unified:?}");
         Some(unified)
     }
 }

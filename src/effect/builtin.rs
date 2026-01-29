@@ -19,12 +19,7 @@ pub fn has_builtin_side_effect(
     context: &LintContext,
     call: &Call,
 ) -> bool {
-    log::debug!("Checking side effect '{side_effect:?}' for command '{command_name}'");
-    log::debug!(
-        "Looking in registry for command '{command_name}' and side effect '{side_effect:?}'"
-    );
-
-    let result = BUILTIN_COMMAND_SIDE_EFFECTS
+    BUILTIN_COMMAND_SIDE_EFFECTS
         .iter()
         .find(|(name, _)| *name == command_name || command_name.starts_with(&format!("{name} ")))
         .and_then(|(_, effects)| {
@@ -32,19 +27,11 @@ pub fn has_builtin_side_effect(
                 .iter()
                 .find(|(effect, _)| *effect == side_effect)
                 .map(|(_, predicate)| {
-                    log::debug!("Checking predicate for side effect '{side_effect:?}'");
+                    log::trace!("Checking predicate for side effect '{side_effect:?}'");
                     predicate(context, call)
                 })
         })
-        .unwrap_or(false);
-
-    if result {
-        log::debug!("Predicate matched for side effect '{side_effect:?}'");
-    } else {
-        log::debug!("No matching side effect '{side_effect:?}' found for command '{command_name}'");
-    }
-
-    result
+        .unwrap_or(false)
 }
 
 pub fn has_recursive_flag(call: &Call, context: &LintContext) -> bool {

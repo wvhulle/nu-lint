@@ -7,6 +7,10 @@ language: Rust
 rule:
   kind: string_content
   regex: \'(?<quoted>[^']+)\'
+  inside:
+    kind: function_item
+    regex: .*description.*
+    stopBy: end
 # fix: $quoted
 # utils: Extract repeated rule as local utility here.
 # note: Add detailed explanation for the rule.

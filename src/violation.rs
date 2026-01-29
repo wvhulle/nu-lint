@@ -4,10 +4,7 @@ use lsp_types::DiagnosticTag;
 use miette::{Diagnostic, LabeledSpan, Severity};
 use nu_protocol::Span;
 
-use crate::{
-    config::LintLevel,
-    span::{FileSpan, LintSpan},
-};
+use crate::span::{FileSpan, LintSpan};
 
 /// Represents the source file of a lint violation
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -60,16 +57,6 @@ impl From<String> for SourceFile {
 impl From<&Path> for SourceFile {
     fn from(p: &Path) -> Self {
         Self::File(p.to_string_lossy().to_string())
-    }
-}
-
-impl From<LintLevel> for Severity {
-    fn from(level: LintLevel) -> Self {
-        match level {
-            LintLevel::Error => Self::Error,
-            LintLevel::Warning => Self::Warning,
-            LintLevel::Hint => Self::Advice,
-        }
     }
 }
 
@@ -214,7 +201,7 @@ impl Detection {
 #[derive(Debug, Clone)]
 pub struct Violation {
     pub rule_id: Option<Cow<'static, str>>,
-    pub lint_level: LintLevel,
+    pub lint_level: Severity,
     pub message: Cow<'static, str>,
     pub span: LintSpan,
     pub primary_label: Option<Cow<'static, str>>,
@@ -240,7 +227,7 @@ impl Violation {
     ) -> Self {
         Self {
             rule_id: None,
-            lint_level: LintLevel::default(),
+            lint_level: Default::default(),
             message: detected.message,
             span: detected.span,
             primary_label: detected.primary_label,
@@ -262,7 +249,7 @@ impl Violation {
     }
 
     /// Set the lint level for this violation (used by the engine)
-    pub(crate) const fn set_lint_level(&mut self, level: LintLevel) {
+    pub(crate) const fn set_lint_level(&mut self, level: Severity) {
         self.lint_level = level;
     }
 
@@ -331,7 +318,7 @@ impl Diagnostic for Violation {
     }
 
     fn severity(&self) -> Option<Severity> {
-        Some(self.lint_level.into())
+        self.lint_level.try_into().ok()
     }
 
     fn help<'a>(&'a self) -> Option<Box<dyn fmt::Display + 'a>> {

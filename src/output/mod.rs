@@ -2,13 +2,11 @@ mod text;
 
 use std::fs;
 
+use miette::Severity;
 use serde::Serialize;
 pub use text::format_text;
 
-use crate::{
-    config::LintLevel,
-    violation::{SourceFile, Violation},
-};
+use crate::violation::{SourceFile, Violation};
 
 /// Output format for linting results
 #[derive(clap::ValueEnum, Clone, Copy, Default)]
@@ -40,9 +38,9 @@ impl Summary {
         let (errors, warnings, hints) = violations.iter().fold(
             (0, 0, 0),
             |(errors, warnings, hints), violation| match violation.lint_level {
-                LintLevel::Error => (errors + 1, warnings, hints),
-                LintLevel::Warning => (errors, warnings + 1, hints),
-                LintLevel::Hint => (errors, warnings, hints + 1),
+                Severity::Error => (errors + 1, warnings, hints),
+                Severity::Warning => (errors, warnings + 1, hints),
+                Severity::Advice => (errors, warnings, hints + 1),
             },
         );
 

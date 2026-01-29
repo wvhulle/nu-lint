@@ -29,19 +29,20 @@ fn get_workspace_root(params: &InitializeParams) -> Option<PathBuf> {
 }
 
 fn load_config_from_workspace(workspace_root: Option<&Path>) -> Config {
-    workspace_root.and_then(find_config_file_from).map_or_else(
-        || {
-            tracing::debug!("No workspace root or config file found, using defaults");
+    if let Some(workspace_root) = workspace_root {
+        if let Some(config_file) = find_config_file_from(workspace_root) {
+            tracing::info!(?config_file);
+            Config::load_from_file(&config_file).unwrap()
+        } else {
             Config::default()
-        },
-        |path| {
-            tracing::info!("Loading config from {}", path.display());
-            Config::load_from_file(&path).unwrap_or_else(|e| {
-                tracing::warn!("Failed to load config from {}: {e}", path.display());
-                Config::default()
-            })
-        },
-    )
+        }
+    } else {
+        if let Some(config_file) = find_config_file_from(&dirs::home_dir().unwrap()) {
+            Config::load_from_file(&config_file).unwrap()
+        } else {
+            Config::default()
+        }
+    }
 }
 
 fn is_config_file(uri: &Uri, workspace_root: Option<&Path>) -> bool {

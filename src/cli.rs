@@ -5,6 +5,7 @@ use std::{
 };
 
 use clap::Parser;
+use miette::Severity;
 
 use crate::{
     LintLevel,
@@ -123,7 +124,7 @@ impl Cli {
         let summary = Summary::from_violations(&violations);
         eprintln!("{}", summary.format_compact());
 
-        if violations.iter().any(|v| v.lint_level > LintLevel::Hint) {
+        if violations.iter().any(|v| v.lint_level > Severity::Advice) {
             process::exit(1);
         } else {
             process::exit(0);
@@ -183,10 +184,10 @@ impl Cli {
         for rule in &sorted_rules {
             let level = config.get_lint_level(*rule);
             let level_char = match level {
-                Some(LintLevel::Hint) => 'H',
-                Some(LintLevel::Warning) => 'W',
-                Some(LintLevel::Error) => 'E',
-                None => 'D',
+                LintLevel::Hint => 'H',
+                LintLevel::Warning => 'W',
+                LintLevel::Error => 'E',
+                LintLevel::Off => 'D',
             };
             let fix_char = if rule.has_auto_fix() { 'F' } else { ' ' };
             let desc = rule.short_description();

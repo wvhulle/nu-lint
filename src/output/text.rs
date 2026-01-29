@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Write};
+use std::{cmp::Reverse, collections::HashMap, fmt::Write};
 
 use miette::{NamedSource, Report};
 
@@ -136,7 +136,7 @@ fn format_combined_diff(source_code: &str, replacements: &[Replacement]) -> Stri
 
     // Sort replacements by start position (descending) to apply from end to start
     let mut sorted_replacements: Vec<_> = replacements.iter().collect();
-    sorted_replacements.sort_by(|a, b| b.file_span().start.cmp(&a.file_span().start));
+    sorted_replacements.sort_by_key(|b| Reverse(b.file_span().start));
 
     // Find the span that encompasses all replacements
     let min_start = replacements

@@ -1,4 +1,7 @@
-use std::{collections::HashMap, fmt::Write, fs, io::Error as IoError, path::PathBuf, vec::Vec};
+use std::{
+    cmp::Reverse, collections::HashMap, fmt::Write, fs, io::Error as IoError, path::PathBuf,
+    vec::Vec,
+};
 
 use crate::{
     engine::LintEngine,
@@ -15,12 +18,12 @@ pub struct FixResult {
     pub fixes_applied: usize,
 }
 
-/// Apply fixes to stdin content
+/// Apply fixes to standard input content
 ///
 /// Returns the fixed content as a string
 #[must_use]
 pub fn apply_fixes_to_stdin(violations: &[Violation]) -> Option<String> {
-    // Filter violations that come from stdin and have fixes
+    // Filter violations that come from standard input and have fixes
     let stdin_violations: Vec<&Violation> = violations
         .iter()
         .filter(|v| {
@@ -161,7 +164,7 @@ fn apply_single_fix_to_content(content: &str, fix: &Fix) -> String {
     }
 
     // Sort replacements by span start in reverse order
-    replacements.sort_by(|a, b| b.file_span().start.cmp(&a.file_span().start));
+    replacements.sort_by_key(|b| Reverse(b.file_span().start));
 
     let mut result = content.to_string();
 
@@ -192,7 +195,7 @@ fn apply_single_fix_to_content(content: &str, fix: &Fix) -> String {
     result
 }
 
-/// Group violations by their file path
+/// Group violations by their filepath
 fn group_violations_by_file(violations: &[Violation]) -> HashMap<PathBuf, Vec<&Violation>> {
     let mut grouped: HashMap<PathBuf, Vec<&Violation>> = HashMap::new();
 
@@ -226,7 +229,7 @@ fn apply_fixes_to_content(content: &str, violations: &[&Violation]) -> String {
 
     // Sort replacements by span start in reverse order to apply from end to start
     // This ensures that earlier positions remain valid as we modify the string
-    replacements.sort_by(|a, b| b.file_span().start.cmp(&a.file_span().start));
+    replacements.sort_by_key(|b| Reverse(b.file_span().start));
 
     // Deduplicate replacements with identical spans
     // This prevents applying the same fix multiple times
@@ -321,13 +324,11 @@ pub fn format_fix_results(results: &[FixResult], dry_run: bool) -> String {
 mod tests {
     use std::borrow::Cow;
 
+    use miette::Severity;
     use nu_protocol::Span;
 
     use super::*;
-    use crate::{
-        config::LintLevel,
-        violation::{Fix, Replacement, SourceFile, Violation},
-    };
+    use crate::violation::{Fix, Replacement, SourceFile, Violation};
 
     #[test]
     fn test_apply_multiple_replacements() {
@@ -345,7 +346,7 @@ mod tests {
 
         let violation = Violation {
             rule_id: Some(Cow::Borrowed("test_rule")),
-            lint_level: LintLevel::Warning,
+            lint_level: Severity::Warning,
             message: Cow::Borrowed("Test"),
             span: FileSpan::new(0, 21).into(),
             primary_label: None,
@@ -403,7 +404,7 @@ mod tests {
         // iteratively
         use crate::{config::Config, engine::LintEngine};
 
-        // This triggers multiple rules: ignore_over_dev_null, posix_tools::grep, etc.
+        // This triggers multiple rules.
         let content = "^grep pattern file.txt err> /dev/null | lines\n";
 
         let config = Config::default();
@@ -496,7 +497,7 @@ mod tests {
 
         let with_fix = Violation {
             rule_id: Some(Cow::Borrowed("test_rule")),
-            lint_level: LintLevel::Warning,
+            lint_level: Severity::Warning,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 5).into(),
             primary_label: None,
@@ -513,7 +514,7 @@ mod tests {
 
         let without_fix = Violation {
             rule_id: Some(Cow::Borrowed("test_rule")),
-            lint_level: LintLevel::Warning,
+            lint_level: Severity::Warning,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 5).into(),
             primary_label: None,
@@ -537,7 +538,7 @@ mod tests {
     fn test_group_violations_by_file() {
         let v1 = Violation {
             rule_id: Some(Cow::Borrowed("test_rule")),
-            lint_level: LintLevel::Warning,
+            lint_level: Severity::Warning,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 5).into(),
             primary_label: None,
@@ -554,7 +555,7 @@ mod tests {
 
         let v2 = Violation {
             rule_id: Some(Cow::Borrowed("test_rule")),
-            lint_level: LintLevel::Warning,
+            lint_level: Severity::Warning,
             message: Cow::Borrowed("Test"),
             span: Span::new(0, 5).into(),
             primary_label: None,
@@ -571,7 +572,7 @@ mod tests {
 
         let v3 = Violation {
             rule_id: Some(Cow::Borrowed("test_rule")),
-            lint_level: LintLevel::Warning,
+            lint_level: Severity::Warning,
             message: Cow::Borrowed("Test"),
             span: Span::new(5, 10).into(),
             primary_label: None,

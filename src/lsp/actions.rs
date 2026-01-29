@@ -3,10 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{
-    LintError,
-    config::{Config, ToggledLevel},
-};
+use crate::{LintError, LintLevel, config::Config};
 
 pub const DISABLE_RULE_COMMAND: &str = "nu-lint.disableRule";
 
@@ -30,22 +27,16 @@ pub fn execute_disable_rule(
         Config::load_from_str(&content)?
     };
 
-    if config.rules.get(rule_id) == Some(&ToggledLevel(None)) {
+    if config.rules.get(rule_id) == Some(&LintLevel::Off) {
         return Ok(config_path);
     }
 
-    config.rules.insert(rule_id.to_string(), ToggledLevel(None));
+    config.rules.insert(rule_id.to_string(), LintLevel::Off);
 
     let new_content =
         toml::to_string_pretty(&config).map_err(|source| LintError::ConfigSerialize { source })?;
 
-    // Atomic write: write to temp file, then rename
-    let temp_path = config_path.with_extension("toml.tmp");
-    fs::write(&temp_path, &new_content).map_err(|source| LintError::Io {
-        path: temp_path.clone(),
-        source,
-    })?;
-    fs::rename(&temp_path, &config_path).map_err(|source| LintError::Io {
+    fs::write(&config_path, &new_content).map_err(|source| LintError::Io {
         path: config_path.clone(),
         source,
     })?;

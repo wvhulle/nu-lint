@@ -24,7 +24,7 @@ pub trait DetectFix: Send + Sync + 'static {
     fn id(&self) -> &'static str;
 
     /// Default lint level of rule
-    fn level(&self) -> Option<LintLevel>;
+    fn level(&self) -> LintLevel;
 
     /// Create a vector of detections of violations of the rule
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)>;
@@ -81,7 +81,7 @@ pub trait Rule: Send + Sync {
     fn id(&self) -> &'static str;
     fn short_description(&self) -> &'static str;
     fn source_link(&self) -> Option<&'static str>;
-    fn level(&self) -> Option<LintLevel>;
+    fn level(&self) -> LintLevel;
     fn has_auto_fix(&self) -> bool;
     fn conflicts_with(&self) -> &'static [&'static dyn Rule];
     fn diagnostic_tags(&self) -> &'static [DiagnosticTag];
@@ -101,7 +101,7 @@ impl<T: DetectFix> Rule for T {
         DetectFix::source_link(self)
     }
 
-    fn level(&self) -> Option<LintLevel> {
+    fn level(&self) -> LintLevel {
         DetectFix::level(self)
     }
 
@@ -189,6 +189,8 @@ impl dyn Rule {
     /// Assumes there is only one violation and fix in the code (with zero or
     /// more replacements)
     pub fn apply_first_fix(&self, code: &str) -> String {
+        use std::cmp::Reverse;
+
         let violation = self.first_violation(code);
         let fix = violation.fix.expect("Expected violation to have a fix");
         assert!(
@@ -197,7 +199,7 @@ impl dyn Rule {
         );
 
         let mut replacements = fix.replacements;
-        replacements.sort_by(|a, b| b.file_span().start.cmp(&a.file_span().start));
+        replacements.sort_by_key(|b| Reverse(b.file_span().start));
 
         let mut result = code.to_string();
         for replacement in replacements {

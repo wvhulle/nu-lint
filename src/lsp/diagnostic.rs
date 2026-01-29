@@ -4,8 +4,9 @@ use lsp_types::{
     CodeDescription, Diagnostic, DiagnosticRelatedInformation, DiagnosticSeverity, Location,
     NumberOrString, Position, Range, Uri,
 };
+use miette::Severity;
 
-use crate::{LintLevel, violation::Violation};
+use crate::violation::Violation;
 
 #[allow(
     clippy::cast_possible_truncation,
@@ -85,11 +86,11 @@ impl LineIndex {
     }
 }
 
-const fn lint_level_to_severity(level: LintLevel) -> DiagnosticSeverity {
+const fn lint_level_to_severity(level: Severity) -> DiagnosticSeverity {
     match level {
-        LintLevel::Error => DiagnosticSeverity::ERROR,
-        LintLevel::Warning => DiagnosticSeverity::WARNING,
-        LintLevel::Hint => DiagnosticSeverity::HINT,
+        Severity::Error => DiagnosticSeverity::ERROR,
+        Severity::Warning => DiagnosticSeverity::WARNING,
+        Severity::Advice => DiagnosticSeverity::HINT,
     }
 }
 
@@ -294,7 +295,7 @@ mod tests {
 
         let mut violation = Violation::from_detected(violation, None, Some("Combine with 'and'"));
 
-        violation.lint_level = LintLevel::Warning;
+        violation.lint_level = Severity::Warning;
 
         let diagnostic = violation_to_diagnostic(&violation, source, &line_index, &file_uri);
 

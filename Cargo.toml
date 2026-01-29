@@ -15,7 +15,7 @@ license = "MIT"
 name = "nu-lint"
 repository = "https://codeberg.org/wvhulle/nu-lint"
 # Find latest published version with `cargo search nu-lint`
-version = "0.0.142"
+version = "0.1.0"
 
 [lints.clippy]
 # https://rust-lang.github.io/rust-clippy/master/index.html
@@ -62,8 +62,9 @@ needless_bool_assign = "deny"
 needless_collect = "deny"
 needless_continue = "deny"
 needless_range_loop = "deny"
-option_if_let_else = "deny"
+option_if_let_else = "allow"
 option_map_or_none = "deny"
+map_or_else = "allow"
 panic_in_result_fn = "deny"
 redundant_clone = "deny"
 redundant_closure_for_method_calls = "deny"

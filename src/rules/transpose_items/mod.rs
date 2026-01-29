@@ -28,6 +28,8 @@ struct TransposeEachPattern {
     transpose_span: nu_protocol::Span,
     each_span: nu_protocol::Span,
     closure_span: nu_protocol::Span,
+    /// The closure parameter's `VarId` for AST-based span lookup
+    param_var_id: nu_protocol::VarId,
     /// Cell path accesses that need replacement
     cell_path_replacements: Vec<CellPathReplacement>,
 }
@@ -195,6 +197,7 @@ fn detect_pattern_in_pipeline(
                 transpose_span: pair.first.head,
                 each_span: pair.second.head,
                 closure_span: closure_arg.span,
+                param_var_id: closure_var_id,
                 cell_path_replacements,
             })
         })
@@ -286,12 +289,9 @@ impl DetectFix for ItemsInsteadOfTransposeEach {
             return None;
         };
 
-        let Expr::Closure(block_id) = &closure_expr.expr else {
+        let Expr::Closure(_block_id) = &closure_expr.expr else {
             return None;
         };
-
-        let block = context.working_set.get_block(*block_id);
-        let param = &block.signature.required_positional[0];
 
         let mut replacements = Vec::new();
 
@@ -301,40 +301,13 @@ impl DetectFix for ItemsInsteadOfTransposeEach {
         replacements.push(Replacement::new(transpose_each_span, "items ".to_string()));
 
         // 2. Replace the closure parameter declaration `|row|` with `|col1, col2|`
-        // Find the parameter span in the closure - it's between the first { and the
-        // body
-        let closure_text = context.expr_text(closure_expr);
-
-        // Find parameter declaration span: from after `{` to before body
-        // The parameter is at `param.name` with its span
-        if param.var_id.is_some() {
-            // Find where the parameter name is declared in the closure signature
-            // The signature spans from `{|` to `|` before body
-            let _body_span = block.span?;
-
-            // The param declaration is between the opening `{|` and the closing `|` before
-            // body We need to find the span of `|param_name|` and replace with
-            // `|col1, col2|`
-            let closure_start = closure_expr.span.start;
-
-            // The parameter list span is from closure_start to body_start (includes {| and
-            // |}) But we only want to replace the parameter name itself
-            // Find `|param_name|` pattern in the closure header
-            if let Some(open_pipe_offset) = closure_text.find('|') {
-                let after_open_pipe = &closure_text[open_pipe_offset + 1..];
-                if let Some(close_pipe_offset) = after_open_pipe.find('|') {
-                    // Span of the parameter list (between the pipes)
-                    let param_list_start = closure_start + open_pipe_offset + 1;
-                    let param_list_end = closure_start + open_pipe_offset + 1 + close_pipe_offset;
-                    let param_list_span = Span::new(param_list_start, param_list_end);
-
-                    replacements.push(Replacement::new(
-                        param_list_span,
-                        format!("{}, {}", pattern.col1, pattern.col2),
-                    ));
-                }
-            }
-        }
+        // Use AST-based span lookup via the variable's declaration_span
+        let var = context.working_set.get_variable(pattern.param_var_id);
+        let param_span = var.declaration_span;
+        replacements.push(Replacement::new(
+            param_span,
+            format!("{}, {}", pattern.col1, pattern.col2),
+        ));
 
         // 3. Replace each cell path access `$row.col1` with `$col1`, `$row.col2` with
         //    `$col2`

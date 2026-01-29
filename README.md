@@ -243,7 +243,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 
 - `curl_to_http` (auto-fix): `curl` replaceable with `http` commands
 - `fd_to_glob` (auto-fix): `fd` replaceable with `glob` or `ls`
-- `jq_to_nu_pipeline` (auto-fix): Simple `jq` filter replaceable with pipeline
+- `jq_to_nu_pipeline` (auto-fix): Simple `jq` filter replaceable with Nushell pipeline
 - `wget_to_http_get` (auto-fix): `wget` replaceable with `http get`
 - `external_which_to_builtin` (auto-fix): External `which` replaceable with built-in
 - `structured_data_to_csv_tool` (auto-fix): Table piped to CSV tool without `to csv`
@@ -318,7 +318,7 @@ nix run git+https://codeberg.org/wvhulle/nu-lint
 
 ### Pre-Compiled Binaries
 
-Download the appropriate binary from the releases subpage.
+Download the appropriate binary from the releases subpage. (Not always the most up-to-date, prefer Crates.io releases)
 
 ## Editor extension
 

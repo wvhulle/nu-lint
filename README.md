@@ -382,6 +382,10 @@ Add to your `~/.config/kate/lspclient/settings.json`:
 }
 ```
 
+### Zed
+
+Available as [`Nu-Lint` extension](https://codeberg.org/vmeurisse/nu-lint-zed#readme).
+
 ### Other
 
 You can also implement your own editor extensions using the `--lsp` flag as in: `nu-lint --lsp`. This will spawn a language server compliant with the [Language Server Protocol](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/).

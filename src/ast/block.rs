@@ -349,15 +349,28 @@ impl BlockExt for Block {
             .flat_map(|p| check_pipeline(p, context))
             .collect();
 
-        // Recurse into nested blocks (closures, blocks, subexpressions)
+        // Collect block_ids from nested expressions (closures, blocks,
+        // subexpressions) without recursing into their contents.
+        let mut child_block_ids = Vec::new();
+        let mut collect_block_id =
+            |expr: &Expression, _parent: Option<&Expression>| match expr.extract_block_id() {
+                Some(block_id) => {
+                    child_block_ids.push(block_id);
+                    ControlFlow::Break(())
+                }
+                None => ControlFlow::Continue(()),
+            };
         for pipeline in &self.pipelines {
             for element in &pipeline.elements {
-                element.expr.flat_map(
-                    context.working_set,
-                    &|expr: &Expression| recurse_into_nested(expr, context, check_pipeline),
-                    &mut results,
-                );
+                element
+                    .expr
+                    .traverse_with_parent(context, None, &mut collect_block_id);
             }
+        }
+
+        for block_id in child_block_ids {
+            let block = context.working_set.get_block(block_id);
+            results.extend(block.detect_in_pipelines(context, check_pipeline));
         }
 
         results
@@ -389,19 +402,4 @@ impl BlockExt for Block {
         let end = elements_before_columns.last()?.expr.span.end;
         Some(Span::new(start, end))
     }
-}
-
-fn recurse_into_nested<T>(
-    expr: &Expression,
-    context: &LintContext,
-    check_pipeline: impl Fn(&Pipeline, &LintContext) -> Vec<T> + Copy,
-) -> Vec<T> {
-    expr.extract_block_id()
-        .map(|id| {
-            context
-                .working_set
-                .get_block(id)
-                .detect_in_pipelines(context, check_pipeline)
-        })
-        .unwrap_or_default()
 }

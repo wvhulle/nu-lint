@@ -23,7 +23,7 @@ $env.VAR2 = "b"
 
 #[test]
 fn test_nested_paths() {
-    // Nested paths should be handled by merge_nested_upsert
+    // Nested paths are no longer linted
     RULE.assert_ignores(
         r#"
 mut config = {}
@@ -47,7 +47,7 @@ $data.b = 2
 
 #[test]
 fn test_no_conflict_with_use_load_env() {
-    // Flat $env should not trigger merge_flat_upsert
+    // Flat $env should not trigger use_record_spread
     RULE.assert_count(
         r#"
 $env.VAR1 = "value1"
@@ -58,8 +58,8 @@ $env.VAR2 = "value2"
 }
 
 #[test]
-fn test_no_conflict_with_merge_nested_upsert() {
-    // Nested non-$env should not trigger merge_flat_upsert
+fn test_nested_non_env_not_detected() {
+    // Nested non-$env should not trigger use_record_spread
     RULE.assert_count(
         r#"
 mut cfg = {}

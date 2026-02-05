@@ -83,8 +83,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `append_to_concat_assign` (auto-fix): Use ++= operator instead of verbose append in assignment
 - `custom_log_command` (auto-fix): Custom log command shadows stdlib. Use `use std/log` instead
 - `chained_append` (auto-fix): Use spread syntax instead of chained 'append' commands
-- `merge_flat_upsert` (auto-fix): Merge consecutive flat field assignments with upsert
-- `merge_nested_upsert` (auto-fix): Merge consecutive nested field assignments with upsert
+- `use_record_spread` (auto-fix): Use record spread for consecutive field assignments
 - `use_load_env` (auto-fix): Use load-env for multiple $env assignments
 - `remove_hat_not_builtin` (auto-fix): Detect unnecessary '^' prefix on external commands
 

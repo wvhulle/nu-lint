@@ -1,14 +1,12 @@
-mod merge_flat_upsert;
-mod merge_nested_upsert;
 mod use_load_env;
+mod use_record_spread;
 
-pub use merge_flat_upsert::RULE as MERGE_FLAT_UPSERT;
-pub use merge_nested_upsert::RULE as MERGE_NESTED_UPSERT;
 use nu_protocol::{
     Span, VarId,
     ast::{Assignment, Block, Expr, Expression, Operator, PathMember, Pipeline},
 };
 pub use use_load_env::RULE as USE_LOAD_ENV;
+pub use use_record_spread::RULE as USE_RECORD_SPREAD;
 
 use crate::{
     ast::{

@@ -29,7 +29,7 @@ $env.config.buffer_editor = "vim"
 
 #[test]
 fn test_non_env_variable() {
-    // Non-$env flat assignments are handled by merge_flat_upsert
+    // Non-$env flat assignments are handled by use_record_spread
     RULE.assert_ignores(
         r#"
 mut config = {}
@@ -40,7 +40,7 @@ $config.b = 2
 }
 
 #[test]
-fn test_no_conflict_with_merge_flat_upsert() {
+fn test_no_conflict_with_use_record_spread() {
     // Flat non-$env should not trigger use_load_env
     RULE.assert_count(
         r#"
@@ -53,7 +53,7 @@ $data.y = 2
 }
 
 #[test]
-fn test_no_conflict_with_merge_nested_upsert() {
+fn test_nested_non_env_not_detected() {
     // Nested non-$env should not trigger use_load_env
     RULE.assert_count(
         r#"

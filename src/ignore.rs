@@ -1,6 +1,5 @@
 use std::collections::{HashMap, HashSet};
 
-
 /// Parse `# nu-lint-ignore: rule_a, rule_b` from a line
 pub fn parse_ignore_comment(line: &str) -> Option<Vec<&str>> {
     line.trim()

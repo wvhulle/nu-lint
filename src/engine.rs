@@ -256,18 +256,13 @@ impl LintEngine {
         // Filter out ignored violations (after normalization so spans are
         // file-relative)
         let ignore_index = ignore::IgnoreIndex::new(source);
-        let mut violations: Vec<Violation> = violations
+        violations
             .into_iter()
             .filter(|v| {
                 let rule_id = v.rule_id.as_deref().unwrap_or("");
                 !ignore_index.should_ignore(v.file_span().start, rule_id)
             })
-            .collect();
-
-        // Add warnings for unknown rule IDs in ignore comments
-        violations.extend(ignore::validate_ignores(source));
-
-        violations
+            .collect()
     }
 
     /// Collect violations from all enabled rules

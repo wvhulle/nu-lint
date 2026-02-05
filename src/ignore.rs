@@ -1,10 +1,5 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::{
-    rules::USED_RULES,
-    span::FileSpan,
-    violation::{Detection, Violation},
-};
 
 /// Parse `# nu-lint-ignore: rule_a, rule_b` from a line
 pub fn parse_ignore_comment(line: &str) -> Option<Vec<&str>> {
@@ -40,7 +35,6 @@ impl IgnoreIndex {
         let lines: Vec<&str> = source.lines().collect();
         let mut ignored_lines = HashMap::new();
 
-        // Build line offsets for offset-to-line conversion
         let mut line_offsets = vec![0];
         for (pos, ch) in source.char_indices() {
             if ch == '\n' {
@@ -49,22 +43,18 @@ impl IgnoreIndex {
         }
 
         for (line_num, line) in lines.iter().enumerate() {
-            // First, try to parse the whole line (for standalone comments)
             if let Some(rules) = parse_ignore_comment(line) {
                 let rule_set: HashSet<String> = rules.iter().map(|&s| String::from(s)).collect();
-                // Standalone comment - find the target line (skip attributes and empty lines)
                 let target = find_target_line(&lines, line_num + 1);
                 ignored_lines
                     .entry(target)
                     .or_insert_with(HashSet::new)
                     .extend(rule_set);
             } else if let Some(comment_start) = line.find('#') {
-                // Check if there's an inline ignore comment
                 let comment_part = &line[comment_start..];
                 if let Some(rules) = parse_ignore_comment(comment_part) {
                     let rule_set: HashSet<String> =
                         rules.iter().map(|&s| String::from(s)).collect();
-                    // Inline comment - ignore violations on the same line
                     ignored_lines
                         .entry(line_num)
                         .or_insert_with(HashSet::new)
@@ -108,39 +98,6 @@ fn find_target_line(lines: &[&str], start: usize) -> usize {
             !trimmed.is_empty() && !trimmed.starts_with('@')
         })
         .map_or(start, |(i, _)| i)
-}
-
-/// Validate ignore comments and return warnings for unknown rule IDs
-pub fn validate_ignores(source: &str) -> Vec<Violation> {
-    let known: HashSet<&str> = USED_RULES.iter().map(|r| r.id()).collect();
-
-    source
-        .lines()
-        .enumerate()
-        .filter_map(|(line_num, line)| {
-            parse_ignore_comment(line).map(|rules| (line_num, line, rules))
-        })
-        .flat_map(|(line_num, line, rules)| {
-            let start: usize = source.lines().take(line_num).map(|l| l.len() + 1).sum();
-            let end = start + line.len();
-
-            rules
-                .into_iter()
-                .filter(|rule_id| !known.contains(rule_id))
-                .map(move |rule_id| {
-                    let mut v = Violation::from_detected(
-                        Detection::from_file_span(
-                            format!("Unknown rule '{rule_id}' in ignore comment"),
-                            FileSpan::new(start, end),
-                        ),
-                        None,
-                        None,
-                    );
-                    v.set_rule_id("unknown_ignore_rule");
-                    v
-                })
-        })
-        .collect()
 }
 
 #[cfg(test)]

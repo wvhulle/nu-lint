@@ -13,9 +13,9 @@ use crate::{
     config::{Config, find_config_file_from},
     engine::{LintEngine, collect_nu_files},
     fix::{apply_fixes, apply_fixes_to_stdin, format_fix_results},
+    format::{Format, Summary, format_output},
     log::{init_lsp_log, init_test_log},
     lsp,
-    output::{Format, Summary, format_output},
     rule::Rule,
     rules::{USED_RULES, groups::ALL_GROUPS},
 };
@@ -55,7 +55,7 @@ pub struct Cli {
     ast: Option<String>,
 
     /// Output format
-    #[arg(long, short = 'f', value_enum, default_value_t = Format::Text)]
+    #[arg(long, short = 'f', value_enum, default_value_t = Format::Pretty)]
     format: Format,
 
     /// Path to config file

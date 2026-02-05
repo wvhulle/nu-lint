@@ -1,26 +1,31 @@
-mod text;
+mod compact;
+mod pretty;
 
 use std::fs;
 
+pub use compact::format_compact;
 use miette::Severity;
+pub use pretty::{format_diff_context, format_pretty};
 use serde::Serialize;
-pub use text::format_text;
 
 use crate::violation::{SourceFile, Violation};
 
 /// Output format for linting results
 #[derive(clap::ValueEnum, Clone, Copy, Default)]
 pub enum Format {
-    /// Human-readable text format (default)
+    /// Human-readable text format with source snippets (default)
     #[default]
-    Text,
+    Pretty,
+    /// One-line-per-violation format (gcc/eslint style)
+    Compact,
 }
 
 /// Format and output linting results
 #[must_use]
 pub fn format_output(violations: &[Violation], format: Format) -> String {
     match format {
-        Format::Text => format_text(violations),
+        Format::Pretty => format_pretty(violations),
+        Format::Compact => format_compact(violations),
     }
 }
 

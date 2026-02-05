@@ -12,7 +12,6 @@ mod ignore;
 pub mod log;
 #[cfg(feature = "lsp")]
 mod lsp;
-mod output;
 mod rule;
 mod rules;
 mod span;

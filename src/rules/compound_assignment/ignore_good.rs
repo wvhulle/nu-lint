@@ -35,3 +35,9 @@ fn test_good_append_assignment() {
     let good = "mut items = []; $items ++= [1, 2, 3]";
     RULE.assert_ignores(good);
 }
+
+#[test]
+fn test_good_different_cell_paths() {
+    let good = "mut var = {a: 5, b: 3}; $var.a = $var.b + 2";
+    RULE.assert_ignores(good);
+}

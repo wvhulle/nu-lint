@@ -1,6 +1,6 @@
 use nu_protocol::{
     Span,
-    ast::{Assignment, Expr, Expression, Math, Operator},
+    ast::{Assignment, Expr, Expression, Math, Operator, PathMember},
 };
 
 use crate::{
@@ -12,11 +12,30 @@ use crate::{
 };
 
 fn refers_to_same_variable(expr1: &Expression, expr2: &Expression, context: &LintContext) -> bool {
-    match (
-        expr1.extract_variable_name(context),
-        expr2.extract_variable_name(context),
-    ) {
-        (Some(name1), Some(name2)) => name1 == name2,
+    match (&expr1.expr, &expr2.expr) {
+        (Expr::Var(_) | Expr::VarDecl(_), Expr::Var(_) | Expr::VarDecl(_)) => {
+            match (
+                expr1.extract_variable_name(context),
+                expr2.extract_variable_name(context),
+            ) {
+                (Some(name1), Some(name2)) => name1 == name2,
+                _ => false,
+            }
+        }
+        (Expr::FullCellPath(fcp1), Expr::FullCellPath(fcp2)) => {
+            fcp1.head.expr == fcp2.head.expr && {
+                fcp1.tail
+                    .iter()
+                    .zip(fcp2.tail.iter())
+                    .all(|(left, right)| match (left, right) {
+                        (PathMember::String { val: l, .. }, PathMember::String { val: r, .. }) => {
+                            l == r
+                        }
+                        (PathMember::Int { val: l, .. }, PathMember::Int { val: r, .. }) => l == r,
+                        _ => false,
+                    })
+            }
+        }
         _ => false,
     }
 }

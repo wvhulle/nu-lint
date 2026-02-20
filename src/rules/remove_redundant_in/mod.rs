@@ -45,7 +45,9 @@ fn find_redundant_in_span(pipeline: &Pipeline, context: &LintContext) -> Option<
     let first = inner_pipeline.elements.first()?;
 
     // Check if first element is $in variable
-    if !matches!(&first.expr.expr, Expr::Var(_) | Expr::FullCellPath(_)) {
+    if !matches!(&first.expr.expr, Expr::Var(_))
+        && !matches!(&first.expr.expr, Expr::FullCellPath(f) if matches!(f.head.expr, Expr::Var(_)))
+    {
         return None;
     }
 

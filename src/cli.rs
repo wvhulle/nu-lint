@@ -4,7 +4,7 @@ use std::{
     process,
 };
 
-use clap::Parser;
+use clap::{Parser, crate_version};
 use miette::Severity;
 
 use crate::{
@@ -23,7 +23,7 @@ use crate::{
 #[derive(Parser)]
 #[command(name = "nu-lint")]
 #[command(about = "A linter for Nushell scripts")]
-#[command(version)]
+#[command(version = crate_version!())]
 pub struct Cli {
     /// Files or directories to lint/fix
     #[arg(default_value = ".")]
@@ -76,14 +76,17 @@ impl Cli {
     fn load_config(path: Option<PathBuf>) -> Config {
         path.map_or_else(
             || {
-                find_config_file_from(Path::new(".")).map_or_else(Config::default, |path| {
+                log::debug!("No configuration file path provided. Looking elsewhere.");
+                let config = find_config_file_from(Path::new(".")).map_or_else(Config::default, |path| {
                     Config::load_from_file(&path).unwrap_or_else(|e| {
                         panic!(
                             "Loading of configuration file failed. Probably bacause the format \
                              was not as expected. Deserialization error:\n{e:#?}"
                         )
                     })
-                })
+                });
+                tracing::debug!(?config);
+                config
             },
             |path| Config::load_from_file(&path).unwrap(),
         )

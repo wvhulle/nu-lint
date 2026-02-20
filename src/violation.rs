@@ -227,7 +227,7 @@ impl Violation {
     ) -> Self {
         Self {
             rule_id: None,
-            lint_level: Default::default(),
+            lint_level: Severity::default(),
             message: detected.message,
             span: detected.span,
             primary_label: detected.primary_label,
@@ -317,9 +317,7 @@ impl Diagnostic for Violation {
         )))
     }
 
-    fn severity(&self) -> Option<Severity> {
-        self.lint_level.try_into().ok()
-    }
+
 
     fn help<'a>(&'a self) -> Option<Box<dyn fmt::Display + 'a>> {
         self.long_description

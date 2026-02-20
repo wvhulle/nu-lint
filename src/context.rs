@@ -103,6 +103,29 @@ impl<'a> LintContext<'a> {
         }
     }
 
+    /// Create a new `LintContext` using the default configuration.
+    ///
+    /// This avoids searching the file system for a user configuration file,
+    /// making it suitable for tests and other contexts where deterministic
+    /// behaviour is required.
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(crate) fn with_default_config(
+        source: &'a str,
+        ast: &'a Block,
+        engine_state: &'a EngineState,
+        working_set: &'a StateWorkingSet<'a>,
+        file_offset: usize,
+    ) -> Self {
+        Self::new(
+            source,
+            ast,
+            engine_state,
+            working_set,
+            file_offset,
+            Config::default_static(),
+        )
+    }
+
     #[must_use]
     pub const unsafe fn source(&self) -> &str {
         self.source
@@ -451,7 +474,10 @@ impl<'a> LintContext<'a> {
 
 #[cfg(test)]
 impl LintContext<'_> {
-    /// Helper to create a test context with stdlib commands loaded
+    /// Helper to create a test context with stdlib commands loaded.
+    ///
+    /// Always uses the default configuration so that user-specific overrides
+    /// (e.g. `~/.nu-lint.toml`) do not interfere with test results.
     #[track_caller]
     pub fn test_with_parsed_source<F, R>(source: &str, f: F) -> R
     where
@@ -461,15 +487,13 @@ impl LintContext<'_> {
 
         let engine_state = LintEngine::new_state();
         let (block, working_set, file_offset) = parse_source(engine_state, source.as_bytes());
-        let config = Config::default();
 
-        let context = LintContext::new(
+        let context = LintContext::with_default_config(
             source,
             &block,
             engine_state,
             &working_set,
             file_offset,
-            &config,
         );
 
         f(context)

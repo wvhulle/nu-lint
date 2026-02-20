@@ -2,6 +2,7 @@ use std::{
     collections::HashMap,
     fs,
     path::{Path, PathBuf},
+    sync::LazyLock,
 };
 
 use miette::Severity;
@@ -72,6 +73,16 @@ impl Default for Config {
 }
 
 impl Config {
+    /// Return a `&'static` reference to the default configuration.
+    ///
+    /// Useful when a `&'static Config` is needed without searching
+    /// the file system (e.g. in tests).
+    #[must_use]
+    pub fn default_static() -> &'static Self {
+        static DEFAULT: LazyLock<Config> = LazyLock::new(Config::default);
+        &DEFAULT
+    }
+
     /// Load configuration from a TOML string.
     ///
     /// # Errors

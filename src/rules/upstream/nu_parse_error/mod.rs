@@ -69,7 +69,7 @@ impl DetectFix for NuParseError {
             let in_external_file = !context.span_in_user_file(error_span);
 
             if in_external_file && context.config.skip_external_parse_errors {
-                log::trace!(
+                log::debug!(
                     "Skipping parse error in external file: {parse_error:?} (span {error_span:?})",
                 );
                 continue;
@@ -77,32 +77,36 @@ impl DetectFix for NuParseError {
 
             let error_key = (error_span.start, error_span.end, parse_error.to_string());
             if seen_errors.contains(&error_key) {
-                log::trace!(
+                log::debug!(
                     "Skipping duplicate parse error: {parse_error:?} (span {error_span:?})"
                 );
                 continue;
             }
             seen_errors.insert(error_key);
 
-            log::trace!("Found parse error in user file: {parse_error:?}");
+            log::debug!("Found parse error in user file: {parse_error:?}");
 
             // Collect labels
             let labels: Vec<_> = parse_error.labels().into_iter().flatten().collect();
 
             // Check if any labels point to external files (indicates dynamic import issue)
-            let _has_external_labels = labels.iter().any(|label| {
+            let has_external_labels = labels.iter().any(|label| {
                 let span = Span::new(label.offset(), label.offset() + label.len());
                 !context.span_in_user_file(span)
             });
+
+            tracing::debug!(has_external_labels);
 
             let mut detection = Detection::from_global_span(parse_error.to_string(), error_span);
 
             // Process labels - add in-file labels as extra_labels, external as
             // ExternalDetection
             for label in labels {
+                log::debug!("Add in file label {:?}", label.label());
                 let span = Span::new(label.offset(), label.offset() + label.len());
 
                 if context.span_in_user_file(span) {
+                    log::debug!("Span of label is in user file");
                     let label_text = label.label().map(ToString::to_string);
                     detection = match label_text {
                         Some(text) => detection.with_extra_label(text, span),

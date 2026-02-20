@@ -1,6 +1,8 @@
 use super::RULE;
 use crate::log::init_test_log;
 
+
+
 #[test]
 fn test_config_nu() {
     init_test_log();

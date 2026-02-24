@@ -72,3 +72,15 @@ fn ignore_commands_without_pipelines() {
         RULE.assert_ignores(code);
     }
 }
+
+#[test]
+fn ignore_wrapped_in() {
+    let good_codes = vec![
+        "def min-zero [] { [$in 0] | math max }",
+        "def json-record [] { {key: $in} | to json }",
+    ];
+
+    for code in good_codes {
+        RULE.assert_ignores(code);
+    }
+}

@@ -71,3 +71,9 @@ fn test_invalid_function_definition_message_descriptive() {
     let code = "def [] { }";
     RULE.assert_detects(code);
 }
+
+#[test]
+fn detect_bare_module_not_found() {
+    let code = "use nonexistent_module";
+    RULE.assert_detects(code);
+}

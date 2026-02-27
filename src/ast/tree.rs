@@ -3,7 +3,7 @@ pub fn print_ast(source: &str) {
     use crate::engine::{LintEngine, parse_source};
 
     let engine_state = LintEngine::new_state();
-    let (block, working_set, _offset) = parse_source(engine_state, source.as_bytes());
+    let (block, working_set, _offset) = parse_source(engine_state, source.as_bytes(), None);
 
     if !working_set.parse_errors.is_empty() {
         eprintln!("=== Parse Errors ===");

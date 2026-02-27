@@ -28,15 +28,22 @@ use crate::{
 pub fn parse_source<'a>(
     engine_state: &'a EngineState,
     source: &[u8],
+    file_path: Option<&Path>,
 ) -> (Block, StateWorkingSet<'a>, usize) {
     let mut working_set = StateWorkingSet::new(engine_state);
+
+    let (fname, file_buf) = match file_path {
+        Some(p) => (p.display().to_string(), p.to_path_buf()),
+        None => ("source".to_string(), Path::new("source").to_path_buf()),
+    };
+
     // Get the offset where this file will start in the virtual span space
     let file_offset = working_set.next_span_start();
     // Add the source to the working set's file stack so spans work correctly
-    let _file_id = working_set.add_file("source".to_string(), source);
+    let _file_id = working_set.add_file(fname.clone(), source);
     // Populate `files` to make `path self` command work
-    working_set.files = FileStack::with_file(Path::new("source").to_path_buf());
-    let block = parse(&mut working_set, Some("source"), source, false);
+    working_set.files = FileStack::with_file(file_buf);
+    let block = parse(&mut working_set, Some(&fname), source, false);
 
     ((*block).clone(), working_set, file_offset)
 }
@@ -170,7 +177,9 @@ impl LintEngine {
             path: path.to_path_buf(),
             source,
         })?;
-        let mut violations = self.lint_str(&source);
+
+        let canonical_path = fs::canonicalize(path).ok();
+        let mut violations = self.lint_source(&source, canonical_path.as_deref());
 
         for violation in &mut violations {
             violation.file = Some(path.into());
@@ -222,7 +231,7 @@ impl LintEngine {
     /// Lint content from standard input
     #[must_use]
     pub fn lint_stdin(&self, source: &str) -> Vec<Violation> {
-        let mut violations = self.lint_str(source);
+        let mut violations = self.lint_source(source, None);
         let source_owned = source.to_string();
 
         for violation in &mut violations {
@@ -235,7 +244,12 @@ impl LintEngine {
 
     #[must_use]
     pub fn lint_str(&self, source: &str) -> Vec<Violation> {
-        let (block, working_set, file_offset) = parse_source(self.engine_state, source.as_bytes());
+        self.lint_source(source, None)
+    }
+
+    fn lint_source(&self, source: &str, file_path: Option<&Path>) -> Vec<Violation> {
+        let (block, working_set, file_offset) =
+            parse_source(self.engine_state, source.as_bytes(), file_path);
 
         let context = LintContext::new(
             source,

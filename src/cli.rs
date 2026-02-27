@@ -77,14 +77,15 @@ impl Cli {
         path.map_or_else(
             || {
                 log::debug!("No configuration file path provided. Looking elsewhere.");
-                let config = find_config_file_from(Path::new(".")).map_or_else(Config::default, |path| {
-                    Config::load_from_file(&path).unwrap_or_else(|e| {
-                        panic!(
-                            "Loading of configuration file failed. Probably bacause the format \
-                             was not as expected. Deserialization error:\n{e:#?}"
-                        )
-                    })
-                });
+                let config =
+                    find_config_file_from(Path::new(".")).map_or_else(Config::default, |path| {
+                        Config::load_from_file(&path).unwrap_or_else(|e| {
+                            panic!(
+                                "Loading of configuration file failed. Probably bacause the \
+                                 format was not as expected. Deserialization error:\n{e:#?}"
+                            )
+                        })
+                    });
                 tracing::debug!(?config);
                 config
             },

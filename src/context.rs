@@ -10,7 +10,7 @@ use nu_protocol::{
 use crate::violation;
 use crate::{
     Config,
-    ast::{self, call::CallExt, string::StringFormat},
+    ast::{call::CallExt, declaration::CustomCommandDef, string::StringFormat},
     span::FileSpan,
     violation::Detection,
 };
@@ -66,12 +66,6 @@ impl ExternalCmdFixData<'_> {
 }
 
 /// Context containing all lint information (source, AST, and engine state)
-///
-/// # Span Handling
-///
-/// AST spans are in a "global" coordinate system that includes all loaded files
-/// (stdlib, etc.). This context encapsulates span translation - rule authors
-/// should use the provided methods and never manually slice source with spans.
 pub struct LintContext<'a> {
     /// Raw source string of the file being linted (file-relative coordinates)
     source: &'a str,
@@ -104,11 +98,7 @@ impl<'a> LintContext<'a> {
     }
 
     /// Create a new `LintContext` using the default configuration.
-    ///
-    /// This avoids searching the file system for a user configuration file,
-    /// making it suitable for tests and other contexts where deterministic
-    /// behaviour is required.
-    #[cfg_attr(not(test), allow(dead_code))]
+    #[cfg(test)]
     pub(crate) fn with_default_config(
         source: &'a str,
         ast: &'a Block,
@@ -396,7 +386,7 @@ impl<'a> LintContext<'a> {
 
     /// Collect all function definitions
     #[must_use]
-    pub fn custom_commands(&self) -> BTreeSet<ast::declaration::CustomCommandDef> {
+    pub fn custom_commands(&self) -> BTreeSet<CustomCommandDef> {
         let mut functions = Vec::new();
         self.ast.flat_map(
             self.working_set,
@@ -486,7 +476,7 @@ impl LintContext<'_> {
         use crate::engine::{LintEngine, parse_source};
 
         let engine_state = LintEngine::new_state();
-        let (block, working_set, file_offset) = parse_source(engine_state, source.as_bytes());
+        let (block, working_set, file_offset) = parse_source(engine_state, source.as_bytes(), None);
 
         let context = LintContext::with_default_config(
             source,

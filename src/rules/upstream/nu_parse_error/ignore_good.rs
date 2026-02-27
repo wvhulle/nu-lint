@@ -1,7 +1,7 @@
+use std::fs;
+
 use super::RULE;
-use crate::log::init_test_log;
-
-
+use crate::{Config, engine::LintEngine, log::init_test_log};
 
 #[test]
 fn test_config_nu() {
@@ -97,4 +97,52 @@ export def refresh-theme [] {
 }
 "#;
     RULE.assert_ignores(code);
+}
+
+#[test]
+fn ignore_relative_parent_import_on_disk() {
+    let dir = tempfile::tempdir().unwrap();
+
+    let lib_dir = dir.path().join("library");
+    fs::create_dir_all(&lib_dir).unwrap();
+    fs::write(lib_dir.join("mod.nu"), "export def hello [] { \"hi\" }").unwrap();
+
+    let bin_dir = dir.path().join("bin");
+    fs::create_dir_all(&bin_dir).unwrap();
+    let script = bin_dir.join("script.nu");
+    fs::write(&script, "use ../library/mod.nu *").unwrap();
+
+    let engine = LintEngine::new(Config::default());
+    let violations = engine.lint_file(&script).unwrap();
+    assert!(
+        violations
+            .iter()
+            .all(|v| v.rule_id.as_deref() != Some("nu_parse_error")),
+        "Expected no nu_parse_error for a valid relative import, but got: {violations:?}"
+    );
+}
+
+#[test]
+fn ignore_relative_dot_import_on_disk() {
+    let dir = tempfile::tempdir().unwrap();
+
+    let sibling_dir = dir.path().join("sibling");
+    fs::create_dir_all(&sibling_dir).unwrap();
+    fs::write(
+        sibling_dir.join("mod.nu"),
+        "export def greet [] { \"hey\" }",
+    )
+    .unwrap();
+
+    let script = dir.path().join("main.nu");
+    fs::write(&script, "use ./sibling/mod.nu *").unwrap();
+
+    let engine = LintEngine::new(Config::default());
+    let violations = engine.lint_file(&script).unwrap();
+    assert!(
+        violations
+            .iter()
+            .all(|v| v.rule_id.as_deref() != Some("nu_parse_error")),
+        "Expected no nu_parse_error for a valid ./sibling import, but got: {violations:?}"
+    );
 }

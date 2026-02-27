@@ -317,8 +317,6 @@ impl Diagnostic for Violation {
         )))
     }
 
-
-
     fn help<'a>(&'a self) -> Option<Box<dyn fmt::Display + 'a>> {
         self.long_description
             .as_ref()

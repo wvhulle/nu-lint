@@ -178,8 +178,10 @@ impl LintEngine {
             source,
         })?;
 
-        let canonical_path = fs::canonicalize(path).ok();
-        let mut violations = self.lint_source(&source, canonical_path.as_deref());
+        let file_path = fs::canonicalize(path).ok();
+        let (block, working_set, file_offset) =
+            parse_source(self.engine_state, source.as_bytes(), file_path.as_deref());
+        let mut violations = self.lint_parsed(&source, &block, &working_set, file_offset);
 
         for violation in &mut violations {
             violation.file = Some(path.into());
@@ -231,7 +233,7 @@ impl LintEngine {
     /// Lint content from standard input
     #[must_use]
     pub fn lint_stdin(&self, source: &str) -> Vec<Violation> {
-        let mut violations = self.lint_source(source, None);
+        let mut violations = self.lint_str(source);
         let source_owned = source.to_string();
 
         for violation in &mut violations {
@@ -244,31 +246,33 @@ impl LintEngine {
 
     #[must_use]
     pub fn lint_str(&self, source: &str) -> Vec<Violation> {
-        self.lint_source(source, None)
+        let (block, working_set, file_offset) =
+            parse_source(self.engine_state, source.as_bytes(), None);
+        self.lint_parsed(source, &block, &working_set, file_offset)
     }
 
-    fn lint_source(&self, source: &str, file_path: Option<&Path>) -> Vec<Violation> {
-        let (block, working_set, file_offset) =
-            parse_source(self.engine_state, source.as_bytes(), file_path);
-
+    fn lint_parsed(
+        &self,
+        source: &str,
+        block: &Block,
+        working_set: &StateWorkingSet,
+        file_offset: usize,
+    ) -> Vec<Violation> {
         let context = LintContext::new(
             source,
-            &block,
+            block,
             self.engine_state,
-            &working_set,
+            working_set,
             file_offset,
             &self.config,
         );
 
         let mut violations = self.detect_with_fix_data(&context);
 
-        // Normalize all spans in violations to be file-relative
         for violation in &mut violations {
             violation.normalize_spans(file_offset);
         }
 
-        // Filter out ignored violations (after normalization so spans are
-        // file-relative)
         let ignore_index = ignore::IgnoreIndex::new(source);
         violations
             .into_iter()

@@ -58,10 +58,13 @@
         craneliftDeps = nightlyCrane.buildDepsOnly (
           commonArgs // { RUSTFLAGS = "-Zcodegen-backend=cranelift"; }
         );
-        craneliftPackage = nightlyCrane.buildPackage (commonArgs // {
-          cargoArtifacts = craneliftDeps;
-          RUSTFLAGS = "-Zcodegen-backend=cranelift";
-        });
+        craneliftPackage = nightlyCrane.buildPackage (
+          commonArgs
+          // {
+            cargoArtifacts = craneliftDeps;
+            RUSTFLAGS = "-Zcodegen-backend=cranelift";
+          }
+        );
 
         #
         # Static musl builds (portable Linux binaries)
@@ -71,10 +74,7 @@
           let
             target = "${arch}-unknown-linux-musl";
             muslPkgs =
-              if arch == "x86_64" then
-                pkgs.pkgsCross.musl64
-              else
-                pkgs.pkgsCross.aarch64-multiplatform-musl;
+              if arch == "x86_64" then pkgs.pkgsCross.musl64 else pkgs.pkgsCross.aarch64-multiplatform-musl;
 
             toolchain = pkgs.rust-bin.stable.latest.default.override { targets = [ target ]; };
             muslCrane = (crane.mkLib pkgs).overrideToolchain (p: toolchain);
@@ -124,18 +124,17 @@
       {
         inherit releaseTargets;
 
-        packages =
-          {
-            default = llvmPackage;
-            llvm = llvmPackage;
-            cranelift = craneliftPackage;
-            deps = llvmDeps;
-            deps-cranelift = craneliftDeps;
-          }
-          // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
-            x86_64-linux-musl = mkMuslPackage "x86_64";
-            aarch64-linux-musl = mkMuslPackage "aarch64";
-          };
+        packages = {
+          default = llvmPackage;
+          llvm = llvmPackage;
+          cranelift = craneliftPackage;
+          deps = llvmDeps;
+          deps-cranelift = craneliftDeps;
+        }
+        // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
+          x86_64-linux-musl = mkMuslPackage "x86_64";
+          aarch64-linux-musl = mkMuslPackage "aarch64";
+        };
 
         checks = {
           inherit llvmPackage craneliftPackage;
@@ -162,14 +161,7 @@
           '';
 
         devShells = {
-          default = pkgs.mkShell {
-            inherit (preCommitHooks) shellHook;
-            packages = [
-              pkgs.rustup
-              pkgs.convco
-            ];
-          };
-          llvm = stableCrane.devShell {
+          default = stableCrane.devShell {
             inherit (preCommitHooks) shellHook;
             packages = [ pkgs.convco ];
           };

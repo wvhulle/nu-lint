@@ -128,7 +128,7 @@ impl Cli {
         let summary = Summary::from_violations(&violations);
         eprintln!("{}", summary.format_compact());
 
-        if violations.iter().any(|v| v.lint_level > Severity::Advice) {
+        if violations.iter().any(|v| v.lint_level > Severity::Warning) {
             process::exit(1);
         } else {
             process::exit(0);

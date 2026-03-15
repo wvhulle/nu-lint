@@ -128,6 +128,17 @@ fn has_null_comparison_for_var(expr: &Expression, var_id: VarId, context: &LintC
         Expr::Subexpression(block_id) | Expr::Block(block_id) | Expr::Closure(block_id) => {
             use nu_protocol::ast::Traverse;
             let block = context.working_set.get_block(*block_id);
+
+            // Recognize `$var | is-empty` / `$var | is-not-empty` pipeline patterns
+            for p in &block.pipelines {
+                if p.elements.len() != 2 { continue; }
+                if !p.elements[0].expr.contains_variable(var_id) { continue; }
+                let Expr::Call(c) = &p.elements[1].expr.expr else { continue; };
+                if matches!(c.get_call_name(context).as_str(), "is-empty" | "is-not-empty") {
+                    return true;
+                }
+            }
+
             let mut found = Vec::new();
             block.flat_map(
                 context.working_set,

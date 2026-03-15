@@ -205,3 +205,28 @@ def my-command [--name: string] {
 "#;
     RULE.assert_ignores(good_code);
 }
+
+#[test]
+fn flag_checked_with_is_empty() {
+    init_test_log();
+    let good_code = r#"
+def my-command [--flake: string] {
+    let dir = if ($flake | is-empty) { "." } else { $flake }
+    print $dir
+}
+"#;
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
+fn flag_checked_with_is_not_empty() {
+    init_test_log();
+    let good_code = r#"
+def my-command [--pass-path: string] {
+    if ($pass_path | is-not-empty) {
+        print $pass_path
+    }
+}
+"#;
+    RULE.assert_ignores(good_code);
+}

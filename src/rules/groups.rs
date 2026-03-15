@@ -77,6 +77,7 @@ const IDIOMATIC: Group = Group {
         super::record_assignments::USE_RECORD_SPREAD,
         super::record_assignments::USE_LOAD_ENV,
         super::remove_hat_not_builtin::RULE,
+        super::division_to_format_duration::RULE,
     ],
 };
 

@@ -20,6 +20,7 @@ pub mod custom_log_command;
 pub mod dangerous_file_operations;
 pub mod dispatch_with_subcommands;
 pub mod do_not_compare_booleans;
+pub mod division_to_format_duration;
 pub mod documentation;
 pub mod dynamic_script_import;
 pub mod error_make;
@@ -110,6 +111,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     documentation::descriptive_error_messages::RULE,
     documentation::main_named_args_docs::RULE,
     documentation::main_positional_args_docs::RULE,
+    division_to_format_duration::RULE,
     dynamic_script_import::RULE,
     error_make::add_help_to_error::RULE,
     error_make::add_label_to_error::RULE,

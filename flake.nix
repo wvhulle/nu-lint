@@ -161,7 +161,7 @@
           '';
 
         devShells = {
-          default = stableCrane.devShell {
+          default = nightlyCrane.devShell {
             inherit (preCommitHooks) shellHook;
             packages = [ pkgs.convco ];
           };

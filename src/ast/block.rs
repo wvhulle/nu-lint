@@ -99,6 +99,9 @@ pub trait BlockExt {
     /// returns the span of the record expression (everything before `columns`).
     /// Example: `($record | columns)` returns span of `$record`
     fn find_columns_record_span(&self, context: &LintContext) -> Option<Span>;
+
+    /// Checks if the given span is inside a `try` block anywhere in this AST.
+    fn is_span_inside_try_block(&self, context: &LintContext, span: Span) -> bool;
 }
 
 impl BlockExt for Block {
@@ -401,5 +404,23 @@ impl BlockExt for Block {
         let start = elements_before_columns.first()?.expr.span.start;
         let end = elements_before_columns.last()?.expr.span.end;
         Some(Span::new(start, end))
+    }
+
+    fn is_span_inside_try_block(&self, context: &LintContext, span: Span) -> bool {
+        use nu_protocol::ast::FindMapResult;
+
+        self.find_map(context.working_set, &|expr| {
+            let Expr::Call(call) = &expr.expr else {
+                return FindMapResult::Continue;
+            };
+            if call.is_call_to_command("try", context)
+                && expr.span.start <= span.start
+                && expr.span.end >= span.end
+            {
+                return FindMapResult::Found(());
+            }
+            FindMapResult::Continue
+        })
+        .is_some()
     }
 }

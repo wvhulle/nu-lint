@@ -84,12 +84,21 @@ impl DetectFix for NonFinalFailureCheck {
         "Non-final pipeline command exit code ignored"
     }
 
+    fn long_description(&self) -> Option<&'static str> {
+        Some(
+            "Without pipefail, nushell only checks the exit code of the final command in a \
+             pipeline. Non-final external commands that fail are silently ignored. Since nushell \
+             0.111.0, pipefail is enabled by default, making this rule unnecessary for most \
+             users. Enable this rule if you have explicitly disabled pipefail.",
+        )
+    }
+
     fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/blog/2025-10-15-nushell_v0_108_0.html#pipefail-16449-toc")
     }
 
     fn level(&self) -> LintLevel {
-        LintLevel::Warning
+        LintLevel::Off
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

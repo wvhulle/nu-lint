@@ -132,10 +132,12 @@ impl DetectFix for AvoidLastExitCode {
     fn long_description(&self) -> Option<&'static str> {
         Some(
             "$env.LAST_EXIT_CODE is fragile because it can be overwritten by any subsequent \
-             external command or shell hook before you check it. Instead, pipe the command to \
-             'complete' and check the exit_code field inline: (cmd | complete).exit_code != 0. \
-             Commands that stream output interactively that you want to watch are an exception to \
-             this rule, since you don't want to hide it behind a complete.",
+             external command or shell hook before you check it. Instead, wrap the command in a \
+             'try' block (non-zero exit codes are errors since nushell 0.98.0, with the exit code \
+             available via $e.exit_code in the catch block), or pipe to 'complete' and check the \
+             exit_code field inline: (cmd | complete).exit_code != 0. Commands that stream output \
+             interactively are an exception, since you don't want to hide output behind \
+             'complete'.",
         )
     }
 

@@ -99,3 +99,25 @@ fn ignore_wget_streaming() {
     // wget shows download progress by default
     RULE.assert_ignores("^wget https://example.com/file.tar.gz");
 }
+
+// try blocks catch external command failures since nushell 0.98.0
+#[test]
+fn ignore_try_wrapped_curl() {
+    RULE.assert_ignores("try { ^curl https://example.com }");
+}
+
+#[test]
+fn ignore_try_catch_git_commit() {
+    RULE.assert_ignores(r#"try { ^git commit -m 'test' } catch { print "failed" }"#);
+}
+
+#[test]
+fn ignore_try_in_function() {
+    RULE.assert_ignores(
+        r#"
+        def safe-op [] {
+            try { ^curl https://api.example.com }
+        }
+    "#,
+    );
+}

@@ -50,11 +50,18 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<Detection> 
                 return None;
             }
 
+            if context
+                .ast
+                .is_span_inside_try_block(context, element.expr.span)
+            {
+                return None;
+            }
+
             Some(
                 Detection::from_global_span(
                     format!(
-                        "External command '{cmd_name}' can fail silently. Pipe to 'complete' and \
-                         check 'exit_code'."
+                        "External command '{cmd_name}' can fail silently. Wrap in 'try' block or \
+                         pipe to 'complete' and check 'exit_code'."
                     ),
                     element.expr.span,
                 )
@@ -64,26 +71,26 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<Detection> 
         .collect()
 }
 
-struct WrapExternalWithComplete;
+struct UnhandledExternalError;
 
-impl DetectFix for WrapExternalWithComplete {
+impl DetectFix for UnhandledExternalError {
     type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
-        "wrap_external_with_complete"
+        "unhandled_external_error"
     }
 
     fn short_description(&self) -> &'static str {
-        "External command missing `complete` wrapper"
+        "Unhandled external command error"
     }
 
     fn long_description(&self) -> Option<&'static str> {
         Some(
-            "External commands can fail and return non-zero exit codes without raising errors. \
-             Unlike builtin commands, 'try' blocks do not catch external command failures based \
-             on exit code. Use '| complete' to capture stdout, stderr, and exit_code in a record, \
-             then check the exit_code field to handle errors properly. Without this, failures may \
-             go unnoticed and cause silent data corruption or unexpected behavior downstream.",
+            "External commands can fail with non-zero exit codes. Since nushell 0.98.0, these \
+             raise errors that 'try' blocks can catch. For cases where you need to inspect \
+             stdout, stderr, and exit_code separately, use '| complete' to capture them in a \
+             record. Without 'try' or 'complete', failures may go unnoticed and cause silent data \
+             corruption or unexpected behavior downstream.",
         )
     }
 
@@ -100,7 +107,7 @@ impl DetectFix for WrapExternalWithComplete {
     }
 }
 
-pub static RULE: &dyn Rule = &WrapExternalWithComplete;
+pub static RULE: &dyn Rule = &UnhandledExternalError;
 
 #[cfg(test)]
 mod detect_bad;

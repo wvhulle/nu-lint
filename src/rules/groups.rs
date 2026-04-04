@@ -29,7 +29,7 @@ const ERROR_HANDLING: Group = Group {
         super::catch_builtin_error_try::RULE,
         super::unchecked_cell_path_index::RULE,
         super::unchecked_get_index::RULE,
-        super::wrap_external_with_complete::RULE,
+        super::unhandled_external_error::RULE,
         super::source_to_use::RULE,
         super::spread_list_to_external::RULE,
         super::glob_may_drop_quotes::RULE,

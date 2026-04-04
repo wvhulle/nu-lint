@@ -1,8 +1,8 @@
-use nu_protocol::ast::{Expr, Expression, FindMapResult, Traverse};
+use nu_protocol::ast::{Expr, Expression};
 
 use crate::{
     LintLevel,
-    ast::call::CallExt,
+    ast::{block::BlockExt, call::CallExt},
     context::LintContext,
     effect::{
         CommonEffect,
@@ -11,24 +11,6 @@ use crate::{
     rule::{DetectFix, Rule},
     violation::Detection,
 };
-
-fn is_inside_try_block(context: &LintContext, span: nu_protocol::Span) -> bool {
-    context
-        .ast
-        .find_map(context.working_set, &|expr| {
-            let Expr::Call(call) = &expr.expr else {
-                return FindMapResult::Continue;
-            };
-            if call.is_call_to_command("try", context)
-                && expr.span.start <= span.start
-                && expr.span.end >= span.end
-            {
-                return FindMapResult::Found(());
-            }
-            FindMapResult::Continue
-        })
-        .is_some()
-}
 
 fn check_call(expr: &Expression, context: &LintContext) -> Option<Detection> {
     let Expr::Call(call) = &expr.expr else {
@@ -43,7 +25,7 @@ fn check_call(expr: &Expression, context: &LintContext) -> Option<Detection> {
         call,
     );
 
-    if !can_error || is_inside_try_block(context, expr.span) {
+    if !can_error || context.ast.is_span_inside_try_block(context, expr.span) {
         return None;
     }
 

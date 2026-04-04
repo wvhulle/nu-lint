@@ -131,10 +131,19 @@ fn has_null_comparison_for_var(expr: &Expression, var_id: VarId, context: &LintC
 
             // Recognize `$var | is-empty` / `$var | is-not-empty` pipeline patterns
             for p in &block.pipelines {
-                if p.elements.len() != 2 { continue; }
-                if !p.elements[0].expr.contains_variable(var_id) { continue; }
-                let Expr::Call(c) = &p.elements[1].expr.expr else { continue; };
-                if matches!(c.get_call_name(context).as_str(), "is-empty" | "is-not-empty") {
+                if p.elements.len() != 2 {
+                    continue;
+                }
+                if !p.elements[0].expr.contains_variable(var_id) {
+                    continue;
+                }
+                let Expr::Call(c) = &p.elements[1].expr.expr else {
+                    continue;
+                };
+                if matches!(
+                    c.get_call_name(context).as_str(),
+                    "is-empty" | "is-not-empty"
+                ) {
                     return true;
                 }
             }

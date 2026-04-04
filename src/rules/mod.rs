@@ -19,8 +19,8 @@ pub mod contains_to_regex_op;
 pub mod custom_log_command;
 pub mod dangerous_file_operations;
 pub mod dispatch_with_subcommands;
-pub mod do_not_compare_booleans;
 pub mod division_to_format_duration;
+pub mod do_not_compare_booleans;
 pub mod documentation;
 pub mod dynamic_script_import;
 pub mod error_make;
@@ -78,6 +78,7 @@ pub mod typing;
 pub mod unchecked_cell_path_index;
 pub mod unchecked_get_index;
 pub mod unescaped_interpolation;
+pub mod unhandled_external_error;
 pub mod unnecessary_accumulate;
 pub mod unnecessary_mut;
 pub mod unsafe_dynamic_record_access;
@@ -85,7 +86,6 @@ pub mod unused_helper_functions;
 pub mod unused_parameter;
 pub mod unused_variable;
 pub mod upstream;
-pub mod wrap_external_with_complete;
 
 /// All rules that are used by default when linting.
 pub const USED_RULES: &[&dyn Rule] = &[
@@ -242,5 +242,5 @@ pub const USED_RULES: &[&dyn Rule] = &[
     unused_variable::RULE,
     upstream::nu_deprecated::RULE,
     upstream::nu_parse_error::RULE,
-    wrap_external_with_complete::RULE,
+    unhandled_external_error::RULE,
 ];

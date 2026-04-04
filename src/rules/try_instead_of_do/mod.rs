@@ -33,7 +33,7 @@ fn find_error_prone_command(expr: &Expression, context: &LintContext) -> Option<
             ) {
                 return FindMapResult::Found(ErrorSource::External(head.span));
             }
-            FindMapResult::Found(ErrorSource::External(head.span))
+            FindMapResult::Continue
         }
         Expr::Call(call) => {
             let cmd_name = call.get_call_name(context);

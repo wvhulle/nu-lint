@@ -62,3 +62,9 @@ fn test_do_block_with_closures() {
     }"#;
     RULE.assert_ignores(good_code);
 }
+
+#[test]
+fn test_do_block_with_safe_external() {
+    // echo doesn't have FailsInNormalCircumstances effect
+    RULE.assert_ignores("do { ^echo hello }");
+}

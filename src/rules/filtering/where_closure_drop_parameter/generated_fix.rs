@@ -170,6 +170,22 @@ fn fix_closure_with_utf8_characters() {
 }
 
 #[test]
+fn fix_closure_with_top_level_pipe() {
+    let source = r#"ls | where {|f| $f.status | str starts-with "Failed"}"#;
+    let expected = r#"ls | where ($it.status | str starts-with "Failed")"#;
+    RULE.assert_count(source, 1);
+    RULE.assert_fixed_is(source, expected);
+}
+
+#[test]
+fn fix_filter_with_top_level_pipe() {
+    let source = r"[a b c] | filter {|x| $x | str length}";
+    let expected = r"[a b c] | filter ($it | str length)";
+    RULE.assert_count(source, 1);
+    RULE.assert_fixed_is(source, expected);
+}
+
+#[test]
 fn fix_closure_with_spaces_around_param() {
     // Regression test for issue: closure with spaces around parameter
     // The fix should produce valid row condition syntax without braces

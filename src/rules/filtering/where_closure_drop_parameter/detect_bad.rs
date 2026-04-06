@@ -122,6 +122,11 @@ fn detect_closure_with_nested_closure_same_param_name() {
 }
 
 #[test]
+fn detect_closure_with_top_level_pipe() {
+    RULE.assert_detects(r#"ls | where {|f| $f.status | str starts-with "Failed"}"#);
+}
+
+#[test]
 fn detect_closure_with_utf8_characters() {
     // UTF-8 safety: parameter and surrounding text contain multi-byte characters
     RULE.assert_detects(r#"["测试", "テスト", "🎉"] | where {|文字| $文字 == "测试"}"#);

@@ -88,6 +88,11 @@ fn ignore_filter_with_it_field_access() {
 }
 
 #[test]
+fn ignore_row_condition_with_top_level_pipe_in_parens() {
+    RULE.assert_ignores(r#"ls | where ($it.status | str starts-with "Failed")"#);
+}
+
+#[test]
 fn ignore_filter_without_arguments() {
     RULE.assert_ignores(r"def test [] { filter }");
 }

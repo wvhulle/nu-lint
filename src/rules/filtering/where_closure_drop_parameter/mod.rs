@@ -254,6 +254,13 @@ impl DetectFix for WhereClosureToIt {
             result = context.span_text(body_span).to_string();
         }
 
+        // If the closure body contains a top-level pipe, wrap in parentheses
+        // so that `where $it.x | cmd` is not parsed as two separate pipeline stages.
+        let has_top_level_pipe = block.pipelines.iter().any(|p| p.elements.len() > 1);
+        if has_top_level_pipe {
+            result = format!("({result})");
+        }
+
         // Replace the entire closure with just the body (row condition syntax)
         let replacements = vec![Replacement::new(fix_data.closure_span, result)];
 

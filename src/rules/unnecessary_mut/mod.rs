@@ -23,11 +23,10 @@ struct UnnecessaryMutFixData {
 /// Returns a global span (will be normalized later by the engine)
 fn find_mut_keyword_span(context: &LintContext, var_span: Span) -> Span {
     let text_before = context.source_before_span(var_span);
-    let search_text = if text_before.len() > 20 {
-        &text_before[text_before.len() - 20..]
-    } else {
-        text_before
-    };
+    let search_text = text_before
+        .char_indices()
+        .nth_back(19)
+        .map_or(text_before, |(byte_idx, _)| &text_before[byte_idx..]);
 
     if let Some(mut_pos) = search_text.rfind("mut ") {
         // Calculate global position

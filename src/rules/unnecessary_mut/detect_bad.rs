@@ -42,3 +42,31 @@ def outer [] {
 ";
     RULE.assert_detects(bad_code);
 }
+
+#[test]
+fn test_unnecessary_mut_detected_after_cjk_comment() {
+    let bad_code = r"
+def process [] {
+    # 这里有中文注释，确保 mut 前面存在多字节字符
+    mut value = 5
+    echo $value
+}
+";
+
+    RULE.assert_detects(bad_code);
+    RULE.assert_count(bad_code, 1);
+}
+
+#[test]
+fn test_unnecessary_mut_detected_after_emoji_comment() {
+    let bad_code = r#"
+def process [] {
+    # 😀😀😀😀😀😀😀😀
+    mut value = 5
+    echo $value
+}
+"#;
+
+    RULE.assert_detects(bad_code);
+    RULE.assert_count(bad_code, 1);
+}

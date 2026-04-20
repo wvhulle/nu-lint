@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use lsp_types::DiagnosticTag;
 use nu_protocol::{
     Span, VarId,
-    ast::{Expr, Expression},
+    ast::{Expr, Expression, Traverse},
 };
 
 use crate::{
@@ -15,40 +15,22 @@ use crate::{
 };
 
 struct UnnecessaryMutFixData {
+    var_id: VarId,
     var_name: String,
-    mut_span: Span,
-}
-
-/// Find the span of 'mut ' keyword before the variable name
-/// Returns a global span (will be normalized later by the engine)
-fn find_mut_keyword_span(context: &LintContext, var_span: Span) -> Span {
-    let text_before = context.source_before_span(var_span);
-    let search_text = text_before
-        .char_indices()
-        .nth_back(19)
-        .map_or(text_before, |(byte_idx, _)| &text_before[byte_idx..]);
-
-    if let Some(mut_pos) = search_text.rfind("mut ") {
-        // Calculate global position
-        let offset_in_search = search_text.len() - mut_pos;
-        let abs_mut_start = var_span.start.saturating_sub(offset_in_search);
-        let abs_mut_end = abs_mut_start + 4;
-        return Span::new(abs_mut_start, abs_mut_end);
-    }
-
-    var_span
+    var_span: Span,
+    keyword_span: Span,
+    mut_to_remove: Span,
 }
 
 fn extract_mut_declaration(
     expr: &Expression,
     context: &LintContext,
-) -> Option<(VarId, String, Span, Span)> {
+) -> Option<UnnecessaryMutFixData> {
     let Expr::Call(call) = &expr.expr else {
         return None;
     };
 
-    let decl_name = call.get_call_name(context);
-    if decl_name != "mut" {
+    if !call.is_call_to_command("mut", context) {
         return None;
     }
 
@@ -58,8 +40,13 @@ fn extract_mut_declaration(
         return None;
     }
 
-    let mut_span = find_mut_keyword_span(context, var_span);
-    Some((var_id, var_name, var_span, mut_span))
+    Some(UnnecessaryMutFixData {
+        var_id,
+        var_name,
+        var_span,
+        keyword_span: call.head,
+        mut_to_remove: Span::new(call.head.start, var_span.start),
+    })
 }
 
 struct UnnecessaryMut;
@@ -88,9 +75,7 @@ impl DetectFix for UnnecessaryMut {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        use nu_protocol::ast::Traverse;
-
-        let mut mut_declarations: Vec<(VarId, String, Span, Span)> = Vec::new();
+        let mut mut_declarations: Vec<UnnecessaryMutFixData> = Vec::new();
 
         context.ast.flat_map(
             context.working_set,
@@ -98,9 +83,9 @@ impl DetectFix for UnnecessaryMut {
             &mut mut_declarations,
         );
 
-        let mut_variables: HashMap<VarId, (String, Span, Span)> = mut_declarations
+        let mut_variables: HashMap<VarId, UnnecessaryMutFixData> = mut_declarations
             .into_iter()
-            .map(|(id, name, decl_span, mut_span)| (id, (name, decl_span, mut_span)))
+            .map(|data| (data.var_id, data))
             .collect();
 
         let mut reassigned: Vec<VarId> = Vec::new();
@@ -113,31 +98,30 @@ impl DetectFix for UnnecessaryMut {
 
         let reassigned_vars: HashSet<VarId> = reassigned.into_iter().collect();
 
-        // Generate violations for mut variables that were never reassigned
-        let mut violations = Vec::new();
-        for (var_id, (var_name, decl_span, mut_span)) in mut_variables {
-            if !reassigned_vars.contains(&var_id) {
+        mut_variables
+            .into_iter()
+            .filter(|(var_id, _)| !reassigned_vars.contains(var_id))
+            .map(|(_, fix_data)| {
                 let violation = Detection::from_global_span(
-                    format!("Variable '{var_name}' is declared as 'mut' but never reassigned"),
-                    mut_span,
+                    format!(
+                        "Variable '{}' is declared as 'mut' but never reassigned",
+                        fix_data.var_name
+                    ),
+                    fix_data.keyword_span,
                 )
                 .with_primary_label("unnecessary mut keyword")
-                .with_extra_label("variable never reassigned", decl_span);
+                .with_extra_label("variable never reassigned", fix_data.var_span);
 
-                let fix_data = UnnecessaryMutFixData { var_name, mut_span };
-
-                violations.push((violation, fix_data));
-            }
-        }
-
-        violations
+                (violation, fix_data)
+            })
+            .collect()
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         Some(Fix {
             explanation: format!("Remove 'mut' keyword from variable '{}'", fix_data.var_name)
                 .into(),
-            replacements: vec![Replacement::new(fix_data.mut_span, "")],
+            replacements: vec![Replacement::new(fix_data.mut_to_remove, "")],
         })
     }
 }

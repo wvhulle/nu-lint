@@ -15,7 +15,7 @@ license = "MIT"
 name = "nu-lint"
 repository = "https://codeberg.org/wvhulle/nu-lint"
 # Find latest published version with `cargo search nu-lint`
-version = "1.1.0"
+version = "1.1.1"
 
 [lints.clippy]
 # https://rust-lang.github.io/rust-clippy/master/index.html
@@ -57,6 +57,7 @@ missing_const_for_fn = "deny"
 multiple_inherent_impl = "deny"
 mut_mut = "deny"
 # mutex_atomic = "deny"
+map_or_else = "allow"
 needless_bool = "deny"
 needless_bool_assign = "deny"
 needless_collect = "deny"
@@ -64,7 +65,6 @@ needless_continue = "deny"
 needless_range_loop = "deny"
 option_if_let_else = "allow"
 option_map_or_none = "deny"
-map_or_else = "allow"
 panic_in_result_fn = "deny"
 redundant_clone = "deny"
 redundant_closure_for_method_calls = "deny"
@@ -93,10 +93,6 @@ jaq-core = "2.2"
 log = "0.4"
 lsp-server = { version = "0.7", optional = true }
 lsp-types = { version = "0.97", optional = true }
-tracing = "0.1"
-tracing-appender = { version = "0.2", optional = true }
-tracing-log = "0.2"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 miette = { version = "7.6", features = ["fancy"] }
 nu-cli = "0.111.0"
 nu-cmd-extra = "0.111.0"
@@ -111,6 +107,10 @@ regex = "1.10"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 toml = "0.8"
+tracing = "0.1"
+tracing-appender = { version = "0.2", optional = true }
+tracing-log = "0.2"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [features]
 default = ["lsp"]

@@ -21,11 +21,30 @@ use super::{
 use crate::{Config, config::find_config_file_from};
 
 fn get_workspace_root(params: &InitializeParams) -> Option<PathBuf> {
-    params
+    let uri = params
         .workspace_folders
         .as_ref()
         .and_then(|folders| folders.first())
-        .map(|folder| PathBuf::from(folder.uri.path().as_str()))
+        .map(|folder| &folder.uri)?;
+
+    let path_str = uri.path().as_str();
+
+    if cfg!(windows) {
+        let auth_host = uri
+            .authority()
+            .map(|auth| auth.host().as_str())
+            .unwrap_or_default();
+
+        // `file:///C:/Windows/...` becomes `C:/Windows/...`
+        if auth_host.is_empty() {
+            return Some(PathBuf::from(path_str.get(1..)?));
+        }
+
+        // `file://server/path/...` becomes `server:/path/...`
+        Some(PathBuf::from(format!("{auth_host}:{path_str}")))
+    } else {
+        Some(PathBuf::from(path_str))
+    }
 }
 
 fn load_config_from_workspace(workspace_root: Option<&Path>) -> Config {

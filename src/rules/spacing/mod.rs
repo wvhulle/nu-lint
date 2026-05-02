@@ -36,14 +36,6 @@ pub fn has_explicit_pipe_delimiters(context: &LintContext, span: Span) -> bool {
     chars.find(|c| !c.is_whitespace()) == Some('|')
 }
 
-/// Checks if the block has actual parameters (not just empty pipes `||`).
-pub fn has_block_params(context: &LintContext, block_id: nu_protocol::BlockId) -> bool {
-    let block = context.working_set.get_block(block_id);
-    !block.signature.required_positional.is_empty()
-        || !block.signature.optional_positional.is_empty()
-        || block.signature.rest_positional.is_some()
-}
-
 /// Determines if a type is a record type.
 pub const fn is_record_type(ty: &nu_protocol::Type) -> bool {
     matches!(ty, nu_protocol::Type::Record(_))

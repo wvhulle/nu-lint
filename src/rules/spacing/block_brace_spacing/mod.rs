@@ -1,6 +1,5 @@
 use nu_protocol::{Span, ast::Expr};
 
-use super::{has_block_params, has_explicit_pipe_delimiters, is_record_type};
 use crate::{
     LintLevel,
     context::LintContext,
@@ -18,7 +17,6 @@ fn check_block_body_spacing(
 ) -> Vec<(Detection, BlockBodySpacingFixData)> {
     let text = context.span_text(block_span);
 
-    // Validate basic structure using char iterators for UTF-8 safety
     let mut chars = text.chars();
     if chars.next() != Some('{') || chars.next_back() != Some('}') {
         return vec![];
@@ -71,33 +69,19 @@ impl DetectFix for BlockBodySpacing {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.detect_with_fix_data(|expr, ctx| {
-            match &expr.expr {
-                Expr::Closure(block_id) | Expr::Block(block_id) => {
-                    // Skip records (they have different spacing rules)
-                    if is_record_type(&expr.ty) {
-                        return vec![];
-                    }
-                    // Skip closures with explicit pipe delimiters (including empty `||`)
-                    // These follow closure spacing rules (no space after `{`)
-                    if has_explicit_pipe_delimiters(ctx, expr.span) {
-                        return vec![];
-                    }
-                    // Only check blocks without actual parameters
-                    if !has_block_params(ctx, *block_id) {
-                        return check_block_body_spacing(ctx, expr.span);
-                    }
-                    vec![]
-                }
-                _ => vec![],
+        context.detect_with_fix_data(|expr, ctx| match &expr.expr {
+            // `Type::Any` covers parser-ambiguous cases like `{$name: $value}`
+            // which could be either a record or a block.
+            Expr::Block(_) if expr.ty != nu_protocol::Type::Any => {
+                check_block_body_spacing(ctx, expr.span)
             }
+            _ => vec![],
         })
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let text = context.span_text(fix_data.block_span);
 
-        // Extract inner content using char iterators for UTF-8 safety
         let mut chars = text.chars();
         if chars.next() != Some('{') || chars.next_back() != Some('}') {
             return None;

@@ -134,6 +134,22 @@ def my-command [--item: string] {
 }
 
 #[test]
+fn flag_used_in_match_with_null_arm_after_wildcard() {
+    init_test_log();
+    // The `_` arm matches everything including null, making the trailing
+    // `null` arm dead code. `$name` inside the wildcard body could be null.
+    let bad_code = r#"
+def my-command [--name: string] {
+    match $name {
+        _ => { print $"hello ($name)" },
+        null => { print "no name" },
+    }
+}
+"#;
+    RULE.assert_detects(bad_code);
+}
+
+#[test]
 fn flag_used_in_match_without_null_arm() {
     init_test_log();
     // A match without a `null` arm does not establish a null check, even if

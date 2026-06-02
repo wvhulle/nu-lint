@@ -80,15 +80,17 @@ fn matches_scrutinee(call: &Call, var_id: VarId) -> bool {
         .is_some_and(|s| s.matches_var(var_id))
 }
 
-fn has_null_arm(call: &Call) -> bool {
+fn has_null_first_arm(call: &Call) -> bool {
     matches!(
         call.get_positional_arg(1).map(|a| &a.expr),
-        Some(Expr::MatchBlock(arms)) if arms.iter().any(|(p, _)| is_null_pattern(p))
+        Some(Expr::MatchBlock(arms)) if arms.first().is_some_and(|(p, _)| is_null_pattern(p))
     )
 }
 
 fn is_match_with_null_arm_for_var(call: &Call, var_id: VarId, context: &LintContext) -> bool {
-    call.get_call_name(context) == "match" && matches_scrutinee(call, var_id) && has_null_arm(call)
+    call.get_call_name(context) == "match"
+        && matches_scrutinee(call, var_id)
+        && has_null_first_arm(call)
 }
 
 fn is_direct_null_equality(

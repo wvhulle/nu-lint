@@ -234,20 +234,6 @@ def foo [--bar: string]: any -> nothing {
 }
 
 #[test]
-fn flag_checked_with_match_null_arm_reversed_order() {
-    init_test_log();
-    let good_code = r#"
-def my-command [--name: string] {
-    match $name {
-        _ => { print $"hello ($name)" },
-        null => { print "no name" },
-    }
-}
-"#;
-    RULE.assert_ignores(good_code);
-}
-
-#[test]
 fn flag_used_in_match_arm_body_with_null_arm() {
     init_test_log();
     // The Nushell book documents this idiom for handling optional flags.

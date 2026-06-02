@@ -125,10 +125,14 @@ pub fn run_lsp_server() {
     };
 
     let workspace_root = get_workspace_root(&params);
+    let is_repl_client = params
+        .client_info
+        .as_ref()
+        .is_some_and(|ci| ci.name == "reedline");
     let config = load_config_from_workspace(workspace_root.as_deref());
     tracing::info!("nu-lint LSP server initialized");
 
-    let mut state = ServerState::new(config, workspace_root);
+    let mut state = ServerState::new(config, workspace_root, is_repl_client);
 
     for msg in &connection.receiver {
         match msg {

@@ -22,14 +22,16 @@ pub struct ServerState {
     engine: LintEngine,
     documents: HashMap<Uri, DocumentState>,
     workspace_root: Option<PathBuf>,
+    is_repl_client: bool,
 }
 
 impl ServerState {
-    pub fn new(config: Config, workspace_root: Option<PathBuf>) -> Self {
+    pub fn new(config: Config, workspace_root: Option<PathBuf>, is_repl_client: bool) -> Self {
         Self {
             engine: LintEngine::new(config),
             documents: HashMap::new(),
             workspace_root,
+            is_repl_client,
         }
     }
 
@@ -99,7 +101,7 @@ impl ServerState {
             return vec![];
         };
 
-        let is_repl = uri.scheme().is_some_and(|s| s.as_str() == "repl");
+        let is_repl = self.is_repl_client || uri.scheme().is_some_and(|s| s.as_str() == "repl");
 
         let disable_scope = if self.workspace_root.is_some() {
             DisableScope::Workspace

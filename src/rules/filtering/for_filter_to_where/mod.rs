@@ -107,7 +107,7 @@ fn is_filtering_only_pattern(
         return false;
     };
 
-    if !call.is_call_to_command("if", context) {
+    if call.get_call_name(context) != "if" {
         log::trace!("Command is not 'if'");
         return false;
     }
@@ -230,7 +230,7 @@ fn extract_filtering_vars(expr: &Expression, context: &LintContext) -> Vec<nu_pr
         return vec![];
     };
 
-    if !call.is_call_to_command("for", context) {
+    if call.get_call_name(context) != "for" {
         return vec![];
     }
 

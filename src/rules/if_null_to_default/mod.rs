@@ -72,7 +72,7 @@ fn extract_null_comparison(expr: &Expression) -> Option<NullComparison> {
 }
 
 fn detect(call: &Call, expr_span: Span, context: &LintContext) -> Option<(Detection, FixData)> {
-    if !call.is_call_to_command("if", context) {
+    if call.get_call_name(context) != "if" {
         return None;
     }
 

@@ -116,7 +116,7 @@ impl DetectFix for UseForOverEach {
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context.detect_with_fix_data(|expr, ctx| match &expr.expr {
-            Expr::Call(call) if call.is_call_to_command("each", ctx) => {
+            Expr::Call(call) if call.get_call_name(ctx) == "each" => {
                 let Some(closure_arg) = call.get_first_positional_arg() else {
                     return vec![];
                 };

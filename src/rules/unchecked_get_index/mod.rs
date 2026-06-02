@@ -25,7 +25,7 @@ fn check_get_call(
         return None;
     };
 
-    if !call.is_call_to_command("get", context) {
+    if call.get_call_name(context) != "get" {
         return None;
     }
 

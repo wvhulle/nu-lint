@@ -24,9 +24,6 @@ fn is_type_compatible(expected: &nu_protocol::Type, actual: &nu_protocol::Type) 
 pub trait CallExt {
     /// Gets the command name of this call. Example: `ls -la` returns "ls"
     fn get_call_name(&self, context: &LintContext) -> String;
-    /// Checks if call is to a specific command. Example: `if $x { }` matches
-    /// "if"
-    fn is_call_to_command(&self, command_name: &str, context: &LintContext) -> bool;
     /// Gets first positional argument. Example: `ls /tmp` returns `/tmp`
     fn get_first_positional_arg(&self) -> Option<&Expression>;
     /// Gets positional argument at index. Example: `parse "{x} {y}"` at index 0
@@ -173,10 +170,6 @@ impl CallExt for Call {
             .to_string()
     }
 
-    fn is_call_to_command(&self, command_name: &str, context: &LintContext) -> bool {
-        self.get_call_name(context) == command_name
-    }
-
     fn get_first_positional_arg(&self) -> Option<&Expression> {
         self.get_positional_arg(0)
     }
@@ -260,7 +253,7 @@ impl CallExt for Call {
     }
 
     fn is_get_optional(&self, context: &LintContext) -> bool {
-        self.is_call_to_command("get", context)
+        self.get_call_name(context) == "get"
             && (self.has_named_flag("optional")
                 || self.has_named_flag("o")
                 || self.has_named_flag("ignore-errors")

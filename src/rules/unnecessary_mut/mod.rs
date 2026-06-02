@@ -30,7 +30,7 @@ fn extract_mut_declaration(
         return None;
     };
 
-    if !call.is_call_to_command("mut", context) {
+    if call.get_call_name(context) != "mut" {
         return None;
     }
 

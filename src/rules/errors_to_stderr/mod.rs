@@ -30,8 +30,8 @@ fn check_print_exit_calls(
     exit_call: &Call,
     context: &LintContext,
 ) -> Option<ErrorToStdout> {
-    (print_call.is_call_to_command("print", context) && !print_call.has_named_flag("stderr"))
-        .then(|| exit_call.is_call_to_command("exit", context))
+    (print_call.get_call_name(context) == "print" && !print_call.has_named_flag("stderr"))
+        .then(|| exit_call.get_call_name(context) == "exit")
         .filter(|&is_exit| is_exit)
         .and_then(|_| {
             let print_message = extract_print_message(print_call, context)?;
@@ -66,8 +66,8 @@ fn check_same_pipeline_print_exit(
     pipeline
         .find_command_pairs(
             context,
-            |call, ctx| call.is_call_to_command("print", ctx) && !call.has_named_flag("stderr"),
-            |call, ctx| call.is_call_to_command("exit", ctx),
+            |call, ctx| call.get_call_name(ctx) == "print" && !call.has_named_flag("stderr"),
+            |call, ctx| call.get_call_name(ctx) == "exit",
         )
         .into_iter()
         .find_map(|pair| check_print_exit_calls(pair.first, pair.second, context))

@@ -14,7 +14,7 @@ use crate::{
 
 fn is_piped_to_complete(pipeline: &Pipeline, idx: usize, context: &LintContext) -> bool {
     pipeline.elements.get(idx + 1).is_some_and(|next| {
-        matches!(&next.expr.expr, Expr::Call(call) if call.is_call_to_command("complete", context))
+        matches!(&next.expr.expr, Expr::Call(call) if call.get_call_name(context) == "complete")
     })
 }
 

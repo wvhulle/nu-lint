@@ -27,7 +27,7 @@ fn has_stdlib_log_import(context: &LintContext) -> bool {
             return vec![];
         };
 
-        if !call.is_call_to_command("use", ctx) {
+        if call.get_call_name(ctx) != "use" {
             return vec![];
         }
 

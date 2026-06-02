@@ -35,7 +35,7 @@ fn extract_let_declaration<'a>(
         return None;
     };
 
-    if !call.is_call_to_command("let", context) {
+    if call.get_call_name(context) != "let" {
         return None;
     }
 

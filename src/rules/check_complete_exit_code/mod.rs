@@ -38,7 +38,7 @@ fn is_exit_code_cell_path(expr: &Expr) -> bool {
 fn is_get_exit_code_call(expr: &Expr, context: &LintContext) -> bool {
     let Expr::Call(call) = expr else { return false };
 
-    call.is_call_to_command("get", context) && call.get_positional_arg(0).is_some_and(|arg| {
+    call.get_call_name(context) == "get" && call.get_positional_arg(0).is_some_and(|arg| {
         matches!(&arg.expr, Expr::CellPath(cp) if cell_path_has_member(&cp.members, "exit_code"))
             || matches!(&arg.expr, Expr::String(s) if s == "exit_code")
     })
@@ -62,7 +62,7 @@ fn has_complete_call(expr: &Expression, context: &LintContext) -> bool {
     use nu_protocol::ast::Traverse;
 
     expr.find_map(context.working_set, &|inner| {
-        if matches!(&inner.expr, Expr::Call(call) if call.is_call_to_command("complete", context)) {
+        if matches!(&inner.expr, Expr::Call(call) if call.get_call_name(context) == "complete") {
             FindMapResult::Found(())
         } else {
             FindMapResult::Continue

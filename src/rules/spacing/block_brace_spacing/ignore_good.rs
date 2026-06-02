@@ -1,6 +1,5 @@
-use crate::log::init_test_log;
-
 use super::RULE;
+use crate::log::init_test_log;
 
 #[test]
 fn if_block_with_spaces() {

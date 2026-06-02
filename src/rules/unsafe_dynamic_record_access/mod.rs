@@ -30,7 +30,7 @@ fn check_get_call(
         return None;
     };
 
-    if !call.is_call_to_command("get", ctx) {
+    if call.get_call_name(ctx) != "get" {
         return None;
     }
 

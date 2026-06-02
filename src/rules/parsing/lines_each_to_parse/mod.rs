@@ -69,7 +69,7 @@ fn extract_parse_from_closure(
         log::trace!("Second element is not a Call");
         return None;
     };
-    if !parse_call.is_call_to_command("parse", ctx) {
+    if parse_call.get_call_name(ctx) != "parse" {
         log::trace!("Second element is not parse command");
         return None;
     }
@@ -94,8 +94,8 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection,
     pipeline
         .find_command_pairs(
             context,
-            |call, ctx| call.is_call_to_command("lines", ctx),
-            |call, ctx| call.is_call_to_command("each", ctx),
+            |call, ctx| call.get_call_name(ctx) == "lines",
+            |call, ctx| call.get_call_name(ctx) == "each",
         )
         .into_iter()
         .filter_map(|pair| {

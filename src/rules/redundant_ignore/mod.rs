@@ -12,7 +12,7 @@ use crate::{
 
 fn ends_with_ignore(pipeline: &Pipeline, context: &LintContext) -> bool {
     pipeline.elements.last().is_some_and(|elem| {
-        matches!(&elem.expr.expr, Expr::Call(call) if call.is_call_to_command("ignore", context))
+        matches!(&elem.expr.expr, Expr::Call(call) if call.get_call_name(context) == "ignore")
     })
 }
 

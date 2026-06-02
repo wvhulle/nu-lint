@@ -43,7 +43,7 @@ impl DetectFix for AddLabelToError {
                 return vec![];
             };
 
-            if !call.is_call_to_command("error make", ctx) {
+            if call.get_call_name(ctx) != "error make" {
                 return vec![];
             }
 

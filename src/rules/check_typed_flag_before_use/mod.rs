@@ -1,6 +1,6 @@
 use nu_protocol::{
     VarId,
-    ast::{Call, Comparison, Expr, Expression, ListItem, Operator, RecordItem},
+    ast::{Call, Comparison, Expr, Expression, MatchPattern, Operator, Pattern},
 };
 
 use crate::{
@@ -71,99 +71,90 @@ fn check_flag_usage_in_body(call: &Call, context: &LintContext) -> Vec<(Detectio
         .collect()
 }
 
-fn has_null_comparison_for_var(expr: &Expression, var_id: VarId, context: &LintContext) -> bool {
+fn is_null_pattern(pattern: &MatchPattern) -> bool {
+    matches!(&pattern.pattern, Pattern::Expression(e) if matches!(&e.expr, Expr::Nothing))
+}
+
+fn matches_scrutinee(call: &Call, var_id: VarId) -> bool {
+    call.get_first_positional_arg()
+        .is_some_and(|s| s.matches_var(var_id))
+}
+
+fn has_null_arm(call: &Call) -> bool {
+    matches!(
+        call.get_positional_arg(1).map(|a| &a.expr),
+        Some(Expr::MatchBlock(arms)) if arms.iter().any(|(p, _)| is_null_pattern(p))
+    )
+}
+
+fn is_match_with_null_arm_for_var(call: &Call, var_id: VarId, context: &LintContext) -> bool {
+    call.get_call_name(context) == "match" && matches_scrutinee(call, var_id) && has_null_arm(call)
+}
+
+fn is_direct_null_equality(
+    left: &Expression,
+    op: &Expression,
+    right: &Expression,
+    var_id: VarId,
+) -> bool {
+    let is_eq_op = matches!(
+        &op.expr,
+        Expr::Operator(Operator::Comparison(
+            Comparison::NotEqual | Comparison::Equal
+        ))
+    );
+    let is_var_null_pair = (left.matches_var(var_id) && matches!(&right.expr, Expr::Nothing))
+        || (right.matches_var(var_id) && matches!(&left.expr, Expr::Nothing));
+    is_eq_op && is_var_null_pair
+}
+
+fn is_empty_pipeline_on_var(
+    block_id: nu_protocol::BlockId,
+    var_id: VarId,
+    context: &LintContext,
+) -> bool {
+    context
+        .working_set
+        .get_block(block_id)
+        .pipelines
+        .iter()
+        .any(|p| {
+            p.elements.len() == 2
+                && p.elements[0].expr.contains_variable(var_id)
+                && matches!(
+                    &p.elements[1].expr.expr,
+                    Expr::Call(c) if matches!(c.get_call_name(context).as_str(), "is-empty" | "is-not-empty")
+                )
+        })
+}
+
+fn is_atomic_null_check(expr: &Expression, var_id: VarId, context: &LintContext) -> bool {
     match &expr.expr {
-        Expr::UnaryNot(inner) => {
-            if inner.matches_var(var_id) {
-                return true;
-            }
-            has_null_comparison_for_var(inner, var_id, context)
-        }
-        Expr::BinaryOp(left, op, right) => {
-            let is_null_comparison = matches!(
-                &op.expr,
-                Expr::Operator(Operator::Comparison(
-                    Comparison::NotEqual | Comparison::Equal
-                ))
-            );
-
-            if is_null_comparison {
-                let left_is_var = left.matches_var(var_id);
-                let right_is_var = right.matches_var(var_id);
-                let left_is_null = matches!(&left.expr, Expr::Nothing);
-                let right_is_null = matches!(&right.expr, Expr::Nothing);
-
-                if (left_is_var && right_is_null) || (left_is_null && right_is_var) {
-                    return true;
-                }
-            }
-
-            has_null_comparison_for_var(left, var_id, context)
-                || has_null_comparison_for_var(right, var_id, context)
-        }
-        Expr::Call(call) => call
-            .all_arg_expressions()
-            .iter()
-            .any(|arg| has_null_comparison_for_var(arg, var_id, context)),
-        Expr::FullCellPath(path) => has_null_comparison_for_var(&path.head, var_id, context),
-        Expr::List(items) => items.iter().any(|item| {
-            let (ListItem::Item(e) | ListItem::Spread(_, e)) = item;
-            has_null_comparison_for_var(e, var_id, context)
-        }),
-        Expr::StringInterpolation(items) => items
-            .iter()
-            .any(|item| has_null_comparison_for_var(item, var_id, context)),
-        Expr::Table(table) => table
-            .rows
-            .iter()
-            .flatten()
-            .any(|cell| has_null_comparison_for_var(cell, var_id, context)),
-        Expr::Record(fields) => fields.iter().any(|field| match field {
-            RecordItem::Pair(key, val) => {
-                has_null_comparison_for_var(key, var_id, context)
-                    || has_null_comparison_for_var(val, var_id, context)
-            }
-            RecordItem::Spread(_, e) => has_null_comparison_for_var(e, var_id, context),
-        }),
-        Expr::Subexpression(block_id) | Expr::Block(block_id) | Expr::Closure(block_id) => {
-            use nu_protocol::ast::Traverse;
-            let block = context.working_set.get_block(*block_id);
-
-            // Recognize `$var | is-empty` / `$var | is-not-empty` pipeline patterns
-            for p in &block.pipelines {
-                if p.elements.len() != 2 {
-                    continue;
-                }
-                if !p.elements[0].expr.contains_variable(var_id) {
-                    continue;
-                }
-                let Expr::Call(c) = &p.elements[1].expr.expr else {
-                    continue;
-                };
-                if matches!(
-                    c.get_call_name(context).as_str(),
-                    "is-empty" | "is-not-empty"
-                ) {
-                    return true;
-                }
-            }
-
-            let mut found = Vec::new();
-            block.flat_map(
-                context.working_set,
-                &|e: &Expression| {
-                    if has_null_comparison_for_var(e, var_id, context) {
-                        vec![()]
-                    } else {
-                        vec![]
-                    }
-                },
-                &mut found,
-            );
-            !found.is_empty()
+        Expr::BinaryOp(left, op, right) => is_direct_null_equality(left, op, right, var_id),
+        Expr::UnaryNot(inner) => inner.matches_var(var_id),
+        Expr::Call(call) => is_match_with_null_arm_for_var(call, var_id, context),
+        Expr::Subexpression(b) | Expr::Block(b) | Expr::Closure(b) => {
+            is_empty_pipeline_on_var(*b, var_id, context)
         }
         _ => false,
     }
+}
+
+fn has_null_comparison_for_var(expr: &Expression, var_id: VarId, context: &LintContext) -> bool {
+    use nu_protocol::ast::Traverse;
+    let mut found = Vec::new();
+    expr.flat_map(
+        context.working_set,
+        &|e: &Expression| {
+            if is_atomic_null_check(e, var_id, context) {
+                vec![()]
+            } else {
+                vec![]
+            }
+        },
+        &mut found,
+    );
+    !found.is_empty()
 }
 
 struct FlagCompareNull;

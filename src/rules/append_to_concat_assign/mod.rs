@@ -105,7 +105,7 @@ fn detect_pipeline_level_pattern(
         return Vec::new();
     };
 
-    if !call.is_call_to_command("append", ctx) {
+    if call.get_call_name(ctx) != "append" {
         return Vec::new();
     }
 
@@ -174,7 +174,7 @@ fn detect_append_assignment(expr: &Expression, ctx: &LintContext) -> Option<(Det
         return None;
     };
 
-    if !call.is_call_to_command("append", ctx) {
+    if call.get_call_name(ctx) != "append" {
         return None;
     }
 

@@ -413,7 +413,7 @@ impl BlockExt for Block {
             let Expr::Call(call) = &expr.expr else {
                 return FindMapResult::Continue;
             };
-            if call.is_call_to_command("try", context)
+            if call.get_call_name(context) == "try"
                 && expr.span.start <= span.start
                 && expr.span.end >= span.end
             {

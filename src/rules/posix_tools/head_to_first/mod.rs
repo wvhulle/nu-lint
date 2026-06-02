@@ -31,7 +31,7 @@ fn is_file_arg(a: &ExternalArgument, ctx: &LintContext) -> bool {
 
 fn is_piped_to_lines(pipeline: &Pipeline, idx: usize, context: &LintContext) -> bool {
     pipeline.elements.get(idx + 1).is_some_and(|next| {
-        matches!(&next.expr.expr, Expr::Call(call) if call.is_call_to_command("lines", context))
+        matches!(&next.expr.expr, Expr::Call(call) if call.get_call_name(context) == "lines")
     })
 }
 

@@ -43,7 +43,7 @@ impl PrintInfo {
             return None;
         };
 
-        if !call.is_call_to_command("print", context) {
+        if call.get_call_name(context) != "print" {
             return None;
         }
 

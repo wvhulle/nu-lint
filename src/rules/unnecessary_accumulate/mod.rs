@@ -33,7 +33,7 @@ fn matches_transformation_pattern(
     loop_var_name: &str,
 ) -> bool {
     match &expr.expr {
-        Expr::Call(call) => call.is_call_to_command("if", context),
+        Expr::Call(call) => call.get_call_name(context) == "if",
         Expr::BinaryOp(_lhs, op, rhs) => {
             matches!(op.expr, Expr::Operator(Operator::Assignment(_)))
                 && has_transformation_in_append(rhs, context, loop_var_name)
@@ -60,7 +60,7 @@ fn has_transformation_in_append(
     loop_var_name: &str,
 ) -> bool {
     match &expr.expr {
-        Expr::Call(call) if call.is_call_to_command("append", context) => {
+        Expr::Call(call) if call.get_call_name(context) == "append" => {
             let Some(arg) = call.arguments.first() else {
                 return false;
             };
@@ -122,7 +122,7 @@ fn extract_empty_list_vars(expr: &Expression, context: &LintContext) -> Vec<Empt
         return vec![];
     };
 
-    if !call.is_call_to_command("mut", context) {
+    if call.get_call_name(context) != "mut" {
         return vec![];
     }
 
@@ -178,7 +178,7 @@ fn extract_direct_copy_patterns(expr: &Expression, context: &LintContext) -> Dir
         return vec![];
     };
 
-    if !call.is_call_to_command("for", context) {
+    if call.get_call_name(context) != "for" {
         return vec![];
     }
 

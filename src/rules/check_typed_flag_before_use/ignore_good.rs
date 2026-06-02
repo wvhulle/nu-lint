@@ -219,6 +219,50 @@ def my-command [--flake: string] {
 }
 
 #[test]
+fn flag_checked_with_match_null_arm() {
+    init_test_log();
+    let good_code = r#"
+def foo [--bar: string]: any -> nothing {
+    match $bar {
+        null => { print 'got null' },
+        _ => { print 'got other' },
+    }
+    ignore
+}
+"#;
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
+fn flag_checked_with_match_null_arm_reversed_order() {
+    init_test_log();
+    let good_code = r#"
+def my-command [--name: string] {
+    match $name {
+        _ => { print $"hello ($name)" },
+        null => { print "no name" },
+    }
+}
+"#;
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
+fn flag_used_in_match_arm_body_with_null_arm() {
+    init_test_log();
+    // The Nushell book documents this idiom for handling optional flags.
+    let good_code = r#"
+def greet [--name: string] {
+    match $name {
+        null => "Hello! I don't know your name!",
+        _ => $"Hello, ($name)!",
+    }
+}
+"#;
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
 fn flag_checked_with_is_not_empty() {
     init_test_log();
     let good_code = r#"

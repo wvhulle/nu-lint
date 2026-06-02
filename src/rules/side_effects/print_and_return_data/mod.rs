@@ -23,7 +23,7 @@ fn collect_stdout_print_spans(block: &Block, context: &LintContext) -> Vec<Span>
         context.working_set,
         &|expr| {
             if let Expr::Call(call) = &expr.expr
-                && call.is_call_to_command("print", context)
+                && call.get_call_name(context) == "print"
                 && !call.has_named_flag("stderr")
             {
                 return vec![call.head];

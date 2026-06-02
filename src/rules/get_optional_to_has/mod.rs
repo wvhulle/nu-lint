@@ -25,7 +25,7 @@ struct FixData {
 }
 
 fn is_is_not_empty(call: &Call, ctx: &LintContext) -> bool {
-    call.is_call_to_command("is-not-empty", ctx)
+    call.get_call_name(ctx) == "is-not-empty"
 }
 
 fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection, FixData)> {

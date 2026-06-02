@@ -20,7 +20,7 @@ pub struct FixData {
 }
 
 fn extract_regex_pattern(call: &Call, context: &LintContext) -> Option<String> {
-    if !call.is_call_to_command("parse", context) {
+    if call.get_call_name(context) != "parse" {
         return None;
     }
 

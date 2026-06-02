@@ -137,8 +137,8 @@ fn detect_pattern_in_pipeline(
     pipeline
         .find_command_pairs(
             context,
-            |call, ctx| call.is_call_to_command("transpose", ctx),
-            |call, ctx| call.is_call_to_command("each", ctx),
+            |call, ctx| call.get_call_name(ctx) == "transpose",
+            |call, ctx| call.get_call_name(ctx) == "each",
         )
         .into_iter()
         .filter_map(|pair| {

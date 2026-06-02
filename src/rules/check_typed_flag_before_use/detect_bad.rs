@@ -134,6 +134,22 @@ def my-command [--item: string] {
 }
 
 #[test]
+fn flag_used_in_match_without_null_arm() {
+    init_test_log();
+    // A match without a `null` arm does not establish a null check, even if
+    // it has a wildcard `_` arm that uses the flag.
+    let bad_code = r#"
+def my-command [--bar: string] {
+    match $bar {
+        "foo" => { print "foo" },
+        _ => { print $bar },
+    }
+}
+"#;
+    RULE.assert_detects(bad_code);
+}
+
+#[test]
 fn flag_in_binary_comparison_without_null_check() {
     init_test_log();
     let bad_code = r#"

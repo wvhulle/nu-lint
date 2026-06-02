@@ -29,7 +29,7 @@ const fn external_arg_span(arg: &ExternalArgument) -> Span {
 fn extract_echo_args_span(element: &PipelineElement, context: &LintContext) -> Option<Span> {
     match &element.expr.expr {
         Expr::Call(call) => {
-            if !call.is_call_to_command("echo", context) {
+            if call.get_call_name(context) != "echo" {
                 return None;
             }
             // Get spans of all positional arguments
@@ -74,7 +74,7 @@ fn extract_echo_args_span(element: &PipelineElement, context: &LintContext) -> O
 
 fn uses_echo(element: &PipelineElement, context: &LintContext) -> bool {
     match &element.expr.expr {
-        Expr::Call(call) => call.is_call_to_command("echo", context),
+        Expr::Call(call) => call.get_call_name(context) == "echo",
         Expr::ExternalCall(head, _) => context.expr_text(head) == "echo",
         _ => false,
     }

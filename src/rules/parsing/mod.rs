@@ -18,7 +18,7 @@ pub mod split_row_get_multistatement;
 pub mod split_row_space_to_split_words;
 
 pub fn is_split_row_call(call: &Call, context: &LintContext) -> bool {
-    call.is_call_to_command("split row", context)
+    call.get_call_name(context) == "split row"
 }
 
 pub fn is_split_call(call: &Call, context: &LintContext) -> bool {

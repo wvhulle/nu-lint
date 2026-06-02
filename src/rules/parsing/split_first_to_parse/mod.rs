@@ -18,7 +18,7 @@ struct FixData {
 }
 
 fn is_first_call(call: &Call, ctx: &LintContext) -> bool {
-    call.is_call_to_command("first", ctx)
+    call.get_call_name(ctx) == "first"
         && call
             .get_first_positional_arg()
             .is_none_or(|arg| ctx.expr_text(arg).parse::<usize>().is_ok_and(|n| n == 1))

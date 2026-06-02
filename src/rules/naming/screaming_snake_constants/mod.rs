@@ -45,7 +45,7 @@ impl DetectFix for ScreamingSnakeConstants {
                 return vec![];
             };
 
-            if !call.is_call_to_command("const", ctx) {
+            if call.get_call_name(ctx) != "const" {
                 return vec![];
             }
 

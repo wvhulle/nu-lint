@@ -173,23 +173,19 @@ impl Config {
     }
 }
 
-/// Search for `.nu-lint.toml` in the given directory, falling back to home
-/// directory
+/// Path to the user-wide config file (XDG: `~/.config/nu-lint.toml` on Linux).
 #[must_use]
-pub fn find_config_file_from(start_dir: &Path) -> Option<PathBuf> {
-    // Check active directory first
-    let config_path = start_dir.join(".nu-lint.toml");
-    if config_path.exists() && config_path.is_file() {
-        return Some(config_path);
-    }
+pub fn user_config_path() -> Option<PathBuf> {
+    dirs::config_dir().map(|d| d.join("nu-lint.toml"))
+}
 
-    // Fall back to home directory
-    let home_config = dirs::home_dir()?.join(".nu-lint.toml");
-    if home_config.exists() && home_config.is_file() {
-        return Some(home_config);
-    }
-
-    None
+/// Load the user-wide XDG config, falling back to defaults if missing.
+#[must_use]
+pub fn load_user_config() -> Config {
+    user_config_path()
+        .filter(|p| p.is_file())
+        .and_then(|p| Config::load_from_file(&p).ok())
+        .unwrap_or_default()
 }
 
 #[cfg(test)]

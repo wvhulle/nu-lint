@@ -1,6 +1,6 @@
 use std::{
     io::{self, Read},
-    path::{Path, PathBuf},
+    path::PathBuf,
     process,
 };
 
@@ -10,7 +10,7 @@ use miette::Severity;
 use crate::{
     LintLevel,
     ast::tree,
-    config::{Config, find_config_file_from},
+    config::{Config, load_user_config},
     engine::{LintEngine, collect_nu_files},
     fix::{apply_fixes, apply_fixes_to_stdin, format_fix_results},
     format::{Format, Summary, format_output},
@@ -76,16 +76,8 @@ impl Cli {
     fn load_config(path: Option<PathBuf>) -> Config {
         path.map_or_else(
             || {
-                log::debug!("No configuration file path provided. Looking elsewhere.");
-                let config =
-                    find_config_file_from(Path::new(".")).map_or_else(Config::default, |path| {
-                        Config::load_from_file(&path).unwrap_or_else(|e| {
-                            panic!(
-                                "Loading of configuration file failed. Probably bacause the \
-                                 format was not as expected. Deserialization error:\n{e:#?}"
-                            )
-                        })
-                    });
+                log::debug!("No configuration file path provided. Loading user config.");
+                let config = load_user_config();
                 tracing::debug!(?config);
                 config
             },

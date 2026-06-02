@@ -103,18 +103,9 @@ fn ignore_line_action(
     })
 }
 
-fn disable_rule_action(
-    rule_id: &str,
-    diagnostic: Diagnostic,
-    scope: DisableScope,
-) -> CodeActionOrCommand {
-    let scope_str = match scope {
-        DisableScope::Workspace => "workspace",
-        DisableScope::Global => "user",
-    };
-
+fn disable_rule_action(rule_id: &str, diagnostic: Diagnostic) -> CodeActionOrCommand {
     CodeActionOrCommand::CodeAction(CodeAction {
-        title: format!("Disable `{rule_id}` in {scope_str}"),
+        title: format!("Disable `{rule_id}` in user config"),
         kind: Some(disable_kind(rule_id)),
         diagnostics: Some(vec![diagnostic]),
         command: Some(Command {
@@ -126,15 +117,8 @@ fn disable_rule_action(
     })
 }
 
-#[derive(Clone, Copy)]
-pub enum DisableScope {
-    Workspace,
-    Global,
-}
-
 pub struct CodeActionOptions {
     pub include_ignore: bool,
-    pub disable_scope: DisableScope,
 }
 
 pub fn build_code_actions(
@@ -196,11 +180,7 @@ pub fn build_code_actions(
             ));
         }
 
-        actions.push(disable_rule_action(
-            rule_id,
-            diagnostic,
-            options.disable_scope,
-        ));
+        actions.push(disable_rule_action(rule_id, diagnostic));
     }
 
     actions

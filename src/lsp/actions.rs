@@ -1,23 +1,23 @@
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
+use std::{fs, path::PathBuf};
 
-use crate::{LintError, LintLevel, config::Config};
+use crate::{
+    LintError, LintLevel,
+    config::{Config, user_config_path},
+};
 
 pub const DISABLE_RULE_COMMAND: &str = "nu-lint.disableRule";
 
-/// Execute the disable rule action by writing to the config file.
-/// Returns the path that was modified on success.
-pub fn execute_disable_rule(
-    workspace_root: Option<&Path>,
-    rule_id: &str,
-) -> Result<PathBuf, LintError> {
-    let base_dir = workspace_root
-        .map(Path::to_path_buf)
-        .or_else(dirs::home_dir)
-        .ok_or(LintError::NoConfigLocation)?;
-    let config_path = base_dir.join(".nu-lint.toml");
+/// Execute the disable rule action by writing to the user-wide XDG config
+/// file. Returns the path that was modified on success.
+pub fn execute_disable_rule(rule_id: &str) -> Result<PathBuf, LintError> {
+    let config_path = user_config_path().ok_or(LintError::NoConfigLocation)?;
+
+    if let Some(parent) = config_path.parent() {
+        fs::create_dir_all(parent).map_err(|source| LintError::Io {
+            path: parent.to_path_buf(),
+            source,
+        })?;
+    }
 
     let content = fs::read_to_string(&config_path).unwrap_or_default();
 

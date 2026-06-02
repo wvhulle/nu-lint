@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use lsp_server::{Connection, ExtractError, Message, Notification, Request, RequestId, Response};
 use lsp_types::{
@@ -18,54 +18,10 @@ use super::{
     diagnostic::{is_nushell_language_id, is_nushell_uri},
     state::ServerState,
 };
-use crate::{Config, config::find_config_file_from};
+use crate::config::{load_user_config, user_config_path};
 
-fn get_workspace_root(params: &InitializeParams) -> Option<PathBuf> {
-    let uri = params
-        .workspace_folders
-        .as_ref()
-        .and_then(|folders| folders.first())
-        .map(|folder| &folder.uri)?;
-
-    let path_str = uri.path().as_str();
-
-    if cfg!(windows) {
-        let auth_host = uri
-            .authority()
-            .map(|auth| auth.host().as_str())
-            .unwrap_or_default();
-
-        // `file:///C:/Windows/...` becomes `C:/Windows/...`
-        if auth_host.is_empty() {
-            return Some(PathBuf::from(path_str.get(1..)?));
-        }
-
-        // `file://server/path/...` becomes `server:/path/...`
-        Some(PathBuf::from(format!("{auth_host}:{path_str}")))
-    } else {
-        Some(PathBuf::from(path_str))
-    }
-}
-
-fn load_config_from_workspace(workspace_root: Option<&Path>) -> Config {
-    if let Some(workspace_root) = workspace_root {
-        if let Some(config_file) = find_config_file_from(workspace_root) {
-            tracing::info!(?config_file);
-            Config::load_from_file(&config_file).unwrap()
-        } else {
-            Config::default()
-        }
-    } else {
-        if let Some(config_file) = find_config_file_from(&dirs::home_dir().unwrap()) {
-            Config::load_from_file(&config_file).unwrap()
-        } else {
-            Config::default()
-        }
-    }
-}
-
-fn is_config_file(uri: &Uri, workspace_root: Option<&Path>) -> bool {
-    workspace_root.is_some_and(|root| Path::new(uri.path().as_str()) == root.join(".nu-lint.toml"))
+fn is_user_config_file(uri: &Uri) -> bool {
+    user_config_path().is_some_and(|p| Path::new(uri.path().as_str()) == p)
 }
 
 fn reload_config_and_relint(connection: &Connection, state: &mut ServerState) {
@@ -124,15 +80,14 @@ pub fn run_lsp_server() {
         return;
     };
 
-    let workspace_root = get_workspace_root(&params);
     let is_repl_client = params
         .client_info
         .as_ref()
         .is_some_and(|ci| ci.name == "reedline");
-    let config = load_config_from_workspace(workspace_root.as_deref());
+    let config = load_user_config();
     tracing::info!("nu-lint LSP server initialized");
 
-    let mut state = ServerState::new(config, workspace_root, is_repl_client);
+    let mut state = ServerState::new(config, is_repl_client);
 
     for msg in &connection.receiver {
         match msg {
@@ -182,7 +137,7 @@ fn handle_notification(connection: &Connection, state: &mut ServerState, mut not
         let Some(change) = params.content_changes.into_iter().last() else {
             return;
         };
-        if is_config_file(&uri, state.workspace_root()) {
+        if is_user_config_file(&uri) {
             tracing::info!("Config file changed, reloading configuration");
             reload_config_and_relint(connection, state);
         } else if state.has_document(&uri) || is_nushell_uri(&uri) {
@@ -193,7 +148,7 @@ fn handle_notification(connection: &Connection, state: &mut ServerState, mut not
 
     notif = try_notif::<DidSaveTextDocument, _>(notif, |params| {
         let uri = params.text_document.uri;
-        if is_config_file(&uri, state.workspace_root()) {
+        if is_user_config_file(&uri) {
             tracing::info!("Config file saved, reloading configuration");
             reload_config_and_relint(connection, state);
             return;
@@ -219,7 +174,7 @@ fn handle_notification(connection: &Connection, state: &mut ServerState, mut not
         if params
             .changes
             .iter()
-            .any(|change| is_config_file(&change.uri, state.workspace_root()))
+            .any(|change| is_user_config_file(&change.uri))
         {
             tracing::info!("Config file changed (watched files), reloading configuration");
             reload_config_and_relint(connection, state);
@@ -306,7 +261,7 @@ fn handle_disable_rule_command(
         return;
     };
 
-    match execute_disable_rule(state.workspace_root(), rule_id) {
+    match execute_disable_rule(rule_id) {
         Ok(_) => reload_config_and_relint(connection, state),
         Err(e) => tracing::error!("Failed to disable rule: {e}"),
     }

@@ -1,16 +1,13 @@
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-};
+use std::collections::HashMap;
 
 use lsp_types::{CodeActionOrCommand, Diagnostic, Hover, Range, TextDocumentPositionParams, Uri};
 
 use super::{
-    completion::{CodeActionOptions, DisableScope, build_code_actions},
+    completion::{CodeActionOptions, build_code_actions},
     diagnostic::{LineIndex, extra_labels_to_hint_diagnostics, violation_to_diagnostic},
     docs::build_hover,
 };
-use crate::{Config, LintEngine, config::find_config_file_from, violation::Violation};
+use crate::{Config, LintEngine, config::load_user_config, violation::Violation};
 
 pub struct DocumentState {
     pub content: String,
@@ -21,46 +18,21 @@ pub struct DocumentState {
 pub struct ServerState {
     engine: LintEngine,
     documents: HashMap<Uri, DocumentState>,
-    workspace_root: Option<PathBuf>,
     is_repl_client: bool,
 }
 
 impl ServerState {
-    pub fn new(config: Config, workspace_root: Option<PathBuf>, is_repl_client: bool) -> Self {
+    pub fn new(config: Config, is_repl_client: bool) -> Self {
         Self {
             engine: LintEngine::new(config),
             documents: HashMap::new(),
-            workspace_root,
             is_repl_client,
         }
     }
 
-    /// Reload configuration from workspace or home config file
+    /// Reload the user-wide XDG config.
     pub fn reload_config(&mut self) {
-        let config_path = self
-            .workspace_root
-            .as_ref()
-            .and_then(|root| find_config_file_from(root))
-            .or_else(|| dirs::home_dir().map(|h| h.join(".nu-lint.toml")));
-
-        let config = config_path
-            .and_then(|path| {
-                if path.exists() {
-                    tracing::info!("Reloading config from {}", path.display());
-                    Config::load_from_file(&path).ok()
-                } else {
-                    None
-                }
-            })
-            .unwrap_or_default();
-
-        self.engine = LintEngine::new(config);
-    }
-
-    /// Get the workspace root path
-    #[must_use]
-    pub fn workspace_root(&self) -> Option<&Path> {
-        self.workspace_root.as_deref()
+        self.engine = LintEngine::new(load_user_config());
     }
 
     pub fn lint_document(&mut self, uri: &Uri, content: &str) -> Vec<Diagnostic> {
@@ -103,19 +75,12 @@ impl ServerState {
 
         let is_repl = self.is_repl_client || uri.scheme().is_some_and(|s| s.as_str() == "repl");
 
-        let disable_scope = if self.workspace_root.is_some() {
-            DisableScope::Workspace
-        } else {
-            DisableScope::Global
-        };
-
         build_code_actions(
             uri,
             &range,
             doc_state,
             &CodeActionOptions {
                 include_ignore: !is_repl,
-                disable_scope,
             },
         )
     }

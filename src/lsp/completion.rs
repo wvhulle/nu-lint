@@ -10,7 +10,10 @@ use super::{
     diagnostic::{LineIndex, ranges_overlap, violation_to_diagnostic},
     state::DocumentState,
 };
-use crate::violation::Fix;
+use crate::{
+    ignore::{is_header_line, parse_file_ignore_comment},
+    violation::Fix,
+};
 
 fn workspace_edit(uri: &Uri, edits: Vec<TextEdit>) -> WorkspaceEdit {
     WorkspaceEdit {
@@ -29,6 +32,48 @@ fn ignore_kind(rule_id: &str) -> CodeActionKind {
 
 fn disable_kind(rule_id: &str) -> CodeActionKind {
     CodeActionKind::from(format!("quickfix.nu-lint.disable.{rule_id}"))
+}
+
+fn ignore_file_kind(rule_id: &str) -> CodeActionKind {
+    CodeActionKind::from(format!("quickfix.nu-lint.ignore-file.{rule_id}"))
+}
+
+/// Compute the edit that adds `rule_id` to a file-level ignore header.
+/// Extends an existing `# nu-lint-ignore-file:` line in the header if one
+/// exists; otherwise inserts a new line right after a `#!` shebang (or at
+/// line 0 if none).
+pub fn ignore_file_edit(content: &str, rule_id: &str) -> TextEdit {
+    let line_index = LineIndex::new(content);
+    let lines: Vec<&str> = content.lines().collect();
+
+    let existing = lines
+        .iter()
+        .enumerate()
+        .take_while(|(_, line)| is_header_line(line))
+        .find_map(|(i, line)| parse_file_ignore_comment(line).map(|_| (i, *line)));
+
+    if let Some((i, line)) = existing {
+        let end_offset = line_index.line_start(i) + line.len();
+        let pos = line_index.offset_to_position(end_offset, content);
+        return TextEdit {
+            range: Range {
+                start: pos,
+                end: pos,
+            },
+            new_text: format!(", {rule_id}"),
+        };
+    }
+
+    let has_shebang = lines.first().is_some_and(|l| l.starts_with("#!"));
+    let insert_offset = line_index.line_start(usize::from(has_shebang));
+    let pos = line_index.offset_to_position(insert_offset, content);
+    TextEdit {
+        range: Range {
+            start: pos,
+            end: pos,
+        },
+        new_text: format!("# nu-lint-ignore-file: {rule_id}\n"),
+    }
 }
 
 pub fn ignore_comment_edit(content: &str, byte_offset: usize, rule_id: &str) -> TextEdit {
@@ -97,6 +142,22 @@ fn ignore_line_action(
     CodeActionOrCommand::CodeAction(CodeAction {
         title: format!("Ignore `{rule_id}` on this line"),
         kind: Some(ignore_kind(rule_id)),
+        diagnostics: Some(vec![diagnostic]),
+        edit: Some(workspace_edit(uri, vec![edit])),
+        ..Default::default()
+    })
+}
+
+fn ignore_file_action(
+    uri: &Uri,
+    rule_id: &str,
+    diagnostic: Diagnostic,
+    content: &str,
+) -> CodeActionOrCommand {
+    let edit = ignore_file_edit(content, rule_id);
+    CodeActionOrCommand::CodeAction(CodeAction {
+        title: format!("Ignore `{rule_id}` in this file"),
+        kind: Some(ignore_file_kind(rule_id)),
         diagnostics: Some(vec![diagnostic]),
         edit: Some(workspace_edit(uri, vec![edit])),
         ..Default::default()
@@ -175,6 +236,12 @@ pub fn build_code_actions(
                 uri,
                 rule_id,
                 span.start,
+                diagnostic.clone(),
+                &doc_state.content,
+            ));
+            actions.push(ignore_file_action(
+                uri,
+                rule_id,
                 diagnostic.clone(),
                 &doc_state.content,
             ));

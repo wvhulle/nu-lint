@@ -4,17 +4,17 @@
 # Usage: ./test.nu [--cargo]
 
 def main [
-    --cargo  # Use cargo instead of nix build
+  --cargo # Use cargo instead of nix build
 ]: nothing -> nothing {
-    print "Running tests..."
+  print "Running tests..."
 
-    if $cargo {
-        print "Running cargo test..."
-        ^cargo test --all-targets
-    } else {
-        print "Running tests with nix develop..."
-        ^nix develop -c cargo test --all-targets
-    }
+  if $cargo {
+    print "Running cargo test..."
+    cargo test --all-targets
+  } else {
+    print "Running tests with nix develop..."
+    ^nix develop -c cargo test --all-targets
+  }
 
-    print "Tests complete!"
+  print "Tests complete!"
 }

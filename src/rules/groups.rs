@@ -27,6 +27,7 @@ const ERROR_HANDLING: Group = Group {
         super::missing_stdin_in_shebang::RULE,
         super::dynamic_script_import::RULE,
         super::catch_builtin_error_try::RULE,
+        super::default_empty_string_masks_missing::RULE,
         super::unchecked_cell_path_index::RULE,
         super::unchecked_get_index::RULE,
         super::unhandled_external_error::RULE,

@@ -18,6 +18,7 @@ pub mod compound_assignment;
 pub mod contains_to_regex_op;
 pub mod custom_log_command;
 pub mod dangerous_file_operations;
+pub mod default_empty_string_masks_missing;
 pub mod dispatch_with_subcommands;
 pub mod division_to_format_duration;
 pub mod do_not_compare_booleans;
@@ -105,6 +106,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     contains_to_regex_op::RULE,
     custom_log_command::RULE,
     dangerous_file_operations::RULE,
+    default_empty_string_masks_missing::RULE,
     dispatch_with_subcommands::RULE,
     do_not_compare_booleans::RULE,
     documentation::add_doc_comment_exported_fn::RULE,

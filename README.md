@@ -172,6 +172,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `missing_stdin_in_shebang` (auto-fix): Shebang missing `--stdin` for input
 - `dynamic_script_import`: Dynamic import path not statically validated
 - `catch_builtin_error_try`: Catch runtime errors from built-in commands using 'try' blocks
+- `default_empty_string_masks_missing`: Avoid '| default ""'; it masks a missing value as an empty string
 - `unchecked_cell_path_index` (auto-fix): Cell path numeric index access may panic on empty lists
 - `unchecked_get_index` (auto-fix): Prefer optional cell path `$list.0?` over `get` for index access
 - `unhandled_external_error`: Unhandled external command error

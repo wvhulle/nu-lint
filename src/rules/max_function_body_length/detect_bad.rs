@@ -31,16 +31,14 @@ fn exported_long_function() {
 }
 
 #[test]
-fn long_function_with_match_statements() {
+fn long_function_with_many_assignments() {
     let rule = RULE;
     let long_function = format!(
-        r"def handle_cases [value] {{
-    match $value {{
+        r"def handle_cases [] {{
 {}
-    }}
 }}",
         (0..45)
-            .map(|i| format!("        {i} => {{ print {i} }}"))
+            .map(|i| format!("    let z{i} = {i}"))
             .collect::<Vec<_>>()
             .join("\n")
     );

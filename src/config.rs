@@ -56,6 +56,13 @@ pub struct Config {
     /// When true, rules recommend `get --optional` instead of `$list.0?` for
     /// safe access. Default is false (prefer `?` syntax).
     pub explicit_optional_access: bool,
+    /// Maximum number of top-level statements allowed in a function body before
+    /// `max_function_body_length` fires. Default: 40.
+    pub max_function_body_statements: usize,
+    /// Maximum number of pipeline elements (pipe-separated steps) a
+    /// single-call function body may have before `single_call_command` stops
+    /// suggesting it can be inlined. Default: 2 (at most one `|`).
+    pub max_inlinable_pipeline_elements: usize,
 }
 
 impl Default for Config {
@@ -68,6 +75,8 @@ impl Default for Config {
             max_pipeline_length: 80,
             skip_external_parse_errors: true,
             explicit_optional_access: false,
+            max_function_body_statements: 40,
+            max_inlinable_pipeline_elements: 2,
         }
     }
 }

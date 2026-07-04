@@ -402,6 +402,13 @@ max_pipeline_length = 80
 pipeline_placement = "start"
 explicit_optional_access = true
 
+# Maximum top-level statements in a function body before max_function_body_length fires (default: 40)
+max_function_body_statements = 40
+
+# Maximum pipe-separated steps a single-call function body may have before
+# single_call_command stops suggesting it can be inlined (default: 2, i.e. at most one |)
+max_inlinable_pipeline_elements = 2
+
 # Set lint level of a set of rules at once.
 [groups]
 performance = "warning"

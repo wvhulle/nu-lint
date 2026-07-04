@@ -5,30 +5,35 @@ use crate::{
     rule::{DetectFix, Rule},
     violation::Detection,
 };
-const MAX_LINES: usize = 40;
-
 fn check(context: &LintContext) -> Vec<Detection> {
+    let max = context.config.max_function_body_statements;
     context
         .custom_commands()
         .iter()
-        .filter_map(|def| function_violation(context, def))
+        .filter_map(|def| function_violation(context, def, max))
         .collect()
 }
+
 fn function_violation(
     context: &LintContext<'_>,
     def: &declaration::CustomCommandDef,
+    max: usize,
 ) -> Option<Detection> {
     let block = context.working_set.get_block(def.body);
-    let block_span = block.span?;
-    let line_count = context.span_text(block_span).lines().count();
-    (line_count > MAX_LINES).then(|| {
+    let pipeline_count = block.pipelines.len();
+    (pipeline_count > max).then(|| {
         let message = format!(
-            "Function `{}` has {line_count} lines, which exceeds the maximum of {MAX_LINES} lines",
+            "Function `{}` has {pipeline_count} statements, which exceeds the maximum of {max} \
+             statements",
             def.name
         );
-        Detection::from_file_span(message, def.declaration_span(context))
-            .with_primary_label(format!("{line_count} lines"))
-            .with_extra_label("function body", block_span)
+        let detection = Detection::from_file_span(message, def.declaration_span(context))
+            .with_primary_label(format!("{pipeline_count} statements"));
+        if let Some(span) = block.span {
+            detection.with_extra_label("function body", span)
+        } else {
+            detection
+        }
     })
 }
 struct TooManyLines;

@@ -144,3 +144,16 @@ def main [
 
     RULE.assert_ignores(good);
 }
+
+#[test]
+fn test_ignore_required_string_param_not_dispatched() {
+    let good = r#"
+def main [
+    message: string
+] {
+    print $message
+}
+"#;
+
+    RULE.assert_ignores(good);
+}

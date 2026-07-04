@@ -1,24 +1,23 @@
-use nu_protocol::ast::{Call, Expr, MatchPattern, Pattern};
+use nu_protocol::{
+    SyntaxShape,
+    ast::{Call, Expr, MatchPattern, Pattern},
+};
 
 use crate::{
     LintLevel,
-    ast::{call::CallExt, expression::ExpressionExt},
+    ast::{call::CallExt, declaration::CustomCommandDef, expression::ExpressionExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
 };
 
-fn extract_optional_string_param(call: &Call, context: &LintContext) -> Option<String> {
-    let sig_text = call.get_positional_arg(1)?.span_text(context);
-
-    (sig_text.contains("?: string") || sig_text.contains(": string = "))
-        .then(|| {
-            sig_text
-                .split(&['[', ']', ':', '?'][..])
-                .find(|s| !s.is_empty() && !s.starts_with(' '))
-                .map(|s| s.trim().to_string())
-        })
-        .flatten()
+fn string_param_names(def: &CustomCommandDef) -> impl Iterator<Item = &str> {
+    def.signature
+        .required_positional
+        .iter()
+        .chain(def.signature.optional_positional.iter())
+        .filter(|p| matches!(p.shape, SyntaxShape::String))
+        .map(|p| p.name.as_str())
 }
 
 fn is_string_literal_pattern(pattern: &MatchPattern) -> bool {
@@ -110,12 +109,12 @@ impl DetectFix for DispatchWithSubcommands {
                 return vec![];
             }
 
-            extract_optional_string_param(def_call, ctx)
-                .and_then(|param| {
-                    find_match_dispatch(def.body, &param, ctx).map(|call| (param, call))
+            string_param_names(&def)
+                .filter_map(|param| {
+                    find_match_dispatch(def.body, param, ctx)
+                        .map(|call| build_violation(param, call))
                 })
-                .map(|(param, call)| vec![build_violation(&param, call)])
-                .unwrap_or_default()
+                .collect()
         }))
     }
 }

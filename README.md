@@ -62,7 +62,6 @@ Some of the rules need further testing and improvement. Please make an issue on 
 +150 rules are defined and most have automatic fixes available (list may be out-of-date):
 
 <!-- start-rule-groups -->
-
 `idioms` - Simplifications unique to the Nu language.
 
 - `not_is_empty_to_is_not_empty` (auto-fix): Simplify `not ... is-empty` to `is-not-empty`
@@ -83,9 +82,10 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `append_to_concat_assign` (auto-fix): Use ++= operator instead of verbose append in assignment
 - `custom_log_command` (auto-fix): Custom log command shadows stdlib. Use `use std/log` instead
 - `chained_append` (auto-fix): Use spread syntax instead of chained 'append' commands
-- `use_record_spread` (auto-fix): Use record spread for consecutive field assignments
+- `merge_with_record_spread` (auto-fix): Use record spread for consecutive field assignments
 - `use_load_env` (auto-fix): Use load-env for multiple $env assignments
 - `remove_hat_not_builtin` (auto-fix): Detect unnecessary '^' prefix on external commands
+- `division_to_format_duration` (auto-fix): Replace duration division with `format duration`
 
 `parsing` - Better ways to parse and transform text data.
 
@@ -174,7 +174,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `catch_builtin_error_try`: Catch runtime errors from built-in commands using 'try' blocks
 - `unchecked_cell_path_index` (auto-fix): Cell path numeric index access may panic on empty lists
 - `unchecked_get_index` (auto-fix): Prefer optional cell path `$list.0?` over `get` for index access
-- `wrap_external_with_complete`: External command missing `complete` wrapper
+- `unhandled_external_error`: Unhandled external command error
 - `source_to_use`: `source` replaceable with `use`
 - `spread_list_to_external` (auto-fix): List variables passed to external commands should be spread with `...`
 - `glob_may_drop_quotes` (auto-fix): Quoted glob pattern treated as literal

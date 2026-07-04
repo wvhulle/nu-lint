@@ -97,3 +97,41 @@ def main [
 
     RULE.assert_count(bad_code, 1);
 }
+
+#[test]
+fn test_detect_main_with_required_string_param() {
+    init_test_log();
+    let bad_code = r#"
+def main [
+    command: string
+] {
+    match $command {
+        "start" => { do-start }
+        "stop" => { do-stop }
+        "status" => { do-status }
+        _ => { print "unknown" }
+    }
+}
+"#;
+
+    RULE.assert_detects(bad_code);
+}
+
+#[test]
+fn test_detect_main_multiple_string_params_one_dispatched() {
+    init_test_log();
+    let bad_code = r#"
+def main [
+    command: string
+    filter: string
+] {
+    match $command {
+        "build" => { do-build $filter }
+        "test" => { do-test $filter }
+        _ => { show-help }
+    }
+}
+"#;
+
+    RULE.assert_detects(bad_code);
+}

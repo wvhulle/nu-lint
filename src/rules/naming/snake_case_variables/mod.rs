@@ -62,9 +62,7 @@ fn check_call(call: &Call, ctx: &LintContext) -> Option<(Detection, SnakeCaseFix
     let mut replacements = vec![(name_expr.span, snake_case_name.clone())];
 
     for usage_span in find_variable_usages(*var_id, ctx) {
-        if ctx.span_text(usage_span).starts_with('$') {
-            replacements.push((usage_span, format!("${snake_case_name}")));
-        }
+        replacements.push((usage_span, format!("${snake_case_name}")));
     }
 
     let var_type = if is_mutable {

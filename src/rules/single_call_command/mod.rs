@@ -15,25 +15,19 @@ use crate::{
 
 /// Check if a block has a single pipeline suitable for inlining.
 fn is_inlinable_body(block: &Block, context: &LintContext) -> bool {
-    // Must have exactly one non-empty pipeline
-    let non_empty_pipeline_count = block
-        .pipelines
-        .iter()
-        .filter(|p| {
-            p.elements
-                .iter()
-                .any(|e| !matches!(&e.expr.expr, Expr::Nothing))
-        })
-        .count();
-
-    if non_empty_pipeline_count != 1 {
-        return false;
+    let mut non_empty = block.pipelines.iter().filter(|p| {
+        p.elements
+            .iter()
+            .any(|e| !matches!(&e.expr.expr, Expr::Nothing))
+    });
+    match non_empty.next() {
+        Some(pipeline) if non_empty.next().is_none() => {
+            let max = context.config.max_inlinable_pipeline_elements;
+            unwrap_body_pipeline(pipeline, context)
+                .is_some_and(|(elements, _, _)| elements.len() <= max)
+        }
+        _ => false,
     }
-
-    // Body must fit within 3 lines
-    block
-        .span
-        .is_none_or(|span| context.span_text(span).lines().count() <= 3)
 }
 
 /// Extract the actual pipeline elements from a body.

@@ -25,7 +25,7 @@ fn try_convert_jq_call<'a>(
         return None;
     };
 
-    if ctx.span_text(head.span) != "jq" {
+    if !matches!(&head.expr, Expr::String(s) | Expr::GlobPattern(s, _) if s == "jq") {
         return None;
     }
 

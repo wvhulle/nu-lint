@@ -1,0 +1,10 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/j178/prek/master/prek-hooks.schema.json
+- id: nu-lint
+  name: nu-lint
+  description: "Linter for the Nu shell scripting language https://nushell.sh"
+  language: rust
+  entry: nu-lint
+  # Pass --fix in your config to apply autosuggestions when the hook runs
+  # args: ["--fix"]
+  pass_filenames: true
+  files: '\.nu$'

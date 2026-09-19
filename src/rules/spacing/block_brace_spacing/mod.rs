@@ -1,5 +1,6 @@
-use nu_protocol::{Span, ast::Expr};
+use nu_protocol::{Span, Type, ast::Expr};
 
+use super::has_explicit_pipe_delimiters;
 use crate::{
     LintLevel,
     context::LintContext,
@@ -7,14 +8,14 @@ use crate::{
     violation::{Detection, Fix, Replacement},
 };
 
-struct BlockBodySpacingFixData {
+struct BlockBraceSpacingFixData {
     block_span: Span,
 }
 
 fn check_block_body_spacing(
     context: &LintContext,
     block_span: Span,
-) -> Vec<(Detection, BlockBodySpacingFixData)> {
+) -> Vec<(Detection, BlockBraceSpacingFixData)> {
     let text = context.span_text(block_span);
 
     let mut chars = text.chars();
@@ -35,33 +36,45 @@ fn check_block_body_spacing(
         let closing_span = Span::new(block_span.end - 1, block_span.end);
         vec![(
             Detection::from_global_span(
-                "Block body needs spaces inside braces: `{ body }` not `{body}`".to_string(),
+                "Block or closure without parameters needs spaces inside braces: `{ body }` not \
+                 `{body}`"
+                    .to_string(),
                 block_span,
             )
             .with_extra_label("add space after `{`", opening_span)
             .with_extra_label("add space before `}`", closing_span),
-            BlockBodySpacingFixData { block_span },
+            BlockBraceSpacingFixData { block_span },
         )]
     } else {
         vec![]
     }
 }
 
-struct BlockBodySpacing;
+struct BlockBraceSpacing;
 
-impl DetectFix for BlockBodySpacing {
-    type FixInput<'a> = BlockBodySpacingFixData;
+impl DetectFix for BlockBraceSpacing {
+    type FixInput<'a> = BlockBraceSpacingFixData;
 
     fn id(&self) -> &'static str {
         "block_brace_spacing"
     }
 
     fn short_description(&self) -> &'static str {
-        "Block body needs spaces inside braces: `{ body }` not `{body}`"
+        "Block or closure without parameters needs spaces inside braces: `{ body }` not `{body}`"
     }
 
     fn source_link(&self) -> Option<&'static str> {
         Some("https://www.nushell.sh/book/style_guide.html#one-line-format")
+    }
+
+    fn long_description(&self) -> Option<&'static str> {
+        Some(
+            "Applies to blocks such as `if`/`else` and `try`, and to closures without explicit \
+             parameters such as `do { ... }`. Closures that declare parameters keep their opening \
+             brace against the pipe, and are covered by `closure_brace_pipe_spacing` and \
+             `closure_pipe_body_spacing` instead. Record literals are covered by \
+             `record_brace_spacing`.",
+        )
     }
 
     fn level(&self) -> LintLevel {
@@ -69,13 +82,16 @@ impl DetectFix for BlockBodySpacing {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.detect_with_fix_data(|expr, ctx| match &expr.expr {
-            // `Type::Any` covers parser-ambiguous cases like `{$name: $value}`
-            // which could be either a record or a block.
-            Expr::Block(_) if expr.ty != nu_protocol::Type::Any => {
-                check_block_body_spacing(ctx, expr.span)
+        context.detect_with_fix_data(|expr, ctx| {
+            let braces_belong_to_this_node = matches!(
+                (&expr.expr, &expr.ty),
+                (Expr::Block(_), Type::Block) | (Expr::Closure(_), Type::Closure)
+            );
+
+            if !braces_belong_to_this_node || has_explicit_pipe_delimiters(ctx, expr.span) {
+                return vec![];
             }
-            _ => vec![],
+            check_block_body_spacing(ctx, expr.span)
         })
     }
 
@@ -97,7 +113,7 @@ impl DetectFix for BlockBodySpacing {
     }
 }
 
-pub static RULE: &dyn Rule = &BlockBodySpacing;
+pub static RULE: &dyn Rule = &BlockBraceSpacing;
 
 #[cfg(test)]
 mod detect_bad;

@@ -64,7 +64,7 @@ fn check_closure(
 
     let body_span = first_body_expr_span(ctx, block_id);
     let mut detection = Detection::from_global_span(
-        "Closure body needs space after `|` and before `}`: `{|x| body }`".to_string(),
+        "Closure body needs spaces: `{|x| body }` not `{|x|body}`".to_string(),
         closure_span,
     );
 
@@ -86,9 +86,9 @@ fn check_closure(
     Some((detection, closure_span))
 }
 
-struct ClosureBodySpacing;
+struct ClosurePipeBodySpacing;
 
-impl DetectFix for ClosureBodySpacing {
+impl DetectFix for ClosurePipeBodySpacing {
     type FixInput<'a> = Span;
 
     fn id(&self) -> &'static str {
@@ -137,7 +137,7 @@ impl DetectFix for ClosureBodySpacing {
     }
 }
 
-pub static RULE: &dyn Rule = &ClosureBodySpacing;
+pub static RULE: &dyn Rule = &ClosurePipeBodySpacing;
 
 #[cfg(test)]
 mod detect_bad;

@@ -8,14 +8,14 @@ use crate::{
     violation::{Detection, Fix, Replacement},
 };
 
-struct ClosureParamSpacingFixData {
+struct ClosureBracePipeSpacingFixData {
     whitespace_span: Span,
 }
 
 fn check_closure_param_spacing(
     context: &LintContext,
     closure_span: Span,
-) -> Vec<(Detection, ClosureParamSpacingFixData)> {
+) -> Vec<(Detection, ClosureBracePipeSpacingFixData)> {
     let text = context.span_text(closure_span);
 
     // Validate basic structure: must start with '{' and end with '}'
@@ -55,27 +55,27 @@ fn check_closure_param_spacing(
 
     vec![(
         Detection::from_global_span(
-            "Closure opening brace should directly touch parameter pipe `{|`".to_string(),
+            "Closure opening brace should touch parameter pipe: `{|x|` not `{ |x|`".to_string(),
             opening_brace_span,
         )
         .with_primary_label("`{` here")
         .with_extra_label("remove this whitespace", whitespace_span)
         .with_extra_label("`|` should follow `{` directly", pipe_span),
-        ClosureParamSpacingFixData { whitespace_span },
+        ClosureBracePipeSpacingFixData { whitespace_span },
     )]
 }
 
-struct ClosureParamSpacing;
+struct ClosureBracePipeSpacing;
 
-impl DetectFix for ClosureParamSpacing {
-    type FixInput<'a> = ClosureParamSpacingFixData;
+impl DetectFix for ClosureBracePipeSpacing {
+    type FixInput<'a> = ClosureBracePipeSpacingFixData;
 
     fn id(&self) -> &'static str {
         "closure_brace_pipe_spacing"
     }
 
     fn short_description(&self) -> &'static str {
-        "Space between `{` and `|` in closure"
+        "Closure opening brace should touch parameter pipe: `{|x|` not `{ |x|`"
     }
 
     fn source_link(&self) -> Option<&'static str> {
@@ -105,7 +105,7 @@ impl DetectFix for ClosureParamSpacing {
     }
 }
 
-pub static RULE: &dyn Rule = &ClosureParamSpacing;
+pub static RULE: &dyn Rule = &ClosureBracePipeSpacing;
 
 #[cfg(test)]
 mod detect_bad;

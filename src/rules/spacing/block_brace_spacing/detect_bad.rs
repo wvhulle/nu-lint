@@ -17,3 +17,9 @@ fn if_block_missing_closing_space() {
     let bad = "if true { echo 'yes'}";
     RULE.assert_detects(bad);
 }
+
+#[test]
+fn closure_without_params_no_spaces() {
+    let bad = "do {print 'hi'}";
+    RULE.assert_detects(bad);
+}

@@ -256,8 +256,8 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `forbid_excessive_nesting`: Avoid excessive nesting (more than 4 levels deep)
 - `max_function_body_length`: Function bodies should be short to maintain readability
 - `if_else_chain_to_match` (auto-fix): Use 'match' for value-based branching instead of if-else-if chains
-- `block_brace_spacing` (auto-fix): Block body needs spaces inside braces: `{ body }` not `{body}`
-- `closure_brace_pipe_spacing` (auto-fix): Space between `{` and `|` in closure
+- `block_brace_spacing` (auto-fix): Block or closure without parameters needs spaces inside braces: `{ body }` not `{body}`
+- `closure_brace_pipe_spacing` (auto-fix): Closure opening brace should touch parameter pipe: `{|x|` not `{ |x|`
 - `closure_pipe_body_spacing` (auto-fix): Closure body needs spaces: `{|x| body }` not `{|x|body}`
 - `no_trailing_spaces` (auto-fix): Eliminate trailing spaces at the end of lines
 - `omit_list_commas` (auto-fix): Omit commas between list items.

@@ -152,6 +152,10 @@ pub fn apply_fixes_iteratively(content: &str, lint_engine: &LintEngine) -> (Stri
         log::warn!("Reached maximum iteration limit ({max_iterations})");
     }
 
+    if current_content == content {
+        return (current_content, 0);
+    }
+
     (current_content, total_fixes_applied)
 }
 

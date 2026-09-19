@@ -1,7 +1,7 @@
 use std::{
-    io::{self, Read},
+    io::{self, Read, Write},
     path::PathBuf,
-    process,
+    process::ExitCode,
 };
 
 use clap::{Parser, crate_version};
@@ -93,10 +93,10 @@ impl Cli {
         source
     }
 
-    fn lint(&self, config: &Config) {
+    fn lint(&self, config: &Config) -> io::Result<ExitCode> {
         if let Err(e) = config.validate() {
-            eprintln!("Error: {e}");
-            process::exit(1);
+            writeln!(io::stderr(), "Error: {e}")?;
+            return Ok(ExitCode::FAILURE);
         }
         let engine = LintEngine::new(config.clone());
 
@@ -106,73 +106,84 @@ impl Cli {
         } else {
             let files = collect_nu_files(&self.paths);
             if files.is_empty() {
-                eprintln!("Warning: No Nushell files found in specified paths");
-                return;
+                writeln!(
+                    io::stderr(),
+                    "Warning: No Nushell files found in specified paths"
+                )?;
+                return Ok(ExitCode::SUCCESS);
             }
             engine.lint_files(&files)
         };
 
         let output = format_output(&violations, self.format);
         if !output.is_empty() {
-            println!("{output}");
+            writeln!(io::stdout(), "{output}")?;
         }
 
         let summary = Summary::from_violations(&violations);
-        eprintln!("{}", summary.format_compact());
+        writeln!(io::stderr(), "{}", summary.format_compact())?;
 
         if violations.iter().any(|v| v.lint_level > Severity::Warning) {
-            process::exit(1);
+            Ok(ExitCode::FAILURE)
         } else {
-            process::exit(0);
+            Ok(ExitCode::SUCCESS)
         }
     }
 
-    fn fix(&self, config: &Config) {
+    fn fix(&self, config: &Config) -> io::Result<ExitCode> {
         if let Err(e) = config.validate() {
-            eprintln!("Error: {e}");
-            process::exit(1);
+            writeln!(io::stderr(), "Error: {e}")?;
+            return Ok(ExitCode::FAILURE);
         }
         let engine = LintEngine::new(config.clone());
 
         if self.stdin {
-            Self::fix_stdin(&engine);
+            Self::fix_stdin(&engine)?;
         } else {
-            Self::fix_files(&self.paths, &engine);
+            Self::fix_files(&self.paths, &engine)?;
         }
+        Ok(ExitCode::SUCCESS)
     }
 
-    fn fix_stdin(engine: &LintEngine) {
+    fn fix_stdin(engine: &LintEngine) -> io::Result<()> {
         let source = Self::read_stdin();
         let violations = engine.lint_stdin(&source);
 
+        let mut stdout = io::stdout().lock();
         if let Some(fixed) = apply_fixes_to_stdin(&violations) {
-            print!("{fixed}");
+            write!(stdout, "{fixed}")?;
         } else {
-            print!("{source}");
+            write!(stdout, "{source}")?;
         }
+        stdout.flush()
     }
 
-    fn fix_files(paths: &[PathBuf], engine: &LintEngine) {
+    fn fix_files(paths: &[PathBuf], engine: &LintEngine) -> io::Result<()> {
         let files = collect_nu_files(paths);
         if files.is_empty() {
-            eprintln!("Warning: No Nushell files found in specified paths");
-            return;
+            return writeln!(
+                io::stderr(),
+                "Warning: No Nushell files found in specified paths"
+            );
         }
 
         let violations = engine.lint_files(&files);
 
         let results = apply_fixes(&violations, false, engine);
         let output = format_fix_results(&results, false);
-        print!("{output}");
+        let mut stdout = io::stdout().lock();
+        write!(stdout, "{output}")?;
+        stdout.flush()
     }
 
-    fn list_rules(config: &Config) {
+    fn list_rules(config: &Config) -> io::Result<()> {
         let mut sorted_rules: Vec<&dyn Rule> = USED_RULES.to_vec();
         sorted_rules.sort_by_key(|r| r.id());
 
+        let mut stdout = io::stdout().lock();
+
         if sorted_rules.is_empty() {
-            println!("No rules enabled.");
-            return;
+            return writeln!(stdout, "No rules enabled.");
         }
 
         let max_id_len = sorted_rules.iter().map(|r| r.id().len()).max().unwrap_or(0);
@@ -187,22 +198,24 @@ impl Cli {
             };
             let fix_char = if rule.has_auto_fix() { 'F' } else { ' ' };
             let desc = rule.short_description();
-            println!(
+            writeln!(
+                stdout,
                 "{level_char}{fix_char} {:<width$}  {desc}",
                 rule.id(),
                 width = max_id_len
-            );
+            )?;
         }
 
         let fixable_count = sorted_rules.iter().filter(|r| r.has_auto_fix()).count();
-        println!(
+        writeln!(
+            stdout,
             "\n{n} rules, {f} fixable. [H]int [W]arning [E]rror [F]ixable [D]eactivated",
             n = sorted_rules.len(),
             f = fixable_count
-        );
+        )
     }
 
-    fn list_groups() {
+    fn list_groups() -> io::Result<()> {
         fn auto_fix_suffix(rule: &dyn Rule) -> &'static str {
             if rule.has_auto_fix() {
                 " (auto-fix)"
@@ -210,33 +223,47 @@ impl Cli {
                 ""
             }
         }
+        let mut stdout = io::stdout().lock();
         for set in ALL_GROUPS {
-            println!("`{}` - {}\n", set.name, set.description);
+            writeln!(stdout, "`{}` - {}\n", set.name, set.description)?;
             for rule in set.rules {
                 let desc = rule.short_description();
-                println!("- `{}`{}: {}", rule.id(), auto_fix_suffix(*rule), desc);
+                writeln!(
+                    stdout,
+                    "- `{}`{}: {}",
+                    rule.id(),
+                    auto_fix_suffix(*rule),
+                    desc
+                )?;
             }
-            println!();
+            writeln!(stdout)?;
         }
+        Ok(())
     }
 
-    fn explain_rule(rule_id: &str) {
+    fn explain_rule(rule_id: &str) -> io::Result<ExitCode> {
         let rule = USED_RULES.iter().find(|r| r.id() == rule_id);
 
         if let Some(rule) = rule {
-            println!("Rule: {}", rule.id());
-            println!("Explanation: {}", rule.short_description());
+            let mut stdout = io::stdout().lock();
+            writeln!(stdout, "Rule: {}", rule.id())?;
+            writeln!(stdout, "Explanation: {}", rule.short_description())?;
             if let Some(url) = rule.source_link() {
-                println!("Documentation: {url}");
+                writeln!(stdout, "Documentation: {url}")?;
             }
+            Ok(ExitCode::SUCCESS)
         } else {
-            eprintln!("Unknown rule ID: {rule_id}");
-            process::exit(1);
+            writeln!(io::stderr(), "Unknown rule ID: {rule_id}")?;
+            Ok(ExitCode::FAILURE)
         }
     }
 }
 
-pub fn run() {
+#[allow(
+    clippy::missing_errors_doc,
+    reason = "write failures are reported by the caller, not documented per stream"
+)]
+pub fn run() -> io::Result<ExitCode> {
     let cli = Cli::parse();
 
     if cli.verbose {
@@ -245,23 +272,24 @@ pub fn run() {
 
     let config = Cli::load_config(cli.config.clone());
     if cli.list {
-        Cli::list_rules(&config);
+        Cli::list_rules(&config)?;
     } else if cli.groups {
-        Cli::list_groups();
+        Cli::list_groups()?;
     } else if let Some(ref rule_id) = cli.explain {
-        Cli::explain_rule(rule_id);
+        return Cli::explain_rule(rule_id);
     } else if let Some(ref source) = cli.ast {
-        tree::print_ast(source);
+        tree::print_ast(source)?;
     } else if cli.lsp {
         let _log_guard = init_lsp_log();
         tracing::info!("nu-lint LSP server started");
         lsp::run_lsp_server();
     } else if cli.fix {
-        cli.fix(&config);
+        return cli.fix(&config);
     } else {
         log::debug!("No flags given, will lint workspace.");
-        cli.lint(&config);
+        return cli.lint(&config);
     }
+    Ok(ExitCode::SUCCESS)
 }
 
 #[cfg(test)]

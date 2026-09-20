@@ -36,11 +36,7 @@ fn command_produces_output(expr: &Expression, context: &LintContext) -> bool {
             !has_external_side_effect(cmd_name, ExternEffect::NoDataInStdout, context, args)
         }
         Expr::Call(call) => {
-            let output_type = context
-                .working_set
-                .get_decl(call.decl_id)
-                .signature()
-                .get_output_type();
+            let output_type = call.get_output_type(context, None);
 
             if output_type != nu_protocol::Type::Nothing {
                 log::trace!(

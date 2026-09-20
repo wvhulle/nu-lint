@@ -146,3 +146,9 @@ fn ignore_relative_dot_import_on_disk() {
         "Expected no nu_parse_error for a valid ./sibling import, but got: {violations:?}"
     );
 }
+
+#[test]
+fn ignore_valid_str_case_commands() {
+    RULE.assert_ignores(r#""HELLO" | str lowercase"#);
+    RULE.assert_ignores(r#""hello" | str uppercase"#);
+}

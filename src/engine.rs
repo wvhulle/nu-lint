@@ -40,7 +40,7 @@ pub fn parse_source<'a>(
     // Get the offset where this file will start in the virtual span space
     let file_offset = working_set.next_span_start();
     // Add the source to the working set's file stack so spans work correctly
-    let _file_id = working_set.add_file(fname.clone(), source);
+    let _file_id = working_set.add_file(&fname, source);
     // Populate `files` to make `path self` command work
     working_set.files = FileStack::with_file(file_buf);
     let block = parse(&mut working_set, Some(&fname), source, false);
@@ -136,16 +136,6 @@ impl LintEngine {
             {
                 engine_state.add_env_var("PWD".into(), Value::string(cwd, Span::unknown()));
             }
-
-            // Add print command (exported by nu-cli but not added by add_cli_context)
-            let delta = {
-                let mut working_set = StateWorkingSet::new(&engine_state);
-                working_set.add_decl(Box::new(nu_cli::Print));
-                working_set.render()
-            };
-            engine_state
-                .merge_delta(delta)
-                .expect("Failed to add Print command");
 
             // Commented out because not needed for most lints and may slow down
             nu_std::load_standard_library(&mut engine_state).unwrap();

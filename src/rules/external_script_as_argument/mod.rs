@@ -1,6 +1,8 @@
+use std::ops::ControlFlow;
+
 use nu_protocol::{
     SyntaxShape, VarId,
-    ast::{Block, FindMapResult, Traverse},
+    ast::{Block, Traverse},
 };
 
 use crate::{
@@ -19,9 +21,9 @@ fn contains_external_call_with_variable(
     block
         .find_map(context.working_set, &|expr| {
             if expr.is_external_call_with_variable(var_id) {
-                FindMapResult::Found(())
+                ControlFlow::Break(Some(()))
             } else {
-                FindMapResult::Continue
+                ControlFlow::Continue(())
             }
         })
         .is_some()

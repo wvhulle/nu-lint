@@ -3,8 +3,8 @@ use std::ops::ControlFlow;
 use nu_protocol::{
     BlockId, ENV_VARIABLE_ID, IN_VARIABLE_ID, NU_VARIABLE_ID, Span, Type, VarId,
     ast::{
-        Argument, Call, Expr, Expression, FindMapResult, FullCellPath, ListItem, Operator,
-        PathMember, RecordItem, Traverse,
+        Argument, Call, Expr, Expression, FullCellPath, ListItem, Operator, PathMember, RecordItem,
+        Traverse,
     },
     engine::Variable,
 };
@@ -236,9 +236,9 @@ impl ExpressionExt for Expression {
     fn contains_variables(&self, context: &LintContext) -> bool {
         self.find_map(context.working_set, &|expr| {
             if matches!(&expr.expr, Expr::Var(_) | Expr::VarDecl(_)) {
-                FindMapResult::Found(())
+                ControlFlow::Break(Some(()))
             } else {
-                FindMapResult::Continue
+                ControlFlow::Continue(())
             }
         })
         .is_some()
@@ -411,7 +411,9 @@ impl ExpressionExt for Expression {
                         .iter()
                         .any(|member| matches!(member, PathMember::String { .. }))
                 {
-                    Some(Type::Record(Box::new([])))
+                    Some(Type::Record(nu_protocol::CollectionColumns::new(Box::new(
+                        [],
+                    ))))
                 } else if !cell_path.tail.is_empty() {
                     Some(Type::List(Box::new(Type::Any)))
                 } else {
@@ -500,12 +502,12 @@ impl ExpressionExt for Expression {
         self.find_map(context.working_set, &|inner_expr| {
             if let Expr::ExternalCall(cmd_expr, _) = &inner_expr.expr {
                 match &cmd_expr.expr {
-                    Expr::String(s) => FindMapResult::Found(s.clone()),
-                    Expr::GlobPattern(pattern, _) => FindMapResult::Found(pattern.clone()),
-                    _ => FindMapResult::Continue,
+                    Expr::String(s) => ControlFlow::Break(Some(s.clone())),
+                    Expr::GlobPattern(pattern, _) => ControlFlow::Break(Some(pattern.clone())),
+                    _ => ControlFlow::Continue(()),
                 }
             } else {
-                FindMapResult::Continue
+                ControlFlow::Continue(())
             }
         })
     }

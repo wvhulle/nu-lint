@@ -49,14 +49,14 @@ fn find_external_command(pipeline: &Pipeline, context: &LintContext) -> Option<(
 
 /// Find `LAST_EXIT_CODE` access anywhere in a pipeline
 fn find_last_exit_code_check(pipeline: &Pipeline, context: &LintContext) -> Option<Span> {
-    use nu_protocol::ast::FindMapResult;
+    use std::ops::ControlFlow;
 
     pipeline.elements.iter().find_map(|element| {
         element.expr.find_map(context.working_set, &|expr| {
             if is_last_exit_code_access(expr) {
-                FindMapResult::Found(expr.span)
+                ControlFlow::Break(Some(expr.span))
             } else {
-                FindMapResult::Continue
+                ControlFlow::Continue(())
             }
         })
     })

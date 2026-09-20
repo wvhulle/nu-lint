@@ -41,7 +41,7 @@ pub fn bare_word_needs_quotes(content: &str) -> bool {
 fn parses_as_non_string(content: &str) -> bool {
     let engine_state = LintEngine::new_state();
     let mut working_set = StateWorkingSet::new(engine_state);
-    let _ = working_set.add_file("check".to_string(), content.as_bytes());
+    let _ = working_set.add_file("check", content.as_bytes());
 
     let source = format!("echo {content}");
     let block = parse(&mut working_set, None, source.as_bytes(), false);
@@ -78,7 +78,7 @@ pub fn bare_glob_needs_quotes(content: &str) -> bool {
 
     let engine_state = LintEngine::new_state();
     let mut working_set = StateWorkingSet::new(engine_state);
-    let _ = working_set.add_file("check".to_string(), content.as_bytes());
+    let _ = working_set.add_file("check", content.as_bytes());
 
     let source = format!("echo {content}");
     let block = parse(&mut working_set, None, source.as_bytes(), false);

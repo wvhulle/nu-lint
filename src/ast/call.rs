@@ -9,7 +9,11 @@ use crate::context::LintContext;
 /// Checks if `actual_type` is compatible with `expected_type` for command
 /// signature matching
 fn is_type_compatible(expected: &nu_protocol::Type, actual: &nu_protocol::Type) -> bool {
-    use nu_protocol::Type;
+    use nu_protocol::{CompareTypes, Type};
+
+    if actual.is_assignable_to(expected) {
+        return true;
+    }
 
     match (expected, actual) {
         (e, a) if e == a => true,
@@ -107,7 +111,7 @@ impl CallExt for Call {
         log::trace!(
             "Nu parser parsed output type for call '{}': {:?}",
             self.get_call_name(context),
-            sig.get_output_type()
+            sig.get_output_type(None)
         );
 
         let has_pipeline_input = pipeline_input.is_some();
@@ -160,7 +164,8 @@ impl CallExt for Call {
             return inferred;
         }
 
-        sig.get_output_type()
+        sig.get_output_type(Some(&input_type))
+            .unwrap_or(nu_protocol::Type::Any)
     }
     fn get_call_name(&self, context: &LintContext) -> String {
         context

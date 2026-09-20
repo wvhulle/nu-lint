@@ -1,6 +1,8 @@
+use std::ops::ControlFlow;
+
 use nu_protocol::{
     Span, VarId,
-    ast::{Block, Expr, FindMapResult, Traverse},
+    ast::{Block, Expr, Traverse},
 };
 
 use crate::{
@@ -26,9 +28,9 @@ fn parameter_used_as_path(block: &Block, var_id: VarId, context: &LintContext) -
                 && call.is_filesystem_command(context)
                 && call.uses_variable(var_id)
             {
-                return FindMapResult::Found(());
+                return ControlFlow::Break(Some(()));
             }
-            FindMapResult::Continue
+            ControlFlow::Continue(())
         })
         .is_some()
 }

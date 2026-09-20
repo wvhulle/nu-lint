@@ -1,6 +1,8 @@
+use std::ops::ControlFlow;
+
 use nu_protocol::{
     Span,
-    ast::{Expr, Expression, FindMapResult, Traverse},
+    ast::{Expr, Expression, Traverse},
 };
 
 use crate::{
@@ -31,19 +33,19 @@ fn find_error_prone_command(expr: &Expression, context: &LintContext) -> Option<
                 context,
                 args,
             ) {
-                return FindMapResult::Found(ErrorSource::External(head.span));
+                return ControlFlow::Break(Some(ErrorSource::External(head.span)));
             }
-            FindMapResult::Continue
+            ControlFlow::Continue(())
         }
         Expr::Call(call) => {
             let cmd_name = call.get_call_name(context);
             if can_error(&cmd_name, context, call) {
                 log::trace!("Found error-prone builtin: {cmd_name}");
-                return FindMapResult::Found(ErrorSource::Builtin(call.head, cmd_name));
+                return ControlFlow::Break(Some(ErrorSource::Builtin(call.head, cmd_name)));
             }
-            FindMapResult::Continue
+            ControlFlow::Continue(())
         }
-        _ => FindMapResult::Continue,
+        _ => ControlFlow::Continue(()),
     })
 }
 

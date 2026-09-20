@@ -1,8 +1,8 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::ControlFlow};
 
 use nu_protocol::{
     Span, VarId,
-    ast::{Expr, Expression, FindMapResult, PathMember},
+    ast::{Expr, Expression, PathMember},
 };
 
 use crate::{
@@ -50,9 +50,9 @@ fn has_exit_code_access(expr: &Expression, context: &LintContext) -> bool {
     expr.find_map(context.working_set, &|inner| {
         if is_exit_code_cell_path(&inner.expr) || is_get_exit_code_call(&inner.expr, context) {
             log::trace!("Found exit_code access");
-            FindMapResult::Found(())
+            ControlFlow::Break(Some(()))
         } else {
-            FindMapResult::Continue
+            ControlFlow::Continue(())
         }
     })
     .is_some()
@@ -63,9 +63,9 @@ fn has_complete_call(expr: &Expression, context: &LintContext) -> bool {
 
     expr.find_map(context.working_set, &|inner| {
         if matches!(&inner.expr, Expr::Call(call) if call.get_call_name(context) == "complete") {
-            FindMapResult::Found(())
+            ControlFlow::Break(Some(()))
         } else {
-            FindMapResult::Continue
+            ControlFlow::Continue(())
         }
     })
     .is_some()
@@ -84,7 +84,7 @@ fn has_external_command_with_likely_errors(expr: &Expression, context: &LintCont
 
     expr.find_map(context.working_set, &|inner| {
         let Expr::ExternalCall(cmd_expr, args) = &inner.expr else {
-            return FindMapResult::Continue;
+            return ControlFlow::Continue(());
         };
 
         let cmd_name = extract_command_name(cmd_expr, context);
@@ -94,9 +94,9 @@ fn has_external_command_with_likely_errors(expr: &Expression, context: &LintCont
             context,
             args,
         ) {
-            FindMapResult::Found(())
+            ControlFlow::Break(Some(()))
         } else {
-            FindMapResult::Continue
+            ControlFlow::Continue(())
         }
     })
     .is_some()

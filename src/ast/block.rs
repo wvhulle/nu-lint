@@ -407,19 +407,19 @@ impl BlockExt for Block {
     }
 
     fn is_span_inside_try_block(&self, context: &LintContext, span: Span) -> bool {
-        use nu_protocol::ast::FindMapResult;
+        use std::ops::ControlFlow;
 
         self.find_map(context.working_set, &|expr| {
             let Expr::Call(call) = &expr.expr else {
-                return FindMapResult::Continue;
+                return ControlFlow::Continue(());
             };
             if call.get_call_name(context) == "try"
                 && expr.span.start <= span.start
                 && expr.span.end >= span.end
             {
-                return FindMapResult::Found(());
+                return ControlFlow::Break(Some(()));
             }
-            FindMapResult::Continue
+            ControlFlow::Continue(())
         })
         .is_some()
     }

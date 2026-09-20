@@ -1,6 +1,7 @@
+use std::ops::ControlFlow;
+
 use nu_protocol::ast::{
-    Assignment, Bits, Boolean, Comparison, Expr, Expression, FindMapResult, Math, Operator,
-    Traverse,
+    Assignment, Bits, Boolean, Comparison, Expr, Expression, Math, Operator, Traverse,
 };
 
 use crate::{
@@ -87,24 +88,24 @@ fn analyze_ast_expression(expr: &Expression, context: &LintContext) -> Option<Pr
 
             // Standalone operators
             // These are operators NOT part of a BinaryOp (which was handled above)
-            Expr::Operator(op) => {
-                FindMapResult::Found(ProblematicPattern::StandaloneOperator(format!("{op}")))
-            }
+            Expr::Operator(op) => ControlFlow::Break(Some(ProblematicPattern::StandaloneOperator(
+                format!("{op}"),
+            ))),
 
             Expr::UnaryNot(inner) => {
                 if inner.as_ref().contains_variables(context) {
-                    FindMapResult::Continue
+                    ControlFlow::Continue(())
                 } else {
-                    FindMapResult::Found(ProblematicPattern::LiteralBinaryOp("not".to_string()))
+                    ControlFlow::Break(Some(ProblematicPattern::LiteralBinaryOp("not".to_string())))
                 }
             }
 
             // External calls to operators
             Expr::ExternalCall(head, _args) => analyze_external_call(head, context)
-                .map_or(FindMapResult::Continue, FindMapResult::Found),
+                .map_or(ControlFlow::Continue(()), |p| ControlFlow::Break(Some(p))),
 
             // For all other expressions, continue traversal
-            _ => FindMapResult::Continue,
+            _ => ControlFlow::Continue(()),
         }
     })
 }
@@ -115,24 +116,24 @@ fn handle_binary_op(
     op: &Expression,
     right: &Expression,
     context: &LintContext,
-) -> FindMapResult<ProblematicPattern> {
+) -> ControlFlow<Option<ProblematicPattern>> {
     // Analyze the binary operation as a whole
     if let Some(p) = analyze_binary_operation(left, op, right, context) {
         // Found a problem with this binary op
-        return FindMapResult::Found(p);
+        return ControlFlow::Break(Some(p));
     }
 
     // Valid binary operation - manually check operands
     // to avoid Traverse visiting the operator child as standalone
     if let Some(left_problem) = analyze_ast_expression(left, context) {
-        return FindMapResult::Found(left_problem);
+        return ControlFlow::Break(Some(left_problem));
     }
     if let Some(right_problem) = analyze_ast_expression(right, context) {
-        return FindMapResult::Found(right_problem);
+        return ControlFlow::Break(Some(right_problem));
     }
 
     // All good, stop traversing this branch (don't visit operator child)
-    FindMapResult::Stop
+    ControlFlow::Break(None)
 }
 
 /// Analyze binary operations for problematic patterns

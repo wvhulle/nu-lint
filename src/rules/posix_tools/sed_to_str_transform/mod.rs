@@ -63,21 +63,18 @@ impl DetectFix for UseBuiltinSed {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let replacement = parse_sed_args(fix_data.arg_texts(context));
+        let replacement = parse_sed_args(fix_data.arg_texts(context))?;
 
         Some(Fix {
             explanation: "Replace with str replace".into(),
-            replacements: vec![Replacement {
-                span: fix_data.expr_span.into(),
-                replacement_text: replacement.into(),
-            }],
+            replacements: vec![Replacement::new(fix_data.expr_span, replacement)],
         })
     }
 }
 
 pub static RULE: &dyn Rule = &UseBuiltinSed;
 
-fn parse_sed_args<'a>(args: impl IntoIterator<Item = &'a str>) -> String {
+fn parse_sed_args<'a>(args: impl IntoIterator<Item = &'a str>) -> Option<String> {
     let mut pattern = None;
     let mut file = None;
     let mut in_place = false;
@@ -123,10 +120,14 @@ fn parse_sed_args<'a>(args: impl IntoIterator<Item = &'a str>) -> String {
         i += 1;
     }
 
-    let pattern_str = pattern.unwrap_or("s/pattern/replacement/");
-    let (find, replace, global) = parse_substitution(pattern_str);
+    let substitution = parse_substitution(pattern?)?;
 
-    build_str_replace_command(find, replace, file, in_place, regex_mode, global)
+    Some(build_str_replace_command(
+        &substitution,
+        file,
+        in_place,
+        regex_mode,
+    ))
 }
 
 struct CombinedFlags {
@@ -154,49 +155,48 @@ fn parse_combined_flags(arg: &str) -> CombinedFlags {
     flags
 }
 
-fn parse_substitution(pattern: &str) -> (&str, &str, bool) {
+struct Substitution<'a> {
+    find: &'a str,
+    replace: &'a str,
+    global: bool,
+}
+
+fn parse_substitution(pattern: &str) -> Option<Substitution<'_>> {
     if !pattern.starts_with('s') {
-        return ("pattern", "replacement", false);
+        return None;
     }
 
-    // Find delimiter (typically '/' but could be others)
-    let delimiter = pattern.chars().nth(1).unwrap_or('/');
-
-    // Split by delimiter, handling escaped delimiters
+    let delimiter = pattern.chars().nth(1)?;
     let parts: Vec<&str> = pattern[2..].split(delimiter).collect();
 
     if parts.len() < 2 {
-        return ("pattern", "replacement", false);
+        return None;
     }
 
-    let find = parts[0];
-    let replace = parts.get(1).copied().unwrap_or("");
-    let flags = parts.get(2).copied().unwrap_or("");
-    let global = flags.contains('g');
-
-    (find, replace, global)
+    Some(Substitution {
+        find: parts[0],
+        replace: parts.get(1).copied().unwrap_or(""),
+        global: parts.get(2).is_some_and(|flags| flags.contains('g')),
+    })
 }
 
 fn build_str_replace_command(
-    find: &str,
-    replace: &str,
+    substitution: &Substitution<'_>,
     file: Option<&str>,
     in_place: bool,
     regex_mode: bool,
-    global: bool,
 ) -> String {
     let mut flags = String::new();
 
-    if global {
+    if substitution.global {
         flags.push_str(" --all");
     }
     if regex_mode {
         flags.push_str(" --regex");
     }
 
-    // Escape single quotes in find and replace patterns
-    let find_escaped = find.replace('\'', "''");
-    let replace_escaped = replace.replace('\'', "''");
+    let find_escaped = substitution.find.replace('\'', "''");
+    let replace_escaped = substitution.replace.replace('\'', "''");
 
     match (file, in_place) {
         (Some(f), true) => {

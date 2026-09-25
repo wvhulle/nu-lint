@@ -1,3 +1,5 @@
+use nu_protocol::Span;
+
 use crate::{
     LintLevel,
     context::{ExternalCmdFixData, LintContext},
@@ -11,13 +13,17 @@ const NOTE: &str = "Use 'open --raw | explore' for interactive file viewing, or 
 
 #[derive(Default)]
 struct PagerOptions {
+    span: Span,
     filename: Option<String>,
     follow: bool,
 }
 
 impl PagerOptions {
-    fn parse<'a>(args: impl IntoIterator<Item = &'a str>) -> Self {
-        let mut opts = Self::default();
+    fn parse<'a>(args: impl IntoIterator<Item = &'a str>, span: Span) -> Self {
+        let mut opts = Self {
+            span,
+            ..Self::default()
+        };
 
         for text in args {
             match text {
@@ -30,30 +36,34 @@ impl PagerOptions {
         opts
     }
 
-    fn to_nushell(&self) -> (String, String) {
-        let (replacement, description) = if self.follow {
-            let file = self.filename.as_deref().unwrap_or("file");
-            (
-                format!("watch {file} {{ open --raw {file} | lines | last 20 }}"),
-                "Use 'watch' to monitor file changes. Nu's watch executes a closure when the file \
-                 changes, similar to 'tail -f'. Note: this is event-based, not continuous \
-                 streaming."
-                    .to_string(),
-            )
-        } else {
-            let replacement = self.filename.as_ref().map_or_else(
-                || "open --raw | explore".to_string(),
-                |file| format!("open --raw {file} | explore"),
-            );
-            (
-                replacement,
-                "Use 'open --raw | explore' for interactive viewing. Nu's explore provides \
-                 keyboard navigation for data. For structured files (JSON, TOML), use 'open file \
-                 | explore' without --raw."
-                    .to_string(),
-            )
-        };
-        (replacement, description)
+    fn to_nushell(&self) -> Option<Fix> {
+        if self.follow {
+            let file = self.filename.as_deref()?;
+
+            return Some(Fix {
+                explanation: "Use 'watch' to monitor file changes. Nu's watch executes a closure \
+                              when the file changes, similar to 'tail -f'. Note: this is \
+                              event-based, not continuous streaming."
+                    .into(),
+                replacements: vec![Replacement::new(
+                    self.span,
+                    format!("watch {file} {{ open --raw {file} | lines | last 20 }}"),
+                )],
+            });
+        }
+
+        let replacement = self.filename.as_ref().map_or_else(
+            || "explore".to_string(),
+            |file| format!("open --raw {file} | explore"),
+        );
+
+        Some(Fix {
+            explanation: "Use 'open --raw | explore' for interactive viewing. Nu's explore \
+                          provides keyboard navigation for data. For structured files (JSON, \
+                          TOML), use 'open file | explore' without --raw."
+                .into(),
+            replacements: vec![Replacement::new(self.span, replacement)],
+        })
     }
 }
 
@@ -87,16 +97,9 @@ impl DetectFix for UseBuiltinPager {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let opts = PagerOptions::parse(fix_data.arg_texts(context));
-        let (replacement, description) = opts.to_nushell();
+        let opts = PagerOptions::parse(fix_data.arg_texts(context), fix_data.expr_span);
 
-        Some(Fix {
-            explanation: description.into(),
-            replacements: vec![Replacement {
-                span: fix_data.expr_span.into(),
-                replacement_text: replacement.into(),
-            }],
-        })
+        opts.to_nushell()
     }
 }
 

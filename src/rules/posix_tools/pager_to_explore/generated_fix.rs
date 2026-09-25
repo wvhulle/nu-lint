@@ -2,31 +2,31 @@ use super::RULE;
 
 #[test]
 fn fix_less_to_explore() {
-    let source = "^less file.txt";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "open --raw file.txt | explore");
+    RULE.assert_fixed_is("^less file.txt", "open --raw file.txt | explore");
 }
 
 #[test]
 fn fix_more_to_explore() {
-    let source = "^more documentation.txt";
-    RULE.assert_fixed_contains(source, "open --raw documentation.txt | explore");
+    RULE.assert_fixed_is(
+        "^more documentation.txt",
+        "open --raw documentation.txt | explore",
+    );
 }
 
 #[test]
-fn fix_less_follow_to_watch() {
-    let source = "^less -f log.txt";
-    RULE.assert_fixed_contains(source, "watch log.txt");
+fn fix_follow_to_watch() {
+    RULE.assert_fixed_is(
+        "^less --follow log.txt",
+        "watch log.txt { open --raw log.txt | lines | last 20 }",
+    );
 }
 
 #[test]
-fn fix_less_follow_long_to_watch() {
-    let source = "^less --follow log.txt";
-    RULE.assert_fixed_contains(source, "watch log.txt");
+fn fix_without_file_reads_pipeline_input() {
+    RULE.assert_fixed_is("^less", "explore");
 }
 
 #[test]
-fn fix_preserves_filename() {
-    let source = "^less my-complex-log.log";
-    RULE.assert_fixed_contains(source, "my-complex-log.log");
+fn no_fix_for_follow_without_file() {
+    RULE.assert_detects_without_fix("^less -f");
 }

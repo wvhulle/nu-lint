@@ -39,7 +39,7 @@ impl DetectFix for UseBuiltinTac {
         let filename = arg_texts.iter().find(|text| !text.starts_with('-'));
 
         let replacement = filename.map_or_else(
-            || "open --raw | lines | reverse".to_string(),
+            || "lines | reverse".to_string(),
             |file| format!("open --raw {file} | lines | reverse"),
         );
 

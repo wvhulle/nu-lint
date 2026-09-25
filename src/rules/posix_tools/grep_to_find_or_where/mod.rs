@@ -1,3 +1,5 @@
+use nu_protocol::Span;
+
 use crate::{
     LintLevel,
     context::{ExternalCmdFixData, LintContext},
@@ -21,6 +23,7 @@ struct GrepFlags {
 /// Parse grep command arguments to extract key options
 #[derive(Default)]
 struct GrepOptions {
+    span: Span,
     pattern: Option<String>,
     files: Vec<String>,
     flags: GrepFlags,
@@ -30,8 +33,11 @@ struct GrepOptions {
 }
 
 impl GrepOptions {
-    fn parse<'a>(args: impl IntoIterator<Item = &'a str>) -> Self {
-        let mut opts = Self::default();
+    fn parse<'a>(args: impl IntoIterator<Item = &'a str>, span: Span) -> Self {
+        let mut opts = Self {
+            span,
+            ..Self::default()
+        };
         let mut iter = args.into_iter();
 
         while let Some(arg) = iter.next() {
@@ -81,14 +87,16 @@ impl GrepOptions {
         }
     }
 
-    fn to_nushell(&self) -> (String, String) {
-        let pattern = self.pattern.as_deref().unwrap_or("pattern");
+    fn to_nushell(&self) -> Option<Fix> {
+        let pattern = self.pattern.as_deref()?;
 
-        if self.should_use_find() {
+        let fix = if self.should_use_find() {
             self.build_find_replacement(pattern)
         } else {
             self.build_where_replacement(pattern)
-        }
+        };
+
+        Some(fix)
     }
 
     const fn should_use_find(&self) -> bool {
@@ -102,13 +110,14 @@ impl GrepOptions {
             && self.files.is_empty()
     }
 
-    fn build_find_replacement(&self, pattern: &str) -> (String, String) {
-        let replacement = format!("find \"{pattern}\"");
-        let description = self.build_find_description(pattern);
-        (replacement, description)
+    fn build_find_replacement(&self, pattern: &str) -> Fix {
+        Fix {
+            explanation: self.build_find_description(pattern).into(),
+            replacements: vec![Replacement::new(self.span, format!("find \"{pattern}\""))],
+        }
     }
 
-    fn build_where_replacement(&self, pattern: &str) -> (String, String) {
+    fn build_where_replacement(&self, pattern: &str) -> Fix {
         let (filter_expr, examples) = self.build_where_filter(pattern);
 
         let replacement = if self.files.is_empty() {
@@ -117,8 +126,10 @@ impl GrepOptions {
             format!("open {} | lines | {filter_expr}", self.files.join(" "))
         };
 
-        let description = self.build_where_description(pattern, &examples);
-        (replacement, description)
+        Fix {
+            explanation: self.build_where_description(pattern, &examples).into(),
+            replacements: vec![Replacement::new(self.span, replacement)],
+        }
     }
 
     fn build_find_description(&self, pattern: &str) -> String {
@@ -250,16 +261,9 @@ impl DetectFix for UseBuiltinGrep {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let opts = GrepOptions::parse(fix_data.arg_texts(context));
-        let (replacement, description) = opts.to_nushell();
+        let opts = GrepOptions::parse(fix_data.arg_texts(context), fix_data.expr_span);
 
-        Some(Fix {
-            explanation: description.into(),
-            replacements: vec![Replacement {
-                span: fix_data.expr_span.into(),
-                replacement_text: replacement.into(),
-            }],
-        })
+        opts.to_nushell()
     }
 }
 

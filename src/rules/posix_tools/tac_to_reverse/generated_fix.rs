@@ -1,20 +1,11 @@
 use super::RULE;
 
 #[test]
-fn fix_simple_tac() {
-    let source = "^tac file.txt";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "open --raw file.txt | lines | reverse");
+fn fix_tac_with_file() {
+    RULE.assert_fixed_is("^tac file.txt", "open --raw file.txt | lines | reverse");
 }
 
 #[test]
-fn fix_tac_log_file() {
-    let source = "^tac file.log";
-    RULE.assert_fixed_contains(source, "open --raw file.log | lines | reverse");
-}
-
-#[test]
-fn fix_preserves_filename() {
-    let source = "^tac my-log-file.log";
-    RULE.assert_fixed_contains(source, "my-log-file.log");
+fn fix_without_file_reads_pipeline_input() {
+    RULE.assert_fixed_is("^tac", "lines | reverse");
 }

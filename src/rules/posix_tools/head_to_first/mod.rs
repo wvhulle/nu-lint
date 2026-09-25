@@ -125,7 +125,7 @@ impl DetectFix for UseBuiltinHead {
             || format!("lines | first {count}"),
             |span| {
                 let filename = context.span_text(span);
-                format!("open {filename} | lines | first {count}")
+                format!("open --raw {filename} | lines | first {count}")
             },
         );
 

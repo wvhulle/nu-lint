@@ -1,3 +1,5 @@
+use nu_protocol::Span;
+
 use crate::{
     LintLevel,
     context::{ExternalCmdFixData, LintContext},
@@ -10,19 +12,30 @@ const NOTE: &str = "Use 'where' for filtering rows, 'split column' for field ext
                     structured data pipelines replace awk's text-based approach with typed \
                     columns and native operations.";
 
+fn is_awk_program(arg: &str) -> bool {
+    let is_slash_delimited_pattern = arg.len() > 1 && arg.starts_with('/') && arg.ends_with('/');
+
+    is_slash_delimited_pattern || arg.contains('{')
+}
+
 #[derive(Default)]
 struct AwkOptions {
+    span: Span,
     field_separator: Option<String>,
     pattern: Option<String>,
     print_fields: Vec<usize>,
     files: Vec<String>,
     nf_referenced: bool,
     nr_referenced: bool,
+    untranslated_fields: bool,
 }
 
 impl AwkOptions {
-    fn parse<'a>(args: impl IntoIterator<Item = &'a str>) -> Self {
-        let mut opts = Self::default();
+    fn parse<'a>(args: impl IntoIterator<Item = &'a str>, span: Span) -> Self {
+        let mut opts = Self {
+            span,
+            ..Self::default()
+        };
         let args: Vec<&str> = args.into_iter().collect();
         let mut i = 0;
 
@@ -41,8 +54,7 @@ impl AwkOptions {
                 "-v" | "-f" => {
                     i += 1; // Skip next argument
                 }
-                // Patterns with / delimiters or braces are programs
-                s if s.starts_with('/') || s.contains('{') => {
+                s if is_awk_program(s) => {
                     opts.parse_program(s);
                 }
                 // Everything else that's not a flag is a file
@@ -72,6 +84,7 @@ impl AwkOptions {
             .trim_end_matches(|c: char| c == '}' || c.is_whitespace());
 
         self.extract_print_fields(body);
+        self.untranslated_fields = self.has_untranslated_field_reference(body);
 
         if body.contains("NF") {
             self.nf_referenced = true;
@@ -79,6 +92,19 @@ impl AwkOptions {
         if body.contains("NR") {
             self.nr_referenced = true;
         }
+    }
+
+    fn has_untranslated_field_reference(&self, body: &str) -> bool {
+        let mut referenced_fields = body
+            .split('$')
+            .skip(1)
+            .filter_map(|rest| {
+                let digits: String = rest.chars().take_while(char::is_ascii_digit).collect();
+                digits.parse::<usize>().ok()
+            })
+            .filter(|field| *field > 0);
+
+        referenced_fields.any(|field| !self.print_fields.contains(&field))
     }
 
     fn extract_print_fields(&mut self, body: &str) {
@@ -102,7 +128,7 @@ impl AwkOptions {
         }
     }
 
-    fn to_nushell(&self) -> (String, String) {
+    fn to_nushell(&self) -> Option<Fix> {
         let mut parts: Vec<String> = Vec::new();
         let mut examples: Vec<String> = Vec::new();
 
@@ -128,13 +154,15 @@ impl AwkOptions {
             examples.push("NF: use '($row | columns | length)' for field count".to_string());
         }
 
-        if parts.len() == 1 {
-            parts.push("each {|line| $line}".to_string());
+        let nothing_translated = parts.len() == 1;
+        if nothing_translated || self.untranslated_fields {
+            return None;
         }
 
-        let replacement = parts.join(" | ");
-        let description = build_description(&examples);
-        (replacement, description)
+        Some(Fix {
+            explanation: build_description(&examples).into(),
+            replacements: vec![Replacement::new(self.span, parts.join(" | "))],
+        })
     }
 
     fn add_field_processing(&self, parts: &mut Vec<String>, examples: &mut Vec<String>) {
@@ -229,16 +257,9 @@ impl DetectFix for UseBuiltinAwk {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let opts = AwkOptions::parse(fix_data.arg_texts(context));
-        let (replacement, description) = opts.to_nushell();
+        let opts = AwkOptions::parse(fix_data.arg_texts(context), fix_data.expr_span);
 
-        Some(Fix {
-            explanation: description.into(),
-            replacements: vec![Replacement {
-                span: fix_data.expr_span.into(),
-                replacement_text: replacement.into(),
-            }],
-        })
+        opts.to_nushell()
     }
 }
 

@@ -1,3 +1,5 @@
+use nu_protocol::Span;
+
 use crate::{
     LintLevel,
     context::{ExternalCmdFixData, LintContext},
@@ -10,15 +12,21 @@ const NOTE: &str = "Use 'http get URL | save file' to download files. This provi
 
 #[derive(Default)]
 struct WgetOptions {
+    span: Span,
     url: Option<String>,
     output_file: Option<String>,
 }
 
 impl WgetOptions {
-    fn parse_wget<'a>(args: impl IntoIterator<Item = &'a str>) -> Self {
+    fn parse_wget<'a>(args: impl IntoIterator<Item = &'a str>, span: Span) -> Self {
+        let empty = Self {
+            span,
+            ..Self::default()
+        };
+
         args.into_iter()
             .fold(
-                (Self::default(), None::<String>),
+                (empty, None::<String>),
                 |(mut opts, expecting), arg| match (expecting.as_deref(), arg) {
                     (Some("-O" | "--output-document"), file) => {
                         opts.output_file = Some(file.to_string());
@@ -35,8 +43,8 @@ impl WgetOptions {
             .0
     }
 
-    fn to_nushell(&self) -> (String, String) {
-        let url = self.url.as_deref().unwrap_or("URL");
+    fn to_nushell(&self) -> Option<Fix> {
+        let url = self.url.as_deref()?;
         let mut replacement = format!("http get {url}");
         if let Some(file) = &self.output_file {
             replacement = format!("{replacement} | save {file}");
@@ -50,7 +58,10 @@ impl WgetOptions {
              http returns structured data and integrates with pipelines."
                 .to_string()
         };
-        (replacement, description)
+        Some(Fix {
+            explanation: description.into(),
+            replacements: vec![Replacement::new(self.span, replacement)],
+        })
     }
 }
 
@@ -103,13 +114,9 @@ impl DetectFix for UseBuiltinWget {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let opts = WgetOptions::parse_wget(fix_data.arg_texts(context));
-        let (replacement, description) = opts.to_nushell();
+        let opts = WgetOptions::parse_wget(fix_data.arg_texts(context), fix_data.expr_span);
 
-        Some(Fix {
-            explanation: description.into(),
-            replacements: vec![Replacement::new(fix_data.expr_span, replacement)],
-        })
+        opts.to_nushell()
     }
 }
 

@@ -60,19 +60,35 @@ impl DetectFix for UseBuiltinWc {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let (replacement, description) = if fix_data.arg_texts(context).any(|x| x == "-l") {
-            (
-                "lines | length".to_string(),
-                "Use 'lines | length' to count lines in a file".to_string(),
-            )
+        let arg_texts: Vec<&str> = fix_data.arg_texts(context).collect();
+        let counts_lines = arg_texts
+            .iter()
+            .any(|text| *text == "-l" || *text == "--lines");
+        let files: Vec<&&str> = arg_texts
+            .iter()
+            .filter(|text| !text.starts_with('-'))
+            .collect();
+
+        if files.len() > 1 {
+            return None;
+        }
+
+        let counting = if counts_lines {
+            "lines | length"
         } else {
-            (
-                "length".to_string(),
-                "Use 'length' for item count or 'str length' for character count".to_string(),
-            )
+            "length"
         };
+        let replacement = match files.first() {
+            Some(file) => format!("open --raw {file} | {counting}"),
+            None => counting.to_string(),
+        };
+
         Some(Fix {
-            explanation: description.into(),
+            explanation: if counts_lines {
+                "Use 'lines | length' to count lines".into()
+            } else {
+                "Use 'length' for item count or 'str length' for character count".into()
+            },
             replacements: vec![Replacement::new(fix_data.expr_span, replacement)],
         })
     }
@@ -81,12 +97,4 @@ impl DetectFix for UseBuiltinWc {
 pub static RULE: &dyn Rule = &UseBuiltinWc;
 
 #[cfg(test)]
-mod tests {
-    use super::RULE;
-
-    #[test]
-    fn converts_wc_lines_to_lines_length() {
-        let source = "^wc -l";
-        RULE.assert_fixed_contains(source, "lines | length");
-    }
-}
+mod generated_fix;

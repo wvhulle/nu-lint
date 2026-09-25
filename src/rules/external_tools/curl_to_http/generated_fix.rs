@@ -1,124 +1,120 @@
 use super::RULE;
-use crate::log::init_test_log;
 
 #[test]
 fn fix_simple_get_to_http_get() {
-    init_test_log();
-    let source = r"^curl https://api.example.com";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "http get");
-    RULE.assert_fixed_contains(source, "https://api.example.com");
+    RULE.assert_fixed_is(
+        "^curl https://api.example.com",
+        "http get https://api.example.com",
+    );
 }
 
 #[test]
 fn fix_explicit_get_method() {
-    init_test_log();
-    let source = r"^curl -X GET https://api.example.com";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "http get");
+    RULE.assert_fixed_is(
+        "^curl -X GET https://api.example.com",
+        "http get https://api.example.com",
+    );
 }
 
 #[test]
 fn fix_post_request() {
-    init_test_log();
-    let source = r#"^curl -X POST -d '{"key":"value"}' https://api.example.com"#;
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "http post");
-    RULE.assert_fixed_contains(source, r#"'{"key":"value"}'"#);
+    RULE.assert_fixed_is(
+        r#"^curl -X POST -d '{"key":"value"}' https://api.example.com"#,
+        r#"http post https://api.example.com '{"key":"value"}'"#,
+    );
 }
 
 #[test]
 fn fix_put_request() {
-    init_test_log();
-    let source = r#"^curl -X PUT -d '{"updated":"data"}' https://api.example.com/resource"#;
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "http put");
+    RULE.assert_fixed_is(
+        r#"^curl -X PUT -d '{"updated":"data"}' https://api.example.com/resource"#,
+        r#"http put https://api.example.com/resource '{"updated":"data"}'"#,
+    );
 }
 
 #[test]
 fn fix_delete_request() {
-    init_test_log();
-    let source = r"^curl -X DELETE https://api.example.com/resource/123";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "http delete");
+    RULE.assert_fixed_is(
+        "^curl -X DELETE https://api.example.com/resource/123",
+        "http delete https://api.example.com/resource/123",
+    );
 }
 
 #[test]
 fn fix_patch_request() {
-    init_test_log();
-    let source = r#"^curl -X PATCH -d '{"field":"patched"}' https://api.example.com/resource"#;
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "http patch");
+    RULE.assert_fixed_is(
+        r#"^curl -X PATCH -d '{"field":"patched"}' https://api.example.com/resource"#,
+        r#"http patch https://api.example.com/resource '{"field":"patched"}'"#,
+    );
 }
 
 #[test]
 fn fix_header_conversion() {
-    init_test_log();
-    let source = r"^curl -H 'Content-Type: application/json' https://api.example.com";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "--headers");
-    RULE.assert_fixed_contains(source, "Content-Type");
-    RULE.assert_fixed_contains(source, "application/json");
+    RULE.assert_fixed_is(
+        "^curl -H 'Content-Type: application/json' https://api.example.com",
+        "http get --headers [Content-Type application/json] https://api.example.com",
+    );
 }
 
 #[test]
 fn fix_multiple_headers() {
-    init_test_log();
-    let source = r"^curl -H 'Accept: application/json' -H 'Authorization: Bearer token' https://api.example.com";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "--headers");
-    RULE.assert_fixed_contains(source, "Accept");
-    RULE.assert_fixed_contains(source, "Authorization");
+    RULE.assert_fixed_is(
+        "^curl -H 'Accept: application/json' -H 'Authorization: Bearer token' https://api.example.com",
+        "http get --headers [Accept application/json Authorization Bearer token] \
+         https://api.example.com",
+    );
 }
 
 #[test]
 fn fix_user_password_auth() {
-    init_test_log();
-    let source = r"^curl -u user:pass https://api.example.com";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "--user user");
-    RULE.assert_fixed_contains(source, "--password pass");
+    RULE.assert_fixed_is(
+        "^curl -u user:pass https://api.example.com",
+        "http get --user user --password pass https://api.example.com",
+    );
 }
 
 #[test]
 fn fix_user_only_auth() {
-    init_test_log();
-    let source = r"^curl -u username https://api.example.com";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "--user username");
+    RULE.assert_fixed_is(
+        "^curl -u username https://api.example.com",
+        "http get --user username https://api.example.com",
+    );
 }
 
 #[test]
 fn fix_output_to_file() {
-    init_test_log();
-    let source = r"^curl -o output.json https://api.example.com/data";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "| save output.json");
+    RULE.assert_fixed_is(
+        "^curl -o output.json https://api.example.com/data",
+        "http get https://api.example.com/data | save output.json",
+    );
 }
 
 #[test]
 fn fix_data_implies_post() {
-    init_test_log();
-    let source = r"^curl -d 'param=value' https://api.example.com";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "http post");
+    RULE.assert_fixed_is(
+        "^curl -d 'param=value' https://api.example.com",
+        "http post https://api.example.com 'param=value'",
+    );
 }
 
 #[test]
 fn fix_data_raw() {
-    init_test_log();
-    let source = r#"^curl --data-raw '{"json":"data"}' https://api.example.com"#;
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "http post");
-    RULE.assert_fixed_contains(source, r#"'{"json":"data"}'"#);
+    RULE.assert_fixed_is(
+        r#"^curl --data-raw '{"json":"data"}' https://api.example.com"#,
+        r#"http post https://api.example.com '{"json":"data"}'"#,
+    );
 }
 
 #[test]
 fn fix_long_form_options() {
-    init_test_log();
-    let source =
-        r"^curl --request POST --header 'Content-Type: application/json' https://api.example.com";
-    RULE.assert_count(source, 1);
-    RULE.assert_fixed_contains(source, "http post");
-    RULE.assert_fixed_contains(source, "--headers");
+    RULE.assert_fixed_is(
+        "^curl --request POST --header 'Content-Type: application/json' https://api.example.com",
+        "http post --headers [Content-Type application/json] https://api.example.com",
+    );
+}
+
+#[test]
+fn no_fix_without_url() {
+    RULE.assert_detects_without_fix("^curl");
+    RULE.assert_detects_without_fix("^curl -X POST");
 }

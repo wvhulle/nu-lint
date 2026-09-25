@@ -2,7 +2,6 @@
 //!  Less common commands are grouped in the 'other' subrule.
 
 pub mod awk_to_pipeline;
-pub mod bat_to_open;
 pub mod cat_to_open;
 pub mod date_to_date_now;
 pub mod df_to_sys_disks;

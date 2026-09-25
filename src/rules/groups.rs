@@ -175,7 +175,6 @@ const POSIX_TOOLS: Group = Group {
     rules: &[
         super::ignore_over_dev_null::RULE,
         super::posix_tools::awk_to_pipeline::RULE,
-        super::posix_tools::bat_to_open::RULE,
         super::posix_tools::cat_to_open::RULE,
         super::posix_tools::date_to_date_now::RULE,
         super::posix_tools::df_to_sys_disks::RULE,

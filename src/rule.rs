@@ -272,6 +272,20 @@ impl dyn Rule {
     }
 
     #[track_caller]
+    pub fn assert_detects_without_fix(&self, code: &str) {
+        let violation = self.first_violation(code);
+        assert!(
+            violation.fix.is_none(),
+            "Expected rule '{}' to detect without offering a fix, but it replaced with `{:?}`",
+            self.id(),
+            violation
+                .fix
+                .map(|fix| fix.replacements)
+                .unwrap_or_default()
+        );
+    }
+
+    #[track_caller]
     pub fn assert_labels_contain(&self, code: &str, expected_text: &str) {
         let violation = self.first_violation(code);
         let label_texts: Vec<&str> = violation

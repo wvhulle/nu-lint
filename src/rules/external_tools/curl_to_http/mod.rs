@@ -13,6 +13,7 @@ const NOTE: &str = "Use 'http get', 'http post', etc. for HTTP requests. Nushell
 
 #[derive(Default)]
 struct HttpOptions {
+    span: Span,
     method: HttpMethod,
     url: Option<String>,
     headers: Vec<(String, String)>,
@@ -28,10 +29,18 @@ enum DataArg {
 }
 
 impl HttpOptions {
-    fn parse_curl<'a>(args: impl IntoIterator<Item = (&'a str, Option<StringFormat>)>) -> Self {
+    fn parse_curl<'a>(
+        args: impl IntoIterator<Item = (&'a str, Option<StringFormat>)>,
+        span: Span,
+    ) -> Self {
+        let empty = Self {
+            span,
+            ..Self::default()
+        };
+
         args.into_iter()
             .fold(
-                (Self::default(), None::<&str>),
+                (empty, None::<&str>),
                 |(mut opts, expecting), (text, format)| match expecting {
                     Some("-X" | "--request") => {
                         opts.method = parse_method(text);
@@ -90,8 +99,8 @@ impl HttpOptions {
             .0
     }
 
-    fn to_nushell(&self) -> (String, String) {
-        let url = self.url.as_deref().unwrap_or("URL");
+    fn to_nushell(&self) -> Option<Fix> {
+        let url = self.url.as_deref()?;
 
         let mut parts = Vec::new();
         let method_cmd = match self.method {
@@ -135,9 +144,10 @@ impl HttpOptions {
             parts.push(format!("| save {file}"));
         }
 
-        let description = self.build_description();
-
-        (parts.join(" "), description)
+        Some(Fix {
+            explanation: self.build_description().into(),
+            replacements: vec![Replacement::new(self.span, parts.join(" "))],
+        })
     }
 
     fn build_description(&self) -> String {
@@ -221,15 +231,10 @@ fn parse_header(header: &str) -> Option<(String, String)> {
         .map(|(key, value)| (key.trim().to_string(), value.trim().to_string()))
 }
 
-struct CurlFixData {
-    expr_span: Span,
-    options: HttpOptions,
-}
-
 struct UseBuiltinCurl;
 
 impl DetectFix for UseBuiltinCurl {
-    type FixInput<'a> = CurlFixData;
+    type FixInput<'a> = HttpOptions;
 
     fn id(&self) -> &'static str {
         "curl_to_http"
@@ -278,25 +283,17 @@ impl DetectFix for UseBuiltinCurl {
                 let args_with_formats = fix_data
                     .arg_texts(context)
                     .zip(fix_data.arg_formats(context));
-                let options = HttpOptions::parse_curl(args_with_formats);
+
                 (
                     detection,
-                    CurlFixData {
-                        expr_span: fix_data.expr_span,
-                        options,
-                    },
+                    HttpOptions::parse_curl(args_with_formats, fix_data.expr_span),
                 )
             })
             .collect()
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let (replacement, description) = fix_data.options.to_nushell();
-
-        Some(Fix {
-            explanation: description.into(),
-            replacements: vec![Replacement::new(fix_data.expr_span, replacement)],
-        })
+        fix_data.to_nushell()
     }
 }
 

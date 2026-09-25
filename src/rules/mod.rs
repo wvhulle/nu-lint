@@ -173,7 +173,6 @@ pub const USED_RULES: &[&dyn Rule] = &[
     parsing::split_row_space_to_split_words::RULE,
     positional_to_pipeline::RULE,
     posix_tools::awk_to_pipeline::RULE,
-    posix_tools::bat_to_open::RULE,
     posix_tools::cat_to_open::RULE,
     posix_tools::date_to_date_now::RULE,
     posix_tools::df_to_sys_disks::RULE,

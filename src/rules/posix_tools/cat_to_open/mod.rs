@@ -1,3 +1,5 @@
+use nu_protocol::Span;
+
 use crate::{
     LintLevel,
     context::{ExternalCmdFixData, LintContext},
@@ -11,6 +13,7 @@ const NOTE: &str = "Use 'open' to read files as structured data, or 'open --raw'
 
 #[derive(Default)]
 struct CatOptions {
+    span: Span,
     files: Vec<String>,
     number_lines: bool,
     number_nonblank: bool,
@@ -20,8 +23,11 @@ struct CatOptions {
 }
 
 impl CatOptions {
-    fn parse<'a>(args: impl IntoIterator<Item = &'a str>) -> Self {
-        let mut opts = Self::default();
+    fn parse<'a>(args: impl IntoIterator<Item = &'a str>, span: Span) -> Self {
+        let mut opts = Self {
+            span,
+            ..Self::default()
+        };
 
         for arg in args {
             Self::parse_arg(&mut opts, arg);
@@ -42,16 +48,7 @@ impl CatOptions {
         }
     }
 
-    fn to_nushell(&self) -> (String, String) {
-        let file_args = if self.files.is_empty() {
-            String::new()
-        } else if self.files.len() == 1 {
-            self.files[0].clone()
-        } else {
-            self.files.join(" ")
-        };
-
-        // Check if we need any post-processing
+    fn to_nushell(&self) -> Option<Fix> {
         let needs_processing = self.number_lines
             || self.number_nonblank
             || self.show_ends
@@ -59,26 +56,26 @@ impl CatOptions {
             || self.show_all;
 
         let (replacement, description) = if needs_processing {
-            self.build_with_processing(&file_args)
+            self.build_with_processing()
         } else if self.files.len() > 1 {
             self.build_multiple_files()
         } else {
-            Self::build_simple(&file_args)
+            self.build_simple()?
         };
 
-        (replacement, description)
+        Some(Fix {
+            explanation: description.into(),
+            replacements: vec![Replacement::new(self.span, replacement)],
+        })
     }
 
-    fn build_simple(file_arg: &str) -> (String, String) {
-        let replacement = if file_arg.is_empty() {
-            "open --raw".to_string()
-        } else {
-            format!("open --raw {file_arg}")
-        };
+    fn build_simple(&self) -> Option<(String, String)> {
+        let file = self.files.first()?;
 
-        let description = "Use 'open --raw' for plain text".to_string();
-
-        (replacement, description)
+        Some((
+            format!("open --raw {file}"),
+            "Use 'open --raw' for plain text".to_string(),
+        ))
     }
 
     fn build_multiple_files(&self) -> (String, String) {
@@ -90,19 +87,14 @@ impl CatOptions {
         (replacement, description)
     }
 
-    fn build_with_processing(&self, file_arg: &str) -> (String, String) {
+    fn build_with_processing(&self) -> (String, String) {
         let mut pipeline = vec![];
         let mut examples = vec![];
 
-        let base = if file_arg.is_empty() {
-            "open --raw".to_string()
-        } else {
-            format!("open --raw {file_arg}")
-        };
+        if !self.files.is_empty() {
+            pipeline.push(format!("open --raw {}", self.files.join(" ")));
+        }
 
-        pipeline.push(base);
-
-        // Convert to lines for processing
         pipeline.push("lines".to_string());
 
         if self.number_lines || self.number_nonblank {
@@ -178,16 +170,9 @@ impl DetectFix for UseBuiltinCat {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let opts = CatOptions::parse(fix_data.arg_texts(context));
-        let (replacement, description) = opts.to_nushell();
+        let opts = CatOptions::parse(fix_data.arg_texts(context), fix_data.expr_span);
 
-        Some(Fix {
-            explanation: description.into(),
-            replacements: vec![Replacement {
-                span: fix_data.expr_span.into(),
-                replacement_text: replacement.into(),
-            }],
-        })
+        opts.to_nushell()
     }
 }
 

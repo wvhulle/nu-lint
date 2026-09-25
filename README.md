@@ -125,7 +125,6 @@ Some of the rules need further testing and improvement. Please make an issue on 
 
 - `ignore_over_dev_null` (auto-fix): Use '| ignore' instead of redirecting to /dev/null
 - `awk_to_pipeline` (auto-fix): `awk` replaceable with structured pipeline
-- `bat_to_open` (auto-fix): `bat` replaceable with `open` for file viewing
 - `cat_to_open` (auto-fix): External `cat` replaceable with `open`
 - `date_to_date_now` (auto-fix): External `date` replaceable with `date now`
 - `df_to_sys_disks` (auto-fix): `df` replaceable with `sys disks`

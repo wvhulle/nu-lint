@@ -111,12 +111,12 @@
         # Release targets (queried by build.nu)
         #
         releaseTargets =
-          if pkgs.stdenv.isLinux then
+          if pkgs.stdenv.hostPlatform.isLinux then
             {
               "x86_64-unknown-linux-musl" = "x86_64-linux-musl";
               "aarch64-unknown-linux-musl" = "aarch64-linux-musl";
             }
-          else if pkgs.stdenv.isDarwin then
+          else if pkgs.stdenv.hostPlatform.isDarwin then
             { "aarch64-apple-darwin" = "default"; }
           else
             { };
@@ -131,7 +131,7 @@
           deps = llvmDeps;
           deps-cranelift = craneliftDeps;
         }
-        // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
+        // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
           x86_64-linux-musl = mkMuslPackage "x86_64";
           aarch64-linux-musl = mkMuslPackage "aarch64";
         };

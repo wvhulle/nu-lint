@@ -6,7 +6,10 @@ use nu_protocol::{
 use crate::{
     LintLevel,
     ast::{
-        block::BlockExt, call::CallExt, declaration::CustomCommandDef, expression::ExpressionExt,
+        block::BlockExt,
+        call::CallExt,
+        declaration::{CustomCommandDef, param_type_annotation_span},
+        expression::ExpressionExt,
         pipeline::PipelineExt,
     },
     context::LintContext,
@@ -62,9 +65,41 @@ fn infer_param_type(
 }
 
 #[derive(Clone, Copy)]
-enum AnnotationEdit {
-    InferType { name_span: Span, var_id: VarId },
-    InferRestElementType { name_span: Span, var_id: VarId },
+struct AnnotationEdit {
+    var_id: VarId,
+    target_span: Span,
+    is_rest: bool,
+    is_explicit_any: bool,
+}
+
+impl AnnotationEdit {
+    fn new(
+        param: &PositionalArg,
+        signature_span: Span,
+        is_rest: bool,
+        ctx: &LintContext,
+    ) -> Option<Self> {
+        let var_id = param.var_id?;
+        let name_span = declaration_span(var_id, ctx);
+        let existing_annotation = param_type_annotation_span(param, signature_span, ctx);
+        Some(Self {
+            var_id,
+            target_span: existing_annotation.unwrap_or(Span::new(name_span.end, name_span.end)),
+            is_rest,
+            is_explicit_any: existing_annotation.is_some(),
+        })
+    }
+
+    fn to_replacement(self, body_block_id: BlockId, ctx: &LintContext) -> Option<Replacement> {
+        let inferred = infer_param_type(self.var_id, body_block_id, ctx);
+        let ty = if self.is_rest {
+            rest_element_type(inferred)
+        } else {
+            inferred
+        };
+        (!(self.is_explicit_any && ty == Type::Any))
+            .then(|| Replacement::new(self.target_span, format!(": {ty}")))
+    }
 }
 
 struct MissingAnnotation<'a> {
@@ -96,17 +131,10 @@ fn untyped_params<'a>(
         .chain(rest)
         .filter(|(param, _)| param.shape == SyntaxShape::Any)
         .filter_map(move |(param, is_rest)| {
-            let var_id = param.var_id?;
-            let name_span = declaration_span(var_id, ctx);
-            let edit = if is_rest {
-                AnnotationEdit::InferRestElementType { name_span, var_id }
-            } else {
-                AnnotationEdit::InferType { name_span, var_id }
-            };
             Some(MissingAnnotation {
                 param,
-                name_span,
-                edit,
+                name_span: declaration_span(param.var_id?, ctx),
+                edit: AnnotationEdit::new(param, def.signature_span, is_rest, ctx)?,
             })
         })
 }
@@ -118,10 +146,6 @@ fn rest_element_type(list_type: Type) -> Type {
     }
 }
 
-fn insert_type_after(name_span: Span, ty: &Type) -> Replacement {
-    Replacement::new(Span::new(name_span.end, name_span.end), format!(": {ty}"))
-}
-
 fn to_detection(
     missing: &MissingAnnotation,
     body_block_id: BlockId,
@@ -129,12 +153,12 @@ fn to_detection(
 ) -> Detection {
     let detection = Detection::from_global_span(
         format!(
-            "Parameter `{}` is missing type annotation",
+            "Parameter `{}` has no specific type annotation",
             missing.param.name
         ),
         missing.name_span,
     )
-    .with_primary_label("add type annotation");
+    .with_primary_label("add a specific type");
     let first_usage = missing.param.var_id.and_then(|var_id| {
         ctx.working_set
             .get_block(body_block_id)
@@ -197,21 +221,12 @@ impl DetectFix for MissingTypeAnnotation {
     }
 
     fn fix(&self, ctx: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let replacements = fix_data
+        let replacements: Vec<_> = fix_data
             .edits
             .iter()
-            .map(|edit| match *edit {
-                AnnotationEdit::InferType { name_span, var_id } => insert_type_after(
-                    name_span,
-                    &infer_param_type(var_id, fix_data.body_block_id, ctx),
-                ),
-                AnnotationEdit::InferRestElementType { name_span, var_id } => insert_type_after(
-                    name_span,
-                    &rest_element_type(infer_param_type(var_id, fix_data.body_block_id, ctx)),
-                ),
-            })
+            .filter_map(|edit| edit.to_replacement(fix_data.body_block_id, ctx))
             .collect();
-        Some(Fix {
+        (!replacements.is_empty()).then(|| Fix {
             explanation: "Add type annotations to parameters".into(),
             replacements,
         })

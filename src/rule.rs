@@ -267,7 +267,7 @@ impl dyn Rule {
         let fixed = self.apply_first_fix(bad_code);
         assert!(
             fixed == expected_code,
-            "Expected fix to be `{fixed}` but received `{expected_code}`"
+            "Expected fix to be `{expected_code}` but received `{fixed}`"
         );
     }
 

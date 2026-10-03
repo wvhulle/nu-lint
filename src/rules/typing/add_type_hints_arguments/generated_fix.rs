@@ -411,3 +411,89 @@ def has_word [text] {
 "#;
     RULE.assert_fixed_contains(bad_code, "text: string");
 }
+
+#[test]
+fn test_explicit_any_is_replaced_by_inferred_type() {
+    let bad_code = r"
+def f [x: any, y] {
+    $x + 1
+    $y + 1
+}
+";
+    RULE.assert_fixed_is(
+        bad_code,
+        r"
+def f [x: int, y: int] {
+    $x + 1
+    $y + 1
+}
+",
+    );
+}
+
+#[test]
+fn test_explicit_any_on_optional_param_is_replaced() {
+    let bad_code = r"
+def f [x?: any] {
+    $x | str trim
+}
+";
+    RULE.assert_fixed_is(
+        bad_code,
+        r"
+def f [x?: string] {
+    $x | str trim
+}
+",
+    );
+}
+
+#[test]
+fn test_explicit_any_without_better_inference_has_no_fix() {
+    let bad_code = r"
+def f [x: any] {
+    $x | describe
+}
+";
+    RULE.assert_detects_without_fix(bad_code);
+}
+
+#[test]
+fn test_fix_keeps_input_output_types() {
+    let bad_code = r"
+def f [x]: nothing -> int {
+    $x + 1
+}
+";
+    RULE.assert_fixed_is(
+        bad_code,
+        r"
+def f [x: int]: nothing -> int {
+    $x + 1
+}
+",
+    );
+}
+
+#[test]
+fn test_fix_keeps_multiline_signature_with_comments() {
+    let bad_code = r"
+def f [
+    x # the input
+    --verbose # be loud
+] {
+    $x + 1
+}
+";
+    RULE.assert_fixed_is(
+        bad_code,
+        r"
+def f [
+    x: int # the input
+    --verbose # be loud
+] {
+    $x + 1
+}
+",
+    );
+}

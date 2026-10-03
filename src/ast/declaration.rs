@@ -16,6 +16,51 @@ fn is_rest_type_annotated(rest: &PositionalArg, context: &LintContext) -> bool {
         .is_some_and(|var_id| context.working_set.get_variable(var_id).ty != Type::Any)
 }
 
+fn parameter_list_interior(signature_span: Span, context: &LintContext) -> Option<Span> {
+    let (tokens, _) = nu_parser::lex(
+        context.working_set.get_span_contents(signature_span),
+        signature_span.start,
+        &[],
+        b":",
+        true,
+    );
+    let parameter_list = tokens.first()?.span;
+    let contents = context.working_set.get_span_contents(parameter_list);
+    (contents.first() == Some(&b'[') && contents.last() == Some(&b']'))
+        .then(|| Span::new(parameter_list.start + 1, parameter_list.end - 1))
+}
+
+pub fn param_type_annotation_span(
+    param: &PositionalArg,
+    signature_span: Span,
+    context: &LintContext,
+) -> Option<Span> {
+    let name_span = context
+        .working_set
+        .get_variable(param.var_id?)
+        .declaration_span;
+    let lex_span = Span::new(
+        name_span.start,
+        parameter_list_interior(signature_span, context)?.end,
+    );
+    let (tokens, _) = nu_parser::lex_signature(
+        context.working_set.get_span_contents(lex_span),
+        lex_span.start,
+        b"\n\r",
+        b":=,",
+        false,
+    );
+    match tokens.as_slice() {
+        [name, colon, type_token, ..]
+            if name.span == name_span
+                && context.working_set.get_span_contents(colon.span) == b":" =>
+        {
+            Some(Span::new(colon.span.start, type_token.span.end))
+        }
+        _ => None,
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct CustomCommandDef {
     pub body: BlockId,

@@ -1,10 +1,12 @@
 pub mod cat_to_open;
+pub mod cd_to_builtin;
 pub mod curl_to_http;
 pub mod external_which_to_builtin;
-pub mod fd_to_glob;
+pub mod find_to_glob;
 pub mod grep_to_where;
 pub mod head_tail_to_first_last;
 pub mod jq_to_nu_pipeline;
+pub mod ls_to_builtin;
 pub mod sed_to_str_replace;
 pub mod sort_to_builtin;
 pub mod tac_to_reverse;

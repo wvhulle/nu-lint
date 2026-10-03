@@ -1,8 +1,5 @@
 pub mod date_to_date_now;
 pub mod df_to_sys_disks;
-pub mod external_cd_to_builtin;
-pub mod external_ls_to_builtin;
-pub mod find_to_glob;
 pub mod free_to_sys_mem;
 pub mod hostname_to_sys_host;
 pub mod pager_to_explore;

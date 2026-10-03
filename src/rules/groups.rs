@@ -300,3 +300,59 @@ impl Display for Group {
         write!(f, "{}", self.name)
     }
 }
+
+pub fn readme_markdown() -> String {
+    ALL_GROUPS.iter().map(group_details_markdown).collect()
+}
+
+fn group_details_markdown(group: &Group) -> String {
+    let rule_lines: String = group
+        .rules
+        .iter()
+        .map(|rule| {
+            let auto_fix_suffix = if rule.has_auto_fix() {
+                " (auto-fix)"
+            } else {
+                ""
+            };
+            format!(
+                "- `{}`{auto_fix_suffix}: {}\n",
+                rule.id(),
+                rule.short_description()
+            )
+        })
+        .collect();
+    format!(
+        "<details>\n<summary><code>{}</code> ({} rules): \
+         {}</summary>\n\n{rule_lines}\n</details>\n\n",
+        group.name,
+        group.rules.len(),
+        group.description
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+
+    use super::readme_markdown;
+
+    const README_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/README.md");
+    const START_MARKER: &str = "<!-- start-rule-groups -->\n";
+    const END_MARKER: &str = "<!-- end-rule-groups -->";
+
+    #[test]
+    fn readme_rule_list_is_up_to_date() {
+        let readme = fs::read_to_string(README_PATH).unwrap();
+        let (before_list, rest) = readme.split_once(START_MARKER).unwrap();
+        let (_, after_list) = rest.split_once(END_MARKER).unwrap();
+        let regenerated = format!(
+            "{before_list}{START_MARKER}{}{END_MARKER}{after_list}",
+            readme_markdown()
+        );
+        if regenerated != readme {
+            fs::write(README_PATH, regenerated).unwrap();
+            panic!("README.md rule list was outdated and has been regenerated; commit the change");
+        }
+    }
+}

@@ -1,6 +1,44 @@
 use super::RULE;
 
 #[test]
+fn ignore_filters_without_faithful_equivalent() {
+    for code in [
+        "^jq '.[]' array.json",
+        "^jq '.users[]' data.json",
+        "^jq '.[-2]' items.json",
+        "^jq 'empty' data.json",
+        "^jq 'add' numbers.json",
+        "^jq 'unique' items.json",
+        "^jq 'flatten' nested.json",
+        "^jq 'type' value.json",
+        "^jq 'select(.active)' users.json",
+        "^jq 'group_by(.category)' records.json",
+        "^jq 'length' items.json",
+    ] {
+        RULE.assert_ignores(code);
+    }
+}
+
+#[test]
+fn ignore_untranslatable_flags_and_inputs() {
+    for code in [
+        "^jq -s '.[0]' a.json",
+        "^jq -n '.a'",
+        "^jq -e '.ok' status.json",
+        "^jq --arg n v '.a' data.json",
+        "^jq '.a' a.json b.json",
+        "^jq '.a'",
+    ] {
+        RULE.assert_ignores(code);
+    }
+}
+
+#[test]
+fn ignore_structured_value_piped_without_serialization() {
+    RULE.assert_ignores("ls | ^jq '.[0]'");
+}
+
+#[test]
 fn complex_jq_function_definitions() {
     RULE.assert_ignores("^jq 'def f: .; . | f' input.json");
 }

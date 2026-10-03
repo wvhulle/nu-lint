@@ -16,6 +16,7 @@ const ERROR_HANDLING: Group = Group {
         super::add_hat_external_commands::RULE,
         super::fragile_last_exit_code::RULE,
         super::check_complete_exit_code::RULE,
+        super::serialize_data_for_external::RULE,
         super::documentation::descriptive_error_messages::RULE,
         super::unescaped_interpolation::RULE,
         super::exit_only_in_main::RULE,
@@ -201,7 +202,7 @@ const EXTERNAL_TOOLS: Group = Group {
     description: "Replace external commands with Nu built-ins where the result is equivalent.",
     rules: &[
         super::external_tools::cat_to_open::RULE,
-        super::external_tools::curl_to_http::RULE,
+        super::external_tools::curl_wget_to_http::RULE,
         super::external_tools::cd_to_builtin::RULE,
         super::external_tools::date_to_builtin::RULE,
         super::external_tools::find_to_glob::RULE,
@@ -215,10 +216,6 @@ const EXTERNAL_TOOLS: Group = Group {
         super::external_tools::system_info_to_sys::RULE,
         super::external_tools::tac_to_reverse::RULE,
         super::external_tools::wc_to_length::RULE,
-        super::external_tools::wget_to_http_get::RULE,
-        super::external_tools::external_which_to_builtin::RULE,
-        super::structured_data_to_csv_tool::RULE,
-        super::structured_data_to_json_tool::RULE,
     ],
 };
 

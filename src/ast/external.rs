@@ -35,10 +35,18 @@ impl<'a> ExternalInvocation<'a> {
     }
 
     pub fn next_command_name(&self, context: &'a LintContext) -> Option<&'a str> {
-        match &self.next?.expr {
-            Expr::Call(call) => Some(context.working_set.get_decl(call.decl_id).name()),
-            _ => None,
-        }
+        command_name(self.next?, context)
+    }
+
+    pub fn previous_command_name(&self, context: &'a LintContext) -> Option<&'a str> {
+        command_name(self.previous?, context)
+    }
+}
+
+fn command_name<'a>(expr: &Expression, context: &'a LintContext) -> Option<&'a str> {
+    match &expr.expr {
+        Expr::Call(call) => Some(context.working_set.get_decl(call.decl_id).name()),
+        _ => None,
     }
 }
 

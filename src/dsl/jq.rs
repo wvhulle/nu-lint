@@ -3,8 +3,6 @@
 //! Converts simple jq filters to equivalent Nushell pipelines.
 //! Used by lint rules to suggest native Nushell alternatives to jq.
 
-use std::borrow::Cow;
-
 use jaq_core::{
     load::{
         lex::{Lexer, StrPart},
@@ -17,7 +15,6 @@ use nu_protocol::{
     ast::{Expr, Expression},
 };
 
-use super::ConversionContext;
 use crate::{ast::string::cell_path_member_needs_quotes, context::LintContext};
 
 /// A static field path extracted from a jq filter (e.g., `.a.b.c`).
@@ -53,27 +50,6 @@ fn maybe_quote_field(s: &str) -> String {
     }
 }
 
-/// A numeric index value from a jq filter.
-#[derive(Debug, Clone, Copy)]
-pub enum IndexValue {
-    Positive(u64),
-    Negative(u64),
-}
-
-impl IndexValue {
-    fn parse(s: &str) -> Option<Self> {
-        s.parse().ok().map(Self::Positive)
-    }
-
-    const fn negative(n: u64) -> Self {
-        Self::Negative(n)
-    }
-
-    const fn is_last(&self) -> bool {
-        matches!(self, Self::Negative(1))
-    }
-}
-
 /// Semantic representation of a Nu command equivalent to a jq filter.
 ///
 /// Text generation happens in `format()` using `LintContext::span_text()` for
@@ -82,8 +58,7 @@ impl IndexValue {
 pub enum NuEquivalent {
     Command(&'static str),
     GetPath(FieldPath),
-    GetThenIterate(FieldPath),
-    GetIndex(IndexValue),
+    GetIndex(u64),
     CommandWithField { nu_cmd: &'static str, field: String },
     DynamicGet { var_span: Span },
     DynamicGetWithPrefix { prefix: String, var_span: Span },
@@ -93,18 +68,11 @@ pub enum NuEquivalent {
 }
 
 impl NuEquivalent {
-    pub fn format(&self, ctx: &ConversionContext, lint_ctx: &LintContext) -> Cow<'static, str> {
-        let cmd = self.to_nu_command(lint_ctx);
-        ctx.wrap_str(&cmd)
-    }
-
-    fn to_nu_command(&self, lint_ctx: &LintContext) -> String {
+    pub fn to_nu_command(&self, lint_ctx: &LintContext) -> String {
         match self {
             Self::Command(cmd) => (*cmd).to_string(),
             Self::GetPath(path) => format!("get {}", path.as_dotted()),
-            Self::GetThenIterate(path) => format!("get {} | each", path.as_dotted()),
-            Self::GetIndex(IndexValue::Positive(n)) => format!("get {n}"),
-            Self::GetIndex(IndexValue::Negative(n)) => format!("get -{n}"),
+            Self::GetIndex(index) => format!("get {index}"),
             Self::CommandWithField { nu_cmd, field } => {
                 format!("{nu_cmd} {}", maybe_quote_field(field))
             }
@@ -175,15 +143,9 @@ fn convert_term(term: &Term<&str>) -> Option<NuEquivalent> {
 
 fn convert_builtin(name: &str) -> Option<NuEquivalent> {
     let cmd: &'static str = match name {
-        "type" => "describe",
-        "empty" => "null",
-        "not" => "not $in",
-        "flatten" => "flatten",
-        "add" => "math sum",
         "min" => "math min",
         "max" => "math max",
         "sort" => "sort",
-        "unique" => "uniq",
         "reverse" => "reverse",
         _ => return None,
     };
@@ -194,8 +156,6 @@ fn convert_call_with_arg(name: &str, arg: &Term<&str>) -> Option<NuEquivalent> {
     let field = extract_single_field_from_term(arg)?;
     let nu_cmd: &'static str = match name {
         "map" => "get",
-        "select" => "where",
-        "group_by" => "group-by",
         "sort_by" => "sort-by",
         _ => return None,
     };
@@ -209,32 +169,15 @@ fn convert_path(path: &path::Path<Term<&str>>) -> Option<NuEquivalent> {
     let parts = &path.0;
 
     match parts.as_slice() {
-        [(Part::Index(Term::Num(n)), _)] => {
-            let idx = IndexValue::parse(n)?;
-            Some(NuEquivalent::GetIndex(idx))
-        }
+        [(Part::Index(Term::Num(n)), _)] => n.parse().ok().map(NuEquivalent::GetIndex),
         [(Part::Index(Term::Neg(inner)), _)] => match &**inner {
-            Term::Num(n) => {
-                let num: u64 = n.parse().ok()?;
-                let idx = IndexValue::negative(num);
-                if idx.is_last() {
-                    Some(NuEquivalent::Command("last"))
-                } else {
-                    Some(NuEquivalent::GetIndex(idx))
-                }
-            }
+            Term::Num("1") => Some(NuEquivalent::Command("last")),
             _ => None,
         },
-        [(Part::Range(None, None), _)] => Some(NuEquivalent::Command("each")),
         _ if is_all_field_access(parts) => {
             let segments = extract_field_names(parts)?;
             let path = FieldPath::from_segments(segments)?;
             Some(NuEquivalent::GetPath(path))
-        }
-        [field_parts @ .., (Part::Range(None, None), _)] if is_all_field_access(field_parts) => {
-            let segments = extract_field_names(field_parts)?;
-            let path = FieldPath::from_segments(segments)?;
-            Some(NuEquivalent::GetThenIterate(path))
         }
         _ => None,
     }

@@ -64,6 +64,7 @@ pub mod remove_redundant_in;
 pub mod require_main_with_stdin;
 pub mod script_export_main;
 pub mod self_import;
+pub mod serialize_data_for_external;
 pub mod side_effects;
 pub mod single_call_command;
 pub mod source_to_use;
@@ -71,8 +72,6 @@ pub mod spacing;
 pub mod spread_list_to_external;
 pub mod streaming_hidden_by_complete;
 pub mod string_may_be_bare;
-pub mod structured_data_to_csv_tool;
-pub mod structured_data_to_json_tool;
 pub mod transpose_items;
 pub mod try_instead_of_do;
 pub mod typing;
@@ -125,8 +124,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     explicit_long_flags::RULE,
     external_script_as_argument::RULE,
     external_tools::cat_to_open::RULE,
-    external_tools::curl_to_http::RULE,
-    external_tools::external_which_to_builtin::RULE,
+    external_tools::curl_wget_to_http::RULE,
     external_tools::cd_to_builtin::RULE,
     external_tools::date_to_builtin::RULE,
     external_tools::find_to_glob::RULE,
@@ -140,7 +138,6 @@ pub const USED_RULES: &[&dyn Rule] = &[
     external_tools::system_info_to_sys::RULE,
     external_tools::tac_to_reverse::RULE,
     external_tools::wc_to_length::RULE,
-    external_tools::wget_to_http_get::RULE,
     filesystem::from_after_parsed_open::RULE,
     filesystem::open_raw_from_to_open::RULE,
     filesystem::string_param_as_path::RULE,
@@ -213,8 +210,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     spread_list_to_external::RULE,
     streaming_hidden_by_complete::RULE,
     string_may_be_bare::RULE,
-    structured_data_to_csv_tool::RULE,
-    structured_data_to_json_tool::RULE,
+    serialize_data_for_external::RULE,
     transpose_items::RULE,
     try_instead_of_do::RULE,
     typing::add_type_hints_arguments::RULE,

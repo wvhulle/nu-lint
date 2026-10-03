@@ -1,14 +1,17 @@
 pub mod cat_to_open;
 pub mod cd_to_builtin;
 pub mod curl_to_http;
+pub mod date_to_builtin;
 pub mod external_which_to_builtin;
 pub mod find_to_glob;
 pub mod grep_to_where;
 pub mod head_tail_to_first_last;
 pub mod jq_to_nu_pipeline;
 pub mod ls_to_builtin;
+pub mod read_to_input;
 pub mod sed_to_str_replace;
 pub mod sort_to_builtin;
+pub mod system_info_to_sys;
 pub mod tac_to_reverse;
 pub mod wc_to_length;
 pub mod wget_to_http_get;

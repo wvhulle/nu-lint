@@ -1,12 +1,1 @@
-pub mod date_to_date_now;
-pub mod df_to_sys_disks;
-pub mod free_to_sys_mem;
-pub mod hostname_to_sys_host;
-pub mod pager_to_explore;
-pub mod read_to_input;
 pub mod redundant_echo;
-pub mod uname_to_sys_host;
-pub mod uptime_to_sys_host;
-pub mod users_to_sys_users;
-pub mod w_to_sys_users;
-pub mod who_to_sys_users;

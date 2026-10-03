@@ -181,7 +181,6 @@ const POSIX_TOOLS: Group = Group {
         super::posix_tools::redundant_echo::RULE,
         super::posix_tools::find_to_glob::RULE,
         super::posix_tools::free_to_sys_mem::RULE,
-        super::posix_tools::grep_to_find_or_where::RULE,
         super::posix_tools::head_to_first::RULE,
         super::posix_tools::hostname_to_sys_host::RULE,
         super::posix_tools::external_cd_to_builtin::RULE,
@@ -226,6 +225,7 @@ const EXTERNAL_TOOLS: Group = Group {
     rules: &[
         super::external_tools::curl_to_http::RULE,
         super::external_tools::fd_to_glob::RULE,
+        super::external_tools::grep_to_where::RULE,
         super::external_tools::jq_to_nu_pipeline::RULE,
         super::external_tools::wget_to_http_get::RULE,
         super::external_tools::external_which_to_builtin::RULE,

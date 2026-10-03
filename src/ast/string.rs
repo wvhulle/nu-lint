@@ -122,6 +122,15 @@ pub fn record_key_needs_quotes(name: &str) -> bool {
         || name.contains(|c: char| !c.is_alphanumeric() && c != '_' && c != '-')
 }
 
+pub fn quote_nu_string(content: &str) -> String {
+    if content.contains('\'') {
+        let escaped = content.replace('\\', "\\\\").replace('"', "\\\"");
+        format!("\"{escaped}\"")
+    } else {
+        format!("'{content}'")
+    }
+}
+
 /// The type and content of a string in Nushell.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StringFormat {

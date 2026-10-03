@@ -9,7 +9,6 @@ pub mod external_cd_to_builtin;
 pub mod external_ls_to_builtin;
 pub mod find_to_glob;
 pub mod free_to_sys_mem;
-pub mod grep_to_find_or_where;
 pub mod head_to_first;
 pub mod hostname_to_sys_host;
 pub mod pager_to_explore;

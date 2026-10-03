@@ -20,3 +20,9 @@ pub fn escape_regex(text: &str) -> String {
     }
     escaped
 }
+
+const BRE_DIVERGING_CHARS: &[char] = &['+', '?', '|', '(', ')', '{', '}'];
+
+pub fn basic_regex_agrees_with_rust_regex(pattern: &str) -> bool {
+    !pattern.contains(BRE_DIVERGING_CHARS) && !pattern.contains("\\<") && !pattern.contains("\\>")
+}

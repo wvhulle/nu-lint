@@ -69,6 +69,28 @@ pub fn value_text<'a>(context: &'a LintContext, expr: &'a Expression) -> Cow<'a,
     }
 }
 
+pub enum LineSource<'a> {
+    Piped,
+    File(&'a Expression),
+}
+
+impl<'a> LineSource<'a> {
+    pub fn of(invocation: &ExternalInvocation<'a>, operands: &[&'a Expression]) -> Option<Self> {
+        match (invocation.input, operands) {
+            (InputSource::Piped, []) => Some(Self::Piped),
+            (InputSource::Leading, [file]) if !is_expanded_glob(file) => Some(Self::File(file)),
+            _ => None,
+        }
+    }
+
+    pub fn open_prefix(&self, context: &LintContext) -> String {
+        match self {
+            Self::Piped => String::new(),
+            Self::File(file) => format!("open --raw {} | ", context.expr_text(file)),
+        }
+    }
+}
+
 impl LintContext<'_> {
     pub fn external_invocations<'a>(&'a self, names: &[&str]) -> Vec<ExternalInvocation<'a>> {
         let mut nested_block_ids = Vec::new();

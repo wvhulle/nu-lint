@@ -3,10 +3,7 @@ use nu_protocol::{Span, ast::Expression};
 use crate::{
     LintLevel,
     ast::{
-        external::{
-            CliSpec, ExternalInvocation, Flag, InputSource, ParsedCli, is_expanded_glob,
-            literal_content, value_text,
-        },
+        external::{CliSpec, ExternalInvocation, Flag, LineSource, literal_content, value_text},
         regex::basic_regex_agrees_with_rust_regex,
         string::quote_nu_string,
     },
@@ -62,7 +59,7 @@ enum Matching {
 
 pub struct LineFilter<'a> {
     span: Span,
-    file: Option<&'a Expression>,
+    source: LineSource<'a>,
     pattern: &'a Expression,
     matching: Matching,
     ignore_case: bool,
@@ -77,7 +74,9 @@ impl<'a> LineFilter<'a> {
             _ => (&RIPGREP_SPEC, Dialect::Extended),
         };
         let parsed = invocation.parse(spec)?;
-        let (pattern, file) = Self::pattern_and_file(invocation, &parsed)?;
+        let (pattern, inputs) = parsed.operands.split_first()?;
+        let source = LineSource::of(invocation, inputs)
+            .filter(|source| matches!(source, LineSource::Piped) || invocation.name == "grep")?;
         let matching = if parsed.has(FIXED_STRINGS) {
             Matching::Literal
         } else if parsed.has(EXTENDED_REGEXP) {
@@ -88,28 +87,13 @@ impl<'a> LineFilter<'a> {
 
         Some(Self {
             span: invocation.span,
-            file,
+            source,
             pattern,
             matching,
             ignore_case: parsed.has(IGNORE_CASE),
             invert: parsed.has(INVERT_MATCH),
             count: parsed.has(COUNT),
         })
-    }
-
-    fn pattern_and_file(
-        invocation: &ExternalInvocation<'a>,
-        parsed: &ParsedCli<'a>,
-    ) -> Option<(&'a Expression, Option<&'a Expression>)> {
-        match (invocation.input, parsed.operands.as_slice()) {
-            (InputSource::Piped, [pattern]) => Some((pattern, None)),
-            (InputSource::Leading, [pattern, file])
-                if invocation.name == "grep" && !is_expanded_glob(file) =>
-            {
-                Some((pattern, Some(file)))
-            }
-            _ => None,
-        }
     }
 
     fn regex_is_portable(&self) -> bool {
@@ -153,12 +137,10 @@ impl<'a> LineFilter<'a> {
     }
 
     fn to_fix(&self, context: &LintContext) -> Fix {
-        let source = self.file.map_or_else(String::new, |file| {
-            format!("open --raw {} | ", context.expr_text(file))
-        });
         let counting = if self.count { " | length" } else { "" };
         let replacement = format!(
-            "{source}lines | where {}{counting}",
+            "{}lines | where {}{counting}",
+            self.source.open_prefix(context),
             self.condition(context)
         );
         Fix {

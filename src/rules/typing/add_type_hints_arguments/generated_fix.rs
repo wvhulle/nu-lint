@@ -497,3 +497,54 @@ def f [
 ",
     );
 }
+
+#[test]
+fn test_param_passed_to_print_is_not_nothing() {
+    let bad_code = r"
+def f [x] {
+    print $x
+}
+";
+    RULE.assert_fixed_is(
+        bad_code,
+        r"
+def f [x: any] {
+    print $x
+}
+",
+    );
+}
+
+#[test]
+fn test_param_type_from_called_command_parameter() {
+    let bad_code = r"
+def f [path] {
+    mkdir $path
+}
+";
+    RULE.assert_fixed_is(
+        bad_code,
+        r"
+def f [path: oneof<glob, string>] {
+    mkdir $path
+}
+",
+    );
+}
+
+#[test]
+fn test_param_type_from_positional_after_named_flag() {
+    let bad_code = r"
+def f [replacement] {
+    str replace --all 'a' $replacement 'abc'
+}
+";
+    RULE.assert_fixed_is(
+        bad_code,
+        r"
+def f [replacement: oneof<string, closure>] {
+    str replace --all 'a' $replacement 'abc'
+}
+",
+    );
+}

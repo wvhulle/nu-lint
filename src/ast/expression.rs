@@ -689,32 +689,20 @@ fn infer_from_call(
 ) -> Option<Type> {
     log::trace!("infer_from_call: checking call for var_id={in_var_id:?}");
 
-    for (idx, arg) in call.arguments.iter().enumerate() {
-        if let Argument::Positional(arg_expr) | Argument::Unknown(arg_expr) = arg {
-            log::trace!("  -> Checking positional arg {idx}");
-            if !arg_expr.contains_variable(in_var_id) {
-                log::trace!("    -> Does not contain variable");
-                continue;
-            }
-
-            log::trace!("    -> Contains variable! Checking signature");
-            let decl = context.working_set.get_decl(call.decl_id);
-            let signature = decl.signature();
-
-            log::trace!(
-                "    -> Command: '{}', input_output_types: {:?}",
-                decl.name(),
-                signature.input_output_types
-            );
-
-            if let Some((input_type, _)) = signature.input_output_types.first()
-                && !matches!(input_type, nu_protocol::Type::Any)
-            {
-                log::trace!("    -> Found input type from signature: {input_type:?}");
-                return Some(input_type.clone());
-            }
-            log::trace!("    -> Signature has no specific input type");
-        }
+    let signature = context.working_set.get_decl(call.decl_id).signature();
+    let direct_argument_type = call
+        .arguments
+        .iter()
+        .filter_map(|arg| match arg {
+            Argument::Positional(arg_expr) => Some(arg_expr),
+            _ => None,
+        })
+        .enumerate()
+        .filter(|(_, arg_expr)| arg_expr.extract_direct_var() == Some(in_var_id))
+        .find_map(|(position, _)| positional_param_type(&signature, position));
+    if direct_argument_type.is_some() {
+        log::trace!("  -> Found type from parameter of called command: {direct_argument_type:?}");
+        return direct_argument_type;
     }
 
     log::trace!("  -> Recursively checking call arguments");
@@ -727,6 +715,17 @@ fn infer_from_call(
 
     log::trace!("infer_from_call result: {result:?}");
     result
+}
+
+fn positional_param_type(signature: &nu_protocol::Signature, position: usize) -> Option<Type> {
+    signature
+        .required_positional
+        .iter()
+        .chain(&signature.optional_positional)
+        .nth(position)
+        .or(signature.rest_positional.as_ref())
+        .map(|param| param.shape.to_type())
+        .filter(|ty| *ty != Type::Any)
 }
 
 const fn is_filepath_expr(expr: &Expr) -> bool {

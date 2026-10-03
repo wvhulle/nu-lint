@@ -132,27 +132,25 @@ impl Iterator for ChainIterator<'_> {
         // Check for else/else-if branch
         match call.get_else_branch() {
             Some((true, else_expr)) => {
-                // else-if: advance to next call
-                if let Expr::Call(next_call) = &else_expr.expr {
-                    self.current = Some(next_call);
-                } else {
-                    self.current = None;
-                }
-                Some(ChainIterResult::Branch(branch))
+                self.current = match &else_expr.expr {
+                    Expr::Call(next_call) => Some(next_call),
+                    _ => None,
+                };
             }
-            Some((false, else_expr)) => {
-                // Final else: store it for next iteration, return branch now
+            Some((false, final_else_expr)) => {
                 self.current = None;
-                self.final_else_pending =
-                    Some(self.context.span_text(else_expr.span).trim().to_string());
-                Some(ChainIterResult::Branch(branch))
+                self.final_else_pending = Some(
+                    self.context
+                        .span_text(final_else_expr.span)
+                        .trim()
+                        .to_string(),
+                );
             }
             None => {
-                // No else branch: done after this
                 self.current = None;
-                Some(ChainIterResult::Branch(branch))
             }
         }
+        Some(ChainIterResult::Branch(branch))
     }
 }
 

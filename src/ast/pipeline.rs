@@ -233,8 +233,8 @@ fn infer_from_pipeline_window(
     log::trace!(
         "  Checking pipeline window: contains_param={}, first_expr={:?}, second_expr={:?}",
         contains_param,
-        &window[0].expr.expr,
-        &window[1].expr.expr
+        window[0].expr.expr,
+        window[1].expr.expr
     );
 
     let Expr::Call(call) = &window[1].expr.expr else {

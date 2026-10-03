@@ -473,7 +473,7 @@ impl ExpressionExt for Expression {
                         log::trace!(
                             "    -> Checking pipeline element, expr='{}', variant={:?}",
                             element.expr.span_text(context),
-                            &element.expr.expr
+                            element.expr.expr
                         );
                         let result = element.expr.infer_input_type(in_var, context);
                         log::trace!("       Result: {result:?}");

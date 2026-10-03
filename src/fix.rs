@@ -60,10 +60,8 @@ pub fn apply_fixes(
     lint_engine: &LintEngine,
 ) -> Vec<FixResult> {
     group_violations_by_file(violations)
-        .into_iter()
-        .filter_map(|(file_path, _file_violations)| {
-            apply_fix_to_file(&file_path, dry_run, lint_engine).ok()
-        })
+        .into_keys()
+        .filter_map(|file_path| apply_fix_to_file(&file_path, dry_run, lint_engine).ok())
         .collect()
 }
 

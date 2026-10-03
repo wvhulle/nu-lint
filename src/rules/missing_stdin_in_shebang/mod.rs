@@ -111,7 +111,7 @@ fn create_fix_data_for_shebang(context: &LintContext) -> Option<ShebangFixData> 
     }
 
     // Find the end of the first line including the newline
-    let first_line_end = source.find('\n').map_or(source.len(), |pos| pos);
+    let first_line_end = source.find('\n').unwrap_or(source.len());
     let fix_span = nu_protocol::Span::new(file_offset, first_line_end + file_offset);
 
     let new_shebang = if first_line.contains("-S ") {

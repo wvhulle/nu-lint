@@ -108,11 +108,10 @@ impl IgnoreIndex {
 /// `#!` shebang). The first line whose first non-whitespace byte is anything
 /// else terminates the header.
 pub fn is_header_line(line: &str) -> bool {
-    match line.bytes().find(|b| !b.is_ascii_whitespace()) {
-        None => true,
-        Some(b'#') => true,
-        _ => false,
-    }
+    matches!(
+        line.bytes().find(|b| !b.is_ascii_whitespace()),
+        None | Some(b'#')
+    )
 }
 
 /// Collect all rule IDs declared in `# nu-lint-ignore-file:` comments at the

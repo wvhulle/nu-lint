@@ -76,8 +76,8 @@ pub fn format_rest_with_shape(name: &str, shape: &SyntaxShape) -> String {
 
 /// Format a flag/named parameter.
 pub fn format_flag(f: &Flag) -> String {
-    let short = f.short.map(|s| format!(" (-{s})")).unwrap_or_default();
-    let arg_type = f.arg.as_ref().map(|s| format!(": {s}")).unwrap_or_default();
+    let short = f.short.map_or_default(|s| format!(" (-{s})"));
+    let arg_type = f.arg.as_ref().map_or_default(|s| format!(": {s}"));
     format!("--{}{short}{arg_type}", f.long)
 }
 

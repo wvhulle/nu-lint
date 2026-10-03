@@ -137,9 +137,9 @@ fn detect_with_fix_data_from_nested_blocks(
             element.expr.flat_map(
                 context.working_set,
                 &|expr| {
-                    extract_nested_block_id(&expr.expr)
-                        .map(|id| detect_block(context.working_set.get_block(id), context))
-                        .unwrap_or_default()
+                    extract_nested_block_id(&expr.expr).map_or_default(|id| {
+                        detect_block(context.working_set.get_block(id), context)
+                    })
                 },
                 violations,
             );

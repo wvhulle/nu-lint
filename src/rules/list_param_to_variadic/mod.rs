@@ -55,8 +55,7 @@ fn find_call_site_replacements(
                 })
                 .nth(param_index)
                 .flatten()
-                .map(|e| vec![transform_arg(e, ctx)])
-                .unwrap_or_default()
+                .map_or_default(|e| vec![transform_arg(e, ctx)])
         },
         &mut replacements,
     );

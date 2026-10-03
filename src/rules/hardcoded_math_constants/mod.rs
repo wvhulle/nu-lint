@@ -36,11 +36,11 @@ const MATH_CONSTANTS: &[MathConstant] = &[
     },
     MathConstant {
         name: "PHI",
-        value: 1.618_033_988_749_895,
+        value: consts::GOLDEN_RATIO,
     },
     MathConstant {
         name: "GAMMA",
-        value: 0.577_215_664_901_532_9,
+        value: consts::EULER_GAMMA,
     },
 ];
 

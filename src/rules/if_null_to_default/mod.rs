@@ -24,7 +24,7 @@ struct NullComparison {
 }
 
 /// Get the single expression from a block, if it contains exactly one.
-fn get_single_block_expr(block: &Block) -> Option<&Expression> {
+const fn get_single_block_expr(block: &Block) -> Option<&Expression> {
     let [pipeline] = block.pipelines.as_slice() else {
         return None;
     };

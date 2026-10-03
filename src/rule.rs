@@ -278,10 +278,7 @@ impl dyn Rule {
             violation.fix.is_none(),
             "Expected rule '{}' to detect without offering a fix, but it replaced with `{:?}`",
             self.id(),
-            violation
-                .fix
-                .map(|fix| fix.replacements)
-                .unwrap_or_default()
+            violation.fix.map_or_default(|fix| fix.replacements)
         );
     }
 

@@ -103,12 +103,10 @@ fn detect_in_all_blocks(context: &LintContext) -> Vec<(Detection, Option<FixData
     context.ast.flat_map(
         context.working_set,
         &|expr| {
-            expr.extract_block_id()
-                .map(|block_id| {
-                    let block = context.working_set.get_block(block_id);
-                    check_pipeline_pairs(block, context)
-                })
-                .unwrap_or_default()
+            expr.extract_block_id().map_or_default(|block_id| {
+                let block = context.working_set.get_block(block_id);
+                check_pipeline_pairs(block, context)
+            })
         },
         &mut all_violations,
     );

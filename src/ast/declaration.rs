@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 use nu_protocol::{
-    BlockId, Span,
+    BlockId, PositionalArg, Span, SyntaxShape, Type,
     ast::{Call, Expr},
 };
 
@@ -11,6 +11,11 @@ use crate::{
     span::FileSpan,
 };
 
+fn is_rest_type_annotated(rest: &PositionalArg, context: &LintContext) -> bool {
+    rest.var_id
+        .is_some_and(|var_id| context.working_set.get_variable(var_id).ty != Type::Any)
+}
+
 #[derive(Debug, Clone)]
 pub struct CustomCommandDef {
     pub body: BlockId,
@@ -19,6 +24,7 @@ pub struct CustomCommandDef {
     pub signature_span: Span,
     pub export_span: Option<Span>,
     pub signature: nu_protocol::Signature,
+    pub is_wrapped: bool,
     /// Span of the entire definition (from `def`/`export def` to closing `}`)
     pub definition_span: Span,
     /// Span of the body expression (the block argument)
@@ -63,12 +69,23 @@ impl CustomCommandDef {
 
         let signature_expr = call.get_positional_arg(1)?;
         let signature_span = signature_expr.span;
+        let Expr::Signature(parsed_signature) = &signature_expr.expr else {
+            return None;
+        };
 
         let body_expr = call.get_positional_arg(2)?;
         let block_id = body_expr.extract_block_id()?;
 
-        let block = context.working_set.get_block(block_id);
-        let signature = (*block.signature).clone();
+        let is_wrapped = call.has_named_flag("wrapped");
+        let mut signature = (**parsed_signature).clone();
+        signature.name.clone_from(&name);
+        signature.allows_unknown_args = is_wrapped;
+        if is_wrapped
+            && let Some(rest) = &mut signature.rest_positional
+            && !is_rest_type_annotated(rest, context)
+        {
+            rest.shape = SyntaxShape::ExternalArgument;
+        }
 
         let export_span = is_exported.then(|| Span::new(call.head.start, call.head.start + 7));
 
@@ -82,6 +99,7 @@ impl CustomCommandDef {
             signature_span,
             export_span,
             signature,
+            is_wrapped,
             definition_span,
             body_expr_span: body_expr.span,
         })

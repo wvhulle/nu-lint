@@ -72,3 +72,38 @@ def process [
 
     RULE.assert_ignores(good_code);
 }
+
+#[test]
+fn ignore_untyped_wrapped_rest() {
+    let good_code = r"
+def --wrapped ezal [...rest] {
+    if '-G' in $rest {
+        ^eza ...$rest
+    } else {
+        ^eza -l --icons ...$rest
+    }
+}
+";
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
+fn ignore_string_wrapped_rest() {
+    let good_code = r"
+def --wrapped dzal [...rest: string] {
+    ^git ...$rest
+}
+";
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
+fn ignore_wrapped_rest_with_explicit_any_left_to_parser_error() {
+    let good_code = r"
+def --wrapped main [...rest: any] {
+    ^ezal ...$rest
+    print end
+}
+";
+    RULE.assert_ignores(good_code);
+}

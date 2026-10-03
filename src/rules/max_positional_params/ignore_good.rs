@@ -34,3 +34,9 @@ fn function_with_optional_param() {
     let good = "def calc [x: int, y?: int] { $x + ($y | default 0) }";
     RULE.assert_ignores(good);
 }
+
+#[test]
+fn wrapped_rest_with_invalid_type() {
+    let good = "def --wrapped ezal [...rest: int] { ^eza -l ...$rest }";
+    RULE.assert_ignores(good);
+}

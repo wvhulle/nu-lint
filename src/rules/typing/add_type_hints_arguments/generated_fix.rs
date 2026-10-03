@@ -93,7 +93,31 @@ def sum [...nums] {
     $nums | each { |n| $n + 1 }
 }
 ";
-    RULE.assert_fixed_contains(bad_code, "...nums: list");
+    RULE.assert_fixed_is(
+        bad_code,
+        r"
+def sum [...nums: any] {
+    $nums | each { |n| $n + 1 }
+}
+",
+    );
+}
+
+#[test]
+fn test_fix_preserves_flags() {
+    let bad_code = r"
+def f [x, --verbose] {
+    $x + 1
+}
+";
+    RULE.assert_fixed_is(
+        bad_code,
+        r"
+def f [x: int, --verbose] {
+    $x + 1
+}
+",
+    );
 }
 
 #[test]
@@ -347,9 +371,16 @@ def complex [required, optional?, ...rest] {
     $rest | where {|x| $x > 0}
 }
 ";
-    RULE.assert_fixed_contains(bad_code, "required: string");
-    RULE.assert_fixed_contains(bad_code, "optional?: list");
-    RULE.assert_fixed_contains(bad_code, "...rest: list");
+    RULE.assert_fixed_is(
+        bad_code,
+        r"
+def complex [required: string, optional?: list<any>, ...rest: any] {
+    $required | str trim
+    $optional | each { |x| $x }
+    $rest | where {|x| $x > 0}
+}
+",
+    );
 }
 
 #[test]

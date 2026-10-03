@@ -46,3 +46,13 @@ def outer [] {
     RULE.assert_detects(bad_code);
     RULE.assert_count(bad_code, 1);
 }
+
+#[test]
+fn detect_untyped_positional_in_wrapped_command() {
+    let bad_code = r"
+def --wrapped run [target, ...rest] {
+    ^make $target ...$rest
+}
+";
+    RULE.assert_count(bad_code, 1);
+}

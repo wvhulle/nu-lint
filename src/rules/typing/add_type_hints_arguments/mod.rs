@@ -1,23 +1,21 @@
 use nu_protocol::{
-    BlockId, Span, Type, VarId,
+    BlockId, PositionalArg, Span, SyntaxShape, Type, VarId,
     ast::{Call, Expr},
 };
 
 use crate::{
     LintLevel,
     ast::{
-        block::BlockExt, call::CallExt, expression::ExpressionExt, pipeline::PipelineExt,
-        span::SpanExt,
+        block::BlockExt, call::CallExt, declaration::CustomCommandDef, expression::ExpressionExt,
+        pipeline::PipelineExt,
     },
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
 
-/// Semantic fix data: stores signature span and body block ID for regenerating
-/// the fix
 pub struct FixData {
-    signature_span: Span,
+    edits: Vec<AnnotationEdit>,
     body_block_id: BlockId,
 }
 
@@ -63,96 +61,111 @@ fn infer_param_type(
     Type::Any
 }
 
-fn get_param_type_str(
-    shape: &nu_protocol::SyntaxShape,
-    var_id: Option<VarId>,
-    body_block_id: nu_protocol::BlockId,
-    ctx: &LintContext,
-) -> String {
-    if *shape == nu_protocol::SyntaxShape::Any {
-        log::trace!("Inferring type for parameter {var_id:?} with shape Any");
-        var_id.map_or_else(
-            || Type::Any.to_string(),
-            |var_id| infer_param_type(var_id, body_block_id, ctx).to_string(),
-        )
-    } else {
-        shape.to_string() // Use upstream Display
-    }
+#[derive(Clone, Copy)]
+enum AnnotationEdit {
+    InferType { name_span: Span, var_id: VarId },
+    InferRestElementType { name_span: Span, var_id: VarId },
 }
 
-fn detect_signature(
-    sig: &nu_protocol::Signature,
-    signature_span: Span,
-    body_block_id: BlockId,
-    ctx: &LintContext,
-) -> Vec<(Detection, FixData)> {
-    log::trace!("Checking signature for missing type annotations: {sig:?}");
-    let block = ctx.working_set.get_block(body_block_id);
+struct MissingAnnotation<'a> {
+    param: &'a PositionalArg,
+    name_span: Span,
+    edit: AnnotationEdit,
+}
 
-    let params_needing_types: Vec<_> = sig
+fn declaration_span(var_id: VarId, ctx: &LintContext) -> Span {
+    ctx.working_set.get_variable(var_id).declaration_span
+}
+
+fn untyped_params<'a>(
+    def: &'a CustomCommandDef,
+    ctx: &LintContext,
+) -> impl Iterator<Item = MissingAnnotation<'a>> {
+    let sig = &def.signature;
+    let positionals = sig
         .required_positional
         .iter()
         .chain(&sig.optional_positional)
-        .chain(sig.rest_positional.iter())
-        .filter(|param| param.shape == nu_protocol::SyntaxShape::Any)
-        .map(|param| {
-            (
-                param,
-                param.var_id.map(|var_id| block.var_usages(var_id, ctx)),
-            )
-        })
-        .collect();
-
-    if params_needing_types.is_empty() {
-        log::trace!("No parameters need type annotations");
-        return vec![];
-    }
-
-    params_needing_types
-        .into_iter()
-        .map(|(param, usage_span)| {
-            let param_span = signature_span.find_substring_span(&param.name, ctx);
-            let mut violation = Detection::from_global_span(
-                format!("Parameter `{}` is missing type annotation", param.name),
-                param_span,
-            )
-            .with_primary_label("add type annotation");
-
-            if let Some(usage_spans) = usage_span
-                && let Some(&first_span) = usage_spans.first()
-            {
-                violation = violation.with_extra_label("used here", first_span);
-            }
-
-            let fix_data = FixData {
-                signature_span,
-                body_block_id,
+        .map(|param| (param, false));
+    let rest = sig
+        .rest_positional
+        .iter()
+        .filter(|_| !def.is_wrapped)
+        .map(|param| (param, true));
+    positionals
+        .chain(rest)
+        .filter(|(param, _)| param.shape == SyntaxShape::Any)
+        .filter_map(move |(param, is_rest)| {
+            let var_id = param.var_id?;
+            let name_span = declaration_span(var_id, ctx);
+            let edit = if is_rest {
+                AnnotationEdit::InferRestElementType { name_span, var_id }
+            } else {
+                AnnotationEdit::InferType { name_span, var_id }
             };
-
-            (violation, fix_data)
+            Some(MissingAnnotation {
+                param,
+                name_span,
+                edit,
+            })
         })
-        .collect()
+}
+
+fn rest_element_type(list_type: Type) -> Type {
+    match list_type {
+        Type::List(element) => *element,
+        _ => Type::Any,
+    }
+}
+
+fn insert_type_after(name_span: Span, ty: &Type) -> Replacement {
+    Replacement::new(Span::new(name_span.end, name_span.end), format!(": {ty}"))
+}
+
+fn to_detection(
+    missing: &MissingAnnotation,
+    body_block_id: BlockId,
+    ctx: &LintContext,
+) -> Detection {
+    let detection = Detection::from_global_span(
+        format!(
+            "Parameter `{}` is missing type annotation",
+            missing.param.name
+        ),
+        missing.name_span,
+    )
+    .with_primary_label("add type annotation");
+    let first_usage = missing.param.var_id.and_then(|var_id| {
+        ctx.working_set
+            .get_block(body_block_id)
+            .var_usages(var_id, ctx)
+            .first()
+            .copied()
+    });
+    match first_usage {
+        Some(usage_span) => detection.with_extra_label("used here", usage_span),
+        None => detection,
+    }
 }
 
 fn detect_def_call(call: &Call, ctx: &LintContext) -> Vec<(Detection, FixData)> {
-    call.custom_command_def(ctx)
-        .is_some()
-        .then(|| {
-            call.get_positional_arg(1)
-                .zip(call.get_positional_arg(2))
-                .and_then(|(sig_arg, body_arg)| {
-                    body_arg
-                        .extract_block_id()
-                        .and_then(|body_block_id| match &sig_arg.expr {
-                            Expr::Signature(sig) => {
-                                Some(detect_signature(sig, sig_arg.span, body_block_id, ctx))
-                            }
-                            _ => None,
-                        })
-                })
+    let Some(def) = call.custom_command_def(ctx) else {
+        return vec![];
+    };
+    let missing: Vec<_> = untyped_params(&def, ctx).collect();
+    let edits: Vec<_> = missing.iter().map(|missing| missing.edit).collect();
+    missing
+        .iter()
+        .map(|missing| {
+            (
+                to_detection(missing, def.body, ctx),
+                FixData {
+                    edits: edits.clone(),
+                    body_block_id: def.body,
+                },
+            )
         })
-        .flatten()
-        .unwrap_or_default()
+        .collect()
 }
 
 struct MissingTypeAnnotation;
@@ -184,41 +197,23 @@ impl DetectFix for MissingTypeAnnotation {
     }
 
     fn fix(&self, ctx: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let block = ctx.working_set.get_block(fix_data.body_block_id);
-        let body_block_id = fix_data.body_block_id;
-        let ctx: &LintContext = ctx;
-        let params = block
-            .signature
-            .required_positional
+        let replacements = fix_data
+            .edits
             .iter()
-            .map(|p| {
-                format!(
-                    "{}: {}",
-                    p.name,
-                    get_param_type_str(&p.shape, p.var_id, body_block_id, ctx)
-                )
+            .map(|edit| match *edit {
+                AnnotationEdit::InferType { name_span, var_id } => insert_type_after(
+                    name_span,
+                    &infer_param_type(var_id, fix_data.body_block_id, ctx),
+                ),
+                AnnotationEdit::InferRestElementType { name_span, var_id } => insert_type_after(
+                    name_span,
+                    &rest_element_type(infer_param_type(var_id, fix_data.body_block_id, ctx)),
+                ),
             })
-            .chain(block.signature.optional_positional.iter().map(|p| {
-                format!(
-                    "{}?: {}",
-                    p.name,
-                    get_param_type_str(&p.shape, p.var_id, body_block_id, ctx)
-                )
-            }))
-            .chain(block.signature.rest_positional.iter().map(|p| {
-                format!(
-                    "...{}: {}",
-                    p.name,
-                    get_param_type_str(&p.shape, p.var_id, body_block_id, ctx)
-                )
-            }))
-            .collect::<Vec<_>>()
-            .join(", ");
-
-        let new_sig = { format!("[{params}]") };
+            .collect();
         Some(Fix {
             explanation: "Add type annotations to parameters".into(),
-            replacements: vec![Replacement::new(fix_data.signature_span, new_sig)],
+            replacements,
         })
     }
 }

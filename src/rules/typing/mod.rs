@@ -59,17 +59,14 @@ pub fn format_optional(p: &PositionalArg) -> String {
 
 /// Format a rest/variadic parameter: `...name: type`
 pub fn format_rest(p: &PositionalArg) -> String {
-    match &p.shape {
-        SyntaxShape::Any => format!("...{}", p.name),
-        s => format!("...{}: {s}", p.name),
-    }
+    format_rest_with_shape(&p.name, &p.shape)
 }
 
 /// Format a rest/variadic parameter with a custom shape (for list<T> -> T
 /// conversion)
 pub fn format_rest_with_shape(name: &str, shape: &SyntaxShape) -> String {
     match shape {
-        SyntaxShape::Any => format!("...{name}"),
+        SyntaxShape::Any | SyntaxShape::ExternalArgument => format!("...{name}"),
         s => format!("...{name}: {s}"),
     }
 }

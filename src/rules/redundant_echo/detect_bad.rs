@@ -7,12 +7,6 @@ fn test_detect_echo_with_string() {
 }
 
 #[test]
-fn test_detect_external_echo() {
-    let bad_code = r#"^echo "hello world""#;
-    RULE.assert_detects(bad_code);
-}
-
-#[test]
 fn test_detect_echo_with_variable() {
     let bad_code = r"echo $value";
     RULE.assert_detects(bad_code);

@@ -54,9 +54,9 @@ pub mod not_is_empty_to_is_not_empty;
 pub mod nothing_outside_signature;
 pub mod parsing;
 pub mod positional_to_pipeline;
-pub mod posix_tools;
 pub mod range_for_iteration;
 pub mod record_assignments;
+pub mod redundant_echo;
 pub mod redundant_ignore;
 pub mod redundant_nu_subprocess;
 pub mod remove_hat_not_builtin;
@@ -181,7 +181,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     parsing::split_row_get_multistatement::RULE,
     parsing::split_row_space_to_split_words::RULE,
     positional_to_pipeline::RULE,
-    posix_tools::redundant_echo::RULE,
+    redundant_echo::RULE,
     range_for_iteration::loop_counter::RULE,
     range_for_iteration::while_counter::RULE,
     redundant_ignore::RULE,

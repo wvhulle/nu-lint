@@ -86,6 +86,8 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `use_load_env` (auto-fix): Use load-env for multiple $env assignments
 - `remove_hat_not_builtin` (auto-fix): Detect unnecessary '^' prefix on external commands
 - `division_to_format_duration` (auto-fix): Replace duration division with `format duration`
+- `ignore_over_dev_null` (auto-fix): Use '| ignore' instead of redirecting to /dev/null
+- `redundant_echo` (auto-fix): Redundant `echo` (identity function)
 
 `parsing` - Better ways to parse and transform text data.
 
@@ -121,35 +123,6 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `single_call_command` (auto-fix): Single-line command called only once
 - `append_to_concat_assign` (auto-fix): Use ++= operator instead of verbose append in assignment
 
-`posix` - Replace common bash/POSIX patterns.
-
-- `ignore_over_dev_null` (auto-fix): Use '| ignore' instead of redirecting to /dev/null
-- `awk_to_pipeline` (auto-fix): `awk` replaceable with structured pipeline
-- `cat_to_open` (auto-fix): External `cat` replaceable with `open`
-- `date_to_date_now` (auto-fix): External `date` replaceable with `date now`
-- `df_to_sys_disks` (auto-fix): `df` replaceable with `sys disks`
-- `redundant_echo` (auto-fix): Redundant `echo` (identity function)
-- `find_to_glob` (auto-fix): `find` replaceable with `glob` or `ls`
-- `free_to_sys_mem` (auto-fix): `free` replaceable with `sys mem` for memory info
-- `grep_to_find_or_where` (auto-fix): `grep` replaceable with `find` or `where`
-- `head_to_first` (auto-fix): `head` replaceable with `first`
-- `hostname_to_sys_host` (auto-fix): `hostname` replaceable with `sys host`
-- `external_cd_to_builtin` (auto-fix): External `cd` replaceable with built-in `cd`
-- `external_ls_to_builtin` (auto-fix): External `ls` replaceable with built-in
-- `pager_to_explore` (auto-fix): Pager replaceable with `explore`
-- `read_to_input` (auto-fix): `read` replaceable with `input`
-- `sed_to_str_transform` (auto-fix): `sed` replaceable with `str replace`
-- `external_sort_to_builtin` (auto-fix): External `sort` replaceable with built-in
-- `tac_to_reverse` (auto-fix): `tac` replaceable with `lines | reverse`
-- `tail_to_last` (auto-fix): `tail` replaceable with `last`
-- `uname_to_sys_host` (auto-fix): `uname` replaceable with `sys host`
-- `external_uniq_to_builtin` (auto-fix): External `uniq` replaceable with built-in
-- `uptime_to_sys_host` (auto-fix): `uptime` replaceable with `sys host`
-- `users_to_sys_users` (auto-fix): `users` replaceable with `sys users`
-- `w_to_sys_users` (auto-fix): `w` replaceable with `sys users`
-- `wc_to_length` (auto-fix): `wc` replaceable with `length`
-- `who_to_sys_users` (auto-fix): `who` replaceable with `sys users`
-
 `iteration` - Better patterns for loops and iteration.
 
 - `loop_counter_to_range`: Loop counter to range iteration
@@ -160,6 +133,7 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `add_hat_external_commands` (auto-fix): Always use the '^' prefix on external commands
 - `fragile_last_exit_code` (auto-fix): Fragile `LAST_EXIT_CODE` check
 - `check_complete_exit_code`: Unchecked exit code after `complete`
+- `serialize_data_for_external` (auto-fix): Structured data piped to a JSON or CSV tool without `to json` or `to csv`
 - `descriptive_error_messages`: Error messages should be descriptive and actionable
 - `unescaped_interpolation`: Unescaped braces in string interpolation
 - `exit_only_in_main`: Avoid using 'exit' in functions other than 'main'
@@ -238,15 +212,23 @@ Some of the rules need further testing and improvement. Please make an issue on 
 - `each_nothing_to_for_loop` (auto-fix): `each` mappings with no output should be written as `for` loops.
 - `silence_stderr_data`: External commands that write data to stderr should not be silenced
 
-`external` - Replace common external CLI tools.
+`external` - Replace external commands with Nu built-ins where the result is equivalent.
 
-- `curl_to_http` (auto-fix): `curl` replaceable with `http` commands
-- `fd_to_glob` (auto-fix): `fd` replaceable with `glob` or `ls`
+- `cat_to_open` (auto-fix): `cat` of a single file replaceable with `open --raw`
+- `curl_wget_to_http` (auto-fix): `curl -fL` or `wget -O` download replaceable with `http get`
+- `cd_to_builtin` (auto-fix): External `cd` replaceable with built-in `cd`
+- `date_to_builtin` (auto-fix): External `date` replaceable with `date now` and `format date`
+- `find_to_glob` (auto-fix): `find` by name or type replaceable with `glob`
+- `grep_to_where` (auto-fix): `grep` filtering lines replaceable with `where`
+- `head_tail_to_first_last` (auto-fix): `head` or `tail` on lines replaceable with `first` or `last`
 - `jq_to_nu_pipeline` (auto-fix): Simple `jq` filter replaceable with Nushell pipeline
-- `wget_to_http_get` (auto-fix): `wget` replaceable with `http get`
-- `external_which_to_builtin` (auto-fix): External `which` replaceable with built-in
-- `structured_data_to_csv_tool` (auto-fix): Table piped to CSV tool without `to csv`
-- `structured_data_to_json_tool` (auto-fix): Data piped to JSON tool without `to json`
+- `ls_to_builtin` (auto-fix): External `ls` replaceable with built-in `ls`
+- `read_to_input` (auto-fix): External `read` replaceable with `input`
+- `sed_to_str_replace` (auto-fix): `sed` literal substitution replaceable with `str replace`
+- `sort_to_builtin` (auto-fix): External `sort` of lines replaceable with built-in `sort`
+- `system_info_to_sys` (auto-fix): System information command replaceable with `sys` or `$nu.os-info`
+- `tac_to_reverse` (auto-fix): `tac` replaceable with `lines | reverse`
+- `wc_to_length` (auto-fix): `wc -l` replaceable with `lines | length`
 
 `formatting` - Formatting according to style-guide.
 

@@ -10,60 +10,10 @@ use nu_protocol::{
 use crate::violation;
 use crate::{
     Config,
-    ast::{call::CallExt, declaration::CustomCommandDef, string::StringFormat},
+    ast::{call::CallExt, declaration::CustomCommandDef},
     span::FileSpan,
     violation::Detection,
 };
-
-/// Fix data for external command alternatives
-pub struct ExternalCmdFixData<'a> {
-    /// Argument expressions from the external call
-    pub args: Box<[&'a Expression]>,
-    pub expr_span: Span,
-}
-
-impl ExternalCmdFixData<'_> {
-    /// Get argument text content for each argument.
-    ///
-    /// For string literals, returns the unquoted content.
-    /// For other expressions (variables, subexpressions), returns the source
-    /// text.
-    ///
-    /// This is the primary API for parsing command arguments.
-    pub fn arg_texts<'b>(&'b self, context: &'b LintContext<'b>) -> impl Iterator<Item = &'b str> {
-        self.args.iter().map(move |expr| match &expr.expr {
-            Expr::String(s) | Expr::RawString(s) => s.as_str(),
-            _ => context.expr_text(expr),
-        })
-    }
-
-    /// Get string format information for arguments that need quote
-    /// preservation.
-    ///
-    /// Returns `Some(StringFormat)` for string literals (with quote type info).
-    /// Returns `None` for non-string expressions (variables, subexpressions,
-    /// etc.).
-    ///
-    /// Use this when generating replacement text that must preserve quote
-    /// styles.
-    pub fn arg_formats(&self, context: &LintContext) -> Vec<Option<StringFormat>> {
-        self.args
-            .iter()
-            .map(|expr| StringFormat::from_expression(expr, context))
-            .collect()
-    }
-
-    /// Check if an argument is a string literal (safe to extract unquoted
-    /// content).
-    pub fn arg_is_string(&self, index: usize) -> bool {
-        self.args.get(index).is_some_and(|expr| {
-            matches!(
-                &expr.expr,
-                Expr::String(_) | Expr::RawString(_) | Expr::StringInterpolation(_)
-            )
-        })
-    }
-}
 
 /// Context containing all lint information (source, AST, and engine state)
 pub struct LintContext<'a> {
@@ -399,66 +349,6 @@ impl<'a> LintContext<'a> {
             &mut functions,
         );
         functions.into_iter().collect()
-    }
-
-    /// Detect external command invocations with custom validation.
-    /// This allows rules to check if the arguments can be reliably translated
-    /// before reporting a violation.
-    ///
-    /// The validator function receives the command name, fix data, and context,
-    /// and should return `Some(note)` if the invocation should be reported,
-    /// or `None` if it should be ignored.
-    #[must_use]
-    pub fn detect_external_with_validation<'context, F>(
-        &'context self,
-        external_cmd: &'static str,
-        validator: F,
-    ) -> Vec<(Detection, ExternalCmdFixData<'context>)>
-    where
-        F: Fn(&str, &ExternalCmdFixData<'context>, &'context Self) -> Option<&'static str>,
-    {
-        use nu_protocol::ast::{Expr, ExternalArgument, Traverse};
-
-        let mut results = Vec::new();
-
-        self.ast.flat_map(
-            self.working_set,
-            &|expr| {
-                let Expr::ExternalCall(head, args) = &expr.expr else {
-                    return vec![];
-                };
-
-                let cmd_text = self.span_text(head.span);
-                if cmd_text != external_cmd {
-                    return vec![];
-                }
-
-                let arg_exprs: Vec<&Expression> = args
-                    .iter()
-                    .map(|arg| match arg {
-                        ExternalArgument::Regular(expr) | ExternalArgument::Spread(expr) => expr,
-                    })
-                    .collect();
-
-                let fix_data = ExternalCmdFixData {
-                    args: arg_exprs.into_boxed_slice(),
-                    expr_span: expr.span,
-                };
-
-                // Validate if this invocation should be reported
-                let Some(note) = validator(cmd_text, &fix_data, self) else {
-                    return vec![];
-                };
-
-                let detected = Detection::from_global_span(note, expr.span)
-                    .with_primary_label(format!("external '{cmd_text}'"));
-
-                vec![(detected, fix_data)]
-            },
-            &mut results,
-        );
-
-        results
     }
 }
 

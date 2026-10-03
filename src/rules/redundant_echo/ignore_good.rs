@@ -37,3 +37,9 @@ ls | where size > 1kb
 ";
     RULE.assert_ignores(good_code);
 }
+
+#[test]
+fn ignore_external_echo_printing_text() {
+    RULE.assert_ignores(r#"^echo "hello world""#);
+    RULE.assert_ignores("^echo -n hello");
+}

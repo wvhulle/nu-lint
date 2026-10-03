@@ -80,6 +80,8 @@ const IDIOMATIC: Group = Group {
         super::record_assignments::USE_LOAD_ENV,
         super::remove_hat_not_builtin::RULE,
         super::division_to_format_duration::RULE,
+        super::ignore_over_dev_null::RULE,
+        super::redundant_echo::RULE,
     ],
 };
 
@@ -167,15 +169,6 @@ const PERFORMANCE: Group = Group {
         super::chained_str_transform::RULE,
         super::streaming_hidden_by_complete::RULE,
         super::chained_append::RULE,
-    ],
-};
-
-const POSIX_TOOLS: Group = Group {
-    name: "posix",
-    description: "Replace common bash/POSIX patterns.",
-    rules: &[
-        super::ignore_over_dev_null::RULE,
-        super::posix_tools::redundant_echo::RULE,
     ],
 };
 
@@ -280,7 +273,6 @@ pub const ALL_GROUPS: &[Group] = &[
     PARSING,
     FILESYSTEM,
     DEAD_CODE,
-    POSIX_TOOLS,
     ITERATION,
     ERROR_HANDLING,
     FILTERING,

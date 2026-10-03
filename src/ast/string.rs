@@ -183,19 +183,6 @@ impl StringFormat {
         )
     }
 
-    /// Reconstructs the original source text with the given content.
-    pub fn reconstruct(&self, new_content: &str) -> String {
-        match self {
-            Self::Double(_) => format!("\"{new_content}\""),
-            Self::Single(_) => format!("'{new_content}'"),
-            Self::Raw(_) => format!("r#'{new_content}'#"),
-            Self::BareWord(_) => new_content.to_string(),
-            Self::InterpolationDouble(_) => format!("$\"{new_content}\""),
-            Self::InterpolationSingle(_) => format!("$'{new_content}'"),
-            Self::Backtick(_) => format!("`{new_content}`"),
-        }
-    }
-
     /// Extracts string format and content from an expression using AST
     /// analysis.
     pub fn from_expression(expr: &Expression, ctx: &LintContext) -> Option<Self> {

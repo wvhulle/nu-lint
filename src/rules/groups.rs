@@ -162,6 +162,7 @@ const PERFORMANCE: Group = Group {
     description: "Rules with potential performance impact",
     rules: &[
         super::redundant_nu_subprocess::RULE,
+        super::nu_script_to_run::RULE,
         super::dispatch_with_subcommands::RULE,
         super::self_import::RULE,
         super::positional_to_pipeline::RULE,

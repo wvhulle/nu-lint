@@ -351,9 +351,10 @@ Most rules have automatic fixes. Run `nu-lint --list-rules` to see the rules wit
 </details>
 
 <details>
-<summary><code>performance</code> (9 rules): Rules with potential performance impact</summary>
+<summary><code>performance</code> (10 rules): Rules with potential performance impact</summary>
 
 - `redundant_nu_subprocess`: Redundant `nu -c` subprocess call
+- `nu_script_to_run`: Run Nu scripts with the `run` keyword instead of a `nu` subprocess
 - `dispatch_with_subcommands`: Match dispatch replaceable with subcommands
 - `self_import`: Circular import: script imports itself
 - `positional_to_pipeline` (auto-fix): Data parameter convertible to pipeline input

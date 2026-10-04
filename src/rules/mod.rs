@@ -52,6 +52,7 @@ pub mod never_space_split;
 pub mod non_final_failure_check;
 pub mod not_is_empty_to_is_not_empty;
 pub mod nothing_outside_signature;
+pub mod nu_script_to_run;
 pub mod parsing;
 pub mod positional_to_pipeline;
 pub mod range_for_iteration;
@@ -174,6 +175,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     non_final_failure_check::RULE,
     not_is_empty_to_is_not_empty::RULE,
     nothing_outside_signature::RULE,
+    nu_script_to_run::RULE,
     parsing::lines_each_to_parse::RULE,
     parsing::lines_instead_of_split::RULE,
     parsing::simplify_regex_parse::RULE,

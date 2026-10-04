@@ -58,7 +58,7 @@ impl DetectFix for NuDeprecated {
                 // Build message with notes appended
                 let mut message = help
                     .as_ref()
-                    .map_or_else(|| label.clone(), |h| format!("{label}. {h}"));
+                    .map_or_else(|| label.clone(), |h| format!("{label} {h}"));
                 if let Some(ref enh) = enhancement {
                     for note in &enh.notes {
                         message.push_str("\n\nNote: ");

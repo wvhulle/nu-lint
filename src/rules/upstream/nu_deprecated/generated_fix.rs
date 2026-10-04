@@ -11,3 +11,24 @@ fn fix_get_ignore_errors_long_flag() {
     let source = "{a: 1} | get --ignore-errors a";
     RULE.assert_fixed_contains(source, "get --optional a");
 }
+
+#[test]
+fn fix_str_upcase_to_uppercase() {
+    RULE.assert_fixed_is("'nu' | str upcase", "'nu' | str uppercase");
+}
+
+#[test]
+fn fix_str_downcase_keeps_cell_path_arguments() {
+    RULE.assert_fixed_is(
+        "[[name]; [NU]] | str downcase name",
+        "[[name]; [NU]] | str lowercase name",
+    );
+}
+
+#[test]
+fn fix_str_upcase_inside_closure() {
+    RULE.assert_fixed_is(
+        "['a' 'b'] | each {|s| $s | str upcase }",
+        "['a' 'b'] | each {|s| $s | str uppercase }",
+    );
+}

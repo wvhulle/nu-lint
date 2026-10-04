@@ -3,12 +3,79 @@
 //! Each enhancer matches specific deprecation patterns and provides fixes
 //! and/or additional context.
 
-use nu_protocol::{ParseWarning, Span};
+use nu_protocol::{
+    ParseWarning, Span,
+    ast::{Expr, Traverse},
+};
 
 use crate::{
+    ast::call::CallExt,
     context::LintContext,
     violation::{Fix, Replacement},
 };
+
+struct RenamedCommand {
+    deprecated: &'static str,
+    successor: &'static str,
+    since: &'static str,
+}
+
+const RENAMED_COMMANDS: &[RenamedCommand] = &[
+    RenamedCommand {
+        deprecated: "str upcase",
+        successor: "str uppercase",
+        since: "0.114.0",
+    },
+    RenamedCommand {
+        deprecated: "str downcase",
+        successor: "str lowercase",
+        since: "0.114.0",
+    },
+];
+
+struct RenamedCall {
+    head: Span,
+    renamed: &'static RenamedCommand,
+}
+
+fn renamed_call(warning_span: Span, context: &LintContext) -> Option<RenamedCall> {
+    let mut calls = Vec::new();
+    context.ast.flat_map(
+        context.working_set,
+        &|expr| match &expr.expr {
+            Expr::Call(call) if call.span() == warning_span => {
+                let name = call.get_call_name(context);
+                RENAMED_COMMANDS
+                    .iter()
+                    .find(|renamed| renamed.deprecated == name)
+                    .map(|renamed| RenamedCall {
+                        head: call.head,
+                        renamed,
+                    })
+                    .into_iter()
+                    .collect()
+            }
+            _ => vec![],
+        },
+        &mut calls,
+    );
+    calls.into_iter().next()
+}
+
+fn enhance_renamed_command(warning_span: Span, context: &LintContext) -> Option<Enhancement> {
+    let RenamedCall { head, renamed } = renamed_call(warning_span, context)?;
+    Some(Enhancement {
+        notes: vec![format!(
+            "`{}` requires nushell >= {}",
+            renamed.successor, renamed.since
+        )],
+        extra_labels: vec![],
+        fix: Some(Fix {
+            explanation: format!("Replace with `{}`", renamed.successor).into(),
+            replacements: vec![Replacement::new(head, renamed.successor)],
+        }),
+    })
+}
 
 /// Enhancement that can be applied to an upstream detection.
 #[derive(Default)]
@@ -42,5 +109,5 @@ pub fn enhance(warning: &ParseWarning, context: &LintContext) -> Option<Enhancem
         });
     }
 
-    None
+    enhance_renamed_command(*span, context)
 }

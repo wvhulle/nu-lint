@@ -462,9 +462,10 @@ Most rules have automatic fixes. Run `nu-lint --list-rules` to see the rules wit
 </details>
 
 <details>
-<summary><code>upstream</code> (3 rules): Forward warnings and errors of the Nu parser.</summary>
+<summary><code>upstream</code> (4 rules): Forward warnings and errors of the Nu parser.</summary>
 
 - `dynamic_script_import`: Dynamic import path not statically validated
+- `legacy_completer_inputs`: Custom completer uses deprecated positional inputs
 - `nu_deprecated` (auto-fix): Parser detected deprecated command or flag usage
 - `nu_parse_error`: Parser encountered a syntax error
 

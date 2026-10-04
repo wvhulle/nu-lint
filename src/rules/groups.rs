@@ -265,6 +265,7 @@ const UPSTREAM: Group = Group {
     description: "Forward warnings and errors of the Nu parser.",
     rules: &[
         super::dynamic_script_import::RULE,
+        super::legacy_completer_inputs::RULE,
         super::upstream::nu_deprecated::RULE,
         super::upstream::nu_parse_error::RULE,
     ],

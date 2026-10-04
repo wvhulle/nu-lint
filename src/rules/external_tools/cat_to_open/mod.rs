@@ -1,3 +1,5 @@
+use nu_protocol::{Span, ast::Expression};
+
 use crate::{
     LintLevel,
     ast::external::{CliSpec, LineSource},
@@ -14,10 +16,15 @@ static SPEC: CliSpec = CliSpec {
 const NOTE: &str = "'open --raw' reads the file without starting an external process and works \
                     the same on every platform.";
 
+pub struct FixData<'a> {
+    span: Span,
+    file: &'a Expression,
+}
+
 struct CatToOpen;
 
 impl DetectFix for CatToOpen {
-    type FixInput<'a> = Replacement;
+    type FixInput<'a> = FixData<'a>;
 
     fn id(&self) -> &'static str {
         "cat_to_open"
@@ -44,21 +51,24 @@ impl DetectFix for CatToOpen {
                 let LineSource::File(file) = LineSource::of(invocation, &parsed.operands)? else {
                     return None;
                 };
-                let replacement = Replacement::new(
-                    invocation.span,
-                    format!("open --raw {}", context.expr_text(file)),
-                );
                 let detection = Detection::from_global_span(NOTE, invocation.span)
                     .with_primary_label("'cat' reading one file");
-                Some((detection, replacement))
+                Some((
+                    detection,
+                    FixData {
+                        span: invocation.span,
+                        file,
+                    },
+                ))
             })
             .collect()
     }
 
-    fn fix(&self, _context: &LintContext, replacement: &Self::FixInput<'_>) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let replacement = format!("open --raw {}", context.expr_text(fix_data.file));
         Some(Fix {
-            explanation: format!("Read the file with '{}'", replacement.replacement_text).into(),
-            replacements: vec![replacement.clone()],
+            explanation: format!("Read the file with '{replacement}'").into(),
+            replacements: vec![Replacement::new(fix_data.span, replacement)],
         })
     }
 }

@@ -1,3 +1,4 @@
 cognitive-complexity-threshold = 12
 excessive-nesting-threshold = 5
 array-size-threshold = 524288
+ignore-interior-mutability = ["nu_lint::ast::declaration::CustomCommandDef"]

@@ -5,7 +5,7 @@ use nu_protocol::{
 
 use crate::{
     LintLevel,
-    ast::external::{CliSpec, ExternalInvocation, Flag, InputSource, literal_content},
+    ast::external::{CliSpec, ExternalInvocation, Flag, literal_content},
     context::LintContext,
     dsl::jq,
     rule::{DetectFix, Rule},
@@ -42,9 +42,9 @@ impl<'a> JqTranslation<'a> {
         context: &'a LintContext,
     ) -> Option<Self> {
         let parsed = invocation.parse(&SPEC)?;
-        let input = match (invocation.input, parsed.operands.as_slice()) {
-            (InputSource::Leading, [_, file]) => JsonInput::File(file),
-            (InputSource::Piped, [_]) => Self::piped_input(invocation, context)?,
+        let input = match (invocation.previous, parsed.operands.as_slice()) {
+            (None, [_, file]) => JsonInput::File(file),
+            (Some(previous), [_]) => Self::piped_input(previous, invocation, context)?,
             _ => return None,
         };
         let filter = parsed.operands.first()?;
@@ -60,10 +60,10 @@ impl<'a> JqTranslation<'a> {
     }
 
     fn piped_input(
+        previous: &Expression,
         invocation: &ExternalInvocation<'a>,
         context: &'a LintContext,
     ) -> Option<JsonInput<'a>> {
-        let previous = invocation.previous?;
         if invocation.previous_command_name(context) == Some("to json") {
             return Some(JsonInput::SerializedValue {
                 serialization_start: previous.span.start,

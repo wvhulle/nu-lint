@@ -7,6 +7,7 @@ use crate::{
         string::quote_nu_string,
     },
     context::LintContext,
+    dsl::sed::{Substitution, global_literal_substitution},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -16,29 +17,8 @@ static SPEC: CliSpec = CliSpec {
     numeric_shorthand: None,
 };
 
-const BASIC_REGEX_SPECIAL_CHARS: &[char] = &['.', '*', '[', ']', '^', '$', '\\', '\n'];
-const REPLACEMENT_SPECIAL_CHARS: &[char] = &['&', '\\', '\n'];
-
 const NOTE: &str = "'str replace --all' substitutes literal text without regex escaping and \
                     without starting an external process.";
-
-struct Substitution<'a> {
-    find: &'a str,
-    replace: &'a str,
-}
-
-impl<'a> Substitution<'a> {
-    fn parse_global_literal(script: &'a str) -> Option<Self> {
-        let body = script.strip_prefix('s')?;
-        let delimiter = body.chars().next().filter(|c| !c.is_alphanumeric())?;
-        let mut parts = body[delimiter.len_utf8()..].split(delimiter);
-        let (find, replace, flags) = (parts.next()?, parts.next()?, parts.next()?);
-        let is_literal = !find.is_empty()
-            && !find.contains(BASIC_REGEX_SPECIAL_CHARS)
-            && !replace.contains(REPLACEMENT_SPECIAL_CHARS);
-        (parts.next().is_none() && flags == "g" && is_literal).then_some(Self { find, replace })
-    }
-}
 
 pub struct TextSubstitution<'a> {
     span: Span,
@@ -53,7 +33,7 @@ impl<'a> TextSubstitution<'a> {
         Some(Self {
             span: invocation.span,
             source: LineSource::of(invocation, inputs)?,
-            substitution: Substitution::parse_global_literal(literal_content(script)?)?,
+            substitution: global_literal_substitution(literal_content(script)?)?,
         })
     }
 

@@ -2,10 +2,7 @@ use nu_protocol::{Span, Type};
 
 use crate::{
     Fix, Replacement,
-    ast::{
-        expression::ExpressionExt,
-        external::{ExternalInvocation, InputSource},
-    },
+    ast::{expression::ExpressionExt, external::ExternalInvocation},
     config::LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
@@ -49,36 +46,33 @@ impl TextFormat {
 
 pub struct MissingSerialization {
     data_span: Span,
+    data_type: Type,
     format: TextFormat,
 }
 
 fn missing_serialization(
     invocation: &ExternalInvocation,
     context: &LintContext,
-) -> Option<(Detection, MissingSerialization)> {
-    if invocation.input != InputSource::Piped {
-        return None;
-    }
+) -> Option<MissingSerialization> {
     let data = invocation.previous?;
     let format = TextFormat::for_tool(invocation.name);
-    let ty = data.infer_output_type(context)?;
-    if !format.accepts(&ty) {
-        return None;
-    }
+    let data_type = data.infer_output_type(context)?;
+    format.accepts(&data_type).then_some(MissingSerialization {
+        data_span: data.span,
+        data_type,
+        format,
+    })
+}
+
+fn detection(invocation: &ExternalInvocation, missing: &MissingSerialization) -> Detection {
+    let data_type = &missing.data_type;
     let message = format!(
-        "Nu renders {ty} as a table when piping it to '{}'; serialize it with '{}' first",
+        "Nu renders {data_type} as a table when piping it to '{}'; serialize it with '{}' first",
         invocation.name,
-        format.command()
+        missing.format.command()
     );
-    let detection = Detection::from_global_span(message, invocation.span)
-        .with_extra_label(format!("{ty} output"), data.span);
-    Some((
-        detection,
-        MissingSerialization {
-            data_span: data.span,
-            format,
-        },
-    ))
+    Detection::from_global_span(message, invocation.span)
+        .with_extra_label(format!("{data_type} output"), missing.data_span)
 }
 
 struct SerializeDataForExternal;
@@ -107,7 +101,10 @@ impl DetectFix for SerializeDataForExternal {
         context
             .external_invocations(&tools)
             .iter()
-            .filter_map(|invocation| missing_serialization(invocation, context))
+            .filter_map(|invocation| {
+                let missing = missing_serialization(invocation, context)?;
+                Some((detection(invocation, &missing), missing))
+            })
             .collect()
     }
 

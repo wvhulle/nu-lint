@@ -1,6 +1,8 @@
+use nu_protocol::{Span, ast::Expression};
+
 use crate::{
     LintLevel,
-    ast::external::{CliSpec, Flag},
+    ast::external::{CliSpec, ExternalInvocation, Flag},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -17,10 +19,32 @@ static SPEC: CliSpec = CliSpec {
 const NOTE: &str = "An external 'cd' runs in a child process and cannot change the directory of \
                     the script. Most systems do not even have a 'cd' binary.";
 
+pub struct FixData<'a> {
+    span: Span,
+    physical: bool,
+    target: Option<&'a Expression>,
+}
+
+impl<'a> FixData<'a> {
+    fn from_invocation(invocation: &ExternalInvocation<'a>) -> Option<Self> {
+        let parsed = invocation.parse(&SPEC)?;
+        let target = match parsed.operands.as_slice() {
+            [] => None,
+            [target] => Some(*target),
+            _ => return None,
+        };
+        Some(Self {
+            span: invocation.span,
+            physical: parsed.has(PHYSICAL),
+            target,
+        })
+    }
+}
+
 struct CdToBuiltin;
 
 impl DetectFix for CdToBuiltin {
-    type FixInput<'a> = Option<Replacement>;
+    type FixInput<'a> = Option<FixData<'a>>;
 
     fn id(&self) -> &'static str {
         "cd_to_builtin"
@@ -43,32 +67,23 @@ impl DetectFix for CdToBuiltin {
             .external_invocations(&["cd"])
             .iter()
             .map(|invocation| {
-                let replacement = invocation
-                    .parse(&SPEC)
-                    .filter(|parsed| parsed.operands.len() <= 1)
-                    .map(|parsed| {
-                        let physical = if parsed.has(PHYSICAL) {
-                            " --physical"
-                        } else {
-                            ""
-                        };
-                        let target = parsed.operands.first().map_or(String::new(), |path| {
-                            format!(" {}", context.expr_text(path))
-                        });
-                        Replacement::new(invocation.span, format!("cd{physical}{target}"))
-                    });
                 let detection = Detection::from_global_span(NOTE, invocation.span)
                     .with_primary_label("external 'cd' has no effect on the script");
-                (detection, replacement)
+                (detection, FixData::from_invocation(invocation))
             })
             .collect()
     }
 
-    fn fix(&self, _context: &LintContext, replacement: &Self::FixInput<'_>) -> Option<Fix> {
-        let replacement = replacement.as_ref()?;
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let fix_data = fix_data.as_ref()?;
+        let physical = if fix_data.physical { " --physical" } else { "" };
+        let target = fix_data.target.map_or(String::new(), |path| {
+            format!(" {}", context.expr_text(path))
+        });
+        let replacement = format!("cd{physical}{target}");
         Some(Fix {
-            explanation: format!("Use the built-in '{}'", replacement.replacement_text).into(),
-            replacements: vec![replacement.clone()],
+            explanation: format!("Use the built-in '{replacement}'").into(),
+            replacements: vec![Replacement::new(fix_data.span, replacement)],
         })
     }
 }

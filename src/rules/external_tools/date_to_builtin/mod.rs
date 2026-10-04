@@ -1,3 +1,5 @@
+use nu_protocol::Span;
+
 use crate::{
     LintLevel,
     ast::{
@@ -5,6 +7,7 @@ use crate::{
         string::quote_nu_string,
     },
     context::LintContext,
+    dsl::date::chrono_compatible_format,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -16,51 +19,47 @@ static SPEC: CliSpec = CliSpec {
     numeric_shorthand: None,
 };
 
-const SHARED_CONVERSIONS: &str = "YmdHMSybBaAjeIpzsFTDRuwUWVGghklPnt%";
-const PADDING_MODIFIERS: &str = "-_0:";
-
 const NOTE: &str = "'date now' returns a datetime value that can be compared, shifted and \
                     formatted later, instead of text in the format of the current locale.";
 
-fn formats_identically_in_chrono(format: &str) -> bool {
-    let mut characters = format.chars();
-    while let Some(character) = characters.next() {
-        if character != '%' {
-            continue;
-        }
-        let conversion = characters.find(|next| !PADDING_MODIFIERS.contains(*next));
-        if !conversion.is_some_and(|letter| SHARED_CONVERSIONS.contains(letter)) {
-            return false;
-        }
-    }
-    true
+pub struct CurrentDate<'a> {
+    span: Span,
+    utc: bool,
+    format: Option<&'a str>,
 }
 
-fn builtin_equivalent(invocation: &ExternalInvocation) -> Option<String> {
-    let parsed = invocation.parse(&SPEC)?;
-    let timezone = if parsed.has(UTC) {
-        " | date to-timezone UTC"
-    } else {
-        ""
-    };
-    let formatting = match parsed.operands.as_slice() {
-        [] => String::new(),
-        [format] => {
-            let format = literal_content(format)?.strip_prefix('+')?;
-            if !formats_identically_in_chrono(format) {
-                return None;
-            }
+impl<'a> CurrentDate<'a> {
+    fn from_invocation(invocation: &ExternalInvocation<'a>) -> Option<Self> {
+        let parsed = invocation.parse(&SPEC)?;
+        let format = match parsed.operands.as_slice() {
+            [] => None,
+            [operand] => Some(chrono_compatible_format(literal_content(operand)?)?),
+            _ => return None,
+        };
+        Some(Self {
+            span: invocation.span,
+            utc: parsed.has(UTC),
+            format,
+        })
+    }
+
+    fn to_nu(&self) -> String {
+        let timezone = if self.utc {
+            " | date to-timezone UTC"
+        } else {
+            ""
+        };
+        let formatting = self.format.map_or(String::new(), |format| {
             format!(" | format date {}", quote_nu_string(format))
-        }
-        _ => return None,
-    };
-    Some(format!("date now{timezone}{formatting}"))
+        });
+        format!("date now{timezone}{formatting}")
+    }
 }
 
 struct DateToBuiltin;
 
 impl DetectFix for DateToBuiltin {
-    type FixInput<'a> = Replacement;
+    type FixInput<'a> = CurrentDate<'a>;
 
     fn id(&self) -> &'static str {
         "date_to_builtin"
@@ -83,18 +82,19 @@ impl DetectFix for DateToBuiltin {
             .external_invocations(&["date"])
             .iter()
             .filter_map(|invocation| {
-                let equivalent = builtin_equivalent(invocation)?;
+                let date = CurrentDate::from_invocation(invocation)?;
                 let detection = Detection::from_global_span(NOTE, invocation.span)
                     .with_primary_label("external 'date' prints text");
-                Some((detection, Replacement::new(invocation.span, equivalent)))
+                Some((detection, date))
             })
             .collect()
     }
 
-    fn fix(&self, _context: &LintContext, replacement: &Self::FixInput<'_>) -> Option<Fix> {
+    fn fix(&self, _context: &LintContext, date: &Self::FixInput<'_>) -> Option<Fix> {
+        let replacement = date.to_nu();
         Some(Fix {
-            explanation: format!("Use '{}'", replacement.replacement_text).into(),
-            replacements: vec![replacement.clone()],
+            explanation: format!("Use '{replacement}'").into(),
+            replacements: vec![Replacement::new(date.span, replacement)],
         })
     }
 }

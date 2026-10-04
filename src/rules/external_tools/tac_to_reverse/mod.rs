@@ -1,3 +1,5 @@
+use nu_protocol::Span;
+
 use crate::{
     LintLevel,
     ast::external::{CliSpec, LineSource},
@@ -14,10 +16,15 @@ static SPEC: CliSpec = CliSpec {
 const NOTE: &str = "'lines | reverse' returns the reversed lines as a list of strings that the \
                     rest of the pipeline can process without splitting text again.";
 
+pub struct FixData<'a> {
+    span: Span,
+    source: LineSource<'a>,
+}
+
 struct TacToReverse;
 
 impl DetectFix for TacToReverse {
-    type FixInput<'a> = Replacement;
+    type FixInput<'a> = FixData<'a>;
 
     fn id(&self) -> &'static str {
         "tac_to_reverse"
@@ -42,21 +49,24 @@ impl DetectFix for TacToReverse {
             .filter_map(|invocation| {
                 let parsed = invocation.parse(&SPEC)?;
                 let source = LineSource::of(invocation, &parsed.operands)?;
-                let replacement = Replacement::new(
-                    invocation.span,
-                    format!("{}lines | reverse", source.open_prefix(context)),
-                );
                 let detection = Detection::from_global_span(NOTE, invocation.span)
                     .with_primary_label("'tac' reversing lines");
-                Some((detection, replacement))
+                Some((
+                    detection,
+                    FixData {
+                        span: invocation.span,
+                        source,
+                    },
+                ))
             })
             .collect()
     }
 
-    fn fix(&self, _context: &LintContext, replacement: &Self::FixInput<'_>) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let replacement = format!("{}lines | reverse", fix_data.source.open_prefix(context));
         Some(Fix {
-            explanation: format!("Reverse lines with '{}'", replacement.replacement_text).into(),
-            replacements: vec![replacement.clone()],
+            explanation: format!("Reverse lines with '{replacement}'").into(),
+            replacements: vec![Replacement::new(fix_data.span, replacement)],
         })
     }
 }

@@ -1,3 +1,7 @@
+use std::iter::once;
+
+use nu_protocol::Span;
+
 use crate::{
     LintLevel,
     ast::external::{CliSpec, Flag, ParsedCli, is_expanded_glob},
@@ -32,18 +36,21 @@ static SPEC: CliSpec = CliSpec {
 const NOTE: &str = "The built-in 'ls' returns a table with name, type, size and modified columns, \
                     so the listing can be filtered and sorted without parsing text.";
 
+pub struct FixData<'a> {
+    span: Span,
+    parsed: ParsedCli<'a>,
+}
+
 fn translate(parsed: &ParsedCli, context: &LintContext) -> String {
-    let mut command = String::from("ls");
-    if parsed.has(ALL) || parsed.has(ALMOST_ALL) {
-        command.push_str(" --all");
-    }
-    if parsed.has(DIRECTORY) {
-        command.push_str(" --directory");
-    }
-    for path in &parsed.operands {
-        command.push(' ');
-        command.push_str(context.expr_text(path));
-    }
+    let hidden = (parsed.has(ALL) || parsed.has(ALMOST_ALL)).then_some("--all");
+    let directory = parsed.has(DIRECTORY).then_some("--directory");
+    let paths = parsed.operands.iter().map(|path| context.expr_text(path));
+    let words: Vec<&str> = once("ls")
+        .chain(hidden)
+        .chain(directory)
+        .chain(paths)
+        .collect();
+    let command = words.join(" ");
 
     let sort_column = if parsed.has(BY_TIME) {
         Some("modified")
@@ -64,7 +71,7 @@ fn translate(parsed: &ParsedCli, context: &LintContext) -> String {
 struct LsToBuiltin;
 
 impl DetectFix for LsToBuiltin {
-    type FixInput<'a> = Replacement;
+    type FixInput<'a> = FixData<'a>;
 
     fn id(&self) -> &'static str {
         "ls_to_builtin"
@@ -89,21 +96,27 @@ impl DetectFix for LsToBuiltin {
             .filter(|invocation| invocation.next_external_name().is_none())
             .filter_map(|invocation| {
                 let parsed = invocation.parse(&SPEC)?;
-                if parsed.operands.iter().any(|path| is_expanded_glob(path)) {
+                if parsed.operands.iter().copied().any(is_expanded_glob) {
                     return None;
                 }
-                let replacement = Replacement::new(invocation.span, translate(&parsed, context));
                 let detection = Detection::from_global_span(NOTE, invocation.span)
                     .with_primary_label("external 'ls' returns text");
-                Some((detection, replacement))
+                Some((
+                    detection,
+                    FixData {
+                        span: invocation.span,
+                        parsed,
+                    },
+                ))
             })
             .collect()
     }
 
-    fn fix(&self, _context: &LintContext, replacement: &Self::FixInput<'_>) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let replacement = translate(&fix_data.parsed, context);
         Some(Fix {
-            explanation: format!("List with '{}'", replacement.replacement_text).into(),
-            replacements: vec![replacement.clone()],
+            explanation: format!("List with '{replacement}'").into(),
+            replacements: vec![Replacement::new(fix_data.span, replacement)],
         })
     }
 }

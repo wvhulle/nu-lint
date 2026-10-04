@@ -28,7 +28,7 @@ fn fix_curl_variable_url() {
 fn fix_curl_output_file() {
     RULE.assert_fixed_is(
         "^curl -fL -o out.tar.gz https://example.com/a.tar.gz",
-        "http get --raw 'https://example.com/a.tar.gz' | save --force out.tar.gz",
+        "http get --raw 'https://example.com/a.tar.gz' | save --force 'out.tar.gz'",
     );
 }
 
@@ -61,6 +61,6 @@ fn fix_wget_to_stdout() {
 fn fix_wget_to_file() {
     RULE.assert_fixed_is(
         "^wget -q -O page.html https://example.com",
-        "http get --raw 'https://example.com' | save --force page.html",
+        "http get --raw 'https://example.com' | save --force 'page.html'",
     );
 }

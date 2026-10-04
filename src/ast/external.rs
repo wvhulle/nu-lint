@@ -1,26 +1,16 @@
-use std::{borrow::Cow, iter::once, slice::Iter};
+use std::{borrow::Cow, iter::from_fn, slice::Iter};
 
 use nu_protocol::{
     Span,
-    ast::{Block, Expr, Expression, ExternalArgument, Traverse},
+    ast::{Expr, Expression, ExternalArgument},
 };
 
-use crate::{
-    ast::{expression::ExpressionExt, string::quote_nu_string},
-    context::LintContext,
-};
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum InputSource {
-    Piped,
-    Leading,
-}
+use crate::{ast::string::quote_nu_string, context::LintContext};
 
 pub struct ExternalInvocation<'a> {
     pub name: &'a str,
     pub span: Span,
     pub args: &'a [ExternalArgument],
-    pub input: InputSource,
     pub previous: Option<&'a Expression>,
     pub next: Option<&'a Expression>,
 }
@@ -84,9 +74,9 @@ pub enum LineSource<'a> {
 
 impl<'a> LineSource<'a> {
     pub fn of(invocation: &ExternalInvocation<'a>, operands: &[&'a Expression]) -> Option<Self> {
-        match (invocation.input, operands) {
-            (InputSource::Piped, []) => Some(Self::Piped),
-            (InputSource::Leading, [file]) if !is_expanded_glob(file) => Some(Self::File(file)),
+        match (invocation.previous, operands) {
+            (Some(_), []) => Some(Self::Piped),
+            (None, [file]) if !is_expanded_glob(file) => Some(Self::File(file)),
             _ => None,
         }
     }
@@ -96,54 +86,6 @@ impl<'a> LineSource<'a> {
             Self::Piped => String::new(),
             Self::File(file) => format!("open --raw {} | ", context.expr_text(file)),
         }
-    }
-}
-
-impl LintContext<'_> {
-    pub fn external_invocations<'a>(&'a self, names: &[&str]) -> Vec<ExternalInvocation<'a>> {
-        let mut nested_block_ids = Vec::new();
-        self.ast.flat_map(
-            self.working_set,
-            &|expr| expr.extract_block_id().into_iter().collect(),
-            &mut nested_block_ids,
-        );
-        nested_block_ids.sort_unstable();
-        nested_block_ids.dedup();
-        let nested_blocks = nested_block_ids
-            .into_iter()
-            .map(|block_id| -> &'a Block { self.working_set.get_block(block_id) });
-
-        once(self.ast)
-            .chain(nested_blocks)
-            .flat_map(|block| &block.pipelines)
-            .flat_map(|pipeline| {
-                let elements = &pipeline.elements;
-                elements
-                    .iter()
-                    .enumerate()
-                    .filter_map(move |(index, element)| {
-                        let Expr::ExternalCall(head, args) = &element.expr.expr else {
-                            return None;
-                        };
-                        let name = literal_content(head)?;
-                        names.contains(&name).then(|| ExternalInvocation {
-                            name,
-                            span: element.expr.span,
-                            args,
-                            input: if index == 0 {
-                                InputSource::Leading
-                            } else {
-                                InputSource::Piped
-                            },
-                            previous: index
-                                .checked_sub(1)
-                                .and_then(|previous| elements.get(previous))
-                                .map(|previous| &previous.expr),
-                            next: elements.get(index + 1).map(|next| &next.expr),
-                        })
-                    })
-            })
-            .collect()
     }
 }
 
@@ -206,17 +148,40 @@ impl<'a> FlagValue<'a> {
         }
     }
 
-    pub fn text(&self, context: &'a LintContext) -> Cow<'a, str> {
+    pub fn nu_text(&self, context: &'a LintContext) -> Cow<'a, str> {
         match self {
-            Self::Inline(text) => Cow::Borrowed(text),
-            Self::Argument(expr) => Cow::Borrowed(context.expr_text(expr)),
+            Self::Inline(text) => Cow::Owned(quote_nu_string(text)),
+            Self::Argument(expr) => value_text(context, expr),
         }
     }
 }
 
+#[derive(Clone, Copy)]
 struct ParsedFlag<'a> {
     flag: Flag,
     value: Option<FlagValue<'a>>,
+}
+
+#[derive(Clone, Copy)]
+enum ParsedArgument<'a> {
+    Flag(ParsedFlag<'a>),
+    Operand(&'a Expression),
+}
+
+impl<'a> ParsedArgument<'a> {
+    const fn flag(self) -> Option<ParsedFlag<'a>> {
+        match self {
+            Self::Flag(flag) => Some(flag),
+            Self::Operand(_) => None,
+        }
+    }
+
+    const fn operand(self) -> Option<&'a Expression> {
+        match self {
+            Self::Operand(expr) => Some(expr),
+            Self::Flag(_) => None,
+        }
+    }
 }
 
 pub struct ParsedCli<'a> {
@@ -227,10 +192,6 @@ pub struct ParsedCli<'a> {
 impl<'a> ParsedCli<'a> {
     pub fn has(&self, flag: Flag) -> bool {
         self.flags.iter().any(|parsed| parsed.flag == flag)
-    }
-
-    pub const fn has_no_flags(&self) -> bool {
-        self.flags.is_empty()
     }
 
     pub fn value(&self, flag: Flag) -> Option<FlagValue<'a>> {
@@ -247,33 +208,42 @@ impl<'a> ParsedCli<'a> {
 
 impl CliSpec {
     pub fn parse<'a>(&self, args: &'a [ExternalArgument]) -> Option<ParsedCli<'a>> {
-        let mut parsed = ParsedCli {
-            flags: Vec::new(),
-            operands: Vec::new(),
-        };
         let mut remaining = args.iter();
-        let mut only_operands_follow = false;
+        let groups: Option<Vec<Vec<ParsedArgument<'a>>>> =
+            from_fn(|| Some(self.parse_argument(remaining.next()?, &mut remaining))).collect();
+        let arguments: Vec<ParsedArgument<'a>> = groups?.into_iter().flatten().collect();
+        Some(ParsedCli {
+            flags: arguments
+                .iter()
+                .copied()
+                .filter_map(ParsedArgument::flag)
+                .collect(),
+            operands: arguments
+                .iter()
+                .copied()
+                .filter_map(ParsedArgument::operand)
+                .collect(),
+        })
+    }
 
-        while let Some(argument) = remaining.next() {
-            let ExternalArgument::Regular(expr) = argument else {
-                return None;
-            };
-            match literal_content(expr).filter(|_| !only_operands_follow) {
-                Some("--") => only_operands_follow = true,
-                Some(word) if word.starts_with("--") => {
-                    let flag = self.parse_long(&word[2..], &mut remaining)?;
-                    parsed.flags.push(flag);
-                }
-                Some(word) if word.len() > 1 && word.starts_with('-') => {
-                    parsed
-                        .flags
-                        .extend(self.parse_short_cluster(&word[1..], &mut remaining)?);
-                }
-                _ => parsed.operands.push(expr),
+    fn parse_argument<'a>(
+        &self,
+        argument: &'a ExternalArgument,
+        remaining: &mut Iter<'a, ExternalArgument>,
+    ) -> Option<Vec<ParsedArgument<'a>>> {
+        let ExternalArgument::Regular(expr) = argument else {
+            return None;
+        };
+        match literal_content(expr) {
+            Some("--") => remaining.map(operand).collect(),
+            Some(word) if word.starts_with("--") => Some(vec![ParsedArgument::Flag(
+                self.parse_long(&word[2..], remaining)?,
+            )]),
+            Some(word) if word.len() > 1 && word.starts_with('-') => {
+                self.parse_short_cluster(&word[1..], remaining)
             }
+            _ => Some(vec![ParsedArgument::Operand(expr)]),
         }
-
-        Some(parsed)
     }
 
     fn parse_long<'a>(
@@ -281,60 +251,86 @@ impl CliSpec {
         word: &'a str,
         remaining: &mut Iter<'a, ExternalArgument>,
     ) -> Option<ParsedFlag<'a>> {
-        let (name, attached) = word
-            .split_once('=')
-            .map_or((word, None), |(name, value)| (name, Some(value)));
-        let flag = *self.flags.iter().find(|flag| flag.long == Some(name))?;
-        let value = match (flag.takes_value, attached) {
-            (true, Some(value)) => Some(FlagValue::Inline(value)),
-            (true, None) => Some(next_value(remaining)?),
-            (false, Some(_)) => return None,
-            (false, None) => None,
+        let (name, attached) = match word.split_once('=') {
+            Some((name, value)) => (name, Some(value)),
+            None => (word, None),
         };
-        Some(ParsedFlag { flag, value })
+        let flag = self
+            .flags
+            .iter()
+            .copied()
+            .find(|flag| flag.long == Some(name))?;
+        attach_value(flag, attached, remaining)
     }
 
     fn parse_short_cluster<'a>(
         &self,
         cluster: &'a str,
         remaining: &mut Iter<'a, ExternalArgument>,
-    ) -> Option<Vec<ParsedFlag<'a>>> {
+    ) -> Option<Vec<ParsedArgument<'a>>> {
         if let Some(shorthand) = self.numeric_shorthand
             && cluster.chars().all(|c| c.is_ascii_digit())
         {
-            return Some(vec![ParsedFlag {
+            let value = Some(FlagValue::Inline(cluster));
+            return Some(vec![ParsedArgument::Flag(ParsedFlag {
                 flag: shorthand,
-                value: Some(FlagValue::Inline(cluster)),
-            }]);
+                value,
+            })]);
         }
 
-        let mut flags = Vec::new();
-        for (offset, letter) in cluster.char_indices() {
-            let flag = *self.flags.iter().find(|flag| flag.short == Some(letter))?;
-            if flag.takes_value {
-                let attached = &cluster[offset + letter.len_utf8()..];
-                let value = if attached.is_empty() {
-                    next_value(remaining)?
-                } else {
-                    FlagValue::Inline(attached)
-                };
-                flags.push(ParsedFlag {
-                    flag,
-                    value: Some(value),
-                });
-                return Some(flags);
-            }
-            flags.push(ParsedFlag { flag, value: None });
+        let value_flag_start = cluster
+            .find(|letter| self.short_flag(letter).is_some_and(|flag| flag.takes_value))
+            .unwrap_or(cluster.len());
+        let (switches, value_flag) = cluster.split_at(value_flag_start);
+        let switch_flags: Option<Vec<ParsedArgument<'a>>> = switches
+            .chars()
+            .map(|letter| {
+                let flag = self.short_flag(letter)?;
+                Some(ParsedArgument::Flag(ParsedFlag { flag, value: None }))
+            })
+            .collect();
+        let mut parsed = switch_flags?;
+        if let Some(letter) = value_flag.chars().next() {
+            let flag = self.short_flag(letter)?;
+            let attached = Some(&value_flag[letter.len_utf8()..]).filter(|rest| !rest.is_empty());
+            parsed.push(ParsedArgument::Flag(attach_value(
+                flag, attached, remaining,
+            )?));
         }
-        Some(flags)
+        Some(parsed)
+    }
+
+    fn short_flag(&self, letter: char) -> Option<Flag> {
+        self.flags
+            .iter()
+            .copied()
+            .find(|flag| flag.short == Some(letter))
     }
 }
 
-fn next_value<'a>(remaining: &mut Iter<'a, ExternalArgument>) -> Option<FlagValue<'a>> {
-    match remaining.next()? {
-        ExternalArgument::Regular(expr) => Some(FlagValue::Argument(expr)),
+fn attach_value<'a>(
+    flag: Flag,
+    attached: Option<&'a str>,
+    remaining: &mut Iter<'a, ExternalArgument>,
+) -> Option<ParsedFlag<'a>> {
+    let value = match (flag.takes_value, attached) {
+        (true, Some(value)) => Some(FlagValue::Inline(value)),
+        (true, None) => Some(FlagValue::Argument(regular(remaining.next()?)?)),
+        (false, Some(_)) => return None,
+        (false, None) => None,
+    };
+    Some(ParsedFlag { flag, value })
+}
+
+const fn regular(argument: &ExternalArgument) -> Option<&Expression> {
+    match argument {
+        ExternalArgument::Regular(expr) => Some(expr),
         ExternalArgument::Spread(_) => None,
     }
+}
+
+fn operand(argument: &ExternalArgument) -> Option<ParsedArgument<'_>> {
+    regular(argument).map(ParsedArgument::Operand)
 }
 
 #[cfg(test)]
@@ -381,6 +377,7 @@ mod tests {
         for source in [
             "^tool -n 5",
             "^tool -n5",
+            "^tool -in5",
             "^tool --lines=5",
             "^tool --lines 5",
             "^tool -5",
@@ -403,6 +400,7 @@ mod tests {
             "^tool -ix p",
             "^tool --other p",
             "^tool --count=3",
+            "^tool -n",
         ] {
             with_parsed(source, |parsed, _| assert!(parsed.is_none(), "{source}"));
         }
@@ -431,20 +429,16 @@ mod tests {
     }
 
     #[test]
-    fn input_source_and_neighbours() {
+    fn pipeline_neighbours() {
         LintContext::test_with_parsed_source(
             "^tool a | ^tool b | lines; ls | each { ^tool c }",
             |context| {
                 let invocations = context.external_invocations(&["tool"]);
-                let inputs: Vec<_> = invocations.iter().map(|i| i.input).collect();
-                assert_eq!(
-                    inputs,
-                    [
-                        InputSource::Leading,
-                        InputSource::Piped,
-                        InputSource::Leading
-                    ]
-                );
+                let piped: Vec<_> = invocations
+                    .iter()
+                    .map(|invocation| invocation.previous.is_some())
+                    .collect();
+                assert_eq!(piped, [false, true, false]);
                 assert_eq!(invocations[0].next_external_name(), Some("tool"));
                 assert_eq!(invocations[1].next_command_name(&context), Some("lines"));
             },

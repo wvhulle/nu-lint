@@ -1,11 +1,10 @@
-use std::borrow::Cow;
-
-use nu_protocol::Span;
+use nu_protocol::{Span, ast::Expression};
 
 use crate::{
     LintLevel,
     ast::external::{CliSpec, ExternalInvocation, Flag, FlagValue, LineSource},
     context::LintContext,
+    dsl::arguments::tail_start_line,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -17,14 +16,43 @@ static SPEC: CliSpec = CliSpec {
     numeric_shorthand: Some(LINES),
 };
 
-const DEFAULT_LINE_COUNT: &str = "10";
+const DEFAULT_LINE_COUNT: u64 = 10;
 
 const NOTE: &str = "'lines | first' and 'lines | last' return a list of strings that the rest of \
                     the pipeline can process without splitting text again.";
 
+enum LineCount<'a> {
+    Literal(u64),
+    Dynamic(&'a Expression),
+}
+
+impl<'a> LineCount<'a> {
+    fn parse(count: Option<FlagValue<'a>>) -> Option<Self> {
+        let Some(count) = count else {
+            return Some(Self::Literal(DEFAULT_LINE_COUNT));
+        };
+        match (count, count.literal()) {
+            (_, Some(literal)) => literal.parse().ok().map(Self::Literal),
+            (FlagValue::Argument(expr), None) => Some(Self::Dynamic(expr)),
+            (FlagValue::Inline(_), None) => None,
+        }
+    }
+
+    fn text(&self, context: &LintContext) -> String {
+        match self {
+            Self::Literal(count) => count.to_string(),
+            Self::Dynamic(expr) => context.expr_text(expr).to_string(),
+        }
+    }
+}
+
+fn tail_start(count: Option<FlagValue>) -> Option<u64> {
+    tail_start_line(count?.literal()?)
+}
+
 enum Selection<'a> {
-    First(Cow<'a, str>),
-    Last(Cow<'a, str>),
+    First(LineCount<'a>),
+    Last(LineCount<'a>),
     SkipLeading(u64),
 }
 
@@ -35,22 +63,14 @@ pub struct LineSlice<'a> {
 }
 
 impl<'a> LineSlice<'a> {
-    fn from_invocation(
-        invocation: &ExternalInvocation<'a>,
-        context: &'a LintContext,
-    ) -> Option<Self> {
+    fn from_invocation(invocation: &ExternalInvocation<'a>) -> Option<Self> {
         let parsed = invocation.parse(&SPEC)?;
         let source = LineSource::of(invocation, &parsed.operands)?;
         let count = parsed.value(LINES);
-        let selection = match invocation.name {
-            "head" => Selection::First(Self::positive_count(count, context)?),
-            _ => match count
-                .and_then(|value| value.literal())
-                .and_then(|text| text.strip_prefix('+'))
-            {
-                Some(start) => Selection::SkipLeading(start.parse::<u64>().ok()?.saturating_sub(1)),
-                None => Selection::Last(Self::positive_count(count, context)?),
-            },
+        let selection = match (invocation.name, tail_start(count)) {
+            ("head", _) => Selection::First(LineCount::parse(count)?),
+            (_, Some(start)) => Selection::SkipLeading(start.saturating_sub(1)),
+            (_, None) => Selection::Last(LineCount::parse(count)?),
         };
         Some(Self {
             span: invocation.span,
@@ -59,23 +79,10 @@ impl<'a> LineSlice<'a> {
         })
     }
 
-    fn positive_count(
-        count: Option<FlagValue<'a>>,
-        context: &'a LintContext,
-    ) -> Option<Cow<'a, str>> {
-        let Some(count) = count else {
-            return Some(Cow::Borrowed(DEFAULT_LINE_COUNT));
-        };
-        match count.literal() {
-            Some(literal) => literal.parse::<u64>().ok().map(|_| Cow::Borrowed(literal)),
-            None => Some(count.text(context)),
-        }
-    }
-
     fn to_fix(&self, context: &LintContext) -> Fix {
         let selection = match &self.selection {
-            Selection::First(count) => format!("first {count}"),
-            Selection::Last(count) => format!("last {count}"),
+            Selection::First(count) => format!("first {}", count.text(context)),
+            Selection::Last(count) => format!("last {}", count.text(context)),
             Selection::SkipLeading(skipped) => format!("skip {skipped}"),
         };
         let replacement = format!("{}lines | {selection}", self.source.open_prefix(context));
@@ -112,7 +119,7 @@ impl DetectFix for HeadTailToFirstLast {
             .external_invocations(&["head", "tail"])
             .iter()
             .filter_map(|invocation| {
-                let slice = LineSlice::from_invocation(invocation, context)?;
+                let slice = LineSlice::from_invocation(invocation)?;
                 let detection = Detection::from_global_span(NOTE, invocation.span)
                     .with_primary_label(format!("'{}' selecting lines", invocation.name));
                 Some((detection, slice))

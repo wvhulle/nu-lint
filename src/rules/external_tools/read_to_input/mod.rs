@@ -1,12 +1,10 @@
-use std::borrow::Cow;
+use nu_protocol::Span;
 
 use crate::{
     LintLevel,
-    ast::{
-        external::{CliSpec, ExternalInvocation, Flag, FlagValue, literal_content, value_text},
-        string::quote_nu_string,
-    },
+    ast::external::{CliSpec, ExternalInvocation, Flag, FlagValue, literal_content},
     context::LintContext,
+    dsl::arguments::is_shell_variable_name,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -24,42 +22,51 @@ const NOTE: &str = "'read' is a shell builtin: an external 'read' cannot assign 
                     script and usually does not exist as a binary. Use 'input' and bind its \
                     result with 'let'.";
 
-fn is_variable_name(name: &str) -> bool {
-    name.starts_with(|c: char| c.is_alphabetic() || c == '_')
-        && name.chars().all(|c| c.is_alphanumeric() || c == '_')
+pub struct InputBinding<'a> {
+    span: Span,
+    variable: &'a str,
+    silent: bool,
+    prompt: Option<FlagValue<'a>>,
 }
 
-fn prompt_text<'a>(prompt: FlagValue<'a>, context: &'a LintContext) -> Cow<'a, str> {
-    match prompt {
-        FlagValue::Inline(text) => Cow::Owned(quote_nu_string(text)),
-        FlagValue::Argument(expr) => value_text(context, expr),
+impl<'a> InputBinding<'a> {
+    fn from_invocation(invocation: &ExternalInvocation<'a>) -> Option<Self> {
+        if invocation.previous.is_some() || invocation.next.is_some() {
+            return None;
+        }
+        let parsed = invocation.parse(&SPEC)?;
+        let [variable] = parsed.operands.as_slice() else {
+            return None;
+        };
+        let variable = literal_content(variable)?;
+        if !is_shell_variable_name(variable) {
+            return None;
+        }
+        Some(Self {
+            span: invocation.span,
+            variable,
+            silent: parsed.has(SILENT),
+            prompt: parsed.value(PROMPT),
+        })
     }
-}
 
-fn input_binding(invocation: &ExternalInvocation, context: &LintContext) -> Option<String> {
-    if invocation.previous.is_some() || invocation.next.is_some() {
-        return None;
+    fn to_nu(&self, context: &LintContext) -> String {
+        let suppress = if self.silent {
+            " --suppress-output"
+        } else {
+            ""
+        };
+        let prompt = self.prompt.map_or(String::new(), |prompt| {
+            format!(" {}", prompt.nu_text(context))
+        });
+        format!("let {} = input{suppress}{prompt}", self.variable)
     }
-    let parsed = invocation.parse(&SPEC)?;
-    let [variable] = parsed.operands.as_slice() else {
-        return None;
-    };
-    let name = literal_content(variable).filter(|name| is_variable_name(name))?;
-    let suppress = if parsed.has(SILENT) {
-        " --suppress-output"
-    } else {
-        ""
-    };
-    let prompt = parsed.value(PROMPT).map_or(String::new(), |prompt| {
-        format!(" {}", prompt_text(prompt, context))
-    });
-    Some(format!("let {name} = input{suppress}{prompt}"))
 }
 
 struct ReadToInput;
 
 impl DetectFix for ReadToInput {
-    type FixInput<'a> = Option<Replacement>;
+    type FixInput<'a> = Option<InputBinding<'a>>;
 
     fn id(&self) -> &'static str {
         "read_to_input"
@@ -82,20 +89,19 @@ impl DetectFix for ReadToInput {
             .external_invocations(&["read"])
             .iter()
             .map(|invocation| {
-                let replacement = input_binding(invocation, context)
-                    .map(|binding| Replacement::new(invocation.span, binding));
                 let detection = Detection::from_global_span(NOTE, invocation.span)
                     .with_primary_label("external 'read' cannot set a variable");
-                (detection, replacement)
+                (detection, InputBinding::from_invocation(invocation))
             })
             .collect()
     }
 
-    fn fix(&self, _context: &LintContext, replacement: &Self::FixInput<'_>) -> Option<Fix> {
-        let replacement = replacement.as_ref()?;
+    fn fix(&self, context: &LintContext, binding: &Self::FixInput<'_>) -> Option<Fix> {
+        let binding = binding.as_ref()?;
+        let replacement = binding.to_nu(context);
         Some(Fix {
-            explanation: format!("Read input with '{}'", replacement.replacement_text).into(),
-            replacements: vec![replacement.clone()],
+            explanation: format!("Read input with '{replacement}'").into(),
+            replacements: vec![Replacement::new(binding.span, replacement)],
         })
     }
 }

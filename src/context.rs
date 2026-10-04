@@ -1,4 +1,4 @@
-use std::{collections::BTreeSet, ops::ControlFlow, str::from_utf8, vec::Vec};
+use std::{collections::BTreeSet, iter::once, ops::ControlFlow, str::from_utf8, vec::Vec};
 
 use nu_protocol::{
     Span,
@@ -10,7 +10,12 @@ use nu_protocol::{
 use crate::violation;
 use crate::{
     Config,
-    ast::{call::CallExt, declaration::CustomCommandDef},
+    ast::{
+        call::CallExt,
+        declaration::CustomCommandDef,
+        expression::ExpressionExt,
+        external::{ExternalInvocation, literal_content},
+    },
     span::FileSpan,
     violation::Detection,
 };
@@ -281,6 +286,44 @@ impl<'a> LintContext<'a> {
         let f = |expr: &Expression| collector(expr, self);
         self.ast.flat_map(self.working_set, &f, &mut results);
         results
+    }
+
+    pub fn external_invocations(&self, names: &[&str]) -> Vec<ExternalInvocation<'_>> {
+        let mut nested_block_ids = Vec::new();
+        self.ast.flat_map(
+            self.working_set,
+            &|expr| expr.extract_block_id().into_iter().collect(),
+            &mut nested_block_ids,
+        );
+        nested_block_ids.sort_unstable();
+        nested_block_ids.dedup();
+        let nested_blocks = nested_block_ids
+            .into_iter()
+            .map(|block_id| -> &Block { self.working_set.get_block(block_id) });
+
+        once(self.ast)
+            .chain(nested_blocks)
+            .flat_map(|block| &block.pipelines)
+            .flat_map(|pipeline| {
+                let elements = &pipeline.elements;
+                elements
+                    .iter()
+                    .enumerate()
+                    .filter_map(move |(index, element)| {
+                        let Expr::ExternalCall(head, args) = &element.expr.expr else {
+                            return None;
+                        };
+                        let name = literal_content(head)?;
+                        names.contains(&name).then(|| ExternalInvocation {
+                            name,
+                            span: element.expr.span,
+                            args,
+                            previous: (index > 0).then(|| &elements[index - 1].expr),
+                            next: elements.get(index + 1).map(|next| &next.expr),
+                        })
+                    })
+            })
+            .collect()
     }
 
     /// Collect detected violations without fix data (convenience for rules with

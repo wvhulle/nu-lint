@@ -301,41 +301,40 @@ impl Display for Group {
     }
 }
 
-pub fn readme_markdown() -> String {
-    ALL_GROUPS.iter().map(group_details_markdown).collect()
-}
+#[cfg(test)]
+mod tests {
+    use std::{fmt::Write, fs};
 
-fn group_details_markdown(group: &Group) -> String {
-    let rule_lines: String = group
-        .rules
-        .iter()
-        .map(|rule| {
+    use super::{ALL_GROUPS, Group};
+
+    fn readme_markdown() -> String {
+        ALL_GROUPS.iter().map(group_details_markdown).collect()
+    }
+
+    fn group_details_markdown(group: &Group) -> String {
+        let rule_lines = group.rules.iter().fold(String::new(), |mut lines, rule| {
             let auto_fix_suffix = if rule.has_auto_fix() {
                 " (auto-fix)"
             } else {
                 ""
             };
-            format!(
-                "- `{}`{auto_fix_suffix}: {}\n",
+            writeln!(
+                lines,
+                "- `{}`{auto_fix_suffix}: {}",
                 rule.id(),
                 rule.short_description()
             )
-        })
-        .collect();
-    format!(
-        "<details>\n<summary><code>{}</code> ({} rules): \
-         {}</summary>\n\n{rule_lines}\n</details>\n\n",
-        group.name,
-        group.rules.len(),
-        group.description
-    )
-}
-
-#[cfg(test)]
-mod tests {
-    use std::fs;
-
-    use super::readme_markdown;
+            .unwrap();
+            lines
+        });
+        format!(
+            "<details>\n<summary><code>{}</code> ({} rules): \
+             {}</summary>\n\n{rule_lines}\n</details>\n\n",
+            group.name,
+            group.rules.len(),
+            group.description
+        )
+    }
 
     const README_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/README.md");
     const START_MARKER: &str = "<!-- start-rule-groups -->\n";

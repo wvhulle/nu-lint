@@ -1,3 +1,5 @@
+use nu_protocol::Span;
+
 use crate::{
     LintLevel,
     ast::external::{CliSpec, ExternalInvocation, Flag, ParsedCli},
@@ -34,8 +36,6 @@ static FREE_SPEC: CliSpec = CliSpec {
     numeric_shorthand: None,
 };
 
-const HOSTNAME: &str = "sys host | get hostname";
-
 const NOTE: &str = "Nu reads system information directly and returns typed values such as \
                     datetimes, durations and file sizes instead of text that needs parsing.";
 
@@ -45,35 +45,63 @@ fn only_flag(parsed: &ParsedCli, candidates: &[Flag]) -> Option<Flag> {
     present.next().is_none().then_some(flag)
 }
 
-fn builtin_equivalent(invocation: &ExternalInvocation) -> Option<&'static str> {
-    let spec = match invocation.name {
-        "hostname" => &NO_FLAGS,
-        "uname" => &UNAME_SPEC,
-        "uptime" => &UPTIME_SPEC,
-        _ => &FREE_SPEC,
-    };
-    let parsed = invocation
-        .parse(spec)
-        .filter(|parsed| parsed.operands.is_empty())?;
-    match invocation.name {
-        "hostname" => Some(HOSTNAME),
-        "uname" => match only_flag(&parsed, UNAME_SPEC.flags)? {
-            KERNEL_RELEASE => Some("$nu.os-info.kernel_version"),
-            NODE_NAME => Some(HOSTNAME),
-            _ => Some("$nu.os-info.arch"),
-        },
-        "uptime" => match only_flag(&parsed, UPTIME_SPEC.flags)? {
-            SINCE => Some("sys host | get boot_time"),
-            _ => Some("sys host | get uptime"),
-        },
-        _ => Some("sys mem"),
+#[derive(Clone, Copy)]
+enum SystemQuery {
+    Hostname,
+    KernelRelease,
+    Machine,
+    BootTime,
+    Uptime,
+    Memory,
+}
+
+impl SystemQuery {
+    fn of(invocation: &ExternalInvocation) -> Option<Self> {
+        let spec = match invocation.name {
+            "hostname" => &NO_FLAGS,
+            "uname" => &UNAME_SPEC,
+            "uptime" => &UPTIME_SPEC,
+            _ => &FREE_SPEC,
+        };
+        let parsed = invocation
+            .parse(spec)
+            .filter(|parsed| parsed.operands.is_empty())?;
+        match invocation.name {
+            "hostname" => Some(Self::Hostname),
+            "uname" => match only_flag(&parsed, UNAME_SPEC.flags)? {
+                KERNEL_RELEASE => Some(Self::KernelRelease),
+                NODE_NAME => Some(Self::Hostname),
+                _ => Some(Self::Machine),
+            },
+            "uptime" => match only_flag(&parsed, UPTIME_SPEC.flags)? {
+                SINCE => Some(Self::BootTime),
+                _ => Some(Self::Uptime),
+            },
+            _ => Some(Self::Memory),
+        }
     }
+
+    const fn nu_expression(self) -> &'static str {
+        match self {
+            Self::Hostname => "sys host | get hostname",
+            Self::KernelRelease => "$nu.os-info.kernel_version",
+            Self::Machine => "$nu.os-info.arch",
+            Self::BootTime => "sys host | get boot_time",
+            Self::Uptime => "sys host | get uptime",
+            Self::Memory => "sys mem",
+        }
+    }
+}
+
+pub struct FixData {
+    span: Span,
+    query: SystemQuery,
 }
 
 struct SystemInfoToSys;
 
 impl DetectFix for SystemInfoToSys {
-    type FixInput<'a> = Replacement;
+    type FixInput<'a> = FixData;
 
     fn id(&self) -> &'static str {
         "system_info_to_sys"
@@ -96,18 +124,25 @@ impl DetectFix for SystemInfoToSys {
             .external_invocations(&["hostname", "uname", "uptime", "free"])
             .iter()
             .filter_map(|invocation| {
-                let equivalent = builtin_equivalent(invocation)?;
+                let query = SystemQuery::of(invocation)?;
                 let detection = Detection::from_global_span(NOTE, invocation.span)
                     .with_primary_label(format!("'{}' prints text", invocation.name));
-                Some((detection, Replacement::new(invocation.span, equivalent)))
+                Some((
+                    detection,
+                    FixData {
+                        span: invocation.span,
+                        query,
+                    },
+                ))
             })
             .collect()
     }
 
-    fn fix(&self, _context: &LintContext, replacement: &Self::FixInput<'_>) -> Option<Fix> {
+    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let replacement = fix_data.query.nu_expression();
         Some(Fix {
-            explanation: format!("Query with '{}'", replacement.replacement_text).into(),
-            replacements: vec![replacement.clone()],
+            explanation: format!("Query with '{replacement}'").into(),
+            replacements: vec![Replacement::new(fix_data.span, replacement)],
         })
     }
 }

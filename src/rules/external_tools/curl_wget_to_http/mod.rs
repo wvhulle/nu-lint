@@ -1,4 +1,6 @@
-use std::borrow::Cow;
+use std::iter::once;
+
+use nu_protocol::{Span, ast::Expression};
 
 use crate::{
     LintLevel,
@@ -7,6 +9,7 @@ use crate::{
         string::quote_nu_string,
     },
     context::LintContext,
+    dsl::arguments::{HttpHeader, http_header},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
@@ -46,122 +49,117 @@ static WGET_SPEC: CliSpec = CliSpec {
 };
 
 const STANDARD_OUTPUT: &str = "-";
+const GET_METHOD: &str = "GET";
 
 const NOTE: &str = "'http get' fails on error status codes and follows redirects like 'curl -fL' \
                     or 'wget', and it is available on every platform without an external download \
                     tool.";
 
-struct Download<'a> {
-    url: Cow<'a, str>,
-    headers: Vec<String>,
+pub struct Download<'a> {
+    span: Span,
+    url: &'a Expression,
+    headers: Vec<HttpHeader<'a>>,
     insecure: bool,
-    max_time: Option<&'a str>,
-    output_file: Option<Cow<'a, str>>,
+    max_time: Option<u32>,
+    output: Option<FlagValue<'a>>,
 }
 
 impl<'a> Download<'a> {
-    fn from_curl(parsed: &ParsedCli<'a>, context: &'a LintContext) -> Option<Self> {
+    fn from_invocation(invocation: &ExternalInvocation<'a>, context: &LintContext) -> Option<Self> {
+        if invocation.next_command_name(context) == Some("complete") {
+            return None;
+        }
+        match invocation.name {
+            "curl" => Self::from_curl(invocation.span, &invocation.parse(&CURL_SPEC)?),
+            _ => Self::from_wget(invocation.span, &invocation.parse(&WGET_SPEC)?),
+        }
+    }
+
+    fn from_curl(span: Span, parsed: &ParsedCli<'a>) -> Option<Self> {
         let follows_redirects_and_fails = parsed.has(FAIL) && parsed.has(LOCATION);
         let is_get = parsed
             .value(REQUEST)
-            .is_none_or(|method| method.literal() == Some("GET"));
+            .is_none_or(|method| method.literal() == Some(GET_METHOD));
         if !(follows_redirects_and_fails && is_get) {
             return None;
         }
         let max_time = match parsed.value(MAX_TIME) {
-            Some(seconds) => Some(seconds.literal().filter(|s| s.parse::<u32>().is_ok())?),
+            Some(seconds) => Some(seconds.literal()?.parse().ok()?),
             None => None,
         };
         Some(Self {
-            url: Self::single_url(parsed, context)?,
-            headers: Self::headers(parsed.values(CURL_HEADER))?,
+            span,
+            url: single_url(parsed)?,
+            headers: headers(parsed.values(CURL_HEADER))?,
             insecure: parsed.has(INSECURE),
             max_time,
-            output_file: parsed
-                .value(CURL_OUTPUT)
-                .map(|file| Self::output_path(file, context)),
+            output: parsed.value(CURL_OUTPUT),
         })
     }
 
-    fn from_wget(parsed: &ParsedCli<'a>, context: &'a LintContext) -> Option<Self> {
+    fn from_wget(span: Span, parsed: &ParsedCli<'a>) -> Option<Self> {
         let output = parsed.value(WGET_OUTPUT)?;
-        let output_file =
-            (output.literal() != Some(STANDARD_OUTPUT)).then(|| Self::output_path(output, context));
         Some(Self {
-            url: Self::single_url(parsed, context)?,
-            headers: Self::headers(parsed.values(WGET_HEADER))?,
+            span,
+            url: single_url(parsed)?,
+            headers: headers(parsed.values(WGET_HEADER))?,
             insecure: false,
             max_time: None,
-            output_file,
+            output: (output.literal() != Some(STANDARD_OUTPUT)).then_some(output),
         })
     }
 
-    fn single_url(parsed: &ParsedCli<'a>, context: &'a LintContext) -> Option<Cow<'a, str>> {
-        match parsed.operands.as_slice() {
-            [url] => Some(value_text(context, url)),
-            _ => None,
-        }
-    }
-
-    fn output_path(file: FlagValue<'a>, context: &'a LintContext) -> Cow<'a, str> {
-        match file {
-            FlagValue::Inline(text) => Cow::Owned(quote_nu_string(text)),
-            FlagValue::Argument(expr) => Cow::Borrowed(context.expr_text(expr)),
-        }
-    }
-
-    fn headers(values: impl Iterator<Item = FlagValue<'a>>) -> Option<Vec<String>> {
-        values
-            .map(|header| {
-                let (name, value) = header.literal()?.split_once(':')?;
-                Some(format!(
-                    "{} {}",
-                    quote_nu_string(name.trim()),
-                    quote_nu_string(value.trim())
-                ))
-            })
-            .collect()
-    }
-
-    fn to_nu(&self) -> String {
-        let headers =
-            (!self.headers.is_empty()).then(|| format!("--headers [{}]", self.headers.join(" ")));
+    fn to_nu(&self, context: &LintContext) -> String {
+        let header_list = (!self.headers.is_empty()).then(|| {
+            let pairs: Vec<String> = self
+                .headers
+                .iter()
+                .map(|header| {
+                    format!(
+                        "{} {}",
+                        quote_nu_string(header.name),
+                        quote_nu_string(header.value)
+                    )
+                })
+                .collect();
+            format!("--headers [{}]", pairs.join(" "))
+        });
         let insecure = self.insecure.then(|| "--insecure".to_string());
         let timeout = self
             .max_time
             .map(|seconds| format!("--max-time {seconds}sec"));
-        let request = ["http get --raw".to_string()]
-            .into_iter()
-            .chain(headers)
+        let url = value_text(context, self.url).into_owned();
+        let words: Vec<String> = once("http get --raw".to_string())
+            .chain(header_list)
             .chain(insecure)
             .chain(timeout)
-            .chain([self.url.to_string()])
-            .collect::<Vec<_>>()
-            .join(" ");
-        match &self.output_file {
-            Some(file) => format!("{request} | save --force {file}"),
+            .chain(once(url))
+            .collect();
+        let request = words.join(" ");
+        match self.output {
+            Some(file) => format!("{request} | save --force {}", file.nu_text(context)),
             None => request,
         }
     }
 }
 
-fn download<'a>(
-    invocation: &ExternalInvocation<'a>,
-    context: &'a LintContext,
-) -> Option<Download<'a>> {
-    if invocation.next_command_name(context) == Some("complete") {
-        return None;
+const fn single_url<'a>(parsed: &ParsedCli<'a>) -> Option<&'a Expression> {
+    match parsed.operands.as_slice() {
+        [url] => Some(url),
+        _ => None,
     }
-    match invocation.name {
-        "curl" => Download::from_curl(&invocation.parse(&CURL_SPEC)?, context),
-        _ => Download::from_wget(&invocation.parse(&WGET_SPEC)?, context),
-    }
+}
+
+fn headers<'a>(values: impl Iterator<Item = FlagValue<'a>>) -> Option<Vec<HttpHeader<'a>>> {
+    values
+        .map(|header| http_header(header.literal()?))
+        .collect()
 }
 
 struct CurlWgetToHttp;
 
 impl DetectFix for CurlWgetToHttp {
-    type FixInput<'a> = Replacement;
+    type FixInput<'a> = Download<'a>;
 
     fn id(&self) -> &'static str {
         "curl_wget_to_http"
@@ -184,21 +182,19 @@ impl DetectFix for CurlWgetToHttp {
             .external_invocations(&["curl", "wget"])
             .iter()
             .filter_map(|invocation| {
-                let request = download(invocation, context)?;
+                let download = Download::from_invocation(invocation, context)?;
                 let detection = Detection::from_global_span(NOTE, invocation.span)
                     .with_primary_label(format!("'{}' downloading a URL", invocation.name));
-                Some((
-                    detection,
-                    Replacement::new(invocation.span, request.to_nu()),
-                ))
+                Some((detection, download))
             })
             .collect()
     }
 
-    fn fix(&self, _context: &LintContext, replacement: &Self::FixInput<'_>) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, download: &Self::FixInput<'_>) -> Option<Fix> {
+        let replacement = download.to_nu(context);
         Some(Fix {
-            explanation: format!("Download with '{}'", replacement.replacement_text).into(),
-            replacements: vec![replacement.clone()],
+            explanation: format!("Download with '{replacement}'").into(),
+            replacements: vec![Replacement::new(download.span, replacement)],
         })
     }
 }

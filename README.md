@@ -335,7 +335,7 @@ Most rules have automatic fixes. Run `nu-lint --list-rules` to see the rules wit
 </details>
 
 <details>
-<summary><code>filtering</code> (9 rules): Better patterns for filtering and selecting data.</summary>
+<summary><code>filtering</code> (10 rules): Better patterns for filtering and selecting data.</summary>
 
 - `each_if_to_where` (auto-fix): Use 'where' for filtering instead of 'each' with 'if'
 - `for_filter_to_where`: Use 'where' filter instead of for loop with if and append
@@ -344,6 +344,7 @@ Most rules have automatic fixes. Run `nu-lint --list-rules` to see the rules wit
 - `slice_to_last` (auto-fix): Use 'last' instead of 'slice (-N)..' to get last N elements
 - `slice_to_skip` (auto-fix): Use 'skip' instead of 'slice N..' to skip first N elements
 - `slice_to_take` (auto-fix): Use 'take' instead of 'slice 0..N' to take first N elements
+- `uniq_to_set_operation` (auto-fix): Use `union`, `intersect` or `difference` instead of combining lists and `uniq`
 - `where_closure_drop_parameter` (auto-fix): You can drop the closure and its parameter in 'where' and 'filter'.
 - `remove_redundant_in` (auto-fix): Redundant `$in` at pipeline start
 

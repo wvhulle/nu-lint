@@ -9,6 +9,7 @@ pub mod slice_to_drop;
 pub mod slice_to_last;
 pub mod slice_to_skip;
 pub mod slice_to_take;
+pub mod uniq_to_set_operation;
 pub mod where_closure_drop_parameter;
 
 /// Extracts an integer value from an expression, handling direct integers,

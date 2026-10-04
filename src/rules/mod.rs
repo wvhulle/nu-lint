@@ -148,6 +148,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     filtering::slice_to_last::RULE,
     filtering::slice_to_skip::RULE,
     filtering::slice_to_take::RULE,
+    filtering::uniq_to_set_operation::RULE,
     filtering::where_closure_drop_parameter::RULE,
     forbid_excessive_nesting::RULE,
     fragile_last_exit_code::RULE,

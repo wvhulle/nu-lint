@@ -121,6 +121,7 @@ const FILTERING: Group = Group {
         super::filtering::slice_to_last::RULE,
         super::filtering::slice_to_skip::RULE,
         super::filtering::slice_to_take::RULE,
+        super::filtering::uniq_to_set_operation::RULE,
         super::filtering::where_closure_drop_parameter::RULE,
         super::remove_redundant_in::RULE,
     ],

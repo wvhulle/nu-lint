@@ -89,7 +89,9 @@ impl DetectFix for ClosureBracePipeSpacing {
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context.detect_with_fix_data(|expr, ctx| match &expr.expr {
             // Check any closure with explicit pipe delimiters (including empty `||`)
-            Expr::Closure(_) if has_explicit_pipe_delimiters(ctx, expr.span) => {
+            Expr::Closure(_) | Expr::RowCondition(_)
+                if has_explicit_pipe_delimiters(ctx, expr.span) =>
+            {
                 check_closure_param_spacing(ctx, expr.span)
             }
             _ => vec![],

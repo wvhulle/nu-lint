@@ -1,5 +1,5 @@
 use nu_protocol::{
-    SyntaxShape,
+    SyntaxShape, Value,
     ast::{Call, Expr, MatchPattern, Pattern},
 };
 
@@ -21,10 +21,11 @@ fn string_param_names(def: &CustomCommandDef) -> impl Iterator<Item = &str> {
 }
 
 fn is_string_literal_pattern(pattern: &MatchPattern) -> bool {
-    matches!(
-        &pattern.pattern,
-        Pattern::Expression(expr) if matches!(&expr.expr, Expr::String(_))
-    )
+    match &pattern.pattern {
+        Pattern::Expression(expr) => matches!(&expr.expr, Expr::String(_)),
+        Pattern::Value(value) => matches!(value, Value::String { .. }),
+        _ => false,
+    }
 }
 
 fn matches_dispatch_variable(call: &Call, var_name: &str, context: &LintContext) -> bool {

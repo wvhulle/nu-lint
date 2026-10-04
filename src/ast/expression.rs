@@ -411,9 +411,7 @@ impl ExpressionExt for Expression {
                         .iter()
                         .any(|member| matches!(member, PathMember::String { .. }))
                 {
-                    Some(Type::Record(nu_protocol::CollectionColumns::new(Box::new(
-                        [],
-                    ))))
+                    Some(Type::Record(nu_protocol::CollectionColumns::default()))
                 } else if !cell_path.tail.is_empty() {
                     Some(Type::List(Box::new(Type::Any)))
                 } else {

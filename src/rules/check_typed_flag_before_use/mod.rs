@@ -1,5 +1,5 @@
 use nu_protocol::{
-    VarId,
+    Value, VarId,
     ast::{Call, Comparison, Expr, Expression, MatchPattern, Operator, Pattern},
 };
 
@@ -72,7 +72,11 @@ fn check_flag_usage_in_body(call: &Call, context: &LintContext) -> Vec<(Detectio
 }
 
 fn is_null_pattern(pattern: &MatchPattern) -> bool {
-    matches!(&pattern.pattern, Pattern::Expression(e) if matches!(&e.expr, Expr::Nothing))
+    match &pattern.pattern {
+        Pattern::Expression(e) => matches!(&e.expr, Expr::Nothing),
+        Pattern::Value(value) => matches!(value, Value::Nothing { .. }),
+        _ => false,
+    }
 }
 
 fn matches_scrutinee(call: &Call, var_id: VarId) -> bool {

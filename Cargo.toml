@@ -93,13 +93,13 @@ log = "0.4"
 lsp-server = { version = "0.7", optional = true }
 lsp-types = { version = "0.97", optional = true }
 miette = { version = "7.6", features = ["fancy"] }
-nu-cli = "0.114.0"
-nu-cmd-extra = "0.114.0"
-nu-cmd-lang = "0.114.0"
-nu-command = { version = "0.114.0", features = ["sqlite"] }
-nu-parser = "0.114.0"
-nu-protocol = "0.114.0"
-nu-std = "0.114.0"
+nu-cli = "0.116.0"
+nu-cmd-extra = "0.116.0"
+nu-cmd-lang = "0.116.0"
+nu-command = { version = "0.116.0", features = ["sqlite"] }
+nu-parser = "0.116.0"
+nu-protocol = "0.116.0"
+nu-std = "0.116.0"
 owo-colors = "4"
 rayon = "1.10"
 regex = "1.10"

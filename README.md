@@ -4,6 +4,14 @@ Linter for the innovative [Nu](https://www.nushell.sh/) shell.
 
 Learning to use a new shell is a radical change that can use some assistance. This project is aimed at helping new and intermediate users of the [Nu](https://www.nushell.sh/) shell. Nu shell has a lot of useful features not found in other scripting languages. This linter will give you hints to use all of them and even offer automatic fixes.
 
+- [Usage](#usage)
+- [Screenshots](#screenshots)
+- [Rule example](#rule-example)
+- [Installation](#installation)
+- [Editor extension](#editor-extension)
+- [Configuration](#configuration)
+- [Rules](#rules)
+
 ## Usage
 
 Lint all Nu files in working directory with:

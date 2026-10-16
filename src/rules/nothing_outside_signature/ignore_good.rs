@@ -52,6 +52,50 @@ def my-command [] {
 }
 
 #[test]
+fn test_nothing_as_record_key() {
+    let good_code = r#"
+let dark_theme = { string: white, nothing: white, binary: white }
+"#;
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
+fn test_nothing_as_table_column() {
+    let good_code = "[[nothing value]; [1 2]]";
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
+fn test_nothing_as_cell_path_argument() {
+    let good_code = "{ nothing: 1 } | get nothing";
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
+fn test_quoted_nothing_string() {
+    let good_code = r#"let s = "nothing""#;
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
+fn test_nothing_as_string_typed_argument() {
+    let good_code = r#""something" | str contains nothing"#;
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
+fn test_nothing_as_external_command_argument() {
+    let good_code = "^grep nothing file.txt";
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
+fn test_external_command_named_nothing_with_arguments() {
+    let good_code = "^nothing --flag";
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
 fn test_no_nothing_keyword() {
     let good_code = r#"
 def my-command [] {

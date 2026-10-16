@@ -1,0 +1,37 @@
+[workspace]
+semver_check = false
+git_release_type = "prod"
+release_commits = "^(feat|fix|perf)[(:!]"
+pr_labels = ["release"]
+git_release_body = """
+{{ changelog }}
+
+## Downloads
+
+| File | Platform |
+|------|----------|
+| `nu-lint-x86_64-unknown-linux-musl.tar.gz` | Linux x86_64 (Ubuntu, Debian, Fedora, etc.) |
+| `nu-lint-aarch64-unknown-linux-musl.tar.gz` | Linux ARM64 (Raspberry Pi, AWS Graviton) |
+
+See [README](https://codeberg.org/wvhulle/nu-lint#installation) for full installation instructions.
+"""
+
+[changelog]
+tag_pattern = "v[0-9].*"
+sort_commits = "oldest"
+protect_breaking_commits = true
+commit_parsers = [
+  { message = "^feat", group = "Added" },
+  { message = "^fix", group = "Fixed" },
+  { message = "^doc", group = "Documentation" },
+  { message = "^perf", group = "Performance" },
+  { message = "^refactor", group = "Changed" },
+  { message = "^style", group = "Changed" },
+  { message = "^test", group = "Testing" },
+  { message = "^chore: release", skip = true },
+  { message = "^chore", group = "Miscellaneous" },
+  { message = "^ci", group = "CI" },
+  { message = "^build", group = "Build" },
+  { message = "^[Mm]erge", skip = true },
+  { message = ".*", group = "Other" },
+]

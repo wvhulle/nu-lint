@@ -1,0 +1,11 @@
+when:
+  - repo: wvhulle/nu-lint
+    event: [pull_request, push, manual]
+
+steps:
+  - name: test
+    image: nixos/nix:latest
+    environment:
+      NIX_CONFIG: experimental-features = nix-command flakes
+    commands:
+      - nix develop -c cargo test --all-targets

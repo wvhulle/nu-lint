@@ -107,23 +107,27 @@
           hooks.convco.enable = true;
         };
 
-        #
-        # Release targets (queried by build.nu)
-        #
-        releaseTargets =
-          if pkgs.stdenv.hostPlatform.isLinux then
-            {
-              "x86_64-unknown-linux-musl" = "x86_64-linux-musl";
-              "aarch64-unknown-linux-musl" = "aarch64-linux-musl";
-            }
-          else if pkgs.stdenv.hostPlatform.isDarwin then
-            { "aarch64-apple-darwin" = "default"; }
-          else
-            { };
+        devTools = [
+          pkgs.convco
+          pkgs.release-plz
+          pkgs.git-cliff
+        ];
+
+        muslPackages = {
+          x86_64 = mkMuslPackage "x86_64";
+          aarch64 = mkMuslPackage "aarch64";
+        };
+
+        releaseArchives = pkgs.runCommand "nu-lint-dist" { } (
+          ''
+            mkdir -p $out
+          ''
+          + pkgs.lib.concatMapAttrsStringSep "\n" (arch: package: ''
+            tar -czf $out/nu-lint-${arch}-unknown-linux-musl.tar.gz -C ${package}/bin nu-lint
+          '') muslPackages
+        );
       in
       {
-        inherit releaseTargets;
-
         packages = {
           default = llvmPackage;
           llvm = llvmPackage;
@@ -132,8 +136,9 @@
           deps-cranelift = craneliftDeps;
         }
         // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
-          x86_64-linux-musl = mkMuslPackage "x86_64";
-          aarch64-linux-musl = mkMuslPackage "aarch64";
+          x86_64-linux-musl = muslPackages.x86_64;
+          aarch64-linux-musl = muslPackages.aarch64;
+          dist = releaseArchives;
         };
 
         checks = {
@@ -163,11 +168,11 @@
         devShells = {
           default = nightlyCrane.devShell {
             inherit (preCommitHooks) shellHook;
-            packages = [ pkgs.convco ];
+            packages = devTools;
           };
           cranelift = nightlyCrane.devShell {
             inherit (preCommitHooks) shellHook;
-            packages = [ pkgs.convco ];
+            packages = devTools;
           };
         };
       }

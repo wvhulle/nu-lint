@@ -188,6 +188,16 @@ git checkout your-branch
 cargo bench --bench speed -- --baseline main
 ```
 
+## Releasing
+
+Releases are automated with [release-plz](https://release-plz.dev) on Woodpecker CI (`.woodpecker/`):
+
+1. Every push to `main` runs the tests and then opens or updates a release PR on Codeberg. That PR bumps the version from the conventional commit messages and updates `CHANGELOG.md`. Only `feat`, `fix` and `perf` commits trigger a release PR.
+2. Merging the release PR publishes the crate to crates.io and creates the `v<version>` tag and Codeberg release.
+3. The Codeberg release event builds the static musl binaries (`nix build .#dist`) and attaches them with sha256 checksums.
+
+To preview the next version and changelog locally, run `nix develop -c release-plz update` and discard the result afterwards.
+
 ## Cachix
 
 Check if it is already in the cachix cache with something like:

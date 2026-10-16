@@ -1,0 +1,28 @@
+when:
+  - repo: wvhulle/nu-lint
+    event: release
+
+steps:
+  - name: build
+    image: nixos/nix:latest
+    environment:
+      NIX_CONFIG: experimental-features = nix-command flakes
+      CACHIX_AUTH_TOKEN:
+        from_secret: cachix_auth_token
+    commands:
+      - nix shell nixpkgs#cachix -c cachix use wvhulle
+      - nix shell nixpkgs#cachix -c cachix watch-exec wvhulle -- nix build .#dist --print-build-logs
+      - mkdir -p dist
+      - cp result/* dist/
+
+  - name: upload
+    image: woodpeckerci/plugin-gitea-release
+    settings:
+      base_url: https://codeberg.org
+      api_key:
+        from_secret: codeberg_token
+      files:
+        - dist/*
+      file_exists: overwrite
+      checksum:
+        - sha256

@@ -7,10 +7,6 @@
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    git-hooks = {
-      url = "github:cachix/git-hooks.nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
   outputs =
@@ -20,7 +16,6 @@
       crane,
       flake-utils,
       rust-overlay,
-      git-hooks,
     }:
     flake-utils.lib.eachDefaultSystem (
       system:
@@ -99,19 +94,41 @@
           in
           muslCrane.buildPackage (args // { cargoArtifacts = deps; });
 
-        #
-        # Pre-commit hooks
-        #
-        preCommitHooks = git-hooks.lib.${system}.run {
-          inherit src;
-          hooks.convco.enable = true;
-        };
-
         devTools = [
+          pkgs.prek
           pkgs.convco
           pkgs.release-plz
           pkgs.git-cliff
         ];
+
+        mkApp = drv: {
+          type = "app";
+          program = pkgs.lib.getExe drv;
+        };
+
+        releaseScript = pkgs.writeShellApplication {
+          name = "release";
+          runtimeInputs = [
+            nightlyToolchain
+            pkgs.release-plz
+            pkgs.gitMinimal
+          ];
+          text = ''
+            release-plz release --forge gitea --git-token "$CODEBERG_TOKEN"
+            release-plz release-pr --forge gitea --git-token "$CODEBERG_TOKEN"
+          '';
+        };
+
+        checkCommitsScript = pkgs.writeShellApplication {
+          name = "check-commits";
+          runtimeInputs = [
+            pkgs.convco
+            pkgs.gitMinimal
+          ];
+          text = ''
+            convco check "$@"
+          '';
+        };
 
         muslPackages = {
           x86_64 = mkMuslPackage "x86_64";
@@ -142,41 +159,19 @@
         };
 
         checks = {
-          inherit llvmPackage craneliftPackage;
-          pre-commit = preCommitHooks;
+          tests = llvmPackage;
+          fmt = nightlyCrane.cargoFmt { inherit src; };
         };
 
         apps = {
-          default = {
-            type = "app";
-            program = pkgs.lib.getExe self.packages.${system}.default;
-          };
-          cranelift = {
-            type = "app";
-            program = pkgs.lib.getExe self.packages.${system}.cranelift;
-          };
+          default = mkApp self.packages.${system}.default;
+          cranelift = mkApp self.packages.${system}.cranelift;
+          release = mkApp releaseScript;
+          check-commits = mkApp checkCommitsScript;
         };
 
-        formatter =
-          let
-            inherit (preCommitHooks.config) package configFile;
-          in
-          pkgs.writeShellScriptBin "pre-commit-run" ''
-            ${pkgs.lib.getExe package} run --all-files --config ${configFile}
-          '';
-
-        devShells = {
-          default = nightlyCrane.devShell {
-            inherit (preCommitHooks) shellHook;
-            packages = devTools;
-          };
-          cranelift = nightlyCrane.devShell {
-            inherit (preCommitHooks) shellHook;
-            packages = devTools;
-          };
-          release = nightlyCrane.devShell {
-            packages = devTools;
-          };
+        devShells.default = nightlyCrane.devShell {
+          packages = devTools;
         };
       }
     );

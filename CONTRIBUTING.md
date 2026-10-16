@@ -198,6 +198,19 @@ Releases are automated with [release-plz](https://release-plz.dev) on Woodpecker
 
 To preview the next version and changelog locally, run `nix develop -c release-plz update` and discard the result afterwards.
 
+## Checks and entry points
+
+Everything CI runs is a flake output, so it can be run locally in the same way:
+
+| Command | Purpose |
+|---------|---------|
+| `nix flake check` | Tests and `cargo fmt` check |
+| `nix run .#check-commits -- main..@` | Conventional commit message check for a revision range |
+| `nix build .#dist` | Static release binaries as `.tar.gz` |
+| `nix run .#release` | Publish unreleased versions and update the release PR (CI only, needs `CODEBERG_TOKEN`) |
+
+Git hooks are optional. Install them with [prek](https://github.com/j178/prek) (`prek install`) or [pre-commit](https://pre-commit.com) (`pre-commit install`) to run the commit message and formatting checks from `.pre-commit-config.yaml` locally.
+
 ## Cachix
 
 Check if it is already in the cachix cache with something like:

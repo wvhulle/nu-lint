@@ -8,4 +8,25 @@ steps:
     environment:
       NIX_CONFIG: experimental-features = nix-command flakes
     commands:
-      - nix develop -c cargo test --all-targets
+      - nix flake check --print-build-logs
+
+  - name: commits-pr
+    image: nixos/nix:latest
+    depends_on: []
+    when:
+      - event: pull_request
+    environment:
+      NIX_CONFIG: experimental-features = nix-command flakes
+    commands:
+      - git fetch --quiet origin "$${CI_COMMIT_TARGET_BRANCH}"
+      - nix run .#check-commits -- FETCH_HEAD..HEAD
+
+  - name: commits-push
+    image: nixos/nix:latest
+    depends_on: []
+    when:
+      - event: [push, manual]
+    environment:
+      NIX_CONFIG: experimental-features = nix-command flakes
+    commands:
+      - nix run .#check-commits -- "$${CI_PREV_COMMIT_SHA}..$${CI_COMMIT_SHA}"

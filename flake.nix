@@ -174,6 +174,9 @@
             inherit (preCommitHooks) shellHook;
             packages = devTools;
           };
+          release = nightlyCrane.devShell {
+            packages = devTools;
+          };
         };
       }
     );

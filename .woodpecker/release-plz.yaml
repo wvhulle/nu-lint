@@ -28,5 +28,5 @@ steps:
       - git config --global user.email "willemvanhulle@protonmail.com"
       - git remote set-url origin "https://wvhulle:$${CODEBERG_TOKEN}@codeberg.org/$${CI_REPO}.git"
       - git checkout -B main "$${CI_COMMIT_SHA}"
-      - nix develop -c release-plz release --forge gitea --git-token "$${CODEBERG_TOKEN}"
-      - nix develop -c release-plz release-pr --forge gitea --git-token "$${CODEBERG_TOKEN}"
+      - nix develop .#release -c release-plz release --forge gitea --git-token "$${CODEBERG_TOKEN}"
+      - nix develop .#release -c release-plz release-pr --forge gitea --git-token "$${CODEBERG_TOKEN}"

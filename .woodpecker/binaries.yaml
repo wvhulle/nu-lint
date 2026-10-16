@@ -6,12 +6,14 @@ steps:
   - name: build-musl-tarballs
     image: nixos/nix:latest
     environment:
-      NIX_CONFIG: experimental-features = nix-command flakes
+      NIX_CONFIG: |
+        experimental-features = nix-command flakes
+        extra-substituters = https://wvhulle.cachix.org
+        extra-trusted-public-keys = wvhulle.cachix.org-1:heXx8DZMiRsKUx6l1TxNoF+Nmtmz66QEdsonQzc1ir0=
       CACHIX_AUTH_TOKEN:
         from_secret: cachix_auth_token
     commands:
-      - nix shell nixpkgs#cachix -c cachix use wvhulle
-      - nix shell nixpkgs#cachix -c cachix watch-exec wvhulle -- nix build .#dist --print-build-logs
+      - nix run .#cached-build -- .#dist
       - mkdir -p dist
       - cp result/* dist/
 

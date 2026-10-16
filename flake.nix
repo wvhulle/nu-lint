@@ -35,8 +35,13 @@
           extensions = [ "rustc-codegen-cranelift-preview" ];
         };
 
+        rustfmtToolchain = pkgs.rust-bin.selectLatestNightlyWith (
+          toolchain: toolchain.minimal.override { extensions = [ "rustfmt" ]; }
+        );
+
         stableCrane = (crane.mkLib pkgs).overrideToolchain stableToolchain;
         nightlyCrane = (crane.mkLib pkgs).overrideToolchain nightlyToolchain;
+        rustfmtCrane = (crane.mkLib pkgs).overrideToolchain rustfmtToolchain;
 
         #
         # Native builds
@@ -48,7 +53,19 @@
         };
 
         llvmDeps = stableCrane.buildDepsOnly commonArgs;
-        llvmPackage = stableCrane.buildPackage (commonArgs // { cargoArtifacts = llvmDeps; });
+        llvmPackage = stableCrane.buildPackage (
+          commonArgs
+          // {
+            cargoArtifacts = llvmDeps;
+            doCheck = false;
+          }
+        );
+
+        devProfileArgs = commonArgs // {
+          CARGO_PROFILE = "dev";
+        };
+        devProfileDeps = stableCrane.buildDepsOnly devProfileArgs;
+        tests = stableCrane.cargoTest (devProfileArgs // { cargoArtifacts = devProfileDeps; });
 
         craneliftDeps = nightlyCrane.buildDepsOnly (
           commonArgs // { RUSTFLAGS = "-Zcodegen-backend=cranelift"; }
@@ -111,7 +128,7 @@
           pkgs.writeShellApplication {
             name = subcommand;
             runtimeInputs = [
-              nightlyToolchain
+              stableToolchain
               pkgs.release-plz
               pkgs.gitMinimal
             ];
@@ -119,6 +136,18 @@
               release-plz ${subcommand} --forge gitea --git-token "$CODEBERG_TOKEN"
             '';
           };
+
+        cachedBuildScript = pkgs.writeShellApplication {
+          name = "cached-build";
+          runtimeInputs = [ pkgs.cachix ];
+          text = ''
+            if [[ -n "''${CACHIX_AUTH_TOKEN:-}" ]]; then
+              cachix watch-exec wvhulle -- nix build --print-build-logs "$@"
+            else
+              nix build --print-build-logs "$@"
+            fi
+          '';
+        };
 
         checkCommitsScript = pkgs.writeShellApplication {
           name = "check-commits";
@@ -160,8 +189,8 @@
         };
 
         checks = {
-          tests = llvmPackage;
-          fmt = nightlyCrane.cargoFmt { inherit src; };
+          inherit tests;
+          fmt = rustfmtCrane.cargoFmt { inherit src; };
         };
 
         apps = {
@@ -170,6 +199,7 @@
           release = mkApp (mkReleasePlzOnCodeberg "release");
           release-pr = mkApp (mkReleasePlzOnCodeberg "release-pr");
           check-commits = mkApp checkCommitsScript;
+          cached-build = mkApp cachedBuildScript;
         };
 
         devShells.default = nightlyCrane.devShell {

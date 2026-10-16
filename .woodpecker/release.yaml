@@ -16,7 +16,10 @@ clone:
 
 variables:
   - &release_env
-    NIX_CONFIG: experimental-features = nix-command flakes
+    NIX_CONFIG: |
+      experimental-features = nix-command flakes
+      extra-substituters = https://wvhulle.cachix.org
+      extra-trusted-public-keys = wvhulle.cachix.org-1:heXx8DZMiRsKUx6l1TxNoF+Nmtmz66QEdsonQzc1ir0=
     GIT_AUTHOR_NAME: release-plz
     GIT_AUTHOR_EMAIL: willemvanhulle@protonmail.com
     GIT_COMMITTER_NAME: release-plz

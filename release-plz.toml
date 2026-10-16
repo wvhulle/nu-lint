@@ -1,5 +1,6 @@
 [workspace]
 semver_check = false
+publish_no_verify = true
 git_release_type = "prod"
 release_commits = "^(feat|fix|perf)[(:!]"
 pr_labels = ["release"]

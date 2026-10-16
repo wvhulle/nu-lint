@@ -3,30 +3,56 @@ when:
     event: [pull_request, push, manual]
 
 variables:
-  - &nix_env
-    NIX_CONFIG: experimental-features = nix-command flakes
+  - &nix_config
+    NIX_CONFIG: |
+      experimental-features = nix-command flakes
+      extra-substituters = https://wvhulle.cachix.org
+      extra-trusted-public-keys = wvhulle.cachix.org-1:heXx8DZMiRsKUx6l1TxNoF+Nmtmz66QEdsonQzc1ir0=
+  - &cache_writing_env
+    <<: *nix_config
+    CACHIX_AUTH_TOKEN:
+      from_secret: cachix_auth_token
+  - &on_trusted_events
+    - event: [push, manual]
+  - &on_pull_requests
+    - event: pull_request
+  - &cargo_test
+    image: nixos/nix:latest
+    depends_on: []
+    commands:
+      - nix run .#cached-build -- .#checks.x86_64-linux.tests
+  - &rustfmt
+    image: nixos/nix:latest
+    depends_on: []
+    commands:
+      - nix run .#cached-build -- .#checks.x86_64-linux.fmt
 
 steps:
   - name: cargo-test
-    image: nixos/nix:latest
-    depends_on: []
-    environment: *nix_env
-    commands:
-      - nix build .#checks.x86_64-linux.tests --print-build-logs
+    <<: *cargo_test
+    when: *on_trusted_events
+    environment: *cache_writing_env
+
+  - name: cargo-test-pr
+    <<: *cargo_test
+    when: *on_pull_requests
+    environment: *nix_config
 
   - name: rustfmt
-    image: nixos/nix:latest
-    depends_on: []
-    environment: *nix_env
-    commands:
-      - nix build .#checks.x86_64-linux.fmt --print-build-logs
+    <<: *rustfmt
+    when: *on_trusted_events
+    environment: *cache_writing_env
+
+  - name: rustfmt-pr
+    <<: *rustfmt
+    when: *on_pull_requests
+    environment: *nix_config
 
   - name: conventional-commits
     image: nixos/nix:latest
     depends_on: []
-    when:
-      - event: pull_request
-    environment: *nix_env
+    when: *on_pull_requests
+    environment: *nix_config
     commands:
       - git fetch --quiet origin "$${CI_COMMIT_TARGET_BRANCH}"
       - nix run .#check-commits -- FETCH_HEAD..HEAD

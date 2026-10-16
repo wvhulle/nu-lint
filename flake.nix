@@ -106,18 +106,19 @@
           program = pkgs.lib.getExe drv;
         };
 
-        releaseScript = pkgs.writeShellApplication {
-          name = "release";
-          runtimeInputs = [
-            nightlyToolchain
-            pkgs.release-plz
-            pkgs.gitMinimal
-          ];
-          text = ''
-            release-plz release --forge gitea --git-token "$CODEBERG_TOKEN"
-            release-plz release-pr --forge gitea --git-token "$CODEBERG_TOKEN"
-          '';
-        };
+        mkReleasePlzOnCodeberg =
+          subcommand:
+          pkgs.writeShellApplication {
+            name = subcommand;
+            runtimeInputs = [
+              nightlyToolchain
+              pkgs.release-plz
+              pkgs.gitMinimal
+            ];
+            text = ''
+              release-plz ${subcommand} --forge gitea --git-token "$CODEBERG_TOKEN"
+            '';
+          };
 
         checkCommitsScript = pkgs.writeShellApplication {
           name = "check-commits";
@@ -166,7 +167,8 @@
         apps = {
           default = mkApp self.packages.${system}.default;
           cranelift = mkApp self.packages.${system}.cranelift;
-          release = mkApp releaseScript;
+          release = mkApp (mkReleasePlzOnCodeberg "release");
+          release-pr = mkApp (mkReleasePlzOnCodeberg "release-pr");
           check-commits = mkApp checkCommitsScript;
         };
 

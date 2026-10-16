@@ -3,7 +3,7 @@ when:
     event: release
 
 steps:
-  - name: build
+  - name: build-musl-tarballs
     image: nixos/nix:latest
     environment:
       NIX_CONFIG: experimental-features = nix-command flakes
@@ -15,7 +15,7 @@ steps:
       - mkdir -p dist
       - cp result/* dist/
 
-  - name: upload
+  - name: attach-to-codeberg-release
     image: woodpeckerci/plugin-gitea-release
     settings:
       base_url: https://codeberg.org

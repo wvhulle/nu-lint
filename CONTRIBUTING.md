@@ -207,7 +207,8 @@ Everything CI runs is a flake output, so it can be run locally in the same way:
 | `nix flake check` | Tests and `cargo fmt` check |
 | `nix run .#check-commits -- main..@` | Conventional commit message check for a revision range |
 | `nix build .#dist` | Static release binaries as `.tar.gz` |
-| `nix run .#release` | Publish unreleased versions and update the release PR (CI only, needs `CODEBERG_TOKEN`) |
+| `nix run .#release` | Publish an unreleased version to crates.io and create its tag and Codeberg release (CI only, needs `CODEBERG_TOKEN`) |
+| `nix run .#release-pr` | Open or update the release PR (CI only, needs `CODEBERG_TOKEN`) |
 
 Git hooks are optional. Install them with [prek](https://github.com/j178/prek) (`prek install`) or [pre-commit](https://pre-commit.com) (`pre-commit install`) to run the commit message and formatting checks from `.pre-commit-config.yaml` locally.
 

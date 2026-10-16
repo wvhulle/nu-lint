@@ -1,0 +1,32 @@
+when:
+  - repo: wvhulle/nu-lint
+    event: [pull_request, push, manual]
+
+variables:
+  - &nix_env
+    NIX_CONFIG: experimental-features = nix-command flakes
+
+steps:
+  - name: cargo-test
+    image: nixos/nix:latest
+    depends_on: []
+    environment: *nix_env
+    commands:
+      - nix build .#checks.x86_64-linux.tests --print-build-logs
+
+  - name: rustfmt
+    image: nixos/nix:latest
+    depends_on: []
+    environment: *nix_env
+    commands:
+      - nix build .#checks.x86_64-linux.fmt --print-build-logs
+
+  - name: conventional-commits
+    image: nixos/nix:latest
+    depends_on: []
+    when:
+      - event: pull_request
+    environment: *nix_env
+    commands:
+      - git fetch --quiet origin "$${CI_COMMIT_TARGET_BRANCH}"
+      - nix run .#check-commits -- FETCH_HEAD..HEAD

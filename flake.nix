@@ -167,31 +167,14 @@
         uploadReleaseAssetsScript = pkgs.writeShellApplication {
           name = "upload-release-assets";
           runtimeInputs = [
-            pkgs.curl
-            pkgs.jq
+            pkgs.tea
             pkgs.coreutils
           ];
           text = ''
-            assets_dir="$1"
-            api="$CI_FORGE_URL/api/v1/repos/$CI_REPO"
-            auth="Authorization: token $CODEBERG_TOKEN"
-            release=$(curl --fail --silent --show-error --header "$auth" "$api/releases/tags/$CI_COMMIT_TAG")
-            release_id=$(jq -r .id <<<"$release")
-
-            cd "$assets_dir"
+            cd "$1"
             sha256sum -- *.tar.gz > sha256sum.txt
-
-            for asset in *; do
-              jq -r --arg name "$asset" '.assets[] | select(.name == $name) | .id' <<<"$release" |
-                while read -r stale_asset_id; do
-                  curl --fail --silent --show-error --request DELETE --header "$auth" \
-                    "$api/releases/$release_id/assets/$stale_asset_id"
-                done
-              curl --fail --silent --show-error --header "$auth" \
-                --form "attachment=@$asset" \
-                "$api/releases/$release_id/assets?name=$asset" > /dev/null
-              echo "uploaded $asset"
-            done
+            tea login add --name codeberg --url "$CI_FORGE_URL" --token "$CODEBERG_TOKEN"
+            tea releases assets create --login codeberg --repo "$CI_REPO" "$CI_COMMIT_TAG" ./*
           '';
         };
 

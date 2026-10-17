@@ -2,14 +2,18 @@ when:
   - repo: wvhulle/nu-lint
     event: release
 
+variables:
+  - &nix_config
+    NIX_CONFIG: |
+      experimental-features = nix-command flakes
+      extra-substituters = https://wvhulle.cachix.org
+      extra-trusted-public-keys = wvhulle.cachix.org-1:heXx8DZMiRsKUx6l1TxNoF+Nmtmz66QEdsonQzc1ir0=
+
 steps:
   - name: build-musl-tarballs
     image: nixos/nix:latest
     environment:
-      NIX_CONFIG: |
-        experimental-features = nix-command flakes
-        extra-substituters = https://wvhulle.cachix.org
-        extra-trusted-public-keys = wvhulle.cachix.org-1:heXx8DZMiRsKUx6l1TxNoF+Nmtmz66QEdsonQzc1ir0=
+      <<: *nix_config
       CACHIX_AUTH_TOKEN:
         from_secret: cachix_auth_token
     commands:
@@ -18,13 +22,10 @@ steps:
       - cp result/* dist/
 
   - name: attach-to-codeberg-release
-    image: woodpeckerci/plugin-gitea-release
-    settings:
-      base_url: https://codeberg.org
-      api_key:
+    image: nixos/nix:latest
+    environment:
+      <<: *nix_config
+      CODEBERG_TOKEN:
         from_secret: codeberg_token
-      files:
-        - dist/*
-      file_exists: overwrite
-      checksum:
-        - sha256
+    commands:
+      - nix run .#upload-release-assets -- dist

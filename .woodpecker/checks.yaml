@@ -21,11 +21,6 @@ variables:
     depends_on: []
     commands:
       - nix run .#cached-build -- .#checks.x86_64-linux.tests
-  - &rustfmt
-    image: nixos/nix:latest
-    depends_on: []
-    commands:
-      - nix run .#cached-build -- .#checks.x86_64-linux.fmt
 
 steps:
   - name: cargo-test
@@ -39,14 +34,11 @@ steps:
     environment: *nix_config
 
   - name: rustfmt
-    <<: *rustfmt
-    when: *on_trusted_events
-    environment: *cache_writing_env
-
-  - name: rustfmt-pr
-    <<: *rustfmt
-    when: *on_pull_requests
+    image: nixos/nix:latest
+    depends_on: []
     environment: *nix_config
+    commands:
+      - nix build .#checks.x86_64-linux.fmt --print-build-logs
 
   - name: conventional-commits
     image: nixos/nix:latest

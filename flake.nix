@@ -31,6 +31,7 @@
         # Toolchains
         #
         stableToolchain = pkgs.rust-bin.stable.latest.default;
+        ciToolchain = pkgs.rust-bin.stable.latest.minimal;
         nightlyToolchain = pkgs.rust-bin.nightly.latest.default.override {
           extensions = [ "rustc-codegen-cranelift-preview" ];
         };
@@ -40,6 +41,7 @@
         );
 
         stableCrane = (crane.mkLib pkgs).overrideToolchain stableToolchain;
+        ciCrane = (crane.mkLib pkgs).overrideToolchain ciToolchain;
         nightlyCrane = (crane.mkLib pkgs).overrideToolchain nightlyToolchain;
         rustfmtCrane = (crane.mkLib pkgs).overrideToolchain rustfmtToolchain;
 
@@ -63,9 +65,22 @@
 
         devProfileArgs = commonArgs // {
           CARGO_PROFILE = "dev";
+          postUnpack = ''
+            if [[ "$NIX_BUILD_TOP" != /build ]]; then
+              rm -rf /tmp/nu-lint-source
+              mv "$sourceRoot" /tmp/nu-lint-source
+              sourceRoot=/tmp/nu-lint-source
+            fi
+          '';
         };
-        devProfileDeps = stableCrane.buildDepsOnly devProfileArgs;
-        tests = stableCrane.cargoTest (devProfileArgs // { cargoArtifacts = devProfileDeps; });
+        devProfileDeps = ciCrane.buildDepsOnly devProfileArgs;
+        tests = ciCrane.cargoTest (
+          devProfileArgs
+          // {
+            cargoArtifacts = devProfileDeps;
+            doInstallCargoArtifacts = false;
+          }
+        );
 
         craneliftDeps = nightlyCrane.buildDepsOnly (
           commonArgs // { RUSTFLAGS = "-Zcodegen-backend=cranelift"; }
@@ -128,7 +143,7 @@
           pkgs.writeShellApplication {
             name = subcommand;
             runtimeInputs = [
-              stableToolchain
+              ciToolchain
               pkgs.release-plz
               pkgs.gitMinimal
             ];

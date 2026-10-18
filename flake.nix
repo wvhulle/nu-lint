@@ -157,7 +157,7 @@
           runtimeInputs = [ pkgs.cachix ];
           text = ''
             if [[ -n "''${CACHIX_AUTH_TOKEN:-}" ]]; then
-              cachix watch-exec wvhulle -- nix build --print-build-logs "$@"
+              cachix watch-exec wvhulle -- nix build --print-build-logs --print-out-paths "$@" | cachix push wvhulle
             else
               nix build --print-build-logs "$@"
             fi

@@ -1,4 +1,3 @@
-use lsp_types::DiagnosticTag;
 use nu_protocol::{
     Span,
     ast::{Comparison, Expr, Expression, Operator},
@@ -8,7 +7,7 @@ use crate::{
     LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
-    violation::{Detection, Fix, Replacement},
+    violation::{Detection, DiagnosticTag, Fix, Replacement},
 };
 
 /// Fix data containing the span and replacement info
@@ -130,7 +129,7 @@ impl DetectFix for RedundantBooleanComparison {
     }
 
     fn diagnostic_tags(&self) -> &'static [DiagnosticTag] {
-        &[DiagnosticTag::UNNECESSARY]
+        &[DiagnosticTag::Unnecessary]
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

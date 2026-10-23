@@ -1,4 +1,3 @@
-use lsp_types::DiagnosticTag;
 use nu_protocol::ast::{Expr, Expression, Pipeline};
 
 use crate::{
@@ -7,7 +6,7 @@ use crate::{
     context::LintContext,
     effect::external::{ExternEffect, has_external_side_effect},
     rule::{DetectFix, Rule},
-    violation::Detection,
+    violation::{Detection, DiagnosticTag},
 };
 
 fn ends_with_ignore(pipeline: &Pipeline, context: &LintContext) -> bool {
@@ -108,7 +107,7 @@ impl DetectFix for RedundantIgnore {
     }
 
     fn diagnostic_tags(&self) -> &'static [DiagnosticTag] {
-        &[DiagnosticTag::UNNECESSARY]
+        &[DiagnosticTag::Unnecessary]
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

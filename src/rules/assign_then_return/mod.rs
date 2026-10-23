@@ -1,4 +1,3 @@
-use lsp_types::DiagnosticTag;
 use nu_protocol::{
     Span, VarId,
     ast::{Block, Call, Expr, Expression, Pipeline},
@@ -9,7 +8,7 @@ use crate::{
     ast::call::CallExt,
     context::LintContext,
     rule::{DetectFix, Rule},
-    violation::{Detection, Fix, Replacement},
+    violation::{Detection, DiagnosticTag, Fix, Replacement},
 };
 
 /// Fix data: spans needed to reconstruct the fix
@@ -153,7 +152,7 @@ impl DetectFix for UnnecessaryVariableBeforeReturn {
     }
 
     fn diagnostic_tags(&self) -> &'static [DiagnosticTag] {
-        &[DiagnosticTag::UNNECESSARY]
+        &[DiagnosticTag::Unnecessary]
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

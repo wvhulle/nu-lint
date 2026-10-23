@@ -1,4 +1,3 @@
-use lsp_types::DiagnosticTag;
 use nu_protocol::ast::{Expr, Expression};
 
 use crate::{
@@ -6,7 +5,7 @@ use crate::{
     config::LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
-    violation::Detection,
+    violation::{Detection, DiagnosticTag},
 };
 
 struct UseOverSource;
@@ -40,7 +39,7 @@ impl DetectFix for UseOverSource {
     }
 
     fn diagnostic_tags(&self) -> &'static [DiagnosticTag] {
-        &[DiagnosticTag::DEPRECATED]
+        &[DiagnosticTag::Deprecated]
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

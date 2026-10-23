@@ -1,11 +1,10 @@
-use lsp_types::DiagnosticTag;
 use nu_protocol::ast::{Expr, Expression, ExternalArgument};
 
 use crate::{
     config::LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
-    violation::Detection,
+    violation::{Detection, DiagnosticTag},
 };
 
 struct AvoidNuSubprocess;
@@ -26,7 +25,7 @@ impl DetectFix for AvoidNuSubprocess {
     }
 
     fn diagnostic_tags(&self) -> &'static [DiagnosticTag] {
-        &[DiagnosticTag::UNNECESSARY]
+        &[DiagnosticTag::Unnecessary]
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

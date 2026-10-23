@@ -6,7 +6,14 @@ use lsp_types::{
 };
 use miette::Severity;
 
-use crate::violation::Violation;
+use crate::violation::{DiagnosticTag, Violation};
+
+const fn to_lsp_diagnostic_tag(tag: DiagnosticTag) -> lsp_types::DiagnosticTag {
+    match tag {
+        DiagnosticTag::Unnecessary => lsp_types::DiagnosticTag::UNNECESSARY,
+        DiagnosticTag::Deprecated => lsp_types::DiagnosticTag::DEPRECATED,
+    }
+}
 
 #[allow(
     clippy::cast_possible_truncation,
@@ -123,7 +130,14 @@ pub fn violation_to_diagnostic(
         source: Some(String::from("nu-lint")),
         message: violation.message.to_string(),
         related_information: (!related_info.is_empty()).then_some(related_info),
-        tags: (!violation.diagnostic_tags.is_empty()).then(|| violation.diagnostic_tags.clone()),
+        tags: (!violation.diagnostic_tags.is_empty()).then(|| {
+            violation
+                .diagnostic_tags
+                .iter()
+                .copied()
+                .map(to_lsp_diagnostic_tag)
+                .collect()
+        }),
         ..Default::default()
     }
 }

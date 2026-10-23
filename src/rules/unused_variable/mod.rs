@@ -1,6 +1,5 @@
 use std::collections::{HashMap, HashSet};
 
-use lsp_types::DiagnosticTag;
 use nu_protocol::{
     Span, VarId,
     ast::{Expr, Traverse},
@@ -11,7 +10,7 @@ use crate::{
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::{DetectFix, Rule},
-    violation::{Detection, Fix, Replacement},
+    violation::{Detection, DiagnosticTag, Fix, Replacement},
 };
 
 struct FixData {
@@ -37,7 +36,7 @@ impl DetectFix for UnusedVariable {
     }
 
     fn diagnostic_tags(&self) -> &'static [DiagnosticTag] {
-        &[DiagnosticTag::UNNECESSARY]
+        &[DiagnosticTag::Unnecessary]
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

@@ -14,11 +14,12 @@ use crate::{
     engine::{LintEngine, collect_nu_files},
     fix::{apply_fixes, apply_fixes_to_stdin, format_fix_results},
     format::{Format, Summary, format_output},
-    log::{init_lsp_log, init_test_log},
-    lsp,
+    log::init_test_log,
     rule::Rule,
     rules::{USED_RULES, groups::ALL_GROUPS},
 };
+#[cfg(feature = "lsp")]
+use crate::{log::init_lsp_log, lsp};
 
 #[derive(Parser)]
 #[command(name = "nu-lint")]
@@ -280,9 +281,7 @@ pub fn run() -> io::Result<ExitCode> {
     } else if let Some(ref source) = cli.ast {
         tree::print_ast(source)?;
     } else if cli.lsp {
-        let _log_guard = init_lsp_log();
-        tracing::info!("nu-lint LSP server started");
-        lsp::run_lsp_server();
+        return Ok(start_lsp_server());
     } else if cli.fix {
         return cli.fix(&config);
     } else {
@@ -290,6 +289,23 @@ pub fn run() -> io::Result<ExitCode> {
         return cli.lint(&config);
     }
     Ok(ExitCode::SUCCESS)
+}
+
+#[cfg(feature = "lsp")]
+fn start_lsp_server() -> ExitCode {
+    let _log_guard = init_lsp_log();
+    tracing::info!("nu-lint LSP server started");
+    lsp::run_lsp_server();
+    ExitCode::SUCCESS
+}
+
+#[cfg(not(feature = "lsp"))]
+fn start_lsp_server() -> ExitCode {
+    let _ = writeln!(
+        io::stderr(),
+        "nu-lint was built without the `lsp` feature; rebuild with `--features lsp`"
+    );
+    ExitCode::FAILURE
 }
 
 #[cfg(test)]

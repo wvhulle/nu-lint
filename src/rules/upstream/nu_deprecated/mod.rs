@@ -1,11 +1,10 @@
-use lsp_types::DiagnosticTag;
 use nu_protocol::ParseWarning;
 
 use crate::{
     LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
-    violation::{Detection, Fix},
+    violation::{Detection, DiagnosticTag, Fix},
 };
 
 mod enhancers;
@@ -40,7 +39,7 @@ impl DetectFix for NuDeprecated {
     }
 
     fn diagnostic_tags(&self) -> &'static [DiagnosticTag] {
-        &[DiagnosticTag::DEPRECATED]
+        &[DiagnosticTag::Deprecated]
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

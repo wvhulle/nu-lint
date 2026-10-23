@@ -6,12 +6,10 @@ use std::{
     hash::{Hash, Hasher},
 };
 
-use lsp_types::DiagnosticTag;
-
 use crate::{
     Fix, LintLevel,
     context::LintContext,
-    violation::{Detection, Violation},
+    violation::{Detection, DiagnosticTag, Violation},
 };
 
 /// Trait for implementing lint rules with typed fix data.

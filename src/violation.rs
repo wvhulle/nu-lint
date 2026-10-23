@@ -1,10 +1,15 @@
 use std::{borrow::Cow, error::Error, fmt, iter::once, path::Path, string::ToString};
 
-use lsp_types::DiagnosticTag;
 use miette::{Diagnostic, LabeledSpan, Severity};
 use nu_protocol::Span;
 
 use crate::span::{FileSpan, LintSpan};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum DiagnosticTag {
+    Unnecessary,
+    Deprecated,
+}
 
 /// Represents the source file of a lint violation
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

@@ -1,6 +1,5 @@
 use std::collections::{HashMap, HashSet};
 
-use lsp_types::DiagnosticTag;
 use nu_protocol::{
     Span, VarId,
     ast::{Argument, Call, Expr, Expression, Operator, Traverse},
@@ -11,7 +10,7 @@ use crate::{
     ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::{DetectFix, Rule},
-    violation::Detection,
+    violation::{Detection, DiagnosticTag},
 };
 
 type EmptyListVar = (VarId, String, Span);
@@ -217,7 +216,7 @@ impl DetectFix for UnnecessaryAccumulate {
     }
 
     fn diagnostic_tags(&self) -> &'static [DiagnosticTag] {
-        &[DiagnosticTag::UNNECESSARY]
+        &[DiagnosticTag::Unnecessary]
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

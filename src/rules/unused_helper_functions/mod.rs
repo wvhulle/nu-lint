@@ -1,6 +1,5 @@
 use std::collections::HashSet;
 
-use lsp_types::DiagnosticTag;
 use nu_protocol::{
     BlockId, Completion, Span,
     ast::{Expr, Traverse},
@@ -11,7 +10,7 @@ use crate::{
     ast::{block::BlockExt, call::CallExt, declaration::CustomCommandDef},
     context::LintContext,
     rule::{DetectFix, Rule},
-    violation::{Detection, Fix, Replacement},
+    violation::{Detection, DiagnosticTag, Fix, Replacement},
 };
 
 struct LocatedFunction {
@@ -185,7 +184,7 @@ impl DetectFix for UnusedHelperFunctions {
     }
 
     fn diagnostic_tags(&self) -> &'static [DiagnosticTag] {
-        &[DiagnosticTag::UNNECESSARY]
+        &[DiagnosticTag::Unnecessary]
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {

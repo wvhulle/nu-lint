@@ -1,5 +1,6 @@
 [workspace]
 members = ["nu-lint-analysis", "nu-lint-rules"]
+default-members = [".", "nu-lint-analysis", "nu-lint-rules"]
 
 [workspace.package]
 authors = ["Willem Vanhulle <willemvanhulle@protonmail.com>"]

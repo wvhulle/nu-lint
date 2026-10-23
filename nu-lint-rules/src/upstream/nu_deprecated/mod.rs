@@ -1,11 +1,10 @@
-use nu_protocol::ParseWarning;
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, DiagnosticTag, Fix},
 };
+use nu_protocol::ParseWarning;
 
 mod enhancers;
 

@@ -1,5 +1,12 @@
 use std::collections::HashMap;
 
+use nu_lint_analysis::{
+    Fix, LintLevel, Replacement,
+    ast::call::CallExt,
+    context::LintContext,
+    rule::{DetectFix, Rule},
+    violation::Detection,
+};
 use nu_protocol::{
     Span, VarId,
     ast::{Block, Call, Expr, Expression, Pipeline},
@@ -8,13 +15,6 @@ use nu_protocol::{
 use super::{
     extract_delimiter_from_split_call, extract_index_from_call, is_indexed_access_call,
     is_split_row_call,
-};
-use crate::{
-    Fix, LintLevel, Replacement,
-    ast::call::CallExt,
-    context::LintContext,
-    rule::{DetectFix, Rule},
-    violation::Detection,
 };
 
 #[derive(Debug, Clone)]

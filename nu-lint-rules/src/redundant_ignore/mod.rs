@@ -1,6 +1,4 @@
-use nu_protocol::ast::{Expr, Expression, Pipeline};
-
-use crate::{
+use nu_lint_analysis::{
     Fix, LintLevel, Replacement,
     ast::call::CallExt,
     context::LintContext,
@@ -8,6 +6,7 @@ use crate::{
     rule::{DetectFix, Rule},
     violation::{Detection, DiagnosticTag},
 };
+use nu_protocol::ast::{Expr, Expression, Pipeline};
 
 fn ends_with_ignore(pipeline: &Pipeline, context: &LintContext) -> bool {
     pipeline.elements.last().is_some_and(|elem| {

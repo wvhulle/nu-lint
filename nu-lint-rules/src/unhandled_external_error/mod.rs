@@ -1,6 +1,4 @@
-use nu_protocol::ast::{Expr, Pipeline};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
     context::LintContext,
@@ -11,6 +9,7 @@ use crate::{
     rule::{DetectFix, Rule},
     violation::Detection,
 };
+use nu_protocol::ast::{Expr, Pipeline};
 
 fn is_piped_to_complete(pipeline: &Pipeline, idx: usize, context: &LintContext) -> bool {
     pipeline.elements.get(idx + 1).is_some_and(|next| {

@@ -1,14 +1,13 @@
 use std::{ffi::OsStr, path::Path};
 
-use nu_protocol::ast::{Expression, ExternalArgument};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::external::{ExternalInvocation, literal_content},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
 };
+use nu_protocol::ast::{Expression, ExternalArgument};
 
 const STDIN_FLAG: &str = "--stdin";
 

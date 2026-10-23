@@ -1,8 +1,9 @@
 use std::{fs, path::PathBuf};
 
+use nu_lint_analysis::{LintLevel, config::Config};
+
 use crate::{
-    LintError, LintLevel,
-    config::Config,
+    LintError,
     config_loading::{parse_config_toml, user_config_path},
 };
 

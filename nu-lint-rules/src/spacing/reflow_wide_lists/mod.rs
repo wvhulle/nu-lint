@@ -1,12 +1,11 @@
-use nu_protocol::ast::{Expr, Expression, ListItem, Traverse};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::expression::ExpressionExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
+use nu_protocol::ast::{Expr, Expression, ListItem, Traverse};
 
 const MAX_LIST_LINE_LENGTH: usize = 80;
 

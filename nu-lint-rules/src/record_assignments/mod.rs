@@ -1,14 +1,7 @@
 mod use_load_env;
 mod use_record_spread;
 
-use nu_protocol::{
-    Span, VarId,
-    ast::{Assignment, Block, Expr, Expression, Operator, PathMember, Pipeline},
-};
-pub use use_load_env::RULE as USE_LOAD_ENV;
-pub use use_record_spread::RULE as USE_RECORD_SPREAD;
-
-use crate::{
+use nu_lint_analysis::{
     ast::{
         expression::var_name_from_expr,
         string::{cell_path_member_needs_quotes, record_key_needs_quotes},
@@ -16,6 +9,12 @@ use crate::{
     context::LintContext,
     violation::Detection,
 };
+use nu_protocol::{
+    Span, VarId,
+    ast::{Assignment, Block, Expr, Expression, Operator, PathMember, Pipeline},
+};
+pub use use_load_env::RULE as USE_LOAD_ENV;
+pub use use_record_spread::RULE as USE_RECORD_SPREAD;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum PathSegment {

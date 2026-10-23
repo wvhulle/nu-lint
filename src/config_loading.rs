@@ -3,11 +3,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{
-    LintError,
-    config::{Config, LintLevel},
-    rules::{USED_RULES, groups::ALL_GROUPS},
-};
+use nu_lint_analysis::config::{Config, LintLevel};
+use nu_lint_rules::{USED_RULES, groups::ALL_GROUPS};
+
+use crate::LintError;
 
 pub fn parse_config_toml(toml_str: &str) -> Result<Config, LintError> {
     toml::from_str(toml_str).map_err(|source| LintError::Config { source })

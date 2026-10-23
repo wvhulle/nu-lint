@@ -1,12 +1,11 @@
-use nu_protocol::ast::{Block, Call, Expr, Pipeline, PipelineElement};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
 };
+use nu_protocol::ast::{Block, Call, Expr, Pipeline, PipelineElement};
 
 fn extract_print_message(call: &Call, context: &LintContext) -> Option<String> {
     call.get_first_positional_arg()
@@ -61,7 +60,7 @@ fn check_same_pipeline_print_exit(
     pipeline: &Pipeline,
     context: &LintContext,
 ) -> Option<ErrorToStdout> {
-    use crate::ast::pipeline::PipelineExt;
+    use nu_lint_analysis::ast::pipeline::PipelineExt;
 
     pipeline
         .find_command_pairs(

@@ -1,16 +1,15 @@
 use std::mem;
 
-use nu_protocol::{
-    Span,
-    ast::{Block, Expr, Pipeline, Traverse},
-};
-
-use crate::{
+use nu_lint_analysis::{
     ast::{call::CallExt, string::StringFormat},
     config::LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
+};
+use nu_protocol::{
+    Span,
+    ast::{Block, Expr, Pipeline, Traverse},
 };
 
 const MIN_CONSECUTIVE_PRINTS: usize = 3;

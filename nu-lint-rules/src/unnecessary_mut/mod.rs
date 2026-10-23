@@ -1,16 +1,15 @@
 use std::collections::{HashMap, HashSet};
 
-use nu_protocol::{
-    Span, VarId,
-    ast::{Expr, Expression, Traverse},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, DiagnosticTag, Fix, Replacement},
+};
+use nu_protocol::{
+    Span, VarId,
+    ast::{Expr, Expression, Traverse},
 };
 
 struct UnnecessaryMutFixData {

@@ -1,9 +1,4 @@
-use nu_protocol::{
-    Span, Type,
-    ast::{Block, Call, Expr},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{block::BlockExt, call::CallExt},
     context::LintContext,
@@ -13,6 +8,10 @@ use crate::{
     },
     rule::{DetectFix, Rule},
     violation::Detection,
+};
+use nu_protocol::{
+    Span, Type,
+    ast::{Block, Call, Expr},
 };
 
 fn collect_stdout_print_spans(block: &Block, context: &LintContext) -> Vec<Span> {

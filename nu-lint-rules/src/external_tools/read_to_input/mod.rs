@@ -1,6 +1,4 @@
-use nu_protocol::Span;
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::external::{CliSpec, ExternalInvocation, Flag, FlagValue, literal_content},
     context::LintContext,
@@ -8,6 +6,7 @@ use crate::{
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
+use nu_protocol::Span;
 
 const PROMPT: Flag = Flag::short_switch('p').with_value();
 const SILENT: Flag = Flag::short_switch('s');

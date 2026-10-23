@@ -1,12 +1,11 @@
-use nu_protocol::ast::{Call, Expr, RecordItem};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::call::CallExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
 };
+use nu_protocol::ast::{Call, Expr, RecordItem};
 
 const VAGUE_PATTERNS: &[&str] = &[
     "something went wrong",

@@ -1,12 +1,11 @@
-use nu_protocol::ast::{Call, Expr};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{call::CallExt, span::SpanExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
 };
+use nu_protocol::ast::{Call, Expr};
 
 fn check_main_function(call: &Call, context: &LintContext) -> Vec<Detection> {
     let Some(def) = call.custom_command_def(context) else {

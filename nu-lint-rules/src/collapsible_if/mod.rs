@@ -1,14 +1,13 @@
-use nu_protocol::{
-    Span,
-    ast::{Block, Call, Expr},
-};
-
-use crate::{
+use nu_lint_analysis::{
     Fix, LintLevel, Replacement,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
+};
+use nu_protocol::{
+    Span,
+    ast::{Block, Call, Expr},
 };
 
 fn get_single_if_call<'a>(block: &'a Block, context: &LintContext) -> Option<&'a Call> {

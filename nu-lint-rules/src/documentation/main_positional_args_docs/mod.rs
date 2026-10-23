@@ -1,14 +1,13 @@
-use nu_protocol::{
-    PositionalArg,
-    ast::{Call, Expr},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{call::CallExt, span::SpanExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
+};
+use nu_protocol::{
+    PositionalArg,
+    ast::{Call, Expr},
 };
 
 fn check_positional_param(

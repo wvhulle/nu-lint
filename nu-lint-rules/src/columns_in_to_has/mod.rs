@@ -1,14 +1,13 @@
-use nu_protocol::{
-    Span,
-    ast::{Comparison, Expr, Expression, Operator},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{block::BlockExt, expression::ExpressionExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
+};
+use nu_protocol::{
+    Span,
+    ast::{Comparison, Expr, Expression, Operator},
 };
 
 #[cfg(test)]

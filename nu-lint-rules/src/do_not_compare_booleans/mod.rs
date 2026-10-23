@@ -1,13 +1,12 @@
-use nu_protocol::{
-    Span,
-    ast::{Comparison, Expr, Expression, Operator},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, DiagnosticTag, Fix, Replacement},
+};
+use nu_protocol::{
+    Span,
+    ast::{Comparison, Expr, Expression, Operator},
 };
 
 /// Fix data containing the span and replacement info

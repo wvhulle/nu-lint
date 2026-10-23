@@ -1,6 +1,4 @@
-use nu_protocol::ast::{Call, Expr};
-
-use crate::{
+use nu_lint_analysis::{
     ast::{
         call::CallExt,
         regex::{contains_regex_special_chars, escape_regex},
@@ -8,6 +6,7 @@ use crate::{
     },
     context::LintContext,
 };
+use nu_protocol::ast::{Call, Expr};
 
 pub mod lines_each_to_parse;
 pub mod lines_instead_of_split;

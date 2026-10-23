@@ -1,10 +1,10 @@
 use std::{cmp::Reverse, collections::HashMap, fmt::Write};
 
 use miette::{NamedSource, Report};
+use nu_lint_analysis::violation::{ExternalDetection, Fix, Replacement, Violation};
 use owo_colors::OwoColorize;
 
 use super::{Summary, read_source_code};
-use crate::violation::{ExternalDetection, Fix, Replacement, Violation};
 
 const SEPARATOR_WIDTH: usize = 80;
 

@@ -1,8 +1,7 @@
+use nu_lint_analysis::log::NU_LINT_DEBUG_FILTER;
 use tracing::subscriber::set_global_default;
 use tracing_appender::{non_blocking, non_blocking::WorkerGuard, rolling};
 use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt};
-
-use crate::log::NU_LINT_DEBUG_FILTER;
 
 #[must_use]
 pub fn init_lsp_log() -> Option<WorkerGuard> {

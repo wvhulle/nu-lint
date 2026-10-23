@@ -1,15 +1,14 @@
-use nu_protocol::{
-    Span, Type,
-    ast::{Expr, Expression},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::external::{CliSpec, ExternalInvocation, Flag, literal_content},
     context::LintContext,
     dsl::jq,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
+};
+use nu_protocol::{
+    Span, Type,
+    ast::{Expr, Expression},
 };
 
 const RAW_OUTPUT: Flag = Flag::switch('r', "raw-output");

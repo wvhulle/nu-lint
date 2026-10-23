@@ -1,12 +1,11 @@
-use nu_protocol::ast::Expr;
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::call::CallExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
 };
+use nu_protocol::ast::Expr;
 
 fn to_kebab_case_preserving_spaces(name: &str) -> String {
     name.split(' ')

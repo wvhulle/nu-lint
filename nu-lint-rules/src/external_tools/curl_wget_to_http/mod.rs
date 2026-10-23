@@ -1,8 +1,6 @@
 use std::iter::once;
 
-use nu_protocol::{Span, ast::Expression};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{
         external::{CliSpec, ExternalInvocation, Flag, FlagValue, ParsedCli, value_text},
@@ -13,6 +11,7 @@ use crate::{
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
+use nu_protocol::{Span, ast::Expression};
 
 const FAIL: Flag = Flag::switch('f', "fail");
 const LOCATION: Flag = Flag::switch('L', "location");

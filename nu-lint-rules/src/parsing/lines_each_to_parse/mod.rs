@@ -1,14 +1,13 @@
-use nu_protocol::{
-    Span,
-    ast::{Argument, Block, Expr, Pipeline},
-};
-
-use crate::{
+use nu_lint_analysis::{
     Fix, LintLevel, Replacement,
     ast::{block::BlockExt, call::CallExt, pipeline::PipelineExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
+};
+use nu_protocol::{
+    Span,
+    ast::{Argument, Block, Expr, Pipeline},
 };
 
 struct FixData {

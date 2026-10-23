@@ -1,15 +1,15 @@
-use nu_protocol::{Span, ast::Pipeline};
-
-use super::{
-    extract_delimiter_from_split_call, extract_index_from_call, generate_parse_replacement,
-    is_indexed_access_call, is_split_row_call,
-};
-use crate::{
+use nu_lint_analysis::{
     Fix, LintLevel, Replacement,
     ast::{block::BlockExt, pipeline::PipelineExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
+};
+use nu_protocol::{Span, ast::Pipeline};
+
+use super::{
+    extract_delimiter_from_split_call, extract_index_from_call, generate_parse_replacement,
+    is_indexed_access_call, is_split_row_call,
 };
 
 pub enum FixData {

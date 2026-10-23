@@ -1,12 +1,11 @@
-use nu_protocol::{Span, ast::Expression};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::external::{CliSpec, LineSource},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
+use nu_protocol::{Span, ast::Expression};
 
 static SPEC: CliSpec = CliSpec {
     flags: &[],

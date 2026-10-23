@@ -1,16 +1,15 @@
 use std::collections::{HashMap, HashSet};
 
-use nu_protocol::{
-    Span, VarId,
-    ast::{Argument, Call, Expr, Expression, Operator, Traverse},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, DiagnosticTag},
+};
+use nu_protocol::{
+    Span, VarId,
+    ast::{Argument, Call, Expr, Expression, Operator, Traverse},
 };
 
 type EmptyListVar = (VarId, String, Span);

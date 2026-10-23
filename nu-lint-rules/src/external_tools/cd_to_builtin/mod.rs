@@ -1,12 +1,11 @@
-use nu_protocol::{Span, ast::Expression};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::external::{CliSpec, ExternalInvocation, Flag},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
+use nu_protocol::{Span, ast::Expression};
 
 const PHYSICAL: Flag = Flag::switch('P', "physical");
 const LOGICAL: Flag = Flag::switch('L', "logical");

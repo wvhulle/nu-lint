@@ -1,16 +1,15 @@
 use std::collections::HashSet;
 
-use nu_protocol::{
-    BlockId, Completion, Span,
-    ast::{Expr, Traverse},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{block::BlockExt, call::CallExt, declaration::CustomCommandDef},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, DiagnosticTag, Fix, Replacement},
+};
+use nu_protocol::{
+    BlockId, Completion, Span,
+    ast::{Expr, Traverse},
 };
 
 struct LocatedFunction {

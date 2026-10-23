@@ -1,15 +1,14 @@
 use std::{f64::consts, ops::ControlFlow};
 
-use nu_protocol::{
-    Span,
-    ast::{Expr, Expression},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
+};
+use nu_protocol::{
+    Span,
+    ast::{Expr, Expression},
 };
 
 const MIN_DIGITS: usize = 5;

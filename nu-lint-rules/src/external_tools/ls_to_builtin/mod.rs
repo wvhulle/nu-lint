@@ -1,14 +1,13 @@
 use std::iter::once;
 
-use nu_protocol::Span;
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::external::{CliSpec, Flag, ParsedCli, is_expanded_glob},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
+use nu_protocol::Span;
 
 const ALL: Flag = Flag::switch('a', "all");
 const ALMOST_ALL: Flag = Flag::switch('A', "almost-all");

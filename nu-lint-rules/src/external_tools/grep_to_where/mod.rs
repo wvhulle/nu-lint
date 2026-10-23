@@ -1,6 +1,4 @@
-use nu_protocol::{Span, ast::Expression};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{
         external::{CliSpec, ExternalInvocation, Flag, LineSource, literal_content, value_text},
@@ -11,6 +9,7 @@ use crate::{
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
+use nu_protocol::{Span, ast::Expression};
 
 const IGNORE_CASE: Flag = Flag::switch('i', "ignore-case");
 const INVERT_MATCH: Flag = Flag::switch('v', "invert-match");

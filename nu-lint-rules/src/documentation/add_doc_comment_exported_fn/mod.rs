@@ -1,12 +1,11 @@
-use nu_protocol::ast::{Call, Expr};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::call::CallExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
 };
+use nu_protocol::ast::{Call, Expr};
 
 /// Check if there's a documentation comment before the given span
 /// Since comments are not preserved in AST, we need to check source text

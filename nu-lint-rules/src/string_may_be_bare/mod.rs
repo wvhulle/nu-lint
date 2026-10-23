@@ -1,16 +1,15 @@
 use std::ops::ControlFlow;
 
-use nu_protocol::{
-    Span,
-    ast::{Expr, Expression},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::string::{StringFormat, bare_word_needs_quotes},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
+};
+use nu_protocol::{
+    Span,
+    ast::{Expr, Expression},
 };
 
 struct FixData {

@@ -1,9 +1,8 @@
+use nu_lint_analysis::{ast::call::CallExt, context::LintContext};
 use nu_protocol::{
     BlockId, Flag, PositionalArg, Span, SyntaxShape, Type,
     ast::{Block, Call},
 };
-
-use crate::{ast::call::CallExt, context::LintContext};
 
 pub mod add_type_hints_arguments;
 pub mod missing_in_type;

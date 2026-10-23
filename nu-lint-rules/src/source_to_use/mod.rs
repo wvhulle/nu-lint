@@ -1,12 +1,11 @@
-use nu_protocol::ast::{Expr, Expression};
-
-use crate::{
+use nu_lint_analysis::{
     ast::call::CallExt,
     config::LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, DiagnosticTag},
 };
+use nu_protocol::ast::{Expr, Expression};
 
 struct UseOverSource;
 

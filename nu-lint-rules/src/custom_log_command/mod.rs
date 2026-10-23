@@ -1,16 +1,15 @@
 use std::cell::Cell;
 
-use nu_protocol::{
-    Span,
-    ast::{Argument, Expr, Traverse},
-};
-
-use crate::{
+use nu_lint_analysis::{
     Fix, LintLevel, Replacement,
     ast::call::CallExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
+};
+use nu_protocol::{
+    Span,
+    ast::{Argument, Expr, Traverse},
 };
 
 const LOG_LEVELS: &[&str] = &["debug", "info", "warning", "error", "critical"];

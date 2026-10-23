@@ -1,12 +1,12 @@
-use nu_protocol::{Span, Type, ast::Expr};
-
-use super::has_explicit_pipe_delimiters;
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
+use nu_protocol::{Span, Type, ast::Expr};
+
+use super::has_explicit_pipe_delimiters;
 
 struct BlockBraceSpacingFixData {
     block_span: Span,

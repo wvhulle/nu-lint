@@ -1,9 +1,9 @@
 use std::{collections::HashMap, iter::once};
 
 use miette::Severity;
+use nu_lint_analysis::violation::Violation;
 
 use super::read_source_code;
-use crate::violation::Violation;
 
 /// Format violations in compact one-line-per-violation style (gcc/eslint).
 ///

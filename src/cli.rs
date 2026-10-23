@@ -6,21 +6,23 @@ use std::{
 
 use clap::{Parser, crate_version};
 use miette::Severity;
+use nu_lint_analysis::{
+    LintLevel,
+    ast::tree,
+    config::Config,
+    engine::LintEngine,
+    fix::{apply_fixes, apply_fixes_to_stdin},
+    log::init_test_log,
+    rule::Rule,
+};
+use nu_lint_rules::{USED_RULES, groups::ALL_GROUPS};
 
 #[cfg(feature = "lsp")]
 use crate::lsp;
 use crate::{
-    LintLevel,
-    ast::tree,
-    config::Config,
     config_loading::{load_user_config, read_config_file, validate_rule_levels},
-    engine::LintEngine,
     file_collection::collect_nu_files,
-    fix::{apply_fixes, apply_fixes_to_stdin},
     format::{Format, Summary, format_fix_results, format_output},
-    log::init_test_log,
-    rule::Rule,
-    rules::{USED_RULES, groups::ALL_GROUPS},
 };
 
 #[derive(Parser)]

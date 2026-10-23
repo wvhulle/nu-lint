@@ -1,4 +1,4 @@
-use crate::rule::Group;
+use nu_lint_analysis::rule::Group;
 
 const ERROR_HANDLING: Group = Group {
     name: "runtime-errors",

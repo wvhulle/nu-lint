@@ -1,16 +1,15 @@
 use std::cmp::Ordering;
 
-use nu_protocol::{
-    Span,
-    ast::{Argument, Block, Expr, Expression, Pipeline, PipelineElement, Traverse},
-};
-
-use crate::{
+use nu_lint_analysis::{
     Fix, LintLevel, Replacement,
     ast::{block::BlockExt, declaration::CustomCommandDef, expression::ExpressionExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
+};
+use nu_protocol::{
+    Span,
+    ast::{Argument, Block, Expr, Expression, Pipeline, PipelineElement, Traverse},
 };
 
 /// Check if a block has a single pipeline suitable for inlining.

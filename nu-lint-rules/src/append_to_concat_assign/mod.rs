@@ -1,14 +1,13 @@
-use nu_protocol::{
-    Span,
-    ast::{Assignment, Expr, Expression, Operator, Pipeline},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
+};
+use nu_protocol::{
+    Span,
+    ast::{Assignment, Expr, Expression, Operator, Pipeline},
 };
 
 fn refers_to_same_variable(expr1: &Expression, expr2: &Expression, context: &LintContext) -> bool {

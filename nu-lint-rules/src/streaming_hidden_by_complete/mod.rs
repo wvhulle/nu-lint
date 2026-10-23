@@ -1,15 +1,14 @@
-use nu_protocol::{
-    Span,
-    ast::{Expr, Pipeline},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
     context::LintContext,
     effect::external::{ExternEffect, has_external_side_effect},
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
+};
+use nu_protocol::{
+    Span,
+    ast::{Expr, Pipeline},
 };
 
 /// Data needed to generate a fix for redundant complete on streaming commands

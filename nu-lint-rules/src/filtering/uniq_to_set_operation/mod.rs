@@ -1,14 +1,13 @@
-use nu_protocol::{
-    Span, Type,
-    ast::{Call, Comparison, Expr, Expression, Operator, Pipeline},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{block::BlockExt, call::CallExt, expression::ExpressionExt, pipeline::PipelineExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
+};
+use nu_protocol::{
+    Span, Type,
+    ast::{Call, Comparison, Expr, Expression, Operator, Pipeline},
 };
 
 #[derive(Clone, Copy)]

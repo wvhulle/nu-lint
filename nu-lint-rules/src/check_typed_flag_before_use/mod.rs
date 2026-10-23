@@ -1,14 +1,13 @@
-use nu_protocol::{
-    Value, VarId,
-    ast::{Call, Comparison, Expr, Expression, MatchPattern, Operator, Pattern},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
+};
+use nu_protocol::{
+    Value, VarId,
+    ast::{Call, Comparison, Expr, Expression, MatchPattern, Operator, Pattern},
 };
 
 fn check_flag_usage_in_body(call: &Call, context: &LintContext) -> Vec<(Detection, ())> {

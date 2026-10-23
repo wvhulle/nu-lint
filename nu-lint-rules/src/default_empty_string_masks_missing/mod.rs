@@ -1,12 +1,11 @@
-use nu_protocol::ast::{Expr, Expression};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::call::CallExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
 };
+use nu_protocol::ast::{Expr, Expression};
 
 fn check_call(expr: &Expression, context: &LintContext) -> Option<Detection> {
     let Expr::Call(call) = &expr.expr else {

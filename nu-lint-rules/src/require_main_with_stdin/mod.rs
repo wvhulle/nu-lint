@@ -1,14 +1,13 @@
 use std::ops::ControlFlow;
 
-use nu_protocol::ast::Expr;
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{declaration::CustomCommandDef, expression::is_dollar_in_var, span::SpanExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
 };
+use nu_protocol::ast::Expr;
 
 struct RequireMainWithStdin;
 

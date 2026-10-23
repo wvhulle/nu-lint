@@ -1,12 +1,11 @@
-use nu_protocol::Span;
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     context::LintContext,
     dsl::find::FileSearch,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
+use nu_protocol::Span;
 
 const NOTE: &str = "'glob' walks the directory tree without an external process and returns a \
                     list of absolute paths, including hidden entries, like 'find'.";

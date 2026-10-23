@@ -1,14 +1,13 @@
-use nu_protocol::{
-    ENV_VARIABLE_ID, Span,
-    ast::{Block, Expr, Expression, PathMember, Pipeline, Traverse},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::expression::ExpressionExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
+};
+use nu_protocol::{
+    ENV_VARIABLE_ID, Span,
+    ast::{Block, Expr, Expression, PathMember, Pipeline, Traverse},
 };
 
 #[derive(Clone)]

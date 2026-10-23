@@ -1,16 +1,16 @@
-use nu_protocol::{
-    Span,
-    ast::{Call, Pipeline},
-};
-
-use super::{extract_delimiter_from_split_call, is_split_row_call};
-use crate::{
+use nu_lint_analysis::{
     Fix, LintLevel, Replacement,
     ast::{block::BlockExt, call::CallExt, pipeline::PipelineExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
 };
+use nu_protocol::{
+    Span,
+    ast::{Call, Pipeline},
+};
+
+use super::{extract_delimiter_from_split_call, is_split_row_call};
 
 struct FixData {
     span: Span,

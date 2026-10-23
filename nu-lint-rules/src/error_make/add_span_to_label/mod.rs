@@ -1,13 +1,13 @@
-use nu_protocol::ast::{Expr, Expression, ListItem, RecordItem};
-
-use super::{extract_record_from_expr, get_labels_value, has_field};
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::call::CallExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
 };
+use nu_protocol::ast::{Expr, Expression, ListItem, RecordItem};
+
+use super::{extract_record_from_expr, get_labels_value, has_field};
 
 /// Check if a label record has 'text' but is missing 'span'
 fn label_missing_span(record: &[RecordItem], context: &LintContext) -> bool {

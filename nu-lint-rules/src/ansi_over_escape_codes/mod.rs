@@ -1,11 +1,10 @@
-use nu_protocol::ast::{Expr, Expression, Traverse};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
+use nu_protocol::ast::{Expr, Expression, Traverse};
 
 struct EscapeMatch {
     span: nu_protocol::Span,

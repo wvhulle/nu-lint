@@ -1,3 +1,10 @@
+use nu_lint_analysis::{
+    LintLevel,
+    ast::{block::BlockExt, call::CallExt},
+    context::LintContext,
+    rule::{DetectFix, Rule},
+    violation::{Detection, Fix, Replacement},
+};
 use nu_protocol::{
     Type,
     ast::{Call, Expr},
@@ -6,13 +13,6 @@ use nu_protocol::{
 use super::{
     FixData, extract_parameters_text, find_return_span, find_signature_span, get_input_type,
     get_output_type,
-};
-use crate::{
-    LintLevel,
-    ast::{block::BlockExt, call::CallExt},
-    context::LintContext,
-    rule::{DetectFix, Rule},
-    violation::{Detection, Fix, Replacement},
 };
 
 fn detect_def_call(call: &Call, ctx: &LintContext) -> Vec<(Detection, FixData)> {

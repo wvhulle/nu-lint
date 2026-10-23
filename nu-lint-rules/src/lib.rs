@@ -1,10 +1,4 @@
-#[cfg(test)]
-use nu_lint_analysis::{Config, engine, fix, log};
-use nu_lint_analysis::{
-    Fix, LintLevel, Replacement, ast, config, context, dsl, effect, rule, span, violation,
-};
-
-use crate::rule::{Rule, RuleCatalog};
+use nu_lint_analysis::rule::{Rule, RuleCatalog};
 
 pub const RULE_CATALOG: RuleCatalog = RuleCatalog {
     rules: USED_RULES,

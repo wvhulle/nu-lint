@@ -1,7 +1,9 @@
 use std::fs;
 
+use nu_lint_analysis::{Config, engine::LintEngine, log::init_test_log};
+
 use super::RULE;
-use crate::{Config, RULE_CATALOG, engine::LintEngine, log::init_test_log};
+use crate::RULE_CATALOG;
 
 #[test]
 fn test_config_nu() {

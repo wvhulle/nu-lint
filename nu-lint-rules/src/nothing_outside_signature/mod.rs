@@ -1,15 +1,14 @@
 use std::iter::repeat;
 
-use nu_protocol::{
-    Span, SyntaxShape,
-    ast::{Argument, Call, Expr, Expression, ListItem, RecordItem},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
+};
+use nu_protocol::{
+    Span, SyntaxShape,
+    ast::{Argument, Call, Expr, Expression, ListItem, RecordItem},
 };
 
 struct FixData {

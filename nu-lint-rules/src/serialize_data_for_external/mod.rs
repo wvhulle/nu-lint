@@ -1,6 +1,4 @@
-use nu_protocol::{Span, Type};
-
-use crate::{
+use nu_lint_analysis::{
     Fix, Replacement,
     ast::{expression::ExpressionExt, external::ExternalInvocation},
     config::LintLevel,
@@ -8,6 +6,7 @@ use crate::{
     rule::{DetectFix, Rule},
     violation::Detection,
 };
+use nu_protocol::{Span, Type};
 
 const JSON_TOOLS: &[&str] = &["jq", "json_pp", "jsonlint", "gron", "fx", "jless", "yq"];
 const CSV_TOOLS: &[&str] = &["csvlook", "csvstat", "csvcut", "csvgrep", "xsv", "qsv"];

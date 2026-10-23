@@ -1,12 +1,11 @@
-use nu_protocol::ast::{Call, Expr};
-
-use crate::{
+use nu_lint_analysis::{
     Fix, LintLevel, Replacement,
     ast::{call::CallExt, declaration::CustomCommandDef},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
 };
+use nu_protocol::ast::{Call, Expr};
 
 fn has_shebang(ctx: &LintContext) -> bool {
     let source = unsafe { ctx.source() };

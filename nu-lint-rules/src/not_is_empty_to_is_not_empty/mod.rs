@@ -1,11 +1,10 @@
-use nu_protocol::ast::{Expr, Expression, Pipeline};
-
-use crate::{
+use nu_lint_analysis::{
     Fix, LintLevel, Replacement,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
 };
+use nu_protocol::ast::{Expr, Expression, Pipeline};
 
 struct IsEmptyPatternMatch {
     block_id: nu_protocol::BlockId,

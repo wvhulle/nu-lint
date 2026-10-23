@@ -1,12 +1,11 @@
-use nu_protocol::ast::{Call, Expr};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{call::CallExt, span::SpanExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
 };
+use nu_protocol::ast::{Call, Expr};
 
 /// Check if a call is to the 'exit' command
 fn is_exit_call(call: &Call, ctx: &LintContext) -> bool {

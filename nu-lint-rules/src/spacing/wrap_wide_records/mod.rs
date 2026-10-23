@@ -1,12 +1,11 @@
-use nu_protocol::ast::{Expr, Expression, RecordItem, Traverse};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::expression::ExpressionExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
+use nu_protocol::ast::{Expr, Expression, RecordItem, Traverse};
 
 const MAX_RECORD_LINE_LENGTH: usize = 80;
 const NESTED_STRUCTURE_LENGTH_THRESHOLD: usize = 60;

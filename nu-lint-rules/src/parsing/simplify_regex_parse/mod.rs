@@ -1,18 +1,17 @@
 use std::sync::LazyLock;
 
-use nu_protocol::{
-    Span,
-    ast::{Argument, Call, Expr},
-};
-use regex::Regex;
-
-use crate::{
+use nu_lint_analysis::{
     Fix, LintLevel, Replacement,
     ast::{call::CallExt, regex::contains_regex_special_chars, string::StringFormat},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
 };
+use nu_protocol::{
+    Span,
+    ast::{Argument, Call, Expr},
+};
+use regex::Regex;
 
 pub struct FixData {
     span: Span,

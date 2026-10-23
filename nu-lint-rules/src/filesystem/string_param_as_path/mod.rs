@@ -1,16 +1,15 @@
 use std::ops::ControlFlow;
 
-use nu_protocol::{
-    Span, VarId,
-    ast::{Block, Expr, Traverse},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{call::CallExt, span::SpanExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
+};
+use nu_protocol::{
+    Span, VarId,
+    ast::{Block, Expr, Traverse},
 };
 
 /// Semantic fix data: stores the parameter name, span, and whether it's

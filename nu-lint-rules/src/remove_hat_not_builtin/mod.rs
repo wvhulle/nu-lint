@@ -1,11 +1,10 @@
-use nu_protocol::ast::{Expr, ExternalArgument};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
+use nu_protocol::ast::{Expr, ExternalArgument};
 
 /// Data needed to generate a fix for unnecessary hat violations
 pub struct UnnecessaryHatFixData {

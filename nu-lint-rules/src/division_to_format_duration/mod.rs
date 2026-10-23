@@ -1,13 +1,12 @@
-use nu_protocol::{
-    Span, Type,
-    ast::{Expr, Expression, Math, Operator},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
+};
+use nu_protocol::{
+    Span, Type,
+    ast::{Expr, Expression, Math, Operator},
 };
 
 struct FixData {

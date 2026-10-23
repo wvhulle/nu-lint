@@ -1,4 +1,4 @@
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::declaration,
     context::LintContext,

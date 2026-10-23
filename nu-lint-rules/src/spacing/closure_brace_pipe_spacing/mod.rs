@@ -1,12 +1,12 @@
-use nu_protocol::{Span, ast::Expr};
-
-use super::has_explicit_pipe_delimiters;
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
+use nu_protocol::{Span, ast::Expr};
+
+use super::has_explicit_pipe_delimiters;
 
 struct ClosureBracePipeSpacingFixData {
     whitespace_span: Span,

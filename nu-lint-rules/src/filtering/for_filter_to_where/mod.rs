@@ -1,14 +1,13 @@
 use std::collections::{HashMap, HashSet};
 
-use nu_protocol::ast::{Argument, Block, Call, Expr, Expression, Operator, Traverse};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
 };
+use nu_protocol::ast::{Argument, Block, Call, Expr, Expression, Operator, Traverse};
 
 fn contains_loop_var_append(expr: &Expression, context: &LintContext, loop_var_name: &str) -> bool {
     match &expr.expr {

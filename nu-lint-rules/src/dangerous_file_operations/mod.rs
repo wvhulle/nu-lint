@@ -1,9 +1,4 @@
-use nu_protocol::{
-    Span,
-    ast::{Call, Expr, Expression, ExternalArgument},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     effect::{
         CommonEffect,
@@ -16,6 +11,10 @@ use crate::{
     },
     rule::{DetectFix, Rule},
     violation::Detection,
+};
+use nu_protocol::{
+    Span,
+    ast::{Call, Expr, Expression, ExternalArgument},
 };
 
 enum DangerousCommand<'a> {
@@ -33,7 +32,7 @@ enum DangerousCommand<'a> {
 
 fn extract_dangerous_command<'a>(
     expr: &'a Expression,
-    context: &'a crate::context::LintContext,
+    context: &'a nu_lint_analysis::context::LintContext,
 ) -> Option<DangerousCommand<'a>> {
     match &expr.expr {
         Expr::ExternalCall(head, args) => {
@@ -105,7 +104,7 @@ fn check_external_command(
     cmd_name: &str,
     args: &[ExternalArgument],
     command_span: Span,
-    context: &crate::context::LintContext,
+    context: &nu_lint_analysis::context::LintContext,
     violations: &mut Vec<Detection>,
 ) {
     let is_recursive = cmd_name == "rm" && has_external_recursive_flag(args, context);
@@ -128,7 +127,7 @@ fn check_builtin_command(
     cmd_name: &str,
     call: &Call,
     command_span: Span,
-    context: &crate::context::LintContext,
+    context: &nu_lint_analysis::context::LintContext,
     violations: &mut Vec<Detection>,
 ) {
     let is_recursive = cmd_name == "rm" && has_recursive_flag(call, context);
@@ -166,7 +165,7 @@ impl DetectFix for DangerousFileOperations {
 
     fn detect<'a>(
         &self,
-        context: &'a crate::context::LintContext,
+        context: &'a nu_lint_analysis::context::LintContext,
     ) -> Vec<(Detection, Self::FixInput<'a>)> {
         use nu_protocol::ast::Traverse;
 

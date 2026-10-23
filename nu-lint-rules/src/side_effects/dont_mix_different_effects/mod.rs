@@ -1,11 +1,6 @@
 use std::{collections::HashMap, fmt, string::ToString};
 
-use nu_protocol::{
-    Span,
-    ast::{Block, Call, Expr, Expression, ExternalArgument},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{self, call::CallExt, expression::ExpressionExt},
     context::LintContext,
@@ -15,6 +10,10 @@ use crate::{
     },
     rule::{DetectFix, Rule},
     violation::Detection,
+};
+use nu_protocol::{
+    Span,
+    ast::{Block, Call, Expr, Expression, ExternalArgument},
 };
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]

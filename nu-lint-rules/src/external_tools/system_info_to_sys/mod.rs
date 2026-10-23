@@ -1,12 +1,11 @@
-use nu_protocol::Span;
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::external::{CliSpec, ExternalInvocation, Flag, ParsedCli},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
+use nu_protocol::Span;
 
 const KERNEL_RELEASE: Flag = Flag::switch('r', "kernel-release");
 const NODE_NAME: Flag = Flag::switch('n', "nodename");

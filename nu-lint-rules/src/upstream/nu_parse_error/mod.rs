@@ -1,15 +1,14 @@
 use std::{collections::HashSet, str::from_utf8};
 
 use miette::Diagnostic;
-use nu_protocol::{Span, engine::StateWorkingSet};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
     span::FileSpan,
     violation::{Detection, ExternalDetection},
 };
+use nu_protocol::{Span, engine::StateWorkingSet};
 
 /// Information about a file in the working set
 struct FileInfo<'a> {

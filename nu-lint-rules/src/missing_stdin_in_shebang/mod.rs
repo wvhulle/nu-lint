@@ -1,12 +1,11 @@
-use nu_protocol::ast::{Argument, Block, Call, Expr, Expression, Pipeline};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{call::CallExt, expression::is_pipeline_input_var},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
+use nu_protocol::ast::{Argument, Block, Call, Expr, Expression, Pipeline};
 
 struct ShebangFixData {
     fix_span: nu_protocol::Span,

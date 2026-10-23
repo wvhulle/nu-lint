@@ -1,14 +1,13 @@
-use nu_protocol::{
-    SyntaxShape, Value,
-    ast::{Call, Expr, MatchPattern, Pattern},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{call::CallExt, declaration::CustomCommandDef, expression::ExpressionExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
+};
+use nu_protocol::{
+    SyntaxShape, Value,
+    ast::{Call, Expr, MatchPattern, Pattern},
 };
 
 fn string_param_names(def: &CustomCommandDef) -> impl Iterator<Item = &str> {

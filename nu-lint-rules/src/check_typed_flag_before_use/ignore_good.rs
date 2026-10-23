@@ -1,5 +1,6 @@
+use nu_lint_analysis::log::init_test_log;
+
 use super::RULE;
-use crate::log::init_test_log;
 
 #[test]
 fn boolean_switch_without_null_check() {

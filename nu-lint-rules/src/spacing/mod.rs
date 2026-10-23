@@ -9,9 +9,8 @@ pub mod reflow_wide_lists;
 pub mod reflow_wide_pipelines;
 pub mod wrap_wide_records;
 
+use nu_lint_analysis::context::LintContext;
 use nu_protocol::Span;
-
-use crate::context::LintContext;
 
 /// Checks if the source text for a block/closure contains explicit pipe
 /// delimiters.

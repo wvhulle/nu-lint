@@ -1,12 +1,12 @@
-use nu_protocol::ast::{Block, Expr};
-
-use super::{AssignmentGroup, find_assignment_groups, make_detection};
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
+use nu_protocol::ast::{Block, Expr};
+
+use super::{AssignmentGroup, find_assignment_groups, make_detection};
 
 const fn is_flat_env(group: &AssignmentGroup) -> bool {
     group.is_env && group.all_flat

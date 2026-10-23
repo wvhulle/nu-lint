@@ -1,14 +1,13 @@
-use nu_protocol::{
-    Span, VarId,
-    ast::{Block, Call, Expr, Expression, Pipeline},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::call::CallExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, DiagnosticTag, Fix, Replacement},
+};
+use nu_protocol::{
+    Span, VarId,
+    ast::{Block, Call, Expr, Expression, Pipeline},
 };
 
 /// Fix data: spans needed to reconstruct the fix

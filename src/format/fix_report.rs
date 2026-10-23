@@ -1,7 +1,8 @@
 use std::fmt::Write;
 
+use nu_lint_analysis::fix::FixResult;
+
 use super::format_diff_context;
-use crate::fix::FixResult;
 
 #[must_use]
 pub fn format_fix_results(results: &[FixResult], dry_run: bool) -> String {

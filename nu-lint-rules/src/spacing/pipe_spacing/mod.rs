@@ -1,13 +1,12 @@
-use nu_protocol::{
-    Span,
-    ast::{Block, Expr, Expression, Pipeline},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
+};
+use nu_protocol::{
+    Span,
+    ast::{Block, Expr, Expression, Pipeline},
 };
 
 /// Semantic fix data: stores the span to replace with " | "

@@ -1,13 +1,13 @@
-use nu_protocol::ast::Expr;
-
-use super::{extract_record_from_expr, has_field};
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::call::CallExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
 };
+use nu_protocol::ast::Expr;
+
+use super::{extract_record_from_expr, has_field};
 
 struct AddLabelToError;
 

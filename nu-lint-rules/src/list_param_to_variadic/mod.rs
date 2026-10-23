@@ -1,18 +1,18 @@
 use std::iter::once;
 
+use nu_lint_analysis::{
+    LintLevel,
+    ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
+    context::LintContext,
+    rule::{DetectFix, Rule},
+    violation::{Detection, Fix, Replacement},
+};
 use nu_protocol::{
     BlockId, DeclId, Span, SyntaxShape,
     ast::{Argument, Call, Expr, Expression, ListItem, Traverse},
 };
 
-use crate::{
-    LintLevel,
-    ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
-    context::LintContext,
-    rule::{DetectFix, Rule},
-    typing::{format_flag, format_optional, format_required, format_rest_with_shape},
-    violation::{Detection, Fix, Replacement},
-};
+use crate::typing::{format_flag, format_optional, format_required, format_rest_with_shape};
 
 struct FixData {
     signature_span: Span,

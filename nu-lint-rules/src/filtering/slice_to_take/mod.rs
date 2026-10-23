@@ -1,12 +1,12 @@
-use nu_protocol::Span;
-
-use super::{extract_int_value, get_slice_range, is_negative_expression};
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
+use nu_protocol::Span;
+
+use super::{extract_int_value, get_slice_range, is_negative_expression};
 
 #[cfg(test)]
 mod detect_bad;

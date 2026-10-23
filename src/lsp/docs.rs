@@ -1,6 +1,6 @@
 use lsp_types::{Hover, HoverContents, MarkupContent, MarkupKind};
-
-use crate::{rules::groups::groups_for_rule, violation::Violation};
+use nu_lint_analysis::violation::Violation;
+use nu_lint_rules::groups::groups_for_rule;
 
 fn violation_to_hover_markdown(v: &Violation) -> String {
     let mut lines = Vec::new();

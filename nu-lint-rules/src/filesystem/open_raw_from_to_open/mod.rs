@@ -1,13 +1,13 @@
-use nu_protocol::{Span, ast::Pipeline};
-
-use super::{find_open_from_patterns, open_from_span};
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::block::BlockExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
+use nu_protocol::{Span, ast::Pipeline};
+
+use super::{find_open_from_patterns, open_from_span};
 
 pub struct FixData {
     full_span: Span,

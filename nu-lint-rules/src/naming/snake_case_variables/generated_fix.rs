@@ -1,5 +1,6 @@
+use nu_lint_analysis::{context::LintContext, fix::apply_fixes_to_stdin, violation};
+
 use super::RULE;
-use crate::{context::LintContext, fix::apply_fixes_to_stdin, violation};
 
 /// Helper function to apply fixes and get the fixed code
 fn apply_fix(code: &str) -> String {

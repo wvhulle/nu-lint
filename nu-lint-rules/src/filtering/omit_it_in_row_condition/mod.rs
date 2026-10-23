@@ -1,11 +1,10 @@
-use nu_protocol::ast::{Argument, Expr, Expression, Operator, PathMember, Traverse};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
+use nu_protocol::ast::{Argument, Expr, Expression, Operator, PathMember, Traverse};
 
 struct ItFieldAccess {
     full_span: nu_protocol::Span,

@@ -1,13 +1,12 @@
-use nu_protocol::ast::{
-    Block, Call, Expr, Expression, ListItem, MatchPattern, Pattern, Pipeline, RecordItem,
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::call::CallExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
+};
+use nu_protocol::ast::{
+    Block, Call, Expr, Expression, ListItem, MatchPattern, Pattern, Pipeline, RecordItem,
 };
 
 const MAX_NESTING_DEPTH: usize = 4;

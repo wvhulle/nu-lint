@@ -1,17 +1,16 @@
 use std::collections::BTreeMap;
 
-use nu_protocol::{
-    CommandWideCompleter, Completion, DeclId, ENV_VARIABLE_ID, PositionalArg, Signature, Span,
-    VarId,
-    ast::{Assignment, Expr, Expression, Operator, PathMember, RecordItem, Traverse},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{call::CallExt, external::literal_content},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
+};
+use nu_protocol::{
+    CommandWideCompleter, Completion, DeclId, ENV_VARIABLE_ID, PositionalArg, Signature, Span,
+    VarId,
+    ast::{Assignment, Expr, Expression, Operator, PathMember, RecordItem, Traverse},
 };
 
 const COMPLETER_INPUTS: [&str; 3] = ["token", "place", "buffer"];

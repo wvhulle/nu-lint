@@ -1,12 +1,12 @@
-use nu_protocol::{BlockId, Span, ast::Expr};
-
-use super::{has_explicit_pipe_delimiters, is_record_type};
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
+use nu_protocol::{BlockId, Span, ast::Expr};
+
+use super::{has_explicit_pipe_delimiters, is_record_type};
 
 /// Get the span of the first expression in a block's pipelines.
 fn first_body_expr_span(context: &LintContext, block_id: BlockId) -> Option<Span> {

@@ -7,10 +7,9 @@ use std::fs;
 pub use compact::format_compact;
 pub use fix_report::format_fix_results;
 use miette::Severity;
+use nu_lint_analysis::violation::{SourceFile, Violation};
 pub use pretty::{format_diff_context, format_pretty};
 use serde::Serialize;
-
-use crate::violation::{SourceFile, Violation};
 
 /// Output format for linting results
 #[derive(clap::ValueEnum, Clone, Copy, Default)]

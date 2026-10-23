@@ -1,16 +1,15 @@
 use std::ops::ControlFlow;
 
-use nu_protocol::{
-    SyntaxShape, VarId,
-    ast::{Block, Traverse},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{declaration::CustomCommandDef, expression::ExpressionExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
+};
+use nu_protocol::{
+    SyntaxShape, VarId,
+    ast::{Block, Traverse},
 };
 
 fn contains_external_call_with_variable(

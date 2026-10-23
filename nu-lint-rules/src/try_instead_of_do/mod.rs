@@ -1,11 +1,6 @@
 use std::ops::ControlFlow;
 
-use nu_protocol::{
-    Span,
-    ast::{Expr, Expression, Traverse},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::call::CallExt,
     context::LintContext,
@@ -16,6 +11,10 @@ use crate::{
     },
     rule::{DetectFix, Rule},
     violation::Detection,
+};
+use nu_protocol::{
+    Span,
+    ast::{Expr, Expression, Traverse},
 };
 
 enum ErrorSource {

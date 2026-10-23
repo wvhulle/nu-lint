@@ -1,9 +1,4 @@
-use nu_protocol::{
-    BlockId, PositionalArg, Span, SyntaxShape, Type, VarId,
-    ast::{Call, Expr},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{
         block::BlockExt,
@@ -15,6 +10,10 @@ use crate::{
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
+};
+use nu_protocol::{
+    BlockId, PositionalArg, Span, SyntaxShape, Type, VarId,
+    ast::{Call, Expr},
 };
 
 pub struct FixData {

@@ -1,14 +1,13 @@
-use nu_protocol::{
-    BlockId, Span, VarId,
-    ast::{Call, Expr, Expression, Traverse},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{block::BlockExt, call::CallExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
+};
+use nu_protocol::{
+    BlockId, Span, VarId,
+    ast::{Call, Expr, Expression, Traverse},
 };
 
 struct RowConditionFixData {

@@ -1,5 +1,6 @@
+use nu_lint_analysis::log::init_test_log;
+
 use super::RULE;
-use crate::log::init_test_log;
 
 #[test]
 fn test_infer_string_type_from_string_operations() {

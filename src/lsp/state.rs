@@ -1,13 +1,14 @@
 use std::collections::HashMap;
 
 use lsp_types::{CodeActionOrCommand, Diagnostic, Hover, Range, TextDocumentPositionParams, Uri};
+use nu_lint_analysis::violation::Violation;
 
 use super::{
     completion::{CodeActionOptions, build_code_actions},
     diagnostic::{LineIndex, extra_labels_to_hint_diagnostics, violation_to_diagnostic},
     docs::build_hover,
 };
-use crate::{Config, LintEngine, config_loading::load_user_config, violation::Violation};
+use crate::{Config, LintEngine, config_loading::load_user_config};
 
 pub struct DocumentState {
     pub content: String,

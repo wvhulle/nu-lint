@@ -1,9 +1,4 @@
-use nu_protocol::{
-    Span,
-    ast::{Argument, Call, Expr, Expression},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{
         call::CallExt,
@@ -12,6 +7,10 @@ use crate::{
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
+};
+use nu_protocol::{
+    Span,
+    ast::{Argument, Call, Expr, Expression},
 };
 
 const NOTE: &str = "'echo' returns its arguments unchanged. Use the value directly, or 'print' to \

@@ -1,9 +1,4 @@
-use nu_protocol::{
-    Span,
-    ast::{Expr, Expression, PathMember, PipelineElement},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{
         call::CallExt,
@@ -13,6 +8,10 @@ use crate::{
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
+};
+use nu_protocol::{
+    Span,
+    ast::{Expr, Expression, PathMember, PipelineElement},
 };
 
 /// Semantic fix data: stores the spans and cell path members for generating fix

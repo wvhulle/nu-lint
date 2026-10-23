@@ -1,12 +1,11 @@
-use nu_protocol::{Span, ast::Pipeline};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     config::PipelinePlacement,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
+use nu_protocol::{Span, ast::Pipeline};
 
 const MIN_PIPELINE_ELEMENTS: usize = 3;
 

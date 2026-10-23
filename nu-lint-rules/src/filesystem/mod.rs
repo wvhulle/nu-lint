@@ -1,11 +1,10 @@
+use nu_lint_analysis::{
+    ast::{call::CallExt, pipeline::PipelineExt},
+    context::LintContext,
+};
 use nu_protocol::{
     Span,
     ast::{Expr, Expression, Pipeline},
-};
-
-use crate::{
-    ast::{call::CallExt, pipeline::PipelineExt},
-    context::LintContext,
 };
 
 pub mod from_after_parsed_open;

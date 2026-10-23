@@ -1,13 +1,13 @@
-use nu_protocol::ast::{Expr, Expression};
-
-use super::{extract_record_from_expr, has_field};
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::call::CallExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
 };
+use nu_protocol::ast::{Expr, Expression};
+
+use super::{extract_record_from_expr, has_field};
 
 fn check_error_make_call(expr: &Expression, ctx: &LintContext) -> Vec<Detection> {
     let Expr::Call(call) = &expr.expr else {

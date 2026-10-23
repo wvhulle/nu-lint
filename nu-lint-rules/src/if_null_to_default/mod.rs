@@ -1,14 +1,13 @@
-use nu_protocol::{
-    Span, VarId,
-    ast::{Block, Call, Comparison, Expr, Expression, Operator},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
+};
+use nu_protocol::{
+    Span, VarId,
+    ast::{Block, Call, Comparison, Expr, Expression, Operator},
 };
 
 struct FixData {

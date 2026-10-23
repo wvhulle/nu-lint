@@ -1,12 +1,11 @@
-use nu_protocol::ast::{Expr, Expression};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::call::CallExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
+use nu_protocol::ast::{Expr, Expression};
 
 struct DynamicAccessFixData {
     insert_span: nu_protocol::Span,

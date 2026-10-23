@@ -1,15 +1,14 @@
 use std::ops::ControlFlow;
 
-use nu_protocol::ast::{
-    Assignment, Bits, Boolean, Comparison, Expr, Expression, Math, Operator, Traverse,
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::expression::ExpressionExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
+};
+use nu_protocol::ast::{
+    Assignment, Bits, Boolean, Comparison, Expr, Expression, Math, Operator, Traverse,
 };
 
 /// Detection categories for problematic AST patterns in string interpolations

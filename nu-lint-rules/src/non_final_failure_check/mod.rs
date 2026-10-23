@@ -1,6 +1,4 @@
-use nu_protocol::ast::{self, Expr, Pipeline};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
     context::LintContext,
@@ -11,6 +9,7 @@ use crate::{
     rule::{DetectFix, Rule},
     violation::Detection,
 };
+use nu_protocol::ast::{self, Expr, Pipeline};
 
 fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<Detection> {
     if pipeline.elements.len() == 1 {

@@ -7,15 +7,10 @@ mod lsp;
 
 use std::{error::Error, fmt, io, path::PathBuf};
 
-pub use config::{Config, LintLevel};
-pub use engine::LintEngine;
 pub use file_collection::collect_nu_files_from_dir;
-pub use fix::apply_fixes_iteratively;
-pub use nu_lint_analysis::log;
-#[cfg(test)]
-use nu_lint_analysis::span;
-use nu_lint_analysis::{ast, config, engine, fix, rule, violation};
-use nu_lint_rules as rules;
+pub use nu_lint_analysis::{
+    Config, LintLevel, engine::LintEngine, fix::apply_fixes_iteratively, log,
+};
 pub use nu_lint_rules::RULE_CATALOG;
 use toml::{de, ser};
 

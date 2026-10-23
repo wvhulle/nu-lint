@@ -1,6 +1,4 @@
-use nu_protocol::{Span, ast::Expression};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::external::{CliSpec, ExternalInvocation, Flag, FlagValue, LineSource},
     context::LintContext,
@@ -8,6 +6,7 @@ use crate::{
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
+use nu_protocol::{Span, ast::Expression};
 
 const LINES: Flag = Flag::switch('n', "lines").with_value();
 

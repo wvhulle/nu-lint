@@ -5,8 +5,7 @@ use lsp_types::{
     NumberOrString, Position, Range, Uri,
 };
 use miette::Severity;
-
-use crate::violation::{DiagnosticTag, Violation};
+use nu_lint_analysis::violation::{DiagnosticTag, Violation};
 
 const fn to_lsp_diagnostic_tag(tag: DiagnosticTag) -> lsp_types::DiagnosticTag {
     match tag {
@@ -240,8 +239,9 @@ pub fn is_nushell_uri(uri: &Uri) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use nu_lint_analysis::{span::FileSpan, violation::Detection};
+
     use super::*;
-    use crate::{span::FileSpan, violation::Detection};
 
     #[test]
     fn line_index_multiple_lines() {

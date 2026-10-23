@@ -1,9 +1,8 @@
-use nu_protocol::ast::{Expr, Expression, RecordItem};
-
-use crate::{
+use nu_lint_analysis::{
     ast::{expression::ExpressionExt, string::StringFormat},
     context::LintContext,
 };
+use nu_protocol::ast::{Expr, Expression, RecordItem};
 
 pub mod add_help_to_error;
 pub mod add_label_to_error;

@@ -1,9 +1,4 @@
-use nu_protocol::{
-    Span,
-    ast::{Expr, Pipeline},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{
         block::BlockExt,
@@ -13,6 +8,10 @@ use crate::{
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
+};
+use nu_protocol::{
+    Span,
+    ast::{Expr, Pipeline},
 };
 
 #[cfg(test)]

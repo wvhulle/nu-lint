@@ -1,5 +1,6 @@
+use nu_lint_analysis::log::init_test_log;
+
 use super::RULE;
-use crate::log::init_test_log;
 
 #[test]
 fn test_detect_main_with_match_dispatch_three_branches() {

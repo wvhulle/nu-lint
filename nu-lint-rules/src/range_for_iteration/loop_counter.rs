@@ -1,12 +1,11 @@
-use nu_protocol::ast::{Expr, Expression};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
 };
+use nu_protocol::ast::{Expr, Expression};
 
 /// Check if an if statement has a break condition comparing counter to a limit
 fn has_break_with_counter_check(

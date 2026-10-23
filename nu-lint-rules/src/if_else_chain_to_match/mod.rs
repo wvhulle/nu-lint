@@ -1,16 +1,15 @@
 use core::iter;
 
-use nu_protocol::{
-    Span,
-    ast::{Call, Comparison, Expr, Expression, Operator},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
+};
+use nu_protocol::{
+    Span,
+    ast::{Call, Comparison, Expr, Expression, Operator},
 };
 
 fn extract_compared_variable(expr: &Expression, context: &LintContext) -> Option<String> {

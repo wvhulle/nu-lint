@@ -1,11 +1,6 @@
 use std::{collections::HashMap, ops::ControlFlow};
 
-use nu_protocol::{
-    Span, VarId,
-    ast::{Expr, Expression, PathMember},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
@@ -15,6 +10,10 @@ use crate::{
     },
     rule::{DetectFix, Rule},
     violation::Detection,
+};
+use nu_protocol::{
+    Span, VarId,
+    ast::{Expr, Expression, PathMember},
 };
 
 struct CompleteAssignment {

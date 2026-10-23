@@ -1,6 +1,5 @@
+use nu_lint_analysis::{ast::call::CallExt, context::LintContext};
 use nu_protocol::ast::{Expr, Expression, Range};
-
-use crate::{ast::call::CallExt, context::LintContext};
 
 pub mod each_if_to_where;
 pub mod for_filter_to_where;

@@ -1,14 +1,13 @@
-use nu_protocol::{
-    Span,
-    ast::{Expr, Expression},
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::external::{CliSpec, ExternalInvocation, Flag, LineSource, external_name},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
+};
+use nu_protocol::{
+    Span,
+    ast::{Expr, Expression},
 };
 
 const REVERSE: Flag = Flag::switch('r', "reverse");

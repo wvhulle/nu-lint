@@ -1,14 +1,13 @@
-use nu_protocol::{
-    Span,
-    ast::{Argument, Call, Expr, Expression, Pipeline, Traverse},
-};
-
-use crate::{
+use nu_lint_analysis::{
     Fix, LintLevel, Replacement,
     ast::{call::CallExt, pipeline::PipelineExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
+};
+use nu_protocol::{
+    Span,
+    ast::{Argument, Call, Expr, Expression, Pipeline, Traverse},
 };
 
 /// Represents a cell path access like `$row.col1` that needs to be replaced

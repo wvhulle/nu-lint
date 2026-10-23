@@ -1,12 +1,11 @@
-use nu_protocol::ast::{Expr, Expression};
-
-use crate::{
+use nu_lint_analysis::{
     Fix, LintLevel, Replacement,
     ast::{call::CallExt, regex::contains_regex_special_chars, string::StringFormat},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
 };
+use nu_protocol::ast::{Expr, Expression};
 
 struct FixData {
     full_expr_span: nu_protocol::Span,

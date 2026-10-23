@@ -1,13 +1,12 @@
 use std::sync::OnceLock;
 
-use regex::Regex;
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
+use regex::Regex;
 fn trailing_space_pattern() -> &'static Regex {
     static PATTERN: OnceLock<Regex> = OnceLock::new();
     PATTERN.get_or_init(|| Regex::new(r"[ \t]+$").unwrap())

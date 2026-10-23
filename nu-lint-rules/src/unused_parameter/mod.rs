@@ -1,16 +1,16 @@
+use nu_lint_analysis::{
+    LintLevel,
+    ast::{block::BlockExt, call::CallExt},
+    context::LintContext,
+    rule::{DetectFix, Rule},
+    violation::{Detection, DiagnosticTag, Fix, Replacement},
+};
 use nu_protocol::{
     DeclId, Span, VarId,
     ast::{self, Argument, Expr, Traverse},
 };
 
-use crate::{
-    LintLevel,
-    ast::{block::BlockExt, call::CallExt},
-    context::LintContext,
-    rule::{DetectFix, Rule},
-    typing::{format_flag, format_optional, format_required, format_rest},
-    violation::{Detection, DiagnosticTag, Fix, Replacement},
-};
+use crate::typing::{format_flag, format_optional, format_required, format_rest};
 
 #[derive(Clone)]
 enum ParamType {

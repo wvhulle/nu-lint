@@ -1,15 +1,15 @@
 use std::collections::HashSet;
 
-use nu_protocol::{Span, ast::Expr};
-
-use super::is_record_type;
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
     span::LintSpan,
     violation::{Detection, Fix, Replacement},
 };
+use nu_protocol::{Span, ast::Expr};
+
+use super::is_record_type;
 
 struct RecordBraceSpacingFixData {
     record_span: Span,

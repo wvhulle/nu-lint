@@ -1,14 +1,13 @@
-use nu_protocol::ast::{
-    Expr, Expression, Pipeline, PipelineElement, PipelineRedirection, RedirectionSource,
-    RedirectionTarget,
-};
-
-use crate::{
+use nu_lint_analysis::{
     Fix, LintLevel, Replacement,
     ast::block::BlockExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
+};
+use nu_protocol::ast::{
+    Expr, Expression, Pipeline, PipelineElement, PipelineRedirection, RedirectionSource,
+    RedirectionTarget,
 };
 
 struct IgnoreFixData {

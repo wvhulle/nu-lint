@@ -1,14 +1,13 @@
-use nu_protocol::ast::{
-    Expr, Pipeline, PipelineElement, PipelineRedirection, RedirectionSource, RedirectionTarget,
-};
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::block::BlockExt,
     context::LintContext,
     effect::external::{ExternEffect, extract_external_arg_text, has_external_side_effect},
     rule::{DetectFix, Rule},
     violation::Detection,
+};
+use nu_protocol::ast::{
+    Expr, Pipeline, PipelineElement, PipelineRedirection, RedirectionSource, RedirectionTarget,
 };
 
 fn is_stderr_silenced(element: &PipelineElement) -> bool {

@@ -1,6 +1,4 @@
-use nu_protocol::Span;
-
-use crate::{
+use nu_lint_analysis::{
     LintLevel,
     ast::{
         external::{CliSpec, ExternalInvocation, LineSource, literal_content},
@@ -11,6 +9,7 @@ use crate::{
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
+use nu_protocol::Span;
 
 static SPEC: CliSpec = CliSpec {
     flags: &[],

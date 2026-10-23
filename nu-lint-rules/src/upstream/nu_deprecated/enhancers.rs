@@ -3,15 +3,14 @@
 //! Each enhancer matches specific deprecation patterns and provides fixes
 //! and/or additional context.
 
-use nu_protocol::{
-    ParseWarning, Span,
-    ast::{Expr, Traverse},
-};
-
-use crate::{
+use nu_lint_analysis::{
     ast::call::CallExt,
     context::LintContext,
     violation::{Fix, Replacement},
+};
+use nu_protocol::{
+    ParseWarning, Span,
+    ast::{Expr, Traverse},
 };
 
 struct RenamedCommand {

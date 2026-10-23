@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
+
+id: source-text-search
+message: String search or trimming on source text. Match on the AST (Expr, Call, spans) instead.
+severity: warning
+language: Rust
+files:
+  - src/rules/**
+rule:
+  any:
+    - pattern: $CTX.source_contains($$$)
+    - pattern: $CTX.$SOURCE_ACCESSOR($$$).$STRING_METHOD($$$)
+    - pattern: $SOURCE_TEXT.$STRING_METHOD($$$)
+      inside:
+        kind: function_item
+        stopBy: end
+        has:
+          stopBy: end
+          pattern: let $SOURCE_TEXT = $CTX.$SOURCE_ACCESSOR($$$);
+constraints:
+  SOURCE_ACCESSOR:
+    regex: ^(span_text|expr_text|source_before_span|source_after_span|source_between_span_ends)$
+  STRING_METHOD:
+    regex: ^(contains|starts_with|ends_with|find|rfind|split\w*|rsplit\w*|trim\w*|strip_prefix|strip_suffix|lines|chars|char_indices|bytes|matches|match_indices|replace)$
+note: CONTRIBUTING.md, section Detection.

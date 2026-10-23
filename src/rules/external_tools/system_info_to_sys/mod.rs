@@ -141,7 +141,7 @@ impl DetectFix for SystemInfoToSys {
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let replacement = fix_data.query.nu_expression();
         Some(Fix {
-            explanation: format!("Query with '{replacement}'").into(),
+            explanation: "Query system information with the built-in `sys`".into(),
             replacements: vec![Replacement::new(fix_data.span, replacement)],
         })
     }

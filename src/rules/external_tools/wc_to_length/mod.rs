@@ -70,7 +70,7 @@ impl DetectFix for WcToLength {
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let replacement = format!("{}lines | length", fix_data.source.open_prefix(context));
         Some(Fix {
-            explanation: format!("Count lines with '{replacement}'").into(),
+            explanation: "Count with the built-in `length`".into(),
             replacements: vec![Replacement::new(fix_data.span, replacement)],
         })
     }

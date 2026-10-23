@@ -1,0 +1,34 @@
+id: source-text-search
+valid:
+  - |
+    fn detect_flag(call: &Call) -> bool {
+        call.has_named_flag("raw")
+    }
+  - |
+    fn build_fix(context: &LintContext, span: Span) -> Fix {
+        let text = context.span_text(span);
+        Fix::new(text.to_string())
+    }
+  - |
+    fn unrelated_search(names: &[String]) -> bool {
+        names.iter().any(|name| name.starts_with("std"))
+    }
+invalid:
+  - |
+    fn has_raw_flag(context: &LintContext, span: Span) -> bool {
+        context.span_text(span).contains("--raw")
+    }
+  - |
+    fn build_fix(context: &LintContext, span: Span) -> String {
+        let condition = context.span_text(span);
+        condition.trim().to_string()
+    }
+  - |
+    fn find_bracket(context: &LintContext, expr: &Expression) -> Option<usize> {
+        let definition = context.expr_text(expr);
+        definition.find('[')
+    }
+  - |
+    fn mentions_log(context: &LintContext) -> bool {
+        context.source_contains("std/log")
+    }

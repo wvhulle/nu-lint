@@ -1,0 +1,17 @@
+id: no-replacement-fix-explanation
+valid:
+  - |
+    fn fix() -> Fix {
+        Fix {
+            explanation: "Read the file with `open`".into(),
+            replacements: vec![Replacement::new(span, format!("open {replacement}"))],
+        }
+    }
+invalid:
+  - |
+    fn fix() -> Fix {
+        Fix {
+            explanation: format!("Read the file with '{replacement}'").into(),
+            replacements: vec![Replacement::new(span, replacement)],
+        }
+    }

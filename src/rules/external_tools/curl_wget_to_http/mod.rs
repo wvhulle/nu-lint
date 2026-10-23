@@ -193,7 +193,7 @@ impl DetectFix for CurlWgetToHttp {
     fn fix(&self, context: &LintContext, download: &Self::FixInput<'_>) -> Option<Fix> {
         let replacement = download.to_nu(context);
         Some(Fix {
-            explanation: format!("Download with '{replacement}'").into(),
+            explanation: "Download with the built-in `http` command".into(),
             replacements: vec![Replacement::new(download.span, replacement)],
         })
     }

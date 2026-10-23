@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
 
 id: vague-description
-message: Rule descriptions should straightforward. Do not use vague or redundant (like Nu, prefer, better, improve, try) words.
+message: Rule descriptions should be straightforward. Do not use vague or redundant words such as "prefer" or "Nushell" (version facts like "Nushell 0.116.0" are fine).
 
 severity: warning # error, warning, info, hint
 language: Rust
@@ -16,7 +16,8 @@ rule:
   has:
     kind: string_content
     any:
-      - regex: (?i).*prefer.*
-      - regex: Nushell
-      - regex: Nu's
-      - regex: Nu\s
+      - regex: (?i)prefer
+      - all:
+          - regex: Nushell|Nu's|Nu\s
+          - not:
+              regex: Nushell \d

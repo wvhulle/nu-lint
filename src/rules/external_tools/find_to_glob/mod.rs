@@ -59,7 +59,7 @@ impl DetectFix for FindToGlob {
     fn fix(&self, _context: &LintContext, glob: &Self::FixInput<'_>) -> Option<Fix> {
         let replacement = glob.search.to_glob();
         Some(Fix {
-            explanation: format!("Search with '{replacement}'").into(),
+            explanation: "Search files with the built-in `glob`".into(),
             replacements: vec![Replacement::new(glob.span, replacement)],
         })
     }

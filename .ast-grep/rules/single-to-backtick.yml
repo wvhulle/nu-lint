@@ -9,8 +9,10 @@ rule:
   regex: \'(?<quoted>[^']+)\'
   inside:
     kind: function_item
-    regex: .*description.*
     stopBy: end
+    has:
+      field: name
+      regex: description$
 # fix: $quoted
 # utils: Extract repeated rule as local utility here.
 # note: Add detailed explanation for the rule.

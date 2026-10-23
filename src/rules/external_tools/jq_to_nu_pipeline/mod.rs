@@ -90,7 +90,7 @@ impl<'a> JqTranslation<'a> {
             } => (Span::new(serialization_start, self.span.end), command),
         };
         Fix {
-            explanation: format!("Query the parsed value with '{replacement}'").into(),
+            explanation: "Query the parsed value with a Nu pipeline".into(),
             replacements: vec![Replacement::new(span, replacement)],
         }
     }

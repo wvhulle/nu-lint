@@ -100,7 +100,7 @@ impl DetectFix for ReadToInput {
         let binding = binding.as_ref()?;
         let replacement = binding.to_nu(context);
         Some(Fix {
-            explanation: format!("Read input with '{replacement}'").into(),
+            explanation: "Read input with the built-in `input`".into(),
             replacements: vec![Replacement::new(binding.span, replacement)],
         })
     }

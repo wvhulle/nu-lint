@@ -41,6 +41,13 @@ steps:
     commands:
       - nix build .#checks.x86_64-linux.fmt --print-build-logs
 
+  - name: ast-grep
+    image: nixos/nix:latest
+    depends_on: []
+    environment: *nix_config
+    commands:
+      - nix build .#checks.x86_64-linux.ast-grep --print-build-logs
+
   - name: conventional-commits
     image: nixos/nix:latest
     depends_on: []

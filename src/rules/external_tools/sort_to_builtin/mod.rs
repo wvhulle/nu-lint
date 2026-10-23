@@ -81,7 +81,7 @@ impl<'a> LineSort<'a> {
             self.source.open_prefix(context)
         );
         Fix {
-            explanation: format!("Sort lines with '{replacement}'").into(),
+            explanation: "Sort lines with the built-in `sort`".into(),
             replacements: vec![Replacement::new(self.span, replacement)],
         }
     }

@@ -93,7 +93,7 @@ impl DetectFix for DateToBuiltin {
     fn fix(&self, _context: &LintContext, date: &Self::FixInput<'_>) -> Option<Fix> {
         let replacement = date.to_nu();
         Some(Fix {
-            explanation: format!("Use '{replacement}'").into(),
+            explanation: "Get the date with the built-in `date` commands".into(),
             replacements: vec![Replacement::new(date.span, replacement)],
         })
     }

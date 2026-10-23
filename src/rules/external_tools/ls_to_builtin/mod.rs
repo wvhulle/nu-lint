@@ -115,7 +115,7 @@ impl DetectFix for LsToBuiltin {
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let replacement = translate(&fix_data.parsed, context);
         Some(Fix {
-            explanation: format!("List with '{replacement}'").into(),
+            explanation: "List files with the built-in `ls`".into(),
             replacements: vec![Replacement::new(fix_data.span, replacement)],
         })
     }

@@ -144,7 +144,7 @@ impl<'a> LineFilter<'a> {
             self.condition(context)
         );
         Fix {
-            explanation: format!("Filter lines with '{replacement}'").into(),
+            explanation: "Filter lines with the built-in `where`".into(),
             replacements: vec![Replacement::new(self.span, replacement)],
         }
     }

@@ -67,7 +67,7 @@ impl DetectFix for CatToOpen {
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let replacement = format!("open --raw {}", context.expr_text(fix_data.file));
         Some(Fix {
-            explanation: format!("Read the file with '{replacement}'").into(),
+            explanation: "Read the file with the built-in `open`".into(),
             replacements: vec![Replacement::new(fix_data.span, replacement)],
         })
     }

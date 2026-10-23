@@ -82,7 +82,7 @@ impl DetectFix for CdToBuiltin {
         });
         let replacement = format!("cd{physical}{target}");
         Some(Fix {
-            explanation: format!("Use the built-in '{replacement}'").into(),
+            explanation: "Change directory with the built-in `cd`".into(),
             replacements: vec![Replacement::new(fix_data.span, replacement)],
         })
     }

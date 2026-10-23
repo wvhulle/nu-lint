@@ -65,7 +65,7 @@ impl DetectFix for TacToReverse {
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let replacement = format!("{}lines | reverse", fix_data.source.open_prefix(context));
         Some(Fix {
-            explanation: format!("Reverse lines with '{replacement}'").into(),
+            explanation: "Reverse lines with the built-in `reverse`".into(),
             replacements: vec![Replacement::new(fix_data.span, replacement)],
         })
     }

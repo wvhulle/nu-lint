@@ -87,7 +87,7 @@ impl<'a> LineSlice<'a> {
         };
         let replacement = format!("{}lines | {selection}", self.source.open_prefix(context));
         Fix {
-            explanation: format!("Select lines with '{replacement}'").into(),
+            explanation: "Select lines with the built-in `first` or `last`".into(),
             replacements: vec![Replacement::new(self.span, replacement)],
         }
     }

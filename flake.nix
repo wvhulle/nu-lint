@@ -82,6 +82,13 @@
           }
         );
 
+        astGrepCheck = pkgs.runCommand "nu-lint-ast-grep" { nativeBuildInputs = [ pkgs.ast-grep ]; } ''
+          cd ${src}
+          ast-grep test --skip-snapshot-tests
+          ast-grep scan
+          touch $out
+        '';
+
         craneliftDeps = nightlyCrane.buildDepsOnly (
           commonArgs // { RUSTFLAGS = "-Zcodegen-backend=cranelift"; }
         );
@@ -127,6 +134,7 @@
           muslCrane.buildPackage (args // { cargoArtifacts = deps; });
 
         devTools = [
+          pkgs.ast-grep
           pkgs.prek
           pkgs.convco
           pkgs.release-plz
@@ -220,6 +228,7 @@
         checks = {
           inherit tests;
           fmt = rustfmtCrane.cargoFmt { inherit src; };
+          ast-grep = astGrepCheck;
         };
 
         apps = {

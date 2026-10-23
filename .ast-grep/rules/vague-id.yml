@@ -14,8 +14,4 @@ rule:
         pattern: fn id
     has:
       kind: string_content
-      any:
-        - regex: .*prefer.*
-        - regex: .*avoid.*
-        - regex: .*replace.*
-        - regex: .*use_.*
+      regex: ^(prefer|avoid|replace|use)_

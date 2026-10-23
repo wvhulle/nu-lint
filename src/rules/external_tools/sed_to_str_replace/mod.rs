@@ -45,7 +45,7 @@ impl<'a> TextSubstitution<'a> {
             quote_nu_string(self.substitution.replace)
         );
         Fix {
-            explanation: format!("Substitute text with '{replacement}'").into(),
+            explanation: "Substitute text with the built-in `str replace`".into(),
             replacements: vec![Replacement::new(self.span, replacement)],
         }
     }

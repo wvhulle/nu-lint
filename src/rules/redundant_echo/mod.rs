@@ -105,7 +105,7 @@ impl DetectFix for RedundantEcho {
             EchoedValue::Several(span) => format!("[{}]", context.span_text(span)),
         };
         Some(Fix {
-            explanation: format!("Use '{replacement}' directly").into(),
+            explanation: "Use the value directly instead of `echo`".into(),
             replacements: vec![Replacement::new(fix_data.span, replacement)],
         })
     }

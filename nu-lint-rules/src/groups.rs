@@ -256,9 +256,20 @@ const UPSTREAM: Group = Group {
     description: "Forward warnings and errors of the Nu parser.",
     rules: &[
         super::dynamic_script_import::RULE,
-        super::legacy_completer_inputs::RULE,
         super::upstream::nu_deprecated::RULE,
         super::upstream::nu_parse_error::RULE,
+    ],
+};
+
+const MIGRATIONS: Group = Group {
+    name: "migrations",
+    description: "Replace syntax that the Nu parser deprecated.",
+    rules: &[
+        super::migrations::filter_to_where::RULE,
+        super::migrations::str_case_full_names::RULE,
+        super::migrations::ignore_errors_to_optional::RULE,
+        super::migrations::drop_get_sensitive::RULE,
+        super::migrations::legacy_completer_inputs::RULE,
     ],
 };
 
@@ -278,6 +289,7 @@ pub const ALL_GROUPS: &[Group] = &[
     FORMATTING,
     NAMING,
     UPSTREAM,
+    MIGRATIONS,
 ];
 
 /// Find all groups that contain the given `rule_id`

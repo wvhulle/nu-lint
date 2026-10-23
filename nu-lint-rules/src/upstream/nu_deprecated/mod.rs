@@ -2,16 +2,16 @@ use nu_lint_analysis::{
     LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
-    violation::{Detection, DiagnosticTag, Fix},
+    violation::{Detection, DiagnosticTag},
 };
 use nu_protocol::ParseWarning;
 
-mod enhancers;
+use crate::migrations::deprecated_usage::migrated_warning_spans;
 
 struct NuDeprecated;
 
 impl DetectFix for NuDeprecated {
-    type FixInput<'a> = Option<Fix>;
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "nu_deprecated"
@@ -19,14 +19,15 @@ impl DetectFix for NuDeprecated {
 
     fn long_description(&self) -> Option<&'static str> {
         Some(
-            "nu-lint expects a specific version. If your installed version differs, this may \
-             cause false positives. Check that your version matches the expected version to avoid \
-             incorrect warnings.",
+            "Forwards every deprecation warning of nu-parser that no rule in the `migrations` \
+             group handles. Deprecations with a migration rule are reported only by that rule, \
+             even when it is turned off, so each warning appears exactly once. The warnings \
+             depend on the nu-parser version nu-lint was built against.",
         )
     }
 
     fn short_description(&self) -> &'static str {
-        "Parser detected deprecated command or flag usage"
+        "Upstream deprecation without a dedicated migration rule"
     }
 
     fn source_link(&self) -> Option<&'static str> {
@@ -42,46 +43,25 @@ impl DetectFix for NuDeprecated {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context
+        let migrated_spans = migrated_warning_spans(context);
+        let detections = context
             .working_set
             .parse_warnings
             .iter()
-            .map(|warning| {
+            .filter_map(|warning| {
                 let ParseWarning::Deprecated {
                     label, span, help, ..
                 } = warning;
-
-                let enhancement = enhancers::enhance(warning, context);
-
-                // Build message with notes appended
-                let mut message = help
+                if migrated_spans.contains(span) {
+                    return None;
+                }
+                let message = help
                     .as_ref()
-                    .map_or_else(|| label.clone(), |h| format!("{label} {h}"));
-                if let Some(ref enh) = enhancement {
-                    for note in &enh.notes {
-                        message.push_str("\n\nNote: ");
-                        message.push_str(note);
-                    }
-                }
-
-                let mut detection =
-                    Detection::from_global_span(message, *span).with_primary_label("deprecated");
-
-                // Apply extra labels from enhancement
-                if let Some(ref enh) = enhancement {
-                    for (label_span, label_text) in &enh.extra_labels {
-                        detection = detection.with_extra_label(label_text.clone(), *label_span);
-                    }
-                }
-
-                let fix = enhancement.and_then(|e| e.fix);
-                (detection, fix)
+                    .map_or_else(|| label.clone(), |help| format!("{label} {help}"));
+                Some(Detection::from_global_span(message, *span).with_primary_label("deprecated"))
             })
-            .collect()
-    }
-
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        fix_data.clone()
+            .collect();
+        Self::no_fix(detections)
     }
 }
 
@@ -89,7 +69,5 @@ pub static RULE: &dyn Rule = &NuDeprecated;
 
 #[cfg(test)]
 mod detect_bad;
-#[cfg(test)]
-mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

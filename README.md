@@ -462,12 +462,22 @@ Most rules have automatic fixes. Run `nu-lint --list-rules` to see the rules wit
 </details>
 
 <details>
-<summary><code>upstream</code> (4 rules): Forward warnings and errors of the Nu parser.</summary>
+<summary><code>upstream</code> (3 rules): Forward warnings and errors of the Nu parser.</summary>
 
 - `dynamic_script_import`: Dynamic import path not statically validated
-- `legacy_completer_inputs`: Custom completer uses deprecated positional inputs
-- `nu_deprecated` (auto-fix): Parser detected deprecated command or flag usage
+- `nu_deprecated`: Upstream deprecation without a dedicated migration rule
 - `nu_parse_error`: Parser encountered a syntax error
+
+</details>
+
+<details>
+<summary><code>migrations</code> (5 rules): Replace syntax that the Nu parser deprecated.</summary>
+
+- `filter_to_where` (auto-fix): Deprecated `filter` replaceable with `where`
+- `str_case_full_names` (auto-fix): Deprecated `str upcase` or `str downcase` renamed
+- `ignore_errors_to_optional` (auto-fix): Deprecated `--ignore-errors` flag renamed to `--optional`
+- `drop_get_sensitive` (auto-fix): Deprecated `get --sensitive` flag has no effect
+- `legacy_completer_inputs`: Custom completer uses deprecated positional inputs
 
 </details>
 

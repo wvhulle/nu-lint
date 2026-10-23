@@ -46,12 +46,12 @@ pub mod hardcoded_math_constants;
 pub mod if_else_chain_to_match;
 pub mod if_null_to_default;
 pub mod ignore_over_dev_null;
-pub mod legacy_completer_inputs;
 pub mod list_param_to_variadic;
 pub mod max_function_body_length;
 pub mod max_positional_params;
 pub mod merge_get_cell_path;
 pub mod merge_multiline_print;
+pub mod migrations;
 pub mod missing_stdin_in_shebang;
 pub mod naming;
 pub mod never_space_split;
@@ -166,11 +166,15 @@ pub const USED_RULES: &[&dyn Rule] = &[
     if_else_chain_to_match::RULE,
     if_null_to_default::RULE,
     ignore_over_dev_null::RULE,
-    legacy_completer_inputs::RULE,
     list_param_to_variadic::RULE,
     max_function_body_length::RULE,
     max_positional_params::RULE,
     merge_get_cell_path::RULE,
+    migrations::drop_get_sensitive::RULE,
+    migrations::filter_to_where::RULE,
+    migrations::ignore_errors_to_optional::RULE,
+    migrations::legacy_completer_inputs::RULE,
+    migrations::str_case_full_names::RULE,
     record_assignments::USE_RECORD_SPREAD,
     record_assignments::USE_LOAD_ENV,
     merge_multiline_print::RULE,

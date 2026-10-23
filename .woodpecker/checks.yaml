@@ -6,6 +6,7 @@ variables:
   - &nix_config
     NIX_CONFIG: |
       experimental-features = nix-command flakes
+      build-users-group =
       extra-substituters = https://wvhulle.cachix.org
       extra-trusted-public-keys = wvhulle.cachix.org-1:heXx8DZMiRsKUx6l1TxNoF+Nmtmz66QEdsonQzc1ir0=
   - &cache_writing_env

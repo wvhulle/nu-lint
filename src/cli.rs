@@ -10,7 +10,8 @@ use miette::Severity;
 use crate::{
     LintLevel,
     ast::tree,
-    config::{Config, load_user_config},
+    config::Config,
+    config_loading::{load_user_config, read_config_file, validate_rule_levels},
     engine::{LintEngine, collect_nu_files},
     fix::{apply_fixes, apply_fixes_to_stdin, format_fix_results},
     format::{Format, Summary, format_output},
@@ -82,7 +83,7 @@ impl Cli {
                 tracing::debug!(?config);
                 config
             },
-            |path| Config::load_from_file(&path).unwrap(),
+            |path| read_config_file(&path).unwrap(),
         )
     }
 
@@ -95,7 +96,7 @@ impl Cli {
     }
 
     fn lint(&self, config: &Config) -> io::Result<ExitCode> {
-        if let Err(e) = config.validate() {
+        if let Err(e) = validate_rule_levels(config) {
             writeln!(io::stderr(), "Error: {e}")?;
             return Ok(ExitCode::FAILURE);
         }
@@ -132,7 +133,7 @@ impl Cli {
     }
 
     fn fix(&self, config: &Config) -> io::Result<ExitCode> {
-        if let Err(e) = config.validate() {
+        if let Err(e) = validate_rule_levels(config) {
             writeln!(io::stderr(), "Error: {e}")?;
             return Ok(ExitCode::FAILURE);
         }
@@ -190,7 +191,7 @@ impl Cli {
         let max_id_len = sorted_rules.iter().map(|r| r.id().len()).max().unwrap_or(0);
 
         for rule in &sorted_rules {
-            let level = config.get_lint_level(*rule);
+            let level = config.get_lint_level(*rule, ALL_GROUPS);
             let level_char = match level {
                 LintLevel::Hint => 'H',
                 LintLevel::Warning => 'W',

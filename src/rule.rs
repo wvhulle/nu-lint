@@ -127,6 +127,13 @@ impl<T: DetectFix> Rule for T {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Group {
+    pub name: &'static str,
+    pub description: &'static str,
+    pub rules: &'static [&'static dyn Rule],
+}
+
 impl Debug for dyn Rule {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         f.debug_struct("Rule")

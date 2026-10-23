@@ -19,7 +19,7 @@ use crate::{
     config::Config,
     context::LintContext,
     ignore,
-    rules::USED_RULES,
+    rules::{USED_RULES, groups::ALL_GROUPS},
     violation::{SourceFile, Violation},
 };
 
@@ -278,7 +278,7 @@ impl LintEngine {
         USED_RULES
             .iter()
             .filter_map(|rule| {
-                let lint_level = self.config.get_lint_level(*rule);
+                let lint_level = self.config.get_lint_level(*rule, ALL_GROUPS);
                 if lint_level == LintLevel::Off {
                     return None;
                 }

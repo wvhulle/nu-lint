@@ -18,7 +18,7 @@ use super::{
     diagnostic::{is_nushell_language_id, is_nushell_uri},
     state::ServerState,
 };
-use crate::config::{load_user_config, user_config_path};
+use crate::config_loading::{load_user_config, user_config_path};
 
 fn is_user_config_file(uri: &Uri) -> bool {
     user_config_path().is_some_and(|p| Path::new(uri.path().as_str()) == p)

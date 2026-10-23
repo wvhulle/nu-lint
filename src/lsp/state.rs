@@ -7,7 +7,7 @@ use super::{
     diagnostic::{LineIndex, extra_labels_to_hint_diagnostics, violation_to_diagnostic},
     docs::build_hover,
 };
-use crate::{Config, LintEngine, config::load_user_config, violation::Violation};
+use crate::{Config, LintEngine, config_loading::load_user_config, violation::Violation};
 
 pub struct DocumentState {
     pub content: String,

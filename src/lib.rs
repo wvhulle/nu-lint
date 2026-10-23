@@ -1,6 +1,7 @@
 mod ast;
 pub mod cli;
 mod config;
+mod config_loading;
 mod context;
 mod dsl;
 mod effect;

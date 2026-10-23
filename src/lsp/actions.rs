@@ -2,7 +2,8 @@ use std::{fs, path::PathBuf};
 
 use crate::{
     LintError, LintLevel,
-    config::{Config, user_config_path},
+    config::Config,
+    config_loading::{parse_config_toml, user_config_path},
 };
 
 pub const DISABLE_RULE_COMMAND: &str = "nu-lint.disableRule";
@@ -24,7 +25,7 @@ pub fn execute_disable_rule(rule_id: &str) -> Result<PathBuf, LintError> {
     let mut config = if content.is_empty() {
         Config::default()
     } else {
-        Config::load_from_str(&content)?
+        parse_config_toml(&content)?
     };
 
     if config.rules.get(rule_id) == Some(&LintLevel::Off) {

@@ -1,13 +1,6 @@
 use core::fmt::{self, Display};
 
-use crate::rule::Rule;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Group {
-    pub name: &'static str,
-    pub description: &'static str,
-    pub rules: &'static [&'static dyn Rule],
-}
+use crate::rule::Group;
 
 const ERROR_HANDLING: Group = Group {
     name: "runtime-errors",

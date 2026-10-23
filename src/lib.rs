@@ -40,6 +40,9 @@ pub enum LintError {
     RuleDoesNotExist {
         non_existing_id: String,
     },
+    GroupDoesNotExist {
+        non_existing_name: String,
+    },
     RuleConflict {
         rule_a: &'static str,
         rule_b: &'static str,
@@ -57,6 +60,12 @@ impl fmt::Display for LintError {
                 f,
                 "Rule declared in config with id `{non_existing_id}` does not exist in this \
                  version."
+            ),
+            Self::GroupDoesNotExist { non_existing_name } => write!(
+                f,
+                "Group `{non_existing_name}` in the `[groups]` section of the config does not \
+                 exist. Rule groups were renamed in this version; run `nu-lint --groups` to see \
+                 the current names."
             ),
             Self::Config { source } => write!(f, "invalid configuration: {source}"),
             Self::ConfigSerialize { source } => {
@@ -85,9 +94,10 @@ impl Error for LintError {
             Self::Io { source, .. } => Some(source),
             Self::Config { source } => Some(source),
             Self::ConfigSerialize { source } => Some(source),
-            Self::RuleConflict { .. } | Self::RuleDoesNotExist { .. } | Self::NoConfigLocation => {
-                None
-            }
+            Self::RuleConflict { .. }
+            | Self::RuleDoesNotExist { .. }
+            | Self::GroupDoesNotExist { .. }
+            | Self::NoConfigLocation => None,
         }
     }
 }

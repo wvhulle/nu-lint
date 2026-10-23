@@ -1,14 +1,13 @@
 use nu_lint_analysis::rule::Group;
 
-const ERROR_HANDLING: Group = Group {
-    name: "runtime-errors",
-    description: "Preventing unexpected runtime behaviour.",
+const CATCH_RUNTIME_FAILURES: Group = Group {
+    name: "catch-runtime-failures",
+    description: "Stop scripts that parse fine from failing or misbehaving at runtime.",
     rules: &[
         super::add_hat_external_commands::RULE,
         super::fragile_last_exit_code::RULE,
         super::check_complete_exit_code::RULE,
         super::serialize_data_for_external::RULE,
-        super::documentation::descriptive_error_messages::RULE,
         super::unescaped_interpolation::RULE,
         super::exit_only_in_main::RULE,
         super::check_typed_flag_before_use::RULE,
@@ -18,21 +17,34 @@ const ERROR_HANDLING: Group = Group {
         super::unsafe_dynamic_record_access::RULE,
         super::missing_stdin_in_shebang::RULE,
         super::dynamic_script_import::RULE,
+        super::self_import::RULE,
         super::catch_builtin_error_try::RULE,
         super::default_empty_string_masks_missing::RULE,
         super::unchecked_cell_path_index::RULE,
         super::unchecked_get_index::RULE,
         super::unhandled_external_error::RULE,
-        super::source_to_use::RULE,
         super::spread_list_to_external::RULE,
         super::glob_may_drop_quotes::RULE,
         super::require_main_with_stdin::RULE,
     ],
 };
 
-const TYPE_SAFETY: Group = Group {
-    name: "type-safety",
-    description: "Annotate with type hints where possible.",
+const ISOLATE_SIDE_EFFECTS: Group = Group {
+    name: "isolate-side-effects",
+    description: "Keep I/O, printing and dangerous file operations out of data-returning code.",
+    rules: &[
+        super::dangerous_file_operations::RULE,
+        super::errors_to_stderr::RULE,
+        super::side_effects::dont_mix_different_effects::RULE,
+        super::side_effects::print_and_return_data::RULE,
+        super::side_effects::each_nothing_to_for_loop::RULE,
+        super::side_effects::silence_stderr_data::RULE,
+    ],
+};
+
+const ANNOTATE_TYPES: Group = Group {
+    name: "annotate-types",
+    description: "Add or tighten type annotations in signatures.",
     rules: &[
         super::external_script_as_argument::RULE,
         super::nothing_outside_signature::RULE,
@@ -40,14 +52,13 @@ const TYPE_SAFETY: Group = Group {
         super::filesystem::string_param_as_path::RULE,
         super::typing::missing_output_type::RULE,
         super::typing::missing_in_type::RULE,
-        super::redundant_nu_subprocess::RULE,
-        super::dynamic_script_import::RULE,
     ],
 };
 
-const IDIOMATIC: Group = Group {
-    name: "idioms",
-    description: "Simplifications unique to the Nu language.",
+const ADOPT_NU_SYNTAX: Group = Group {
+    name: "adopt-nu-syntax",
+    description: "Replace verbose code with Nu operators, spread, assignment forms and the \
+                  standard library.",
     rules: &[
         super::not_is_empty_to_is_not_empty::RULE,
         super::columns_in_to_has::RULE,
@@ -56,10 +67,8 @@ const IDIOMATIC: Group = Group {
         super::get_optional_to_has::RULE,
         super::get_optional_to_not_has::RULE,
         super::hardcoded_math_constants::RULE,
-        super::transpose_items::RULE,
         super::merge_get_cell_path::RULE,
         super::merge_multiline_print::RULE,
-        super::positional_to_pipeline::RULE,
         super::source_to_use::RULE,
         super::compound_assignment::RULE,
         super::contains_to_regex_op::RULE,
@@ -73,37 +82,14 @@ const IDIOMATIC: Group = Group {
         super::division_to_format_duration::RULE,
         super::ignore_over_dev_null::RULE,
         super::redundant_echo::RULE,
+        super::if_null_to_default::RULE,
+        super::list_param_to_variadic::RULE,
     ],
 };
 
-const PARSING: Group = Group {
-    name: "parsing",
-    description: "Better ways to parse and transform text data.",
-    rules: &[
-        super::parsing::lines_instead_of_split::RULE,
-        super::never_space_split::RULE,
-        super::parsing::lines_each_to_parse::RULE,
-        super::parsing::simplify_regex_parse::RULE,
-        super::parsing::split_row_get_multistatement::RULE,
-        super::parsing::split_first_to_parse::RULE,
-        super::parsing::split_row_get_inline::RULE,
-        super::parsing::split_row_space_to_split_words::RULE,
-    ],
-};
-
-const FILESYSTEM: Group = Group {
-    name: "filesystem",
-    description: "Simplify file and path operations.",
-    rules: &[
-        super::filesystem::from_after_parsed_open::RULE,
-        super::filesystem::open_raw_from_to_open::RULE,
-        super::filesystem::string_param_as_path::RULE,
-    ],
-};
-
-const FILTERING: Group = Group {
-    name: "filtering",
-    description: "Better patterns for filtering and selecting data.",
+const PIPE_INSTEAD_OF_LOOP: Group = Group {
+    name: "pipe-instead-of-loop",
+    description: "Turn loops, counters, slices and manual filters into pipeline commands.",
     rules: &[
         super::filtering::each_if_to_where::RULE,
         super::filtering::for_filter_to_where::RULE,
@@ -115,77 +101,33 @@ const FILTERING: Group = Group {
         super::filtering::uniq_to_set_operation::RULE,
         super::filtering::where_closure_drop_parameter::RULE,
         super::remove_redundant_in::RULE,
-    ],
-};
-
-const ITERATION: Group = Group {
-    name: "iteration",
-    description: "Better patterns for loops and iteration.",
-    rules: &[
         super::range_for_iteration::loop_counter::RULE,
         super::range_for_iteration::while_counter::RULE,
-    ],
-};
-
-const DEAD_CODE: Group = Group {
-    name: "dead-code",
-    description: "Remove unused or redundant code",
-    rules: &[
-        super::self_import::RULE,
+        super::transpose_items::RULE,
         super::unnecessary_accumulate::RULE,
-        super::assign_then_return::RULE,
-        super::do_not_compare_booleans::RULE,
-        super::if_null_to_default::RULE,
-        super::redundant_ignore::RULE,
-        super::unnecessary_mut::RULE,
-        super::unused_helper_functions::RULE,
-        super::unused_parameter::RULE,
-        super::unused_variable::RULE,
-        super::script_export_main::RULE,
-        super::string_may_be_bare::RULE,
-        super::single_call_command::RULE,
-        super::append_to_concat_assign::RULE,
     ],
 };
 
-const PERFORMANCE: Group = Group {
-    name: "performance",
-    description: "Rules with potential performance impact",
+const PARSE_STRUCTURED_DATA: Group = Group {
+    name: "parse-structured-data",
+    description: "Get structured data from text and files with `parse`, `lines` and `open`.",
     rules: &[
-        super::redundant_nu_subprocess::RULE,
-        super::nu_script_to_run::RULE,
-        super::dispatch_with_subcommands::RULE,
-        super::self_import::RULE,
-        super::positional_to_pipeline::RULE,
-        super::unnecessary_accumulate::RULE,
-        super::merge_multiline_print::RULE,
-        super::chained_str_transform::RULE,
-        super::streaming_hidden_by_complete::RULE,
-        super::chained_append::RULE,
+        super::parsing::lines_instead_of_split::RULE,
+        super::never_space_split::RULE,
+        super::parsing::lines_each_to_parse::RULE,
+        super::parsing::simplify_regex_parse::RULE,
+        super::parsing::split_row_get_multistatement::RULE,
+        super::parsing::split_first_to_parse::RULE,
+        super::parsing::split_row_get_inline::RULE,
+        super::parsing::split_row_space_to_split_words::RULE,
+        super::filesystem::from_after_parsed_open::RULE,
+        super::filesystem::open_raw_from_to_open::RULE,
     ],
 };
 
-const DOCUMENTATION: Group = Group {
-    name: "documentation",
-    description: "Improve usefullness user-facing messages.",
-    rules: &[
-        super::documentation::add_doc_comment_exported_fn::RULE,
-        super::documentation::descriptive_error_messages::RULE,
-        super::error_make::add_label_to_error::RULE,
-        super::error_make::add_help_to_error::RULE,
-        super::error_make::add_span_to_label::RULE,
-        super::error_make::add_url_to_error::RULE,
-        super::documentation::main_positional_args_docs::RULE,
-        super::documentation::main_named_args_docs::RULE,
-        super::max_positional_params::RULE,
-        super::explicit_long_flags::RULE,
-        super::list_param_to_variadic::RULE,
-    ],
-};
-
-const EXTERNAL_TOOLS: Group = Group {
-    name: "external",
-    description: "Replace external commands with Nu built-ins where the result is equivalent.",
+const REPLACE_EXTERNAL_TOOLS: Group = Group {
+    name: "replace-external-tools",
+    description: "Swap external tools such as `grep`, `sed` and `jq` for equivalent built-ins.",
     rules: &[
         super::external_tools::cat_to_open::RULE,
         super::external_tools::curl_wget_to_http::RULE,
@@ -205,15 +147,51 @@ const EXTERNAL_TOOLS: Group = Group {
     ],
 };
 
-const FORMATTING: Group = Group {
-    name: "formatting",
-    description: "Formatting according to style-guide.",
+const STREAM_IN_PROCESS: Group = Group {
+    name: "stream-in-process",
+    description: "Avoid subprocesses and buffering so data streams inside one Nu process.",
     rules: &[
-        super::ansi_over_escape_codes::RULE,
+        super::redundant_nu_subprocess::RULE,
+        super::nu_script_to_run::RULE,
+        super::positional_to_pipeline::RULE,
+        super::chained_str_transform::RULE,
+        super::streaming_hidden_by_complete::RULE,
+    ],
+};
+
+const REMOVE_DEAD_CODE: Group = Group {
+    name: "remove-dead-code",
+    description: "Delete unused or redundant code.",
+    rules: &[
+        super::assign_then_return::RULE,
+        super::do_not_compare_booleans::RULE,
+        super::redundant_ignore::RULE,
+        super::unnecessary_mut::RULE,
+        super::unused_helper_functions::RULE,
+        super::unused_parameter::RULE,
+        super::unused_variable::RULE,
+        super::script_export_main::RULE,
+    ],
+};
+
+const REDUCE_COMPLEXITY: Group = Group {
+    name: "reduce-complexity",
+    description: "Flatten nesting, shorten bodies and simplify signatures and calls.",
+    rules: &[
         super::collapsible_if::RULE,
         super::forbid_excessive_nesting::RULE,
         super::max_function_body_length::RULE,
         super::if_else_chain_to_match::RULE,
+        super::max_positional_params::RULE,
+        super::explicit_long_flags::RULE,
+        super::single_call_command::RULE,
+    ],
+};
+
+const FORMAT_WHITESPACE: Group = Group {
+    name: "format-whitespace",
+    description: "Fix spacing, line width and quoting according to the style guide.",
+    rules: &[
         super::spacing::block_brace_spacing::RULE,
         super::spacing::closure_brace_pipe_spacing::RULE,
         super::spacing::closure_pipe_body_spacing::RULE,
@@ -224,46 +202,47 @@ const FORMATTING: Group = Group {
         super::spacing::reflow_wide_pipelines::RULE,
         super::spacing::reflow_wide_lists::RULE,
         super::spacing::wrap_wide_records::RULE,
+        super::string_may_be_bare::RULE,
     ],
 };
 
-const NAMING: Group = Group {
-    name: "naming",
-    description: "Follow official naming conventions",
+const FOLLOW_NAMING_CONVENTIONS: Group = Group {
+    name: "follow-naming-conventions",
+    description: "Apply the casing of the official style guide.",
     rules: &[
         super::naming::kebab_case_commands::RULE,
         super::naming::screaming_snake_constants::RULE,
         super::naming::snake_case_variables::RULE,
+    ],
+};
+
+const DOCUMENT_INTERFACES: Group = Group {
+    name: "document-interfaces",
+    description: "Add docs to commands and context to `error make`.",
+    rules: &[
+        super::documentation::add_doc_comment_exported_fn::RULE,
+        super::documentation::descriptive_error_messages::RULE,
         super::error_make::add_label_to_error::RULE,
+        super::error_make::add_help_to_error::RULE,
+        super::error_make::add_span_to_label::RULE,
+        super::error_make::add_url_to_error::RULE,
+        super::documentation::main_positional_args_docs::RULE,
+        super::documentation::main_named_args_docs::RULE,
     ],
 };
 
-const SIDE_EFFECTS: Group = Group {
-    name: "effects",
-    description: "Handle built-in and external commands with side-effects.",
+const FORWARD_PARSER_DIAGNOSTICS: Group = Group {
+    name: "forward-parser-diagnostics",
+    description: "Report errors and unhandled deprecations from nu-parser.",
     rules: &[
-        super::dangerous_file_operations::RULE,
-        super::errors_to_stderr::RULE,
-        super::side_effects::dont_mix_different_effects::RULE,
-        super::side_effects::print_and_return_data::RULE,
-        super::side_effects::each_nothing_to_for_loop::RULE,
-        super::side_effects::silence_stderr_data::RULE,
-    ],
-};
-
-const UPSTREAM: Group = Group {
-    name: "upstream",
-    description: "Forward warnings and errors of the Nu parser.",
-    rules: &[
-        super::dynamic_script_import::RULE,
         super::upstream::nu_deprecated::RULE,
         super::upstream::nu_parse_error::RULE,
     ],
 };
 
-const MIGRATIONS: Group = Group {
-    name: "migrations",
-    description: "Replace syntax that the Nu parser deprecated.",
+const MIGRATE_DEPRECATED_SYNTAX: Group = Group {
+    name: "migrate-deprecated-syntax",
+    description: "Rewrite syntax that nu-parser deprecated.",
     rules: &[
         super::migrations::filter_to_where::RULE,
         super::migrations::str_case_full_names::RULE,
@@ -274,32 +253,29 @@ const MIGRATIONS: Group = Group {
 };
 
 pub const ALL_GROUPS: &[Group] = &[
-    IDIOMATIC,
-    PARSING,
-    FILESYSTEM,
-    DEAD_CODE,
-    ITERATION,
-    ERROR_HANDLING,
-    FILTERING,
-    PERFORMANCE,
-    TYPE_SAFETY,
-    DOCUMENTATION,
-    SIDE_EFFECTS,
-    EXTERNAL_TOOLS,
-    FORMATTING,
-    NAMING,
-    UPSTREAM,
-    MIGRATIONS,
+    CATCH_RUNTIME_FAILURES,
+    ISOLATE_SIDE_EFFECTS,
+    ANNOTATE_TYPES,
+    ADOPT_NU_SYNTAX,
+    PIPE_INSTEAD_OF_LOOP,
+    PARSE_STRUCTURED_DATA,
+    REPLACE_EXTERNAL_TOOLS,
+    STREAM_IN_PROCESS,
+    REMOVE_DEAD_CODE,
+    REDUCE_COMPLEXITY,
+    FORMAT_WHITESPACE,
+    FOLLOW_NAMING_CONVENTIONS,
+    DOCUMENT_INTERFACES,
+    FORWARD_PARSER_DIAGNOSTICS,
+    MIGRATE_DEPRECATED_SYNTAX,
 ];
 
-/// Find all groups that contain the given `rule_id`
 #[must_use]
-pub fn groups_for_rule(rule_id: &str) -> Vec<&'static str> {
+pub fn group_for_rule(rule_id: &str) -> Option<&'static str> {
     ALL_GROUPS
         .iter()
-        .filter(|g| g.rules.iter().any(|r| r.id() == rule_id))
-        .map(|g| g.name)
-        .collect()
+        .find(|group| group.rules.iter().any(|rule| rule.id() == rule_id))
+        .map(|group| group.name)
 }
 
 #[cfg(test)]
@@ -307,6 +283,7 @@ mod tests {
     use std::{fmt::Write, fs};
 
     use super::{ALL_GROUPS, Group};
+    use crate::USED_RULES;
 
     fn readme_markdown() -> String {
         ALL_GROUPS.iter().map(group_details_markdown).collect()
@@ -354,5 +331,58 @@ mod tests {
             fs::write(README_PATH, regenerated).unwrap();
             panic!("README.md rule list was outdated and has been regenerated; commit the change");
         }
+    }
+
+    fn group_count_of(rule_id: &str) -> usize {
+        ALL_GROUPS
+            .iter()
+            .filter(|group| group.rules.iter().any(|rule| rule.id() == rule_id))
+            .count()
+    }
+
+    #[test]
+    fn every_used_rule_is_in_exactly_one_group() {
+        let misgrouped_rules: Vec<_> = USED_RULES
+            .iter()
+            .map(|rule| (rule.id(), group_count_of(rule.id())))
+            .filter(|(_, group_count)| *group_count != 1)
+            .collect();
+        assert!(
+            misgrouped_rules.is_empty(),
+            "rules must be in exactly one group, found (rule, group count): {misgrouped_rules:?}"
+        );
+    }
+
+    #[test]
+    fn every_grouped_rule_is_used() {
+        let unused_grouped_rules: Vec<_> = ALL_GROUPS
+            .iter()
+            .flat_map(|group| group.rules)
+            .map(|rule| rule.id())
+            .filter(|rule_id| !USED_RULES.iter().any(|rule| rule.id() == *rule_id))
+            .collect();
+        assert!(
+            unused_grouped_rules.is_empty(),
+            "grouped rules missing from USED_RULES: {unused_grouped_rules:?}"
+        );
+    }
+
+    #[test]
+    fn group_names_are_unique() {
+        let duplicated_names: Vec<_> = ALL_GROUPS
+            .iter()
+            .map(|group| group.name)
+            .filter(|name| {
+                ALL_GROUPS
+                    .iter()
+                    .filter(|group| group.name == *name)
+                    .count()
+                    > 1
+            })
+            .collect();
+        assert!(
+            duplicated_names.is_empty(),
+            "duplicated group names: {duplicated_names:?}"
+        );
     }
 }

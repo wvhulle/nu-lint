@@ -34,6 +34,16 @@ pub fn validate_rule_levels(config: &Config) -> Result<(), LintError> {
         });
     }
 
+    if let Some(unknown_group_name) = config.groups.keys().find(|group_name| {
+        !ALL_GROUPS
+            .iter()
+            .any(|group| group.name == group_name.as_str())
+    }) {
+        return Err(LintError::GroupDoesNotExist {
+            non_existing_name: unknown_group_name.clone(),
+        });
+    }
+
     for rule in USED_RULES {
         if config.get_lint_level(*rule, ALL_GROUPS) == LintLevel::Off {
             continue;
@@ -56,12 +66,16 @@ pub fn user_config_path() -> Option<PathBuf> {
     dirs::config_dir().map(|config_dir| config_dir.join("nu-lint.toml"))
 }
 
-#[must_use]
-pub fn load_user_config() -> Config {
-    user_config_path()
-        .filter(|path| path.is_file())
-        .and_then(|path| read_config_file(&path).ok())
-        .unwrap_or_default()
+pub fn load_validated_config(explicit_path: Option<&Path>) -> Result<Config, LintError> {
+    let config_path = explicit_path
+        .map(Path::to_path_buf)
+        .or_else(|| user_config_path().filter(|path| path.is_file()));
+    let config = match config_path {
+        Some(path) => read_config_file(&path)?,
+        None => Config::default(),
+    };
+    validate_rule_levels(&config)?;
+    Ok(config)
 }
 
 #[cfg(test)]
@@ -86,5 +100,20 @@ mod tests {
     fn test_validate_passes_with_default_config() {
         let result = validate_rule_levels(&Config::default());
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_validate_rejects_unknown_group() {
+        let config = parse_config_toml("[groups]\nfiltering = \"off\"").unwrap();
+        assert!(matches!(
+            validate_rule_levels(&config),
+            Err(LintError::GroupDoesNotExist { non_existing_name }) if non_existing_name == "filtering"
+        ));
+    }
+
+    #[test]
+    fn test_validate_accepts_known_group() {
+        let config = parse_config_toml("[groups]\npipe-instead-of-loop = \"off\"").unwrap();
+        assert!(validate_rule_levels(&config).is_ok());
     }
 }

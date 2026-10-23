@@ -4,11 +4,12 @@ use lsp_server::{Connection, ExtractError, Message, Notification, Request, Reque
 use lsp_types::{
     CodeActionKind, CodeActionOptions, CodeActionProviderCapability, Diagnostic,
     ExecuteCommandOptions, ExecuteCommandParams, HoverProviderCapability, InitializeParams,
-    PublishDiagnosticsParams, ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind,
-    TextDocumentSyncOptions, TextDocumentSyncSaveOptions, Uri,
+    MessageType, PublishDiagnosticsParams, ServerCapabilities, ShowMessageParams,
+    TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions,
+    TextDocumentSyncSaveOptions, Uri,
     notification::{
         DidChangeTextDocument, DidChangeWatchedFiles, DidCloseTextDocument, DidOpenTextDocument,
-        DidSaveTextDocument, Notification as NotificationTrait, PublishDiagnostics,
+        DidSaveTextDocument, Notification as NotificationTrait, PublishDiagnostics, ShowMessage,
     },
     request::{CodeActionRequest, ExecuteCommand, HoverRequest, Request as RequestTrait},
 };
@@ -18,14 +19,41 @@ use super::{
     diagnostic::{is_nushell_language_id, is_nushell_uri},
     state::ServerState,
 };
-use crate::config_loading::{load_user_config, user_config_path};
+use crate::{
+    Config,
+    config_loading::{load_validated_config, user_config_path},
+};
 
 fn is_user_config_file(uri: &Uri) -> bool {
     user_config_path().is_some_and(|p| Path::new(uri.path().as_str()) == p)
 }
 
+fn show_error_message(connection: &Connection, message: String) {
+    let notification = Notification::new(
+        ShowMessage::METHOD.to_string(),
+        ShowMessageParams {
+            typ: MessageType::ERROR,
+            message,
+        },
+    );
+    if let Err(e) = connection.sender.send(Message::Notification(notification)) {
+        tracing::error!("Failed to send message: {e}");
+    }
+}
+
+fn load_config_or_report(connection: &Connection) -> Config {
+    load_validated_config(None).unwrap_or_else(|config_error| {
+        tracing::error!("Invalid nu-lint config: {config_error}");
+        show_error_message(
+            connection,
+            format!("nu-lint: {config_error} Using default rule levels until the config is fixed."),
+        );
+        Config::default()
+    })
+}
+
 fn reload_config_and_relint(connection: &Connection, state: &mut ServerState) {
-    state.reload_config();
+    state.replace_config(load_config_or_report(connection));
     for uri in state.open_document_uris() {
         if let Some(doc) = state.get_document(&uri) {
             let content = doc.content.clone();
@@ -84,7 +112,7 @@ pub fn run_lsp_server() {
         .client_info
         .as_ref()
         .is_some_and(|ci| ci.name == "reedline");
-    let config = load_user_config();
+    let config = load_config_or_report(&connection);
     tracing::info!("nu-lint LSP server initialized");
 
     let mut state = ServerState::new(config, is_repl_client);

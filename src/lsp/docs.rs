@@ -1,13 +1,16 @@
 use lsp_types::{Hover, HoverContents, MarkupContent, MarkupKind};
 use nu_lint_analysis::violation::Violation;
-use nu_lint_rules::groups::groups_for_rule;
+use nu_lint_rules::groups::group_for_rule;
 
 fn violation_to_hover_markdown(v: &Violation) -> String {
     let mut lines = Vec::new();
 
     if let Some(rule_id) = v.rule_id.as_deref() {
-        let groups = groups_for_rule(rule_id).join(", ");
-        lines.push(format!("### `{rule_id}` ({groups})"));
+        let heading = group_for_rule(rule_id).map_or_else(
+            || format!("### `{rule_id}`"),
+            |group| format!("### `{rule_id}` ({group})"),
+        );
+        lines.push(heading);
     }
 
     if let Some(short) = v.short_description {

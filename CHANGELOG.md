@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** every rule now belongs to exactly one group, and the groups have descriptive names. Unknown group names in the config file are now an error instead of being ignored. Rename your `[groups]` keys:
+
+  | Old group | New group |
+  |---|---|
+  | `runtime-errors` | `catch-runtime-failures` |
+  | `effects` | `isolate-side-effects` |
+  | `type-safety` | `annotate-types` |
+  | `idioms` | `adopt-nu-syntax` |
+  | `filtering`, `iteration` | `pipe-instead-of-loop` |
+  | `parsing`, `filesystem` | `parse-structured-data` (`string_param_as_path` moved to `annotate-types`) |
+  | `external` | `replace-external-tools` |
+  | `performance` | `stream-in-process` |
+  | `dead-code` | `remove-dead-code` |
+  | `formatting` | `format-whitespace` (structural rules moved to the new `reduce-complexity`) |
+  | `naming` | `follow-naming-conventions` |
+  | `documentation` | `document-interfaces` |
+  | `upstream` | `forward-parser-diagnostics` |
+  | `migrations` | `migrate-deprecated-syntax` |
+
 ## [1.6.0](https://codeberg.org/wvhulle/nu-lint/compare/v1.5.0...v1.6.0) - 2026-10-16
 
 ### Added

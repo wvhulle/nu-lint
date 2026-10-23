@@ -19,10 +19,10 @@ impl DetectFix for NuDeprecated {
 
     fn long_description(&self) -> Option<&'static str> {
         Some(
-            "Forwards every deprecation warning of nu-parser that no rule in the `migrations` \
-             group handles. Deprecations with a migration rule are reported only by that rule, \
-             even when it is turned off, so each warning appears exactly once. The warnings \
-             depend on the nu-parser version nu-lint was built against.",
+            "Forwards every deprecation warning of nu-parser that no rule in the \
+             `migrate-deprecated-syntax` group handles. Deprecations with a migration rule are \
+             reported only by that rule, even when it is turned off, so each warning appears \
+             exactly once. The warnings depend on the nu-parser version nu-lint was built against.",
         )
     }
 

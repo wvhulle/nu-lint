@@ -8,7 +8,7 @@ use super::{
     diagnostic::{LineIndex, extra_labels_to_hint_diagnostics, violation_to_diagnostic},
     docs::build_hover,
 };
-use crate::{Config, LintEngine, config_loading::load_user_config};
+use crate::{Config, LintEngine};
 
 pub struct DocumentState {
     pub content: String,
@@ -31,9 +31,8 @@ impl ServerState {
         }
     }
 
-    /// Reload the user-wide XDG config.
-    pub fn reload_config(&mut self) {
-        self.engine = crate::lint_engine_with_all_rules(load_user_config());
+    pub fn replace_config(&mut self, config: Config) {
+        self.engine = crate::lint_engine_with_all_rules(config);
     }
 
     pub fn lint_document(&mut self, uri: &Uri, content: &str) -> Vec<Diagnostic> {

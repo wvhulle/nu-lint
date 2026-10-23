@@ -1,6 +1,6 @@
 use std::{
     io::{self, Read, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::ExitCode,
 };
 
@@ -20,7 +20,7 @@ use nu_lint_rules::{USED_RULES, groups::ALL_GROUPS};
 #[cfg(feature = "lsp")]
 use crate::lsp;
 use crate::{
-    config_loading::{load_user_config, read_config_file, validate_rule_levels},
+    config_loading::load_validated_config,
     file_collection::collect_nu_files,
     format::{Format, Summary, format_fix_results, format_output},
 };
@@ -78,16 +78,20 @@ pub struct Cli {
 }
 
 impl Cli {
-    fn load_config(path: Option<PathBuf>) -> Config {
-        path.map_or_else(
-            || {
-                log::debug!("No configuration file path provided. Loading user config.");
-                let config = load_user_config();
+    fn with_loaded_config(
+        explicit_path: Option<&Path>,
+        run_with_config: impl FnOnce(&Config) -> io::Result<ExitCode>,
+    ) -> io::Result<ExitCode> {
+        match load_validated_config(explicit_path) {
+            Ok(config) => {
                 tracing::debug!(?config);
-                config
-            },
-            |path| read_config_file(&path).unwrap(),
-        )
+                run_with_config(&config)
+            }
+            Err(config_error) => {
+                writeln!(io::stderr(), "Error: {config_error}")?;
+                Ok(ExitCode::FAILURE)
+            }
+        }
     }
 
     fn read_stdin() -> String {
@@ -99,10 +103,6 @@ impl Cli {
     }
 
     fn lint(&self, config: &Config) -> io::Result<ExitCode> {
-        if let Err(e) = validate_rule_levels(config) {
-            writeln!(io::stderr(), "Error: {e}")?;
-            return Ok(ExitCode::FAILURE);
-        }
         let engine = crate::lint_engine_with_all_rules(config.clone());
 
         let violations = if self.stdin {
@@ -136,10 +136,6 @@ impl Cli {
     }
 
     fn fix(&self, config: &Config) -> io::Result<ExitCode> {
-        if let Err(e) = validate_rule_levels(config) {
-            writeln!(io::stderr(), "Error: {e}")?;
-            return Ok(ExitCode::FAILURE);
-        }
         let engine = crate::lint_engine_with_all_rules(config.clone());
 
         if self.stdin {
@@ -275,9 +271,11 @@ pub fn run() -> io::Result<ExitCode> {
         init_test_log();
     }
 
-    let config = Cli::load_config(cli.config.clone());
+    let explicit_config_path = cli.config.as_deref();
     if cli.list {
-        Cli::list_rules(&config)?;
+        return Cli::with_loaded_config(explicit_config_path, |config| {
+            Cli::list_rules(config).map(|()| ExitCode::SUCCESS)
+        });
     } else if cli.groups {
         Cli::list_groups()?;
     } else if let Some(ref rule_id) = cli.explain {
@@ -287,10 +285,10 @@ pub fn run() -> io::Result<ExitCode> {
     } else if cli.lsp {
         return Ok(start_lsp_server());
     } else if cli.fix {
-        return cli.fix(&config);
+        return Cli::with_loaded_config(explicit_config_path, |config| cli.fix(config));
     } else {
         log::debug!("No flags given, will lint workspace.");
-        return cli.lint(&config);
+        return Cli::with_loaded_config(explicit_config_path, |config| cli.lint(config));
     }
     Ok(ExitCode::SUCCESS)
 }

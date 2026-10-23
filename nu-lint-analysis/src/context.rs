@@ -403,10 +403,6 @@ impl<'a> LintContext<'a> {
 
 #[cfg(any(test, feature = "test-support"))]
 impl LintContext<'_> {
-    /// Helper to create a test context with stdlib commands loaded.
-    ///
-    /// Always uses the default configuration so that user-specific overrides
-    /// (e.g. `~/.nu-lint.toml`) do not interfere with test results.
     #[track_caller]
     pub fn test_with_parsed_source<F, R>(source: &str, f: F) -> R
     where

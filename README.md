@@ -26,7 +26,7 @@ To see all options and get help:
 nu-lint --help
 ```
 
-See [Rules](#rules) for all available rules, or run `nu-lint --list-rules`.
+See [Rules](#rules) for all available rules, or run `nu-lint --list`.
 
 ## Screenshots
 
@@ -171,7 +171,11 @@ You can also implement your own editor extensions using the `--lsp` flag as in: 
 
 Some rules are deactivated by default. Usually because they are too noisy or annoy people. You should activate them with the config file and a level override.
 
-A configuration file at the top of the workspace is optional and should be named `.nu-lint.toml` in your project root. It may look like this:
+The configuration file is optional. By default nu-lint reads `nu-lint.toml` from your user configuration directory (`~/.config/nu-lint.toml` on Linux, `~/Library/Application Support/nu-lint.toml` on macOS, `%APPDATA%\nu-lint.toml` on Windows). Pass `--config <path>` to use a different file. The language server always reads the file in the user configuration directory and reloads it when it changes.
+
+If the file cannot be parsed or names an unknown rule or group, the command line exits with an error, and the language server shows the error in your editor and uses the default levels until the file is fixed.
+
+The file may look like this:
 
 ```toml
 # Some rules are configurable
@@ -188,8 +192,8 @@ max_inlinable_pipeline_elements = 2
 
 # Set lint level of a set of rules at once.
 [groups]
-performance = "warning"
-type-safety = "error"
+stream-in-process = "warning"
+annotate-types = "error"
 
 # Override a single rule level
 [rules]
@@ -209,7 +213,7 @@ $data | each {|row|
 
 There is a shortcut to do this by selecting the "ignore line violation" code action in the code action menu of your editor.
 
-For any setting you don't set in the optional workspace configuration file, the defaults set in [`./src/config.rs`](./src/config.rs) will be used. If you specify the option in the configuration file, it will override the defaults.
+For any setting you don't set in the configuration file, the defaults set in [`./nu-lint-analysis/src/config.rs`](./nu-lint-analysis/src/config.rs) will be used. If you specify the option in the configuration file, it will override the defaults.
 
 ## Rules
 
@@ -221,11 +225,63 @@ All rules are optional and can be disabled with a configuration file or comment.
 
 Some of the rules need further testing and improvement. Please make an issue on the issue tracker to report any bugs. In early stages of development some rules may be replaced or renamed.
 
-Most rules have automatic fixes. Run `nu-lint --list-rules` to see the rules with their configured levels, `nu-lint --groups` to see them per group, or `nu-lint --explain <RULE_ID>` for details on one rule. Rules per group:
+Most rules have automatic fixes. Run `nu-lint --list` to see the rules with their configured levels, `nu-lint --groups` to see them per group, or `nu-lint --explain <RULE_ID>` for details on one rule. Rules per group:
 
 <!-- start-rule-groups -->
 <details>
-<summary><code>idioms</code> (24 rules): Simplifications unique to the Nu language.</summary>
+<summary><code>catch-runtime-failures</code> (22 rules): Stop scripts that parse fine from failing or misbehaving at runtime.</summary>
+
+- `add_hat_external_commands` (auto-fix): Always use the '^' prefix on external commands
+- `fragile_last_exit_code` (auto-fix): Fragile `LAST_EXIT_CODE` check
+- `check_complete_exit_code`: Unchecked exit code after `complete`
+- `serialize_data_for_external` (auto-fix): Structured data piped to a JSON or CSV tool without `to json` or `to csv`
+- `unescaped_interpolation`: Unescaped braces in string interpolation
+- `exit_only_in_main`: Avoid using 'exit' in functions other than 'main'
+- `check_typed_flag_before_use`: Typed flag used without null check
+- `non_final_failure_check`: Non-final pipeline command exit code ignored
+- `error_make_for_non_fatal` (auto-fix): Use 'error make' for catchable errors in functions and try blocks
+- `try_instead_of_do`: Use 'try' blocks instead of 'do' blocks for error-prone operations
+- `unsafe_dynamic_record_access` (auto-fix): Use 'get -o' for dynamic keys to handle missing keys safely
+- `missing_stdin_in_shebang` (auto-fix): Shebang missing `--stdin` for input
+- `dynamic_script_import`: Dynamic import path not statically validated
+- `self_import`: Circular import: script imports itself
+- `catch_builtin_error_try`: Catch runtime errors from built-in commands using 'try' blocks
+- `default_empty_string_masks_missing`: Avoid '| default ""'; it masks a missing value as an empty string
+- `unchecked_cell_path_index` (auto-fix): Cell path numeric index access may panic on empty lists
+- `unchecked_get_index` (auto-fix): Prefer optional cell path `$list.0?` over `get` for index access
+- `unhandled_external_error`: Unhandled external command error
+- `spread_list_to_external` (auto-fix): List variables passed to external commands should be spread with `...`
+- `glob_may_drop_quotes` (auto-fix): Quoted glob pattern treated as literal
+- `require_main_with_stdin`: Scripts using $in must define a main function
+
+</details>
+
+<details>
+<summary><code>isolate-side-effects</code> (6 rules): Keep I/O, printing and dangerous file operations out of data-returning code.</summary>
+
+- `dangerous_file_operations`: File operation on dangerous system path
+- `errors_to_stderr`: Error messages should go to stderr, not stdout
+- `dont_mix_different_effects`: Functions should not mix different types of I/O operations or effects.
+- `print_and_return_data`: Function prints and returns data
+- `each_nothing_to_for_loop` (auto-fix): `each` mappings with no output should be written as `for` loops.
+- `silence_stderr_data`: External commands that write data to stderr should not be silenced
+
+</details>
+
+<details>
+<summary><code>annotate-types</code> (6 rules): Add or tighten type annotations in signatures.</summary>
+
+- `external_script_as_argument`: Script path passed as command argument
+- `nothing_outside_signature` (auto-fix): `nothing` type used outside signature
+- `add_type_hints_arguments` (auto-fix): Arguments of custom commands should have type annotations
+- `string_param_as_path` (auto-fix): Parameter typed as string but used as filesystem path
+- `missing_output_type` (auto-fix): Command missing output type annotation
+- `missing_in_type` (auto-fix): Command using `$in` missing input type
+
+</details>
+
+<details>
+<summary><code>adopt-nu-syntax</code> (24 rules): Replace verbose code with Nu operators, spread, assignment forms and the standard library.</summary>
 
 - `not_is_empty_to_is_not_empty` (auto-fix): Simplify `not ... is-empty` to `is-not-empty`
 - `columns_in_to_has` (auto-fix): Use 'has' operator instead of 'in ($record | columns)'
@@ -234,10 +290,8 @@ Most rules have automatic fixes. Run `nu-lint --list-rules` to see the rules wit
 - `get_optional_to_has` (auto-fix): Simplify `get -o | is-not-empty` to `has`
 - `get_optional_to_not_has` (auto-fix): Simplify `get -o | is-empty` to `not-has`
 - `hardcoded_math_constants` (auto-fix): Hardcoded mathematical constants should use std/math constants instead
-- `transpose_items` (auto-fix): Simplify `transpose | each` to `items`
 - `merge_get_cell_path` (auto-fix): Combine chained 'get' commands into cell paths
 - `merge_multiline_print` (auto-fix): Consecutive prints mergeable into one
-- `positional_to_pipeline` (auto-fix): Data parameter convertible to pipeline input
 - `source_to_use`: `source` replaceable with `use`
 - `compound_assignment` (auto-fix): Compound assignment operators simplify simple arithmetic.
 - `contains_to_regex_op` (auto-fix): Use =~ and !~ operators instead of verbose 'str contains' checks
@@ -251,91 +305,13 @@ Most rules have automatic fixes. Run `nu-lint --list-rules` to see the rules wit
 - `division_to_format_duration` (auto-fix): Replace duration division with `format duration`
 - `ignore_over_dev_null` (auto-fix): Use '| ignore' instead of redirecting to /dev/null
 - `redundant_echo` (auto-fix): Redundant `echo` (identity function)
-
-</details>
-
-<details>
-<summary><code>parsing</code> (8 rules): Better ways to parse and transform text data.</summary>
-
-- `lines_instead_of_split` (auto-fix): Use 'lines' command for splitting by newlines
-- `never_space_split` (auto-fix): Unnecessary quotes around variable
-- `lines_each_to_parse` (auto-fix): Remove redundant 'each' wrapper around 'parse'
-- `simplify_regex_parse` (auto-fix): Simplify 'parse --regex' to 'parse' with pattern syntax
-- `split_row_get_multistatement` (auto-fix): Extract field directly with 'parse' instead of storing split result
-- `split_first_to_parse` (auto-fix): Extract first field with 'parse' pattern
-- `split_row_get_inline` (auto-fix): Extract field by name with 'parse' pattern
-- `split_row_space_to_split_words` (auto-fix): Use 'split words' for whitespace splitting
-
-</details>
-
-<details>
-<summary><code>filesystem</code> (3 rules): Simplify file and path operations.</summary>
-
-- `from_after_parsed_open` (auto-fix): `open` already parses known formats into structured data
-- `open_raw_from_to_open` (auto-fix): Simplify `open --raw | from` to `open`
-- `string_param_as_path` (auto-fix): Parameter typed as string but used as filesystem path
-
-</details>
-
-<details>
-<summary><code>dead-code</code> (14 rules): Remove unused or redundant code</summary>
-
-- `self_import`: Circular import: script imports itself
-- `unnecessary_accumulate`: Redundant accumulator pattern: can be simplified
-- `assign_then_return` (auto-fix): Redundant variable before return
-- `do_not_compare_booleans` (auto-fix): Redundant comparison with boolean literal
 - `if_null_to_default` (auto-fix): Simplify if-null pattern to `| default`
-- `redundant_ignore` (auto-fix): Commands producing output that is discarded with '| ignore'
-- `unnecessary_mut` (auto-fix): Variable marked `mut` but never reassigned
-- `unused_helper_functions` (auto-fix): Function unreachable from entry points
-- `unused_parameter` (auto-fix): Function parameter declared but never used
-- `unused_variable` (auto-fix): Variable declared but never used
-- `script_export_main` (auto-fix): In scripts, 'def main' is the entry point and doesn't need 'export'
-- `string_may_be_bare` (auto-fix): Quoted string can be bare word
-- `single_call_command` (auto-fix): Single-line command called only once
-- `append_to_concat_assign` (auto-fix): Use ++= operator instead of verbose append in assignment
+- `list_param_to_variadic` (auto-fix): Use variadic `...args` instead of a single list parameter
 
 </details>
 
 <details>
-<summary><code>iteration</code> (2 rules): Better patterns for loops and iteration.</summary>
-
-- `loop_counter_to_range`: Loop counter to range iteration
-- `while_counter_to_range`: Counter while-loop to range iteration
-
-</details>
-
-<details>
-<summary><code>runtime-errors</code> (23 rules): Preventing unexpected runtime behaviour.</summary>
-
-- `add_hat_external_commands` (auto-fix): Always use the '^' prefix on external commands
-- `fragile_last_exit_code` (auto-fix): Fragile `LAST_EXIT_CODE` check
-- `check_complete_exit_code`: Unchecked exit code after `complete`
-- `serialize_data_for_external` (auto-fix): Structured data piped to a JSON or CSV tool without `to json` or `to csv`
-- `descriptive_error_messages`: Error messages should be descriptive and actionable
-- `unescaped_interpolation`: Unescaped braces in string interpolation
-- `exit_only_in_main`: Avoid using 'exit' in functions other than 'main'
-- `check_typed_flag_before_use`: Typed flag used without null check
-- `non_final_failure_check`: Non-final pipeline command exit code ignored
-- `error_make_for_non_fatal` (auto-fix): Use 'error make' for catchable errors in functions and try blocks
-- `try_instead_of_do`: Use 'try' blocks instead of 'do' blocks for error-prone operations
-- `unsafe_dynamic_record_access` (auto-fix): Use 'get -o' for dynamic keys to handle missing keys safely
-- `missing_stdin_in_shebang` (auto-fix): Shebang missing `--stdin` for input
-- `dynamic_script_import`: Dynamic import path not statically validated
-- `catch_builtin_error_try`: Catch runtime errors from built-in commands using 'try' blocks
-- `default_empty_string_masks_missing`: Avoid '| default ""'; it masks a missing value as an empty string
-- `unchecked_cell_path_index` (auto-fix): Cell path numeric index access may panic on empty lists
-- `unchecked_get_index` (auto-fix): Prefer optional cell path `$list.0?` over `get` for index access
-- `unhandled_external_error`: Unhandled external command error
-- `source_to_use`: `source` replaceable with `use`
-- `spread_list_to_external` (auto-fix): List variables passed to external commands should be spread with `...`
-- `glob_may_drop_quotes` (auto-fix): Quoted glob pattern treated as literal
-- `require_main_with_stdin`: Scripts using $in must define a main function
-
-</details>
-
-<details>
-<summary><code>filtering</code> (10 rules): Better patterns for filtering and selecting data.</summary>
+<summary><code>pipe-instead-of-loop</code> (14 rules): Turn loops, counters, slices and manual filters into pipeline commands.</summary>
 
 - `each_if_to_where` (auto-fix): Use 'where' for filtering instead of 'each' with 'if'
 - `for_filter_to_where`: Use 'where' filter instead of for loop with if and append
@@ -347,70 +323,31 @@ Most rules have automatic fixes. Run `nu-lint --list-rules` to see the rules wit
 - `uniq_to_set_operation` (auto-fix): Use `union`, `intersect` or `difference` instead of combining lists and `uniq`
 - `where_closure_drop_parameter` (auto-fix): You can drop the closure and its parameter in 'where' and 'filter'.
 - `remove_redundant_in` (auto-fix): Redundant `$in` at pipeline start
-
-</details>
-
-<details>
-<summary><code>performance</code> (10 rules): Rules with potential performance impact</summary>
-
-- `redundant_nu_subprocess`: Redundant `nu -c` subprocess call
-- `nu_script_to_run`: Run Nu scripts with the `run` keyword instead of a `nu` subprocess
-- `dispatch_with_subcommands`: Match dispatch replaceable with subcommands
-- `self_import`: Circular import: script imports itself
-- `positional_to_pipeline` (auto-fix): Data parameter convertible to pipeline input
+- `loop_counter_to_range`: Loop counter to range iteration
+- `while_counter_to_range`: Counter while-loop to range iteration
+- `transpose_items` (auto-fix): Simplify `transpose | each` to `items`
 - `unnecessary_accumulate`: Redundant accumulator pattern: can be simplified
-- `merge_multiline_print` (auto-fix): Consecutive prints mergeable into one
-- `chained_str_transform` (auto-fix): Consecutive `str replace` combinable
-- `streaming_hidden_by_complete` (auto-fix): Streaming commands should not be wrapped with 'complete'
-- `chained_append` (auto-fix): Use spread syntax instead of chained 'append' commands
 
 </details>
 
 <details>
-<summary><code>type-safety</code> (8 rules): Annotate with type hints where possible.</summary>
+<summary><code>parse-structured-data</code> (10 rules): Get structured data from text and files with `parse`, `lines` and `open`.</summary>
 
-- `external_script_as_argument`: Script path passed as command argument
-- `nothing_outside_signature` (auto-fix): `nothing` type used outside signature
-- `add_type_hints_arguments` (auto-fix): Arguments of custom commands should have type annotations
-- `string_param_as_path` (auto-fix): Parameter typed as string but used as filesystem path
-- `missing_output_type` (auto-fix): Command missing output type annotation
-- `missing_in_type` (auto-fix): Command using `$in` missing input type
-- `redundant_nu_subprocess`: Redundant `nu -c` subprocess call
-- `dynamic_script_import`: Dynamic import path not statically validated
-
-</details>
-
-<details>
-<summary><code>documentation</code> (11 rules): Improve usefullness user-facing messages.</summary>
-
-- `add_doc_comment_exported_fn`: Exported functions should have documentation comments
-- `descriptive_error_messages`: Error messages should be descriptive and actionable
-- `add_label_to_error`: error make should include 'label'
-- `add_help_to_error`: `error make` missing `help` field
-- `add_span_to_label`: labels should include 'span' to highlight error location in user code
-- `add_url_to_error`: error make should include 'url' field to link to documentation
-- `main_positional_args_docs`: Missing docs on main positional parameter
-- `main_named_args_docs`: Missing docs on main flag parameter
-- `max_positional_params`: Custom commands should have ≤ 2 positional parameters
-- `explicit_long_flags` (auto-fix): Replace short flags (-f) with long flags (--flag)
-- `list_param_to_variadic` (auto-fix): Use variadic `...args` instead of a single list parameter
+- `lines_instead_of_split` (auto-fix): Use 'lines' command for splitting by newlines
+- `never_space_split` (auto-fix): Unnecessary quotes around variable
+- `lines_each_to_parse` (auto-fix): Remove redundant 'each' wrapper around 'parse'
+- `simplify_regex_parse` (auto-fix): Simplify 'parse --regex' to 'parse' with pattern syntax
+- `split_row_get_multistatement` (auto-fix): Extract field directly with 'parse' instead of storing split result
+- `split_first_to_parse` (auto-fix): Extract first field with 'parse' pattern
+- `split_row_get_inline` (auto-fix): Extract field by name with 'parse' pattern
+- `split_row_space_to_split_words` (auto-fix): Use 'split words' for whitespace splitting
+- `from_after_parsed_open` (auto-fix): `open` already parses known formats into structured data
+- `open_raw_from_to_open` (auto-fix): Simplify `open --raw | from` to `open`
 
 </details>
 
 <details>
-<summary><code>effects</code> (6 rules): Handle built-in and external commands with side-effects.</summary>
-
-- `dangerous_file_operations`: File operation on dangerous system path
-- `errors_to_stderr`: Error messages should go to stderr, not stdout
-- `dont_mix_different_effects`: Functions should not mix different types of I/O operations or effects.
-- `print_and_return_data`: Function prints and returns data
-- `each_nothing_to_for_loop` (auto-fix): `each` mappings with no output should be written as `for` loops.
-- `silence_stderr_data`: External commands that write data to stderr should not be silenced
-
-</details>
-
-<details>
-<summary><code>external</code> (15 rules): Replace external commands with Nu built-ins where the result is equivalent.</summary>
+<summary><code>replace-external-tools</code> (15 rules): Swap external tools such as `grep`, `sed` and `jq` for equivalent built-ins.</summary>
 
 - `cat_to_open` (auto-fix): `cat` of a single file replaceable with `open --raw`
 - `curl_wget_to_http` (auto-fix): `curl -fL` or `wget -O` download replaceable with `http get`
@@ -431,13 +368,46 @@ Most rules have automatic fixes. Run `nu-lint --list-rules` to see the rules wit
 </details>
 
 <details>
-<summary><code>formatting</code> (15 rules): Formatting according to style-guide.</summary>
+<summary><code>stream-in-process</code> (5 rules): Avoid subprocesses and buffering so data streams inside one Nu process.</summary>
 
-- `ansi_over_escape_codes` (auto-fix): Raw ANSI escape replaceable with `ansi`
+- `redundant_nu_subprocess`: Redundant `nu -c` subprocess call
+- `nu_script_to_run`: Run Nu scripts with the `run` keyword instead of a `nu` subprocess
+- `positional_to_pipeline` (auto-fix): Data parameter convertible to pipeline input
+- `chained_str_transform` (auto-fix): Consecutive `str replace` combinable
+- `streaming_hidden_by_complete` (auto-fix): Streaming commands should not be wrapped with 'complete'
+
+</details>
+
+<details>
+<summary><code>remove-dead-code</code> (8 rules): Delete unused or redundant code.</summary>
+
+- `assign_then_return` (auto-fix): Redundant variable before return
+- `do_not_compare_booleans` (auto-fix): Redundant comparison with boolean literal
+- `redundant_ignore` (auto-fix): Commands producing output that is discarded with '| ignore'
+- `unnecessary_mut` (auto-fix): Variable marked `mut` but never reassigned
+- `unused_helper_functions` (auto-fix): Function unreachable from entry points
+- `unused_parameter` (auto-fix): Function parameter declared but never used
+- `unused_variable` (auto-fix): Variable declared but never used
+- `script_export_main` (auto-fix): In scripts, 'def main' is the entry point and doesn't need 'export'
+
+</details>
+
+<details>
+<summary><code>reduce-complexity</code> (7 rules): Flatten nesting, shorten bodies and simplify signatures and calls.</summary>
+
 - `collapsible_if` (auto-fix): Nested if-statements collapsible with `and`
 - `forbid_excessive_nesting`: Avoid excessive nesting (more than 4 levels deep)
 - `max_function_body_length`: Function bodies should be short to maintain readability
 - `if_else_chain_to_match` (auto-fix): Use 'match' for value-based branching instead of if-else-if chains
+- `max_positional_params`: Custom commands should have ≤ 2 positional parameters
+- `explicit_long_flags` (auto-fix): Replace short flags (-f) with long flags (--flag)
+- `single_call_command` (auto-fix): Single-line command called only once
+
+</details>
+
+<details>
+<summary><code>format-whitespace</code> (11 rules): Fix spacing, line width and quoting according to the style guide.</summary>
+
 - `block_brace_spacing` (auto-fix): Block or closure without parameters needs spaces inside braces: `{ body }` not `{body}`
 - `closure_brace_pipe_spacing` (auto-fix): Closure opening brace should touch parameter pipe: `{|x|` not `{ |x|`
 - `closure_pipe_body_spacing` (auto-fix): Closure body needs spaces: `{|x| body }` not `{|x|body}`
@@ -448,30 +418,43 @@ Most rules have automatic fixes. Run `nu-lint --list-rules` to see the rules wit
 - `reflow_wide_pipelines` (auto-fix): Pipeline exceeds line length limit
 - `reflow_wide_lists` (auto-fix): Wrap wide lists vertically across multiple lines.
 - `wrap_wide_records` (auto-fix): Wrap records exceeding 80 chars or with deeply nested structures
+- `string_may_be_bare` (auto-fix): Quoted string can be bare word
 
 </details>
 
 <details>
-<summary><code>naming</code> (4 rules): Follow official naming conventions</summary>
+<summary><code>follow-naming-conventions</code> (3 rules): Apply the casing of the official style guide.</summary>
 
 - `kebab_case_commands`: Custom commands should use kebab-case naming convention
 - `screaming_snake_constants`: Constants should use SCREAMING_SNAKE_CASE naming convention
 - `snake_case_variables` (auto-fix): Variables should use snake_case naming convention
-- `add_label_to_error`: error make should include 'label'
 
 </details>
 
 <details>
-<summary><code>upstream</code> (3 rules): Forward warnings and errors of the Nu parser.</summary>
+<summary><code>document-interfaces</code> (8 rules): Add docs to commands and context to `error make`.</summary>
 
-- `dynamic_script_import`: Dynamic import path not statically validated
+- `add_doc_comment_exported_fn`: Exported functions should have documentation comments
+- `descriptive_error_messages`: Error messages should be descriptive and actionable
+- `add_label_to_error`: error make should include 'label'
+- `add_help_to_error`: `error make` missing `help` field
+- `add_span_to_label`: labels should include 'span' to highlight error location in user code
+- `add_url_to_error`: error make should include 'url' field to link to documentation
+- `main_positional_args_docs`: Missing docs on main positional parameter
+- `main_named_args_docs`: Missing docs on main flag parameter
+
+</details>
+
+<details>
+<summary><code>forward-parser-diagnostics</code> (2 rules): Report errors and unhandled deprecations from nu-parser.</summary>
+
 - `nu_deprecated`: Upstream deprecation without a dedicated migration rule
 - `nu_parse_error`: Parser encountered a syntax error
 
 </details>
 
 <details>
-<summary><code>migrations</code> (5 rules): Replace syntax that the Nu parser deprecated.</summary>
+<summary><code>migrate-deprecated-syntax</code> (5 rules): Rewrite syntax that nu-parser deprecated.</summary>
 
 - `filter_to_where` (auto-fix): Deprecated `filter` replaceable with `where`
 - `str_case_full_names` (auto-fix): Deprecated `str upcase` or `str downcase` renamed

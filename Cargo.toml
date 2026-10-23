@@ -8,7 +8,7 @@ edition = "2024"
 license = "MIT"
 repository = "https://codeberg.org/wvhulle/nu-lint"
 # Find latest published version with `cargo search nu-lint`
-version = "1.6.0"
+version = "1.7.0"
 
 [package]
 authors.workspace = true

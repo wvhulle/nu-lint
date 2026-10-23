@@ -1,7 +1,18 @@
-[package]
+[workspace]
+members = []
+
+[workspace.package]
 authors = ["Willem Vanhulle <willemvanhulle@protonmail.com>"]
-description = "Linter for Nu shell scripts that helpfully suggests improvements"
 edition = "2024"
+license = "MIT"
+repository = "https://codeberg.org/wvhulle/nu-lint"
+# Find latest published version with `cargo search nu-lint`
+version = "1.6.0"
+
+[package]
+authors.workspace = true
+description = "Linter for Nu shell scripts that helpfully suggests improvements"
+edition.workspace = true
 exclude = [
   "result",
   ".ast-grep/",
@@ -19,13 +30,15 @@ exclude = [
   "sgconfig.yml",
 ]
 keywords = ["nushell", "linter", "static-analysis", "code-quality", "shell"]
-license = "MIT"
+license.workspace = true
 name = "nu-lint"
-repository = "https://codeberg.org/wvhulle/nu-lint"
-# Find latest published version with `cargo search nu-lint`
-version = "1.6.0"
+repository.workspace = true
+version.workspace = true
 
-[lints.clippy]
+[lints]
+workspace = true
+
+[workspace.lints.clippy]
 # https://rust-lang.github.io/rust-clippy/master/index.html
 complexity = { level = "warn", priority = -1 }
 pedantic = { level = "warn", priority = -1 }
@@ -91,16 +104,18 @@ use_self = "deny"
 useless_let_if_seq = "deny"
 verbose_file_reads = "deny"
 
-[dependencies]
+[workspace.dependencies]
 clap = { version = "4.5", features = ["derive"] }
+criterion = { version = "0.7", features = ["html_reports", "csv_output"] }
 dirs = "6"
 heck = "0.5"
 ignore = "0.4"
 jaq-core = "2.2"
 log = "0.4"
-lsp-server = { version = "0.7", optional = true }
-lsp-types = { version = "0.97", optional = true }
+lsp-server = "0.7"
+lsp-types = "0.97"
 miette = { version = "7.6", features = ["fancy"] }
+nu-ansi-term = "0.50"
 nu-cli = "0.116.0"
 nu-cmd-extra = "0.116.0"
 nu-cmd-lang = "0.116.0"
@@ -113,24 +128,53 @@ rayon = "1.10"
 regex = "1.10"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+tempfile = "3.10"
 toml = "0.8"
 tracing = "0.1"
-tracing-appender = { version = "0.2", optional = true }
+tracing-appender = "0.2"
 tracing-log = "0.2"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
+[dependencies]
+clap.workspace = true
+dirs.workspace = true
+heck.workspace = true
+ignore.workspace = true
+jaq-core.workspace = true
+log.workspace = true
+lsp-server = { workspace = true, optional = true }
+lsp-types = { workspace = true, optional = true }
+miette.workspace = true
+nu-cli.workspace = true
+nu-cmd-extra.workspace = true
+nu-cmd-lang.workspace = true
+nu-command.workspace = true
+nu-parser.workspace = true
+nu-protocol.workspace = true
+nu-std.workspace = true
+owo-colors.workspace = true
+rayon.workspace = true
+regex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+tracing.workspace = true
+tracing-appender = { workspace = true, optional = true }
+tracing-log.workspace = true
+tracing-subscriber.workspace = true
+
 [features]
 default = ["lsp"]
-lsp = ["lsp-server", "lsp-types", "tracing-appender"]
+lsp = ["dep:lsp-server", "dep:lsp-types", "dep:tracing-appender"]
 test-support = []
 
 [dev-dependencies]
-criterion = { version = "0.7", features = ["html_reports", "csv_output"] }
-nu-ansi-term = "0.50"
-tempfile = "3.10"
+criterion.workspace = true
+nu-ansi-term.workspace = true
+tempfile.workspace = true
 
 [build-dependencies]
-toml = "0.8"
+toml.workspace = true
 
 [[bench]]
 harness = false

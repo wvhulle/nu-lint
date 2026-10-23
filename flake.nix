@@ -84,6 +84,7 @@
           // {
             cargoArtifacts = devProfileDeps;
             doInstallCargoArtifacts = false;
+            cargoTestExtraArgs = "--workspace";
           }
         );
 

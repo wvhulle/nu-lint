@@ -17,6 +17,13 @@ git_release_body = """
 See [README](https://codeberg.org/wvhulle/nu-lint#installation) for full installation instructions.
 """
 
+[[package]]
+name = "nu-lint"
+changelog_path = "CHANGELOG.md"
+git_tag_name = "v{{ version }}"
+git_release_name = "v{{ version }}"
+version_group = "nu-lint"
+
 [changelog]
 tag_pattern = "v[0-9].*"
 sort_commits = "oldest"

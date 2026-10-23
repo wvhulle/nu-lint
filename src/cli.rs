@@ -7,6 +7,8 @@ use std::{
 use clap::{Parser, crate_version};
 use miette::Severity;
 
+#[cfg(feature = "lsp")]
+use crate::lsp;
 use crate::{
     LintLevel,
     ast::tree,
@@ -20,8 +22,6 @@ use crate::{
     rule::Rule,
     rules::{USED_RULES, groups::ALL_GROUPS},
 };
-#[cfg(feature = "lsp")]
-use crate::{log::init_lsp_log, lsp};
 
 #[derive(Parser)]
 #[command(name = "nu-lint")]
@@ -295,7 +295,7 @@ pub fn run() -> io::Result<ExitCode> {
 
 #[cfg(feature = "lsp")]
 fn start_lsp_server() -> ExitCode {
-    let _log_guard = init_lsp_log();
+    let _log_guard = lsp::init_lsp_log();
     tracing::info!("nu-lint LSP server started");
     lsp::run_lsp_server();
     ExitCode::SUCCESS

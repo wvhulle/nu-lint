@@ -1,9 +1,11 @@
 mod compact;
+mod fix_report;
 mod pretty;
 
 use std::fs;
 
 pub use compact::format_compact;
+pub use fix_report::format_fix_results;
 use miette::Severity;
 pub use pretty::{format_diff_context, format_pretty};
 use serde::Serialize;

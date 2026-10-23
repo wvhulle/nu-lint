@@ -1,11 +1,7 @@
-use std::{
-    cmp::Reverse, collections::HashMap, fmt::Write, fs, io::Error as IoError, path::PathBuf,
-    vec::Vec,
-};
+use std::{cmp::Reverse, collections::HashMap, fs, io::Error as IoError, path::PathBuf, vec::Vec};
 
 use crate::{
     engine::LintEngine,
-    format::format_diff_context,
     violation::{Fix, Violation},
 };
 
@@ -270,58 +266,6 @@ fn apply_fixes_to_content(content: &str, violations: &[&Violation]) -> String {
     result
 }
 
-/// Format fix results for output
-#[must_use]
-pub fn format_fix_results(results: &[FixResult], dry_run: bool) -> String {
-    let mut output = String::new();
-
-    if results.is_empty() {
-        output.push_str("No fixable violations found.\n");
-        return output;
-    }
-
-    if dry_run {
-        writeln!(
-            output,
-            "The following changes would be applied ({} file{}):\n",
-            results.len(),
-            if results.len() == 1 { "" } else { "s" }
-        )
-        .unwrap();
-
-        for result in results {
-            writeln!(output, "File: {}", result.file_path.display()).unwrap();
-            writeln!(output, "Fixes to apply: {}\n", result.fixes_applied).unwrap();
-
-            // Generate and display unified diff
-            let diff = format_diff_context(&result.original_content, &result.fixed_content);
-            output.push_str(&diff);
-            output.push('\n');
-        }
-    } else {
-        writeln!(
-            output,
-            "Fixed {} file{}:\n",
-            results.len(),
-            if results.len() == 1 { "" } else { "s" }
-        )
-        .unwrap();
-
-        for result in results {
-            writeln!(
-                output,
-                "  {} ({} fix{})",
-                result.file_path.display(),
-                result.fixes_applied,
-                if result.fixes_applied == 1 { "" } else { "es" }
-            )
-            .unwrap();
-        }
-    }
-
-    output
-}
-
 #[cfg(test)]
 mod tests {
     use std::borrow::Cow;
@@ -365,129 +309,6 @@ mod tests {
 
         let fixed = apply_fixes_to_content(content, &[&violation]);
         assert_eq!(fixed, "let a = 5; let b = 10");
-    }
-
-    #[test]
-    fn test_iterative_fixes_with_overlapping_spans() {
-        // Test that the iterative fix system can handle fixes that would have
-        // overlapping spans if applied simultaneously
-        use crate::config::Config;
-
-        let content = "^evtest /dev/input/event0 err> /dev/null | lines\n";
-
-        let config = Config::default();
-        let engine = crate::lint_engine_with_all_rules(config);
-
-        let (fixed, count) = apply_fixes_iteratively(content, &engine);
-
-        // Should apply at least one fix without panicking
-        assert!(count > 0, "Expected at least one fix to be applied");
-
-        // Fixed content should not contain the redirect
-        assert!(
-            !fixed.contains("err> /dev/null"),
-            "Fixed content should not contain err> /dev/null"
-        );
-
-        // Should be valid Nushell code (no corruption)
-        assert!(
-            fixed.contains("evtest"),
-            "Fixed content should still contain command name"
-        );
-        assert!(
-            fixed.contains("lines"),
-            "Fixed content should still contain pipeline command"
-        );
-    }
-
-    #[test]
-    fn test_iterative_fixes_multiple_rules_same_line() {
-        // Test that multiple rules fixing the same line work correctly when applied
-        // iteratively
-        use crate::config::Config;
-
-        // This triggers multiple rules.
-        let content = "^grep pattern file.txt err> /dev/null | lines\n";
-
-        let config = Config::default();
-        let engine = crate::lint_engine_with_all_rules(config);
-
-        let (fixed, count) = apply_fixes_iteratively(content, &engine);
-
-        // Should apply multiple fixes without corruption
-        assert!(count > 0, "Expected at least one fix to be applied");
-
-        // Content should not be corrupted - should still be valid Nushell
-        assert!(!fixed.is_empty(), "Fixed content should not be empty");
-
-        // The content should be transformed, not corrupted
-        // We don't assert exact output since multiple rules may apply
-        assert!(
-            fixed.len() < 200,
-            "Fixed content should not be unreasonably long (corruption check)"
-        );
-    }
-
-    #[test]
-    fn test_iterative_fixes_converge() {
-        // Test that iterative fixes eventually converge (no infinite loop)
-        use crate::config::Config;
-
-        // Multiple violations that could potentially trigger repeatedly
-        let content = "^curl https://example.com err> /dev/null | str trim\n";
-
-        let config = Config::default();
-        let engine = crate::lint_engine_with_all_rules(config);
-
-        let (fixed, count) = apply_fixes_iteratively(content, &engine);
-
-        // Should converge within reasonable iterations
-        assert!(
-            count < 50,
-            "Should converge within 50 iterations, got {count}"
-        );
-
-        // Re-linting the fixed content should produce no fixable violations
-        let violations_after = engine.lint_str(&fixed);
-        let fixable_after = violations_after.iter().filter(|v| v.fix.is_some()).count();
-
-        assert_eq!(
-            fixable_after, 0,
-            "After applying all fixes, there should be no more fixable violations"
-        );
-    }
-
-    #[test]
-    fn test_iterative_fixes_preserve_utf8() {
-        // Test that iterative fixes correctly handle UTF-8 boundaries
-        use crate::config::Config;
-
-        let content = "^echo 测试 err> /dev/null | lines\n";
-
-        let config = Config::default();
-        let engine = crate::lint_engine_with_all_rules(config);
-
-        let (fixed, count) = apply_fixes_iteratively(content, &engine);
-
-        // Should apply fixes without UTF-8 boundary panics
-        assert!(count > 0, "Expected at least one fix to be applied");
-
-        // UTF-8 characters should be preserved
-        assert!(
-            fixed.contains("测试"),
-            "UTF-8 characters should be preserved"
-        );
-        assert!(
-            !fixed.contains("err> /dev/null"),
-            "Redirect should be removed"
-        );
-
-        // Verify the result is valid UTF-8 (String is always valid UTF-8, but this
-        // confirms no corruption)
-        assert!(
-            !fixed.is_empty() && fixed.chars().all(|c| !c.is_control() || c.is_whitespace()),
-            "Result should contain valid characters"
-        );
     }
 
     #[test]

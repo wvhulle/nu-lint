@@ -1,4 +1,4 @@
-use std::iter::repeat_with;
+use std::iter::repeat;
 
 use nu_protocol::{
     Span, SyntaxShape,
@@ -31,8 +31,11 @@ fn untyped_positional_args<'a>(call: &'a Call, context: &LintContext) -> Vec<&'a
         .iter()
         .chain(&signature.optional_positional)
         .map(|param| param.shape.clone());
-    let rest_shape = signature.rest_positional.map(|param| param.shape);
-    let shapes = fixed_shapes.chain(repeat_with(move || rest_shape.clone()).flatten());
+    let rest_shapes = signature
+        .rest_positional
+        .into_iter()
+        .flat_map(|param| repeat(param.shape));
+    let shapes = fixed_shapes.chain(rest_shapes);
     call.arguments
         .iter()
         .filter_map(|arg| match arg {

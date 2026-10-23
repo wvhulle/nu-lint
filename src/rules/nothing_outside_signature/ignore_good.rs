@@ -96,6 +96,15 @@ fn test_external_command_named_nothing_with_arguments() {
 }
 
 #[test]
+fn test_extra_positional_without_rest_parameter_terminates() {
+    let good_code = r#"
+def my-command [x] { }
+my-command 1 2
+"#;
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
 fn test_no_nothing_keyword() {
     let good_code = r#"
 def my-command [] {

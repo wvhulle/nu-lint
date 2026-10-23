@@ -107,10 +107,10 @@ Tests call the assertion methods on `dyn Rule` from `nu-lint-analysis/src/rule.r
 
 Before you start implementing the detection itself, you need investigate how the upstream Nu parser (crate `nu-parser`) parses the fragment representing your new anti-pattern.
 
-You can use this binary and the `--ast` flag:
+You can use this binary and the `dev ast` command:
 
 ```bash
-cargo run -- --ast 'def main [] { if $in { ".md" } }'
+cargo run -- dev ast 'def main [] { if $in { ".md" } }'
 ```
 
 Or from Bash, call the Nu interpreter to show the AST (note: this shows block IDs instead of expanded blocks):

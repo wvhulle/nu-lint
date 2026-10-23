@@ -20,17 +20,33 @@ Lint all Nu files in working directory with:
 nu-lint
 ```
 
-To see all options and get help:
+Apply automatic fixes with:
+
+```bash
+nu-lint fix
+```
+
+Preview fixes without writing files, or restrict a run to some rules or rule groups:
+
+```bash
+nu-lint fix --dry-run
+nu-lint check --only migrate-deprecated-syntax
+nu-lint fix --only filter_to_where,str_case_full_names
+```
+
+To see all commands and options:
 
 ```bash
 nu-lint --help
 ```
 
-See [Rules](#rules) for all available rules, or run `nu-lint --list`.
+See [Rules](#rules) for all available rules, or run `nu-lint rules`.
+
+The flags of older versions (`--fix`, `--lsp`, `--list`, `--groups`, `--explain`, `--ast`) still work.
 
 ## Screenshots
 
-Following screenshots were taking in Helix with `nu-lint` set-up as LSP (`nu-lint --lsp`).
+Following screenshots were taking in Helix with `nu-lint` set-up as LSP (`nu-lint lsp`).
 
 - Automatic fixes and ignore actions (with keybinding `space a` in Helix): ![(Screenshot of code action menu)](./docs/screenshots/code-actions.png)
 - Explanations in popup (with keybinding with `space k` in Helix): ![(Screenshot of explanations)](./docs/screenshots/explanations.png)
@@ -110,7 +126,7 @@ Add to your `~/.config/helix/languages.toml`:
 ```toml
 [language-server.nu-lint]
 command = "nu-lint"
-args = ["--lsp"]
+args = ["lsp"]
 
 [[language]]
 name = "nu"
@@ -125,7 +141,7 @@ Add to your Neovim configuration (Lua):
 
 ```lua
 vim.lsp.config['nu-lint'] = {
-  cmd = { 'nu-lint', '--lsp' },
+  cmd = { 'nu-lint', 'lsp' },
   filetypes = { 'nu' },
   root_markers = { '.git' }
 }
@@ -141,7 +157,7 @@ Add to your Emacs configuration (with Eglot, built-in since Emacs 29):
 ```elisp
 (with-eval-after-load 'eglot
   (add-to-list 'eglot-server-programs
-               '(nushell-mode "nu-lint" "--lsp")))
+               '(nushell-mode "nu-lint" "lsp")))
 ```
 
 ### Kate
@@ -152,7 +168,7 @@ Add to your `~/.config/kate/lspclient/settings.json`:
 {
   "servers": {
     "nushell": {
-      "command": ["nu-lint", "--lsp"],
+      "command": ["nu-lint", "lsp"],
       "highlightingModeRegex": "^Nushell$"
     }
   }
@@ -165,7 +181,7 @@ Available as [`Nu-Lint` extension](https://codeberg.org/vmeurisse/nu-lint-zed#re
 
 ### Other
 
-You can also implement your own editor extensions using the `--lsp` flag as in: `nu-lint --lsp`. This will spawn a language server compliant with the [Language Server Protocol](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/).
+You can also implement your own editor extensions using the `lsp` command as in: `nu-lint lsp`. This will spawn a language server compliant with the [Language Server Protocol](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/).
 
 ## Configuration
 
@@ -225,7 +241,7 @@ All rules are optional and can be disabled with a configuration file or comment.
 
 Some of the rules need further testing and improvement. Please make an issue on the issue tracker to report any bugs. In early stages of development some rules may be replaced or renamed.
 
-Most rules have automatic fixes. Run `nu-lint --list` to see the rules with their configured levels, `nu-lint --groups` to see them per group, or `nu-lint --explain <RULE_ID>` for details on one rule. Rules per group:
+Most rules have automatic fixes. Run `nu-lint rules` to see the rules with their configured levels, `nu-lint rules groups` to see them per group, or `nu-lint rules explain <RULE_ID>` for details on one rule. Rules per group:
 
 <!-- start-rule-groups -->
 <details>

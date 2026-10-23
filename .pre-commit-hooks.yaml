@@ -4,7 +4,7 @@
   description: "Linter for the Nu shell scripting language https://nushell.sh"
   language: rust
   entry: nu-lint
-  # Pass --fix in your config to apply autosuggestions when the hook runs
-  # args: ["--fix"]
+  # Pass fix in your config to apply autosuggestions when the hook runs
+  # args: ["fix"]
   pass_filenames: true
   files: '\.nu$'

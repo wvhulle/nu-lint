@@ -132,6 +132,7 @@ pub fn run_lsp_server() {
         }
     }
 
+    drop(connection);
     if let Err(e) = io_threads.join() {
         tracing::error!("Error joining IO threads: {e}");
     }

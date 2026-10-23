@@ -4,6 +4,7 @@ mod file_collection;
 mod format;
 #[cfg(feature = "lsp")]
 mod lsp;
+mod rule_selection;
 
 use std::{error::Error, fmt, io, path::PathBuf};
 
@@ -43,6 +44,9 @@ pub enum LintError {
     GroupDoesNotExist {
         non_existing_name: String,
     },
+    SelectionDoesNotExist {
+        name: String,
+    },
     RuleConflict {
         rule_a: &'static str,
         rule_b: &'static str,
@@ -64,8 +68,13 @@ impl fmt::Display for LintError {
             Self::GroupDoesNotExist { non_existing_name } => write!(
                 f,
                 "Group `{non_existing_name}` in the `[groups]` section of the config does not \
-                 exist. Rule groups were renamed in this version; run `nu-lint --groups` to see \
-                 the current names."
+                 exist. Rule groups were renamed in this version; run `nu-lint rules groups` to \
+                 see the current names."
+            ),
+            Self::SelectionDoesNotExist { name } => write!(
+                f,
+                "`{name}` passed to `--only` is neither a rule id nor a group name; run `nu-lint \
+                 rules` or `nu-lint rules groups` to see them."
             ),
             Self::Config { source } => write!(f, "invalid configuration: {source}"),
             Self::ConfigSerialize { source } => {
@@ -97,6 +106,7 @@ impl Error for LintError {
             Self::RuleConflict { .. }
             | Self::RuleDoesNotExist { .. }
             | Self::GroupDoesNotExist { .. }
+            | Self::SelectionDoesNotExist { .. }
             | Self::NoConfigLocation => None,
         }
     }

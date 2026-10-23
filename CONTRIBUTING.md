@@ -177,10 +177,16 @@ cargo fmt
 
 ## Benchmarks
 
-Quick benchmark for performance testing:
+Lint and fix timings on the fixtures in `benches/fixtures/`:
 
 ```bash
-cargo bench --bench speed lint
+cargo bench --bench speed fixtures
+```
+
+Timing of each rule in isolation on the [nu_scripts](https://github.com/nushell/nu_scripts) corpus. The nix devshell sets `NU_SCRIPTS_DIR` to the pinned flake input; without it the group is skipped. `per_rule/parse_only` runs with every rule disabled and is the baseline to compare against:
+
+```bash
+cargo bench --bench speed per_rule
 ```
 
 Comparative benchmarks against a baseline:

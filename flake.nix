@@ -7,6 +7,10 @@
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    nu-scripts = {
+      url = "github:nushell/nu_scripts";
+      flake = false;
+    };
   };
 
   outputs =
@@ -16,6 +20,7 @@
       crane,
       flake-utils,
       rust-overlay,
+      nu-scripts,
     }:
     flake-utils.lib.eachDefaultSystem (
       system:
@@ -243,6 +248,7 @@
 
         devShells.default = nightlyCrane.devShell {
           packages = devTools;
+          NU_SCRIPTS_DIR = "${nu-scripts}";
         };
       }
     );

@@ -19,12 +19,16 @@ mod violation;
 use std::{error::Error, fmt, io, path::PathBuf};
 
 pub use config::{Config, LintLevel};
-pub use engine::LintEngine;
+pub use engine::{LintEngine, collect_nu_files_from_dir};
 pub use fix::apply_fixes_iteratively;
 use toml::{de, ser};
 use violation::{Fix, Replacement};
 
 pub const NU_PARSER_VERSION: &str = env!("NU_PARSER_VERSION");
+
+pub fn all_rule_ids() -> impl Iterator<Item = &'static str> {
+    rules::USED_RULES.iter().map(|rule| rule.id())
+}
 
 #[derive(Debug)]
 pub enum LintError {

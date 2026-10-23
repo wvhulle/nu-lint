@@ -213,8 +213,8 @@ pub struct Violation {
     pub extra_labels: Vec<(LintSpan, Option<String>)>,
     pub long_description: Option<String>,
     pub fix: Option<Fix>,
-    pub(crate) file: Option<SourceFile>,
-    pub(crate) source: Option<Cow<'static, str>>,
+    pub file: Option<SourceFile>,
+    pub source: Option<Cow<'static, str>>,
     pub doc_url: Option<&'static str>,
     /// Short description of the rule (for hover documentation)
     pub short_description: Option<&'static str>,
@@ -225,7 +225,7 @@ pub struct Violation {
 }
 
 impl Violation {
-    pub(crate) fn from_detected(
+    pub fn from_detected(
         detected: Detection,
         fix: Option<Fix>,
         long_description: impl Into<Option<&'static str>>,

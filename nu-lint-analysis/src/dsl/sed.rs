@@ -7,6 +7,7 @@ pub struct Substitution<'a> {
     pub replace: &'a str,
 }
 
+#[must_use]
 pub fn global_literal_substitution(script: &str) -> Option<Substitution<'_>> {
     let body = script.strip_prefix('s')?;
     let delimiter = body.chars().next().filter(|c| !c.is_alphanumeric())?;

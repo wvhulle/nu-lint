@@ -96,6 +96,7 @@ pub trait ExpressionExt: Traverse {
         F: FnMut(&'a Expression, Option<&'a Expression>) -> ControlFlow<()>;
 }
 
+#[must_use]
 pub const fn is_dollar_in_var(var_id: VarId) -> bool {
     use nu_protocol::IN_VARIABLE_ID;
     var_id.get() == IN_VARIABLE_ID.get()
@@ -107,6 +108,7 @@ const fn has_synthetic_declaration_span(var: &Variable) -> bool {
             && var.declaration_span.start > 0)
 }
 
+#[must_use]
 pub fn is_pipeline_input_var(var_id: VarId, context: &LintContext) -> bool {
     use nu_protocol::{ENV_VARIABLE_ID, NU_VARIABLE_ID};
 

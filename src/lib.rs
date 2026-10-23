@@ -1,22 +1,10 @@
-mod ast;
 pub mod cli;
-mod config;
 mod config_loading;
-mod context;
-mod dsl;
-mod effect;
-mod engine;
 mod file_collection;
-mod fix;
 mod format;
-mod ignore;
-pub mod log;
 #[cfg(feature = "lsp")]
 mod lsp;
-mod rule;
 mod rules;
-mod span;
-mod violation;
 
 use std::{error::Error, fmt, io, path::PathBuf};
 
@@ -24,6 +12,8 @@ pub use config::{Config, LintLevel};
 pub use engine::LintEngine;
 pub use file_collection::collect_nu_files_from_dir;
 pub use fix::apply_fixes_iteratively;
+pub use nu_lint_analysis::log;
+use nu_lint_analysis::{ast, config, context, dsl, effect, engine, fix, rule, span, violation};
 use rule::RuleCatalog;
 use toml::{de, ser};
 use violation::{Fix, Replacement};

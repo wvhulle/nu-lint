@@ -34,7 +34,7 @@ pub struct LintContext<'a> {
 
 impl<'a> LintContext<'a> {
     /// Create a new `LintContext`
-    pub(crate) const fn new(
+    pub const fn new(
         source: &'a str,
         ast: &'a Block,
         engine_state: &'a EngineState,
@@ -54,7 +54,7 @@ impl<'a> LintContext<'a> {
 
     /// Create a new `LintContext` using the default configuration.
     #[cfg(any(test, feature = "test-support"))]
-    pub(crate) fn with_default_config(
+    pub fn with_default_config(
         source: &'a str,
         ast: &'a Block,
         engine_state: &'a EngineState,
@@ -72,6 +72,11 @@ impl<'a> LintContext<'a> {
     }
 
     #[must_use]
+    #[allow(
+        clippy::missing_safety_doc,
+        reason = "unsafe only marks raw source access as discouraged in rules; it has no \
+                  memory-safety precondition"
+    )]
     pub const unsafe fn source(&self) -> &str {
         self.source
     }
@@ -277,7 +282,7 @@ impl<'a> LintContext<'a> {
 
     /// Collect detected violations with associated fix data using a closure
     /// over expressions
-    pub(crate) fn detect_with_fix_data<F, D>(&self, collector: F) -> Vec<(Detection, D)>
+    pub fn detect_with_fix_data<F, D>(&self, collector: F) -> Vec<(Detection, D)>
     where
         F: Fn(&Expression, &Self) -> Vec<(Detection, D)>,
         D: 'a,
@@ -288,6 +293,7 @@ impl<'a> LintContext<'a> {
         results
     }
 
+    #[must_use]
     pub fn external_invocations(&self, names: &[&str]) -> Vec<ExternalInvocation<'_>> {
         let mut nested_block_ids = Vec::new();
         self.ast.flat_map(
@@ -328,7 +334,7 @@ impl<'a> LintContext<'a> {
 
     /// Collect detected violations without fix data (convenience for rules with
     /// `FixData = ()`)
-    pub(crate) fn detect<F>(&self, fix_data_collector: F) -> Vec<Detection>
+    pub fn detect<F>(&self, fix_data_collector: F) -> Vec<Detection>
     where
         F: Fn(&Expression, &Self) -> Vec<Detection>,
     {
@@ -338,7 +344,7 @@ impl<'a> LintContext<'a> {
         violations
     }
 
-    pub(crate) fn detect_single<F>(&self, detector: F) -> Vec<Detection>
+    pub fn detect_single<F>(&self, detector: F) -> Vec<Detection>
     where
         F: Fn(&Expression, &Self) -> Option<Detection>,
     {
@@ -360,7 +366,7 @@ impl<'a> LintContext<'a> {
     /// The callback returns `ControlFlow::Continue(())` to recurse into
     /// children, or `ControlFlow::Break(())` to skip this expression's
     /// children.
-    pub(crate) fn traverse_with_parent<F>(&self, mut callback: F)
+    pub fn traverse_with_parent<F>(&self, mut callback: F)
     where
         F: FnMut(&Expression, Option<&Expression>) -> ControlFlow<()>,
     {

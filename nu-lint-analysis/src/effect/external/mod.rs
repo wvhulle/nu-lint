@@ -79,6 +79,7 @@ pub fn has_external_side_effect(
     false
 }
 
+#[must_use]
 pub fn has_external_recursive_flag(args: &[ExternalArgument], context: &LintContext) -> bool {
     args.iter().any(|arg| {
         let arg_text = extract_external_arg_text(arg, context);

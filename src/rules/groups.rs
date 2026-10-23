@@ -1,5 +1,3 @@
-use core::fmt::{self, Display};
-
 use crate::rule::Group;
 
 const ERROR_HANDLING: Group = Group {
@@ -289,12 +287,6 @@ pub fn groups_for_rule(rule_id: &str) -> Vec<&'static str> {
         .filter(|g| g.rules.iter().any(|r| r.id() == rule_id))
         .map(|g| g.name)
         .collect()
-}
-
-impl Display for Group {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.name)
-    }
 }
 
 #[cfg(test)]

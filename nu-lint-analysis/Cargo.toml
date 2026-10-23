@@ -1,0 +1,32 @@
+[package]
+authors.workspace = true
+description = "AST analysis, rule trait and lint engine shared by nu-lint and its rules"
+edition.workspace = true
+keywords = ["nushell", "linter", "static-analysis"]
+license.workspace = true
+name = "nu-lint-analysis"
+repository.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+jaq-core.workspace = true
+log.workspace = true
+miette.workspace = true
+nu-cli.workspace = true
+nu-cmd-extra.workspace = true
+nu-cmd-lang.workspace = true
+nu-command.workspace = true
+nu-parser.workspace = true
+nu-protocol.workspace = true
+nu-std.workspace = true
+rayon.workspace = true
+regex.workspace = true
+serde.workspace = true
+tracing-log.workspace = true
+tracing-subscriber.workspace = true
+
+[features]
+test-support = []

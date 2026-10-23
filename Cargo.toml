@@ -1,5 +1,5 @@
 [workspace]
-members = []
+members = ["nu-lint-analysis"]
 
 [workspace.package]
 authors = ["Willem Vanhulle <willemvanhulle@protonmail.com>"]
@@ -120,6 +120,7 @@ nu-cli = "0.116.0"
 nu-cmd-extra = "0.116.0"
 nu-cmd-lang = "0.116.0"
 nu-command = { version = "0.116.0", features = ["sqlite"] }
+nu-lint-analysis = { version = "1.6.0", path = "nu-lint-analysis" }
 nu-parser = "0.116.0"
 nu-protocol = "0.116.0"
 nu-std = "0.116.0"
@@ -149,6 +150,7 @@ nu-cli.workspace = true
 nu-cmd-extra.workspace = true
 nu-cmd-lang.workspace = true
 nu-command.workspace = true
+nu-lint-analysis.workspace = true
 nu-parser.workspace = true
 nu-protocol.workspace = true
 nu-std.workspace = true
@@ -166,10 +168,10 @@ tracing-subscriber.workspace = true
 [features]
 default = ["lsp"]
 lsp = ["dep:lsp-server", "dep:lsp-types", "dep:tracing-appender"]
-test-support = []
 
 [dev-dependencies]
 criterion.workspace = true
+nu-lint-analysis = { workspace = true, features = ["test-support"] }
 nu-ansi-term.workspace = true
 tempfile.workspace = true
 

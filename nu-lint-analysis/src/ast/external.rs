@@ -16,6 +16,7 @@ pub struct ExternalInvocation<'a> {
 }
 
 impl<'a> ExternalInvocation<'a> {
+    #[must_use]
     pub fn parse(&self, spec: &CliSpec) -> Option<ParsedCli<'a>> {
         spec.parse(self.args)
     }
@@ -24,10 +25,12 @@ impl<'a> ExternalInvocation<'a> {
         self.next.and_then(external_name)
     }
 
+    #[must_use]
     pub fn next_command_name(&self, context: &'a LintContext) -> Option<&'a str> {
         command_name(self.next?, context)
     }
 
+    #[must_use]
     pub fn previous_command_name(&self, context: &'a LintContext) -> Option<&'a str> {
         command_name(self.previous?, context)
     }
@@ -40,6 +43,7 @@ fn command_name<'a>(expr: &Expression, context: &'a LintContext) -> Option<&'a s
     }
 }
 
+#[must_use]
 pub fn external_name(expr: &Expression) -> Option<&str> {
     match &expr.expr {
         Expr::ExternalCall(head, _) => literal_content(head),
@@ -47,6 +51,7 @@ pub fn external_name(expr: &Expression) -> Option<&str> {
     }
 }
 
+#[must_use]
 pub fn literal_content(expr: &Expression) -> Option<&str> {
     match &expr.expr {
         Expr::String(content) | Expr::RawString(content) | Expr::GlobPattern(content, _) => {
@@ -56,10 +61,12 @@ pub fn literal_content(expr: &Expression) -> Option<&str> {
     }
 }
 
+#[must_use]
 pub fn is_expanded_glob(expr: &Expression) -> bool {
     matches!(&expr.expr, Expr::GlobPattern(content, false) if content.contains(['*', '?', '[']))
 }
 
+#[must_use]
 pub fn value_text<'a>(context: &'a LintContext, expr: &'a Expression) -> Cow<'a, str> {
     match &expr.expr {
         Expr::GlobPattern(bare_word, _) => Cow::Owned(quote_nu_string(bare_word)),
@@ -73,6 +80,7 @@ pub enum LineSource<'a> {
 }
 
 impl<'a> LineSource<'a> {
+    #[must_use]
     pub fn of(invocation: &ExternalInvocation<'a>, operands: &[&'a Expression]) -> Option<Self> {
         match (invocation.previous, operands) {
             (Some(_), []) => Some(Self::Piped),
@@ -81,6 +89,7 @@ impl<'a> LineSource<'a> {
         }
     }
 
+    #[must_use]
     pub fn open_prefix(&self, context: &LintContext) -> String {
         match self {
             Self::Piped => String::new(),
@@ -97,6 +106,7 @@ pub struct Flag {
 }
 
 impl Flag {
+    #[must_use]
     pub const fn switch(short: char, long: &'static str) -> Self {
         Self {
             short: Some(short),
@@ -105,6 +115,7 @@ impl Flag {
         }
     }
 
+    #[must_use]
     pub const fn short_switch(short: char) -> Self {
         Self {
             short: Some(short),
@@ -113,6 +124,7 @@ impl Flag {
         }
     }
 
+    #[must_use]
     pub const fn long_switch(long: &'static str) -> Self {
         Self {
             short: None,
@@ -121,6 +133,7 @@ impl Flag {
         }
     }
 
+    #[must_use]
     pub const fn with_value(self) -> Self {
         Self {
             takes_value: true,
@@ -141,6 +154,7 @@ pub enum FlagValue<'a> {
 }
 
 impl<'a> FlagValue<'a> {
+    #[must_use]
     pub fn literal(&self) -> Option<&'a str> {
         match self {
             Self::Inline(text) => Some(text),
@@ -148,6 +162,7 @@ impl<'a> FlagValue<'a> {
         }
     }
 
+    #[must_use]
     pub fn nu_text(&self, context: &'a LintContext) -> Cow<'a, str> {
         match self {
             Self::Inline(text) => Cow::Owned(quote_nu_string(text)),
@@ -190,10 +205,12 @@ pub struct ParsedCli<'a> {
 }
 
 impl<'a> ParsedCli<'a> {
+    #[must_use]
     pub fn has(&self, flag: Flag) -> bool {
         self.flags.iter().any(|parsed| parsed.flag == flag)
     }
 
+    #[must_use]
     pub fn value(&self, flag: Flag) -> Option<FlagValue<'a>> {
         self.values(flag).last()
     }

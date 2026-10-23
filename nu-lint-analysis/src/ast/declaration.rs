@@ -30,6 +30,7 @@ fn parameter_list_interior(signature_span: Span, context: &LintContext) -> Optio
         .then(|| Span::new(parameter_list.start + 1, parameter_list.end - 1))
 }
 
+#[must_use]
 pub fn param_type_annotation_span(
     param: &PositionalArg,
     signature_span: Span,
@@ -97,6 +98,7 @@ impl Ord for CustomCommandDef {
 }
 
 impl CustomCommandDef {
+    #[must_use]
     pub fn try_from_call(call: &Call, context: &LintContext) -> Option<Self> {
         let decl_name = call.get_call_name(context);
 
@@ -150,10 +152,12 @@ impl CustomCommandDef {
         })
     }
 
+    #[must_use]
     pub fn is_main(&self) -> bool {
         self.name == "main" || self.name.starts_with("main ")
     }
 
+    #[must_use]
     pub const fn is_exported(&self) -> bool {
         self.export_span.is_some()
     }
@@ -161,6 +165,7 @@ impl CustomCommandDef {
     /// Get the declaration span as a `FileSpan` for use in detections
     /// This requires the `LintContext` to normalize the global span to
     /// file-relative positions
+    #[must_use]
     pub const fn declaration_span(&self, context: &LintContext) -> FileSpan {
         context.normalize_span(self.name_span)
     }

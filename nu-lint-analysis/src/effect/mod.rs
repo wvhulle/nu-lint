@@ -12,6 +12,7 @@ pub enum CommonEffect {
     MayCauseDataLoss,
 }
 
+#[must_use]
 pub fn matches_short_flag(arg_text: &str, flag_char: char) -> bool {
     arg_text
         .strip_prefix('-')
@@ -20,6 +21,7 @@ pub fn matches_short_flag(arg_text: &str, flag_char: char) -> bool {
         || is_dashless_flags(arg_text) && arg_text.contains(flag_char)
 }
 
+#[must_use]
 pub fn matches_long_flag(arg_text: &str, pattern: &str) -> bool {
     arg_text == pattern || arg_text.starts_with(&format!("{pattern}="))
 }
@@ -32,6 +34,7 @@ fn is_dashless_flags(text: &str) -> bool {
             .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
 }
 
+#[must_use]
 pub fn is_dangerous_path(path_str: &str) -> bool {
     EXACT_DANGEROUS_PATHS.contains(&path_str)
         || path_str.starts_with("/..")

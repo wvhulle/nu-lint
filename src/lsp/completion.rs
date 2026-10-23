@@ -4,15 +4,15 @@ use lsp_types::{
     CodeAction, CodeActionKind, CodeActionOrCommand, Command, Diagnostic, Range, TextEdit, Uri,
     WorkspaceEdit,
 };
+use nu_lint_analysis::{
+    ignore::{is_header_line, parse_file_ignore_comment},
+    violation::Fix,
+};
 
 use super::{
     actions::DISABLE_RULE_COMMAND,
     diagnostic::{LineIndex, ranges_overlap, violation_to_diagnostic},
     state::DocumentState,
-};
-use crate::{
-    ignore::{is_header_line, parse_file_ignore_comment},
-    violation::Fix,
 };
 
 fn workspace_edit(uri: &Uri, edits: Vec<TextEdit>) -> WorkspaceEdit {

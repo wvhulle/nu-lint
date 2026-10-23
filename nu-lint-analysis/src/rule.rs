@@ -2,7 +2,7 @@
 use std::borrow::Cow;
 use std::{
     any::TypeId,
-    fmt::{Debug, Formatter, Result as FmtResult},
+    fmt::{Debug, Display, Formatter, Result as FmtResult},
     hash::{Hash, Hasher},
 };
 
@@ -60,6 +60,7 @@ pub trait DetectFix: Send + Sync + 'static {
 
     /// Pairs violations with default fix input (for rules with `FixInput =
     /// ()`).
+    #[must_use]
     fn no_fix<'a>(detections: Vec<Detection>) -> Vec<(Detection, Self::FixInput<'a>)>
     where
         Self::FixInput<'a>: Default,
@@ -132,6 +133,12 @@ pub struct Group {
     pub name: &'static str,
     pub description: &'static str,
     pub rules: &'static [&'static dyn Rule],
+}
+
+impl Display for Group {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        write!(f, "{}", self.name)
+    }
 }
 
 #[derive(Debug, Clone, Copy)]

@@ -64,6 +64,7 @@ impl<'a> FileSearch<'a> {
         }
     }
 
+    #[must_use]
     pub fn to_glob(self) -> String {
         let directory = self.directory;
         let pattern = self.name.map_or_else(

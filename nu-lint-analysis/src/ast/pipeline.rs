@@ -30,6 +30,11 @@ impl CommandCluster<'_> {
         self.calls.len()
     }
 
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
+        self.calls.is_empty()
+    }
+
     /// First index in the pipeline
     #[must_use]
     pub fn first_index(&self) -> Option<usize> {

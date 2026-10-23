@@ -17,6 +17,7 @@ const BARE_WORD_FORBIDDEN: &[char] = &[
 /// Checks if a string can be represented as a bare word in Nushell.
 ///
 /// Returns `true` if quotes are needed, `false` if the string can be bare.
+#[must_use]
 pub fn bare_word_needs_quotes(content: &str) -> bool {
     if content.is_empty() {
         return true;
@@ -67,6 +68,7 @@ fn parses_as_non_string(content: &str) -> bool {
 }
 
 /// Like `bare_word_needs_quotes`, but allows glob metacharacters.
+#[must_use]
 pub fn bare_glob_needs_quotes(content: &str) -> bool {
     if content.is_empty()
         || content.chars().any(|ch| BARE_WORD_FORBIDDEN.contains(&ch))
@@ -102,6 +104,7 @@ pub fn bare_glob_needs_quotes(content: &str) -> bool {
 }
 
 /// Checks if a string needs quotes when used as a cell path member.
+#[must_use]
 pub fn cell_path_member_needs_quotes(content: &str) -> bool {
     if content.is_empty() || content.parse::<i64>().is_ok() || content.contains(' ') {
         return true;
@@ -116,12 +119,14 @@ pub fn cell_path_member_needs_quotes(content: &str) -> bool {
 ///
 /// Record keys can be bare if they contain only alphanumeric characters,
 /// underscores, or hyphens, and don't start with a digit.
+#[must_use]
 pub fn record_key_needs_quotes(name: &str) -> bool {
     name.is_empty()
         || name.starts_with(|c: char| c.is_ascii_digit())
         || name.contains(|c: char| !c.is_alphanumeric() && c != '_' && c != '-')
 }
 
+#[must_use]
 pub fn quote_nu_string(content: &str) -> String {
     if content.contains('\'') {
         let escaped = content.replace('\\', "\\\\").replace('"', "\\\"");
@@ -153,6 +158,7 @@ pub enum StringFormat {
 
 impl StringFormat {
     /// Returns the string content regardless of format.
+    #[must_use]
     pub fn content(&self) -> &str {
         match self {
             Self::Double(s)
@@ -166,6 +172,7 @@ impl StringFormat {
     }
 
     /// Checks if two string formats are compatible for merging.
+    #[must_use]
     pub const fn is_compatible(&self, other: &Self) -> bool {
         use StringFormat::{
             BareWord, Double, InterpolationDouble, InterpolationSingle, Raw, Single,
@@ -185,6 +192,7 @@ impl StringFormat {
 
     /// Extracts string format and content from an expression using AST
     /// analysis.
+    #[must_use]
     pub fn from_expression(expr: &Expression, ctx: &LintContext) -> Option<Self> {
         match &expr.expr {
             Expr::String(s) => Some(Self::detect_string_format(s, expr.span, ctx)),
@@ -195,6 +203,7 @@ impl StringFormat {
     }
 
     /// Extracts string format from a Call's first positional argument.
+    #[must_use]
     pub fn from_call_arg(call: &Call, ctx: &LintContext) -> Option<Self> {
         use nu_protocol::ast::Argument;
 

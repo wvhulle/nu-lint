@@ -5,11 +5,13 @@ pub const REGEX_SPECIAL_CHARS: &[char] = &[
 ];
 
 /// Checks if a string contains any regex special characters.
+#[must_use]
 pub fn contains_regex_special_chars(text: &str) -> bool {
     text.chars().any(|c| REGEX_SPECIAL_CHARS.contains(&c))
 }
 
 /// Escapes regex special characters in a string for literal matching.
+#[must_use]
 pub fn escape_regex(text: &str) -> String {
     let mut escaped = String::with_capacity(text.len());
     for c in text.chars() {
@@ -23,6 +25,7 @@ pub fn escape_regex(text: &str) -> String {
 
 const BRE_DIVERGING_CHARS: &[char] = &['+', '?', '|', '(', ')', '{', '}'];
 
+#[must_use]
 pub fn basic_regex_agrees_with_rust_regex(pattern: &str) -> bool {
     !pattern.contains(BRE_DIVERGING_CHARS) && !pattern.contains("\\<") && !pattern.contains("\\>")
 }

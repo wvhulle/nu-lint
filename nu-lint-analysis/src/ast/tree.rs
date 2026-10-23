@@ -1,6 +1,9 @@
 use std::io::{self, Write};
 
-/// Print AST with Debug formatting to stdout
+#[allow(
+    clippy::missing_errors_doc,
+    reason = "errors only come from writing to stdout or stderr"
+)]
 pub fn print_ast(source: &str) -> io::Result<()> {
     use crate::engine::{default_engine_state, parse_source};
 

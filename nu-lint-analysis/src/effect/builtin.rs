@@ -34,6 +34,7 @@ pub fn has_builtin_side_effect(
         .unwrap_or(false)
 }
 
+#[must_use]
 pub fn has_recursive_flag(call: &Call, context: &LintContext) -> bool {
     call.arguments.iter().any(|arg| {
         let arg_text = extract_arg_text(arg, context);
@@ -48,6 +49,7 @@ pub fn has_recursive_flag(call: &Call, context: &LintContext) -> bool {
     })
 }
 
+#[must_use]
 pub fn extract_arg_text<'a>(arg: &Argument, context: &'a LintContext) -> &'a str {
     match arg {
         Argument::Positional(expr) | Argument::Spread(expr) => context.expr_text(expr),
@@ -55,6 +57,7 @@ pub fn extract_arg_text<'a>(arg: &Argument, context: &'a LintContext) -> &'a str
     }
 }
 
+#[must_use]
 pub fn can_error(command_name: &str, context: &LintContext, call: &Call) -> bool {
     has_builtin_side_effect(
         command_name,

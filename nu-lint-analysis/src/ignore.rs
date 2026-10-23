@@ -86,6 +86,7 @@ impl IgnoreIndex {
 
     /// Check if a violation at the given byte offset should be ignored for a
     /// rule.
+    #[must_use]
     pub fn should_ignore(&self, byte_offset: usize, rule_id: &str) -> bool {
         if self.file_ignored.contains(rule_id) {
             return true;
@@ -107,6 +108,7 @@ impl IgnoreIndex {
 /// The header consists of blank lines and `#`-prefixed comments (including a
 /// `#!` shebang). The first line whose first non-whitespace byte is anything
 /// else terminates the header.
+#[must_use]
 pub fn is_header_line(line: &str) -> bool {
     matches!(
         line.bytes().find(|b| !b.is_ascii_whitespace()),

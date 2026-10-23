@@ -3401,6 +3401,7 @@ dependencies = [
  "nu-cmd-extra",
  "nu-cmd-lang",
  "nu-command",
+ "nu-lint-analysis",
  "nu-parser",
  "nu-protocol",
  "nu-std",
@@ -3413,6 +3414,27 @@ dependencies = [
  "toml 0.8.23",
  "tracing",
  "tracing-appender",
+ "tracing-log",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "nu-lint-analysis"
+version = "1.6.0"
+dependencies = [
+ "jaq-core",
+ "log",
+ "miette 7.6.0",
+ "nu-cli",
+ "nu-cmd-extra",
+ "nu-cmd-lang",
+ "nu-command",
+ "nu-parser",
+ "nu-protocol",
+ "nu-std",
+ "rayon",
+ "regex",
+ "serde",
  "tracing-log",
  "tracing-subscriber",
 ]

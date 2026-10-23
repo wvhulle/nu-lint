@@ -50,6 +50,7 @@ pub fn apply_fixes_to_stdin(violations: &[Violation]) -> Option<String> {
 /// # Errors
 ///
 /// Returns an error if a file cannot be read or written
+#[must_use]
 pub fn apply_fixes(
     violations: &[Violation],
     dry_run: bool,

@@ -2,6 +2,8 @@ use tracing::subscriber::set_global_default;
 use tracing_appender::{non_blocking, non_blocking::WorkerGuard, rolling};
 use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt};
 
+use crate::log::NU_LINT_DEBUG_FILTER;
+
 #[must_use]
 pub fn init_lsp_log() -> Option<WorkerGuard> {
     tracing_log::LogTracer::init().ok();
@@ -10,7 +12,7 @@ pub fn init_lsp_log() -> Option<WorkerGuard> {
     let file_appender = rolling::daily(log_dir, "lsp.log");
     let (non_blocking_writer, guard) = non_blocking(file_appender);
 
-    let filter = EnvFilter::new("nu_lint=debug");
+    let filter = EnvFilter::new(NU_LINT_DEBUG_FILTER);
     let subscriber = tracing_subscriber::registry().with(filter).with(
         fmt::layer()
             .with_writer(non_blocking_writer)

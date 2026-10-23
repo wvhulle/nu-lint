@@ -68,6 +68,7 @@ pub enum NuEquivalent {
 }
 
 impl NuEquivalent {
+    #[must_use]
     pub fn to_nu_command(&self, lint_ctx: &LintContext) -> String {
         match self {
             Self::Command(cmd) => (*cmd).to_string(),
@@ -106,6 +107,7 @@ impl NuEquivalent {
 
 /// Parse and convert a jq filter string to Nushell.
 /// Returns `None` if the filter cannot be converted.
+#[must_use]
 pub fn convert(filter: &str) -> Option<NuEquivalent> {
     let term = parse_filter(filter)?;
     convert_term(&term)
@@ -218,6 +220,7 @@ fn extract_single_field_from_term<'a>(term: &'a Term<&str>) -> Option<&'a str> {
 
 /// Convert interpolated jq filter to Nushell.
 /// Handles patterns like `$".($field)"` → `get $field`
+#[must_use]
 pub fn convert_interpolation(exprs: &[Expression], lint_ctx: &LintContext) -> Option<NuEquivalent> {
     match exprs {
         [dot, var_expr] if is_dot_string(dot) => {

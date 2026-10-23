@@ -7,6 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0](https://codeberg.org/wvhulle/nu-lint/compare/v1.6.0...v1.7.0) - 2026-10-23
+
+### Added
+
+- more migrations of deprecated commands
+
+### Build
+
+- make the root manifest a cargo workspace
+
+### CI
+
+- slim the test toolchain and stop uploading test artifacts
+- upload release binaries with a flake app instead of the tag-only plugin
+- upload release assets with tea
+- push final build outputs that cachix watch-exec misses
+- enforce project ast-grep rules and replace text search rule with structural check
+
+### Changed
+
+- separate config data from config loading and validation
+- pass the rule catalog into the lint engine and move file collection out
+- move fix report formatting to the format module
+- move the lsp log setup into the lsp module
+- expose rule test helpers behind a test-support feature
+- extract nu-lint-analysis crate with the AST, rule trait and lint engine
+- extract nu-lint-rules crate
+- import from nu-lint-analysis and nu-lint-rules directly instead of crate facades
+
+### Documentation
+
+- describe the workspace crates and run all of them by default
+
+### Fixed
+
+- build user group
+- *(nothing_outside_signature)* stop hanging on calls with extra positional arguments
+- build without the lsp feature by owning the diagnostic tag type
+- silent skip of malformed config in lsp
+- close lsp properly on shutdown
+
+### Miscellaneous
+
+- tidy repo root and move ast-grep rules into .ast-grep
+
+### Other
+
+- expose project as https://pre-commit.com/ hook
+
+### Performance
+
+- benchmark every rule on the nu_scripts corpus and all fixtures
+
 ### Changed
 
 - **Breaking:** every rule now belongs to exactly one group, and the groups have descriptive names. Unknown group names in the config file are now an error instead of being ignored. Rename your `[groups]` keys:

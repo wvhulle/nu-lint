@@ -6,6 +6,7 @@ mod context;
 mod dsl;
 mod effect;
 mod engine;
+mod file_collection;
 mod fix;
 mod format;
 mod ignore;
@@ -20,15 +21,27 @@ mod violation;
 use std::{error::Error, fmt, io, path::PathBuf};
 
 pub use config::{Config, LintLevel};
-pub use engine::{LintEngine, collect_nu_files_from_dir};
+pub use engine::LintEngine;
+pub use file_collection::collect_nu_files_from_dir;
 pub use fix::apply_fixes_iteratively;
+use rule::RuleCatalog;
 use toml::{de, ser};
 use violation::{Fix, Replacement};
 
 pub const NU_PARSER_VERSION: &str = env!("NU_PARSER_VERSION");
 
+pub const RULE_CATALOG: RuleCatalog = RuleCatalog {
+    rules: rules::USED_RULES,
+    groups: rules::groups::ALL_GROUPS,
+};
+
 pub fn all_rule_ids() -> impl Iterator<Item = &'static str> {
-    rules::USED_RULES.iter().map(|rule| rule.id())
+    RULE_CATALOG.rules.iter().map(|rule| rule.id())
+}
+
+#[must_use]
+pub fn lint_engine_with_all_rules(config: Config) -> LintEngine {
+    LintEngine::new(config, RULE_CATALOG)
 }
 
 #[derive(Debug)]

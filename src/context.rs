@@ -406,9 +406,9 @@ impl LintContext<'_> {
     where
         F: for<'b> FnOnce(LintContext<'b>) -> R,
     {
-        use crate::engine::{LintEngine, parse_source};
+        use crate::engine::{default_engine_state, parse_source};
 
-        let engine_state = LintEngine::new_state();
+        let engine_state = default_engine_state();
         let (block, working_set, file_offset) = parse_source(engine_state, source.as_bytes(), None);
 
         let context = LintContext::with_default_config(

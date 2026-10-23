@@ -24,7 +24,7 @@ pub struct ServerState {
 impl ServerState {
     pub fn new(config: Config, is_repl_client: bool) -> Self {
         Self {
-            engine: LintEngine::new(config),
+            engine: crate::lint_engine_with_all_rules(config),
             documents: HashMap::new(),
             is_repl_client,
         }
@@ -32,7 +32,7 @@ impl ServerState {
 
     /// Reload the user-wide XDG config.
     pub fn reload_config(&mut self) {
-        self.engine = LintEngine::new(load_user_config());
+        self.engine = crate::lint_engine_with_all_rules(load_user_config());
     }
 
     pub fn lint_document(&mut self, uri: &Uri, content: &str) -> Vec<Diagnostic> {

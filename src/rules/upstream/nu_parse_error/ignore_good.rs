@@ -1,7 +1,7 @@
 use std::fs;
 
 use super::RULE;
-use crate::{Config, engine::LintEngine, log::init_test_log};
+use crate::{Config, log::init_test_log};
 
 #[test]
 fn test_config_nu() {
@@ -112,7 +112,7 @@ fn ignore_relative_parent_import_on_disk() {
     let script = bin_dir.join("script.nu");
     fs::write(&script, "use ../library/mod.nu *").unwrap();
 
-    let engine = LintEngine::new(Config::default());
+    let engine = crate::lint_engine_with_all_rules(Config::default());
     let violations = engine.lint_file(&script).unwrap();
     assert!(
         violations
@@ -137,7 +137,7 @@ fn ignore_relative_dot_import_on_disk() {
     let script = dir.path().join("main.nu");
     fs::write(&script, "use ./sibling/mod.nu *").unwrap();
 
-    let engine = LintEngine::new(Config::default());
+    let engine = crate::lint_engine_with_all_rules(Config::default());
     let violations = engine.lint_file(&script).unwrap();
     assert!(
         violations

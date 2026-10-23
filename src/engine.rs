@@ -1,11 +1,11 @@
 use std::{
-    env, fs,
-    io::{self, BufRead},
+    env,
+    error::Error,
+    fmt, fs, io,
     path::{Path, PathBuf},
     sync::{LazyLock, Mutex},
 };
 
-use ::ignore::WalkBuilder;
 use nu_parser::parse;
 use nu_protocol::{
     Span, Value,
@@ -15,13 +15,55 @@ use nu_protocol::{
 use rayon::prelude::*;
 
 use crate::{
-    LintError, LintLevel,
+    LintLevel,
     config::Config,
     context::LintContext,
     ignore,
-    rules::{USED_RULES, groups::ALL_GROUPS},
+    rule::{Rule, RuleCatalog},
     violation::{SourceFile, Violation},
 };
+
+#[derive(Debug)]
+pub struct ReadSourceError {
+    pub path: PathBuf,
+    pub source: io::Error,
+}
+
+impl fmt::Display for ReadSourceError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "failed to read '{}': {}",
+            self.path.display(),
+            self.source
+        )
+    }
+}
+
+impl Error for ReadSourceError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        Some(&self.source)
+    }
+}
+
+#[must_use]
+pub fn default_engine_state() -> &'static EngineState {
+    static ENGINE: LazyLock<EngineState> = LazyLock::new(|| {
+        let mut engine_state = nu_cmd_lang::create_default_context();
+        engine_state = nu_command::add_shell_command_context(engine_state);
+        engine_state = nu_cmd_extra::add_extra_command_context(engine_state);
+        engine_state = nu_cli::add_cli_context(engine_state);
+        if let Ok(cwd) = env::current_dir()
+            && let Some(cwd) = cwd.to_str()
+        {
+            engine_state.add_env_var("PWD".into(), Value::string(cwd, Span::unknown()));
+        }
+        nu_std::load_standard_library(&mut engine_state).unwrap();
+        engine_state.generate_nu_constant();
+        engine_state
+    });
+    &ENGINE
+}
 
 /// Parse Nushell source code into an AST and return both the Block and
 /// `StateWorkingSet`, along with the file's starting offset in the span space.
@@ -48,122 +90,35 @@ pub fn parse_source<'a>(
     ((*block).clone(), working_set, file_offset)
 }
 
-/// Check if a file is a Nushell script (by extension or shebang)
-fn is_nushell_file(path: &Path) -> bool {
-    path.extension()
-        .and_then(|s| s.to_str())
-        .is_some_and(|ext| ext == "nu")
-        || fs::File::open(path)
-            .ok()
-            .and_then(|file| {
-                let mut reader = io::BufReader::new(file);
-                let mut first_line = String::new();
-                reader.read_line(&mut first_line).ok()?;
-                first_line.starts_with("#!").then(|| {
-                    first_line
-                        .split_whitespace()
-                        .any(|word| word.ends_with("/nu") || word == "nu")
-                })
-            })
-            .unwrap_or(false)
-}
-
-/// Collect .nu files from a directory, respecting git ignore files
-#[must_use]
-pub fn collect_nu_files_from_dir(dir: &Path) -> Vec<PathBuf> {
-    WalkBuilder::new(dir)
-        .standard_filters(true)
-        .build()
-        .filter_map(|result| match result {
-            Ok(entry) => {
-                let path = entry.path().to_path_buf();
-                (path.is_file() && is_nushell_file(&path)).then_some(path)
-            }
-            Err(err) => {
-                log::warn!("Error walking directory: {err}");
-                None
-            }
-        })
-        .collect()
-}
-
-/// Collect all Nushell files to lint from given paths
-///
-/// For files: includes them if they are `.nu` files or have a nushell shebang
-/// For directories: recursively collects `.nu` files, respecting `.gitignore`
-#[must_use]
-pub fn collect_nu_files(paths: &[PathBuf]) -> Vec<PathBuf> {
-    paths
-        .iter()
-        .flat_map(|path| {
-            if !path.exists() {
-                log::warn!("Path not found: {}", path.display());
-                return vec![];
-            }
-
-            if path.is_file() {
-                if is_nushell_file(path) {
-                    vec![path.clone()]
-                } else {
-                    vec![]
-                }
-            } else if path.is_dir() {
-                collect_nu_files_from_dir(path)
-            } else {
-                vec![]
-            }
-        })
-        .collect()
-}
-
 pub struct LintEngine {
-    pub(crate) config: Config,
+    config: Config,
     engine_state: &'static EngineState,
+    enabled_rules: Vec<(&'static dyn Rule, LintLevel)>,
 }
 
 impl LintEngine {
-    /// Get or initialize the default engine state
     #[must_use]
-    pub fn new_state() -> &'static EngineState {
-        static ENGINE: LazyLock<EngineState> = LazyLock::new(|| {
-            let mut engine_state = nu_cmd_lang::create_default_context();
-            engine_state = nu_command::add_shell_command_context(engine_state);
-            engine_state = nu_cmd_extra::add_extra_command_context(engine_state);
-            engine_state = nu_cli::add_cli_context(engine_state);
-            // Required by command `path self`
-            if let Ok(cwd) = env::current_dir()
-                && let Some(cwd) = cwd.to_str()
-            {
-                engine_state.add_env_var("PWD".into(), Value::string(cwd, Span::unknown()));
-            }
-
-            // Commented out because not needed for most lints and may slow down
-            nu_std::load_standard_library(&mut engine_state).unwrap();
-
-            // Set up $nu constant (required for const evaluation at parse time)
-            engine_state.generate_nu_constant();
-
-            engine_state
-        });
-        &ENGINE
-    }
-
-    #[must_use]
-    pub fn new(config: Config) -> Self {
+    pub fn new(config: Config, catalog: RuleCatalog) -> Self {
+        let enabled_rules = catalog
+            .rules
+            .iter()
+            .map(|rule| (*rule, config.get_lint_level(*rule, catalog.groups)))
+            .filter(|(_, lint_level)| *lint_level != LintLevel::Off)
+            .collect();
         Self {
             config,
-            engine_state: Self::new_state(),
+            engine_state: default_engine_state(),
+            enabled_rules,
         }
     }
 
-    /// Lint a file at the given path.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the file cannot be read.
-    pub(crate) fn lint_file(&self, path: &Path) -> Result<Vec<Violation>, LintError> {
+    #[allow(
+        clippy::missing_errors_doc,
+        reason = "the only error is ReadSourceError, which names the unreadable path"
+    )]
+    pub fn lint_file(&self, path: &Path) -> Result<Vec<Violation>, ReadSourceError> {
         log::debug!("Linting file: {}", path.display());
-        let source = fs::read_to_string(path).map_err(|source| LintError::Io {
+        let source = fs::read_to_string(path).map_err(|source| ReadSourceError {
             path: path.to_path_buf(),
             source,
         })?;
@@ -273,15 +228,10 @@ impl LintEngine {
             .collect()
     }
 
-    /// Collect violations from all enabled rules
     fn detect_with_fix_data(&self, context: &LintContext) -> Vec<Violation> {
-        USED_RULES
+        self.enabled_rules
             .iter()
-            .filter_map(|rule| {
-                let lint_level = self.config.get_lint_level(*rule, ALL_GROUPS);
-                if lint_level == LintLevel::Off {
-                    return None;
-                }
+            .filter_map(|&(rule, lint_level)| {
                 let mut violations = rule.check(context);
                 for violation in &mut violations {
                     violation.set_rule_id(rule.id());

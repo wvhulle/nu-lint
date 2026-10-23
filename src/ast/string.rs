@@ -7,7 +7,7 @@ use nu_protocol::{
     engine::StateWorkingSet,
 };
 
-use crate::{context::LintContext, engine::LintEngine};
+use crate::{context::LintContext, engine::default_engine_state};
 
 /// Characters that cannot appear in bare words.
 const BARE_WORD_FORBIDDEN: &[char] = &[
@@ -39,7 +39,7 @@ pub fn bare_word_needs_quotes(content: &str) -> bool {
 }
 
 fn parses_as_non_string(content: &str) -> bool {
-    let engine_state = LintEngine::new_state();
+    let engine_state = default_engine_state();
     let mut working_set = StateWorkingSet::new(engine_state);
     let _ = working_set.add_file("check", content.as_bytes());
 
@@ -76,7 +76,7 @@ pub fn bare_glob_needs_quotes(content: &str) -> bool {
         return true;
     }
 
-    let engine_state = LintEngine::new_state();
+    let engine_state = default_engine_state();
     let mut working_set = StateWorkingSet::new(engine_state);
     let _ = working_set.add_file("check", content.as_bytes());
 

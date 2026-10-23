@@ -6,7 +6,8 @@ use std::{
 
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use nu_lint::{
-    Config, LintEngine, LintLevel, all_rule_ids, apply_fixes_iteratively, collect_nu_files_from_dir,
+    Config, LintEngine, LintLevel, all_rule_ids, apply_fixes_iteratively,
+    collect_nu_files_from_dir, lint_engine_with_all_rules,
 };
 use rayon::prelude::*;
 
@@ -55,7 +56,7 @@ fn lint_all_sources(lint_engine: &LintEngine, sources: &[String]) -> usize {
 }
 
 fn bench_fixture_lint_and_fix(c: &mut Criterion) {
-    let lint_engine = LintEngine::new(Config::default());
+    let lint_engine = lint_engine_with_all_rules(Config::default());
     let mut group = c.benchmark_group("fixtures");
     for fixture_name in FIXTURE_NAMES {
         let source = read_fixture_source(fixture_name);
@@ -89,13 +90,13 @@ fn bench_each_rule_on_nu_scripts(c: &mut Criterion) {
     let mut group = c.benchmark_group("per_rule");
     group.sample_size(10);
 
-    let parse_only_engine = LintEngine::new(config_with_only_rule(None));
+    let parse_only_engine = lint_engine_with_all_rules(config_with_only_rule(None));
     group.bench_function(PARSE_ONLY_BENCH_ID, |b| {
         b.iter(|| black_box(lint_all_sources(&parse_only_engine, &sources)));
     });
 
     for rule_id in all_rule_ids() {
-        let single_rule_engine = LintEngine::new(config_with_only_rule(Some(rule_id)));
+        let single_rule_engine = lint_engine_with_all_rules(config_with_only_rule(Some(rule_id)));
         group.bench_function(rule_id, |b| {
             b.iter(|| black_box(lint_all_sources(&single_rule_engine, &sources)));
         });

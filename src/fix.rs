@@ -371,12 +371,12 @@ mod tests {
     fn test_iterative_fixes_with_overlapping_spans() {
         // Test that the iterative fix system can handle fixes that would have
         // overlapping spans if applied simultaneously
-        use crate::{config::Config, engine::LintEngine};
+        use crate::config::Config;
 
         let content = "^evtest /dev/input/event0 err> /dev/null | lines\n";
 
         let config = Config::default();
-        let engine = LintEngine::new(config);
+        let engine = crate::lint_engine_with_all_rules(config);
 
         let (fixed, count) = apply_fixes_iteratively(content, &engine);
 
@@ -404,13 +404,13 @@ mod tests {
     fn test_iterative_fixes_multiple_rules_same_line() {
         // Test that multiple rules fixing the same line work correctly when applied
         // iteratively
-        use crate::{config::Config, engine::LintEngine};
+        use crate::config::Config;
 
         // This triggers multiple rules.
         let content = "^grep pattern file.txt err> /dev/null | lines\n";
 
         let config = Config::default();
-        let engine = LintEngine::new(config);
+        let engine = crate::lint_engine_with_all_rules(config);
 
         let (fixed, count) = apply_fixes_iteratively(content, &engine);
 
@@ -431,13 +431,13 @@ mod tests {
     #[test]
     fn test_iterative_fixes_converge() {
         // Test that iterative fixes eventually converge (no infinite loop)
-        use crate::{config::Config, engine::LintEngine};
+        use crate::config::Config;
 
         // Multiple violations that could potentially trigger repeatedly
         let content = "^curl https://example.com err> /dev/null | str trim\n";
 
         let config = Config::default();
-        let engine = LintEngine::new(config);
+        let engine = crate::lint_engine_with_all_rules(config);
 
         let (fixed, count) = apply_fixes_iteratively(content, &engine);
 
@@ -460,12 +460,12 @@ mod tests {
     #[test]
     fn test_iterative_fixes_preserve_utf8() {
         // Test that iterative fixes correctly handle UTF-8 boundaries
-        use crate::{config::Config, engine::LintEngine};
+        use crate::config::Config;
 
         let content = "^echo 测试 err> /dev/null | lines\n";
 
         let config = Config::default();
-        let engine = LintEngine::new(config);
+        let engine = crate::lint_engine_with_all_rules(config);
 
         let (fixed, count) = apply_fixes_iteratively(content, &engine);
 

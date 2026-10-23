@@ -134,6 +134,12 @@ pub struct Group {
     pub rules: &'static [&'static dyn Rule],
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct RuleCatalog {
+    pub rules: &'static [&'static dyn Rule],
+    pub groups: &'static [Group],
+}
+
 impl Debug for dyn Rule {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         f.debug_struct("Rule")

@@ -12,7 +12,8 @@ use crate::{
     ast::tree,
     config::Config,
     config_loading::{load_user_config, read_config_file, validate_rule_levels},
-    engine::{LintEngine, collect_nu_files},
+    engine::LintEngine,
+    file_collection::collect_nu_files,
     fix::{apply_fixes, apply_fixes_to_stdin, format_fix_results},
     format::{Format, Summary, format_output},
     log::init_test_log,
@@ -100,7 +101,7 @@ impl Cli {
             writeln!(io::stderr(), "Error: {e}")?;
             return Ok(ExitCode::FAILURE);
         }
-        let engine = LintEngine::new(config.clone());
+        let engine = crate::lint_engine_with_all_rules(config.clone());
 
         let violations = if self.stdin {
             let source = Self::read_stdin();
@@ -137,7 +138,7 @@ impl Cli {
             writeln!(io::stderr(), "Error: {e}")?;
             return Ok(ExitCode::FAILURE);
         }
-        let engine = LintEngine::new(config.clone());
+        let engine = crate::lint_engine_with_all_rules(config.clone());
 
         if self.stdin {
             Self::fix_stdin(&engine)?;
@@ -315,7 +316,7 @@ mod tests {
 
     use clap::Parser;
 
-    use crate::{Config, LintEngine, cli::Cli, engine::collect_nu_files};
+    use crate::{Config, cli::Cli, file_collection::collect_nu_files};
 
     #[test]
     fn test_cli_parsing() {
@@ -374,7 +375,7 @@ mod tests {
         let test_file = temp_dir.path().join("test.nu");
         fs::write(&test_file, "def foo [] { echo 'hello' }").unwrap();
 
-        let engine = LintEngine::new(Config::default());
+        let engine = crate::lint_engine_with_all_rules(Config::default());
         let files = collect_nu_files(&[test_file]);
 
         assert_eq!(files.len(), 1);

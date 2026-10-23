@@ -122,6 +122,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 [features]
 default = ["lsp"]
 lsp = ["lsp-server", "lsp-types", "tracing-appender"]
+test-support = []
 
 [dev-dependencies]
 criterion = { version = "0.7", features = ["html_reports", "csv_output"] }

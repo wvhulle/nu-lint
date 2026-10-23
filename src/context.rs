@@ -6,7 +6,7 @@ use nu_protocol::{
     engine::{EngineState, StateWorkingSet},
 };
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 use crate::violation;
 use crate::{
     Config,
@@ -53,7 +53,7 @@ impl<'a> LintContext<'a> {
     }
 
     /// Create a new `LintContext` using the default configuration.
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub(crate) fn with_default_config(
         source: &'a str,
         ast: &'a Block,
@@ -395,7 +395,7 @@ impl<'a> LintContext<'a> {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 impl LintContext<'_> {
     /// Helper to create a test context with stdlib commands loaded.
     ///

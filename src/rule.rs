@@ -1,4 +1,4 @@
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 use std::borrow::Cow;
 use std::{
     any::TypeId,
@@ -164,7 +164,7 @@ impl PartialEq for dyn Rule {
 
 impl Eq for dyn Rule {}
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 impl dyn Rule {
     fn run_check(&self, code: &str) -> Vec<Violation> {
         LintContext::test_get_violations(code, |context| self.check(context))

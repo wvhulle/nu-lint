@@ -1,4 +1,4 @@
 ruleDirs:
-- refactor
+- .ast-grep/rules
 testConfigs:
-- testDir: refactor-tests
+- testDir: .ast-grep/rule-tests

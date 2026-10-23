@@ -32,14 +32,14 @@ See [Rules](#rules) for all available rules, or run `nu-lint --list-rules`.
 
 Following screenshots were taking in Helix with `nu-lint` set-up as LSP (`nu-lint --lsp`).
 
-- Automatic fixes and ignore actions (with keybinding `space a` in Helix): ![(Screenshot of code action menu)](./screenshots/code-actions.png)
-- Explanations in popup (with keybinding with `space k` in Helix): ![(Screenshot of explanations)](./screenshots/explanations.png)
-- Inline hints (opt-in in most editors) ![(Screenshot of inline hints)](./screenshots/inline-hints.png)
+- Automatic fixes and ignore actions (with keybinding `space a` in Helix): ![(Screenshot of code action menu)](./docs/screenshots/code-actions.png)
+- Explanations in popup (with keybinding with `space k` in Helix): ![(Screenshot of explanations)](./docs/screenshots/explanations.png)
+- Inline hints (opt-in in most editors) ![(Screenshot of inline hints)](./docs/screenshots/inline-hints.png)
 
 To have `nu-lint` in your terminal directly (not just scripts), use [nushell-lsp](https://github.com/wvhulle/nushell):
 
-- Real-time diagnostics while typing in Nushell prompt: ![(Screenshot of prompt real-time diagnostics)](./screenshots/prompt.png)
-- Fixes (and ignore actions) offered in Nushell prompt ![(Screenshot of fixes in prompt)](./screenshots/ignore.png)
+- Real-time diagnostics while typing in Nushell prompt: ![(Screenshot of prompt real-time diagnostics)](./docs/screenshots/prompt.png)
+- Fixes (and ignore actions) offered in Nushell prompt ![(Screenshot of fixes in prompt)](./docs/screenshots/ignore.png)
 
 ## Rule example
 

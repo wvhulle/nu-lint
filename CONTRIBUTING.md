@@ -89,6 +89,8 @@ src/rules/your_rule_name/
 └── generated_fix.rs # Tests for auto-fix output (optional but recommended)
 ```
 
+Tests call the assertion methods on `dyn Rule` from `src/rule.rs`, such as `RULE.assert_detects(code)`, `RULE.assert_ignores(code)` and `RULE.assert_count(code, n)`. For fixes, assert the complete output with `RULE.assert_fixed_is(bad_code, expected_code)`. Use the looser `assert_fixed_contains` only when the full output cannot be pinned down.
+
 ## Parsing
 
 Before you start implementing the detection itself, you need investigate how the upstream Nu parser (crate `nu-parser`) parses the fragment representing your new anti-pattern.
@@ -134,13 +136,15 @@ The codebase provides several helper traits in `src/ast/`:
 
 Check existing rules for examples of common detection patterns.
 
+Do not search, split or trim source text (`span_text`, `expr_text`, `source_before_span`, …) with string methods such as `contains`, `starts_with`, `find` or `trim`. Match on the AST nodes and spans instead, and add a helper to `src/ast/` when one is missing. The `source-text-search` ast-grep rule reports violations (see [Checks and entry points](#checks-and-entry-points)).
+
 ## Debugging
 
 You can debug the code in two ways:
 
 - Use the built-in Rust macro `dbg!`
-- Use a custom formatter for `env_logger`:
-  - Add a call to the function `crate::log::init_log()` at the beginning of the test you are debugging
+- Use log output:
+  - Add a call to the function `crate::log::init_test_log()` at the beginning of the test you are debugging
   - Call debug macros of the `log` crate in the new rule implementation.
 
 For example, you could run one test named `test_detect_unnecessary_variable_simple`:
@@ -205,6 +209,7 @@ Everything CI runs is a flake output, so it can be run locally in the same way:
 | Command | Purpose |
 |---------|---------|
 | `nix flake check` | Tests and `cargo fmt` check |
+| `sg scan` / `sg test` | Project-specific ast-grep rules in `.ast-grep/rules/` and their tests in `.ast-grep/rule-tests/` |
 | `nix run .#check-commits -- main..@` | Conventional commit message check for a revision range |
 | `nix build .#dist` | Static release binaries as `.tar.gz` |
 | `nix run .#release` | Publish an unreleased version to crates.io and create its tag and Codeberg release (CI only, needs `CODEBERG_TOKEN`) |

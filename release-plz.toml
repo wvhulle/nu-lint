@@ -23,10 +23,17 @@ changelog_path = "CHANGELOG.md"
 git_tag_name = "v{{ version }}"
 git_release_name = "v{{ version }}"
 version_group = "nu-lint"
-changelog_include = ["nu-lint-analysis"]
+changelog_include = ["nu-lint-analysis", "nu-lint-rules"]
 
 [[package]]
 name = "nu-lint-analysis"
+changelog_update = false
+git_tag_enable = false
+git_release_enable = false
+version_group = "nu-lint"
+
+[[package]]
+name = "nu-lint-rules"
 changelog_update = false
 git_tag_enable = false
 git_release_enable = false

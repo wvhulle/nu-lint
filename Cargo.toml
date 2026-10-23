@@ -1,5 +1,5 @@
 [workspace]
-members = ["nu-lint-analysis"]
+members = ["nu-lint-analysis", "nu-lint-rules"]
 
 [workspace.package]
 authors = ["Willem Vanhulle <willemvanhulle@protonmail.com>"]
@@ -121,6 +121,7 @@ nu-cmd-extra = "0.116.0"
 nu-cmd-lang = "0.116.0"
 nu-command = { version = "0.116.0", features = ["sqlite"] }
 nu-lint-analysis = { version = "1.6.0", path = "nu-lint-analysis" }
+nu-lint-rules = { version = "1.6.0", path = "nu-lint-rules" }
 nu-parser = "0.116.0"
 nu-protocol = "0.116.0"
 nu-std = "0.116.0"
@@ -139,24 +140,16 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 [dependencies]
 clap.workspace = true
 dirs.workspace = true
-heck.workspace = true
 ignore.workspace = true
-jaq-core.workspace = true
 log.workspace = true
 lsp-server = { workspace = true, optional = true }
 lsp-types = { workspace = true, optional = true }
 miette.workspace = true
-nu-cli.workspace = true
-nu-cmd-extra.workspace = true
-nu-cmd-lang.workspace = true
-nu-command.workspace = true
 nu-lint-analysis.workspace = true
+nu-lint-rules.workspace = true
 nu-parser.workspace = true
-nu-protocol.workspace = true
-nu-std.workspace = true
 owo-colors.workspace = true
 rayon.workspace = true
-regex.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 toml.workspace = true

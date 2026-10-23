@@ -281,6 +281,7 @@ pub const ALL_GROUPS: &[Group] = &[
 ];
 
 /// Find all groups that contain the given `rule_id`
+#[must_use]
 pub fn groups_for_rule(rule_id: &str) -> Vec<&'static str> {
     ALL_GROUPS
         .iter()
@@ -324,7 +325,7 @@ mod tests {
         )
     }
 
-    const README_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/README.md");
+    const README_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../README.md");
     const START_MARKER: &str = "<!-- start-rule-groups -->\n";
     const END_MARKER: &str = "<!-- end-rule-groups -->";
 

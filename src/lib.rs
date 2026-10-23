@@ -4,7 +4,6 @@ mod file_collection;
 mod format;
 #[cfg(feature = "lsp")]
 mod lsp;
-mod rules;
 
 use std::{error::Error, fmt, io, path::PathBuf};
 
@@ -13,17 +12,14 @@ pub use engine::LintEngine;
 pub use file_collection::collect_nu_files_from_dir;
 pub use fix::apply_fixes_iteratively;
 pub use nu_lint_analysis::log;
-use nu_lint_analysis::{ast, config, context, dsl, effect, engine, fix, rule, span, violation};
-use rule::RuleCatalog;
+#[cfg(test)]
+use nu_lint_analysis::span;
+use nu_lint_analysis::{ast, config, engine, fix, rule, violation};
+use nu_lint_rules as rules;
+pub use nu_lint_rules::RULE_CATALOG;
 use toml::{de, ser};
-use violation::{Fix, Replacement};
 
 pub const NU_PARSER_VERSION: &str = env!("NU_PARSER_VERSION");
-
-pub const RULE_CATALOG: RuleCatalog = RuleCatalog {
-    rules: rules::USED_RULES,
-    groups: rules::groups::ALL_GROUPS,
-};
 
 pub fn all_rule_ids() -> impl Iterator<Item = &'static str> {
     RULE_CATALOG.rules.iter().map(|rule| rule.id())

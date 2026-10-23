@@ -23,6 +23,7 @@ use crate::context::LintContext;
 ///
 /// This is needed because Nu's AST doesn't distinguish between a block and a
 /// closure with empty pipes - both have no parameters in the signature.
+#[must_use]
 pub fn has_explicit_pipe_delimiters(context: &LintContext, span: Span) -> bool {
     let text = context.span_text(span);
     let mut chars = text.chars();
@@ -37,6 +38,7 @@ pub fn has_explicit_pipe_delimiters(context: &LintContext, span: Span) -> bool {
 }
 
 /// Determines if a type is a record type.
+#[must_use]
 pub const fn is_record_type(ty: &nu_protocol::Type) -> bool {
     matches!(ty, nu_protocol::Type::Record(_))
 }

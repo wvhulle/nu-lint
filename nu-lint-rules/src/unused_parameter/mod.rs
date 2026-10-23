@@ -8,7 +8,7 @@ use crate::{
     ast::{block::BlockExt, call::CallExt},
     context::LintContext,
     rule::{DetectFix, Rule},
-    rules::typing::{format_flag, format_optional, format_required, format_rest},
+    typing::{format_flag, format_optional, format_required, format_rest},
     violation::{Detection, DiagnosticTag, Fix, Replacement},
 };
 

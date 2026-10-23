@@ -17,23 +17,28 @@ pub mod split_row_get_inline;
 pub mod split_row_get_multistatement;
 pub mod split_row_space_to_split_words;
 
+#[must_use]
 pub fn is_split_row_call(call: &Call, context: &LintContext) -> bool {
     call.get_call_name(context) == "split row"
 }
 
+#[must_use]
 pub fn is_split_call(call: &Call, context: &LintContext) -> bool {
     matches!(call.get_call_name(context).as_str(), "split row" | "split")
 }
 
+#[must_use]
 pub fn is_indexed_access_call(call: &Call, context: &LintContext) -> bool {
     matches!(call.get_call_name(context).as_str(), "get" | "skip")
 }
 
+#[must_use]
 pub fn extract_index_from_call(call: &Call, context: &LintContext) -> Option<usize> {
     call.get_first_positional_arg()
         .and_then(|arg| context.expr_text(arg).parse().ok())
 }
 
+#[must_use]
 pub fn extract_delimiter_from_split_call(call: &Call, context: &LintContext) -> Option<String> {
     if !is_split_call(call, context) {
         return None;
@@ -45,10 +50,12 @@ pub fn extract_delimiter_from_split_call(call: &Call, context: &LintContext) -> 
     }
 }
 
+#[must_use]
 pub fn needs_regex_for_delimiter(delimiter: &str) -> bool {
     contains_regex_special_chars(delimiter)
 }
 
+#[must_use]
 pub fn generate_parse_pattern(delimiter: &str, num_fields: usize) -> (String, bool) {
     let needs_regex = needs_regex_for_delimiter(delimiter);
 
@@ -68,6 +75,7 @@ pub fn generate_parse_pattern(delimiter: &str, num_fields: usize) -> (String, bo
     }
 }
 
+#[must_use]
 pub fn generate_parse_replacement(delimiter: &str, indexed_fields: &[usize]) -> String {
     let max_field = indexed_fields.iter().copied().max().unwrap_or(0);
     let num_fields = max_field + 2;

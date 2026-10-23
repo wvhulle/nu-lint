@@ -4,7 +4,7 @@ use nu_protocol::ast::Expr;
 
 use crate::{
     LintLevel,
-    ast::{expression::is_dollar_in_var, span::SpanExt},
+    ast::{declaration::CustomCommandDef, expression::is_dollar_in_var, span::SpanExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
@@ -33,9 +33,7 @@ impl DetectFix for RequireMainWithStdin {
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         let functions = context.custom_commands();
-        let has_main = functions
-            .iter()
-            .any(super::super::ast::declaration::CustomCommandDef::is_main);
+        let has_main = functions.iter().any(CustomCommandDef::is_main);
 
         // Only check top-level code if there's no main function
         if has_main {

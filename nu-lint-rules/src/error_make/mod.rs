@@ -11,6 +11,7 @@ pub mod add_span_to_label;
 pub mod add_url_to_error;
 pub mod error_make_for_non_fatal;
 
+#[must_use]
 pub fn extract_field_name(key: &Expression, context: &LintContext) -> String {
     StringFormat::from_expression(key, context).map_or_else(
         || key.span_text(context).to_string(),
@@ -18,12 +19,14 @@ pub fn extract_field_name(key: &Expression, context: &LintContext) -> String {
     )
 }
 
+#[must_use]
 pub fn has_field(record: &[RecordItem], field_name: &str, context: &LintContext) -> bool {
     record.iter().any(|item| {
         matches!(item, RecordItem::Pair(key, _) if extract_field_name(key, context) == field_name)
     })
 }
 
+#[must_use]
 pub fn extract_record_from_expr(expr: &Expression) -> Option<&Vec<RecordItem>> {
     match &expr.expr {
         Expr::Record(record) => Some(record),
@@ -35,6 +38,7 @@ pub fn extract_record_from_expr(expr: &Expression) -> Option<&Vec<RecordItem>> {
     }
 }
 
+#[must_use]
 pub fn get_labels_value<'a>(
     record: &'a [RecordItem],
     context: &LintContext,

@@ -14,6 +14,7 @@ pub mod where_closure_drop_parameter;
 
 /// Extracts an integer value from an expression, handling direct integers,
 /// subexpressions, and full cell paths.
+#[must_use]
 pub fn extract_int_value(expr: &Expression, context: &LintContext) -> Option<i64> {
     match &expr.expr {
         Expr::Int(n) => Some(*n),
@@ -41,6 +42,7 @@ pub fn extract_int_value(expr: &Expression, context: &LintContext) -> Option<i64
 }
 
 /// Gets the range argument from a slice call, if it exists and is valid.
+#[must_use]
 pub fn get_slice_range<'a>(expr: &'a Expression, context: &LintContext) -> Option<&'a Range> {
     let Expr::Call(call) = &expr.expr else {
         return None;
@@ -61,6 +63,7 @@ pub fn get_slice_range<'a>(expr: &'a Expression, context: &LintContext) -> Optio
 /// Checks if an expression represents a negative value by examining the AST
 /// structure. This handles constants like (-2), variables like (-$n), and
 /// subexpressions like (-($x + 1)).
+#[must_use]
 pub fn is_negative_expression(expr: &Expression, context: &LintContext) -> bool {
     match &expr.expr {
         // Direct negative integer

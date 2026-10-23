@@ -28,6 +28,7 @@ pub struct OpenFromPattern<'a> {
 ///
 /// Returns patterns where the `from` format matches the file's extension
 /// according to `context.format_for_extension()`.
+#[must_use]
 pub fn find_open_from_patterns<'a>(
     pipeline: &'a Pipeline,
     context: &'a LintContext,
@@ -73,6 +74,7 @@ pub fn find_open_from_patterns<'a>(
 
 /// Create a span covering from open to from (the entire `open FILE | from
 /// FORMAT` expression)
+#[must_use]
 pub fn open_from_span(pattern: &OpenFromPattern) -> Span {
     Span::new(pattern.open_expr.span.start, pattern.from_expr.span.end)
 }

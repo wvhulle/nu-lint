@@ -9,6 +9,7 @@ pub mod add_type_hints_arguments;
 pub mod missing_in_type;
 pub mod missing_output_type;
 
+#[must_use]
 pub fn find_return_span(block: &Block) -> Option<Span> {
     block
         .pipelines
@@ -17,6 +18,7 @@ pub fn find_return_span(block: &Block) -> Option<Span> {
         .map(|e| e.expr.span)
 }
 
+#[must_use]
 pub fn get_input_type(signature: &nu_protocol::Signature) -> Option<Type> {
     signature
         .input_output_types
@@ -24,6 +26,7 @@ pub fn get_input_type(signature: &nu_protocol::Signature) -> Option<Type> {
         .map(|(input, _)| input.clone())
 }
 
+#[must_use]
 pub fn get_output_type(signature: &nu_protocol::Signature) -> Option<Type> {
     signature
         .input_output_types
@@ -31,6 +34,7 @@ pub fn get_output_type(signature: &nu_protocol::Signature) -> Option<Type> {
         .map(|(_, output)| output.clone())
 }
 
+#[must_use]
 pub fn find_signature_span(call: &Call, _ctx: &LintContext) -> Option<Span> {
     let sig_arg = call.get_positional_arg(1)?;
     Some(sig_arg.span)
@@ -44,11 +48,13 @@ fn format_shape(name: &str, shape: &SyntaxShape) -> String {
 }
 
 /// Format a required positional parameter: `name: type`
+#[must_use]
 pub fn format_required(p: &PositionalArg) -> String {
     format_shape(&p.name, &p.shape)
 }
 
 /// Format an optional positional parameter: `name?: type`
+#[must_use]
 pub fn format_optional(p: &PositionalArg) -> String {
     if matches!(p.shape, SyntaxShape::Any) {
         format!("{}?", p.name)
@@ -58,12 +64,14 @@ pub fn format_optional(p: &PositionalArg) -> String {
 }
 
 /// Format a rest/variadic parameter: `...name: type`
+#[must_use]
 pub fn format_rest(p: &PositionalArg) -> String {
     format_rest_with_shape(&p.name, &p.shape)
 }
 
 /// Format a rest/variadic parameter with a custom shape (for list<T> -> T
 /// conversion)
+#[must_use]
 pub fn format_rest_with_shape(name: &str, shape: &SyntaxShape) -> String {
     match shape {
         SyntaxShape::Any | SyntaxShape::ExternalArgument => format!("...{name}"),
@@ -72,6 +80,7 @@ pub fn format_rest_with_shape(name: &str, shape: &SyntaxShape) -> String {
 }
 
 /// Format a flag/named parameter.
+#[must_use]
 pub fn format_flag(f: &Flag) -> String {
     let short = f.short.map_or_default(|s| format!(" (-{s})"));
     let arg_type = f.arg.as_ref().map_or_default(|s| format!(": {s}"));

@@ -35,6 +35,7 @@ impl PathSegment {
         }
     }
 
+    #[must_use]
     pub fn to_record_key(&self) -> String {
         match self {
             Self::Field(name) if !record_key_needs_quotes(name) => name.clone(),
@@ -105,6 +106,7 @@ fn pipeline_field_assignment(
         .flatten()
 }
 
+#[must_use]
 pub fn format_path(path: &[PathSegment]) -> String {
     path.iter()
         .map(|seg| match seg {
@@ -221,6 +223,7 @@ enum FoldState {
     Building(GroupBuilder),
 }
 
+#[must_use]
 pub fn find_assignment_groups(block: &Block, context: &LintContext) -> Vec<AssignmentGroup> {
     let (groups, final_state) = block
         .pipelines
@@ -265,6 +268,7 @@ pub fn find_assignment_groups(block: &Block, context: &LintContext) -> Vec<Assig
     }
 }
 
+#[must_use]
 pub fn make_detection(group: &AssignmentGroup) -> Detection {
     let paths = group
         .assignments

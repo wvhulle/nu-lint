@@ -1,0 +1,25 @@
+[package]
+authors.workspace = true
+description = "Lint rules for Nushell scripts used by nu-lint"
+edition.workspace = true
+keywords = ["nushell", "linter", "static-analysis"]
+license.workspace = true
+name = "nu-lint-rules"
+repository.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+heck.workspace = true
+log.workspace = true
+miette.workspace = true
+nu-lint-analysis.workspace = true
+nu-protocol.workspace = true
+regex.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+nu-lint-analysis = { workspace = true, features = ["test-support"] }
+tempfile.workspace = true

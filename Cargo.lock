@@ -3389,25 +3389,17 @@ dependencies = [
  "clap",
  "criterion",
  "dirs 6.0.0",
- "heck",
  "ignore",
- "jaq-core",
  "log",
  "lsp-server",
  "lsp-types",
  "miette 7.6.0",
  "nu-ansi-term",
- "nu-cli",
- "nu-cmd-extra",
- "nu-cmd-lang",
- "nu-command",
  "nu-lint-analysis",
+ "nu-lint-rules",
  "nu-parser",
- "nu-protocol",
- "nu-std",
  "owo-colors",
  "rayon",
- "regex",
  "serde",
  "serde_json",
  "tempfile",
@@ -3437,6 +3429,20 @@ dependencies = [
  "serde",
  "tracing-log",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "nu-lint-rules"
+version = "1.6.0"
+dependencies = [
+ "heck",
+ "log",
+ "miette 7.6.0",
+ "nu-lint-analysis",
+ "nu-protocol",
+ "regex",
+ "tempfile",
+ "tracing",
 ]
 
 [[package]]

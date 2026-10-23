@@ -10,7 +10,7 @@ use crate::{
     ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
     context::LintContext,
     rule::{DetectFix, Rule},
-    rules::typing::{format_flag, format_optional, format_required, format_rest_with_shape},
+    typing::{format_flag, format_optional, format_required, format_rest_with_shape},
     violation::{Detection, Fix, Replacement},
 };
 

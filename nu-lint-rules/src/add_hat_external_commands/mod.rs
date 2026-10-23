@@ -3,8 +3,8 @@ use nu_protocol::ast::{Expr, ExternalArgument};
 use crate::{
     LintLevel,
     context::LintContext,
+    remove_hat_not_builtin,
     rule::{DetectFix, Rule},
-    rules::remove_hat_not_builtin,
     violation::{Detection, Fix, Replacement},
 };
 

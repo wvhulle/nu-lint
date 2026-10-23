@@ -5,7 +5,7 @@ message: String search or trimming on source text. Match on the AST (Expr, Call,
 severity: warning
 language: Rust
 files:
-  - src/rules/**
+  - nu-lint-rules/src/**
 rule:
   any:
     - pattern: $CTX.source_contains($$$)

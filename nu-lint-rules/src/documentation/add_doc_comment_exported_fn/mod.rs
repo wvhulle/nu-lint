@@ -1,3 +1,5 @@
+use std::ops::ControlFlow;
+
 use nu_lint_analysis::{
     LintLevel,
     ast::call::CallExt,
@@ -5,7 +7,10 @@ use nu_lint_analysis::{
     rule::{DetectFix, Rule},
     violation::Detection,
 };
-use nu_protocol::ast::{Call, Expr};
+use nu_protocol::{
+    Span,
+    ast::{Call, Expr},
+};
 
 /// Check if there's a documentation comment before the given span
 /// Since comments are not preserved in AST, we need to check source text
@@ -24,11 +29,6 @@ fn has_doc_comment_before(context: &LintContext, span: nu_protocol::Span) -> boo
             continue;
         }
 
-        // Skip attribute lines (like @example, @search-terms, etc.)
-        if trimmed.starts_with('@') {
-            continue;
-        }
-
         // Check if it's a documentation comment (not a shebang ##)
         let is_comment = trimmed.starts_with('#') && !trimmed.starts_with("##");
         return is_comment;
@@ -37,14 +37,18 @@ fn has_doc_comment_before(context: &LintContext, span: nu_protocol::Span) -> boo
     false
 }
 
-fn check_exported_function(call: &Call, context: &LintContext) -> Option<Detection> {
+fn check_exported_function(
+    call: &Call,
+    documented_span: Span,
+    context: &LintContext,
+) -> Option<Detection> {
     let func_def = call.custom_command_def(context)?;
 
     if !func_def.is_exported() {
         return None;
     }
 
-    let has_docs = has_doc_comment_before(context, call.head);
+    let has_docs = has_doc_comment_before(context, documented_span);
 
     if has_docs {
         None
@@ -85,13 +89,22 @@ impl DetectFix for AddDocCommentExportedFn {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        Self::no_fix(context.detect(|expr, ctx| {
-            if let Expr::Call(call) = &expr.expr {
-                check_exported_function(call, ctx).into_iter().collect()
-            } else {
-                vec![]
-            }
-        }))
+        let mut detections = Vec::new();
+
+        context.traverse_with_parent(|expr, parent| {
+            let Expr::Call(call) = &expr.expr else {
+                return ControlFlow::Continue(());
+            };
+
+            let documented_span = parent
+                .filter(|p| matches!(p.expr, Expr::AttributeBlock(_)))
+                .map_or(call.head, |p| p.span);
+
+            detections.extend(check_exported_function(call, documented_span, context));
+            ControlFlow::Continue(())
+        });
+
+        Self::no_fix(detections)
     }
 }
 

@@ -46,6 +46,20 @@ export def my-command [] {
 }
 
 #[test]
+fn exported_function_with_comment_and_example_attribute_multiline() {
+    let source = r#"
+# This function _also_ does something
+@example "run the function" {
+  my-command-two
+}
+export def my-command-two [] {
+    echo "hello"
+}"#;
+
+    RULE.assert_ignores(source);
+}
+
+#[test]
 fn exported_function_with_comment_and_multiple_attributes() {
     let source = r#"
 # Process data with multiple examples

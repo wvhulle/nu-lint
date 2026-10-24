@@ -32,6 +32,19 @@ export def my-command [] {
 }
 
 #[test]
+fn exported_function_with_only_example_attribute_multiline() {
+    let source = r#"
+@example "run the function" {
+  my-command-two
+}
+export def my-command-two [] {
+  echo "hello"
+}"#;
+
+    RULE.assert_count(source, 1);
+}
+
+#[test]
 fn exported_function_with_multiple_attributes_but_no_comment() {
     let source = r#"
 @example "process a string" { process-data "test" }

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.1](https://codeberg.org/wvhulle/nu-lint/compare/v1.7.0...v1.7.1) - 2026-10-25
+
+### CI
+
+- keep configuration docs updated through bot PR
+
+### Fixed
+
+- *(add_doc_comment_exported_fn)* use attribute block span or call's
+- *(lsp)* skip file logging instead of panicking when log directory cannot be created
+
+### Miscellaneous
+
+- *(nu-lint)* release v1.7.0
+- *(deps)* update cfg_aliases to 0.2.2 and sync xtask version in lockfile
+
 ## [1.7.0](https://codeberg.org/wvhulle/nu-lint/compare/v1.6.0...v1.7.0) - 2026-10-23
 
 ### Added

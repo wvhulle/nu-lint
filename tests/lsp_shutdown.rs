@@ -1,7 +1,9 @@
 #![cfg(feature = "lsp")]
 
 use std::{
+    fs,
     io::Write,
+    path::Path,
     process::{Child, Command, ExitStatus, Stdio},
     thread,
     time::{Duration, Instant},
@@ -35,11 +37,12 @@ fn wait_until_exited(server: &mut Child) -> Option<ExitStatus> {
     None
 }
 
-fn assert_exits_after_exit_notification(lsp_arguments: &[&str]) {
+fn assert_exits_after_exit_notification(lsp_arguments: &[&str], cache_home: &Path) {
     let isolated_config_home = tempfile::tempdir().unwrap();
     let mut server = Command::new(env!("CARGO_BIN_EXE_nu-lint"))
         .args(lsp_arguments)
         .env("XDG_CONFIG_HOME", isolated_config_home.path())
+        .env("XDG_CACHE_HOME", cache_home)
         .stdin(Stdio::piped())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
@@ -111,10 +114,20 @@ fn lsp_exits_when_client_closes_stdin_without_shutdown() {
 
 #[test]
 fn lsp_subcommand_exits_after_exit_notification() {
-    assert_exits_after_exit_notification(&["lsp"]);
+    let isolated_cache_home = tempfile::tempdir().unwrap();
+    assert_exits_after_exit_notification(&["lsp"], isolated_cache_home.path());
 }
 
 #[test]
 fn legacy_lsp_flag_exits_after_exit_notification() {
-    assert_exits_after_exit_notification(&["--lsp"]);
+    let isolated_cache_home = tempfile::tempdir().unwrap();
+    assert_exits_after_exit_notification(&["--lsp"], isolated_cache_home.path());
+}
+
+#[test]
+fn lsp_exits_cleanly_when_log_directory_cannot_be_created() {
+    let scratch_directory = tempfile::tempdir().unwrap();
+    let cache_home_blocked_by_file = scratch_directory.path().join("regular-file");
+    fs::write(&cache_home_blocked_by_file, "").unwrap();
+    assert_exits_after_exit_notification(&["lsp"], &cache_home_blocked_by_file);
 }

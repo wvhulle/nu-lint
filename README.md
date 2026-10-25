@@ -185,51 +185,7 @@ You can also implement your own editor extensions using the `lsp` command as in:
 
 ## Configuration
 
-Some rules are deactivated by default. Usually because they are too noisy or annoy people. You should activate them with the config file and a level override.
-
-The configuration file is optional. By default nu-lint reads `nu-lint.toml` from your user configuration directory (`~/.config/nu-lint.toml` on Linux, `~/Library/Application Support/nu-lint.toml` on macOS, `%APPDATA%\nu-lint.toml` on Windows). Pass `--config <path>` to use a different file. The language server always reads the file in the user configuration directory and reloads it when it changes.
-
-If the file cannot be parsed or names an unknown rule or group, the command line exits with an error, and the language server shows the error in your editor and uses the default levels until the file is fixed.
-
-The file may look like this:
-
-```toml
-# Some rules are configurable
-max_pipeline_length = 80
-pipeline_placement = "start"
-explicit_optional_access = true
-
-# Maximum top-level statements in a function body before max_function_body_length fires (default: 40)
-max_function_body_statements = 40
-
-# Maximum pipe-separated steps a single-call function body may have before
-# single_call_command stops suggesting it can be inlined (default: 2, i.e. at most one |)
-max_inlinable_pipeline_elements = 2
-
-# Set lint level of a set of rules at once.
-[groups]
-stream-in-process = "warning"
-annotate-types = "error"
-
-# Override a single rule level
-[rules]
-dispatch_with_subcommands = "hint"
-unchecked_cell_path_index = "off"
-```
-
-In this particular case, the user overrides the 'level' of certain groups and individual rules.
-
-You can also turn of a rule violation on a particular lien by appending a comment to the line:
-
-```nu
-$data | each {|row|
-    $row.values.0 # nu-lint-ignore: unchecked_cell_path_index
-}
-```
-
-There is a shortcut to do this by selecting the "ignore line violation" code action in the code action menu of your editor.
-
-For any setting you don't set in the configuration file, the defaults set in [`./nu-lint-analysis/src/config.rs`](./nu-lint-analysis/src/config.rs) will be used. If you specify the option in the configuration file, it will override the defaults.
+Rule levels and rule options can be changed in an optional `nu-lint.toml` file in your user configuration directory. Run `nu-lint config example` to print a configuration file with every option, group and rule at its default. See [configuration](https://codeberg.org/wvhulle/nu-lint/src/branch/main/docs/configuration.md) for the file location, the options and how to ignore a single line.
 
 ## Rules
 

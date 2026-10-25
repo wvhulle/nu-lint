@@ -1,0 +1,13 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "xtask"
+publish = false
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+clap.workspace = true
+nu-lint = { path = "..", default-features = false }

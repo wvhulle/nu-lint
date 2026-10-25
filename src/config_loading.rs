@@ -1,4 +1,5 @@
 use std::{
+    fmt::Write,
     fs,
     path::{Path, PathBuf},
 };
@@ -61,6 +62,56 @@ pub fn validate_rule_levels(config: &Config) -> Result<(), LintError> {
     Ok(())
 }
 
+fn toml_level(level: LintLevel) -> toml::Value {
+    toml::Value::try_from(level).expect("lint level serializes to a toml value")
+}
+
+fn commented_groups_toml() -> String {
+    ALL_GROUPS.iter().fold(
+        String::from(
+            "# Set the level of every rule in a group at once, for example to turn it \
+             off\n[groups]\n",
+        ),
+        |mut groups_toml, group| {
+            writeln!(
+                groups_toml,
+                "# {}\n# {} = {}",
+                group.description,
+                group.name,
+                toml_level(LintLevel::Off)
+            )
+            .unwrap();
+            groups_toml
+        },
+    )
+}
+
+fn commented_rules_toml() -> String {
+    ALL_GROUPS.iter().fold(
+        String::from(
+            "# Set the level of a single rule, overriding its group. Shown are the default \
+             levels.\n[rules]\n",
+        ),
+        |mut rules_toml, group| {
+            writeln!(rules_toml, "\n# {}", group.name).unwrap();
+            for rule in group.rules {
+                writeln!(rules_toml, "# {} = {}", rule.id(), toml_level(rule.level())).unwrap();
+            }
+            rules_toml
+        },
+    )
+}
+
+#[must_use]
+pub fn example_config_toml() -> String {
+    format!(
+        "{}\n{}\n{}",
+        Config::documented_default_toml(),
+        commented_groups_toml(),
+        commented_rules_toml()
+    )
+}
+
 #[must_use]
 pub fn user_config_path() -> Option<PathBuf> {
     dirs::config_dir().map(|config_dir| config_dir.join("nu-lint.toml"))
@@ -109,6 +160,61 @@ mod tests {
             validate_rule_levels(&config),
             Err(LintError::GroupDoesNotExist { non_existing_name }) if non_existing_name == "filtering"
         ));
+    }
+
+    fn uncommented_level_lines(commented_toml: &str) -> String {
+        commented_toml
+            .lines()
+            .map(|line| {
+                line.strip_prefix("# ")
+                    .filter(|uncommented| {
+                        uncommented
+                            .split_once(" = ")
+                            .is_some_and(|(key, _)| !key.contains(' '))
+                    })
+                    .unwrap_or(line)
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    #[test]
+    fn example_config_parses_to_default_config() {
+        assert_eq!(
+            parse_config_toml(&example_config_toml()).unwrap(),
+            Config::default()
+        );
+    }
+
+    #[test]
+    fn uncommented_example_rules_keep_default_levels() {
+        let uncommented_config =
+            parse_config_toml(&uncommented_level_lines(&commented_rules_toml())).unwrap();
+        validate_rule_levels(&uncommented_config).unwrap();
+        assert_eq!(uncommented_config.rules.len(), USED_RULES.len());
+        assert!(
+            USED_RULES.iter().all(|rule| {
+                uncommented_config.get_lint_level(*rule, ALL_GROUPS) == rule.level()
+            })
+        );
+    }
+
+    #[test]
+    fn each_uncommented_example_group_is_valid_alone() {
+        let invalid_group_lines: Vec<_> = uncommented_level_lines(&commented_groups_toml())
+            .lines()
+            .filter(|line| !line.starts_with('#') && line.contains(" = "))
+            .filter(|group_line| {
+                parse_config_toml(&format!("[groups]\n{group_line}"))
+                    .and_then(|group_config| validate_rule_levels(&group_config))
+                    .is_err()
+            })
+            .map(ToString::to_string)
+            .collect();
+        assert!(
+            invalid_group_lines.is_empty(),
+            "example group lines rejected on their own: {invalid_group_lines:?}"
+        );
     }
 
     #[test]

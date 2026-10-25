@@ -1,0 +1,29 @@
+when:
+  - repo: wvhulle/nu-lint
+    event: [push, manual]
+    branch: main
+
+depends_on:
+  - checks
+
+variables:
+  - &docs_env
+    NIX_CONFIG: |
+      experimental-features = nix-command flakes
+      build-users-group =
+      extra-substituters = https://wvhulle.cachix.org
+      extra-trusted-public-keys = wvhulle.cachix.org-1:heXx8DZMiRsKUx6l1TxNoF+Nmtmz66QEdsonQzc1ir0=
+    GIT_AUTHOR_NAME: nu-lint-bot
+    GIT_AUTHOR_EMAIL: willemvanhulle@protonmail.com
+    GIT_COMMITTER_NAME: nu-lint-bot
+    GIT_COMMITTER_EMAIL: willemvanhulle@protonmail.com
+    CODEBERG_TOKEN:
+      from_secret: codeberg_token
+
+steps:
+  - name: update-example-config-pr
+    image: nixos/nix:latest
+    environment: *docs_env
+    commands:
+      - git remote set-url origin "https://wvhulle:$${CODEBERG_TOKEN}@codeberg.org/$${CI_REPO}.git"
+      - nix develop --command cargo xtask update-example-config --open-pr

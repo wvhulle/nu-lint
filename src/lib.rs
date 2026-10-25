@@ -8,6 +8,7 @@ mod rule_selection;
 
 use std::{error::Error, fmt, io, path::PathBuf};
 
+pub use config_loading::example_config_toml;
 pub use file_collection::collect_nu_files_from_dir;
 pub use nu_lint_analysis::{
     Config, LintLevel, engine::LintEngine, fix::apply_fixes_iteratively, log,

@@ -1,3 +1,6 @@
+[alias]
+xtask = "run --package xtask --"
+
 # Static linking configuration for musl targets
 # Linker paths are set by Nix at build time via environment variables
 

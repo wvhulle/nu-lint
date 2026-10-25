@@ -3427,6 +3427,7 @@ dependencies = [
  "rayon",
  "regex",
  "serde",
+ "toml 0.8.23",
  "tracing-log",
  "tracing-subscriber",
 ]
@@ -7004,6 +7005,14 @@ checksum = "32e45ad4206f6d2479085147f02bc2ef834ac85886624a23575ae137c8aa8156"
 dependencies = [
  "libc",
  "rustix",
+]
+
+[[package]]
+name = "xtask"
+version = "1.6.0"
+dependencies = [
+ "clap",
+ "nu-lint",
 ]
 
 [[package]]

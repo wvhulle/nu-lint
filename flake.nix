@@ -145,6 +145,7 @@
           pkgs.convco
           pkgs.release-plz
           pkgs.git-cliff
+          pkgs.tea
         ];
 
         mkApp = drv: {

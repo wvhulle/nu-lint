@@ -1,5 +1,5 @@
 [workspace]
-members = ["nu-lint-analysis", "nu-lint-rules"]
+members = ["nu-lint-analysis", "nu-lint-rules", "xtask"]
 default-members = [".", "nu-lint-analysis", "nu-lint-rules"]
 
 [workspace.package]

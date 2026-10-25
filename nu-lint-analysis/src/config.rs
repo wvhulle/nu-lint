@@ -44,16 +44,19 @@ pub struct Config {
     pub pipeline_placement: PipelinePlacement,
     pub max_pipeline_length: usize,
     pub skip_external_parse_errors: bool,
-    /// When true, rules recommend `get --optional` instead of `$list.0?` for
-    /// safe access. Default is false (prefer `?` syntax).
     pub explicit_optional_access: bool,
-    /// Maximum number of top-level statements allowed in a function body before
-    /// `max_function_body_length` fires. Default: 40.
     pub max_function_body_statements: usize,
-    /// Maximum number of pipeline elements (pipe-separated steps) a
-    /// single-call function body may have before `single_call_command` stops
-    /// suggesting it can be inlined. Default: 2 (at most one `|`).
     pub max_inlinable_pipeline_elements: usize,
+}
+
+fn documented_option(
+    option_name: &str,
+    description: &str,
+    default_value: impl Serialize,
+) -> String {
+    let default_value =
+        toml::Value::try_from(default_value).expect("config option serializes to a toml value");
+    format!("# {description}\n{option_name} = {default_value}\n")
 }
 
 impl Default for Config {
@@ -84,6 +87,63 @@ impl Config {
     }
 
     #[must_use]
+    pub fn documented_default_toml() -> String {
+        let Self {
+            groups: _,
+            rules: _,
+            sequential,
+            pipeline_placement,
+            max_pipeline_length,
+            skip_external_parse_errors,
+            explicit_optional_access,
+            max_function_body_statements,
+            max_inlinable_pipeline_elements,
+        } = Self::default();
+        [
+            documented_option(
+                "max_pipeline_length",
+                "Maximum length of a single-line pipeline before reflow_wide_pipelines splits it \
+                 over multiple lines",
+                max_pipeline_length,
+            ),
+            documented_option(
+                "pipeline_placement",
+                "Where reflow_wide_pipelines puts the `|` when splitting a pipeline: \"start\" or \
+                 \"end\" of a line",
+                pipeline_placement,
+            ),
+            documented_option(
+                "explicit_optional_access",
+                "Recommend `get --optional` instead of `$list.0?` for safe access",
+                explicit_optional_access,
+            ),
+            documented_option(
+                "max_function_body_statements",
+                "Maximum top-level statements in a function body before max_function_body_length \
+                 fires",
+                max_function_body_statements,
+            ),
+            documented_option(
+                "max_inlinable_pipeline_elements",
+                "Maximum pipe-separated steps a single-call function body may have before \
+                 single_call_command stops suggesting it can be inlined",
+                max_inlinable_pipeline_elements,
+            ),
+            documented_option(
+                "skip_external_parse_errors",
+                "Ignore parse errors in files that are imported but not linted themselves",
+                skip_external_parse_errors,
+            ),
+            documented_option(
+                "sequential",
+                "Lint files one after another instead of in parallel",
+                sequential,
+            ),
+        ]
+        .join("\n")
+    }
+
+    #[must_use]
     pub fn get_lint_level(&self, rule: &dyn Rule, groups: &[Group]) -> LintLevel {
         let rule_id = rule.id();
 
@@ -109,5 +169,26 @@ impl Config {
         }
 
         rule.level()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn documented_default_toml_parses_to_default_config() {
+        let parsed_config: Config = toml::from_str(&Config::documented_default_toml()).unwrap();
+        assert_eq!(parsed_config, Config::default());
+    }
+
+    #[test]
+    fn documented_default_toml_sets_every_serialized_option() {
+        let documented_options: toml::Table =
+            toml::from_str(&Config::documented_default_toml()).unwrap();
+        let mut serialized_options = toml::Table::try_from(Config::default()).unwrap();
+        serialized_options
+            .retain(|option_name, _| option_name != "groups" && option_name != "rules");
+        assert_eq!(documented_options, serialized_options);
     }
 }

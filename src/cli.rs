@@ -21,7 +21,7 @@ use nu_lint_rules::{USED_RULES, groups::ALL_GROUPS};
 use crate::lsp;
 use crate::{
     LintError,
-    config_loading::load_validated_config,
+    config_loading::{example_config_toml, load_validated_config},
     file_collection::collect_nu_files,
     format::{Format, Summary, format_fix_results, format_output},
     rule_selection::restrict_config_to_selection,
@@ -129,6 +129,12 @@ enum RulesCommand {
 }
 
 #[derive(Subcommand)]
+enum ConfigCommand {
+    #[command(about = "Print an example configuration file with default values")]
+    Example,
+}
+
+#[derive(Subcommand)]
 enum DevCommand {
     #[command(about = "Print the parsed AST of Nu source code, with blocks expanded")]
     Ast(AstArgs),
@@ -147,6 +153,8 @@ enum CliCommand {
         about = "List, explain and group rules"
     )]
     Rules(RulesArgs),
+    #[command(subcommand, about = "Commands for the configuration file")]
+    Config(ConfigCommand),
     #[command(subcommand, about = "Commands for developing nu-lint")]
     Dev(DevCommand),
     #[command(hide = true, long_flag_alias = "explain")]
@@ -381,6 +389,7 @@ pub fn run() -> io::Result<ExitCode> {
         }),
         CliCommand::Lsp => Ok(start_lsp_server()),
         CliCommand::Rules(rules_args) => run_rules_command(rules_args.into_command()),
+        CliCommand::Config(config_command) => run_config_command(&config_command),
         CliCommand::Dev(dev_command) => run_dev_command(dev_command),
         CliCommand::Explain(explain_args) => run_rules_command(RulesCommand::Explain(explain_args)),
         CliCommand::Groups => run_rules_command(RulesCommand::Groups),
@@ -396,6 +405,14 @@ fn run_rules_command(rules_command: RulesCommand) -> io::Result<ExitCode> {
         ),
         RulesCommand::Explain(explain_args) => Cli::explain_rule(&explain_args.rule_id),
         RulesCommand::Groups => Cli::list_groups().map(|()| ExitCode::SUCCESS),
+    }
+}
+
+fn run_config_command(config_command: &ConfigCommand) -> io::Result<ExitCode> {
+    match config_command {
+        ConfigCommand::Example => {
+            write!(io::stdout(), "{}", example_config_toml()).map(|()| ExitCode::SUCCESS)
+        }
     }
 }
 
@@ -620,6 +637,7 @@ mod tests {
             &["nu-lint", "rules", "--only", "filter_to_where"],
             &["nu-lint", "rules", "--config", "c.toml", "groups"],
             &["nu-lint", "dev"],
+            &["nu-lint", "config"],
             &["nu-lint", "fix", "--format", "compact"],
             &["nu-lint", "fix", "--dry-run", "--stdin"],
         ]
@@ -642,7 +660,7 @@ mod tests {
             .collect();
         assert_eq!(
             visible_command_names,
-            ["check", "fix", "lsp", "rules", "dev"]
+            ["check", "fix", "lsp", "rules", "config", "dev"]
         );
     }
 

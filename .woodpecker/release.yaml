@@ -37,6 +37,8 @@ steps:
     commands:
       - git remote set-url origin "https://wvhulle:$${CODEBERG_TOKEN}@codeberg.org/$${CI_REPO}.git"
       - git checkout -B main "$${CI_COMMIT_SHA}"
+      - git config branch.main.remote origin
+      - git config branch.main.merge refs/heads/main
       - nix run .#release
 
   - name: update-release-pr

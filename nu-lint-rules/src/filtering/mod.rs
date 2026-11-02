@@ -1,5 +1,8 @@
-use nu_lint_analysis::{ast::call::CallExt, context::LintContext};
-use nu_protocol::ast::{Expr, Expression, Range};
+use nu_lint_analysis::{
+    ast::{call::CallExt, expression::ExpressionExt},
+    context::LintContext,
+};
+use nu_protocol::ast::{Call, Comparison, Expr, Expression, Operator, Range};
 
 pub mod each_if_to_where;
 pub mod for_filter_to_where;
@@ -10,6 +13,54 @@ pub mod slice_to_skip;
 pub mod slice_to_take;
 pub mod uniq_to_set_operation;
 pub mod where_closure_drop_parameter;
+pub mod where_not_null_to_compact;
+
+#[must_use]
+pub fn where_it_not_equal_matches(
+    where_call: &Call,
+    context: &LintContext,
+    matches_compared_operand: impl Fn(&Expression) -> bool,
+) -> bool {
+    if where_call.builtin_name(context) != Some("where") {
+        return false;
+    }
+    let Some(Expr::RowCondition(block_id)) = where_call
+        .get_first_positional_arg()
+        .map(|condition_arg| &condition_arg.expr)
+    else {
+        return false;
+    };
+
+    let block = context.working_set.get_block(*block_id);
+    let Some(row_variable_id) = block
+        .signature
+        .required_positional
+        .first()
+        .and_then(|row_parameter| row_parameter.var_id)
+    else {
+        return false;
+    };
+    let [pipeline] = block.pipelines.as_slice() else {
+        return false;
+    };
+    let [element] = pipeline.elements.as_slice() else {
+        return false;
+    };
+    let Expr::BinaryOp(left_operand, operator, right_operand) = &element.expr.expr else {
+        return false;
+    };
+    if !matches!(
+        operator.expr,
+        Expr::Operator(Operator::Comparison(Comparison::NotEqual))
+    ) {
+        return false;
+    }
+
+    (left_operand.extract_direct_var() == Some(row_variable_id)
+        && matches_compared_operand(right_operand))
+        || (right_operand.extract_direct_var() == Some(row_variable_id)
+            && matches_compared_operand(left_operand))
+}
 
 /// Extracts an integer value from an expression, handling direct integers,
 /// subexpressions, and full cell paths.

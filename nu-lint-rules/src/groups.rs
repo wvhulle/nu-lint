@@ -95,6 +95,7 @@ const PIPE_INSTEAD_OF_LOOP: Group = Group {
         super::filtering::each_if_to_where::RULE,
         super::filtering::for_filter_to_where::RULE,
         super::filtering::omit_it_in_row_condition::RULE,
+        super::filtering::where_not_null_to_compact::RULE,
         super::filtering::slice_to_drop::RULE,
         super::filtering::slice_to_last::RULE,
         super::filtering::slice_to_skip::RULE,

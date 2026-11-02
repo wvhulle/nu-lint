@@ -284,11 +284,12 @@ Most rules have automatic fixes. Run `nu-lint rules` to see the rules with their
 </details>
 
 <details>
-<summary><code>pipe-instead-of-loop</code> (14 rules): Turn loops, counters, slices and manual filters into pipeline commands.</summary>
+<summary><code>pipe-instead-of-loop</code> (15 rules): Turn loops, counters, slices and manual filters into pipeline commands.</summary>
 
 - `each_if_to_where` (auto-fix): Use 'where' for filtering instead of 'each' with 'if'
 - `for_filter_to_where`: Use 'where' filter instead of for loop with if and append
 - `omit_it_in_row_condition` (auto-fix): Field names in 'where' row conditions don't need `$it.` prefix
+- `where_not_null_to_compact` (auto-fix): Simplify `where $it != null` to `compact`
 - `slice_to_drop` (auto-fix): Use 'drop' instead of 'slice ..-N' to drop last N-1 elements
 - `slice_to_last` (auto-fix): Use 'last' instead of 'slice (-N)..' to get last N elements
 - `slice_to_skip` (auto-fix): Use 'skip' instead of 'slice N..' to skip first N elements

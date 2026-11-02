@@ -1,6 +1,7 @@
 use heck::ToSnakeCase;
 use nu_lint_analysis::{
     LintLevel,
+    ast::call::CallExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -36,9 +37,9 @@ fn find_variable_usages(var_id: VarId, context: &LintContext) -> Vec<Span> {
 }
 
 fn check_call(call: &Call, ctx: &LintContext) -> Option<(Detection, SnakeCaseFixData)> {
-    let decl_name = ctx.working_set.get_decl(call.decl_id).name();
-    let is_mutable = matches!(decl_name, "mut");
-    if !matches!(decl_name, "let" | "mut") {
+    let builtin_name = call.builtin_name(ctx);
+    let is_mutable = builtin_name == Some("mut");
+    if !matches!(builtin_name, Some("let" | "mut")) {
         return None;
     }
 

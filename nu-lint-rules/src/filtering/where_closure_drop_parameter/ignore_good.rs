@@ -96,3 +96,10 @@ fn ignore_row_condition_with_top_level_pipe_in_parens() {
 fn ignore_filter_without_arguments() {
     RULE.assert_ignores(r"def test [] { filter }");
 }
+
+#[test]
+fn ignore_user_defined_filter() {
+    RULE.assert_ignores(
+        "def filter [condition: closure] { $in }\n[1 null] | filter {|entry| $entry != null}",
+    );
+}

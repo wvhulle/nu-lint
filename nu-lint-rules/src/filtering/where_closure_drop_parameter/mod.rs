@@ -74,8 +74,7 @@ fn check_where_or_filter_call(
     call: &Call,
     context: &LintContext,
 ) -> Option<(Detection, RowConditionFixData)> {
-    let command_name = call.get_call_name(context);
-    if !matches!(command_name.as_str(), "where" | "filter") {
+    if !matches!(call.builtin_name(context), Some("where" | "filter")) {
         return None;
     }
 
@@ -111,7 +110,10 @@ fn check_where_or_filter_call(
         arg_expr.span,
     )
     .with_primary_label("closure with named parameter")
-    .with_extra_label(format!("{command_name} command"), call.span());
+    .with_extra_label(
+        format!("{} command", call.get_call_name(context)),
+        call.span(),
+    );
 
     let fix_data = RowConditionFixData {
         closure_span: arg_expr.span,

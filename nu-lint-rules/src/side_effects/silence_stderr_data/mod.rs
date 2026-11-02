@@ -1,6 +1,6 @@
 use nu_lint_analysis::{
     LintLevel,
-    ast::block::BlockExt,
+    ast::{block::BlockExt, call::CallExt},
     context::LintContext,
     effect::external::{ExternEffect, extract_external_arg_text, has_external_side_effect},
     rule::{DetectFix, Rule},
@@ -37,7 +37,7 @@ fn next_element_is_ignore(
         .elements
         .get(current_index + 1)
         .is_some_and(|next| match &next.expr.expr {
-            Expr::Call(call) => context.working_set.get_decl(call.decl_id).name() == "ignore",
+            Expr::Call(call) => call.builtin_name(context) == Some("ignore"),
             _ => false,
         })
 }

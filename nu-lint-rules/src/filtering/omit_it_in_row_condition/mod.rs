@@ -1,5 +1,6 @@
 use nu_lint_analysis::{
     LintLevel,
+    ast::call::CallExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -101,10 +102,7 @@ fn check_where_row_condition(
         return vec![];
     };
 
-    let decl = context.working_set.get_decl(call.decl_id);
-    log::trace!("Found call to: {}", decl.name());
-
-    if decl.name() != "where" {
+    if call.builtin_name(context) != Some("where") {
         return vec![];
     }
 

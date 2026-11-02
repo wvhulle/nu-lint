@@ -12,10 +12,7 @@ use nu_protocol::ast::{Argument, Block, Call, Expr, Expression, Operator, Traver
 fn contains_loop_var_append(expr: &Expression, context: &LintContext, loop_var_name: &str) -> bool {
     match &expr.expr {
         Expr::Call(call) => {
-            let decl_name = call.get_call_name(context);
-            log::trace!("Found call to: {decl_name}");
-
-            if decl_name == "append"
+            if call.builtin_name(context) == Some("append")
                 && let Some(arg_expr) = call.get_first_positional_arg()
             {
                 let is_loop_var = arg_expr
@@ -144,10 +141,7 @@ fn extract_empty_list_vars(
         return vec![];
     };
 
-    let decl_name = call.get_call_name(context);
-    log::trace!("Checking call to: {decl_name}");
-
-    if decl_name != "mut" {
+    if call.builtin_name(context) != Some("mut") {
         return vec![];
     }
 
@@ -276,8 +270,7 @@ fn extract_var_ids_from_if_statements(
                 continue;
             };
 
-            let if_decl = context.working_set.get_decl(if_call.decl_id).name();
-            if if_decl != "if" {
+            if if_call.builtin_name(context) != Some("if") {
                 continue;
             }
 

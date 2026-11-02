@@ -1,5 +1,6 @@
 use nu_lint_analysis::{
     Fix, LintLevel, Replacement,
+    ast::call::CallExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
@@ -58,8 +59,7 @@ fn check_pipeline_for_is_empty(pipeline: &Pipeline, context: &LintContext) -> bo
         if let Some(last_element) = pipeline.elements.last()
             && let Expr::Call(call) = &last_element.expr.expr
         {
-            let decl = context.working_set.get_decl(call.decl_id);
-            return decl.name() == "is-empty";
+            return call.builtin_name(context) == Some("is-empty");
         }
     }
     false

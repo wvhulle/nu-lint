@@ -148,8 +148,8 @@ fn check_expr_nesting(
     match &expr.expr {
         Expr::Call(call) => {
             if call.is_control_flow_command(context) {
-                let command_name = call.get_call_name(context);
-                check_control_flow_call(call, &command_name, current_depth, violations, context);
+                let command_name = call.builtin_name(context).unwrap_or_default();
+                check_control_flow_call(call, command_name, current_depth, violations, context);
             } else {
                 check_call_arguments(call, current_depth, violations, context);
             }

@@ -36,12 +36,14 @@ pub fn find_open_from_patterns<'a>(
         .find_command_pairs(
             context,
             |call, ctx| call.builtin_name(ctx) == Some("open"),
-            |call, ctx| call.get_call_name(ctx).starts_with("from "),
+            |call, ctx| {
+                call.builtin_name(ctx)
+                    .is_some_and(|builtin_name| builtin_name.starts_with("from "))
+            },
         )
         .into_iter()
         .filter_map(|pair| {
-            let from_name = pair.second.get_call_name(context);
-            let format = from_name.strip_prefix("from ")?;
+            let format = pair.second.builtin_name(context)?.strip_prefix("from ")?;
 
             let filename_arg = pair.first.get_first_positional_arg()?;
             let filename = context.expr_text(filename_arg);

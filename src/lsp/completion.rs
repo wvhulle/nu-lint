@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{cmp::Reverse, collections::HashMap};
 
 use lsp_types::{
     CodeAction, CodeActionKind, CodeActionOrCommand, Command, Diagnostic, Range, TextEdit, Uri,
@@ -109,25 +109,34 @@ fn quickfix_action(
     line_index: &LineIndex,
     content: &str,
 ) -> CodeActionOrCommand {
-    let edits = fix
-        .replacements
-        .iter()
-        .map(|r| {
-            let span = r.file_span();
-            TextEdit {
-                range: line_index.span_to_range(content, span.start, span.end),
-                new_text: r.replacement_text.to_string(),
-            }
-        })
-        .collect();
-
     CodeActionOrCommand::CodeAction(CodeAction {
         title: format!("{} [{rule_id}]", fix.explanation),
         kind: Some(quickfix_kind(rule_id)),
         diagnostics: Some(vec![diagnostic]),
-        edit: Some(workspace_edit(uri, edits)),
+        edit: Some(workspace_edit(
+            uri,
+            fix_text_edits(fix, line_index, content),
+        )),
         ..Default::default()
     })
+}
+
+fn fix_text_edits(fix: &Fix, line_index: &LineIndex, content: &str) -> Vec<TextEdit> {
+    fix.replacements
+        .iter()
+        .map(|replacement| {
+            let span = replacement.file_span();
+            TextEdit {
+                range: line_index.span_to_range(content, span.start, span.end),
+                new_text: replacement.replacement_text.to_string(),
+            }
+        })
+        .collect()
+}
+
+fn edit_ranges_conflict(first_range: &Range, second_range: &Range) -> bool {
+    first_range.start == second_range.start
+        || (first_range.start < second_range.end && second_range.start < first_range.end)
 }
 
 fn ignore_line_action(
@@ -265,37 +274,165 @@ fn fix_all_action(uri: &Uri, doc_state: &DocumentState) -> Option<CodeActionOrCo
         return None;
     }
 
+    let mut accepted_edits: Vec<TextEdit> = Vec::new();
     let diagnostics: Vec<_> = fixable
-        .iter()
+        .into_iter()
+        .filter(|violation| {
+            let fix_edits = fix_text_edits(
+                violation.fix.as_ref().unwrap(),
+                &doc_state.line_index,
+                &doc_state.content,
+            );
+            let conflicts_with_accepted = fix_edits.iter().any(|fix_edit| {
+                accepted_edits.iter().any(|accepted_edit| {
+                    edit_ranges_conflict(&fix_edit.range, &accepted_edit.range)
+                })
+            });
+            if !conflicts_with_accepted {
+                accepted_edits.extend(fix_edits);
+            }
+            !conflicts_with_accepted
+        })
         .map(|v| violation_to_diagnostic(v, &doc_state.content, &doc_state.line_index, uri))
         .collect();
 
-    let mut edits: Vec<_> = fixable
-        .iter()
-        .flat_map(|v| &v.fix.as_ref().unwrap().replacements)
-        .map(|r| {
-            let span = r.file_span();
-            TextEdit {
-                range: doc_state
-                    .line_index
-                    .span_to_range(&doc_state.content, span.start, span.end),
-                new_text: r.replacement_text.to_string(),
-            }
-        })
-        .collect();
-
-    edits.sort_by(|a, b| {
-        (b.range.start.line, b.range.start.character)
-            .cmp(&(a.range.start.line, a.range.start.character))
-    });
-    edits.dedup_by(|a, b| ranges_overlap(&a.range, &b.range));
+    accepted_edits.sort_by_key(|text_edit| Reverse(text_edit.range.start));
 
     Some(CodeActionOrCommand::CodeAction(CodeAction {
-        title: format!("Fix all auto-fixable problems ({} fixes)", edits.len()),
+        title: format!(
+            "Fix all auto-fixable problems ({} fixes)",
+            diagnostics.len()
+        ),
         kind: Some(CodeActionKind::SOURCE_FIX_ALL),
         diagnostics: Some(diagnostics),
-        edit: Some(workspace_edit(uri, edits)),
+        edit: Some(workspace_edit(uri, accepted_edits)),
         is_preferred: Some(false),
         ..Default::default()
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use lsp_types::Position;
+    use nu_lint_analysis::{
+        config::Config,
+        span::FileSpan,
+        violation::{Detection, Replacement, Violation},
+    };
+
+    use super::*;
+    use crate::{lsp::state::ServerState, rule_selection::restrict_config_to_selection};
+
+    fn position_offset(line_index: &LineIndex, position: Position) -> usize {
+        line_index.line_start(position.line as usize) + position.character as usize
+    }
+
+    fn apply_edits_to_source(source_text: &str, text_edits: &[TextEdit]) -> String {
+        let line_index = LineIndex::new(source_text);
+        let mut descending_edits: Vec<_> = text_edits.iter().collect();
+        descending_edits.sort_by_key(|text_edit| Reverse(text_edit.range.start));
+        descending_edits.into_iter().fold(
+            source_text.to_string(),
+            |mut edited_source, text_edit| {
+                edited_source.replace_range(
+                    position_offset(&line_index, text_edit.range.start)
+                        ..position_offset(&line_index, text_edit.range.end),
+                    &text_edit.new_text,
+                );
+                edited_source
+            },
+        )
+    }
+
+    fn only_document_edits(code_action: CodeAction) -> Vec<TextEdit> {
+        code_action
+            .edit
+            .unwrap()
+            .changes
+            .unwrap()
+            .into_values()
+            .next()
+            .unwrap()
+    }
+
+    fn fix_all_result(source_text: &str, selected_rule: &str) -> String {
+        let restricted_config =
+            restrict_config_to_selection(Config::default(), &[selected_rule.to_string()]).unwrap();
+        let mut server_state = ServerState::new(restricted_config, false);
+        let document_uri: Uri = "repl:///repl.nu".parse().unwrap();
+        server_state.lint_document(&document_uri, source_text);
+        let document_state = server_state.get_document(&document_uri).unwrap();
+        let Some(CodeActionOrCommand::CodeAction(fix_all)) =
+            fix_all_action(&document_uri, document_state)
+        else {
+            panic!("expected a fix-all code action");
+        };
+        apply_edits_to_source(source_text, &only_document_edits(fix_all))
+    }
+
+    #[test]
+    fn fix_all_keeps_every_fix_on_one_line() {
+        assert_eq!(
+            fix_all_result("ls|first|last", "pipe_spacing"),
+            "ls | first | last"
+        );
+    }
+
+    #[test]
+    fn fix_all_keeps_fixes_sharing_a_line_boundary() {
+        assert_eq!(
+            fix_all_result(
+                "^docker run \\\n    --rm \\\n    alpine",
+                "shell_line_continuation"
+            ),
+            "^docker run --rm alpine"
+        );
+    }
+
+    fn violation_replacing_spans(replaced_spans: &[FileSpan]) -> Violation {
+        Violation::from_detected(
+            Detection::from_file_span("sample violation", replaced_spans[0]),
+            Some(Fix {
+                explanation: "sample fix".into(),
+                replacements: replaced_spans
+                    .iter()
+                    .map(|replaced_span| Replacement::with_file_span(*replaced_span, "X"))
+                    .collect(),
+            }),
+            None,
+        )
+    }
+
+    #[test]
+    fn fix_all_drops_whole_fix_on_real_overlap() {
+        let source_text = "abcdefghijkl";
+        let document_uri: Uri = "repl:///repl.nu".parse().unwrap();
+        let document_state = DocumentState {
+            content: source_text.to_string(),
+            line_index: LineIndex::new(source_text),
+            violations: vec![
+                violation_replacing_spans(&[FileSpan::new(0, 5)]),
+                violation_replacing_spans(&[FileSpan::new(3, 6), FileSpan::new(9, 11)]),
+                violation_replacing_spans(&[FileSpan::new(5, 7)]),
+            ],
+        };
+        let Some(CodeActionOrCommand::CodeAction(fix_all)) =
+            fix_all_action(&document_uri, &document_state)
+        else {
+            panic!("expected a fix-all code action");
+        };
+        assert_eq!(fix_all.title, "Fix all auto-fixable problems (2 fixes)");
+        assert_eq!(fix_all.diagnostics.as_ref().unwrap().len(), 2);
+        assert_eq!(
+            apply_edits_to_source(source_text, &only_document_edits(fix_all)),
+            "XXhijkl"
+        );
+    }
+
+    #[test]
+    fn insertions_at_same_position_conflict() {
+        let insertion_point = Position::new(0, 3);
+        let insertion_range = Range::new(insertion_point, insertion_point);
+        assert!(edit_ranges_conflict(&insertion_range, &insertion_range));
+    }
 }

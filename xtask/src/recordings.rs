@@ -6,7 +6,7 @@ use std::{
 use crate::run_checked;
 
 const RECORDINGS_BOOKMARK: &str = "recordings";
-const RECORDINGS_COMMIT_MESSAGE: &str = "docs: regenerate recordings";
+const RECORDINGS_COMMIT_MESSAGE: &str = "docs: regenerate recordings [skip ci]";
 const STAGING_DIRECTORY_NAME: &str = "nu-lint-recordings";
 
 pub fn record_scene(tape: &Path, output_directory: &Path) -> io::Result<()> {

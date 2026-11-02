@@ -222,13 +222,13 @@ Each tape is its own derivation, so only tapes whose inputs changed are recorded
 nix build .#recordings
 ```
 
-To publish the result, replacing the branch contents:
+`.woodpecker/recordings.yaml` records and publishes them after the checks pass, on every push to `main` that touches the crates, `xtask/`, `demos/` or the build inputs, and on manual runs. Recordings are not byte-reproducible, so each of those runs replaces the single commit of the branch.
+
+To publish by hand, replacing the branch contents:
 
 ```bash
 nix run .#publish-recordings -- result git@codeberg.org:wvhulle/nu-lint.git
 ```
-
-This is a manual step, so publish again when a change affects what the recordings show, such as a rule message or the code action menu.
 
 To add a scene, add a `<scene>.tape` to `demos/`.
 

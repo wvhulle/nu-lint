@@ -1,0 +1,42 @@
+when:
+  - repo: wvhulle/nu-lint
+    event: push
+    branch: main
+    path:
+      include:
+        - src/**
+        - nu-lint-analysis/**
+        - nu-lint-rules/**
+        - xtask/**
+        - demos/**
+        - build.rs
+        - Cargo.toml
+        - Cargo.lock
+        - flake.nix
+        - flake.lock
+  - repo: wvhulle/nu-lint
+    event: manual
+    branch: main
+
+depends_on:
+  - checks
+
+steps:
+  - name: record-and-publish
+    image: nixos/nix:latest
+    environment:
+      NIX_CONFIG: |
+        experimental-features = nix-command flakes
+        build-users-group =
+        sandbox = false
+        extra-substituters = https://wvhulle.cachix.org
+        extra-trusted-public-keys = wvhulle.cachix.org-1:heXx8DZMiRsKUx6l1TxNoF+Nmtmz66QEdsonQzc1ir0=
+      JJ_USER: nu-lint-bot
+      JJ_EMAIL: willemvanhulle@protonmail.com
+      CACHIX_AUTH_TOKEN:
+        from_secret: cachix_auth_token
+      CODEBERG_TOKEN:
+        from_secret: codeberg_token
+    commands:
+      - nix run .#cached-build -- .#recordings --max-jobs 1
+      - nix run .#publish-recordings -- result "https://wvhulle:$${CODEBERG_TOKEN}@codeberg.org/$${CI_REPO}.git"

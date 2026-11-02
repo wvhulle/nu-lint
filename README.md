@@ -253,7 +253,7 @@ Most rules have automatic fixes. Run `nu-lint rules` to see the rules with their
 </details>
 
 <details>
-<summary><code>adopt-nu-syntax</code> (24 rules): Replace verbose code with Nu operators, spread, assignment forms and the standard library.</summary>
+<summary><code>adopt-nu-syntax</code> (25 rules): Replace verbose code with Nu operators, spread, assignment forms and the standard library.</summary>
 
 - `not_is_empty_to_is_not_empty` (auto-fix): Simplify `not ... is-empty` to `is-not-empty`
 - `columns_in_to_has` (auto-fix): Use 'has' operator instead of 'in ($record | columns)'
@@ -263,6 +263,7 @@ Most rules have automatic fixes. Run `nu-lint rules` to see the rules with their
 - `get_optional_to_not_has` (auto-fix): Simplify `get -o | is-empty` to `not-has`
 - `hardcoded_math_constants` (auto-fix): Hardcoded mathematical constants should use std/math constants instead
 - `merge_get_cell_path` (auto-fix): Combine chained 'get' commands into cell paths
+- `get_optional_to_cell_path` (auto-fix): Simplify `$record | get -o a.b` to `$record.a?.b?`
 - `merge_multiline_print` (auto-fix): Consecutive prints mergeable into one
 - `source_to_use`: `source` replaceable with `use`
 - `compound_assignment` (auto-fix): Compound assignment operators simplify simple arithmetic.

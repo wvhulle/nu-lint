@@ -68,6 +68,7 @@ const ADOPT_NU_SYNTAX: Group = Group {
         super::get_optional_to_not_has::RULE,
         super::hardcoded_math_constants::RULE,
         super::merge_get_cell_path::RULE,
+        super::get_optional_to_cell_path::RULE,
         super::merge_multiline_print::RULE,
         super::source_to_use::RULE,
         super::compound_assignment::RULE,

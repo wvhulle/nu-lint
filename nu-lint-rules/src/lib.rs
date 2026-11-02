@@ -39,6 +39,7 @@ pub mod filesystem;
 pub mod filtering;
 pub mod forbid_excessive_nesting;
 pub mod fragile_last_exit_code;
+pub mod get_optional_to_cell_path;
 pub mod get_optional_to_has;
 pub mod get_optional_to_not_has;
 pub mod glob_may_drop_quotes;
@@ -159,6 +160,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     filtering::where_closure_drop_parameter::RULE,
     forbid_excessive_nesting::RULE,
     fragile_last_exit_code::RULE,
+    get_optional_to_cell_path::RULE,
     get_optional_to_has::RULE,
     get_optional_to_not_has::RULE,
     glob_may_drop_quotes::RULE,

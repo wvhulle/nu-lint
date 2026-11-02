@@ -36,7 +36,7 @@ impl DetectFix for AddUrlToError {
                 return vec![];
             };
 
-            if call.get_call_name(ctx) != "error make" {
+            if call.builtin_name(ctx) != Some("error make") {
                 return vec![];
             }
 

@@ -36,7 +36,7 @@ impl AvoidSelfImport {
         };
 
         let is_use_or_source =
-            call.get_call_name(ctx) == "use" || call.get_call_name(ctx) == "source";
+            call.builtin_name(ctx) == Some("use") || call.builtin_name(ctx) == Some("source");
         if !is_use_or_source {
             return vec![];
         }

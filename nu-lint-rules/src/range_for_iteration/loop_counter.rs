@@ -17,7 +17,7 @@ fn has_break_with_counter_check(
         return false;
     };
 
-    if call.get_call_name(context) != "if" {
+    if call.builtin_name(context) != Some("if") {
         return false;
     }
 
@@ -41,7 +41,7 @@ fn has_break_with_counter_check(
             if left.extract_variable_name(context).as_deref() == Some(counter_name));
 
     let has_break = then_block.all_elements().iter().any(|elem| {
-        matches!(&elem.expr.expr, Expr::Call(call) if call.get_call_name(context) == "break")
+        matches!(&elem.expr.expr, Expr::Call(call) if call.builtin_name(context) == Some("break"))
     });
 
     has_counter_in_condition && has_break
@@ -75,7 +75,7 @@ fn extract_counter_from_mut(
         return None;
     };
 
-    (call.get_call_name(context) == "mut")
+    (call.builtin_name(context) == Some("mut"))
         .then(|| {
             let var_name = call.get_positional_arg(0)?.extract_variable_name(context)?;
             let init_value = call.get_positional_arg(1)?;
@@ -119,7 +119,7 @@ impl DetectFix for LoopCounter {
                         return vec![];
                     };
 
-                    if call.get_call_name(ctx) != "loop" {
+                    if call.builtin_name(ctx) != Some("loop") {
                         return vec![];
                     }
 

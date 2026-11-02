@@ -9,7 +9,7 @@ use nu_protocol::ast::{Call, Expr};
 
 /// Check if a call is to the 'exit' command
 fn is_exit_call(call: &Call, ctx: &LintContext) -> bool {
-    call.get_call_name(ctx) == "exit"
+    call.builtin_name(ctx) == Some("exit")
 }
 
 struct ExitOnlyInMain;

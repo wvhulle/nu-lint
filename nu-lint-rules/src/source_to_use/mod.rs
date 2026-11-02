@@ -58,7 +58,7 @@ impl UseOverSource {
         let Expr::Call(call) = &expr.expr else {
             return false;
         };
-        call.get_call_name(ctx) == "source"
+        call.builtin_name(ctx) == Some("source")
     }
 
     fn create_detection(expr: &Expression) -> Detection {

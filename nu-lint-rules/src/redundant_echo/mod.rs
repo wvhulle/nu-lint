@@ -63,7 +63,7 @@ fn detect_echo(expr: &Expression, context: &LintContext) -> Vec<(Detection, Opti
     let Expr::Call(call) = &expr.expr else {
         return vec![];
     };
-    if call.get_call_name(context) != "echo" {
+    if call.builtin_name(context) != Some("echo") {
         return vec![];
     }
     let detection =

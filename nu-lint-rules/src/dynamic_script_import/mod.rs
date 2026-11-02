@@ -39,9 +39,9 @@ impl DynamicScriptImport {
             return vec![];
         };
 
-        let is_import_command = call.get_call_name(ctx) == "use"
-            || call.get_call_name(ctx) == "source"
-            || call.get_call_name(ctx) == "overlay use";
+        let is_import_command = call.builtin_name(ctx) == Some("use")
+            || call.builtin_name(ctx) == Some("source")
+            || call.builtin_name(ctx) == Some("overlay use");
 
         if !is_import_command {
             return vec![];

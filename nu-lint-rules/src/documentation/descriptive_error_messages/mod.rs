@@ -112,7 +112,7 @@ impl DetectFix for DescriptiveErrorMessages {
                 return vec![];
             };
 
-            match call.get_call_name(ctx).as_str() {
+            match call.builtin_name(ctx).unwrap_or_default() {
                 "error make" => check_error_make(call).into_iter().collect(),
                 "print" => check_print_stderr(call).into_iter().collect(),
                 _ => vec![],

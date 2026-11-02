@@ -55,7 +55,7 @@ impl DetectFix for LinesInsteadOfSplit {
                 return vec![];
             };
 
-            if call.get_call_name(ctx) != "split row" {
+            if call.builtin_name(ctx) != Some("split row") {
                 return vec![];
             }
 

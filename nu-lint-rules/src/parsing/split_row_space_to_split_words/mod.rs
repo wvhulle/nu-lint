@@ -23,14 +23,14 @@ struct FixData {
 }
 
 fn is_first_call(call: &Call, ctx: &LintContext) -> bool {
-    call.get_call_name(ctx) == "first"
+    call.builtin_name(ctx) == Some("first")
         && call
             .get_first_positional_arg()
             .is_none_or(|arg| ctx.expr_text(arg).parse::<usize>().is_ok_and(|n| n == 1))
 }
 
 fn is_last_call(call: &Call, ctx: &LintContext) -> bool {
-    call.get_call_name(ctx) == "last"
+    call.builtin_name(ctx) == Some("last")
         && call
             .get_first_positional_arg()
             .is_none_or(|arg| ctx.expr_text(arg).parse::<usize>().is_ok_and(|n| n == 1))

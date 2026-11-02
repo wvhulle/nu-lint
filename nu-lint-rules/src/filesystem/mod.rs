@@ -35,7 +35,7 @@ pub fn find_open_from_patterns<'a>(
     pipeline
         .find_command_pairs(
             context,
-            |call, ctx| call.get_call_name(ctx) == "open",
+            |call, ctx| call.builtin_name(ctx) == Some("open"),
             |call, ctx| call.get_call_name(ctx).starts_with("from "),
         )
         .into_iter()

@@ -14,7 +14,7 @@ fn check_error_make_call(expr: &Expression, ctx: &LintContext) -> Vec<Detection>
         return vec![];
     };
 
-    if call.get_call_name(ctx) != "error make" {
+    if call.builtin_name(ctx) != Some("error make") {
         return vec![];
     }
 

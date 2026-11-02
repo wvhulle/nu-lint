@@ -69,7 +69,7 @@ fn is_filtering_pattern<'a>(
         return None;
     };
 
-    if call.get_call_name(context) != "if" {
+    if call.builtin_name(context) != Some("if") {
         return None;
     }
 
@@ -101,7 +101,7 @@ fn check_expression(expr: &Expression, context: &LintContext) -> Vec<(Detection,
         return vec![];
     };
 
-    if each_call.get_call_name(context) != "each" {
+    if each_call.builtin_name(context) != Some("each") {
         return vec![];
     }
 

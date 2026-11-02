@@ -12,7 +12,7 @@ fn check_call(expr: &Expression, context: &LintContext) -> Option<Detection> {
         return None;
     };
 
-    if call.get_call_name(context) != "default" {
+    if call.builtin_name(context) != Some("default") {
         return None;
     }
 

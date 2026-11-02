@@ -269,7 +269,7 @@ impl CallExt for Call {
     }
 
     fn is_get_optional(&self, context: &LintContext) -> bool {
-        self.get_call_name(context) == "get"
+        self.builtin_name(context) == Some("get")
             && (self.has_named_flag("optional")
                 || self.has_named_flag("o")
                 || self.has_named_flag("ignore-errors")
@@ -300,12 +300,15 @@ impl CallExt for Call {
     }
 
     fn is_branching_control_flow(&self, context: &LintContext) -> bool {
-        matches!(self.get_call_name(context).as_str(), "if" | "match" | "try")
+        matches!(
+            self.builtin_name(context).unwrap_or_default(),
+            "if" | "match" | "try"
+        )
     }
 
     fn is_control_flow_command(&self, context: &LintContext) -> bool {
         matches!(
-            self.get_call_name(context).as_str(),
+            self.builtin_name(context).unwrap_or_default(),
             "if" | "for" | "while" | "loop" | "match" | "try"
         )
     }

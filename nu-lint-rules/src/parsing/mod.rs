@@ -18,17 +18,23 @@ pub mod split_row_space_to_split_words;
 
 #[must_use]
 pub fn is_split_row_call(call: &Call, context: &LintContext) -> bool {
-    call.get_call_name(context) == "split row"
+    call.builtin_name(context) == Some("split row")
 }
 
 #[must_use]
 pub fn is_split_call(call: &Call, context: &LintContext) -> bool {
-    matches!(call.get_call_name(context).as_str(), "split row" | "split")
+    matches!(
+        call.builtin_name(context).unwrap_or_default(),
+        "split row" | "split"
+    )
 }
 
 #[must_use]
 pub fn is_indexed_access_call(call: &Call, context: &LintContext) -> bool {
-    matches!(call.get_call_name(context).as_str(), "get" | "skip")
+    matches!(
+        call.builtin_name(context).unwrap_or_default(),
+        "get" | "skip"
+    )
 }
 
 #[must_use]

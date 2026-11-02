@@ -46,7 +46,7 @@ fn extract_counter_from_mut(
         return None;
     };
 
-    (call.get_call_name(context) == "mut")
+    (call.builtin_name(context) == Some("mut"))
         .then(|| {
             let var_name = call.get_positional_arg(0)?.extract_variable_name(context)?;
             let init_value = call.get_positional_arg(1)?;
@@ -114,7 +114,7 @@ impl DetectFix for WhileCounter {
                         return vec![];
                     };
 
-                    (call.get_call_name(ctx) == "while")
+                    (call.builtin_name(ctx) == Some("while"))
                         .then(|| {
                             check_while_loop_for_counter(call, &counter_name, counter_span, ctx)
                         })

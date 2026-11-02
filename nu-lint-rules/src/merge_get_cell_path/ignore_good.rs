@@ -39,3 +39,8 @@ fn test_get_with_no_args_not_flagged() {
 "#;
     RULE.assert_ignores(good_code);
 }
+
+#[test]
+fn ignore_user_defined_get() {
+    RULE.assert_ignores("def get [path: cell-path] { $in }\n{a: {b: 1}} | get a | get b");
+}

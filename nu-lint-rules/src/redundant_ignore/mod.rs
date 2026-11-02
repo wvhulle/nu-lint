@@ -10,7 +10,7 @@ use nu_protocol::ast::{Expr, Expression, Pipeline};
 
 fn ends_with_ignore(pipeline: &Pipeline, context: &LintContext) -> bool {
     pipeline.elements.last().is_some_and(|elem| {
-        matches!(&elem.expr.expr, Expr::Call(call) if call.get_call_name(context) == "ignore")
+        matches!(&elem.expr.expr, Expr::Call(call) if call.builtin_name(context) == Some("ignore"))
     })
 }
 

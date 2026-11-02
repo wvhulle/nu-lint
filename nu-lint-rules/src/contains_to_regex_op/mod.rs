@@ -55,7 +55,7 @@ fn extract_str_contains_data<'a>(
         return None;
     };
 
-    if call.get_call_name(context) != "str contains" {
+    if call.builtin_name(context) != Some("str contains") {
         return None;
     }
 

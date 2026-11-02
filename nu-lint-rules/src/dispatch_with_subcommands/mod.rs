@@ -58,7 +58,7 @@ fn find_match_dispatch<'a>(
             _ => None,
         })
         .find(|call| {
-            call.get_call_name(context) == "match"
+            call.builtin_name(context) == Some("match")
                 && matches_dispatch_variable(call, param_name, context)
                 && has_string_patterns(call)
         })

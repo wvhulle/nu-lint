@@ -198,7 +198,7 @@ fn walk_if_else_chain(
             return None;
         };
 
-        (next_call.get_call_name(context) == "if").then(|| {
+        (next_call.builtin_name(context) == Some("if")).then(|| {
             current_call = next_call;
             chain_length += 1;
             compares_same_var
@@ -230,7 +230,7 @@ fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<(Detection, Fi
         return None;
     };
 
-    (nested_call.get_call_name(context) == "if").then_some(())?;
+    (nested_call.builtin_name(context) == Some("if")).then_some(())?;
 
     // Analyze chain properties
     let analysis = walk_if_else_chain(nested_call, &compared_var, context);
@@ -302,7 +302,7 @@ impl DetectFix for ReplaceIfElseChainWithMatch {
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context.detect_with_fix_data(|expr, ctx| {
             if let Expr::Call(call) = &expr.expr
-                && call.get_call_name(ctx) == "if"
+                && call.builtin_name(ctx) == Some("if")
             {
                 return analyze_if_chain(call, ctx).into_iter().collect();
             }

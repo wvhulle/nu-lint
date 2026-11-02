@@ -413,7 +413,7 @@ impl BlockExt for Block {
             let Expr::Call(call) = &expr.expr else {
                 return ControlFlow::Continue(());
             };
-            if call.get_call_name(context) == "try"
+            if call.builtin_name(context) == Some("try")
                 && expr.span.start <= span.start
                 && expr.span.end >= span.end
             {

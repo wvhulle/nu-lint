@@ -33,7 +33,7 @@ fn extract_let_declaration<'a>(
         return None;
     };
 
-    if call.get_call_name(context) != "let" {
+    if call.builtin_name(context) != Some("let") {
         return None;
     }
 

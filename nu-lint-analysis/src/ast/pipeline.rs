@@ -135,8 +135,8 @@ pub trait PipelineExt {
     /// ```ignore
     /// // Find `split row | get` patterns
     /// let pairs = pipeline.find_command_pairs(ctx,
-    ///     |c, ctx| c.get_call_name(ctx) == "split row",
-    ///     |c, ctx| c.get_call_name(ctx) == "get");
+    ///     |c, ctx| c.builtin_name(ctx) == Some("split row"),
+    ///     |c, ctx| c.builtin_name(ctx) == Some("get"));
     /// ```
     fn find_command_pairs<'a, F1, F2>(
         &'a self,
@@ -178,7 +178,7 @@ impl PipelineExt for Pipeline {
             .enumerate()
             .filter_map(|(idx, elem)| {
                 if let Expr::Call(call) = &elem.expr.expr
-                    && call.get_call_name(context) == command_name
+                    && call.builtin_name(context) == Some(command_name)
                 {
                     return Some((idx, call.as_ref()));
                 }

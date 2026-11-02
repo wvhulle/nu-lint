@@ -28,7 +28,7 @@ fn extract_mut_declaration(
         return None;
     };
 
-    if call.get_call_name(context) != "mut" {
+    if call.builtin_name(context) != Some("mut") {
         return None;
     }
 

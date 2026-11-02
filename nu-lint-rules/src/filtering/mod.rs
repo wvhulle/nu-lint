@@ -47,7 +47,7 @@ pub fn get_slice_range<'a>(expr: &'a Expression, context: &LintContext) -> Optio
         return None;
     };
 
-    if call.get_call_name(context) != "slice" {
+    if call.builtin_name(context) != Some("slice") {
         return None;
     }
 

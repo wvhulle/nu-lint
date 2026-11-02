@@ -75,7 +75,7 @@ impl DetectFix for TryInsteadOfDo {
                 return vec![];
             };
 
-            if call.get_call_name(ctx) != "do" {
+            if call.builtin_name(ctx) != Some("do") {
                 return vec![];
             }
 

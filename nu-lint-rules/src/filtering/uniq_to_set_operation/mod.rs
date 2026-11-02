@@ -61,11 +61,11 @@ const fn is_list_operand(expr: &Expression) -> bool {
 }
 
 fn is_plain_uniq(call: &Call, context: &LintContext) -> bool {
-    call.get_call_name(context) == "uniq" && call.arguments.is_empty()
+    call.builtin_name(context) == Some("uniq") && call.arguments.is_empty()
 }
 
 fn append_operand<'a>(call: &'a Call, context: &LintContext) -> Option<&'a Expression> {
-    if call.get_call_name(context) != "append" || call.arguments.len() != 1 {
+    if call.builtin_name(context) != Some("append") || call.arguments.len() != 1 {
         return None;
     }
     call.get_first_positional_arg()
@@ -76,7 +76,7 @@ fn row_condition_membership<'a>(
     call: &Call,
     context: &'a LintContext,
 ) -> Option<SetOperationCandidate<'a>> {
-    if call.get_call_name(context) != "where" || call.arguments.len() != 1 {
+    if call.builtin_name(context) != Some("where") || call.arguments.len() != 1 {
         return None;
     }
     let Expr::RowCondition(block_id) = &call.get_first_positional_arg()?.expr else {

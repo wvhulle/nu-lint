@@ -42,7 +42,7 @@ impl PrintInfo {
             return None;
         };
 
-        if call.get_call_name(context) != "print" {
+        if call.builtin_name(context) != Some("print") {
             return None;
         }
 

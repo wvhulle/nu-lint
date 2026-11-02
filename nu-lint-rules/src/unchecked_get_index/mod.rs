@@ -24,7 +24,7 @@ fn check_get_call(
         return None;
     };
 
-    if call.get_call_name(context) != "get" {
+    if call.builtin_name(context) != Some("get") {
         return None;
     }
 

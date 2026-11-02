@@ -13,7 +13,7 @@ use nu_protocol::ast::{Expr, Pipeline};
 
 fn is_piped_to_complete(pipeline: &Pipeline, idx: usize, context: &LintContext) -> bool {
     pipeline.elements.get(idx + 1).is_some_and(|next| {
-        matches!(&next.expr.expr, Expr::Call(call) if call.get_call_name(context) == "complete")
+        matches!(&next.expr.expr, Expr::Call(call) if call.builtin_name(context) == Some("complete"))
     })
 }
 

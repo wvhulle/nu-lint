@@ -27,7 +27,7 @@ fn collect_try_blocks(context: &LintContext) -> HashSet<BlockId> {
             let Expr::Call(call) = &expr.expr else {
                 return vec![];
             };
-            if call.get_call_name(context) == "try" {
+            if call.builtin_name(context) == Some("try") {
                 call.arguments
                     .iter()
                     .filter_map(|arg| {
@@ -76,7 +76,7 @@ impl DetectFix for UseErrorMakeForCatch {
                 return vec![];
             };
 
-            if call.get_call_name(ctx) != "print" {
+            if call.builtin_name(ctx) != Some("print") {
                 return vec![];
             }
 

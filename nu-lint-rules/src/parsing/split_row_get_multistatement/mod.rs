@@ -163,7 +163,7 @@ fn find_split_in_pipeline(
 
 fn is_filter_operation(call: &Call, context: &LintContext) -> bool {
     matches!(
-        call.get_call_name(context).as_str(),
+        call.builtin_name(context).unwrap_or_default(),
         "where" | "filter" | "skip" | "take"
     )
 }

@@ -91,7 +91,7 @@ fn has_null_first_arm(call: &Call) -> bool {
 }
 
 fn is_match_with_null_arm_for_var(call: &Call, var_id: VarId, context: &LintContext) -> bool {
-    call.get_call_name(context) == "match"
+    call.builtin_name(context) == Some("match")
         && matches_scrutinee(call, var_id)
         && has_null_first_arm(call)
 }
@@ -128,7 +128,7 @@ fn is_empty_pipeline_on_var(
                 && p.elements[0].expr.contains_variable(var_id)
                 && matches!(
                     &p.elements[1].expr.expr,
-                    Expr::Call(c) if matches!(c.get_call_name(context).as_str(), "is-empty" | "is-not-empty")
+                    Expr::Call(c) if matches!(c.builtin_name(context).unwrap_or_default(), "is-empty" | "is-not-empty")
                 )
         })
 }

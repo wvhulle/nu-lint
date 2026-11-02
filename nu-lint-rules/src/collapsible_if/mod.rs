@@ -16,7 +16,7 @@ fn get_single_if_call<'a>(block: &'a Block, context: &LintContext) -> Option<&'a
     let element = (pipeline.elements.len() == 1).then(|| pipeline.elements.first())??;
 
     match &element.expr.expr {
-        Expr::Call(call) if call.get_call_name(context) == "if" => Some(call),
+        Expr::Call(call) if call.builtin_name(context) == Some("if") => Some(call),
         _ => None,
     }
 }
@@ -57,7 +57,7 @@ impl DetectFix for CollapsibleIf {
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         context.detect_with_fix_data(|expr, ctx| match &expr.expr {
-            Expr::Call(call) if call.get_call_name(ctx) == "if" => {
+            Expr::Call(call) if call.builtin_name(ctx) == Some("if") => {
                 if call.get_else_branch().is_some() {
                     return vec![];
                 }

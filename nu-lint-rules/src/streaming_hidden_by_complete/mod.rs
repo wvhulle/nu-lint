@@ -40,7 +40,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection,
             let Expr::Call(call) = &second.expr.expr else {
                 return None;
             };
-            if call.get_call_name(context) != "complete" {
+            if call.builtin_name(context) != Some("complete") {
                 return None;
             }
 

@@ -29,7 +29,7 @@ fn check_get_call(
         return None;
     };
 
-    if call.get_call_name(ctx) != "get" {
+    if call.builtin_name(ctx) != Some("get") {
         return None;
     }
 

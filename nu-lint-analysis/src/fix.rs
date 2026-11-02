@@ -238,10 +238,16 @@ fn apply_fixes_to_content(content: &str, violations: &[&Violation]) -> String {
 
     let mut result = content.to_string();
     let content_bytes = content.as_bytes();
+    let mut applied_from = content_bytes.len();
 
     for replacement in replacements {
         let start = replacement.file_span().start;
         let end = replacement.file_span().end;
+
+        if end > applied_from {
+            log::debug!("Skipping overlapping replacement: start={start}, end={end}");
+            continue;
+        }
 
         // Validate span bounds against original content
         if start > content_bytes.len() || end > content_bytes.len() || start > end {
@@ -262,6 +268,7 @@ fn apply_fixes_to_content(content: &str, violations: &[&Violation]) -> String {
 
         // Apply the replacement to the result string
         result.replace_range(start..end, &replacement.replacement_text);
+        applied_from = start;
     }
 
     result
@@ -276,6 +283,38 @@ mod tests {
 
     use super::*;
     use crate::violation::{Fix, Replacement, SourceFile, Violation};
+
+    #[test]
+    fn overlapping_replacements_keep_the_later_one() {
+        use crate::span::FileSpan;
+
+        let content = "abcdef";
+        let fix = Fix {
+            explanation: "Overlapping edits".into(),
+            replacements: vec![
+                Replacement::with_file_span(FileSpan::new(1, 4), "X"),
+                Replacement::with_file_span(FileSpan::new(3, 5), "Y"),
+            ],
+        };
+        let violation = Violation {
+            rule_id: Some(Cow::Borrowed("test_rule")),
+            lint_level: Severity::Warning,
+            message: Cow::Borrowed("Test"),
+            span: FileSpan::new(0, 6).into(),
+            primary_label: None,
+            extra_labels: vec![],
+            long_description: None,
+            fix: Some(fix),
+            file: Some(SourceFile::from("test.nu")),
+            source: None,
+            doc_url: None,
+            short_description: None,
+            diagnostic_tags: vec![],
+            external_detections: vec![],
+        };
+
+        assert_eq!(apply_fixes_to_content(content, &[&violation]), "abcYf");
+    }
 
     #[test]
     fn test_apply_multiple_replacements() {

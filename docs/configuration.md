@@ -69,6 +69,8 @@ sequential = false
 # document-interfaces = "off"
 # Report errors and unhandled deprecations from nu-parser.
 # forward-parser-diagnostics = "off"
+# Rewrite bash operators and variables pasted into Nu code.
+# translate-bash-syntax = "off"
 # Rewrite syntax that nu-parser deprecated.
 # migrate-deprecated-syntax = "off"
 
@@ -124,6 +126,7 @@ sequential = false
 # get_optional_to_not_has = "warning"
 # hardcoded_math_constants = "hint"
 # merge_get_cell_path = "hint"
+# get_optional_to_cell_path = "hint"
 # merge_multiline_print = "hint"
 # source_to_use = "hint"
 # compound_assignment = "hint"
@@ -136,6 +139,8 @@ sequential = false
 # use_load_env = "hint"
 # remove_hat_not_builtin = "hint"
 # division_to_format_duration = "hint"
+# datetime_epoch_arithmetic = "hint"
+# manual_duration_decomposition = "hint"
 # ignore_over_dev_null = "warning"
 # redundant_echo = "warning"
 # if_null_to_default = "warning"
@@ -145,6 +150,8 @@ sequential = false
 # each_if_to_where = "warning"
 # for_filter_to_where = "warning"
 # omit_it_in_row_condition = "hint"
+# where_not_null_to_compact = "hint"
+# where_not_empty_to_compact = "hint"
 # slice_to_drop = "hint"
 # slice_to_last = "hint"
 # slice_to_skip = "hint"
@@ -216,7 +223,9 @@ sequential = false
 # block_brace_spacing = "hint"
 # closure_brace_pipe_spacing = "hint"
 # closure_pipe_body_spacing = "hint"
+# join_wrapped_lines = "off"
 # no_trailing_spaces = "off"
+# normalize_pasted_whitespace = "off"
 # omit_list_commas = "hint"
 # pipe_spacing = "warning"
 # record_brace_spacing = "hint"
@@ -244,6 +253,13 @@ sequential = false
 # nu_deprecated = "warning"
 # nu_parse_error = "error"
 
+# translate-bash-syntax
+# shell_and_to_semicolon = "error"
+# shell_line_continuation = "warning"
+# shell_or_to_try = "error"
+# shell_redirect_to_nu = "error"
+# shell_variable_to_env = "error"
+
 # migrate-deprecated-syntax
 # filter_to_where = "warning"
 # str_case_full_names = "warning"
@@ -254,6 +270,27 @@ sequential = false
 <!-- end-example-config -->
 
 Options you leave out keep their default value. Levels set in `[rules]` take precedence over levels set in `[groups]`.
+
+## Repairing pasted code
+
+Copying a command from wrapped terminal output or a web page can add line breaks, indentation, tabs and non-breaking spaces, and the code may use bash syntax. Nu reports no error for most of these, so the command silently runs with the wrong arguments.
+
+`join_wrapped_lines` and `normalize_pasted_whitespace` are off by default, because the same text is legal in a script. `--only` turns them on for one run. To repair the current prompt with a key press, add this keybinding to your Nushell configuration:
+
+```nu
+$env.config.keybindings ++= [{
+    name: repair_pasted_code
+    modifier: alt
+    keycode: char_r
+    mode: [emacs vi_insert vi_normal]
+    event: {
+        send: executehostcommand
+        cmd: "commandline edit --replace (commandline | nu-lint fix --stdin --only join_wrapped_lines,normalize_pasted_whitespace,translate-bash-syntax)"
+    }
+}]
+```
+
+Line joining is a best guess, so check the result before pressing Enter. A word ending exactly at the wrap width can lose its space, and continuation lines without indentation are not detected.
 
 ## Ignoring a single line
 

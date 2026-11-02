@@ -11,6 +11,7 @@ pub mod add_hat_external_commands;
 pub mod ansi_over_escape_codes;
 pub mod append_to_concat_assign;
 pub mod assign_then_return;
+pub mod bash_syntax;
 pub mod catch_builtin_error_try;
 pub mod chained_append;
 pub mod chained_str_transform;
@@ -103,6 +104,11 @@ pub const USED_RULES: &[&dyn Rule] = &[
     ansi_over_escape_codes::RULE,
     append_to_concat_assign::RULE,
     assign_then_return::RULE,
+    bash_syntax::shell_and_to_semicolon::RULE,
+    bash_syntax::shell_line_continuation::RULE,
+    bash_syntax::shell_or_to_try::RULE,
+    bash_syntax::shell_redirect_to_nu::RULE,
+    bash_syntax::shell_variable_to_env::RULE,
     catch_builtin_error_try::RULE,
     chained_append::RULE,
     chained_str_transform::RULE,
@@ -222,7 +228,9 @@ pub const USED_RULES: &[&dyn Rule] = &[
     spacing::block_brace_spacing::RULE,
     spacing::closure_brace_pipe_spacing::RULE,
     spacing::closure_pipe_body_spacing::RULE,
+    spacing::join_wrapped_lines::RULE,
     spacing::no_trailing_spaces::RULE,
+    spacing::normalize_pasted_whitespace::RULE,
     spacing::omit_list_commas::RULE,
     spacing::pipe_spacing::RULE,
     spacing::record_brace_spacing::RULE,

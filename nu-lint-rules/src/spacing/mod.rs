@@ -1,7 +1,9 @@
 pub mod block_brace_spacing;
 pub mod closure_brace_pipe_spacing;
 pub mod closure_pipe_body_spacing;
+pub mod join_wrapped_lines;
 pub mod no_trailing_spaces;
+pub mod normalize_pasted_whitespace;
 pub mod omit_list_commas;
 pub mod pipe_spacing;
 pub mod record_brace_spacing;

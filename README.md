@@ -383,12 +383,14 @@ Most rules have automatic fixes. Run `nu-lint rules` to see the rules with their
 </details>
 
 <details>
-<summary><code>format-whitespace</code> (11 rules): Fix spacing, line width and quoting according to the style guide.</summary>
+<summary><code>format-whitespace</code> (13 rules): Fix spacing, line width and quoting according to the style guide.</summary>
 
 - `block_brace_spacing` (auto-fix): Block or closure without parameters needs spaces inside braces: `{ body }` not `{body}`
 - `closure_brace_pipe_spacing` (auto-fix): Closure opening brace should touch parameter pipe: `{|x|` not `{ |x|`
 - `closure_pipe_body_spacing` (auto-fix): Closure body needs spaces: `{|x| body }` not `{|x|body}`
+- `join_wrapped_lines` (auto-fix): Code copied from wrapped terminal output contains extra line breaks
 - `no_trailing_spaces` (auto-fix): Eliminate trailing spaces at the end of lines
+- `normalize_pasted_whitespace` (auto-fix): Tab or non-breaking space outside strings
 - `omit_list_commas` (auto-fix): Omit commas between list items.
 - `pipe_spacing` (auto-fix): Inconsistent spacing around `|`
 - `record_brace_spacing` (auto-fix): Record braces should touch content: `{a: 1}` not `{ a: 1 }`
@@ -427,6 +429,17 @@ Most rules have automatic fixes. Run `nu-lint rules` to see the rules with their
 
 - `nu_deprecated`: Upstream deprecation without a dedicated migration rule
 - `nu_parse_error`: Parser encountered a syntax error
+
+</details>
+
+<details>
+<summary><code>translate-bash-syntax</code> (5 rules): Rewrite bash operators and variables pasted into Nu code.</summary>
+
+- `shell_and_to_semicolon` (auto-fix): Bash `&&` replaceable with `;` or `and`
+- `shell_line_continuation` (auto-fix): Trailing backslash does not continue the command on the next line
+- `shell_or_to_try` (auto-fix): Bash `||` replaceable with `try`/`catch` or `or`
+- `shell_redirect_to_nu` (auto-fix): Bash stderr redirection replaceable with `err>` or `out+err>|`
+- `shell_variable_to_env` (auto-fix): Bash variable replaceable with `$env`
 
 </details>
 

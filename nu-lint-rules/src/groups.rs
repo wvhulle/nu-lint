@@ -200,7 +200,9 @@ const FORMAT_WHITESPACE: Group = Group {
         super::spacing::block_brace_spacing::RULE,
         super::spacing::closure_brace_pipe_spacing::RULE,
         super::spacing::closure_pipe_body_spacing::RULE,
+        super::spacing::join_wrapped_lines::RULE,
         super::spacing::no_trailing_spaces::RULE,
+        super::spacing::normalize_pasted_whitespace::RULE,
         super::spacing::omit_list_commas::RULE,
         super::spacing::pipe_spacing::RULE,
         super::spacing::record_brace_spacing::RULE,
@@ -245,6 +247,18 @@ const FORWARD_PARSER_DIAGNOSTICS: Group = Group {
     ],
 };
 
+const TRANSLATE_BASH_SYNTAX: Group = Group {
+    name: "translate-bash-syntax",
+    description: "Rewrite bash operators and variables pasted into Nu code.",
+    rules: &[
+        super::bash_syntax::shell_and_to_semicolon::RULE,
+        super::bash_syntax::shell_line_continuation::RULE,
+        super::bash_syntax::shell_or_to_try::RULE,
+        super::bash_syntax::shell_redirect_to_nu::RULE,
+        super::bash_syntax::shell_variable_to_env::RULE,
+    ],
+};
+
 const MIGRATE_DEPRECATED_SYNTAX: Group = Group {
     name: "migrate-deprecated-syntax",
     description: "Rewrite syntax that nu-parser deprecated.",
@@ -272,6 +286,7 @@ pub const ALL_GROUPS: &[Group] = &[
     FOLLOW_NAMING_CONVENTIONS,
     DOCUMENT_INTERFACES,
     FORWARD_PARSER_DIAGNOSTICS,
+    TRANSLATE_BASH_SYNTAX,
     MIGRATE_DEPRECATED_SYNTAX,
 ];
 

@@ -3,6 +3,7 @@ pub mod call;
 pub mod declaration;
 pub mod expression;
 pub mod external;
+pub mod lexed_statement;
 pub mod pipeline;
 pub mod regex;
 pub mod span;

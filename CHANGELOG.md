@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.0](https://codeberg.org/wvhulle/nu-lint/compare/v1.7.1...v1.8.0) - 2026-11-02
+
+### Added
+
+- *(get_optional_to_cell_path)* add rule replacing get -o with optional cell paths
+- *(where_not_null_to_compact)* add rule replacing null filters with compact
+- *(where_not_empty_to_compact)* add hint for empty string filters
+- *(datetime_epoch_arithmetic)* add hint for time arithmetic on integers
+- *(manual_duration_decomposition)* add hint for splitting time units by hand
+- *(translate-bash-syntax)* add rules repairing pasted shell code
+
+### Changed
+
+- *(analysis)* add CallExt::builtin_name to identify builtin and keyword calls
+- *(translate-bash-syntax)* follow contributing guidelines
+
+### Documentation
+
+- generate webp in ci
+
+### Fixed
+
+- stop matching user-defined commands that share a builtin name
+- *(merge_get_cell_path)* detect inside blocks and keep optional access in fixes
+- *(division_to_format_duration)* remove auto-fix that changed the result type
+- *(do_not_compare_booleans)* ignore optional cell paths that may be null
+- *(missing_stdin_in_shebang)* detect pipeline input inside try and if blocks
+- *(missing_output_type)* include nothing for an if without else
+- *(analysis)* resolve builtin names in shared AST helpers
+- *(effect)* look up builtin side effects from the resolved call
+- resolve builtin names in remaining rules
+- use utf16 for column calculations
+
+### Other
+
+- remove useless join wrapped lines
+
 ## [1.7.1](https://codeberg.org/wvhulle/nu-lint/compare/v1.7.0...v1.7.1) - 2026-10-25
 
 ### CI

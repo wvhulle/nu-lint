@@ -2,63 +2,42 @@ use nu_lint_analysis::{
     LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
-    violation::{Detection, Fix, Replacement},
+    violation::Detection,
 };
 use nu_protocol::{
-    Span, Type,
+    Type,
     ast::{Expr, Expression, Math, Operator},
 };
 
-struct FixData {
-    /// Span of the entire `$diff / 1hr` expression
-    full: Span,
-    /// Span of the left operand (`$diff`)
-    left: Span,
-    /// Span of the duration unit text (`hr`, `min`, `sec`)
-    unit: Span,
-}
-
-fn extract_division_by_duration(expr: &Expression) -> Option<FixData> {
-    let Expr::BinaryOp(left, op, rhs) = &expr.expr else {
-        return None;
+fn is_division_by_duration_literal(division_expr: &Expression) -> bool {
+    let Expr::BinaryOp(_, operator, divisor) = &division_expr.expr else {
+        return false;
     };
 
-    if !matches!(op.expr, Expr::Operator(Operator::Math(Math::Divide))) {
-        return None;
-    }
-
-    if rhs.ty != Type::Duration {
-        return None;
-    }
-
-    let Expr::ValueWithUnit(vu) = &rhs.expr else {
-        return None;
-    };
-
-    Some(FixData {
-        full: expr.span,
-        left: left.span,
-        unit: vu.unit.span,
-    })
+    matches!(operator.expr, Expr::Operator(Operator::Math(Math::Divide)))
+        && divisor.ty == Type::Duration
+        && matches!(divisor.expr, Expr::ValueWithUnit(_))
 }
 
 struct DivisionToFormatDuration;
 
 impl DetectFix for DivisionToFormatDuration {
-    type FixInput<'a> = FixData;
+    type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
         "division_to_format_duration"
     }
 
     fn short_description(&self) -> &'static str {
-        "Replace duration division with `format duration`"
+        "Duration divided by a duration literal to get a number"
     }
 
     fn long_description(&self) -> Option<&'static str> {
         Some(
-            "Dividing by a duration literal (e.g. `$diff / 1hr`) manually extracts a time unit \
-             from a duration. Use `format duration` for idiomatic unit conversion.",
+            "Dividing by a duration literal (e.g. `$diff / 1hr`) turns a duration into a plain \
+             number and loses its unit. Compare against a duration literal (`$diff > 1hr`) when \
+             checking a threshold, and use `format duration` when displaying the value. Neither \
+             replaces the division automatically, because `format duration` returns a string.",
         )
     }
 
@@ -71,32 +50,15 @@ impl DetectFix for DivisionToFormatDuration {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.detect_with_fix_data(|expr, _ctx| {
-            let Some(fix_data) = extract_division_by_duration(expr) else {
-                return vec![];
-            };
-
-            let detection = Detection::from_global_span(
-                "Duration division can be replaced with `format duration`",
-                expr.span,
-            )
-            .with_primary_label("division by duration literal");
-
-            vec![(detection, fix_data)]
-        })
-    }
-
-    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let left_text = context.span_text(fix_data.left);
-        let unit_text = context.span_text(fix_data.unit);
-
-        Some(Fix {
-            explanation: "Use `format duration` instead of manual division".into(),
-            replacements: vec![Replacement::new(
-                fix_data.full,
-                format!("{left_text} | format duration {unit_text}"),
-            )],
-        })
+        Self::no_fix(context.detect_single(|division_expr, _context| {
+            is_division_by_duration_literal(division_expr).then(|| {
+                Detection::from_global_span(
+                    "Compare against a duration literal, or use `format duration` for display",
+                    division_expr.span,
+                )
+                .with_primary_label("division by duration literal")
+            })
+        }))
     }
 }
 
@@ -104,7 +66,5 @@ pub static RULE: &dyn Rule = &DivisionToFormatDuration;
 
 #[cfg(test)]
 mod detect_bad;
-#[cfg(test)]
-mod generated_fix;
 #[cfg(test)]
 mod ignore_good;

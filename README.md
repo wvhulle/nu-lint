@@ -274,7 +274,7 @@ Most rules have automatic fixes. Run `nu-lint rules` to see the rules with their
 - `merge_with_record_spread` (auto-fix): Use record spread for consecutive field assignments
 - `use_load_env` (auto-fix): Use load-env for multiple $env assignments
 - `remove_hat_not_builtin` (auto-fix): Detect unnecessary '^' prefix on external commands
-- `division_to_format_duration` (auto-fix): Replace duration division with `format duration`
+- `division_to_format_duration`: Duration divided by a duration literal to get a number
 - `ignore_over_dev_null` (auto-fix): Use '| ignore' instead of redirecting to /dev/null
 - `redundant_echo` (auto-fix): Redundant `echo` (identity function)
 - `if_null_to_default` (auto-fix): Simplify if-null pattern to `| default`

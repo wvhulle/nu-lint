@@ -163,7 +163,13 @@ impl CallExt for Call {
                 self.get_call_name(context),
                 inferred
             );
-            return inferred;
+            let can_skip_every_branch =
+                self.builtin_name(context) == Some("if") && self.get_else_branch().is_none();
+            return if can_skip_every_branch && inferred != nu_protocol::Type::Nothing {
+                nu_protocol::Type::one_of([inferred, nu_protocol::Type::Nothing])
+            } else {
+                inferred
+            };
         }
 
         sig.get_output_type(Some(&input_type))

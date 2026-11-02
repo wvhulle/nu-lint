@@ -126,3 +126,19 @@ def time_to_hours [time_str: string] {
 }"#;
     RULE.assert_fixed_contains(bad_code, "[time_str: string]: any -> float");
 }
+
+#[test]
+fn fix_if_without_else_includes_nothing() {
+    RULE.assert_fixed_contains(
+        "def maybe-label [flag: bool] { if $flag { \"label\" } }",
+        "oneof<string, nothing>",
+    );
+}
+
+#[test]
+fn fix_if_with_else_stays_single_output() {
+    RULE.assert_fixed_contains(
+        "def pick-label [flag: bool] { if $flag { \"yes\" } else { \"no\" } }",
+        "-> string",
+    );
+}

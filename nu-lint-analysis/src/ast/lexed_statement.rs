@@ -149,28 +149,12 @@ pub fn all_lexed_statements(lint_context: &LintContext) -> Vec<LexedStatement> {
 }
 
 #[must_use]
-pub fn top_level_statements(lint_context: &LintContext) -> Vec<LexedStatement> {
-    split_into_statements(
-        lex_span_tokens(user_file_span(lint_context), lint_context),
-        lint_context,
-    )
-}
-
-#[must_use]
 pub fn is_quoted_string_token(lexed_token: &Token, lint_context: &LintContext) -> bool {
     lexed_token.contents == TokenContents::Item
         && matches!(
             token_source_bytes(lexed_token, lint_context),
             [b'\'' | b'"' | b'`', ..] | [b'$', b'\'' | b'"', ..] | [b'r', b'#', ..]
         )
-}
-
-#[must_use]
-pub fn is_raw_string_token(lexed_token: &Token, lint_context: &LintContext) -> bool {
-    matches!(
-        token_source_bytes(lexed_token, lint_context),
-        [b'r', b'#', ..]
-    )
 }
 
 fn literal_spans_within(lexed_span: Span, lint_context: &LintContext) -> Vec<Span> {

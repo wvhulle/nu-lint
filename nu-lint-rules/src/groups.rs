@@ -200,7 +200,6 @@ const FORMAT_WHITESPACE: Group = Group {
         super::spacing::block_brace_spacing::RULE,
         super::spacing::closure_brace_pipe_spacing::RULE,
         super::spacing::closure_pipe_body_spacing::RULE,
-        super::spacing::join_wrapped_lines::RULE,
         super::spacing::no_trailing_spaces::RULE,
         super::spacing::normalize_pasted_whitespace::RULE,
         super::spacing::omit_list_commas::RULE,

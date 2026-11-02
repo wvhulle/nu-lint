@@ -392,12 +392,11 @@ Most rules have automatic fixes. Run `nu-lint rules` to see the rules with their
 </details>
 
 <details>
-<summary><code>format-whitespace</code> (13 rules): Fix spacing, line width and quoting according to the style guide.</summary>
+<summary><code>format-whitespace</code> (12 rules): Fix spacing, line width and quoting according to the style guide.</summary>
 
 - `block_brace_spacing` (auto-fix): Block or closure without parameters needs spaces inside braces: `{ body }` not `{body}`
 - `closure_brace_pipe_spacing` (auto-fix): Closure opening brace should touch parameter pipe: `{|x|` not `{ |x|`
 - `closure_pipe_body_spacing` (auto-fix): Closure body needs spaces: `{|x| body }` not `{|x|body}`
-- `join_wrapped_lines` (auto-fix): Code copied from wrapped terminal output contains extra line breaks
 - `no_trailing_spaces` (auto-fix): Eliminate trailing spaces at the end of lines
 - `normalize_pasted_whitespace` (auto-fix): Tab or non-breaking space outside strings
 - `omit_list_commas` (auto-fix): Omit commas between list items.

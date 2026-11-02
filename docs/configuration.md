@@ -223,7 +223,6 @@ sequential = false
 # block_brace_spacing = "hint"
 # closure_brace_pipe_spacing = "hint"
 # closure_pipe_body_spacing = "hint"
-# join_wrapped_lines = "off"
 # no_trailing_spaces = "off"
 # normalize_pasted_whitespace = "off"
 # omit_list_commas = "hint"
@@ -273,9 +272,9 @@ Options you leave out keep their default value. Levels set in `[rules]` take pre
 
 ## Repairing pasted code
 
-Copying a command from wrapped terminal output or a web page can add line breaks, indentation, tabs and non-breaking spaces, and the code may use bash syntax. Nu reports no error for most of these, so the command silently runs with the wrong arguments.
+Copying a command from a web page can add tabs and non-breaking spaces, and the code may use bash syntax. Nu reports no error for most of these, so the command silently runs with the wrong arguments.
 
-`join_wrapped_lines` and `normalize_pasted_whitespace` are off by default, because the same text is legal in a script. `--only` turns them on for one run. To repair the current prompt with a key press, add this keybinding to your Nushell configuration:
+`normalize_pasted_whitespace` is off by default, because tabs are legal in a script. `--only` turns it on for one run. To repair the current prompt with a key press, add this keybinding to your Nushell configuration:
 
 ```nu
 $env.config.keybindings ++= [{
@@ -285,12 +284,12 @@ $env.config.keybindings ++= [{
     mode: [emacs vi_insert vi_normal]
     event: {
         send: executehostcommand
-        cmd: "commandline edit --replace (commandline | nu-lint fix --stdin --only join_wrapped_lines,normalize_pasted_whitespace,translate-bash-syntax)"
+        cmd: "commandline edit --replace (commandline | nu-lint fix --stdin --only normalize_pasted_whitespace,translate-bash-syntax)"
     }
 }]
 ```
 
-Line joining is a best guess, so check the result before pressing Enter. A word ending exactly at the wrap width can lose its space, and continuation lines without indentation are not detected.
+Line breaks added by terminal wrapping are not repaired, because a wrapped line cannot be reliably told apart from a separate command.
 
 ## Ignoring a single line
 

@@ -5,41 +5,22 @@ pub struct SourceLine {
     pub visible_end: usize,
     pub next_line_start: usize,
     pub indent_width: usize,
-    pub character_count: usize,
-    pub last_word_width: usize,
 }
 
 impl SourceLine {
-    #[must_use]
-    pub const fn is_blank(&self) -> bool {
-        self.line_start + self.indent_width >= self.visible_end
-    }
-
     #[must_use]
     pub const fn content_start(&self) -> usize {
         self.line_start + self.indent_width
     }
 }
 
-fn count_utf8_characters(utf8_bytes: &[u8]) -> usize {
-    utf8_bytes
-        .iter()
-        .filter(|utf8_byte| (**utf8_byte & 0xC0) != 0x80)
-        .count()
-}
-
-fn parse_source_line(line_start: usize, line_bytes: &[u8]) -> SourceLine {
+const fn parse_source_line(line_start: usize, line_bytes: &[u8]) -> SourceLine {
     let visible_bytes = line_bytes.trim_ascii_end();
     SourceLine {
         line_start,
         visible_end: line_start + visible_bytes.len(),
         next_line_start: line_start + line_bytes.len(),
         indent_width: visible_bytes.len() - visible_bytes.trim_ascii_start().len(),
-        character_count: count_utf8_characters(visible_bytes),
-        last_word_width: visible_bytes
-            .rsplit(u8::is_ascii_whitespace)
-            .next()
-            .map_or(0, count_utf8_characters),
     }
 }
 

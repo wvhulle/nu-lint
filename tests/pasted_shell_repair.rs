@@ -3,8 +3,7 @@ use std::{
     process::{Command, Stdio},
 };
 
-const PASTE_REPAIR_SELECTION: &str =
-    "join_wrapped_lines,normalize_pasted_whitespace,translate-bash-syntax";
+const PASTE_REPAIR_SELECTION: &str = "normalize_pasted_whitespace,translate-bash-syntax";
 
 fn repair_pasted_text(pasted_text: &str) -> String {
     let empty_config = tempfile::NamedTempFile::new().unwrap();
@@ -43,27 +42,6 @@ fn repair_pasted_text(pasted_text: &str) -> String {
 }
 
 #[test]
-fn repairs_command_copied_from_wrapped_terminal_output() {
-    let pasted_text = concat!(
-        "    printf '%s\\n' '@nix {\"action\":\"result\",\"id\":4503307569594372,",
-        "\"payload\":{\"bodySize\":15869172,\"httpStatus\":20\n",
-        "      0},\"sid\":\"01a19be8-e20e-731d-803f-6fee2c300e2\",\"type\":10111}' ",
-        "| <out>/bin/nom --json 2>&1 | grep -a -c\n",
-        "      'nix-output-monitor error'\n",
-    );
-
-    assert_eq!(
-        repair_pasted_text(pasted_text),
-        concat!(
-            "printf '%s\\n' '@nix {\"action\":\"result\",\"id\":4503307569594372,",
-            "\"payload\":{\"bodySize\":15869172,\"httpStatus\":200},",
-            "\"sid\":\"01a19be8-e20e-731d-803f-6fee2c300e2\",\"type\":10111}' ",
-            "| <out>/bin/nom --json out+err>| grep -a -c 'nix-output-monitor error'",
-        ),
-    );
-}
-
-#[test]
 fn repairs_chained_operators_in_one_pass() {
     assert_eq!(
         repair_pasted_text("^make && ^make test || ^echo failed\n"),
@@ -72,7 +50,7 @@ fn repairs_chained_operators_in_one_pass() {
 }
 
 #[test]
-fn repairs_line_continuation_without_overlapping_wrapped_line_join() {
+fn repairs_backslash_line_continuation() {
     assert_eq!(
         repair_pasted_text("^docker run \\\n    --rm \\\n    alpine\n"),
         "^docker run --rm alpine",

@@ -228,7 +228,6 @@ pub const USED_RULES: &[&dyn Rule] = &[
     spacing::block_brace_spacing::RULE,
     spacing::closure_brace_pipe_spacing::RULE,
     spacing::closure_pipe_body_spacing::RULE,
-    spacing::join_wrapped_lines::RULE,
     spacing::no_trailing_spaces::RULE,
     spacing::normalize_pasted_whitespace::RULE,
     spacing::omit_list_commas::RULE,

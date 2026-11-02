@@ -13,6 +13,7 @@ pub mod slice_to_skip;
 pub mod slice_to_take;
 pub mod uniq_to_set_operation;
 pub mod where_closure_drop_parameter;
+pub mod where_not_empty_to_compact;
 pub mod where_not_null_to_compact;
 
 #[must_use]

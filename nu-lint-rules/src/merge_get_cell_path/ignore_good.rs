@@ -41,6 +41,16 @@ fn test_get_with_no_args_not_flagged() {
 }
 
 #[test]
+fn ignore_optional_get_before_required_get() {
+    RULE.assert_ignores("{a: {b: 1}} | get -o a | get b");
+}
+
+#[test]
+fn ignore_required_get_before_optional_get() {
+    RULE.assert_ignores("{a: {b: 1}} | get a | get -o b");
+}
+
+#[test]
 fn ignore_user_defined_get() {
     RULE.assert_ignores("def get [path: cell-path] { $in }\n{a: {b: 1}} | get a | get b");
 }

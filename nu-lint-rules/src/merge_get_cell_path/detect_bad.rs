@@ -44,3 +44,13 @@ fn test_detect_string_and_int_mixed() {
 
     RULE.assert_detects(bad_code);
 }
+
+#[test]
+fn detect_chained_gets_inside_def() {
+    RULE.assert_detects("def lookup-nested []: nothing -> int { {a: {b: 1}} | get a | get b }");
+}
+
+#[test]
+fn detect_chained_gets_inside_closure() {
+    RULE.assert_detects("[{a: {b: 1}}] | each {|row| $row | get a | get b }");
+}

@@ -39,3 +39,24 @@ fn test_fix_count_single_violation() {
 "#;
     RULE.assert_count(bad_code, 1);
 }
+
+#[test]
+fn fix_keeps_optional_flags_as_optional_members() {
+    RULE.assert_fixed_is(
+        "{a: {b: 1}} | get -o a | get -o b",
+        "{a: {b: 1}} | get a?.b?",
+    );
+}
+
+#[test]
+fn fix_keeps_optional_long_flags_as_optional_members() {
+    RULE.assert_fixed_is(
+        "{a: {b: 1}} | get --optional a | get --optional b",
+        "{a: {b: 1}} | get a?.b?",
+    );
+}
+
+#[test]
+fn fix_writes_optional_member_suffix() {
+    RULE.assert_fixed_is("{a: {b: 1}} | get a? | get b", "{a: {b: 1}} | get a?.b");
+}

@@ -3,7 +3,7 @@ use std::str::from_utf8;
 use nu_parser::parse;
 use nu_protocol::{
     Span,
-    ast::{Argument, Call, Expr, Expression},
+    ast::{Argument, Call, Expr, Expression, PathMember},
     engine::StateWorkingSet,
 };
 
@@ -101,6 +101,28 @@ pub fn bare_glob_needs_quotes(content: &str) -> bool {
                 true
             }
         })
+}
+
+#[must_use]
+pub fn format_cell_path_members(members: &[PathMember]) -> String {
+    members
+        .iter()
+        .map(|member| match member {
+            PathMember::String { val, optional, .. } => {
+                let suffix = if *optional { "?" } else { "" };
+                if cell_path_member_needs_quotes(val) {
+                    format!("\"{val}\"{suffix}")
+                } else {
+                    format!("{val}{suffix}")
+                }
+            }
+            PathMember::Int { val, optional, .. } => {
+                let suffix = if *optional { "?" } else { "" };
+                format!("{val}{suffix}")
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(".")
 }
 
 /// Checks if a string needs quotes when used as a cell path member.

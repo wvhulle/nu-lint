@@ -1,9 +1,10 @@
 use nu_lint_analysis::{
     LintLevel,
     ast::{
+        block::BlockExt,
         call::CallExt,
         pipeline::{ClusterConfig, PipelineExt},
-        string::cell_path_member_needs_quotes,
+        string::format_cell_path_members,
     },
     context::LintContext,
     rule::{DetectFix, Rule},
@@ -11,7 +12,7 @@ use nu_lint_analysis::{
 };
 use nu_protocol::{
     Span,
-    ast::{Expr, Expression, PathMember, PipelineElement},
+    ast::{Call, Expr, Expression, PathMember, Pipeline, PipelineElement},
 };
 
 /// Semantic fix data: stores the spans and cell path members for generating fix
@@ -29,35 +30,6 @@ fn extract_cell_path_members(expr: &Expression) -> Option<Vec<PathMember>> {
     }
 }
 
-const fn format_optional_prefix(optional: bool) -> &'static str {
-    if optional { "?." } else { "" }
-}
-
-fn format_path_member(member: &PathMember) -> String {
-    match member {
-        PathMember::String { val, optional, .. } => {
-            let prefix = format_optional_prefix(*optional);
-            if cell_path_member_needs_quotes(val) {
-                format!("{prefix}\"{val}\"")
-            } else {
-                format!("{prefix}{val}")
-            }
-        }
-        PathMember::Int { val, optional, .. } => {
-            let prefix = format_optional_prefix(*optional);
-            format!("{prefix}{val}")
-        }
-    }
-}
-
-fn format_cell_path(members: &[PathMember]) -> String {
-    members
-        .iter()
-        .map(format_path_member)
-        .collect::<Vec<_>>()
-        .join(".")
-}
-
 const fn get_command_label(idx: usize, start_idx: usize, end_idx: usize) -> &'static str {
     if idx == start_idx {
         "First 'get' command"
@@ -68,13 +40,73 @@ const fn get_command_label(idx: usize, start_idx: usize, end_idx: usize) -> &'st
     }
 }
 
-/// Extract cell path members from a pipeline element's get call
-fn extract_members_from_get_call(element: &PipelineElement) -> Option<Vec<PathMember>> {
-    let Expr::Call(call) = &element.expr.expr else {
-        return None;
-    };
-    let arg = call.get_first_positional_arg()?;
-    extract_cell_path_members(arg)
+fn extract_get_call(element: &PipelineElement) -> Option<&Call> {
+    match &element.expr.expr {
+        Expr::Call(get_call) => Some(get_call),
+        _ => None,
+    }
+}
+
+fn extract_members_from_get_call(
+    get_call: &Call,
+    context: &LintContext,
+) -> Option<Vec<PathMember>> {
+    let mut members = extract_cell_path_members(get_call.get_first_positional_arg()?)?;
+    if get_call.is_get_optional(context) {
+        members.iter_mut().for_each(PathMember::make_optional);
+    }
+    Some(members)
+}
+
+fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection, FixData)> {
+    let config = ClusterConfig::min_consecutive(2);
+
+    pipeline
+        .find_command_clusters("get", context, &config)
+        .into_iter()
+        .filter_map(|cluster| {
+            let start_idx = cluster.first_index()?;
+            let end_idx = cluster.last_index()?;
+
+            let get_calls: Vec<&Call> = cluster
+                .indices
+                .iter()
+                .map(|&idx| extract_get_call(&pipeline.elements[idx]))
+                .collect::<Option<_>>()?;
+
+            let first_is_optional = get_calls.first()?.is_get_optional(context);
+            if get_calls
+                .iter()
+                .any(|get_call| get_call.is_get_optional(context) != first_is_optional)
+            {
+                return None;
+            }
+
+            let member_groups: Vec<Vec<PathMember>> = get_calls
+                .iter()
+                .map(|get_call| extract_members_from_get_call(get_call, context))
+                .collect::<Option<_>>()?;
+            let combined_members: Vec<PathMember> = member_groups.into_iter().flatten().collect();
+
+            let num_gets = cluster.len();
+            let message =
+                format!("Use combined cell path instead of {num_gets} chained 'get' commands");
+
+            let mut detection = Detection::from_global_span(message, cluster.span);
+            for &idx in &cluster.indices {
+                let span = pipeline.elements[idx].expr.span;
+                let label = get_command_label(idx, start_idx, end_idx);
+                detection = detection.with_extra_label(label, span);
+            }
+
+            let fix_data = FixData {
+                full_span: cluster.span,
+                combined_members,
+            };
+
+            Some((detection, fix_data))
+        })
+        .collect()
 }
 
 struct MergeGetCellPath;
@@ -99,57 +131,11 @@ impl DetectFix for MergeGetCellPath {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let config = ClusterConfig::min_consecutive(2);
-
-        context
-            .ast
-            .pipelines
-            .iter()
-            .flat_map(|pipeline| {
-                pipeline
-                    .find_command_clusters("get", context, &config)
-                    .into_iter()
-                    .filter_map(|cluster| {
-                        let start_idx = cluster.first_index()?;
-                        let end_idx = cluster.last_index()?;
-
-                        // Collect cell path members from each get call
-                        let member_groups: Option<Vec<Vec<PathMember>>> = cluster
-                            .indices
-                            .iter()
-                            .map(|&idx| extract_members_from_get_call(&pipeline.elements[idx]))
-                            .collect();
-
-                        let member_groups = member_groups?;
-                        let combined_members: Vec<PathMember> =
-                            member_groups.into_iter().flatten().collect();
-
-                        // Create violation with labels
-                        let num_gets = cluster.len();
-                        let message = format!(
-                            "Use combined cell path instead of {num_gets} chained 'get' commands"
-                        );
-
-                        let mut detection = Detection::from_global_span(message, cluster.span);
-                        for &idx in &cluster.indices {
-                            let span = pipeline.elements[idx].expr.span;
-                            let label = get_command_label(idx, start_idx, end_idx);
-                            detection = detection.with_extra_label(label, span);
-                        }
-
-                        let fix_data = FixData {
-                            full_span: cluster.span,
-                            combined_members,
-                        };
-
-                        Some((detection, fix_data))
-                    })
-            })
-            .collect()
+        context.ast.detect_in_pipelines(context, check_pipeline)
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let combined_path = format_cell_path(&fix_data.combined_members);
+        let combined_path = format_cell_path_members(&fix_data.combined_members);
         let replacement_text = format!("get {combined_path}");
 
         Some(Fix {

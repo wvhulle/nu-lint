@@ -53,7 +53,7 @@ impl LineIndex {
         let end_offset = offset.min(source.len());
         let column = source
             .get(line_start..end_offset)
-            .map_or(0, |s| s.chars().count());
+            .map_or(0, |s| s.encode_utf16().count());
 
         Position {
             line: to_lsp_u32(line),
@@ -262,6 +262,20 @@ mod tests {
         let pos = index.offset_to_position(14, source);
         assert_eq!(pos.line, 2);
         assert_eq!(pos.character, 2);
+    }
+
+    #[test]
+    fn offset_to_position_counts_utf16_units() {
+        let source = "é😀x\n😀y";
+        let index = LineIndex::new(source);
+
+        assert_eq!(index.offset_to_position(2, source).character, 1);
+        assert_eq!(index.offset_to_position(6, source).character, 3);
+        assert_eq!(index.offset_to_position(7, source).character, 4);
+
+        let second_line = index.offset_to_position(source.len(), source);
+        assert_eq!(second_line.line, 1);
+        assert_eq!(second_line.character, 3);
     }
 
     #[test]

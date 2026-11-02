@@ -18,94 +18,121 @@ mod generated_fix;
 #[cfg(test)]
 mod ignore_good;
 
+struct TryCatchSpans {
+    first_operand_start: usize,
+    operand_gaps: Vec<Span>,
+    last_operand_end: usize,
+}
+
 enum OrOperatorRewrite {
     BooleanKeyword(Span),
-    TryCatchNesting(Vec<Replacement>),
+    TryCatchNesting(TryCatchSpans),
     NoEquivalent,
 }
 
-fn is_or_operator(token: &Token) -> bool {
-    token.contents == TokenContents::PipePipe
+struct OrOperatorOccurrence {
+    operator_span: Span,
+    operator_rewrite: OrOperatorRewrite,
 }
 
-fn try_catch_edits(tokens: &[Token]) -> Option<Vec<Replacement>> {
-    let first_token = tokens.first().filter(|token| !is_or_operator(token))?;
-    let last_token = tokens.last().filter(|token| !is_or_operator(token))?;
-    let operator_count = tokens.iter().filter(|token| is_or_operator(token)).count();
-    let insertion_at = |position: usize, inserted_text: String| {
-        Replacement::new(Span::new(position, position), inserted_text)
-    };
+fn is_or_operator(lexed_token: &Token) -> bool {
+    lexed_token.contents == TokenContents::PipePipe
+}
 
-    let operator_edits = tokens
-        .iter()
-        .enumerate()
-        .filter(|(_, token)| is_or_operator(token))
-        .flat_map(|(token_index, _)| {
-            let operand_end = tokens[token_index - 1].span.end;
-            let next_operand_start = tokens[token_index + 1].span.start;
-            let opening_try = tokens[token_index + 1..]
-                .iter()
-                .any(is_or_operator)
-                .then(|| insertion_at(next_operand_start, "try { ".to_string()));
-            once(Replacement::new(
-                Span::new(operand_end, next_operand_start),
-                " } catch { ".to_string(),
-            ))
-            .chain(opening_try)
-        });
+fn try_catch_spans(lexed_tokens: &[Token]) -> Option<TryCatchSpans> {
+    let first_token = lexed_tokens
+        .first()
+        .filter(|lexed_token| !is_or_operator(lexed_token))?;
+    let last_token = lexed_tokens
+        .last()
+        .filter(|lexed_token| !is_or_operator(lexed_token))?;
+    let has_adjacent_operators = lexed_tokens
+        .windows(2)
+        .any(|token_pair| token_pair.iter().all(is_or_operator));
+    if has_adjacent_operators {
+        return None;
+    }
 
-    Some(
-        once(insertion_at(first_token.span.start, "try { ".to_string()))
-            .chain(operator_edits)
-            .chain(once(insertion_at(
-                last_token.span.end,
-                " }".repeat(operator_count),
-            )))
+    Some(TryCatchSpans {
+        first_operand_start: first_token.span.start,
+        operand_gaps: (1..lexed_tokens.len() - 1)
+            .filter(|&token_index| is_or_operator(&lexed_tokens[token_index]))
+            .map(|token_index| {
+                Span::new(
+                    lexed_tokens[token_index - 1].span.end,
+                    lexed_tokens[token_index + 1].span.start,
+                )
+            })
             .collect(),
-    )
+        last_operand_end: last_token.span.end,
+    })
 }
 
 fn statement_or_operators(
-    statement: &LexedStatement,
-    context: &LintContext,
-) -> Vec<(Detection, OrOperatorRewrite)> {
-    let tokens = &statement.statement_tokens;
-    let operators = tokens.iter().filter(|token| is_or_operator(token));
-    let operator_detection = |operator: &Token| {
-        Detection::from_global_span("The `||` operator does not exist in Nu", operator.span)
-            .with_primary_label("bash operator")
-    };
+    lexed_statement: &LexedStatement,
+    lint_context: &LintContext,
+) -> Vec<OrOperatorOccurrence> {
+    let lexed_tokens = &lexed_statement.statement_tokens;
+    let or_operators = lexed_tokens
+        .iter()
+        .filter(|lexed_token| is_or_operator(lexed_token));
 
-    match classify_operand_context(statement, context) {
-        OperandContext::BooleanExpression => operators
-            .map(|operator| {
-                (
-                    operator_detection(operator),
-                    OrOperatorRewrite::BooleanKeyword(operator.span),
-                )
+    match classify_operand_context(lexed_statement, lint_context) {
+        OperandContext::BooleanExpression => or_operators
+            .map(|or_operator| OrOperatorOccurrence {
+                operator_span: or_operator.span,
+                operator_rewrite: OrOperatorRewrite::BooleanKeyword(or_operator.span),
             })
             .collect(),
-        OperandContext::BashTest => operators
-            .map(|operator| {
-                (
-                    operator_detection(operator),
+        OperandContext::UnclearOperands => or_operators
+            .map(|or_operator| OrOperatorOccurrence {
+                operator_span: or_operator.span,
+                operator_rewrite: OrOperatorRewrite::NoEquivalent,
+            })
+            .collect(),
+        OperandContext::CommandChain => lexed_tokens
+            .iter()
+            .find(|lexed_token| is_or_operator(lexed_token))
+            .map(|first_operator| OrOperatorOccurrence {
+                operator_span: first_operator.span,
+                operator_rewrite: try_catch_spans(lexed_tokens).map_or(
                     OrOperatorRewrite::NoEquivalent,
-                )
+                    OrOperatorRewrite::TryCatchNesting,
+                ),
             })
+            .into_iter()
             .collect(),
-        OperandContext::CommandChain => {
-            let rewrite = try_catch_edits(tokens).map_or(
-                OrOperatorRewrite::NoEquivalent,
-                OrOperatorRewrite::TryCatchNesting,
-            );
-            tokens
-                .iter()
-                .find(|token| is_or_operator(token))
-                .map(|first_operator| (operator_detection(first_operator), rewrite))
-                .into_iter()
-                .collect()
-        }
     }
+}
+
+fn insertion_at(insert_position: usize, inserted_text: String) -> Replacement {
+    Replacement::new(Span::new(insert_position, insert_position), inserted_text)
+}
+
+fn catch_opening(operand_gap: Span) -> Replacement {
+    Replacement::new(operand_gap, " } catch { ".to_string())
+}
+
+fn try_catch_replacements(nesting_spans: &TryCatchSpans) -> Option<Vec<Replacement>> {
+    let (last_gap, earlier_gaps) = nesting_spans.operand_gaps.split_last()?;
+    Some(
+        once(insertion_at(
+            nesting_spans.first_operand_start,
+            "try { ".to_string(),
+        ))
+        .chain(earlier_gaps.iter().flat_map(|operand_gap| {
+            [
+                catch_opening(*operand_gap),
+                insertion_at(operand_gap.end, "try { ".to_string()),
+            ]
+        }))
+        .chain(once(catch_opening(*last_gap)))
+        .chain(once(insertion_at(
+            nesting_spans.last_operand_end,
+            " }".repeat(nesting_spans.operand_gaps.len()),
+        )))
+        .collect(),
+    )
 }
 
 struct ShellOrToTry;
@@ -124,7 +151,8 @@ impl DetectFix for ShellOrToTry {
     fn long_description(&self) -> Option<&'static str> {
         Some(
             "There is no `||` operator. Use `try { a } catch { b }` to run a fallback command, \
-             and `or` to combine booleans. A bash test such as `[ -f x ] || y` gets no fix.",
+             and `or` to combine booleans. There is no fix when the operands could be either \
+             commands or booleans, such as after a bash test `[ -f x ]`.",
         )
     }
 
@@ -139,19 +167,33 @@ impl DetectFix for ShellOrToTry {
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         all_lexed_statements(context)
             .iter()
-            .flat_map(|statement| statement_or_operators(statement, context))
+            .flat_map(|lexed_statement| statement_or_operators(lexed_statement, context))
+            .map(|operator_occurrence| {
+                (
+                    Detection::from_global_span(
+                        "The `||` operator does not exist in Nu",
+                        operator_occurrence.operator_span,
+                    )
+                    .with_primary_label("bash operator"),
+                    operator_occurrence.operator_rewrite,
+                )
+            })
             .collect()
     }
 
-    fn fix(&self, _context: &LintContext, rewrite: &Self::FixInput<'_>) -> Option<Fix> {
-        match rewrite {
+    fn fix(
+        &self,
+        _lint_context: &LintContext,
+        operator_rewrite: &Self::FixInput<'_>,
+    ) -> Option<Fix> {
+        match operator_rewrite {
             OrOperatorRewrite::BooleanKeyword(operator_span) => Some(Fix {
                 explanation: "Use the `or` operator".into(),
                 replacements: vec![Replacement::new(*operator_span, "or".to_string())],
             }),
-            OrOperatorRewrite::TryCatchNesting(nesting_edits) => Some(Fix {
+            OrOperatorRewrite::TryCatchNesting(nesting_spans) => Some(Fix {
                 explanation: "Run the fallback with `try`/`catch`".into(),
-                replacements: nesting_edits.clone(),
+                replacements: try_catch_replacements(nesting_spans)?,
             }),
             OrOperatorRewrite::NoEquivalent => None,
         }

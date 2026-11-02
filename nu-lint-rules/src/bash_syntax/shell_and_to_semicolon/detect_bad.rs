@@ -19,3 +19,13 @@ fn detect_operator_inside_closure() {
 fn detect_bash_test_without_fix() {
     RULE.assert_detects_without_fix("[ -f file.txt ] && ^cat file.txt");
 }
+
+#[test]
+fn detect_parenthesized_head_without_fix() {
+    RULE.assert_detects_without_fix("(^make) && ^make test");
+}
+
+#[test]
+fn detect_boolean_head_with_external_right_operand_without_fix() {
+    RULE.assert_detects_without_fix("$env.READY && ^make");
+}

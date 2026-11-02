@@ -1,14 +1,11 @@
-use std::sync::OnceLock;
-
 use nu_lint_analysis::{
     LintLevel,
-    ast::lexed_statement::all_lexed_statements,
+    ast::lexed_statement::{Token, all_lexed_statements, token_source_bytes},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
 use nu_protocol::{ParseError, Span};
-use regex::Regex;
 
 #[cfg(test)]
 mod detect_bad;
@@ -17,29 +14,77 @@ mod generated_fix;
 #[cfg(test)]
 mod ignore_good;
 
-const LAST_EXIT_CODE_VARIABLE: &str = "$?";
+const LAST_EXIT_CODE_VARIABLE: &[u8] = b"$?";
 
-fn shell_variable_pattern() -> &'static Regex {
-    static PATTERN: OnceLock<Regex> = OnceLock::new();
-    PATTERN.get_or_init(|| {
-        Regex::new(r"^\$(?:\{(?P<braced>[A-Z_][A-Z0-9_]*)\}|(?P<bare>[A-Z_][A-Z0-9_]*))(?P<suffix>[\w./:-]*)$")
-            .unwrap()
-    })
+enum EnvVariableRewrite {
+    LastExitCode {
+        variable_span: Span,
+    },
+    WholeVariable {
+        opening_span: Span,
+        closing_span: Span,
+    },
+    InterpolatedPath {
+        opening_span: Span,
+        closing_span: Span,
+        path_end: usize,
+    },
 }
 
-fn nu_env_expression(token_text: &str) -> Option<String> {
-    if token_text == LAST_EXIT_CODE_VARIABLE {
-        return Some("$env.LAST_EXIT_CODE".to_string());
+struct EnvVariableOccurrence {
+    variable_span: Span,
+    variable_rewrite: EnvVariableRewrite,
+}
+
+const fn is_env_name_byte(name_byte: u8) -> bool {
+    matches!(name_byte, b'A'..=b'Z' | b'0'..=b'9' | b'_')
+}
+
+const fn is_path_suffix_byte(suffix_byte: u8) -> bool {
+    suffix_byte.is_ascii_alphanumeric() || matches!(suffix_byte, b'_' | b'.' | b'/' | b':' | b'-')
+}
+
+fn parse_shell_variable(variable_span: Span, token_bytes: &[u8]) -> Option<EnvVariableRewrite> {
+    if token_bytes == LAST_EXIT_CODE_VARIABLE {
+        return Some(EnvVariableRewrite::LastExitCode { variable_span });
     }
-    let captures = shell_variable_pattern().captures(token_text)?;
-    let variable_name = captures
-        .name("braced")
-        .or_else(|| captures.name("bare"))?
-        .as_str();
-    match captures.name("suffix").map_or("", |suffix| suffix.as_str()) {
-        "" => Some(format!("$env.{variable_name}")),
-        path_suffix => Some(format!("$\"($env.{variable_name}){path_suffix}\"")),
+    let after_sigil = token_bytes.strip_prefix(b"$")?;
+    let is_braced = after_sigil.first() == Some(&b'{');
+    let name_offset = if is_braced { 2 } else { 1 };
+    let name_bytes = token_bytes.get(name_offset..)?;
+    let name_width = name_bytes
+        .iter()
+        .take_while(|name_byte| is_env_name_byte(**name_byte))
+        .count();
+    if name_width == 0 || name_bytes[0].is_ascii_digit() {
+        return None;
     }
+    let name_end = name_offset + name_width;
+    let closing_end = if is_braced {
+        (token_bytes.get(name_end) == Some(&b'}')).then_some(name_end + 1)?
+    } else {
+        name_end
+    };
+    let path_suffix = &token_bytes[closing_end..];
+    if !path_suffix.iter().copied().all(is_path_suffix_byte) {
+        return None;
+    }
+
+    let token_start = variable_span.start;
+    let opening_span = Span::new(token_start, token_start + name_offset);
+    let closing_span = Span::new(token_start + name_end, token_start + closing_end);
+    Some(if path_suffix.is_empty() {
+        EnvVariableRewrite::WholeVariable {
+            opening_span,
+            closing_span,
+        }
+    } else {
+        EnvVariableRewrite::InterpolatedPath {
+            opening_span,
+            closing_span,
+            path_end: variable_span.end,
+        }
+    })
 }
 
 const fn is_type_check_error(parse_error: &ParseError) -> bool {
@@ -53,15 +98,32 @@ const fn is_type_check_error(parse_error: &ParseError) -> bool {
     )
 }
 
-fn contains_unresolved_variable_error(token_span: Span, context: &LintContext) -> bool {
-    context.working_set.parse_errors.iter().any(|parse_error| {
-        !is_type_check_error(parse_error) && token_span.contains_span(parse_error.span())
-    })
+fn contains_unresolved_variable_error(token_span: Span, lint_context: &LintContext) -> bool {
+    lint_context
+        .working_set
+        .parse_errors
+        .iter()
+        .any(|parse_error| {
+            !is_type_check_error(parse_error) && token_span.contains_span(parse_error.span())
+        })
 }
 
-struct EnvVariableRewrite {
-    variable_span: Span,
-    env_expression: String,
+fn env_variable_occurrence(
+    lexed_token: &Token,
+    lint_context: &LintContext,
+) -> Option<EnvVariableOccurrence> {
+    contains_unresolved_variable_error(lexed_token.span, lint_context)
+        .then(|| {
+            parse_shell_variable(
+                lexed_token.span,
+                token_source_bytes(lexed_token, lint_context),
+            )
+        })
+        .flatten()
+        .map(|variable_rewrite| EnvVariableOccurrence {
+            variable_span: lexed_token.span,
+            variable_rewrite,
+        })
 }
 
 struct ShellVariableToEnv;
@@ -96,31 +158,51 @@ impl DetectFix for ShellVariableToEnv {
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         all_lexed_statements(context)
             .iter()
-            .flat_map(|statement| &statement.statement_tokens)
-            .filter(|token| contains_unresolved_variable_error(token.span, context))
-            .filter_map(|token| {
-                let env_expression = nu_env_expression(context.span_text(token.span))?;
-                let detection =
-                    Detection::from_global_span("Bash variable is not defined in Nu", token.span)
-                        .with_primary_label("bash variable");
-                Some((
-                    detection,
-                    EnvVariableRewrite {
-                        variable_span: token.span,
-                        env_expression,
-                    },
-                ))
+            .flat_map(|lexed_statement| &lexed_statement.statement_tokens)
+            .filter_map(|lexed_token| env_variable_occurrence(lexed_token, context))
+            .map(|variable_occurrence| {
+                (
+                    Detection::from_global_span(
+                        "Bash variable is not defined in Nu",
+                        variable_occurrence.variable_span,
+                    )
+                    .with_primary_label("bash variable"),
+                    variable_occurrence.variable_rewrite,
+                )
             })
             .collect()
     }
 
-    fn fix(&self, _context: &LintContext, rewrite: &Self::FixInput<'_>) -> Option<Fix> {
+    fn fix(
+        &self,
+        _lint_context: &LintContext,
+        variable_rewrite: &Self::FixInput<'_>,
+    ) -> Option<Fix> {
+        let replacements = match variable_rewrite {
+            EnvVariableRewrite::LastExitCode { variable_span } => vec![Replacement::new(
+                *variable_span,
+                "$env.LAST_EXIT_CODE".to_string(),
+            )],
+            EnvVariableRewrite::WholeVariable {
+                opening_span,
+                closing_span,
+            } => vec![
+                Replacement::new(*opening_span, "$env.".to_string()),
+                Replacement::new(*closing_span, String::new()),
+            ],
+            EnvVariableRewrite::InterpolatedPath {
+                opening_span,
+                closing_span,
+                path_end,
+            } => vec![
+                Replacement::new(*opening_span, "$\"($env.".to_string()),
+                Replacement::new(*closing_span, ")".to_string()),
+                Replacement::new(Span::new(*path_end, *path_end), "\"".to_string()),
+            ],
+        };
         Some(Fix {
             explanation: "Read the variable from `$env`".into(),
-            replacements: vec![Replacement::new(
-                rewrite.variable_span,
-                rewrite.env_expression.clone(),
-            )],
+            replacements,
         })
     }
 }

@@ -9,29 +9,49 @@ pub struct LexedStatement {
     pub statement_tokens: Vec<Token>,
 }
 
-impl LexedStatement {
-    #[must_use]
-    pub fn full_span(&self) -> Option<Span> {
-        let first_token = self.statement_tokens.first()?;
-        let last_token = self.statement_tokens.last()?;
-        Some(Span::new(first_token.span.start, last_token.span.end))
+#[derive(Default)]
+struct StatementSplitter {
+    completed_statements: Vec<Vec<Token>>,
+    current_tokens: Vec<Token>,
+}
+
+impl StatementSplitter {
+    fn finish_statement(&mut self) {
+        self.completed_statements
+            .push(take(&mut self.current_tokens));
+    }
+
+    fn is_line_continued(&self, lint_context: &LintContext) -> bool {
+        self.current_tokens
+            .last()
+            .is_some_and(|last_token| continues_after_newline(last_token, lint_context))
     }
 }
 
 #[must_use]
-pub fn token_text_equals(token: &Token, context: &LintContext, expected_text: &[u8]) -> bool {
-    context.working_set.get_span_contents(token.span) == expected_text
+pub fn token_text_equals(
+    lexed_token: &Token,
+    lint_context: &LintContext,
+    expected_text: &[u8],
+) -> bool {
+    token_source_bytes(lexed_token, lint_context) == expected_text
 }
 
-fn user_file_span(context: &LintContext) -> Span {
-    let file_start = context.file_offset();
-    Span::new(file_start, file_start + context.source_len())
+#[must_use]
+pub fn token_source_bytes<'a>(lexed_token: &Token, lint_context: &'a LintContext) -> &'a [u8] {
+    lint_context.working_set.get_span_contents(lexed_token.span)
 }
 
-fn lex_span_tokens(span: Span, context: &LintContext) -> Vec<Token> {
+#[must_use]
+pub fn user_file_span(lint_context: &LintContext) -> Span {
+    let file_start = lint_context.file_offset();
+    Span::new(file_start, file_start + lint_context.source_len())
+}
+
+fn lex_span_tokens(lexed_span: Span, lint_context: &LintContext) -> Vec<Token> {
     nu_parser::lex(
-        context.working_set.get_span_contents(span),
-        span.start,
+        lint_context.working_set.get_span_contents(lexed_span),
+        lexed_span.start,
         &[],
         &[],
         false,
@@ -39,138 +59,139 @@ fn lex_span_tokens(span: Span, context: &LintContext) -> Vec<Token> {
     .0
 }
 
-fn delimited_interior(token: &Token, context: &LintContext) -> Option<Span> {
-    if token.contents != TokenContents::Item {
+fn delimited_interior(lexed_token: &Token, lint_context: &LintContext) -> Option<Span> {
+    if lexed_token.contents != TokenContents::Item {
         return None;
     }
-    let contents = context.working_set.get_span_contents(token.span);
-    let closing_delimiter = match contents.first()? {
+    let token_bytes = token_source_bytes(lexed_token, lint_context);
+    let closing_delimiter = match token_bytes.first()? {
         b'{' => b'}',
         b'(' => b')',
         b'[' => b']',
         _ => return None,
     };
-    (contents.len() >= 2 && contents.last() == Some(&closing_delimiter))
-        .then(|| Span::new(token.span.start + 1, token.span.end - 1))
+    (token_bytes.len() >= 2 && token_bytes.last() == Some(&closing_delimiter))
+        .then(|| Span::new(lexed_token.span.start + 1, lexed_token.span.end - 1))
 }
 
-fn continues_after_newline(token: &Token, context: &LintContext) -> bool {
+fn continues_after_newline(lexed_token: &Token, lint_context: &LintContext) -> bool {
     matches!(
-        token.contents,
+        lexed_token.contents,
         TokenContents::Pipe
             | TokenContents::PipePipe
             | TokenContents::ErrGreaterPipe
             | TokenContents::OutErrGreaterPipe
-    ) || token_text_equals(token, context, b"&&")
+    ) || token_text_equals(lexed_token, lint_context, b"&&")
 }
 
 #[must_use]
-pub fn is_pipe_token(token: &Token, context: &LintContext) -> bool {
-    token_text_equals(token, context, b"|")
+pub fn is_pipe_token(lexed_token: &Token, lint_context: &LintContext) -> bool {
+    token_text_equals(lexed_token, lint_context, b"|")
 }
 
-fn closure_parameter_count(tokens: &[Token], context: &LintContext) -> usize {
-    match tokens.first() {
+fn closure_parameter_count(lexed_tokens: &[Token], lint_context: &LintContext) -> usize {
+    match lexed_tokens.first() {
         Some(first_token) if first_token.contents == TokenContents::PipePipe => 1,
-        Some(first_token) if is_pipe_token(first_token, context) => tokens
+        Some(first_token) if is_pipe_token(first_token, lint_context) => lexed_tokens
             .iter()
             .skip(1)
-            .position(|token| is_pipe_token(token, context))
+            .position(|lexed_token| is_pipe_token(lexed_token, lint_context))
             .map_or(0, |closing_position| closing_position + 2),
         _ => 0,
     }
 }
 
-fn split_into_statements(tokens: Vec<Token>, context: &LintContext) -> Vec<LexedStatement> {
-    let mut completed_statements = Vec::new();
-    let mut current_tokens: Vec<Token> = Vec::new();
-
-    for token in tokens {
-        match token.contents {
-            TokenContents::Comment => {}
-            TokenContents::Semicolon => {
-                completed_statements.push(take(&mut current_tokens));
-            }
-            TokenContents::Eol => {
-                let line_continues = current_tokens
-                    .last()
-                    .is_some_and(|last_token| continues_after_newline(last_token, context));
-                if !line_continues {
-                    completed_statements.push(take(&mut current_tokens));
+fn split_into_statements(
+    lexed_tokens: Vec<Token>,
+    lint_context: &LintContext,
+) -> Vec<LexedStatement> {
+    let mut statement_splitter = lexed_tokens.into_iter().fold(
+        StatementSplitter::default(),
+        |mut statement_splitter, lexed_token| {
+            match lexed_token.contents {
+                TokenContents::Comment => {}
+                TokenContents::Semicolon => statement_splitter.finish_statement(),
+                TokenContents::Eol => {
+                    if !statement_splitter.is_line_continued(lint_context) {
+                        statement_splitter.finish_statement();
+                    }
                 }
+                _ => statement_splitter.current_tokens.push(lexed_token),
             }
-            _ => current_tokens.push(token),
-        }
-    }
-    completed_statements.push(current_tokens);
+            statement_splitter
+        },
+    );
+    statement_splitter.finish_statement();
 
-    completed_statements
+    statement_splitter
+        .completed_statements
         .into_iter()
         .filter(|statement_tokens| !statement_tokens.is_empty())
         .map(|statement_tokens| LexedStatement { statement_tokens })
         .collect()
 }
 
-fn collect_nested_statements(
-    span: Span,
-    context: &LintContext,
-    statements: &mut Vec<LexedStatement>,
-) {
-    let mut tokens = lex_span_tokens(span, context);
-    for interior_span in tokens
+fn nested_statements(lexed_span: Span, lint_context: &LintContext) -> Vec<LexedStatement> {
+    let mut lexed_tokens = lex_span_tokens(lexed_span, lint_context);
+    let mut gathered_statements: Vec<LexedStatement> = lexed_tokens
         .iter()
-        .filter_map(|token| delimited_interior(token, context))
-    {
-        collect_nested_statements(interior_span, context, statements);
-    }
-    tokens.drain(..closure_parameter_count(&tokens, context));
-    statements.extend(split_into_statements(tokens, context));
+        .filter_map(|lexed_token| delimited_interior(lexed_token, lint_context))
+        .flat_map(|interior_span| nested_statements(interior_span, lint_context))
+        .collect();
+    lexed_tokens.drain(..closure_parameter_count(&lexed_tokens, lint_context));
+    gathered_statements.extend(split_into_statements(lexed_tokens, lint_context));
+    gathered_statements
 }
 
 #[must_use]
-pub fn all_lexed_statements(context: &LintContext) -> Vec<LexedStatement> {
-    let mut statements = Vec::new();
-    collect_nested_statements(user_file_span(context), context, &mut statements);
-    statements
+pub fn all_lexed_statements(lint_context: &LintContext) -> Vec<LexedStatement> {
+    nested_statements(user_file_span(lint_context), lint_context)
 }
 
 #[must_use]
-pub fn top_level_statements(context: &LintContext) -> Vec<LexedStatement> {
-    split_into_statements(lex_span_tokens(user_file_span(context), context), context)
-}
-
-#[must_use]
-pub fn is_quoted_string_token(token: &Token, context: &LintContext) -> bool {
-    if token.contents != TokenContents::Item {
-        return false;
-    }
-    matches!(
-        context.working_set.get_span_contents(token.span),
-        [b'\'' | b'"' | b'`', ..] | [b'$', b'\'' | b'"', ..] | [b'r', b'#', ..]
+pub fn top_level_statements(lint_context: &LintContext) -> Vec<LexedStatement> {
+    split_into_statements(
+        lex_span_tokens(user_file_span(lint_context), lint_context),
+        lint_context,
     )
 }
 
 #[must_use]
-pub fn is_raw_string_token(token: &Token, context: &LintContext) -> bool {
+pub fn is_quoted_string_token(lexed_token: &Token, lint_context: &LintContext) -> bool {
+    lexed_token.contents == TokenContents::Item
+        && matches!(
+            token_source_bytes(lexed_token, lint_context),
+            [b'\'' | b'"' | b'`', ..] | [b'$', b'\'' | b'"', ..] | [b'r', b'#', ..]
+        )
+}
+
+#[must_use]
+pub fn is_raw_string_token(lexed_token: &Token, lint_context: &LintContext) -> bool {
     matches!(
-        context.working_set.get_span_contents(token.span),
+        token_source_bytes(lexed_token, lint_context),
         [b'r', b'#', ..]
     )
 }
 
-fn collect_literal_text_spans(span: Span, context: &LintContext, literal_spans: &mut Vec<Span>) {
-    for token in lex_span_tokens(span, context) {
-        if token.contents == TokenContents::Comment || is_quoted_string_token(&token, context) {
-            literal_spans.push(token.span);
-        } else if let Some(interior_span) = delimited_interior(&token, context) {
-            collect_literal_text_spans(interior_span, context, literal_spans);
-        }
-    }
+fn literal_spans_within(lexed_span: Span, lint_context: &LintContext) -> Vec<Span> {
+    lex_span_tokens(lexed_span, lint_context)
+        .iter()
+        .flat_map(|lexed_token| {
+            if lexed_token.contents == TokenContents::Comment
+                || is_quoted_string_token(lexed_token, lint_context)
+            {
+                vec![lexed_token.span]
+            } else {
+                delimited_interior(lexed_token, lint_context)
+                    .map_or_else(Vec::new, |interior_span| {
+                        literal_spans_within(interior_span, lint_context)
+                    })
+            }
+        })
+        .collect()
 }
 
 #[must_use]
-pub fn literal_text_spans(context: &LintContext) -> Vec<Span> {
-    let mut literal_spans = Vec::new();
-    collect_literal_text_spans(user_file_span(context), context, &mut literal_spans);
-    literal_spans
+pub fn literal_text_spans(lint_context: &LintContext) -> Vec<Span> {
+    literal_spans_within(user_file_span(lint_context), lint_context)
 }

@@ -1,6 +1,6 @@
 use nu_lint_analysis::{
     ast::lexed_statement::{
-        LexedStatement, Token, TokenContents, is_pipe_token, token_text_equals,
+        LexedStatement, Token, TokenContents, is_pipe_token, token_source_bytes, token_text_equals,
     },
     context::LintContext,
 };
@@ -18,34 +18,47 @@ const BOOLEAN_CONTEXT_KEYWORDS: &[&[u8]] = &[
 enum OperandContext {
     CommandChain,
     BooleanExpression,
-    BashTest,
+    UnclearOperands,
 }
 
-fn is_logical_operator(token: &Token, context: &LintContext) -> bool {
-    token.contents == TokenContents::PipePipe || token_text_equals(token, context, b"&&")
+fn is_logical_operator(lexed_token: &Token, lint_context: &LintContext) -> bool {
+    lexed_token.contents == TokenContents::PipePipe
+        || token_text_equals(lexed_token, lint_context, b"&&")
 }
 
-fn classify_operand_context(statement: &LexedStatement, context: &LintContext) -> OperandContext {
-    let tokens = &statement.statement_tokens;
-    let first_operator_index = tokens
+fn starts_external_command(lexed_token: &Token, lint_context: &LintContext) -> bool {
+    token_source_bytes(lexed_token, lint_context).first() == Some(&b'^')
+}
+
+fn classify_operand_context(
+    lexed_statement: &LexedStatement,
+    lint_context: &LintContext,
+) -> OperandContext {
+    let lexed_tokens = &lexed_statement.statement_tokens;
+    let first_operator_index = lexed_tokens
         .iter()
-        .position(|token| is_logical_operator(token, context))
-        .unwrap_or(tokens.len());
-    let operand_head = tokens[..first_operator_index]
+        .position(|lexed_token| is_logical_operator(lexed_token, lint_context))
+        .unwrap_or(lexed_tokens.len());
+    let operand_head = lexed_tokens[..first_operator_index]
         .iter()
         .rev()
-        .take_while(|token| !is_pipe_token(token, context))
+        .take_while(|lexed_token| !is_pipe_token(lexed_token, lint_context))
         .last();
+    let right_operand_runs_command = lexed_tokens
+        .get(first_operator_index + 1)
+        .is_some_and(|right_operand| starts_external_command(right_operand, lint_context));
 
     let Some(head_token) = operand_head else {
         return OperandContext::CommandChain;
     };
-    let head_contents = context.working_set.get_span_contents(head_token.span);
+    let head_bytes = token_source_bytes(head_token, lint_context);
+    let reads_as_boolean =
+        head_bytes.first() == Some(&b'$') || BOOLEAN_CONTEXT_KEYWORDS.contains(&head_bytes);
 
-    match head_contents.first() {
-        Some(b'[') => OperandContext::BashTest,
-        Some(b'$' | b'(' | b'"' | b'\'' | b'0'..=b'9') => OperandContext::BooleanExpression,
-        _ if BOOLEAN_CONTEXT_KEYWORDS.contains(&head_contents) => OperandContext::BooleanExpression,
+    match head_bytes.first() {
+        Some(b'[' | b'(' | b'"' | b'\'' | b'0'..=b'9') => OperandContext::UnclearOperands,
+        _ if reads_as_boolean && right_operand_runs_command => OperandContext::UnclearOperands,
+        _ if reads_as_boolean => OperandContext::BooleanExpression,
         _ => OperandContext::CommandChain,
     }
 }

@@ -2,7 +2,10 @@ use std::sync::OnceLock;
 
 use nu_lint_analysis::{
     LintLevel,
-    ast::lexed_statement::literal_text_spans,
+    ast::{
+        lexed_statement::literal_text_spans,
+        source_line::{SourceLine, file_source_lines, line_index_at},
+    },
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -20,27 +23,34 @@ mod ignore_good;
 const INDENT_WIDTH_PER_CHARACTER: usize = 4;
 
 fn pasted_whitespace_pattern() -> &'static Regex {
-    static PATTERN: OnceLock<Regex> = OnceLock::new();
-    PATTERN.get_or_init(|| Regex::new(r"[\t\u{a0}]+").unwrap())
+    static WHITESPACE_PATTERN: OnceLock<Regex> = OnceLock::new();
+    WHITESPACE_PATTERN.get_or_init(|| Regex::new(r"[\t\u{a0}]+").unwrap())
 }
 
-struct WhitespaceRewrite {
+enum WhitespaceRewrite {
+    IndentationRun {
+        whitespace_span: Span,
+        character_count: usize,
+    },
+    InlineGap(Span),
+}
+
+fn classify_whitespace_run(
     whitespace_span: Span,
-    plain_spaces: String,
-}
-
-fn is_line_indentation(source_before: &str) -> bool {
-    source_before
-        .rsplit('\n')
-        .next()
-        .is_some_and(|line_prefix| line_prefix.bytes().all(|byte| matches!(byte, b' ' | b'\t')))
-}
-
-const fn is_line_end(source_after: &str) -> bool {
-    matches!(
-        source_after.as_bytes(),
-        [] | [b'\n', ..] | [b'\r', b'\n', ..]
-    )
+    character_count: usize,
+    source_lines: &[SourceLine],
+) -> Option<WhitespaceRewrite> {
+    let source_line = &source_lines[line_index_at(source_lines, whitespace_span.start)];
+    if whitespace_span.end >= source_line.visible_end {
+        None
+    } else if whitespace_span.start <= source_line.content_start() {
+        Some(WhitespaceRewrite::IndentationRun {
+            whitespace_span,
+            character_count,
+        })
+    } else {
+        Some(WhitespaceRewrite::InlineGap(whitespace_span))
+    }
 }
 
 struct NormalizePastedWhitespace;
@@ -73,51 +83,61 @@ impl DetectFix for NormalizePastedWhitespace {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let source = unsafe { context.source() };
+        let source_text = unsafe { context.source() };
         let file_offset = context.file_offset();
         let literal_spans = literal_text_spans(context);
+        let source_lines = file_source_lines(context);
 
         pasted_whitespace_pattern()
-            .find_iter(source)
-            .filter(|whitespace| !is_line_end(&source[whitespace.end()..]))
-            .filter_map(|whitespace| {
+            .find_iter(source_text)
+            .filter_map(|whitespace_match| {
                 let whitespace_span = Span::new(
-                    whitespace.start() + file_offset,
-                    whitespace.end() + file_offset,
+                    whitespace_match.start() + file_offset,
+                    whitespace_match.end() + file_offset,
                 );
-                if literal_spans
+                let is_literal_text = literal_spans
                     .iter()
-                    .any(|literal_span| literal_span.contains_span(whitespace_span))
-                {
-                    return None;
-                }
-                let plain_spaces = if is_line_indentation(&source[..whitespace.start()]) {
-                    " ".repeat(whitespace.as_str().chars().count() * INDENT_WIDTH_PER_CHARACTER)
-                } else {
-                    " ".to_string()
-                };
-                Some((
-                    Detection::from_global_span(
-                        "Tab or non-breaking space outside a string",
-                        whitespace_span,
-                    )
-                    .with_primary_label("pasted whitespace"),
-                    WhitespaceRewrite {
-                        whitespace_span,
-                        plain_spaces,
-                    },
-                ))
+                    .any(|literal_span| literal_span.contains_span(whitespace_span));
+                let character_count = whitespace_match.as_str().chars().count();
+                (!is_literal_text)
+                    .then(|| {
+                        classify_whitespace_run(whitespace_span, character_count, &source_lines)
+                    })
+                    .flatten()
+                    .map(|whitespace_rewrite| {
+                        (
+                            Detection::from_global_span(
+                                "Tab or non-breaking space outside a string",
+                                whitespace_span,
+                            )
+                            .with_primary_label("pasted whitespace"),
+                            whitespace_rewrite,
+                        )
+                    })
             })
             .collect()
     }
 
-    fn fix(&self, _context: &LintContext, rewrite: &Self::FixInput<'_>) -> Option<Fix> {
+    fn fix(
+        &self,
+        _lint_context: &LintContext,
+        whitespace_rewrite: &Self::FixInput<'_>,
+    ) -> Option<Fix> {
+        let replacement = match whitespace_rewrite {
+            WhitespaceRewrite::IndentationRun {
+                whitespace_span,
+                character_count,
+            } => Replacement::new(
+                *whitespace_span,
+                " ".repeat(character_count * INDENT_WIDTH_PER_CHARACTER),
+            ),
+            WhitespaceRewrite::InlineGap(whitespace_span) => {
+                Replacement::new(*whitespace_span, " ".to_string())
+            }
+        };
         Some(Fix {
             explanation: "Replace with plain spaces".into(),
-            replacements: vec![Replacement::new(
-                rewrite.whitespace_span,
-                rewrite.plain_spaces.clone(),
-            )],
+            replacements: vec![replacement],
         })
     }
 }

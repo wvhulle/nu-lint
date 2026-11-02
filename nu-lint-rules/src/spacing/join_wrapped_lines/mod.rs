@@ -2,9 +2,12 @@ use std::collections::BTreeSet;
 
 use nu_lint_analysis::{
     LintLevel,
-    ast::lexed_statement::{
-        LexedStatement, Token, all_lexed_statements, is_quoted_string_token, is_raw_string_token,
-        token_text_equals, top_level_statements,
+    ast::{
+        lexed_statement::{
+            LexedStatement, Token, all_lexed_statements, is_quoted_string_token,
+            is_raw_string_token, token_text_equals, top_level_statements,
+        },
+        source_line::{SourceLine, file_source_lines, line_index_at},
     },
     context::LintContext,
     rule::{DetectFix, Rule},
@@ -19,193 +22,161 @@ mod generated_fix;
 #[cfg(test)]
 mod ignore_good;
 
-struct SourceLine {
-    line_start: usize,
-    trimmed_end: usize,
-    next_line_start: usize,
-    indent_width: usize,
-    character_count: usize,
-    last_word_width: usize,
+enum LineRepair {
+    JoinTogether(Span),
+    JoinWithSpace(Span),
+    RemoveIndentation(Vec<Span>),
 }
 
-impl SourceLine {
-    const fn is_blank(&self) -> bool {
-        self.line_start + self.indent_width >= self.trimmed_end
-    }
-
-    const fn is_filled_by_one_word(&self, longest_line_width: usize) -> bool {
-        self.character_count == longest_line_width
-            && self.last_word_width * 2 > self.character_count
-    }
+struct LineRepairFinding {
+    finding_detection: Detection,
+    line_repair: LineRepair,
 }
 
-fn parse_source_lines(source: &str) -> Vec<SourceLine> {
-    let mut line_start = 0;
-    source
-        .split_inclusive('\n')
-        .map(|line_text| {
-            let visible_text = line_text.trim_end();
-            let source_line = SourceLine {
-                line_start,
-                trimmed_end: line_start + visible_text.len(),
-                next_line_start: line_start + line_text.len(),
-                indent_width: visible_text.len() - visible_text.trim_start().len(),
-                character_count: visible_text.chars().count(),
-                last_word_width: visible_text
-                    .split_whitespace()
-                    .next_back()
-                    .map_or(0, |last_word| last_word.chars().count()),
-            };
-            line_start = source_line.next_line_start;
-            source_line
-        })
-        .collect()
+struct StatementExtent {
+    start_line: usize,
+    end_line: usize,
+    start_indent: usize,
+    ends_with_backslash: bool,
 }
 
-fn line_index_at(lines: &[SourceLine], file_position: usize) -> usize {
-    lines
-        .partition_point(|line| line.next_line_start <= file_position)
-        .min(lines.len().saturating_sub(1))
+const fn is_filled_by_one_word(source_line: &SourceLine, longest_line_width: usize) -> bool {
+    source_line.character_count == longest_line_width
+        && source_line.last_word_width * 2 > source_line.character_count
 }
 
-fn is_wrappable_string_token(token: &Token, context: &LintContext) -> bool {
-    is_quoted_string_token(token, context) && !is_raw_string_token(token, context)
+fn is_wrappable_string_token(lexed_token: &Token, lint_context: &LintContext) -> bool {
+    is_quoted_string_token(lexed_token, lint_context)
+        && !is_raw_string_token(lexed_token, lint_context)
 }
 
 fn lines_inside_tokens(
-    lines: &[SourceLine],
-    context: &LintContext,
+    source_lines: &[SourceLine],
+    lint_context: &LintContext,
     is_selected_token: fn(&Token, &LintContext) -> bool,
 ) -> BTreeSet<usize> {
-    let file_offset = context.file_offset();
-    all_lexed_statements(context)
+    all_lexed_statements(lint_context)
         .iter()
-        .flat_map(|statement| &statement.statement_tokens)
-        .filter(|token| is_selected_token(token, context))
-        .flat_map(|token| {
-            let first_line = line_index_at(lines, token.span.start - file_offset);
-            let last_line = line_index_at(lines, token.span.end.saturating_sub(file_offset + 1));
+        .flat_map(|lexed_statement| &lexed_statement.statement_tokens)
+        .filter(|lexed_token| is_selected_token(lexed_token, lint_context))
+        .flat_map(|lexed_token| {
+            let first_line = line_index_at(source_lines, lexed_token.span.start);
+            let last_line = line_index_at(source_lines, lexed_token.span.end.saturating_sub(1));
             (first_line + 1)..=last_line
         })
         .collect()
 }
 
-fn ends_with_line_continuation(statement: &LexedStatement, context: &LintContext) -> bool {
-    statement
-        .statement_tokens
-        .last()
-        .is_some_and(|last_token| token_text_equals(last_token, context, b"\\"))
+fn statement_extent(
+    lexed_statement: &LexedStatement,
+    source_lines: &[SourceLine],
+    lint_context: &LintContext,
+) -> Option<StatementExtent> {
+    let first_token = lexed_statement.statement_tokens.first()?;
+    let last_token = lexed_statement.statement_tokens.last()?;
+    let start_line = line_index_at(source_lines, first_token.span.start);
+    Some(StatementExtent {
+        start_line,
+        end_line: line_index_at(source_lines, last_token.span.end.saturating_sub(1)),
+        start_indent: source_lines[start_line].indent_width,
+        ends_with_backslash: token_text_equals(last_token, lint_context, b"\\"),
+    })
 }
 
-fn split_statement_lines(lines: &[SourceLine], context: &LintContext) -> BTreeSet<usize> {
-    let file_offset = context.file_offset();
-    let statements = top_level_statements(context);
-    let mut split_lines = BTreeSet::new();
-    let mut anchor_indent = None;
-    let mut previous_statement: Option<&LexedStatement> = None;
+fn split_statement_lines(
+    source_lines: &[SourceLine],
+    lint_context: &LintContext,
+) -> BTreeSet<usize> {
+    let statement_extents: Vec<StatementExtent> = top_level_statements(lint_context)
+        .iter()
+        .filter_map(|lexed_statement| statement_extent(lexed_statement, source_lines, lint_context))
+        .collect();
+    let first_indent = statement_extents
+        .first()
+        .map_or(0, |first_extent| first_extent.start_indent);
 
-    for statement in &statements {
-        let Some(statement_span) = statement.full_span() else {
-            continue;
-        };
-        let start_line = line_index_at(lines, statement_span.start - file_offset);
-        let start_indent = lines[start_line].indent_width;
-        let continues_previous = previous_statement.is_some_and(|previous| {
-            previous.full_span().is_some_and(|previous_span| {
-                line_index_at(lines, previous_span.end.saturating_sub(file_offset + 1)) + 1
-                    == start_line
-            }) && !ends_with_line_continuation(previous, context)
-        }) && anchor_indent.is_some_and(|anchor| start_indent > anchor);
-
-        if continues_previous {
-            split_lines.insert(start_line);
-        } else {
-            anchor_indent = Some(start_indent);
-        }
-        previous_statement = Some(statement);
-    }
-    split_lines
+    statement_extents
+        .windows(2)
+        .scan(first_indent, |anchor_indent, extent_pair| {
+            let [previous_extent, next_extent] = extent_pair else {
+                return None;
+            };
+            let continues_previous = previous_extent.end_line + 1 == next_extent.start_line
+                && !previous_extent.ends_with_backslash
+                && next_extent.start_indent > *anchor_indent;
+            if !continues_previous {
+                *anchor_indent = next_extent.start_indent;
+            }
+            Some(continues_previous.then_some(next_extent.start_line))
+        })
+        .flatten()
+        .collect()
 }
 
-fn global_span(file_start: usize, file_end: usize, context: &LintContext) -> Span {
-    let file_offset = context.file_offset();
-    Span::new(file_start + file_offset, file_end + file_offset)
-}
-
-fn line_join_detection(
-    lines: &[SourceLine],
+fn line_join_finding(
+    source_lines: &[SourceLine],
     continuation_line: usize,
     longest_line_width: usize,
-    context: &LintContext,
-) -> (Detection, LineRepairEdits) {
-    let line_before_break = &lines[continuation_line - 1];
-    let content_start = lines[continuation_line].line_start + lines[continuation_line].indent_width;
-    let joined_span = global_span(line_before_break.trimmed_end, content_start, context);
-    let joining_text = if line_before_break.is_filled_by_one_word(longest_line_width) {
-        ""
-    } else {
-        " "
-    };
+) -> LineRepairFinding {
+    let line_before_break = &source_lines[continuation_line - 1];
+    let joined_span = Span::new(
+        line_before_break.visible_end,
+        source_lines[continuation_line].content_start(),
+    );
 
-    (
-        Detection::from_global_span("Line looks broken by terminal wrapping", joined_span)
-            .with_primary_label("wrapped line break"),
-        LineRepairEdits {
-            line_edits: vec![Replacement::new(joined_span, joining_text.to_string())],
+    LineRepairFinding {
+        finding_detection: Detection::from_global_span(
+            "Line looks broken by terminal wrapping",
+            joined_span,
+        )
+        .with_primary_label("wrapped line break"),
+        line_repair: if is_filled_by_one_word(line_before_break, longest_line_width) {
+            LineRepair::JoinTogether(joined_span)
+        } else {
+            LineRepair::JoinWithSpace(joined_span)
         },
-    )
+    }
 }
 
-fn common_indent_detection(
-    lines: &[SourceLine],
+fn common_indent_finding(
+    source_lines: &[SourceLine],
     excluded_lines: &BTreeSet<usize>,
-    context: &LintContext,
-) -> Option<(Detection, LineRepairEdits)> {
-    let indented_lines: Vec<&SourceLine> = lines
-        .iter()
-        .enumerate()
-        .filter(|(line_index, line)| !line.is_blank() && !excluded_lines.contains(line_index))
-        .map(|(_, line)| line)
+) -> Option<LineRepairFinding> {
+    let indented_lines: Vec<&SourceLine> = (0..source_lines.len())
+        .filter(|line_index| {
+            !source_lines[*line_index].is_blank() && !excluded_lines.contains(line_index)
+        })
+        .map(|line_index| &source_lines[line_index])
         .collect();
     let common_indent = indented_lines
         .iter()
-        .map(|line| line.indent_width)
+        .map(|source_line| source_line.indent_width)
         .min()
         .filter(|&indent_width| indent_width > 0)?;
-    let first_line = indented_lines.first()?;
+    let indentation_spans: Vec<Span> = indented_lines
+        .iter()
+        .map(|source_line| {
+            Span::new(
+                source_line.line_start,
+                source_line.line_start + common_indent,
+            )
+        })
+        .collect();
 
-    Some((
-        Detection::from_global_span(
+    Some(LineRepairFinding {
+        finding_detection: Detection::from_global_span(
             "Every line shares leading whitespace",
-            global_span(
-                first_line.line_start,
-                first_line.line_start + common_indent,
-                context,
-            ),
+            *indentation_spans.first()?,
         )
         .with_primary_label("common indentation"),
-        LineRepairEdits {
-            line_edits: indented_lines
-                .iter()
-                .map(|line| {
-                    Replacement::new(
-                        global_span(line.line_start, line.line_start + common_indent, context),
-                        String::new(),
-                    )
-                })
-                .collect(),
-        },
-    ))
-}
-
-struct LineRepairEdits {
-    line_edits: Vec<Replacement>,
+        line_repair: LineRepair::RemoveIndentation(indentation_spans),
+    })
 }
 
 struct JoinWrappedLines;
 
 impl DetectFix for JoinWrappedLines {
-    type FixInput<'a> = LineRepairEdits;
+    type FixInput<'a> = LineRepair;
 
     fn id(&self) -> &'static str {
         "join_wrapped_lines"
@@ -234,18 +205,17 @@ impl DetectFix for JoinWrappedLines {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        let source = unsafe { context.source() };
-        let lines = parse_source_lines(source);
-        let interior_lines = lines_inside_tokens(&lines, context, is_quoted_string_token);
-        let wrapped_string_lines = lines_inside_tokens(&lines, context, is_wrappable_string_token)
-            .into_iter()
-            .filter(|&line_index| lines[line_index].indent_width > 0);
-        let continuation_lines: BTreeSet<usize> = wrapped_string_lines
-            .chain(split_statement_lines(&lines, context))
-            .collect();
-        let longest_line_width = lines
+        let source_lines = file_source_lines(context);
+        let interior_lines = lines_inside_tokens(&source_lines, context, is_quoted_string_token);
+        let continuation_lines: BTreeSet<usize> =
+            lines_inside_tokens(&source_lines, context, is_wrappable_string_token)
+                .into_iter()
+                .filter(|&line_index| source_lines[line_index].indent_width > 0)
+                .chain(split_statement_lines(&source_lines, context))
+                .collect();
+        let longest_line_width = source_lines
             .iter()
-            .map(|line| line.character_count)
+            .map(|source_line| source_line.character_count)
             .max()
             .unwrap_or_default();
         let lines_outside_dedent = interior_lines.union(&continuation_lines).copied().collect();
@@ -253,20 +223,29 @@ impl DetectFix for JoinWrappedLines {
         continuation_lines
             .iter()
             .map(|&continuation_line| {
-                line_join_detection(&lines, continuation_line, longest_line_width, context)
+                line_join_finding(&source_lines, continuation_line, longest_line_width)
             })
-            .chain(common_indent_detection(
-                &lines,
-                &lines_outside_dedent,
-                context,
-            ))
+            .chain(common_indent_finding(&source_lines, &lines_outside_dedent))
+            .map(|repair_finding| (repair_finding.finding_detection, repair_finding.line_repair))
             .collect()
     }
 
-    fn fix(&self, _context: &LintContext, repair_edits: &Self::FixInput<'_>) -> Option<Fix> {
+    fn fix(&self, _lint_context: &LintContext, line_repair: &Self::FixInput<'_>) -> Option<Fix> {
+        let replacements = match line_repair {
+            LineRepair::JoinTogether(joined_span) => {
+                vec![Replacement::new(*joined_span, String::new())]
+            }
+            LineRepair::JoinWithSpace(joined_span) => {
+                vec![Replacement::new(*joined_span, " ".to_string())]
+            }
+            LineRepair::RemoveIndentation(indentation_spans) => indentation_spans
+                .iter()
+                .map(|indentation_span| Replacement::new(*indentation_span, String::new()))
+                .collect(),
+        };
         Some(Fix {
             explanation: "Undo terminal line wrapping".into(),
-            replacements: repair_edits.line_edits.clone(),
+            replacements,
         })
     }
 }

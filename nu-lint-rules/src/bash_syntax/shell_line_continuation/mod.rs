@@ -1,6 +1,8 @@
 use nu_lint_analysis::{
     LintLevel,
-    ast::lexed_statement::{LexedStatement, all_lexed_statements, token_text_equals},
+    ast::lexed_statement::{
+        LexedStatement, all_lexed_statements, token_text_equals, user_file_span,
+    },
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -14,9 +16,9 @@ mod generated_fix;
 #[cfg(test)]
 mod ignore_good;
 
-fn next_line_content_start(backslash_end: usize, context: &LintContext) -> Option<usize> {
-    let file_end = context.file_offset() + context.source_len();
-    let following_bytes = context
+fn next_line_content_start(backslash_end: usize, lint_context: &LintContext) -> Option<usize> {
+    let file_end = user_file_span(lint_context).end;
+    let following_bytes = lint_context
         .working_set
         .get_span_contents(Span::new(backslash_end, file_end));
     let newline_width = match following_bytes {
@@ -26,16 +28,16 @@ fn next_line_content_start(backslash_end: usize, context: &LintContext) -> Optio
     };
     following_bytes[newline_width..]
         .iter()
-        .position(|byte| !matches!(byte, b' ' | b'\t' | b'\r' | b'\n'))
+        .position(|following_byte| !following_byte.is_ascii_whitespace())
         .map(|indent_width| backslash_end + newline_width + indent_width)
 }
 
-fn continuation_span(statement: &LexedStatement, context: &LintContext) -> Option<Span> {
-    let [.., previous_token, backslash_token] = statement.statement_tokens.as_slice() else {
+fn continuation_span(lexed_statement: &LexedStatement, lint_context: &LintContext) -> Option<Span> {
+    let [.., previous_token, backslash_token] = lexed_statement.statement_tokens.as_slice() else {
         return None;
     };
-    token_text_equals(backslash_token, context, b"\\")
-        .then(|| next_line_content_start(backslash_token.span.end, context))
+    token_text_equals(backslash_token, lint_context, b"\\")
+        .then(|| next_line_content_start(backslash_token.span.end, lint_context))
         .flatten()
         .map(|content_start| Span::new(previous_token.span.end, content_start))
 }
@@ -75,7 +77,7 @@ impl DetectFix for ShellLineContinuation {
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         all_lexed_statements(context)
             .iter()
-            .filter_map(|statement| continuation_span(statement, context))
+            .filter_map(|lexed_statement| continuation_span(lexed_statement, context))
             .map(|joined_span| {
                 (
                     Detection::from_global_span(
@@ -89,10 +91,17 @@ impl DetectFix for ShellLineContinuation {
             .collect()
     }
 
-    fn fix(&self, _context: &LintContext, continuation: &Self::FixInput<'_>) -> Option<Fix> {
+    fn fix(
+        &self,
+        _lint_context: &LintContext,
+        continuation_join: &Self::FixInput<'_>,
+    ) -> Option<Fix> {
         Some(Fix {
             explanation: "Join the lines into one command".into(),
-            replacements: vec![Replacement::new(continuation.joined_span, " ".to_string())],
+            replacements: vec![Replacement::new(
+                continuation_join.joined_span,
+                " ".to_string(),
+            )],
         })
     }
 }

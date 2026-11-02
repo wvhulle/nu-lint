@@ -22,33 +22,39 @@ enum AndOperatorRewrite {
     NoEquivalent,
 }
 
+struct AndOperatorOccurrence {
+    operator_span: Span,
+    operator_rewrite: AndOperatorRewrite,
+}
+
 fn statement_and_operators(
-    statement: &LexedStatement,
-    context: &LintContext,
-) -> Vec<(Detection, AndOperatorRewrite)> {
-    let tokens = &statement.statement_tokens;
-    let operand_context = classify_operand_context(statement, context);
-    tokens
-        .iter()
-        .enumerate()
-        .filter(|(_, token)| token_text_equals(token, context, b"&&"))
-        .map(|(token_index, token)| {
-            let rewrite = match operand_context {
+    lexed_statement: &LexedStatement,
+    lint_context: &LintContext,
+) -> Vec<AndOperatorOccurrence> {
+    let lexed_tokens = &lexed_statement.statement_tokens;
+    let operand_context = classify_operand_context(lexed_statement, lint_context);
+    (0..lexed_tokens.len())
+        .filter(|&token_index| token_text_equals(&lexed_tokens[token_index], lint_context, b"&&"))
+        .map(|token_index| {
+            let operator_span = lexed_tokens[token_index].span;
+            let operator_rewrite = match operand_context {
                 OperandContext::CommandChain => {
                     let chain_start = token_index
                         .checked_sub(1)
-                        .map_or(token.span.start, |previous_index| {
-                            tokens[previous_index].span.end
+                        .map_or(operator_span.start, |previous_index| {
+                            lexed_tokens[previous_index].span.end
                         });
-                    AndOperatorRewrite::SeparateCommands(Span::new(chain_start, token.span.end))
+                    AndOperatorRewrite::SeparateCommands(Span::new(chain_start, operator_span.end))
                 }
-                OperandContext::BooleanExpression => AndOperatorRewrite::BooleanKeyword(token.span),
-                OperandContext::BashTest => AndOperatorRewrite::NoEquivalent,
+                OperandContext::BooleanExpression => {
+                    AndOperatorRewrite::BooleanKeyword(operator_span)
+                }
+                OperandContext::UnclearOperands => AndOperatorRewrite::NoEquivalent,
             };
-            let detection =
-                Detection::from_global_span("The `&&` operator does not exist in Nu", token.span)
-                    .with_primary_label("bash operator");
-            (detection, rewrite)
+            AndOperatorOccurrence {
+                operator_span,
+                operator_rewrite,
+            }
         })
         .collect()
 }
@@ -69,8 +75,9 @@ impl DetectFix for ShellAndToSemicolon {
     fn long_description(&self) -> Option<&'static str> {
         Some(
             "A failing command stops the statements after it, so `;` keeps the short-circuit \
-             behaviour of `&&`. A bash test such as `[ -f x ] && y` gets no fix, because `[ -f x \
-             ]` is a list here and `;` would run `y` unconditionally.",
+             behaviour of `&&`. There is no fix when the operands could be either commands or \
+             booleans. For example `[ -f x ]` is a list here, and `;` would run what follows \
+             unconditionally.",
         )
     }
 
@@ -85,12 +92,26 @@ impl DetectFix for ShellAndToSemicolon {
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         all_lexed_statements(context)
             .iter()
-            .flat_map(|statement| statement_and_operators(statement, context))
+            .flat_map(|lexed_statement| statement_and_operators(lexed_statement, context))
+            .map(|operator_occurrence| {
+                (
+                    Detection::from_global_span(
+                        "The `&&` operator does not exist in Nu",
+                        operator_occurrence.operator_span,
+                    )
+                    .with_primary_label("bash operator"),
+                    operator_occurrence.operator_rewrite,
+                )
+            })
             .collect()
     }
 
-    fn fix(&self, _context: &LintContext, rewrite: &Self::FixInput<'_>) -> Option<Fix> {
-        match rewrite {
+    fn fix(
+        &self,
+        _lint_context: &LintContext,
+        operator_rewrite: &Self::FixInput<'_>,
+    ) -> Option<Fix> {
+        match operator_rewrite {
             AndOperatorRewrite::SeparateCommands(operator_span) => Some(Fix {
                 explanation: "Separate the commands with `;`".into(),
                 replacements: vec![Replacement::new(*operator_span, ";".to_string())],

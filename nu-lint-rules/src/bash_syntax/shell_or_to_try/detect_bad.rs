@@ -29,3 +29,13 @@ fn detect_bash_test_without_fix() {
 fn detect_dangling_operator_without_fix() {
     RULE.assert_detects_without_fix("^make ||");
 }
+
+#[test]
+fn detect_parenthesized_head_without_fix() {
+    RULE.assert_detects_without_fix("(^make) || ^echo failed");
+}
+
+#[test]
+fn detect_boolean_head_with_external_right_operand_without_fix() {
+    RULE.assert_detects_without_fix("$env.READY || ^make");
+}

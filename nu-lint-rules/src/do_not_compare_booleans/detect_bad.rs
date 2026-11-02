@@ -79,3 +79,8 @@ if $a == true and $b == false { do_something }
 "#;
     RULE.assert_count(bad_code, 2);
 }
+
+#[test]
+fn detect_required_cell_path_compared_to_true() {
+    RULE.assert_detects("let cache = {warm: true}\nif $cache.warm != true { print cold }");
+}

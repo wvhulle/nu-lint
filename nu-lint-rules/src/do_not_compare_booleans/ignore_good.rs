@@ -71,3 +71,13 @@ $items | where { $in.active }
 "#;
     RULE.assert_ignores(good_code);
 }
+
+#[test]
+fn ignore_optional_cell_path_compared_to_true() {
+    RULE.assert_ignores("let cache = {}\nif $cache.warm? != true { print cold }");
+}
+
+#[test]
+fn ignore_nested_optional_cell_path_compared_to_false() {
+    RULE.assert_ignores("let cache = {}\nif false == $cache.state?.warm { print cold }");
+}

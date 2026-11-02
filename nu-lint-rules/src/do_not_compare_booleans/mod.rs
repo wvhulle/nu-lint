@@ -6,7 +6,7 @@ use nu_lint_analysis::{
 };
 use nu_protocol::{
     Span,
-    ast::{Comparison, Expr, Expression, Operator},
+    ast::{Comparison, Expr, Expression, Operator, PathMember},
 };
 
 /// Fix data containing the span and replacement info
@@ -24,6 +24,15 @@ const fn is_bool_literal(expr: &Expression) -> Option<bool> {
     match &expr.expr {
         Expr::Bool(value) => Some(*value),
         _ => None,
+    }
+}
+
+fn has_optional_cell_path(operand: &Expression) -> bool {
+    match &operand.expr {
+        Expr::FullCellPath(cell_path) => cell_path.tail.iter().any(|member| match member {
+            PathMember::String { optional, .. } | PathMember::Int { optional, .. } => *optional,
+        }),
+        _ => false,
     }
 }
 
@@ -72,6 +81,10 @@ fn detect_redundant_bool_comparison(
         Expr::Operator(Operator::Comparison(Comparison::NotEqual)) => false,
         _ => return vec![],
     };
+
+    if has_optional_cell_path(left) || has_optional_cell_path(right) {
+        return vec![];
+    }
 
     // Analyze if one side is a boolean literal
     let Some((operand_span, needs_negation)) = analyze_bool_comparison(left, right, is_equal)

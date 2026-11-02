@@ -138,3 +138,8 @@ fn ignore_error_make() {
     // error make is designed to throw errors, not accidentally failing
     RULE.assert_ignores(r#"error make { msg: "intentional error" }"#);
 }
+
+#[test]
+fn ignore_user_defined_open() {
+    RULE.assert_ignores("def open [target: string] { $target }\nopen missing.txt");
+}

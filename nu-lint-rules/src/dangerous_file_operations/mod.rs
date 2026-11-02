@@ -1,5 +1,6 @@
 use nu_lint_analysis::{
     LintLevel,
+    ast::call::CallExt,
     effect::{
         CommonEffect,
         builtin::{BuiltinEffect, extract_arg_text, has_builtin_side_effect, has_recursive_flag},
@@ -54,14 +55,7 @@ fn extract_dangerous_command<'a>(
             })
         }
         Expr::Call(call) => {
-            let decl_name = context
-                .working_set
-                .get_decl(call.decl_id)
-                .name()
-                .to_string();
-
             if !has_builtin_side_effect(
-                &decl_name,
                 BuiltinEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
                 context,
                 call,
@@ -71,7 +65,7 @@ fn extract_dangerous_command<'a>(
 
             Some(DangerousCommand::Builtin {
                 span: expr.span,
-                name: decl_name,
+                name: call.get_call_name(context),
                 call,
             })
         }

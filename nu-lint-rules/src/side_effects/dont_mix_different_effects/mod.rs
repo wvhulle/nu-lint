@@ -39,14 +39,13 @@ fn classify_builtin_io(
     context: &LintContext,
     io_spans: &mut HashMap<IoType, Vec<Span>>,
 ) {
-    let command_name = call.get_call_name(context);
     let category = context
         .working_set
         .get_decl(call.decl_id)
         .signature()
         .category;
 
-    if has_builtin_side_effect(&command_name, BuiltinEffect::PrintToStdout, context, call) {
+    if has_builtin_side_effect(BuiltinEffect::PrintToStdout, context, call) {
         io_spans
             .entry(IoType::PrintStdout)
             .or_default()

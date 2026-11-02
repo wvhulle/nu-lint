@@ -1,6 +1,7 @@
 use nu_protocol::ast::{Argument, Call};
 
 use crate::{
+    ast::call::CallExt,
     context::LintContext,
     effect::{CommonEffect, is_dangerous_path},
 };
@@ -14,11 +15,14 @@ pub enum BuiltinEffect {
 }
 
 pub fn has_builtin_side_effect(
-    command_name: &str,
     side_effect: BuiltinEffect,
     context: &LintContext,
     call: &Call,
 ) -> bool {
+    let Some(command_name) = call.builtin_name(context) else {
+        return false;
+    };
+
     BUILTIN_COMMAND_SIDE_EFFECTS
         .iter()
         .find(|(name, _)| *name == command_name || command_name.starts_with(&format!("{name} ")))
@@ -58,9 +62,8 @@ pub fn extract_arg_text<'a>(arg: &Argument, context: &'a LintContext) -> &'a str
 }
 
 #[must_use]
-pub fn can_error(command_name: &str, context: &LintContext, call: &Call) -> bool {
+pub fn can_error(context: &LintContext, call: &Call) -> bool {
     has_builtin_side_effect(
-        command_name,
         BuiltinEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
         context,
         call,
@@ -101,7 +104,6 @@ fn http_can_error(_context: &LintContext, call: &Call) -> bool {
 }
 
 fn print_to_stdout(_context: &LintContext, call: &Call) -> bool {
-    use crate::ast::call::CallExt;
     !call.has_named_flag("stderr")
 }
 

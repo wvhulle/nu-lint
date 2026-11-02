@@ -46,8 +46,7 @@ fn last_command_produces_output(block: &Block, context: &LintContext) -> bool {
         Expr::Call(call) => {
             // If it explicitly prints to stdout, we treat that as output for pollution
             // purposes
-            let cmd_name = call.get_call_name(context);
-            if has_builtin_side_effect(&cmd_name, BuiltinEffect::PrintToStdout, context, call) {
+            if has_builtin_side_effect(BuiltinEffect::PrintToStdout, context, call) {
                 return true;
             }
 

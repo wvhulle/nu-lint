@@ -16,9 +16,7 @@ fn check_call(expr: &Expression, context: &LintContext) -> Option<Detection> {
         return None;
     };
 
-    let name = call.get_call_name(context);
     let can_error = has_builtin_side_effect(
-        &name,
         BuiltinEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
         context,
         call,
@@ -30,7 +28,10 @@ fn check_call(expr: &Expression, context: &LintContext) -> Option<Detection> {
 
     Some(
         Detection::from_global_span(
-            format!("'{name}' may fail. Wrap in 'try' block."),
+            format!(
+                "'{}' may fail. Wrap in 'try' block.",
+                call.get_call_name(context)
+            ),
             call.head,
         )
         .with_primary_label("command can error at runtime"),

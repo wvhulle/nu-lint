@@ -119,3 +119,8 @@ ls ~/.cache/my_app | where modified < (date now | date add -7day) | each { rm $i
 ";
     RULE.assert_ignores(code);
 }
+
+#[test]
+fn ignore_user_defined_rm() {
+    RULE.assert_ignores("def rm [target: string, --recursive(-r)] { print $target }\nrm -r /");
+}

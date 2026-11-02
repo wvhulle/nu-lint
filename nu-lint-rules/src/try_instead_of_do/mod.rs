@@ -37,8 +37,8 @@ fn find_error_prone_command(expr: &Expression, context: &LintContext) -> Option<
             ControlFlow::Continue(())
         }
         Expr::Call(call) => {
-            let cmd_name = call.get_call_name(context);
-            if can_error(&cmd_name, context, call) {
+            if can_error(context, call) {
+                let cmd_name = call.get_call_name(context);
                 log::trace!("Found error-prone builtin: {cmd_name}");
                 return ControlFlow::Break(Some(ErrorSource::Builtin(call.head, cmd_name)));
             }

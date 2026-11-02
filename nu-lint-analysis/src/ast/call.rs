@@ -1,6 +1,7 @@
 use nu_protocol::{
     Span,
     ast::{Argument, Call, Expr, Expression},
+    engine::CommandType,
 };
 
 use super::{block::BlockExt, declaration::CustomCommandDef, expression::ExpressionExt};
@@ -28,6 +29,7 @@ fn is_type_compatible(expected: &nu_protocol::Type, actual: &nu_protocol::Type) 
 pub trait CallExt {
     /// Gets the command name of this call. Example: `ls -la` returns "ls"
     fn get_call_name(&self, context: &LintContext) -> String;
+    fn builtin_name<'ctx>(&self, context: &'ctx LintContext) -> Option<&'ctx str>;
     /// Gets first positional argument. Example: `ls /tmp` returns `/tmp`
     fn get_first_positional_arg(&self) -> Option<&Expression>;
     /// Gets positional argument at index. Example: `parse "{x} {y}"` at index 0
@@ -173,6 +175,15 @@ impl CallExt for Call {
             .get_decl(self.decl_id)
             .name()
             .to_string()
+    }
+
+    fn builtin_name<'ctx>(&self, context: &'ctx LintContext) -> Option<&'ctx str> {
+        let decl = context.working_set.get_decl(self.decl_id);
+        matches!(
+            decl.command_type(),
+            CommandType::Builtin | CommandType::Keyword
+        )
+        .then(|| decl.name())
     }
 
     fn get_first_positional_arg(&self) -> Option<&Expression> {

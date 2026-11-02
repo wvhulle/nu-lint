@@ -135,7 +135,10 @@ pub fn publish_recordings(recordings: &Path, remote_url: &str) -> io::Result<()>
             println!("Recordings are unchanged, nothing to publish");
             return Ok(());
         }
-        run_jj(&staging_directory, &["bookmark", "track", &remote_bookmark])?;
+        run_jj(
+            &staging_directory,
+            &["bookmark", "track", RECORDINGS_BOOKMARK, "--remote=origin"],
+        )?;
         run_jj(
             &staging_directory,
             &[
@@ -151,6 +154,10 @@ pub fn publish_recordings(recordings: &Path, remote_url: &str) -> io::Result<()>
         run_jj(
             &staging_directory,
             &["bookmark", "create", RECORDINGS_BOOKMARK, "--revision", "@"],
+        )?;
+        run_jj(
+            &staging_directory,
+            &["bookmark", "track", RECORDINGS_BOOKMARK, "--remote=origin"],
         )?;
     }
     run_jj(

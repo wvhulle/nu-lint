@@ -120,3 +120,17 @@ def main [
 "#;
     RULE.assert_count(source, 0);
 }
+
+#[test]
+fn ignore_dollar_in_inside_try_block_fed_by_pipeline() {
+    RULE.assert_ignores(
+        "#!/usr/bin/env nu\ndef main [] {\n  ls | try { $in | length } | print\n}\n",
+    );
+}
+
+#[test]
+fn ignore_dollar_in_inside_closure() {
+    RULE.assert_ignores(
+        "#!/usr/bin/env nu\ndef main [] {\n  [1 2] | each {|value| $in + $value } | print\n}\n",
+    );
+}

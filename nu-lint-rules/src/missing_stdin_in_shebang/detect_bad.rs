@@ -110,3 +110,24 @@ def main [] {
 ";
     RULE.assert_count(source, 1);
 }
+
+#[test]
+fn detect_dollar_in_inside_try_block() {
+    RULE.assert_detects(
+        "#!/usr/bin/env nu\ndef main [] {\n  let parsed = try { $in | from json } catch { {} }\n  \
+         print $parsed\n}\n",
+    );
+}
+
+#[test]
+fn detect_bare_conversion_inside_try_block() {
+    RULE.assert_detects(
+        "#!/usr/bin/env nu\ndef main [] {\n  let parsed = try { from json } catch { {} }\n  print \
+         $parsed\n}\n",
+    );
+}
+
+#[test]
+fn detect_dollar_in_inside_if_block() {
+    RULE.assert_detects("#!/usr/bin/env nu\ndef main [] {\n  if true { $in | print }\n}\n");
+}

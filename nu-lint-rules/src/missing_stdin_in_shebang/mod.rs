@@ -32,7 +32,7 @@ fn uses_pipeline_input_directly(expr: &Expression, context: &LintContext) -> boo
             }
         }),
         Expr::FullCellPath(cell_path) => uses_pipeline_input_directly(&cell_path.head, context),
-        Expr::Subexpression(block_id) => {
+        Expr::Subexpression(block_id) | Expr::Block(block_id) => {
             let block = context.working_set.get_block(*block_id);
             block_uses_pipeline_input_directly(block, context)
         }
@@ -89,10 +89,9 @@ fn is_bare_streaming_command(pipeline: &Pipeline, context: &LintContext) -> bool
 fn block_uses_pipeline_input_directly(block: &Block, context: &LintContext) -> bool {
     block.pipelines.iter().any(|pipeline| {
         is_bare_streaming_command(pipeline, context)
-            || pipeline
-                .elements
-                .iter()
-                .any(|elem| uses_pipeline_input_directly(&elem.expr, context))
+            || pipeline.elements.first().is_some_and(|first_element| {
+                uses_pipeline_input_directly(&first_element.expr, context)
+            })
     })
 }
 

@@ -5,7 +5,7 @@ Linter for the innovative [Nu](https://www.nushell.sh/) shell.
 Learning to use a new shell is a radical change that can use some assistance. This project is aimed at helping new and intermediate users of the [Nu](https://www.nushell.sh/) shell. Nu shell has a lot of useful features not found in other scripting languages. This linter will give you hints to use all of them and even offer automatic fixes.
 
 - [Usage](#usage)
-- [Screenshots](#screenshots)
+- [Demo](#demo)
 - [Rule example](#rule-example)
 - [Installation](#installation)
 - [Editor extension](#editor-extension)
@@ -44,18 +44,27 @@ See [Rules](#rules) for all available rules, or run `nu-lint rules`.
 
 The flags of older versions (`--fix`, `--lsp`, `--list`, `--groups`, `--explain`, `--ast`) still work.
 
-## Screenshots
+## Demo
 
-Following screenshots were taking in Helix with `nu-lint` set-up as LSP (`nu-lint lsp`).
+These recordings show Helix with `nu-lint` set up as a language server (`nu-lint lsp`). The inline hints are opt-in in most editors.
 
-- Automatic fixes and ignore actions (with keybinding `space a` in Helix): ![(Screenshot of code action menu)](./docs/screenshots/code-actions.png)
-- Explanations in popup (with keybinding with `space k` in Helix): ![(Screenshot of explanations)](./docs/screenshots/explanations.png)
-- Inline hints (opt-in in most editors) ![(Screenshot of inline hints)](./docs/screenshots/inline-hints.png)
+Apply a fix or ignore a rule from the code action menu (`space a` in Helix):
 
-To have `nu-lint` in your terminal directly (not just scripts), use [nushell-lsp](https://github.com/wvhulle/nushell):
+![Animation of the code action menu applying a compound assignment fix](https://codeberg.org/wvhulle/nu-lint/media/branch/recordings/apply_code_action.webp)
 
-- Real-time diagnostics while typing in Nushell prompt: ![(Screenshot of prompt real-time diagnostics)](./docs/screenshots/prompt.png)
-- Fixes (and ignore actions) offered in Nushell prompt ![(Screenshot of fixes in prompt)](./docs/screenshots/ignore.png)
+Read why a rule fired in a popup (`space k` in Helix):
+
+![Animation of a popup explaining the compound assignment rule](https://codeberg.org/wvhulle/nu-lint/media/branch/recordings/explain_diagnostic.webp)
+
+To use `nu-lint` directly in your Nushell prompt, not just in scripts, use [nu-diagnostics](https://github.com/wvhulle/nushell/tree/main/crates/nu-diagnostics#readme).
+
+See diagnostics while typing:
+
+![Animation of diagnostics appearing under the input while typing](https://raw.githubusercontent.com/wvhulle/nushell/recordings/inline_diagnostics.webp)
+
+Apply a fix from the fix menu:
+
+![Animation of the fix menu listing fixes and applying one](https://raw.githubusercontent.com/wvhulle/nushell/recordings/fix_menu.webp)
 
 ## Rule example
 

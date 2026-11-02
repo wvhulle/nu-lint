@@ -24,6 +24,7 @@ exclude = [
   ".pre-commit-hooks.yaml",
   "Cargo.lock",
   "benches/",
+  "demos/",
   "docs/",
   "flake.lock",
   "flake.nix",

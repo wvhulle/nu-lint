@@ -210,6 +210,28 @@ git checkout your-branch
 cargo bench --bench speed -- --baseline main
 ```
 
+## Recordings
+
+The animations in the README are not part of `main`. They are the single commit of the orphan `recordings` branch, so the history of `main` stays free of media.
+
+Each `demos/<scene>.tape` is a [VHS](https://github.com/charmbracelet/vhs) script that opens `demos/sample_script.nu` in Helix. `cargo xtask record-scene` runs the tape and encodes the MP4 to an animated WebP with ffmpeg. It drops duplicate frames so still moments cost nothing, then holds the last frame for 5 seconds, so the end of a tape does not need a long `Sleep`.
+
+Each tape is its own derivation, so only tapes whose inputs changed are recorded again:
+
+```bash
+nix build .#recordings
+```
+
+To publish the result, replacing the branch contents:
+
+```bash
+nix run .#publish-recordings -- result git@codeberg.org:wvhulle/nu-lint.git
+```
+
+This is a manual step, so publish again when a change affects what the recordings show, such as a rule message or the code action menu.
+
+To add a scene, add a `<scene>.tape` to `demos/`.
+
 ## Releasing
 
 Releases are automated with [release-plz](https://release-plz.dev) on Woodpecker CI (`.woodpecker/`):

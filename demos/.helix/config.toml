@@ -1,0 +1,13 @@
+theme = "base16_default_dark"
+
+[editor]
+auto-info = false
+cursorline = true
+true-color = true
+
+[editor.cursor-shape]
+normal = "block"
+
+[editor.inline-diagnostics]
+cursor-line = "hint"
+other-lines = "hint"

@@ -1,3 +1,5 @@
+mod recordings;
+
 use std::{
     env, fs, io,
     path::{Path, PathBuf},
@@ -27,6 +29,17 @@ enum XtaskCommand {
             help = "Commit, push and open a Codeberg pull request when it changed"
         )]
         open_pr: bool,
+    },
+    #[command(about = "Record a VHS tape from the working directory as an animated WebP")]
+    RecordScene {
+        tape: PathBuf,
+        #[arg(long, help = "Directory that receives the WebP")]
+        out: PathBuf,
+    },
+    #[command(about = "Replace the recordings branch of a remote with the given WebP files")]
+    PublishRecordings {
+        recordings: PathBuf,
+        remote_url: String,
     },
 }
 
@@ -149,6 +162,11 @@ fn main() -> ExitCode {
     let XtaskCli { command } = XtaskCli::parse();
     let task_outcome = match command {
         XtaskCommand::UpdateExampleConfig { open_pr } => update_example_config(open_pr),
+        XtaskCommand::RecordScene { tape, out } => recordings::record_scene(&tape, &out),
+        XtaskCommand::PublishRecordings {
+            recordings,
+            remote_url,
+        } => recordings::publish_recordings(&recordings, &remote_url),
     };
     match task_outcome {
         Ok(()) => ExitCode::SUCCESS,

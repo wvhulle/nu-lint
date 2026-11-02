@@ -30,7 +30,10 @@
           overlays = [ (import rust-overlay) ];
         };
 
-        src = pkgs.lib.cleanSource ./.;
+        src = pkgs.lib.cleanSourceWith {
+          src = pkgs.lib.cleanSource ./.;
+          filter = path: _: baseNameOf path != "demos";
+        };
 
         #
         # Toolchains
@@ -67,6 +70,23 @@
             doCheck = false;
           }
         );
+
+        xtaskPackage = stableCrane.buildPackage (
+          commonArgs
+          // {
+            pname = "xtask";
+            cargoArtifacts = llvmDeps;
+            cargoExtraArgs = "--locked --package xtask";
+            doCheck = false;
+            meta.mainProgram = "xtask";
+          }
+        );
+
+        recordings = import ./demos {
+          inherit pkgs;
+          nu-lint = llvmPackage;
+          xtask = xtaskPackage;
+        };
 
         devProfileArgs = commonArgs // {
           CARGO_PROFILE = "dev";
@@ -230,7 +250,13 @@
           x86_64-linux-musl = muslPackages.x86_64;
           aarch64-linux-musl = muslPackages.aarch64;
           dist = releaseArchives;
-        };
+          recordings = recordings.all;
+        }
+        // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux (
+          pkgs.lib.mapAttrs' (
+            scene_name: scene_recording: pkgs.lib.nameValuePair "recording-${scene_name}" scene_recording
+          ) recordings.scenes
+        );
 
         checks = {
           inherit tests;
@@ -246,6 +272,9 @@
           check-commits = mkApp checkCommitsScript;
           cached-build = mkApp cachedBuildScript;
           upload-release-assets = mkApp uploadReleaseAssetsScript;
+        }
+        // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+          publish-recordings = mkApp recordings.publish-recordings;
         };
 
         devShells.default = nightlyCrane.devShell {

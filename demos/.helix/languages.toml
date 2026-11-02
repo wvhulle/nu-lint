@@ -1,0 +1,7 @@
+[language-server.nu-lint]
+command = "nu-lint"
+args = ["lsp"]
+
+[[language]]
+name = "nu"
+language-servers = ["nu-lint"]

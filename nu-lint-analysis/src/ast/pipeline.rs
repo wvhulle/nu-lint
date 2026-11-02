@@ -327,8 +327,11 @@ fn is_valid_gap(
 
     (start..end).all(|i| {
         if let Expr::Call(call) = &pipeline.elements[i].expr.expr {
-            let name = call.get_call_name(context);
-            config.allowed_gap_commands.iter().any(|&cmd| cmd == name)
+            let builtin_name = call.builtin_name(context);
+            config
+                .allowed_gap_commands
+                .iter()
+                .any(|&allowed_command| Some(allowed_command) == builtin_name)
         } else {
             false
         }

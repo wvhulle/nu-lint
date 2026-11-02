@@ -219,8 +219,7 @@ impl CallExt for Call {
         &self,
         context: &LintContext,
     ) -> Option<(nu_protocol::VarId, String, Span)> {
-        let decl_name = self.get_call_name(context);
-        if !matches!(decl_name.as_str(), "let" | "mut") {
+        if !matches!(self.builtin_name(context), Some("let" | "mut")) {
             return None;
         }
 

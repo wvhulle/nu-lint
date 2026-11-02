@@ -391,8 +391,7 @@ impl BlockExt for Block {
             return None;
         };
 
-        let decl = context.working_set.get_decl(call.decl_id);
-        if decl.name() != "columns" {
+        if call.builtin_name(context) != Some("columns") {
             return None;
         }
 

@@ -100,9 +100,7 @@ impl Ord for CustomCommandDef {
 impl CustomCommandDef {
     #[must_use]
     pub fn try_from_call(call: &Call, context: &LintContext) -> Option<Self> {
-        let decl_name = call.get_call_name(context);
-
-        let is_exported = match decl_name.as_str() {
+        let is_exported = match call.builtin_name(context)? {
             "export def" => true,
             "def" => false,
             _ => return None,

@@ -202,8 +202,11 @@ impl<'a> LintContext<'a> {
             self.working_set,
             &|expr| {
                 if let Expr::Call(call) = &expr.expr {
-                    let cmd_name = call.get_call_name(self);
-                    if commands.iter().any(|&cmd| cmd == cmd_name) {
+                    let builtin_name = call.builtin_name(self);
+                    if commands
+                        .iter()
+                        .any(|&listed_command| Some(listed_command) == builtin_name)
+                    {
                         return vec![expr.span];
                     }
                 }

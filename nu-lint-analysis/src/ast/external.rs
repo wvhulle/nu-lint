@@ -5,6 +5,7 @@ use nu_protocol::{
     ast::{Expr, Expression, ExternalArgument},
 };
 
+use super::call::CallExt;
 use crate::{ast::string::quote_nu_string, context::LintContext};
 
 pub struct ExternalInvocation<'a> {
@@ -38,7 +39,7 @@ impl<'a> ExternalInvocation<'a> {
 
 fn command_name<'a>(expr: &Expression, context: &'a LintContext) -> Option<&'a str> {
     match &expr.expr {
-        Expr::Call(call) => Some(context.working_set.get_decl(call.decl_id).name()),
+        Expr::Call(call) => call.builtin_name(context),
         _ => None,
     }
 }

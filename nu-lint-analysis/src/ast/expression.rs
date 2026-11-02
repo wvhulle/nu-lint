@@ -807,10 +807,10 @@ fn infer_expr_output_type(expr: &Expr, ty: &Type, context: &LintContext) -> Opti
             }
         }
         Expr::Call(call) => {
-            let decl = context.working_set.get_decl(call.decl_id);
-            let cmd_name = decl.name();
-            if matches!(cmd_name, "if" | "match" | "try" | "do")
-                && let Some(unified_type) = call.infer_from_blocks(context)
+            if matches!(
+                call.builtin_name(context),
+                Some("if" | "match" | "try" | "do")
+            ) && let Some(unified_type) = call.infer_from_blocks(context)
             {
                 return Some(unified_type);
             }

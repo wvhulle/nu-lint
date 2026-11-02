@@ -23,6 +23,7 @@ pub mod compound_assignment;
 pub mod contains_to_regex_op;
 pub mod custom_log_command;
 pub mod dangerous_file_operations;
+pub mod datetime_epoch_arithmetic;
 pub mod default_empty_string_masks_missing;
 pub mod dispatch_with_subcommands;
 pub mod division_to_format_duration;
@@ -120,6 +121,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     documentation::descriptive_error_messages::RULE,
     documentation::main_named_args_docs::RULE,
     documentation::main_positional_args_docs::RULE,
+    datetime_epoch_arithmetic::RULE,
     division_to_format_duration::RULE,
     dynamic_script_import::RULE,
     error_make::add_help_to_error::RULE,

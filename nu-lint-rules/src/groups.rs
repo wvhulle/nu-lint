@@ -82,6 +82,7 @@ const ADOPT_NU_SYNTAX: Group = Group {
         super::remove_hat_not_builtin::RULE,
         super::division_to_format_duration::RULE,
         super::datetime_epoch_arithmetic::RULE,
+        super::manual_duration_decomposition::RULE,
         super::ignore_over_dev_null::RULE,
         super::redundant_echo::RULE,
         super::if_null_to_default::RULE,

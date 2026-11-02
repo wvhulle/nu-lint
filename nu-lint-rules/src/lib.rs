@@ -49,6 +49,7 @@ pub mod if_else_chain_to_match;
 pub mod if_null_to_default;
 pub mod ignore_over_dev_null;
 pub mod list_param_to_variadic;
+pub mod manual_duration_decomposition;
 pub mod max_function_body_length;
 pub mod max_positional_params;
 pub mod merge_get_cell_path;
@@ -175,6 +176,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     list_param_to_variadic::RULE,
     max_function_body_length::RULE,
     max_positional_params::RULE,
+    manual_duration_decomposition::RULE,
     merge_get_cell_path::RULE,
     migrations::drop_get_sensitive::RULE,
     migrations::filter_to_where::RULE,

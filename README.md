@@ -253,7 +253,7 @@ Most rules have automatic fixes. Run `nu-lint rules` to see the rules with their
 </details>
 
 <details>
-<summary><code>adopt-nu-syntax</code> (26 rules): Replace verbose code with Nu operators, spread, assignment forms and the standard library.</summary>
+<summary><code>adopt-nu-syntax</code> (27 rules): Replace verbose code with Nu operators, spread, assignment forms and the standard library.</summary>
 
 - `not_is_empty_to_is_not_empty` (auto-fix): Simplify `not ... is-empty` to `is-not-empty`
 - `columns_in_to_has` (auto-fix): Use 'has' operator instead of 'in ($record | columns)'
@@ -277,6 +277,7 @@ Most rules have automatic fixes. Run `nu-lint rules` to see the rules with their
 - `remove_hat_not_builtin` (auto-fix): Detect unnecessary '^' prefix on external commands
 - `division_to_format_duration`: Duration divided by a duration literal to get a number
 - `datetime_epoch_arithmetic`: Datetime converted to an integer for time arithmetic
+- `manual_duration_decomposition`: Integer division and modulo used to split a duration
 - `ignore_over_dev_null` (auto-fix): Use '| ignore' instead of redirecting to /dev/null
 - `redundant_echo` (auto-fix): Redundant `echo` (identity function)
 - `if_null_to_default` (auto-fix): Simplify if-null pattern to `| default`

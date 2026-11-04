@@ -9,30 +9,40 @@ variables:
       build-users-group =
       extra-substituters = https://wvhulle.cachix.org
       extra-trusted-public-keys = wvhulle.cachix.org-1:heXx8DZMiRsKUx6l1TxNoF+Nmtmz66QEdsonQzc1ir0=
-  - &cache_writing_env
-    <<: *nix_config
-    CACHIX_AUTH_TOKEN:
-      from_secret: cachix_auth_token
   - &on_trusted_events
     - event: [push, manual]
   - &on_pull_requests
     - event: pull_request
-  - &cargo_test
-    image: nixos/nix:latest
-    depends_on: []
-    commands:
-      - nix run .#cached-build -- .#checks.x86_64-linux.tests
 
 steps:
   - name: cargo-test
-    <<: *cargo_test
+    image: nixos/nix:latest
+    depends_on: []
     when: *on_trusted_events
-    environment: *cache_writing_env
+    environment: *nix_config
+    commands:
+      - nix run .#build-and-export-paths -- .#checks.x86_64-linux.tests
+
+  - name: upload-cargo-test-cache
+    image: nixos/nix:latest
+    depends_on: [cargo-test]
+    when:
+      - event: [push, manual]
+        status: [success, failure]
+    environment:
+      <<: *nix_config
+      CACHIX_AUTH_TOKEN:
+        from_secret: cachix_auth_token
+    commands:
+      - nix run .#upload-exported-paths
 
   - name: cargo-test-pr
-    <<: *cargo_test
+    image: nixos/nix:latest
+    depends_on: []
     when: *on_pull_requests
     environment: *nix_config
+    commands:
+      - nix build --print-build-logs .#checks.x86_64-linux.tests
 
   - name: rustfmt
     image: nixos/nix:latest

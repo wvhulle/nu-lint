@@ -21,22 +21,35 @@ when:
 depends_on:
   - checks
 
+variables:
+  - &nix_config
+    NIX_CONFIG: |
+      experimental-features = nix-command flakes
+      build-users-group =
+      sandbox = false
+      extra-substituters = https://wvhulle.cachix.org
+      extra-trusted-public-keys = wvhulle.cachix.org-1:heXx8DZMiRsKUx6l1TxNoF+Nmtmz66QEdsonQzc1ir0=
+
 steps:
   - name: record-and-publish
     image: nixos/nix:latest
     environment:
-      NIX_CONFIG: |
-        experimental-features = nix-command flakes
-        build-users-group =
-        sandbox = false
-        extra-substituters = https://wvhulle.cachix.org
-        extra-trusted-public-keys = wvhulle.cachix.org-1:heXx8DZMiRsKUx6l1TxNoF+Nmtmz66QEdsonQzc1ir0=
+      <<: *nix_config
       JJ_USER: nu-lint-bot
       JJ_EMAIL: willemvanhulle@protonmail.com
-      CACHIX_AUTH_TOKEN:
-        from_secret: cachix_auth_token
       CODEBERG_TOKEN:
         from_secret: codeberg_token
     commands:
-      - nix run .#cached-build -- .#recordings --max-jobs 1
+      - nix run .#build-and-export-paths -- .#recordings --max-jobs 1
       - nix run .#publish-recordings -- result "https://wvhulle:$${CODEBERG_TOKEN}@codeberg.org/$${CI_REPO}.git"
+
+  - name: upload-recordings-cache
+    image: nixos/nix:latest
+    when:
+      - status: [success, failure]
+    environment:
+      <<: *nix_config
+      CACHIX_AUTH_TOKEN:
+        from_secret: cachix_auth_token
+    commands:
+      - nix run .#upload-exported-paths

@@ -187,15 +187,38 @@
             '';
           };
 
-        cachedBuildScript = pkgs.writeShellApplication {
-          name = "cached-build";
+        exportBuiltPathsHook = pkgs.writeShellApplication {
+          name = "export-built-paths-hook";
+          text = ''
+            exported_paths_dir="$CI_WORKSPACE/.nix-built-paths"
+            mkdir -p "$exported_paths_dir"
+            read -ra built_paths <<< "$OUT_PATHS"
+            nix copy --to "file://$exported_paths_dir?compression=zstd" "''${built_paths[@]}"
+            printf '%s\n' "''${built_paths[@]}" >> "$exported_paths_dir/paths.txt"
+          '';
+        };
+
+        buildAndExportPathsScript = pkgs.writeShellApplication {
+          name = "build-and-export-paths";
+          text = ''
+            export NIX_CONFIG="''${NIX_CONFIG:-}
+            post-build-hook = ${pkgs.lib.getExe exportBuiltPathsHook}"
+            nix build --print-build-logs "$@"
+          '';
+        };
+
+        uploadExportedPathsScript = pkgs.writeShellApplication {
+          name = "upload-exported-paths";
           runtimeInputs = [ pkgs.cachix ];
           text = ''
-            if [[ -n "''${CACHIX_AUTH_TOKEN:-}" ]]; then
-              cachix watch-exec wvhulle -- nix build --print-build-logs --print-out-paths "$@" | cachix push wvhulle
-            else
-              nix build --print-build-logs "$@"
+            exported_paths_dir="$CI_WORKSPACE/.nix-built-paths"
+            if [[ ! -s "$exported_paths_dir/paths.txt" ]]; then
+              echo "No newly built paths to upload"
+              exit 0
             fi
+            mapfile -t built_paths < "$exported_paths_dir/paths.txt"
+            nix copy --no-check-sigs --from "file://$exported_paths_dir" "''${built_paths[@]}"
+            cachix push wvhulle "''${built_paths[@]}"
           '';
         };
 
@@ -270,7 +293,8 @@
           release = mkApp (mkReleasePlzOnCodeberg "release");
           release-pr = mkApp (mkReleasePlzOnCodeberg "release-pr");
           check-commits = mkApp checkCommitsScript;
-          cached-build = mkApp cachedBuildScript;
+          build-and-export-paths = mkApp buildAndExportPathsScript;
+          upload-exported-paths = mkApp uploadExportedPathsScript;
           upload-release-assets = mkApp uploadReleaseAssetsScript;
         }
         // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {

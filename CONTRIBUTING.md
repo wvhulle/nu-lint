@@ -254,6 +254,8 @@ Everything CI runs is a flake output, so it can be run locally in the same way:
 | `nix build .#dist` | Static release binaries as `.tar.gz` |
 | `nix run .#release` | Publish an unreleased version to crates.io and create its tag and Codeberg release (CI only, needs `CODEBERG_TOKEN`) |
 | `nix run .#release-pr` | Open or update the release PR (CI only, needs `CODEBERG_TOKEN`) |
+| `nix run .#build-and-export-paths -- <installable>` | Build and export newly built paths to the workspace for a later upload step (CI only, needs `CI_WORKSPACE`) |
+| `nix run .#upload-exported-paths` | Push the exported paths to Cachix (CI only, needs `CI_WORKSPACE` and `CACHIX_AUTH_TOKEN`) |
 
 Git hooks are optional. Install them with [prek](https://github.com/j178/prek) (`prek install`) or [pre-commit](https://pre-commit.com) (`pre-commit install`) to run the commit message and formatting checks from `.pre-commit-config.yaml` locally.
 

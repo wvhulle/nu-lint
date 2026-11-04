@@ -9,7 +9,7 @@ use nu_lint_analysis::{
 };
 use nu_protocol::{
     Span,
-    ast::{Argument, Expr, Traverse},
+    ast::{Argument, Expr, Expression, Traverse},
 };
 
 const LOG_LEVELS: &[&str] = &["debug", "info", "warning", "error", "critical"];
@@ -30,13 +30,18 @@ fn has_stdlib_log_import(context: &LintContext) -> bool {
             return vec![];
         }
 
-        for arg in &call.arguments {
-            if let Argument::Positional(e) = arg {
-                let text = ctx.expr_text(e);
-                if text == "std/log" || text == "std log" || text.starts_with("std/log ") {
-                    found.set(true);
-                }
-            }
+        let mut import_segments = call.arguments.iter().filter_map(|arg| match arg {
+            Argument::Positional(Expression {
+                expr: Expr::String(segment),
+                ..
+            }) => Some(segment.as_str()),
+            _ => None,
+        });
+        if matches!(
+            (import_segments.next(), import_segments.next()),
+            (Some("std/log"), _) | (Some("std"), Some("log"))
+        ) {
+            found.set(true);
         }
         vec![]
     });

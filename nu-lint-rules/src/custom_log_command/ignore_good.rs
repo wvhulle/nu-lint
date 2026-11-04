@@ -52,3 +52,21 @@ fn ignore_log_critical_when_stdlib_imported() {
 def "log critical" [msg] { print $msg }"#,
     );
 }
+
+#[test]
+fn ignore_when_stdlib_imported_as_two_segments() {
+    RULE.assert_ignores(
+        r#"use std log
+def "log info" [msg: string] { print $msg }
+"#,
+    );
+}
+
+#[test]
+fn ignore_when_stdlib_imported_with_members() {
+    RULE.assert_ignores(
+        r#"use std/log [info]
+def "log debug" [msg: string] { print $msg }
+"#,
+    );
+}

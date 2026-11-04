@@ -14,7 +14,6 @@ use nu_protocol::{
 struct FixData {
     external_cmd_span: Span,
     last_exit_code_span: Span,
-    external_cmd_text: String,
 }
 
 /// Check if expression is exactly `$env.LAST_EXIT_CODE`
@@ -35,14 +34,9 @@ fn is_last_exit_code_access(expr: &Expression) -> bool {
 }
 
 /// Find the first external command in a pipeline
-fn find_external_command(pipeline: &Pipeline, context: &LintContext) -> Option<(Span, String)> {
+fn find_external_command(pipeline: &Pipeline) -> Option<Span> {
     pipeline.elements.iter().find_map(|element| {
-        matches!(&element.expr.expr, Expr::ExternalCall(_, _)).then(|| {
-            (
-                element.expr.span,
-                context.expr_text(&element.expr).to_string(),
-            )
-        })
+        matches!(&element.expr.expr, Expr::ExternalCall(_, _)).then_some(element.expr.span)
     })
 }
 
@@ -69,7 +63,7 @@ fn check_pipeline_pairs(block: &Block, context: &LintContext) -> Vec<(Detection,
         .enumerate()
         .filter_map(|(idx, pipeline)| {
             // Find external command in current pipeline
-            let (cmd_span, cmd_text) = find_external_command(pipeline, context)?;
+            let cmd_span = find_external_command(pipeline)?;
 
             // Check next pipeline for LAST_EXIT_CODE access
             let next_pipeline = block.pipelines.get(idx + 1)?;
@@ -79,7 +73,6 @@ fn check_pipeline_pairs(block: &Block, context: &LintContext) -> Vec<(Detection,
             let fix_data = FixData {
                 external_cmd_span: cmd_span,
                 last_exit_code_span: exit_code_span,
-                external_cmd_text: cmd_text,
             };
 
             let detection = Detection::from_global_span(
@@ -150,10 +143,11 @@ impl DetectFix for AvoidLastExitCode {
         detect_in_all_blocks(context)
     }
 
-    fn fix(&self, _context: &LintContext, data: &Self::FixInput<'_>) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, data: &Self::FixInput<'_>) -> Option<Fix> {
         let fix_data = data.as_ref()?;
 
-        let inline_complete = format!("({} | complete).exit_code", fix_data.external_cmd_text);
+        let external_cmd_text = context.span_text(fix_data.external_cmd_span);
+        let inline_complete = format!("({external_cmd_text} | complete).exit_code");
 
         Some(Fix {
             explanation: "Replace fragile $env.LAST_EXIT_CODE check with inline complete pattern"

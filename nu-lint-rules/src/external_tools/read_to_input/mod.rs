@@ -6,7 +6,7 @@ use nu_lint_analysis::{
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
-use nu_protocol::Span;
+use nu_protocol::{Span, ast::Expression};
 
 const PROMPT: Flag = Flag::short_switch('p').with_value();
 const SILENT: Flag = Flag::short_switch('s');
@@ -23,7 +23,7 @@ const NOTE: &str = "'read' is a shell builtin: an external 'read' cannot assign 
 
 pub struct InputBinding<'a> {
     span: Span,
-    variable: &'a str,
+    variable: &'a Expression,
     silent: bool,
     prompt: Option<FlagValue<'a>>,
 }
@@ -37,8 +37,8 @@ impl<'a> InputBinding<'a> {
         let [variable] = parsed.operands.as_slice() else {
             return None;
         };
-        let variable = literal_content(variable)?;
-        if !is_shell_variable_name(variable) {
+        let variable = *variable;
+        if !is_shell_variable_name(literal_content(variable)?) {
             return None;
         }
         Some(Self {
@@ -49,7 +49,7 @@ impl<'a> InputBinding<'a> {
         })
     }
 
-    fn to_nu(&self, context: &LintContext) -> String {
+    fn to_nu(&self, context: &LintContext) -> Option<String> {
         let suppress = if self.silent {
             " --suppress-output"
         } else {
@@ -58,7 +58,8 @@ impl<'a> InputBinding<'a> {
         let prompt = self.prompt.map_or(String::new(), |prompt| {
             format!(" {}", prompt.nu_text(context))
         });
-        format!("let {} = input{suppress}{prompt}", self.variable)
+        let variable_name = literal_content(self.variable)?;
+        Some(format!("let {variable_name} = input{suppress}{prompt}"))
     }
 }
 
@@ -97,7 +98,7 @@ impl DetectFix for ReadToInput {
 
     fn fix(&self, context: &LintContext, binding: &Self::FixInput<'_>) -> Option<Fix> {
         let binding = binding.as_ref()?;
-        let replacement = binding.to_nu(context);
+        let replacement = binding.to_nu(context)?;
         Some(Fix {
             explanation: "Read input with the built-in `input`".into(),
             replacements: vec![Replacement::new(binding.span, replacement)],

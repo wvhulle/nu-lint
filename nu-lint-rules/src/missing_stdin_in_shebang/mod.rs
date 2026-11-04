@@ -11,7 +11,6 @@ use nu_protocol::ast::{Argument, Block, Call, Expr, Expression, Pipeline};
 
 struct ShebangFixData {
     fix_span: nu_protocol::Span,
-    new_shebang: String,
 }
 
 fn uses_pipeline_input_directly(expr: &Expression, context: &LintContext) -> bool {
@@ -114,18 +113,17 @@ fn create_fix_data_for_shebang(context: &LintContext) -> Option<ShebangFixData> 
     let first_line_end = source.find('\n').unwrap_or(source.len());
     let fix_span = nu_protocol::Span::new(file_offset, first_line_end + file_offset);
 
-    let new_shebang = if first_line.contains("-S ") {
-        first_line.replace("-S nu", "-S nu --stdin")
-    } else if first_line.contains("env nu") {
-        first_line.replace("env nu", "env -S nu --stdin")
-    } else {
-        format!("{first_line} --stdin")
-    };
+    Some(ShebangFixData { fix_span })
+}
 
-    Some(ShebangFixData {
-        fix_span,
-        new_shebang,
-    })
+fn shebang_with_stdin_flag(shebang_line: &str) -> String {
+    if shebang_line.contains("-S ") {
+        shebang_line.replace("-S nu", "-S nu --stdin")
+    } else if shebang_line.contains("env nu") {
+        shebang_line.replace("env nu", "env -S nu --stdin")
+    } else {
+        format!("{shebang_line} --stdin")
+    }
 }
 
 fn check_main_function(
@@ -217,10 +215,13 @@ impl DetectFix for MissingStdinInShebang {
         })
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         fix_data.as_ref().map(|data| Fix {
             explanation: "Add --stdin flag to shebang".into(),
-            replacements: vec![Replacement::new(data.fix_span, data.new_shebang.clone())],
+            replacements: vec![Replacement::new(
+                data.fix_span,
+                shebang_with_stdin_flag(context.span_text(data.fix_span)),
+            )],
         })
     }
 }

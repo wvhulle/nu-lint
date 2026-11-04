@@ -17,8 +17,7 @@ use nu_protocol::{
 /// Fix data for combining str replace calls
 struct FixData {
     span: Span,
-    patterns: Vec<String>,
-    replacement: String,
+    replace_calls: Vec<Call>,
 }
 
 fn extract_args(call: &Call) -> Option<(String, String)> {
@@ -83,10 +82,11 @@ fn try_build_fix(calls: &[&Call], span: Span) -> Option<FixData> {
         return None;
     }
 
+    replacement?;
+
     Some(FixData {
         span,
-        patterns: finds.iter().map(|s| escape_regex(s)).collect(),
-        replacement: replacement?,
+        replace_calls: calls.iter().map(|&call| call.clone()).collect(),
     })
 }
 
@@ -155,8 +155,18 @@ impl DetectFix for ChainedStrReplace {
 
     fn fix(&self, _context: &LintContext, data: &Self::FixInput<'_>) -> Option<Fix> {
         let d = data.as_ref()?;
-        let pattern = d.patterns.join("|");
-        let replacement = format!("str replace -ar \"{}\" \"{}\"", pattern, d.replacement);
+        let decoded_arguments = d
+            .replace_calls
+            .iter()
+            .map(extract_args)
+            .collect::<Option<Vec<_>>>()?;
+        let pattern = decoded_arguments
+            .iter()
+            .map(|(find_text, _)| escape_regex(find_text))
+            .collect::<Vec<_>>()
+            .join("|");
+        let (_, shared_replacement) = decoded_arguments.first()?;
+        let replacement = format!("str replace -ar \"{pattern}\" \"{shared_replacement}\"");
         Some(Fix {
             explanation: "combine".into(),
             replacements: vec![Replacement::new(d.span, replacement)],

@@ -13,3 +13,8 @@ fn ci_scripts_pass_the_linter() {
         String::from_utf8_lossy(&lint_output.stdout)
     );
 }
+
+#[test]
+fn deliberate_failure_for_the_cache_upload_probe() {
+    assert_eq!(1, 2, "this probe must fail so the upload runs after a failed build");
+}

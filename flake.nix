@@ -51,7 +51,6 @@
         stableCrane = (crane.mkLib pkgs).overrideToolchain stableToolchain;
         ciCrane = (crane.mkLib pkgs).overrideToolchain ciToolchain;
         nightlyCrane = (crane.mkLib pkgs).overrideToolchain nightlyToolchain;
-        rustfmtCrane = (crane.mkLib pkgs).overrideToolchain rustfmtToolchain;
 
         #
         # Native builds
@@ -107,13 +106,6 @@
             cargoTestExtraArgs = "--workspace";
           }
         );
-
-        astGrepCheck = pkgs.runCommand "nu-lint-ast-grep" { nativeBuildInputs = [ pkgs.ast-grep ]; } ''
-          cd ${src}
-          ast-grep test --skip-snapshot-tests
-          ast-grep scan
-          touch $out
-        '';
 
         craneliftDeps = nightlyCrane.buildDepsOnly (
           commonArgs // { RUSTFLAGS = "-Zcodegen-backend=cranelift"; }
@@ -346,6 +338,19 @@
           '';
         };
 
+        runPreCommitHooksScript = pkgs.writeShellApplication {
+          name = "run-pre-commit-hooks";
+          runtimeInputs = [
+            pkgs.prek
+            pkgs.ast-grep
+            pkgs.gitMinimal
+            rustfmtToolchain
+          ];
+          text = ''
+            prek run --all-files --show-diff-on-failure "$@"
+          '';
+        };
+
         muslPackages = {
           x86_64 = mkMuslPackage "x86_64";
           aarch64 = mkMuslPackage "aarch64";
@@ -386,8 +391,6 @@
 
         checks = {
           inherit tests;
-          fmt = rustfmtCrane.cargoFmt { inherit src; };
-          ast-grep = astGrepCheck;
         };
 
         apps = {
@@ -396,6 +399,7 @@
           release = mkApp (mkReleasePlzOnCodeberg "release");
           release-pr = mkApp (mkReleasePlzOnCodeberg "release-pr");
           check-commits = mkApp checkCommitsScript;
+          run-pre-commit-hooks = mkApp runPreCommitHooksScript;
           build-and-export-paths = mkApp buildAndExportPathsScript;
           build-unless-cached = mkApp buildUnlessCachedScript;
           import-exported-paths = mkApp importExportedPathsScript;

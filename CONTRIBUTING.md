@@ -260,8 +260,9 @@ Everything CI runs is a flake output, so it can be run locally in the same way:
 
 | Command | Purpose |
 |---------|---------|
-| `nix flake check` | Tests and `cargo fmt` check |
-| `sg scan` / `sg test` | Project-specific ast-grep rules in `.ast-grep/rules/` and their tests in `.ast-grep/rule-tests/` |
+| `nix flake check` | Tests |
+| `nix run .#run-pre-commit-hooks` | `cargo fmt`, the ast-grep rule tests and `ast-grep scan`, as defined in `.pre-commit-config.yaml` |
+| `ast-grep scan` / `ast-grep test` | Project-specific ast-grep rules in `.ast-grep/rules/` and their tests in `.ast-grep/rule-tests/` |
 | `nix run .#check-commits -- main..@` | Conventional commit message check for a revision range |
 | `nix build .#dist` | Static release binaries as `.tar.gz` |
 | `nix build .#dist-macos` | macOS release binaries as `.tar.gz`, cross-compiled from Linux |
@@ -273,7 +274,9 @@ Everything CI runs is a flake output, so it can be run locally in the same way:
 | `nix run .#build-and-export-paths -- <installable>` | Build and export newly built paths to the workspace for a later upload step (CI only, needs `CI_WORKSPACE`) |
 | `nix run .#upload-exported-paths` | Push the exported paths to Cachix (CI only, needs `CI_WORKSPACE` and `CACHIX_AUTH_TOKEN`) |
 
-Git hooks are optional. Install them with [prek](https://github.com/j178/prek) (`prek install`) or [pre-commit](https://pre-commit.com) (`pre-commit install`) to run the commit message and formatting checks from `.pre-commit-config.yaml` locally.
+Git hooks are optional. Install them with [prek](https://github.com/j178/prek) (`prek install`) or [pre-commit](https://pre-commit.com) (`pre-commit install`) to run the commit message, formatting and ast-grep checks from `.pre-commit-config.yaml` locally. To run them without installing a hook, use `prek run --all-files`.
+
+Every ast-grep rule has severity `error`, so a finding fails the hooks and CI. A rule's `ignores` list holds either files it can never apply to, such as layout rules for `source-text-search`, or files still to be cleaned up. Remove a file from the list when you clean it up, and do not add files to work around a finding.
 
 ## Cachix
 

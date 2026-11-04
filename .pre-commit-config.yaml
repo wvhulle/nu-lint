@@ -1,15 +1,27 @@
 default_install_hook_types: [pre-commit, commit-msg]
 repos:
-  - repo: https://github.com/compilerla/conventional-pre-commit
-    rev: v4.4.0
-    hooks:
-      - id: conventional-pre-commit
-        stages: [commit-msg]
   - repo: local
     hooks:
+      - id: conventional-commit-message
+        name: conventional commit message
+        entry: bash -c 'convco check --from-stdin --strip < "$1"' --
+        language: system
+        stages: [commit-msg]
       - id: cargo-fmt
         name: cargo fmt
         entry: cargo fmt --
         language: system
         types: [rust]
+        pass_filenames: false
+      - id: ast-grep-rule-tests
+        name: ast-grep rule tests
+        entry: ast-grep test --skip-snapshot-tests
+        language: system
+        files: ^(\.ast-grep/|sgconfig\.yml$)
+        pass_filenames: false
+      - id: ast-grep-scan
+        name: ast-grep scan
+        entry: ast-grep scan
+        language: system
+        files: (\.rs$|^\.ast-grep/|^sgconfig\.yml$)
         pass_filenames: false

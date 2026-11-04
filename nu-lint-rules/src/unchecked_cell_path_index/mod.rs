@@ -11,7 +11,6 @@ use nu_protocol::{
 };
 
 struct CellPathIndexFixData {
-    full_span: Span,
     index_span: Span,
 }
 
@@ -63,7 +62,6 @@ fn check_cell_path_access(
         Detection::from_global_span(message, index_info.index_span).with_primary_label(label);
 
     let fix_data = CellPathIndexFixData {
-        full_span: expr.span,
         index_span: index_info.index_span,
     };
 
@@ -117,15 +115,14 @@ impl DetectFix for UncheckedCellPathIndex {
             return None;
         }
 
-        // Insert `?` after the numeric index to make it optional
-        let full_text = context.span_text(fix_data.full_span);
-        let index_end_offset = fix_data.index_span.end - fix_data.full_span.start;
-        let (before, after) = full_text.split_at(index_end_offset);
-        let replacement = format!("{before}?{after}");
+        let index_end = fix_data.index_span.end;
 
         Some(Fix {
             explanation: "Add `?` for safe optional access".into(),
-            replacements: vec![Replacement::new(fix_data.full_span, replacement)],
+            replacements: vec![Replacement::new(
+                Span::new(index_end, index_end),
+                "?".to_string(),
+            )],
         })
     }
 }

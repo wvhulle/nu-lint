@@ -5,24 +5,19 @@ use nu_lint_analysis::{
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
-use nu_protocol::ast::{Argument, Expr, Expression, Operator, PathMember, Traverse};
+use nu_protocol::{
+    VarId,
+    ast::{Argument, Expr, Expression, Operator, PathMember, Traverse},
+};
+
+const ROW_CONDITION_PARAMETER: &str = "$it";
 
 struct ItFieldAccess {
     full_span: nu_protocol::Span,
     field_name: String,
 }
 
-fn is_it_variable(expr: &Expression, context: &LintContext) -> bool {
-    if let Expr::Var(_var_id) = &expr.expr {
-        let var_text = context.expr_text(expr);
-        log::trace!("Checking if var is 'it': {var_text}");
-        return var_text == "$it";
-    }
-    log::trace!("Not a Var expression");
-    false
-}
-
-fn extract_it_field_access(expr: &Expression, context: &LintContext) -> Option<ItFieldAccess> {
+fn extract_it_field_access(expr: &Expression, it_var_id: VarId) -> Option<ItFieldAccess> {
     log::trace!("extract_it_field_access called");
     let Expr::FullCellPath(cell_path) = &expr.expr else {
         log::trace!("Not a FullCellPath");
@@ -30,21 +25,26 @@ fn extract_it_field_access(expr: &Expression, context: &LintContext) -> Option<I
     };
 
     log::trace!("Is FullCellPath, checking if head is $it");
-    if !is_it_variable(&cell_path.head, context) {
+    if !matches!(cell_path.head.expr, Expr::Var(var_id) if var_id == it_var_id) {
         log::trace!("Head is not $it");
         return None;
     }
 
-    if cell_path.tail.len() != 1 {
-        return None;
-    }
-
-    let PathMember::String {
-        val: field_name, ..
-    } = &cell_path.tail[0]
+    let [
+        PathMember::String {
+            val: field_name,
+            span: member_span,
+            ..
+        },
+    ] = cell_path.tail.as_slice()
     else {
         return None;
     };
+
+    if cell_path.head.span.end >= member_span.start {
+        log::trace!("Head is the implicit $it of a bare field");
+        return None;
+    }
 
     Some(ItFieldAccess {
         full_span: expr.span,
@@ -54,6 +54,7 @@ fn extract_it_field_access(expr: &Expression, context: &LintContext) -> Option<I
 
 fn check_binary_op_for_it_field(
     expr: &Expression,
+    it_var_id: VarId,
     context: &LintContext,
     violations: &mut Vec<(Detection, ItFieldAccess)>,
 ) {
@@ -64,7 +65,7 @@ fn check_binary_op_for_it_field(
 
             if is_comparison {
                 log::trace!("Found comparison op, checking LHS for $it.field");
-                if let Some(it_access) = extract_it_field_access(lhs, context) {
+                if let Some(it_access) = extract_it_field_access(lhs, it_var_id) {
                     log::trace!("Found $it.{} on LHS of comparison!", it_access.field_name);
                     let violation = Detection::from_global_span(
                         "Field name can be used directly in row condition without `$it.` prefix",
@@ -76,17 +77,17 @@ fn check_binary_op_for_it_field(
                 }
             }
 
-            check_binary_op_for_it_field(lhs, context, violations);
-            check_binary_op_for_it_field(rhs, context, violations);
+            check_binary_op_for_it_field(lhs, it_var_id, context, violations);
+            check_binary_op_for_it_field(rhs, it_var_id, context, violations);
         }
         Expr::FullCellPath(cell_path) => {
-            check_binary_op_for_it_field(&cell_path.head, context, violations);
+            check_binary_op_for_it_field(&cell_path.head, it_var_id, context, violations);
         }
         Expr::Subexpression(block_id) | Expr::Block(block_id) | Expr::Closure(block_id) => {
             let block = context.working_set.get_block(*block_id);
             for pipeline in &block.pipelines {
                 for element in &pipeline.elements {
-                    check_binary_op_for_it_field(&element.expr, context, violations);
+                    check_binary_op_for_it_field(&element.expr, it_var_id, context, violations);
                 }
             }
         }
@@ -128,11 +129,20 @@ fn check_where_row_condition(
     log::trace!("Found row condition, checking for $it.field patterns");
 
     let block = context.working_set.get_block(*block_id);
+    let Some(it_var_id) = block
+        .signature
+        .required_positional
+        .first()
+        .filter(|row_param| row_param.name == ROW_CONDITION_PARAMETER)
+        .and_then(|row_param| row_param.var_id)
+    else {
+        return vec![];
+    };
     let mut violations = Vec::new();
 
     for pipeline in &block.pipelines {
         for element in &pipeline.elements {
-            check_binary_op_for_it_field(&element.expr, context, &mut violations);
+            check_binary_op_for_it_field(&element.expr, it_var_id, context, &mut violations);
         }
     }
 

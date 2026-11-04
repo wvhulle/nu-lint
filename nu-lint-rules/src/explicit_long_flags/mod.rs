@@ -16,13 +16,12 @@ struct ShortFlagInfo {
     flag_span: Span,
 }
 
-/// Checks if the span represents a short flag (starts with single dash and is
-/// short)
-fn is_short_flag_span(context: &LintContext, span: Span) -> bool {
-    let text = context.span_text(span);
-    // Short flags are like "-a", "-f", etc. (2-3 chars with single dash)
-    // Long flags are like "--all", "--force", etc.
-    text.starts_with('-') && !text.starts_with("--") && text.len() <= 3
+const MAX_SHORT_FLAG_LENGTH: usize = 3;
+const LONG_FLAG_DASHES: usize = 2;
+
+const fn is_short_flag_spelling(flag_span: Span, long_name: &str) -> bool {
+    let written_length = flag_span.end - flag_span.start;
+    written_length <= MAX_SHORT_FLAG_LENGTH && written_length < long_name.len() + LONG_FLAG_DASHES
 }
 
 /// Finds the short character for a given long flag name from the command
@@ -46,8 +45,7 @@ fn extract_short_flags(call: &Call, context: &LintContext) -> Vec<ShortFlagInfo>
             let flag_span = spanned_name.span;
             let long_name = spanned_name.item.clone();
 
-            // Check if this was written as a short flag by examining the source text
-            if is_short_flag_span(context, flag_span) {
+            if is_short_flag_spelling(flag_span, &long_name) {
                 // The parser has already resolved it to the long name
                 // We need to find what short char was used
                 if let Some(short_char) = short_alias.as_ref().and_then(|s| s.item.chars().next()) {

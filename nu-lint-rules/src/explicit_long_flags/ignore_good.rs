@@ -41,3 +41,8 @@ fn ignore_mixed_with_long() {
     // When long flags are used, they shouldn't trigger
     RULE.assert_ignores("ls --all /tmp");
 }
+
+#[test]
+fn ignore_long_flag_spelling() {
+    RULE.assert_ignores("ls --all");
+}

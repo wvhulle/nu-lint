@@ -5,8 +5,6 @@ id: vague-id
 message: IDs of rules should be descriptive and not contain vague string operations.
 severity: error
 language: Rust
-ignores:
-  - nu-lint-rules/src/record_assignments/use_load_env/**
 rule:
     kind: string_literal
     inside:
@@ -17,4 +15,4 @@ rule:
     has:
       kind: string_content
       regex: ^(prefer|avoid|replace|use)_
-note: Rule ids are configuration keys, so renaming the ignored rule would break user configs.
+note: Rule ids are configuration keys. When renaming a rule, keep the old id in former_ids.

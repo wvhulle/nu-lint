@@ -4,8 +4,6 @@ id: short-rule-id
 message: IDs of rules should be just a few keywords long
 severity: error
 language: Rust
-ignores:
-  - nu-lint-rules/src/default_empty_string_masks_missing/**
 rule:
     kind: string_literal
     inside:
@@ -17,4 +15,4 @@ rule:
       kind: string_content
       not:
         regex: ^.{10,30}$
-note: Rule ids are configuration keys, so renaming the ignored rule would break user configs.
+note: Rule ids are configuration keys. When renaming a rule, keep the old id in former_ids.

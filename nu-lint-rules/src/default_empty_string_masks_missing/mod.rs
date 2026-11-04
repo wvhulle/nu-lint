@@ -38,7 +38,11 @@ impl DetectFix for DefaultEmptyStringMasksMissing {
     type FixInput<'a> = ();
 
     fn id(&self) -> &'static str {
-        "default_empty_string_masks_missing"
+        "default_empty_masks_missing"
+    }
+
+    fn former_ids(&self) -> &'static [&'static str] {
+        &["default_empty_string_masks_missing"]
     }
 
     fn short_description(&self) -> &'static str {

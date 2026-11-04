@@ -28,7 +28,11 @@ impl DetectFix for UseLoadEnv {
     type FixInput<'a> = AssignmentGroup;
 
     fn id(&self) -> &'static str {
-        "use_load_env"
+        "env_assignments_to_load_env"
+    }
+
+    fn former_ids(&self) -> &'static [&'static str] {
+        &["use_load_env"]
     }
 
     fn short_description(&self) -> &'static str {

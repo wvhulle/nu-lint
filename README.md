@@ -227,7 +227,7 @@ Most rules have automatic fixes. Run `nu-lint rules` to see the rules with their
 - `dynamic_script_import`: Dynamic import path not statically validated
 - `self_import`: Circular import: script imports itself
 - `catch_builtin_error_try`: Catch runtime errors from built-in commands using `try` blocks
-- `default_empty_string_masks_missing`: Avoid `| default ""`; it masks a missing value as an empty string
+- `default_empty_masks_missing`: Avoid `| default ""`; it masks a missing value as an empty string
 - `unchecked_cell_path_index` (auto-fix): Cell path numeric index access may panic on empty lists
 - `unchecked_get_index` (auto-fix): Use optional cell path `$list.0?` over `get` for index access
 - `unhandled_external_error`: Unhandled external command error
@@ -282,7 +282,7 @@ Most rules have automatic fixes. Run `nu-lint rules` to see the rules with their
 - `custom_log_command` (auto-fix): Custom log command shadows stdlib. Use `use std/log` instead
 - `chained_append` (auto-fix): Use spread syntax instead of chained `append` commands
 - `merge_with_record_spread` (auto-fix): Use record spread for consecutive field assignments
-- `use_load_env` (auto-fix): Use load-env for multiple $env assignments
+- `env_assignments_to_load_env` (auto-fix): Use load-env for multiple $env assignments
 - `remove_hat_not_builtin` (auto-fix): Detect unnecessary `^` prefix on external commands
 - `division_to_format_duration`: Duration divided by a duration literal to get a number
 - `datetime_epoch_arithmetic`: Datetime converted to an integer for time arithmetic

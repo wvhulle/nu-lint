@@ -1,4 +1,9 @@
+use std::collections::HashMap;
+
+use nu_lint_analysis::{Config, LintLevel, engine::LintEngine};
+
 use super::RULE;
+use crate::RULE_CATALOG;
 
 #[test]
 fn test_single_assignment() {
@@ -63,4 +68,38 @@ $config.db.port = 5432
 "#,
         0,
     );
+}
+
+#[test]
+fn config_level_applies_to_former_id() {
+    let config = Config {
+        rules: HashMap::from([("use_load_env".to_string(), LintLevel::Off)]),
+        ..Default::default()
+    };
+    assert_eq!(config.get_lint_level(RULE, &[]), LintLevel::Off);
+}
+
+#[test]
+fn ignore_comment_applies_to_former_id() {
+    let engine = LintEngine::new(
+        Config {
+            rules: HashMap::from([(
+                "env_assignments_to_load_env".to_string(),
+                LintLevel::Warning,
+            )]),
+            ..Default::default()
+        },
+        RULE_CATALOG,
+    );
+    let assignments = "$env.A = 1\n$env.B = 2\n";
+    let reports_rule = |source: &str| {
+        engine
+            .lint_str(source)
+            .iter()
+            .any(|violation| violation.rule_id.as_deref() == Some("env_assignments_to_load_env"))
+    };
+    assert!(reports_rule(assignments));
+    assert!(!reports_rule(&format!(
+        "# nu-lint-ignore-file: use_load_env\n{assignments}"
+    )));
 }

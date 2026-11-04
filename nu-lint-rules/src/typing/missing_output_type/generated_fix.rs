@@ -142,3 +142,8 @@ fn fix_if_with_else_stays_single_output() {
         "-> string",
     );
 }
+
+#[test]
+fn fix_does_not_guess_output_from_first_signature_of_unknown_input() {
+    RULE.assert_fixed_not_contains("def pick [] { first }", "binary");
+}

@@ -131,6 +131,21 @@ impl CallExt for Call {
             sig.input_output_types
         );
 
+        let mut compatible_mappings = sig
+            .input_output_types
+            .iter()
+            .filter(|(in_ty, _)| is_type_compatible(in_ty, &input_type));
+        let output_depends_on_unknown_input = matches!(input_type, nu_protocol::Type::Any)
+            && compatible_mappings
+                .next()
+                .is_some_and(|(first_in, first_out)| {
+                    compatible_mappings
+                        .any(|(other_in, other_out)| other_in != first_in && other_out != first_out)
+                });
+        if output_depends_on_unknown_input {
+            return nu_protocol::Type::Any;
+        }
+
         for (in_ty, out_ty) in &sig.input_output_types {
             if is_type_compatible(in_ty, &input_type) && !matches!(out_ty, nu_protocol::Type::Any) {
                 log::trace!(

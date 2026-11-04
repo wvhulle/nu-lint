@@ -374,3 +374,14 @@ def level4 [] {
 "#,
     );
 }
+
+#[test]
+fn ignore_completer_used_only_by_extern() {
+    RULE.assert_ignores(
+        r#"
+def "nu-complete site" [] { [a b] }
+export extern lftp [site?: string@"nu-complete site"]
+def main [] { print done }
+"#,
+    );
+}

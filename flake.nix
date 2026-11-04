@@ -261,65 +261,39 @@
             '';
           };
 
-        exportBuiltPathsHook = pkgs.writeShellApplication {
-          name = "export-built-paths-hook";
-          text = ''
-            exported_paths_dir="$CI_WORKSPACE/.nix-built-paths"
-            mkdir -p "$exported_paths_dir"
-            read -ra built_paths <<< "$OUT_PATHS"
-            nix copy --quiet --to "file://$exported_paths_dir?compression=zstd" "''${built_paths[@]}"
-            printf '%s\n' "''${built_paths[@]}" >> "$exported_paths_dir/paths.txt"
-          '';
-        };
+        nixBuiltPathsTool =
+          {
+            name,
+            runtimeInputs ? [ ],
+            wrapperArgs ? [ ],
+          }:
+          pkgs.runCommand name
+            {
+              nativeBuildInputs = [ pkgs.makeBinaryWrapper ];
+              meta.mainProgram = name;
+            }
+            ''
+              makeWrapper ${pkgs.lib.getExe pkgs.nushell} $out/bin/${name} \
+                --add-flags ${./ci/nix-built-paths.nu} \
+                --add-flags ${name} \
+                ${pkgs.lib.optionalString (runtimeInputs != [ ]) "--prefix PATH : ${pkgs.lib.makeBinPath runtimeInputs}"} \
+                ${pkgs.lib.escapeShellArgs wrapperArgs}
+            '';
 
-        buildAndExportPathsScript = pkgs.writeShellApplication {
-          name = "build-and-export-paths";
-          text = ''
-            export NIX_CONFIG="''${NIX_CONFIG:-}
-            post-build-hook = ${pkgs.lib.getExe exportBuiltPathsHook}"
-            nix build --quiet --print-build-logs "$@"
-          '';
-        };
+        exportBuiltPathsHook = nixBuiltPathsTool { name = "export-built-paths-hook"; };
 
-        buildUnlessCachedScript = pkgs.writeShellApplication {
-          name = "build-unless-cached";
-          text = ''
-            built_output=$(nix eval --quiet --raw "$1.outPath")
-            if nix path-info --quiet --store https://wvhulle.cachix.org "$built_output" > /dev/null 2>&1; then
-              echo "$built_output is already in Cachix"
-              exit 0
-            fi
-            ${pkgs.lib.getExe buildAndExportPathsScript} "$1"
-          '';
-        };
-
-        importExportedPathsScript = pkgs.writeShellApplication {
-          name = "import-exported-paths";
-          text = ''
-            exported_paths_dir="$CI_WORKSPACE/.nix-built-paths"
-            if [[ ! -s "$exported_paths_dir/paths.txt" ]]; then
-              echo "No exported paths to import"
-              exit 0
-            fi
-            mapfile -t built_paths < "$exported_paths_dir/paths.txt"
-            nix copy --quiet --no-check-sigs --from "file://$exported_paths_dir" "''${built_paths[@]}"
-          '';
-        };
-
-        uploadExportedPathsScript = pkgs.writeShellApplication {
-          name = "upload-exported-paths";
-          runtimeInputs = [ pkgs.cachix ];
-          text = ''
-            exported_paths_dir="$CI_WORKSPACE/.nix-built-paths"
-            if [[ ! -s "$exported_paths_dir/paths.txt" ]]; then
-              echo "No newly built paths to upload"
-              exit 0
-            fi
-            ${pkgs.lib.getExe importExportedPathsScript}
-            mapfile -t built_paths < "$exported_paths_dir/paths.txt"
-            cachix push wvhulle "''${built_paths[@]}"
-          '';
-        };
+        exportingBuildTool =
+          toolArgs:
+          nixBuiltPathsTool (
+            toolArgs
+            // {
+              wrapperArgs = [
+                "--set"
+                "EXPORT_HOOK_PROGRAM"
+                (pkgs.lib.getExe exportBuiltPathsHook)
+              ];
+            }
+          );
 
         uploadReleaseAssetsScript = pkgs.writeShellApplication {
           name = "upload-release-assets";
@@ -396,10 +370,23 @@
           release = mkApp (mkReleasePlzOnCodeberg "release");
           release-pr = mkApp (mkReleasePlzOnCodeberg "release-pr");
           check-commits = mkApp checkCommitsScript;
-          build-and-export-paths = mkApp buildAndExportPathsScript;
-          build-unless-cached = mkApp buildUnlessCachedScript;
-          import-exported-paths = mkApp importExportedPathsScript;
-          upload-exported-paths = mkApp uploadExportedPathsScript;
+          build-and-export-paths = mkApp (exportingBuildTool {
+            name = "build-and-export-paths";
+          });
+          build-unless-cached = mkApp (exportingBuildTool {
+            name = "build-unless-cached";
+          });
+          check-and-export-paths = mkApp (exportingBuildTool {
+            name = "check-and-export-paths";
+            runtimeInputs = [ pkgs.nix-fast-build ];
+          });
+          import-exported-paths = mkApp (nixBuiltPathsTool {
+            name = "import-exported-paths";
+          });
+          upload-exported-paths = mkApp (nixBuiltPathsTool {
+            name = "upload-exported-paths";
+            runtimeInputs = [ pkgs.cachix ];
+          });
           upload-release-assets = mkApp uploadReleaseAssetsScript;
         }
         // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {

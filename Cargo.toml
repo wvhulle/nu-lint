@@ -118,15 +118,15 @@ lsp-server = "0.7"
 lsp-types = "0.97"
 miette = { version = "7.6", features = ["fancy"] }
 nu-ansi-term = "0.50"
-nu-cli = "0.116.0"
-nu-cmd-extra = "0.116.0"
-nu-cmd-lang = "0.116.0"
-nu-command = { version = "0.116.0", features = ["sqlite"] }
+nu-cli = "0.116.1"
+nu-cmd-extra = "0.116.1"
+nu-cmd-lang = "0.116.1"
+nu-command = { version = "0.116.1", features = ["sqlite"] }
 nu-lint-analysis = { version = "1.8.0", path = "nu-lint-analysis" }
 nu-lint-rules = { version = "1.8.0", path = "nu-lint-rules" }
-nu-parser = "0.116.0"
-nu-protocol = "0.116.0"
-nu-std = "0.116.0"
+nu-parser = "0.116.1"
+nu-protocol = "0.116.1"
+nu-std = "0.116.1"
 owo-colors = "4"
 rayon = "1.10"
 regex = "1.10"

@@ -2,7 +2,7 @@ use std::ops::ControlFlow;
 
 use nu_lint_analysis::{
     LintLevel,
-    ast::{call::CallExt, span::SpanExt},
+    ast::{call::CallExt, declaration::param_type_annotation_span},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -17,7 +17,6 @@ use nu_protocol::{
 pub struct FixData {
     param_name_span: Span,
     replace_span: Span,
-    is_optional: bool,
 }
 
 fn parameter_used_as_path(block: &Block, var_id: VarId, context: &LintContext) -> bool {
@@ -40,7 +39,6 @@ fn detect_parameter(
     block: &Block,
     function_name: &str,
     signature_span: Span,
-    is_optional: bool,
     context: &LintContext,
 ) -> Option<(Detection, FixData)> {
     use nu_protocol::SyntaxShape::{Any, String as StringShape};
@@ -66,34 +64,18 @@ fn detect_parameter(
         }
     );
 
-    let param_in_sig_span = signature_span.find_substring_span(&param.name, context);
-    let param_end = find_param_type_end(param_in_sig_span, signature_span, context);
-    let replace_span = Span::new(param_in_sig_span.start, param_end);
+    let replace_span = param_type_annotation_span(param, signature_span, context)
+        .unwrap_or_else(|| Span::new(param_span.end, param_span.end));
 
     let violation =
         Detection::from_global_span(message, param_span).with_primary_label("used as path");
 
     let fix_data = FixData {
-        param_name_span: param_in_sig_span,
+        param_name_span: param_span,
         replace_span,
-        is_optional,
     };
 
     Some((violation, fix_data))
-}
-
-fn find_param_type_end(param_start: Span, signature_span: Span, context: &LintContext) -> usize {
-    let sig_text = context.span_text(signature_span);
-    let param_offset = param_start.start - signature_span.start;
-
-    let after_param = &sig_text[param_offset..];
-
-    for (i, c) in after_param.char_indices() {
-        if c == ',' || c == ']' || c == '#' {
-            return param_start.start + i;
-        }
-    }
-    signature_span.end
 }
 
 fn detect_function_parameters(
@@ -102,17 +84,9 @@ fn detect_function_parameters(
     signature_span: Span,
     context: &LintContext,
 ) -> Vec<(Detection, FixData)> {
-    let check_param = |param: &nu_protocol::PositionalArg, is_optional: bool| {
+    let check_param = |param: &nu_protocol::PositionalArg| {
         param.var_id.and_then(|var_id| {
-            detect_parameter(
-                param,
-                var_id,
-                block,
-                function_name,
-                signature_span,
-                is_optional,
-                context,
-            )
+            detect_parameter(param, var_id, block, function_name, signature_span, context)
         })
     };
 
@@ -120,20 +94,20 @@ fn detect_function_parameters(
         .signature
         .required_positional
         .iter()
-        .filter_map(|param| check_param(param, false))
+        .filter_map(&check_param)
         .chain(
             block
                 .signature
                 .optional_positional
                 .iter()
-                .filter_map(|param| check_param(param, true)),
+                .filter_map(&check_param),
         )
         .chain(
             block
                 .signature
                 .rest_positional
                 .iter()
-                .filter_map(|param| check_param(param, false)),
+                .filter_map(&check_param),
         )
         .collect()
 }
@@ -179,12 +153,13 @@ impl DetectFix for StringAsPath {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let optional_marker = if fix_data.is_optional { "?" } else { "" };
         let param_name = context.span_text(fix_data.param_name_span);
-        let new_param_text = format!("{param_name}{optional_marker}: path");
         Some(Fix {
             explanation: format!("Change `{param_name}` type to `path`").into(),
-            replacements: vec![Replacement::new(fix_data.replace_span, new_param_text)],
+            replacements: vec![Replacement::new(
+                fix_data.replace_span,
+                ": path".to_string(),
+            )],
         })
     }
 }

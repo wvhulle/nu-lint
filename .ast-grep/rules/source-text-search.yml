@@ -9,7 +9,6 @@ files:
 ignores:
   - nu-lint-rules/src/spacing/**
   - nu-lint-rules/src/documentation/add_doc_comment_exported_fn/**
-  - nu-lint-rules/src/filesystem/string_param_as_path/**
   - nu-lint-rules/src/unused_parameter/**
 utils:
   bound-to-source-text:

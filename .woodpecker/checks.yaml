@@ -13,47 +13,25 @@ variables:
     - event: pull_request
 
 steps:
-  - name: build-test-dependencies
+  - name: flake-checks
     image: nixos/nix:latest
     depends_on: []
-    environment: *nix_config
-    commands:
-      - nix run --quiet .#build-unless-cached -- .#packages.x86_64-linux.test-dependencies
-
-  - name: cargo-test
-    image: nixos/nix:latest
-    depends_on: [build-test-dependencies]
-    environment: *nix_config
-    commands:
-      - nix run --quiet .#import-exported-paths
-      - nix run --quiet .#build-and-export-paths -- .#checks.x86_64-linux.tests
-
-  - name: upload-cargo-test-cache
-    image: nixos/nix:latest
-    depends_on: [cargo-test]
     when:
       - event: [push, manual]
-        status: [success, failure]
     environment:
       <<: *nix_config
       CACHIX_AUTH_TOKEN:
         from_secret: cachix_auth_token
     commands:
-      - nix run --quiet .#upload-exported-paths
+      - nix shell --quiet --inputs-from . nixpkgs#cachix nixpkgs#nix-fast-build --command nix-fast-build --no-nom --skip-cached --cachix-cache wvhulle --push-build-closure --flake .#checks.x86_64-linux
 
-  - name: rustfmt
+  - name: flake-checks-pr
     image: nixos/nix:latest
     depends_on: []
+    when: *on_pull_requests
     environment: *nix_config
     commands:
-      - nix build --quiet --print-build-logs .#checks.x86_64-linux.fmt
-
-  - name: ast-grep
-    image: nixos/nix:latest
-    depends_on: []
-    environment: *nix_config
-    commands:
-      - nix build --quiet --print-build-logs .#checks.x86_64-linux.ast-grep
+      - nix shell --quiet --inputs-from . nixpkgs#cachix nixpkgs#nix-fast-build --command nix-fast-build --no-nom --skip-cached --flake .#checks.x86_64-linux
 
   - name: conventional-commits
     image: nixos/nix:latest

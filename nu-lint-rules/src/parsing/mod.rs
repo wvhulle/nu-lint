@@ -6,7 +6,7 @@ use nu_lint_analysis::{
     },
     context::LintContext,
 };
-use nu_protocol::ast::{Call, Expr};
+use nu_protocol::ast::{Argument, Call, Expr};
 
 pub mod lines_each_to_parse;
 pub mod lines_instead_of_split;
@@ -46,6 +46,13 @@ pub fn extract_index_from_call(call: &Call, context: &LintContext) -> Option<usi
 #[must_use]
 pub fn extract_delimiter_from_split_call(call: &Call, context: &LintContext) -> Option<String> {
     if !is_split_call(call, context) {
+        return None;
+    }
+    let changes_split_behaviour = call
+        .arguments
+        .iter()
+        .any(|argument| matches!(argument, Argument::Named(_)));
+    if changes_split_behaviour {
         return None;
     }
     let arg = call.get_first_positional_arg()?;

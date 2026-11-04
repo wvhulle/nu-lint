@@ -72,3 +72,13 @@ fn test_fix_tab_delimiter() {
     RULE.assert_fixed_contains(bad_code, "parse");
     RULE.assert_fixed_contains(bad_code, "{field0}");
 }
+
+#[test]
+fn no_fix_when_split_uses_regex_flag() {
+    RULE.assert_detects_without_fix(r"$line | split row -r '\s+' | get 1");
+}
+
+#[test]
+fn no_fix_when_split_limits_field_count() {
+    RULE.assert_detects_without_fix(r#"$line | split row -n 2 ":" | get 1"#);
+}

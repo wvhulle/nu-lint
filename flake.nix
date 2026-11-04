@@ -169,6 +169,79 @@
           pkgs.tea
         ];
 
+        buildMacosPackage =
+          macosArch:
+          let
+            macosTarget = "${macosArch}-apple-darwin";
+            macosToolchain = pkgs.rust-bin.stable.latest.minimal.override { targets = [ macosTarget ]; };
+            macosCrane = (crane.mkLib pkgs).overrideToolchain (_toolchainPkgs: macosToolchain);
+            macosSdkRoot = pkgs.pkgsCross.aarch64-darwin.apple-sdk.src;
+
+            macosArgs = {
+              inherit src;
+              strictDeps = true;
+              pname = "nu-lint-macos";
+              meta.mainProgram = "nu-lint";
+              doCheck = false;
+              dontStrip = true;
+              cargoVendorDir = macosCrane.vendorCargoDeps {
+                inherit src;
+                overrideVendorCargoPackage =
+                  lockedCrate: vendoredCrate:
+                  if lockedCrate.name == "libproc" then
+                    vendoredCrate.overrideAttrs {
+                      postPatch = ''
+                        substituteInPlace src/lib.rs \
+                          --replace-fail '#[cfg(not(docsrs))]' '#[cfg(any())]' \
+                          --replace-fail '#[cfg(docsrs)]' '#[cfg(all())]'
+                      '';
+                    }
+                  else
+                    vendoredCrate;
+              };
+              nativeBuildInputs = [
+                pkgs.cargo-zigbuild
+                pkgs.zig
+              ];
+              CARGO_BUILD_TARGET = macosTarget;
+              MACOSX_DEPLOYMENT_TARGET = "11.0";
+              SDKROOT = macosSdkRoot;
+              "CARGO_TARGET_${pkgs.lib.toUpper (builtins.replaceStrings [ "-" ] [ "_" ] macosTarget)}_RUSTFLAGS" =
+                "-C link-arg=-F${macosSdkRoot}/System/Library/Frameworks";
+              cargoCheckCommand = "true";
+              cargoBuildCommand = "cargoWithProfile zigbuild";
+              preBuild = ''
+                export HOME="$TMPDIR"
+                export ZIG_GLOBAL_CACHE_DIR="$TMPDIR/zig-global-cache"
+                export ZIG_LOCAL_CACHE_DIR="$TMPDIR/zig-local-cache"
+              '';
+            };
+          in
+          macosCrane.buildPackage (
+            macosArgs
+            // {
+              cargoArtifacts = macosCrane.buildDepsOnly macosArgs;
+              nativeBuildInputs = macosArgs.nativeBuildInputs ++ [ pkgs.rcodesign ];
+              postFixup = ''
+                rcodesign sign --binary-identifier nu-lint "$out/bin/nu-lint"
+              '';
+            }
+          );
+
+        macosPackages = {
+          aarch64 = buildMacosPackage "aarch64";
+          x86_64 = buildMacosPackage "x86_64";
+        };
+
+        macosReleaseArchives = pkgs.runCommand "nu-lint-dist-macos" { } (
+          ''
+            mkdir -p $out
+          ''
+          + pkgs.lib.concatMapAttrsStringSep "\n" (macosArch: macosPackage: ''
+            tar -czf $out/nu-lint-${macosArch}-apple-darwin.tar.gz -C ${macosPackage}/bin nu-lint
+          '') macosPackages
+        );
+
         mkApp = drv: {
           type = "app";
           program = pkgs.lib.getExe drv;
@@ -300,6 +373,9 @@
           x86_64-linux-musl = muslPackages.x86_64;
           aarch64-linux-musl = muslPackages.aarch64;
           dist = releaseArchives;
+          aarch64-apple-darwin = macosPackages.aarch64;
+          x86_64-apple-darwin = macosPackages.x86_64;
+          dist-macos = macosReleaseArchives;
           recordings = recordings.all;
         }
         // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux (

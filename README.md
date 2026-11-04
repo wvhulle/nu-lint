@@ -120,7 +120,7 @@ nix run git+https://codeberg.org/wvhulle/nu-lint
 
 ### Pre-Compiled Binaries
 
-Download the appropriate binary from the releases subpage. (Not always the most up-to-date, prefer Crates.io releases)
+Download the appropriate binary from the releases subpage, available for Linux and macOS on x86_64 and aarch64. (Not always the most up-to-date, prefer Crates.io releases)
 
 ## Editor extension
 

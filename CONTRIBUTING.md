@@ -248,7 +248,9 @@ Releases are automated with [release-plz](https://release-plz.dev) on Woodpecker
 
 1. Every push to `main` runs the tests and then opens or updates a release PR on Codeberg. That PR bumps the version from the conventional commit messages and updates `CHANGELOG.md`. Only `feat`, `fix` and `perf` commits trigger a release PR.
 2. Merging the release PR publishes the crate to crates.io and creates the `v<version>` tag and Codeberg release.
-3. The Codeberg release event builds the static musl binaries (`nix build .#dist`) and attaches them with sha256 checksums.
+3. The Codeberg release event builds the static musl binaries (`nix build .#dist`) and the macOS binaries (`nix build .#dist-macos`), and attaches them with sha256 checksums.
+
+The macOS binaries are cross-compiled on Linux with `cargo-zigbuild` against the Apple SDK from nixpkgs. CI does not upload them to Cachix, because the upload would also publish the SDK. They are never run in CI, so try a tarball on a Mac after changing this build.
 
 To preview the next version and changelog locally, run `nix develop -c release-plz update` and discard the result afterwards.
 
@@ -262,6 +264,7 @@ Everything CI runs is a flake output, so it can be run locally in the same way:
 | `sg scan` / `sg test` | Project-specific ast-grep rules in `.ast-grep/rules/` and their tests in `.ast-grep/rule-tests/` |
 | `nix run .#check-commits -- main..@` | Conventional commit message check for a revision range |
 | `nix build .#dist` | Static release binaries as `.tar.gz` |
+| `nix build .#dist-macos` | macOS release binaries as `.tar.gz`, cross-compiled from Linux |
 | `nix run .#release` | Publish an unreleased version to crates.io and create its tag and Codeberg release (CI only, needs `CODEBERG_TOKEN`) |
 | `nix run .#release-pr` | Open or update the release PR (CI only, needs `CODEBERG_TOKEN`) |
 | `cargo xtask update-dependencies` | Update the Nushell crates, `Cargo.lock` and `flake.lock`; add `--open-pr` to open a pull request (CI only, needs `CODEBERG_TOKEN`) |

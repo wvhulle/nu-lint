@@ -184,9 +184,10 @@ impl BlockExt for Block {
     }
 
     fn uses_pipeline_input(&self, context: &LintContext) -> bool {
-        self.all_elements()
+        self.pipelines
             .iter()
-            .any(|elem| elem.expr.uses_pipeline_input(context))
+            .filter_map(|pipeline| pipeline.elements.first())
+            .any(|head| head.expr.uses_pipeline_input(context))
     }
 
     fn produces_output(&self) -> bool {
@@ -199,9 +200,10 @@ impl BlockExt for Block {
     }
 
     fn find_pipeline_input(&self, context: &LintContext) -> Option<(VarId, Span)> {
-        self.all_elements()
+        self.pipelines
             .iter()
-            .find_map(|element| element.expr.find_pipeline_input(context))
+            .filter_map(|pipeline| pipeline.elements.first())
+            .find_map(|head| head.expr.find_pipeline_input(context))
     }
 
     fn find_dollar_in_usage(&self) -> Option<Span> {
@@ -229,9 +231,8 @@ impl BlockExt for Block {
         };
 
         let elements = self.all_elements();
-        let block_input_type = elements
-            .iter()
-            .find_map(|element| element.expr.find_pipeline_input(context))
+        let block_input_type = self
+            .find_pipeline_input(context)
             .and_then(|(in_var, _)| {
                 elements
                     .iter()

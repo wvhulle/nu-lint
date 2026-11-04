@@ -62,3 +62,15 @@ def make-formatter [] {
 ";
     RULE.assert_ignores(good_code);
 }
+
+#[test]
+fn ignore_in_reading_previous_pipeline_element() {
+    RULE.assert_ignores("def first-name [] { ls | open $in.0.name }");
+}
+
+#[test]
+fn ignore_in_after_command_in_let_value() {
+    RULE.assert_ignores(
+        "def shifted [offset: duration] { let moved = date now | $in + $offset; $moved }",
+    );
+}

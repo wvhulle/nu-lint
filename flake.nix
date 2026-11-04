@@ -90,6 +90,7 @@
 
         devProfileArgs = commonArgs // {
           CARGO_PROFILE = "dev";
+          pname = "nu-lint-rebuild-probe-ours";
           postUnpack = ''
             if [[ "$NIX_BUILD_TOP" != /build ]]; then
               rm -rf /tmp/nu-lint-source

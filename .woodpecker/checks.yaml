@@ -20,17 +20,17 @@ steps:
     commands:
       - nix run --quiet .#build-unless-cached -- .#packages.x86_64-linux.test-dependencies
 
-  - name: cargo-test
+  - name: flake-checks
     image: nixos/nix:latest
     depends_on: [build-test-dependencies]
     environment: *nix_config
     commands:
       - nix run --quiet .#import-exported-paths
-      - nix run --quiet .#build-and-export-paths -- .#checks.x86_64-linux.tests
+      - nix run --quiet .#check-and-export-paths -- --flake .#checks.x86_64-linux
 
-  - name: upload-cargo-test-cache
+  - name: upload-flake-checks-cache
     image: nixos/nix:latest
-    depends_on: [cargo-test]
+    depends_on: [flake-checks]
     when:
       - event: [push, manual]
         status: [success, failure]
@@ -40,20 +40,6 @@ steps:
         from_secret: cachix_auth_token
     commands:
       - nix run --quiet .#upload-exported-paths
-
-  - name: rustfmt
-    image: nixos/nix:latest
-    depends_on: []
-    environment: *nix_config
-    commands:
-      - nix build --quiet --print-build-logs .#checks.x86_64-linux.fmt
-
-  - name: ast-grep
-    image: nixos/nix:latest
-    depends_on: []
-    environment: *nix_config
-    commands:
-      - nix build --quiet --print-build-logs .#checks.x86_64-linux.ast-grep
 
   - name: conventional-commits
     image: nixos/nix:latest

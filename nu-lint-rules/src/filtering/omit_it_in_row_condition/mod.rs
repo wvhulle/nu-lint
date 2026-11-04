@@ -14,7 +14,7 @@ const ROW_CONDITION_PARAMETER: &str = "$it";
 
 struct ItFieldAccess {
     full_span: nu_protocol::Span,
-    field_name: String,
+    field_span: nu_protocol::Span,
 }
 
 fn extract_it_field_access(expr: &Expression, it_var_id: VarId) -> Option<ItFieldAccess> {
@@ -32,9 +32,7 @@ fn extract_it_field_access(expr: &Expression, it_var_id: VarId) -> Option<ItFiel
 
     let [
         PathMember::String {
-            val: field_name,
-            span: member_span,
-            ..
+            span: member_span, ..
         },
     ] = cell_path.tail.as_slice()
     else {
@@ -48,7 +46,7 @@ fn extract_it_field_access(expr: &Expression, it_var_id: VarId) -> Option<ItFiel
 
     Some(ItFieldAccess {
         full_span: expr.span,
-        field_name: field_name.clone(),
+        field_span: *member_span,
     })
 }
 
@@ -66,7 +64,7 @@ fn check_binary_op_for_it_field(
             if is_comparison {
                 log::trace!("Found comparison op, checking LHS for $it.field");
                 if let Some(it_access) = extract_it_field_access(lhs, it_var_id) {
-                    log::trace!("Found $it.{} on LHS of comparison!", it_access.field_name);
+                    log::trace!("Found $it field access on LHS of comparison!");
                     let violation = Detection::from_global_span(
                         "Field name can be used directly in row condition without `$it.` prefix",
                         it_access.full_span,
@@ -185,17 +183,11 @@ impl DetectFix for OmitItInRowCondition {
         violations
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let field_name = context.span_text(fix_data.field_span);
         Some(Fix {
-            explanation: format!(
-                "Remove `$it.` prefix from field name `{}`",
-                fix_data.field_name
-            )
-            .into(),
-            replacements: vec![Replacement::new(
-                fix_data.full_span,
-                fix_data.field_name.clone(),
-            )],
+            explanation: format!("Remove `$it.` prefix from field name `{field_name}`").into(),
+            replacements: vec![Replacement::new(fix_data.full_span, field_name.to_string())],
         })
     }
 }

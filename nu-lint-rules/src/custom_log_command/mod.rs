@@ -15,7 +15,7 @@ use nu_protocol::{
 const LOG_LEVELS: &[&str] = &["debug", "info", "warning", "error", "critical"];
 
 struct FixData {
-    name: String,
+    definition_body: nu_protocol::BlockId,
     removal_span: Span,
 }
 
@@ -114,7 +114,7 @@ impl DetectFix for CustomLogCommand {
                     .with_primary_label("custom log command");
 
                 let fix_data = FixData {
-                    name: def.name,
+                    definition_body: def.body,
                     removal_span: context.expand_span_to_statement(expr.span),
                 };
 
@@ -126,11 +126,15 @@ impl DetectFix for CustomLogCommand {
         results
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let custom_commands = context.custom_commands();
+        let definition = custom_commands
+            .iter()
+            .find(|definition| definition.body == fix_data.definition_body)?;
         Some({
             let explanation = format!(
                 "Remove custom '{}' function (add `use std/log` manually)",
-                fix_data.name
+                definition.name
             );
             let replacements = vec![Replacement::new(fix_data.removal_span, String::new())];
             Fix {

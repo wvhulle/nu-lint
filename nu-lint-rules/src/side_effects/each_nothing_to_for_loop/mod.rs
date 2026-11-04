@@ -13,7 +13,7 @@ use nu_protocol::{
 pub struct FixData {
     replace_span: Span,
     list_span: Span,
-    param_name: String,
+    param_declaration_span: Option<Span>,
     body_span: Span,
     pipeline_elements_before_each: usize,
 }
@@ -130,11 +130,12 @@ impl DetectFix for UseForOverEach {
 
                 let block = ctx.working_set.get_block(*block_id);
 
-                let param_name = block
+                let param_declaration_span = block
                     .signature
                     .required_positional
                     .first()
-                    .map_or_else(|| "item".to_string(), |p| p.name.clone());
+                    .and_then(|param| param.var_id)
+                    .map(|var_id| ctx.working_set.get_variable(var_id).declaration_span);
 
                 let Some(body_span) = get_closure_body_span(block) else {
                     return vec![];
@@ -152,7 +153,7 @@ impl DetectFix for UseForOverEach {
                 let fix_data = FixData {
                     replace_span: call.span(),
                     list_span,
-                    param_name,
+                    param_declaration_span,
                     body_span,
                     pipeline_elements_before_each,
                 };
@@ -178,7 +179,10 @@ impl DetectFix for UseForOverEach {
         };
 
         let body = context.span_text(fix_data.body_span);
-        let fix_text = format!("for {} in {} {{ {} }}", fix_data.param_name, list, body);
+        let param_name = fix_data
+            .param_declaration_span
+            .map_or("item", |span| context.span_text(span));
+        let fix_text = format!("for {param_name} in {list} {{ {body} }}");
 
         Some(Fix {
             explanation: "Convert each to for loop".into(),

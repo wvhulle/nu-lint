@@ -6,13 +6,13 @@ use nu_lint_analysis::{
     violation::{Detection, Fix, Replacement},
 };
 use nu_protocol::{
-    Span,
+    DeclId, Span,
     ast::{Argument, Call, Expr, Expression},
 };
 
 struct ShortFlagInfo {
     short_char: char,
-    long_name: String,
+    decl_id: DeclId,
     flag_span: Span,
 }
 
@@ -22,6 +22,21 @@ const LONG_FLAG_DASHES: usize = 2;
 const fn is_short_flag_spelling(flag_span: Span, long_name: &str) -> bool {
     let written_length = flag_span.end - flag_span.start;
     written_length <= MAX_SHORT_FLAG_LENGTH && written_length < long_name.len() + LONG_FLAG_DASHES
+}
+
+fn long_name_of_short_flag(
+    decl_id: DeclId,
+    short_char: char,
+    context: &LintContext,
+) -> Option<String> {
+    context
+        .working_set
+        .get_decl(decl_id)
+        .signature()
+        .named
+        .into_iter()
+        .find(|flag| flag.short == Some(short_char))
+        .map(|flag| flag.long)
 }
 
 /// Finds the short character for a given long flag name from the command
@@ -43,22 +58,22 @@ fn extract_short_flags(call: &Call, context: &LintContext) -> Vec<ShortFlagInfo>
     for arg in &call.arguments {
         if let Argument::Named((spanned_name, short_alias, _value)) = arg {
             let flag_span = spanned_name.span;
-            let long_name = spanned_name.item.clone();
+            let long_name = &spanned_name.item;
 
-            if is_short_flag_spelling(flag_span, &long_name) {
+            if is_short_flag_spelling(flag_span, long_name) {
                 // The parser has already resolved it to the long name
                 // We need to find what short char was used
                 if let Some(short_char) = short_alias.as_ref().and_then(|s| s.item.chars().next()) {
                     short_flags.push(ShortFlagInfo {
                         short_char,
-                        long_name,
+                        decl_id: call.decl_id,
                         flag_span,
                     });
-                } else if let Some(short_char) = find_short_for_long(call, &long_name, context) {
+                } else if let Some(short_char) = find_short_for_long(call, long_name, context) {
                     // Fall back to looking up from signature
                     short_flags.push(ShortFlagInfo {
                         short_char,
-                        long_name,
+                        decl_id: call.decl_id,
                         flag_span,
                     });
                 }
@@ -85,17 +100,19 @@ fn check_call(expr: &Expression, context: &LintContext) -> Vec<(Detection, Short
 
     short_flags
         .into_iter()
-        .map(|info| {
+        .filter_map(|info| {
+            let long_name = long_name_of_short_flag(info.decl_id, info.short_char, context)?;
             let detection = Detection::from_global_span(
                 format!(
-                    "Short flag '-{}' used in '{}', consider using '--{}' for clarity",
-                    info.short_char, cmd_name, info.long_name
+                    "Short flag '-{}' used in '{cmd_name}', consider using '--{long_name}' for \
+                     clarity",
+                    info.short_char
                 ),
                 info.flag_span,
             )
-            .with_primary_label(format!("use '--{}' instead", info.long_name));
+            .with_primary_label(format!("use '--{long_name}' instead"));
 
-            (detection, info)
+            Some((detection, info))
         })
         .collect()
 }
@@ -133,14 +150,11 @@ impl DetectFix for PreferLongFlags {
         context.detect_with_fix_data(|expr, ctx| check_call(expr, ctx))
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let replacement_text = format!("--{}", fix_data.long_name);
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let long_name = long_name_of_short_flag(fix_data.decl_id, fix_data.short_char, context)?;
+        let replacement_text = format!("--{long_name}");
         Some(Fix {
-            explanation: format!(
-                "Replace '-{}' with '--{}'",
-                fix_data.short_char, fix_data.long_name
-            )
-            .into(),
+            explanation: format!("Replace '-{}' with '--{long_name}'", fix_data.short_char).into(),
             replacements: vec![Replacement::new(fix_data.flag_span, replacement_text)],
         })
     }

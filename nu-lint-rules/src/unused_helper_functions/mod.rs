@@ -18,7 +18,7 @@ struct LocatedFunction {
 }
 
 struct UnusedFunctionFixData {
-    name: String,
+    definition_body: BlockId,
     removal_span: Span,
 }
 
@@ -154,7 +154,7 @@ fn create_violation(
     .with_primary_label("unused function");
 
     let fix_data = UnusedFunctionFixData {
-        name: f.definition.name.clone(),
+        definition_body: f.definition.body,
         removal_span,
     };
 
@@ -219,9 +219,13 @@ impl DetectFix for UnusedHelperFunctions {
             .collect()
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let custom_commands = context.custom_commands();
+        let definition = custom_commands
+            .iter()
+            .find(|definition| definition.body == fix_data.definition_body)?;
         Some(Fix {
-            explanation: format!("Remove unused function '{}'", fix_data.name).into(),
+            explanation: format!("Remove unused function '{}'", definition.name).into(),
             replacements: vec![Replacement::new(fix_data.removal_span, String::new())],
         })
     }

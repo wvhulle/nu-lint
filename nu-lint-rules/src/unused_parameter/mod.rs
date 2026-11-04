@@ -17,17 +17,37 @@ enum ParamType {
     Required(usize),
     Optional(usize),
     Rest(usize),
-    Named(String),
+    Named(usize),
 }
 
 struct FixData {
-    param_name: String,
     name_span: Span,
     signature_span: Span,
     decl_id: Option<DeclId>,
     is_exported: bool,
     param_type: ParamType,
     signature: nu_protocol::Signature,
+}
+
+impl FixData {
+    fn param_name(&self) -> Option<&str> {
+        let signature = &self.signature;
+        match self.param_type {
+            ParamType::Required(index) => signature
+                .required_positional
+                .get(index)
+                .map(|param| param.name.as_str()),
+            ParamType::Optional(index) => signature
+                .optional_positional
+                .get(index.checked_sub(signature.required_positional.len())?)
+                .map(|param| param.name.as_str()),
+            ParamType::Rest(_) => signature
+                .rest_positional
+                .as_ref()
+                .map(|param| param.name.as_str()),
+            ParamType::Named(index) => signature.named.get(index).map(|flag| flag.long.as_str()),
+        }
+    }
 }
 
 struct UnusedParameter;
@@ -104,14 +124,20 @@ impl DetectFix for UnusedParameter {
                         &check_ctx,
                     )
                 }))
-                .chain(def.signature.named.iter().filter_map(|f| {
-                    check_parameter(
-                        &f.long,
-                        f.var_id,
-                        ParamType::Named(f.long.clone()),
-                        &check_ctx,
-                    )
-                }))
+                .chain(
+                    def.signature
+                        .named
+                        .iter()
+                        .enumerate()
+                        .filter_map(|(flag_index, flag)| {
+                            check_parameter(
+                                &flag.long,
+                                flag.var_id,
+                                ParamType::Named(flag_index),
+                                &check_ctx,
+                            )
+                        }),
+                )
                 .collect()
         })
     }
@@ -120,9 +146,10 @@ impl DetectFix for UnusedParameter {
         // For exported functions or if we can't resolve decl_id, just prefix with
         // underscore
         if fix_data.is_exported || fix_data.decl_id.is_none() {
-            let new_name = format!("_{}", fix_data.param_name);
+            let param_name = fix_data.param_name()?;
+            let new_name = format!("_{param_name}");
             return Some(Fix {
-                explanation: format!("Prefix `{}` with underscore", fix_data.param_name).into(),
+                explanation: format!("Prefix `{param_name}` with underscore").into(),
                 replacements: vec![Replacement::new(fix_data.name_span, new_name)],
             });
         }
@@ -132,7 +159,7 @@ impl DetectFix for UnusedParameter {
         replacements.extend(find_call_site_removals(fix_data, context));
 
         Some(Fix {
-            explanation: format!("Remove unused parameter '{}'", fix_data.param_name).into(),
+            explanation: format!("Remove unused parameter '{}'", fix_data.param_name()?).into(),
             replacements,
         })
     }
@@ -160,9 +187,7 @@ fn check_parameter(
     }
 
     // Skip the built-in --help flag
-    if let ParamType::Named(ref name) = param_type
-        && name == "help"
-    {
+    if matches!(param_type, ParamType::Named(_)) && param_name == "help" {
         return None;
     }
 
@@ -191,7 +216,6 @@ fn check_parameter(
     Some((
         detection,
         FixData {
-            param_name: param_name.to_string(),
             name_span: param_span,
             signature_span: ctx.signature_span,
             decl_id: ctx.decl_id,
@@ -231,11 +255,12 @@ fn remove_param_from_signature(fix_data: &FixData) -> Replacement {
         .chain(
             sig.named
                 .iter()
-                .filter(|f| f.long != "help")
-                .filter(
-                    |f| !matches!(&fix_data.param_type, ParamType::Named(name) if name == &f.long),
-                )
-                .map(format_flag),
+                .enumerate()
+                .filter(|(_, flag)| flag.long != "help")
+                .filter(|(flag_index, _)| {
+                    !matches!(fix_data.param_type, ParamType::Named(removed) if removed == *flag_index)
+                })
+                .map(|(_, flag)| format_flag(flag)),
         )
         .collect();
 
@@ -263,7 +288,11 @@ fn find_call_site_removals(fix_data: &FixData, ctx: &LintContext) -> Vec<Replace
                 ParamType::Required(idx) | ParamType::Optional(idx) => {
                     remove_positional_arg(call, *idx, ctx)
                 }
-                ParamType::Named(flag_name) => remove_named_arg(call, flag_name, ctx),
+                ParamType::Named(flag_index) => fix_data
+                    .signature
+                    .named
+                    .get(*flag_index)
+                    .map_or_else(Vec::new, |flag| remove_named_arg(call, &flag.long, ctx)),
                 ParamType::Rest(start_idx) => {
                     remove_trailing_positional_args(call, *start_idx, ctx)
                 }

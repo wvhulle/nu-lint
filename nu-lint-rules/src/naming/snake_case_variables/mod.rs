@@ -12,9 +12,8 @@ use nu_protocol::{
 };
 
 struct SnakeCaseFixData {
-    var_name: String,
-    snake_case_name: String,
-    replacements: Vec<(Span, String)>,
+    var_name_span: Span,
+    usage_spans: Vec<Span>,
 }
 
 /// Find all usages of a variable in the AST
@@ -58,13 +57,6 @@ fn check_call(call: &Call, ctx: &LintContext) -> Option<(Detection, SnakeCaseFix
         return None;
     }
 
-    // Collect replacement spans and texts
-    let mut replacements = vec![(name_expr.span, snake_case_name.clone())];
-
-    for usage_span in find_variable_usages(*var_id, ctx) {
-        replacements.push((usage_span, format!("${snake_case_name}")));
-    }
-
     let var_type = if is_mutable {
         "Mutable variable"
     } else {
@@ -78,9 +70,8 @@ fn check_call(call: &Call, ctx: &LintContext) -> Option<(Detection, SnakeCaseFix
     .with_primary_label("non-snake_case name");
 
     let fix_data = SnakeCaseFixData {
-        var_name: var_name.to_string(),
-        snake_case_name,
-        replacements,
+        var_name_span: name_expr.span,
+        usage_spans: find_variable_usages(*var_id, ctx),
     };
 
     Some((violation, fix_data))
@@ -117,18 +108,23 @@ impl DetectFix for SnakeCaseVariables {
         })
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let replacements = fix_data
-            .replacements
-            .iter()
-            .map(|(span, text)| Replacement::new(*span, text.clone()))
-            .collect();
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let var_name = context.span_text(fix_data.var_name_span);
+        let snake_case_name = var_name.to_snake_case();
+        let usage_replacement = format!("${snake_case_name}");
+        let replacements = std::iter::once(Replacement::new(
+            fix_data.var_name_span,
+            snake_case_name.clone(),
+        ))
+        .chain(
+            fix_data
+                .usage_spans
+                .iter()
+                .map(|usage_span| Replacement::new(*usage_span, usage_replacement.clone())),
+        )
+        .collect();
         Some(Fix {
-            explanation: format!(
-                "Rename variable '{}' to '{}'",
-                fix_data.var_name, fix_data.snake_case_name
-            )
-            .into(),
+            explanation: format!("Rename variable '{var_name}' to '{snake_case_name}'").into(),
             replacements,
         })
     }

@@ -20,12 +20,8 @@ pub struct FixData {
     signature_span: Span,
     /// Block containing the function body
     block_id: nu_protocol::BlockId,
-    /// Parameter name being converted to pipeline input
-    param_name: String,
     /// `VarId` of the parameter being converted
     param_var_id: VarId,
-    /// Names of remaining parameters (excluding the pipeline input parameter)
-    remaining_params: Vec<String>,
 }
 
 /// Check if a parameter is a data type that would benefit from pipeline input
@@ -98,14 +94,10 @@ fn analyze_function_from_ast(def: &CustomCommandDef, context: &LintContext) -> V
         return vec![];
     };
 
-    let mut function_signature = block.signature.clone();
-    function_signature.name.clone_from(&def.name);
-
     pipeline_params
         .into_iter()
         .filter_map(|param| {
             create_violation_with_span(
-                &function_signature,
                 param,
                 def_span,
                 def.signature_span,
@@ -136,32 +128,21 @@ fn create_violation(
     context: &LintContext,
 ) -> Option<ViolationPair> {
     let name_span = def.declaration_span(context);
-    let signature = &def.signature;
     let block_id = def.body;
 
     let violation = Detection::from_file_span("Use pipeline input instead of parameter", name_span)
         .with_primary_label("function with single data parameter");
 
-    let remaining_params: Vec<String> = signature
-        .required_positional
-        .iter()
-        .filter(|p| p.name != param.name)
-        .map(|p| p.name.clone())
-        .collect();
-
     let fix_data = FixData {
         signature_span: def.signature_span,
         block_id,
-        param_name: param.name.clone(),
         param_var_id: param.var_id?,
-        remaining_params,
     };
 
     Some((violation, fix_data))
 }
 
 fn create_violation_with_span(
-    signature: &nu_protocol::Signature,
     param: &nu_protocol::PositionalArg,
     def_span: nu_protocol::Span,
     signature_span: Span,
@@ -172,19 +153,10 @@ fn create_violation_with_span(
         Detection::from_global_span("Use pipeline input instead of parameter", def_span)
             .with_primary_label("function with single data parameter");
 
-    let remaining_params: Vec<String> = signature
-        .required_positional
-        .iter()
-        .filter(|p| p.name != param.name)
-        .map(|p| p.name.clone())
-        .collect();
-
     let fix_data = FixData {
         signature_span,
         block_id,
-        param_name: param.name.clone(),
         param_var_id: param.var_id?,
-        remaining_params,
     };
 
     Some((violation, fix_data))
@@ -225,12 +197,13 @@ impl DetectFix for TurnPositionalIntoStreamInput {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let explanation = format!(
-            "Use pipeline input ($in) instead of parameter (${})",
-            fix_data.param_name
-        );
-
         let block = context.working_set.get_block(fix_data.block_id);
+        let required_params = &block.signature.required_positional;
+        let param_name = &required_params
+            .iter()
+            .find(|param| param.var_id == Some(fix_data.param_var_id))?
+            .name;
+        let explanation = format!("Use pipeline input ($in) instead of parameter (${param_name})");
 
         // Find all usages of the parameter variable in the block
         let mut var_spans = block.var_usages(fix_data.param_var_id, context);
@@ -274,11 +247,12 @@ impl DetectFix for TurnPositionalIntoStreamInput {
         let param_list_span = parameter_list_span(fix_data.signature_span, context)?;
 
         // Reconstruct parameter list from remaining parameters
-        let new_params_str = if fix_data.remaining_params.is_empty() {
-            "[]".to_string()
-        } else {
-            format!("[{}]", fix_data.remaining_params.join(", "))
-        };
+        let remaining_params: Vec<&str> = required_params
+            .iter()
+            .filter(|param| param.var_id != Some(fix_data.param_var_id))
+            .map(|param| param.name.as_str())
+            .collect();
+        let new_params_str = format!("[{}]", remaining_params.join(", "));
 
         replacements.push(Replacement::new(param_list_span, new_params_str));
 

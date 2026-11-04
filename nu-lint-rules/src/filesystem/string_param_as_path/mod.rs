@@ -15,7 +15,7 @@ use nu_protocol::{
 /// Semantic fix data: stores the parameter name, span, and whether it's
 /// optional
 pub struct FixData {
-    param_name: String,
+    param_name_span: Span,
     replace_span: Span,
     is_optional: bool,
 }
@@ -74,7 +74,7 @@ fn detect_parameter(
         Detection::from_global_span(message, param_span).with_primary_label("used as path");
 
     let fix_data = FixData {
-        param_name: param.name.clone(),
+        param_name_span: param_in_sig_span,
         replace_span,
         is_optional,
     };
@@ -178,11 +178,12 @@ impl DetectFix for StringAsPath {
         })
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let optional_marker = if fix_data.is_optional { "?" } else { "" };
-        let new_param_text = format!("{}{optional_marker}: path", fix_data.param_name);
+        let param_name = context.span_text(fix_data.param_name_span);
+        let new_param_text = format!("{param_name}{optional_marker}: path");
         Some(Fix {
-            explanation: format!("Change `{}` type to `path`", fix_data.param_name).into(),
+            explanation: format!("Change `{param_name}` type to `path`").into(),
             replacements: vec![Replacement::new(fix_data.replace_span, new_param_text)],
         })
     }

@@ -13,7 +13,7 @@ use nu_protocol::{
 };
 
 struct FixData {
-    var_name: String,
+    var_name_span: Span,
     declaration_span: Span,
 }
 
@@ -40,28 +40,30 @@ impl DetectFix for UnusedVariable {
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
         // 1. Collect all let/mut declarations
-        let mut declarations: Vec<(VarId, String, Span)> = Vec::new();
+        let mut declarations: Vec<(VarId, Span, Span)> = Vec::new();
         context.ast.flat_map(
             context.working_set,
             &|expr| {
                 let Expr::Call(call) = &expr.expr else {
                     return vec![];
                 };
-                let Some((var_id, var_name, _)) = call.extract_variable_declaration(context) else {
+                let Some((var_id, var_name, var_name_span)) =
+                    call.extract_variable_declaration(context)
+                else {
                     return vec![];
                 };
                 // Skip underscore-prefixed variables (intentionally unused)
                 if var_name.starts_with('_') {
                     return vec![];
                 }
-                vec![(var_id, var_name, expr.span)]
+                vec![(var_id, var_name_span, expr.span)]
             },
             &mut declarations,
         );
 
-        let decl_map: HashMap<VarId, (String, Span)> = declarations
+        let decl_map: HashMap<VarId, (Span, Span)> = declarations
             .into_iter()
-            .map(|(id, name, span)| (id, (name, span)))
+            .map(|(id, name_span, span)| (id, (name_span, span)))
             .collect();
 
         // 2. Collect all variable usages
@@ -77,9 +79,12 @@ impl DetectFix for UnusedVariable {
         decl_map
             .into_iter()
             .filter(|(var_id, _)| !used_vars.contains(var_id))
-            .map(|(_, (var_name, span))| {
+            .map(|(_, (var_name_span, span))| {
                 let detection = Detection::from_global_span(
-                    format!("Variable '{var_name}' is declared but never used"),
+                    format!(
+                        "Variable '{}' is declared but never used",
+                        context.span_text(var_name_span)
+                    ),
                     span,
                 )
                 .with_primary_label("unused variable");
@@ -87,7 +92,7 @@ impl DetectFix for UnusedVariable {
                 (
                     detection,
                     FixData {
-                        var_name,
+                        var_name_span,
                         declaration_span: span,
                     },
                 )
@@ -99,7 +104,11 @@ impl DetectFix for UnusedVariable {
         let removal_span = context.expand_span_to_statement(fix_data.declaration_span);
 
         Some(Fix {
-            explanation: format!("Remove unused variable '{}'", fix_data.var_name).into(),
+            explanation: format!(
+                "Remove unused variable '{}'",
+                context.span_text(fix_data.var_name_span)
+            )
+            .into(),
             replacements: vec![Replacement::new(removal_span, String::new())],
         })
     }

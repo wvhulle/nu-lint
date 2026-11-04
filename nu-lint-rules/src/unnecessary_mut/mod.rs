@@ -14,7 +14,6 @@ use nu_protocol::{
 
 struct UnnecessaryMutFixData {
     var_id: VarId,
-    var_name: String,
     var_span: Span,
     keyword_span: Span,
     mut_to_remove: Span,
@@ -40,7 +39,6 @@ fn extract_mut_declaration(
 
     Some(UnnecessaryMutFixData {
         var_id,
-        var_name,
         var_span,
         keyword_span: call.head,
         mut_to_remove: Span::new(call.head.start, var_span.start),
@@ -103,7 +101,7 @@ impl DetectFix for UnnecessaryMut {
                 let violation = Detection::from_global_span(
                     format!(
                         "Variable '{}' is declared as 'mut' but never reassigned",
-                        fix_data.var_name
+                        context.span_text(fix_data.var_span)
                     ),
                     fix_data.keyword_span,
                 )
@@ -115,10 +113,13 @@ impl DetectFix for UnnecessaryMut {
             .collect()
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         Some(Fix {
-            explanation: format!("Remove 'mut' keyword from variable '{}'", fix_data.var_name)
-                .into(),
+            explanation: format!(
+                "Remove 'mut' keyword from variable '{}'",
+                context.span_text(fix_data.var_span)
+            )
+            .into(),
             replacements: vec![Replacement::new(fix_data.mut_to_remove, "")],
         })
     }

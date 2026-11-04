@@ -15,7 +15,6 @@ struct RowConditionFixData {
     closure_span: Span,
     /// Block ID of the closure body for AST-based span extraction
     block_id: BlockId,
-    param_name: String,
     param_var_id: VarId,
 }
 
@@ -117,7 +116,6 @@ fn check_where_or_filter_call(
     let fix_data = RowConditionFixData {
         closure_span: arg_expr.span,
         block_id,
-        param_name: param.name,
         param_var_id: param.var_id,
     };
 
@@ -213,6 +211,12 @@ impl DetectFix for WhereClosureToIt {
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         // Extract body span and variable usages from the block (AST-based)
         let block = context.working_set.get_block(fix_data.block_id);
+        let param_name = context.span_text(
+            context
+                .working_set
+                .get_variable(fix_data.param_var_id)
+                .declaration_span,
+        );
         let body_span = extract_body_span_from_block(fix_data.block_id, context)?;
         let var_usage_spans = block.var_usages(fix_data.param_var_id, context);
 
@@ -239,7 +243,7 @@ impl DetectFix for WhereClosureToIt {
             }
             // Add the replacement for this variable
             let var_text = context.span_text(*span);
-            result.push_str(&replace_param_with_it(var_text, &fix_data.param_name));
+            result.push_str(&replace_param_with_it(var_text, param_name));
             last_end = span.end;
         }
 
@@ -266,8 +270,7 @@ impl DetectFix for WhereClosureToIt {
 
         Some(Fix {
             explanation: format!(
-                "Replace closure parameter ${} with row condition using $it",
-                fix_data.param_name
+                "Replace closure parameter ${param_name} with row condition using $it"
             )
             .into(),
             replacements,

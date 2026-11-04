@@ -23,6 +23,8 @@ steps:
   - name: cargo-test
     image: nixos/nix:latest
     depends_on: [build-test-dependencies]
+    when:
+      - status: [success, failure]
     environment: *nix_config
     commands:
       - nix run --quiet .#import-exported-paths
@@ -48,11 +50,17 @@ steps:
     commands:
       - nix run --quiet .#run-pre-commit-hooks
 
+  - name: ci-task-tests
+    image: nixos/nix:latest
+    depends_on: []
+    environment: *nix_config
+    commands:
+      - nix build --quiet --print-build-logs .#checks.x86_64-linux.ci-task-tests
+
   - name: conventional-commits
     image: nixos/nix:latest
     depends_on: []
     when: *on_pull_requests
     environment: *nix_config
     commands:
-      - git fetch --quiet origin "$${CI_COMMIT_TARGET_BRANCH}"
-      - nix run --quiet .#check-commits -- FETCH_HEAD..HEAD
+      - nix run --quiet .#check-commits -- --fetch-target-branch FETCH_HEAD..HEAD

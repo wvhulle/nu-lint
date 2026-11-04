@@ -239,106 +239,61 @@
           program = pkgs.lib.getExe drv;
         };
 
-        mkReleasePlzOnCodeberg =
-          subcommand:
-          pkgs.writeShellApplication {
-            name = subcommand;
-            runtimeInputs = [
-              ciToolchain
-              pkgs.release-plz
-              pkgs.gitMinimal
-            ];
-            text = ''
-              release-plz ${subcommand} --forge gitea --git-token "$CODEBERG_TOKEN"
+        nuScriptTool =
+          {
+            script,
+            name,
+            runtimeInputs ? [ ],
+            wrapperArgs ? [ ],
+          }:
+          pkgs.runCommand name
+            {
+              nativeBuildInputs = [ pkgs.makeBinaryWrapper ];
+              meta.mainProgram = name;
+            }
+            ''
+              makeWrapper ${pkgs.lib.getExe pkgs.nushell} $out/bin/${name} \
+                --add-flags ${script} \
+                --add-flags ${name} \
+                ${
+                  pkgs.lib.optionalString (
+                    runtimeInputs != [ ]
+                  ) "--prefix PATH : ${pkgs.lib.makeBinPath runtimeInputs}"
+                } \
+                ${pkgs.lib.escapeShellArgs wrapperArgs}
             '';
-          };
 
-        exportBuiltPathsHook = pkgs.writeShellApplication {
-          name = "export-built-paths-hook";
-          text = ''
-            exported_paths_dir="$CI_WORKSPACE/.nix-built-paths"
-            mkdir -p "$exported_paths_dir"
-            read -ra built_paths <<< "$OUT_PATHS"
-            nix copy --quiet --to "file://$exported_paths_dir?compression=zstd" "''${built_paths[@]}"
-            printf '%s\n' "''${built_paths[@]}" >> "$exported_paths_dir/paths.txt"
-          '';
-        };
+        nixBuiltPathsTool = toolArgs: nuScriptTool (toolArgs // { script = ./ci/nix-built-paths.nu; });
+        releaseTaskApp = toolArgs: mkApp (nuScriptTool (toolArgs // { script = ./ci/release-tasks.nu; }));
 
-        buildAndExportPathsScript = pkgs.writeShellApplication {
-          name = "build-and-export-paths";
-          text = ''
-            export NIX_CONFIG="''${NIX_CONFIG:-}
-            post-build-hook = ${pkgs.lib.getExe exportBuiltPathsHook}"
-            nix build --quiet --print-build-logs "$@"
-          '';
-        };
+        ciTaskTests = pkgs.runCommand "nu-lint-ci-task-tests" { nativeBuildInputs = [ pkgs.nushell ]; } ''
+          nu ${./ci}/test-ci-tasks.nu
+          touch $out
+        '';
 
-        buildUnlessCachedScript = pkgs.writeShellApplication {
-          name = "build-unless-cached";
-          text = ''
-            built_output=$(nix eval --quiet --raw "$1.outPath")
-            if nix path-info --quiet --store https://wvhulle.cachix.org "$built_output" > /dev/null 2>&1; then
-              echo "$built_output is already in Cachix"
-              exit 0
-            fi
-            ${pkgs.lib.getExe buildAndExportPathsScript} "$1"
-          '';
-        };
+        releasePlzInputs = [
+          ciToolchain
+          pkgs.release-plz
+          pkgs.gitMinimal
+        ];
 
-        importExportedPathsScript = pkgs.writeShellApplication {
-          name = "import-exported-paths";
-          text = ''
-            exported_paths_dir="$CI_WORKSPACE/.nix-built-paths"
-            if [[ ! -s "$exported_paths_dir/paths.txt" ]]; then
-              echo "No exported paths to import"
-              exit 0
-            fi
-            mapfile -t built_paths < "$exported_paths_dir/paths.txt"
-            nix copy --quiet --no-check-sigs --from "file://$exported_paths_dir" "''${built_paths[@]}"
-          '';
-        };
+        exportBuiltPathsHook = nixBuiltPathsTool { name = "export-built-paths-hook"; };
 
-        uploadExportedPathsScript = pkgs.writeShellApplication {
-          name = "upload-exported-paths";
-          runtimeInputs = [ pkgs.cachix ];
-          text = ''
-            exported_paths_dir="$CI_WORKSPACE/.nix-built-paths"
-            if [[ ! -s "$exported_paths_dir/paths.txt" ]]; then
-              echo "No newly built paths to upload"
-              exit 0
-            fi
-            ${pkgs.lib.getExe importExportedPathsScript}
-            mapfile -t built_paths < "$exported_paths_dir/paths.txt"
-            cachix push wvhulle "''${built_paths[@]}"
-          '';
-        };
+        exportingBuildTool =
+          toolArgs:
+          nixBuiltPathsTool (
+            toolArgs
+            // {
+              wrapperArgs = [
+                "--set"
+                "EXPORT_HOOK_PROGRAM"
+                (pkgs.lib.getExe exportBuiltPathsHook)
+              ];
+            }
+          );
 
-        uploadReleaseAssetsScript = pkgs.writeShellApplication {
-          name = "upload-release-assets";
-          runtimeInputs = [
-            pkgs.tea
-            pkgs.coreutils
-          ];
-          text = ''
-            cd "$1"
-            sha256sum -- *.tar.gz > sha256sum.txt
-            tea login add --name codeberg --url "$CI_FORGE_URL" --token "$CODEBERG_TOKEN"
-            tea releases assets create --login codeberg --repo "$CI_REPO" "$CI_COMMIT_TAG" ./*
-          '';
-        };
-
-        checkCommitsScript = pkgs.writeShellApplication {
-          name = "check-commits";
-          runtimeInputs = [
-            pkgs.convco
-            pkgs.gitMinimal
-          ];
-          text = ''
-            convco check "$@"
-          '';
-        };
-
-        runPreCommitHooksScript = pkgs.writeShellApplication {
+        preCommitHooksTool = nuScriptTool {
+          script = ./ci/pre-commit-hooks.nu;
           name = "run-pre-commit-hooks";
           runtimeInputs = [
             pkgs.prek
@@ -346,9 +301,6 @@
             pkgs.gitMinimal
             rustfmtToolchain
           ];
-          text = ''
-            prek run --all-files --show-diff-on-failure "$@"
-          '';
         };
 
         muslPackages = {
@@ -391,20 +343,50 @@
 
         checks = {
           inherit tests;
+          ci-task-tests = ciTaskTests;
         };
 
         apps = {
           default = mkApp self.packages.${system}.default;
           cranelift = mkApp self.packages.${system}.cranelift;
-          release = mkApp (mkReleasePlzOnCodeberg "release");
-          release-pr = mkApp (mkReleasePlzOnCodeberg "release-pr");
-          check-commits = mkApp checkCommitsScript;
-          run-pre-commit-hooks = mkApp runPreCommitHooksScript;
-          build-and-export-paths = mkApp buildAndExportPathsScript;
-          build-unless-cached = mkApp buildUnlessCachedScript;
-          import-exported-paths = mkApp importExportedPathsScript;
-          upload-exported-paths = mkApp uploadExportedPathsScript;
-          upload-release-assets = mkApp uploadReleaseAssetsScript;
+          run-pre-commit-hooks = mkApp preCommitHooksTool;
+          release = releaseTaskApp {
+            name = "release";
+            runtimeInputs = releasePlzInputs;
+          };
+          release-pr = releaseTaskApp {
+            name = "release-pr";
+            runtimeInputs = releasePlzInputs;
+          };
+          authenticate-git-origin = releaseTaskApp {
+            name = "authenticate-git-origin";
+            runtimeInputs = [ pkgs.gitMinimal ];
+          };
+          collect-release-archives = releaseTaskApp { name = "collect-release-archives"; };
+          upload-release-assets = releaseTaskApp {
+            name = "upload-release-assets";
+            runtimeInputs = [ pkgs.tea ];
+          };
+          check-commits = releaseTaskApp {
+            name = "check-commits";
+            runtimeInputs = [
+              pkgs.convco
+              pkgs.gitMinimal
+            ];
+          };
+          build-and-export-paths = mkApp (exportingBuildTool {
+            name = "build-and-export-paths";
+          });
+          build-unless-cached = mkApp (exportingBuildTool {
+            name = "build-unless-cached";
+          });
+          import-exported-paths = mkApp (nixBuiltPathsTool {
+            name = "import-exported-paths";
+          });
+          upload-exported-paths = mkApp (nixBuiltPathsTool {
+            name = "upload-exported-paths";
+            runtimeInputs = [ pkgs.cachix ];
+          });
         }
         // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
           publish-recordings = mkApp recordings.publish-recordings;

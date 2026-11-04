@@ -38,10 +38,10 @@ steps:
       JJ_USER: nu-lint-bot
       JJ_EMAIL: willemvanhulle@protonmail.com
       CODEBERG_TOKEN:
-        from_secret: codeberg_token
+        from_secret: bot_token
     commands:
       - nix run --quiet .#build-and-export-paths -- .#recordings --max-jobs 1
-      - nix run --quiet .#publish-recordings -- result "https://wvhulle:$${CODEBERG_TOKEN}@codeberg.org/$${CI_REPO}.git"
+      - nix run --quiet .#publish-recordings -- result "https://wvhulle-bot:$${CODEBERG_TOKEN}@codeberg.org/$${CI_REPO}.git"
 
   - name: upload-recordings-cache
     image: nixos/nix:latest

@@ -18,12 +18,12 @@ variables:
     GIT_COMMITTER_NAME: nu-lint-bot
     GIT_COMMITTER_EMAIL: willemvanhulle@protonmail.com
     CODEBERG_TOKEN:
-      from_secret: codeberg_token
+      from_secret: bot_token
 
 steps:
   - name: update-example-config-pr
     image: nixos/nix:latest
     environment: *docs_env
     commands:
-      - git remote set-url origin "https://wvhulle:$${CODEBERG_TOKEN}@codeberg.org/$${CI_REPO}.git"
+      - nix run --quiet .#authenticate-git-origin
       - nix develop --quiet --command cargo xtask update-example-config --open-pr

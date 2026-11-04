@@ -1,5 +1,3 @@
-use core::iter;
-
 use nu_lint_analysis::{
     LintLevel,
     ast::{call::CallExt, expression::ExpressionExt},
@@ -181,38 +179,71 @@ fn walk_if_else_chain(
     context: &LintContext,
 ) -> ChainAnalysis {
     let mut current_call = first_call;
-    let mut chain_length = 2; // First if + one else-if
+    let mut chain_length = 2;
+    let mut consistent_variable = true;
 
-    // Collect all subsequent else-if branches
-    let subsequent_branches = iter::from_fn(|| {
-        // Check if current branch compares the same variable
-        let compares_same_var = current_call
+    loop {
+        consistent_variable &= current_call
             .get_first_positional_arg()
             .and_then(|arg| extract_compared_variable(arg, context))
             .is_some_and(|var_span| context.span_text(var_span) == compared_var);
 
-        // Try to get the next else-if branch
-        let (is_else_if, else_expr) = current_call.get_else_branch()?;
-        if !is_else_if {
-            return None;
+        match next_else_if_call(current_call, context) {
+            Some(next_call) => {
+                current_call = next_call;
+                chain_length += 1;
+            }
+            None => break,
         }
-
-        let Expr::Call(next_call) = &else_expr.expr else {
-            return None;
-        };
-
-        (next_call.builtin_name(context) == Some("if")).then(|| {
-            current_call = next_call;
-            chain_length += 1;
-            compares_same_var
-        })
-    })
-    .collect::<Vec<_>>();
+    }
 
     ChainAnalysis {
         length: chain_length,
-        consistent_variable: subsequent_branches.iter().all(|&same| same),
+        consistent_variable,
     }
+}
+
+fn next_else_if_call<'a>(call: &'a Call, context: &LintContext) -> Option<&'a Call> {
+    let (is_else_if, else_expr) = call.get_else_branch()?;
+    let Expr::Call(next_call) = &else_expr.expr else {
+        return None;
+    };
+    (is_else_if && next_call.builtin_name(context) == Some("if")).then_some(next_call)
+}
+
+fn is_equality_with_literal(condition: &Expression) -> bool {
+    let Expr::BinaryOp(left, op, right) = &condition.expr else {
+        return false;
+    };
+    let is_literal = |operand: &Expression| {
+        matches!(
+            operand.expr,
+            Expr::Bool(_)
+                | Expr::Float(_)
+                | Expr::Int(_)
+                | Expr::Nothing
+                | Expr::RawString(_)
+                | Expr::String(_)
+        )
+    };
+    matches!(
+        op.expr,
+        Expr::Operator(Operator::Comparison(Comparison::Equal))
+    ) && (is_literal(left) || is_literal(right))
+}
+
+fn chain_compares_literals_only(first_call: &Call, context: &LintContext) -> bool {
+    let mut current_call = Some(first_call);
+    while let Some(call) = current_call {
+        if !call
+            .get_first_positional_arg()
+            .is_some_and(is_equality_with_literal)
+        {
+            return false;
+        }
+        current_call = next_else_if_call(call, context);
+    }
+    true
 }
 
 /// Analyze an if-call and its else branch to detect if-else-if chains
@@ -266,11 +297,12 @@ fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<(Detection, Fi
     };
 
     // Collect branch data for fix generation (only if consistent variable)
-    let (branches, final_else) = if analysis.consistent_variable {
-        collect_chain_branches(call, context)
-    } else {
-        (vec![], None)
-    };
+    let (branches, final_else) =
+        if analysis.consistent_variable && chain_compares_literals_only(call, context) {
+            collect_chain_branches(call, context)
+        } else {
+            (vec![], None)
+        };
 
     let fix_data = FixData {
         call_span: call.span(),

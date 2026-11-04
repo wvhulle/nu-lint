@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 
+use nu_parser::TokenContents;
 use nu_protocol::{
     BlockId, PositionalArg, Span, SyntaxShape, Type,
     ast::{Call, Expr},
@@ -44,6 +45,56 @@ pub fn has_input_output_annotation(signature_span: Span, context: &LintContext) 
     lex_signature_tokens(signature_span, context)
         .get(1)
         .is_some_and(|token| context.working_set.get_span_contents(token.span) == b":")
+}
+
+#[must_use]
+pub fn parameter_removal_span(
+    name_span: Span,
+    signature_span: Span,
+    context: &LintContext,
+) -> Option<Span> {
+    let interior = parameter_list_interior(signature_span, context)?;
+    let (tokens, _) = nu_parser::lex_signature(
+        context.working_set.get_span_contents(interior),
+        interior.start,
+        b"\n\r",
+        b":=,",
+        false,
+    );
+    let token_is = |token_index: usize, expected: &[u8]| {
+        tokens
+            .get(token_index)
+            .is_some_and(|token| context.working_set.get_span_contents(token.span) == expected)
+    };
+    let name_index = tokens
+        .iter()
+        .position(|token| token.span.start == name_span.start)?;
+
+    let mut next_index = name_index + 1;
+    for annotation_separator in [b":", b"="] {
+        if token_is(next_index, annotation_separator) {
+            next_index += 2;
+        }
+    }
+    if token_is(next_index, b",") {
+        next_index += 1;
+    }
+    while tokens
+        .get(next_index)
+        .is_some_and(|token| token.contents == TokenContents::Comment)
+    {
+        next_index += 1;
+    }
+
+    if let Some(next_token) = tokens.get(next_index) {
+        return Some(Span::new(name_span.start, next_token.span.start));
+    }
+
+    let removal_start = (0..name_index)
+        .rev()
+        .find(|&token_index| !token_is(token_index, b","))
+        .map_or(interior.start, |token_index| tokens[token_index].span.end);
+    Some(Span::new(removal_start, interior.end))
 }
 
 #[must_use]

@@ -154,3 +154,43 @@ fn fix_removes_head_without_spaces_around_pipe() {
         "def get-first [] { first }",
     );
 }
+
+#[test]
+fn fix_keeps_types_of_other_parameters() {
+    RULE.assert_fixed_contains(
+        "def tag [items: list<string>, label: string] { $items | each { |item| $label } }",
+        "def tag [label: string] { each",
+    );
+}
+
+#[test]
+fn fix_keeps_optional_parameter() {
+    RULE.assert_fixed_contains(
+        "def pick [items, count?: int] { $items | first $count }",
+        "def pick [count?: int] { first $count }",
+    );
+}
+
+#[test]
+fn fix_keeps_flag() {
+    RULE.assert_fixed_contains(
+        "def pick [items, --reverse] { $items | first }",
+        "def pick [--reverse] { first }",
+    );
+}
+
+#[test]
+fn fix_keeps_rest_parameter() {
+    RULE.assert_fixed_contains(
+        "def pick [items, ...others] { $items | append $others }",
+        "def pick [...others] { append $others }",
+    );
+}
+
+#[test]
+fn fix_removes_last_parameter_without_trailing_comma() {
+    RULE.assert_fixed_contains(
+        "def pick [--reverse, items] { $items | first }",
+        "def pick [--reverse] { first }",
+    );
+}

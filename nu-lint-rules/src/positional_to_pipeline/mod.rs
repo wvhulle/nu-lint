@@ -3,7 +3,7 @@ use nu_lint_analysis::{
     ast::{
         block::BlockExt,
         call::CallExt,
-        declaration::{CustomCommandDef, parameter_list_span},
+        declaration::{CustomCommandDef, parameter_removal_span},
         expression::ExpressionExt,
     },
     context::LintContext,
@@ -244,17 +244,14 @@ impl DetectFix for TurnPositionalIntoStreamInput {
             })
             .collect();
 
-        let param_list_span = parameter_list_span(fix_data.signature_span, context)?;
-
-        // Reconstruct parameter list from remaining parameters
-        let remaining_params: Vec<&str> = required_params
-            .iter()
-            .filter(|param| param.var_id != Some(fix_data.param_var_id))
-            .map(|param| param.name.as_str())
-            .collect();
-        let new_params_str = format!("[{}]", remaining_params.join(", "));
-
-        replacements.push(Replacement::new(param_list_span, new_params_str));
+        let parameter_name_span = context
+            .working_set
+            .get_variable(fix_data.param_var_id)
+            .declaration_span;
+        replacements.push(Replacement::new(
+            parameter_removal_span(parameter_name_span, fix_data.signature_span, context)?,
+            String::new(),
+        ));
 
         Some(Fix {
             explanation: explanation.into(),

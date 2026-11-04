@@ -14,3 +14,6 @@ invalid:
   - |
     struct Rewrite { remaining_params: Vec<String> }
     impl DetectFix for Unused { type FixInput<'a> = Rewrite; }
+  - |
+    struct FixData<'a> { variable: &'a str }
+    impl DetectFix for Unused { type FixInput<'a> = FixData<'a>; }

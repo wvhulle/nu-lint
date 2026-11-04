@@ -10,6 +10,7 @@ ignores:
   - nu-lint-rules/src/add_hat_external_commands/mod.rs
   - nu-lint-rules/src/custom_log_command/mod.rs
   - nu-lint-rules/src/explicit_long_flags/mod.rs
+  - nu-lint-rules/src/external_tools/date_to_builtin/mod.rs
   - nu-lint-rules/src/filesystem/from_after_parsed_open/mod.rs
   - nu-lint-rules/src/filesystem/open_raw_from_to_open/mod.rs
   - nu-lint-rules/src/filesystem/string_param_as_path/mod.rs
@@ -43,17 +44,31 @@ rule:
     regex: \bString\b|\bstr\b
     not:
       regex: "'static"
-  inside:
-    stopBy: end
-    kind: struct_item
-    has:
-      field: name
-      pattern: $FIX_STRUCT
-    inside:
-      kind: source_file
-      has:
+  any:
+    - inside:
         stopBy: end
-        pattern:
-          context: "impl X for Y { type FixInput<'a> = $FIX_STRUCT; }"
-          selector: type_item
+        kind: struct_item
+        has:
+          field: name
+          pattern: $FIX_STRUCT
+        inside:
+          kind: source_file
+          has:
+            stopBy: end
+            pattern:
+              context: "impl X for Y { type FixInput<'a> = $FIX_STRUCT; }"
+              selector: type_item
+    - inside:
+        stopBy: end
+        kind: struct_item
+        has:
+          field: name
+          pattern: $FIX_STRUCT
+        inside:
+          kind: source_file
+          has:
+            stopBy: end
+            pattern:
+              context: "impl X for Y { type FixInput<'a> = $FIX_STRUCT<'a>; }"
+              selector: type_item
 note: See CONTRIBUTING.md, section Implementing auto-fix.

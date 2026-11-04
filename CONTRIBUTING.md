@@ -256,17 +256,20 @@ To preview the next version and changelog locally, run `nix develop -c release-p
 
 ## Checks and entry points
 
-Everything CI runs is a flake output, so it can be run locally in the same way:
+Everything CI runs is a flake app, so it can be run locally in the same way. CI tasks are Nushell scripts in `ci/`, which `nu-lint` lints as part of the tests, and workflows hold no shell logic:
 
 | Command | Purpose |
 |---------|---------|
-| `nix flake check` | Tests and `cargo fmt` check |
+| `nix flake check` | Tests, `cargo fmt` check and CI task tests |
 | `sg scan` / `sg test` | Project-specific ast-grep rules in `.ast-grep/rules/` and their tests in `.ast-grep/rule-tests/` |
 | `nix run .#check-commits -- main..@` | Conventional commit message check for a revision range |
 | `nix build .#dist` | Static release binaries as `.tar.gz` |
 | `nix build .#dist-macos` | macOS release binaries as `.tar.gz`, cross-compiled from Linux |
 | `nix run .#release` | Publish an unreleased version to crates.io and create its tag and Codeberg release (CI only, needs `CODEBERG_TOKEN`) |
 | `nix run .#release-pr` | Open or update the release PR (CI only, needs `CODEBERG_TOKEN`) |
+| `nix run .#collect-release-archives -- <result> <dist>` | Copy the archives of a build result into a release directory |
+| `nix run .#upload-release-assets -- <dist>` | Checksum the archives in a release directory and attach them to the Codeberg release (CI only, needs `CODEBERG_TOKEN`) |
+| `nix run .#authenticate-git-origin` | Add `CODEBERG_TOKEN` to the `origin` URL before a CI task pushes (CI only) |
 | `cargo xtask update-dependencies` | Update the Nushell crates, `Cargo.lock` and `flake.lock`; add `--open-pr` to open a pull request (CI only, needs `CODEBERG_TOKEN`) |
 | `nix run .#build-unless-cached -- <installable>` | Build and export an output unless it is already in Cachix (CI only, needs `CI_WORKSPACE`) |
 | `nix run .#import-exported-paths` | Import paths exported by an earlier step (CI only, needs `CI_WORKSPACE`) |

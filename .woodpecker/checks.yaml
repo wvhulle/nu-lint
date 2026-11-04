@@ -23,6 +23,8 @@ steps:
   - name: cargo-test
     image: nixos/nix:latest
     depends_on: [build-test-dependencies]
+    when:
+      - status: [success, failure]
     environment: *nix_config
     commands:
       - nix run --quiet .#import-exported-paths
@@ -61,5 +63,4 @@ steps:
     when: *on_pull_requests
     environment: *nix_config
     commands:
-      - git fetch --quiet origin "$${CI_COMMIT_TARGET_BRANCH}"
-      - nix run --quiet .#check-commits -- FETCH_HEAD..HEAD
+      - nix run --quiet .#check-commits -- --fetch-target-branch FETCH_HEAD..HEAD

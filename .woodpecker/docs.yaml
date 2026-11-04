@@ -25,5 +25,5 @@ steps:
     image: nixos/nix:latest
     environment: *docs_env
     commands:
-      - git remote set-url origin "https://wvhulle:$${CODEBERG_TOKEN}@codeberg.org/$${CI_REPO}.git"
+      - nix run --quiet .#authenticate-git-origin
       - nix develop --quiet --command cargo xtask update-example-config --open-pr

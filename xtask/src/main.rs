@@ -1,12 +1,15 @@
+mod codeberg_pull_request;
+mod dependency_updates;
 mod recordings;
 
 use std::{
-    env, fs, io,
+    fs, io,
     path::{Path, PathBuf},
-    process::{Command, ExitCode},
+    process::ExitCode,
 };
 
 use clap::{Parser, Subcommand};
+use codeberg_pull_request::{CodebergRepository, run_checked};
 use nu_lint::example_config_toml;
 
 const START_MARKER: &str = "<!-- start-example-config -->\n";
@@ -27,6 +30,14 @@ enum XtaskCommand {
         #[arg(
             long,
             help = "Commit, push and open a Codeberg pull request when it changed"
+        )]
+        open_pr: bool,
+    },
+    #[command(about = "Update the Nushell crates, Cargo.lock and flake.lock")]
+    UpdateDependencies {
+        #[arg(
+            long,
+            help = "Commit, push and open a Codeberg pull request when changed"
         )]
         open_pr: bool,
     },
@@ -59,23 +70,9 @@ fn with_regenerated_example(configuration_doc: &str) -> io::Result<String> {
     ))
 }
 
-fn run_checked(program: &str, arguments: &[&str]) -> io::Result<String> {
-    let output = Command::new(program).args(arguments).output()?;
-    if !output.status.success() {
-        return Err(io::Error::other(format!(
-            "{program} {} failed: {}",
-            arguments.join(" "),
-            String::from_utf8_lossy(&output.stderr)
-        )));
-    }
-    Ok(String::from_utf8_lossy(&output.stdout).into_owned())
-}
-
 fn open_example_config_pr(doc_path: &Path) -> io::Result<()> {
     let doc_path = doc_path.to_string_lossy();
-    let forge_url = env::var("CI_FORGE_URL").map_err(io::Error::other)?;
-    let codeberg_token = env::var("CODEBERG_TOKEN").map_err(io::Error::other)?;
-    let repository = env::var("CI_REPO").map_err(io::Error::other)?;
+    let codeberg_repository = CodebergRepository::log_in()?;
 
     run_checked("git", &["checkout", "-B", BOT_BRANCH])?;
     run_checked(
@@ -84,62 +81,12 @@ fn open_example_config_pr(doc_path: &Path) -> io::Result<()> {
     )?;
     run_checked("git", &["push", "--force", "origin", BOT_BRANCH])?;
 
-    run_checked(
-        "tea",
-        &[
-            "login",
-            "add",
-            "--name",
-            "codeberg",
-            "--url",
-            &forge_url,
-            "--token",
-            &codeberg_token,
-        ],
-    )?;
-    let open_pr_heads = run_checked(
-        "tea",
-        &[
-            "pulls",
-            "list",
-            "--login",
-            "codeberg",
-            "--repo",
-            &repository,
-            "--state",
-            "open",
-            "--fields",
-            "head",
-            "--output",
-            "simple",
-        ],
-    )?;
-    if open_pr_heads.lines().any(|head| head.trim() == BOT_BRANCH) {
-        println!("Updated existing pull request from {BOT_BRANCH}");
-        return Ok(());
-    }
-    run_checked(
-        "tea",
-        &[
-            "pulls",
-            "create",
-            "--login",
-            "codeberg",
-            "--repo",
-            &repository,
-            "--head",
-            BOT_BRANCH,
-            "--base",
-            "main",
-            "--title",
-            BOT_COMMIT_MESSAGE,
-            "--description",
-            "Regenerated with `cargo xtask update-example-config` after the configuration options \
-             changed.",
-        ],
-    )?;
-    println!("Opened pull request from {BOT_BRANCH}");
-    Ok(())
+    codeberg_repository.open_or_keep_pull_request(
+        BOT_BRANCH,
+        BOT_COMMIT_MESSAGE,
+        "Regenerated with `cargo xtask update-example-config` after the configuration options \
+         changed.",
+    )
 }
 
 fn update_example_config(open_pr: bool) -> io::Result<()> {
@@ -162,6 +109,9 @@ fn main() -> ExitCode {
     let XtaskCli { command } = XtaskCli::parse();
     let task_outcome = match command {
         XtaskCommand::UpdateExampleConfig { open_pr } => update_example_config(open_pr),
+        XtaskCommand::UpdateDependencies { open_pr } => {
+            dependency_updates::update_dependencies(open_pr)
+        }
         XtaskCommand::RecordScene { tape, out } => recordings::record_scene(&tape, &out),
         XtaskCommand::PublishRecordings {
             recordings,

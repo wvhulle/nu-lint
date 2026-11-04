@@ -161,6 +161,7 @@
 
         devTools = [
           pkgs.ast-grep
+          pkgs.cargo-edit
           pkgs.prek
           pkgs.convco
           pkgs.release-plz

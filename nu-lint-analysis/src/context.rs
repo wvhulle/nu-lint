@@ -1,8 +1,8 @@
-use std::{collections::BTreeSet, iter::once, ops::ControlFlow, str::from_utf8, vec::Vec};
+use std::{collections::BTreeSet, iter::once, ops::ControlFlow, ptr, str::from_utf8, vec::Vec};
 
 use nu_protocol::{
     Span,
-    ast::{Block, Expr, Expression, Traverse},
+    ast::{Block, Expr, Expression, Pipeline, Traverse},
     engine::{EngineState, StateWorkingSet},
 };
 
@@ -248,39 +248,72 @@ impl<'a> LintContext<'a> {
     /// - If only pipeline: expand to full line
     #[must_use]
     pub fn expand_span_to_statement(&self, span: Span) -> Span {
-        let pipelines = &self.ast.pipelines;
+        let mut nested_block_ids = Vec::new();
+        self.ast.flat_map(
+            self.working_set,
+            &|expr| expr.extract_block_id().into_iter().collect(),
+            &mut nested_block_ids,
+        );
 
-        // Find which pipeline contains this span
-        let Some(idx) = pipelines.iter().position(|p| {
-            p.elements
+        let contains_span = |pipeline: &Pipeline| {
+            pipeline
+                .elements
                 .first()
-                .is_some_and(|e| e.expr.span.start <= span.start)
-                && p.elements
+                .is_some_and(|first_element| first_element.expr.span.start <= span.start)
+                && pipeline
+                    .elements
                     .last()
-                    .is_some_and(|e| e.expr.span.end >= span.end)
-        }) else {
+                    .is_some_and(|last_element| last_element.expr.span.end >= span.end)
+        };
+        let pipeline_width = |pipeline: &Pipeline| {
+            pipeline
+                .elements
+                .last()
+                .map_or(usize::MAX, |last_element| last_element.expr.span.end)
+                - pipeline
+                    .elements
+                    .first()
+                    .map_or(0, |first_element| first_element.expr.span.start)
+        };
+
+        let enclosing_blocks = once(self.ast).chain(
+            nested_block_ids
+                .iter()
+                .map(|block_id| self.working_set.get_block(*block_id).as_ref()),
+        );
+        let innermost_statement = enclosing_blocks
+            .filter_map(|block| {
+                let statement_index = block.pipelines.iter().position(contains_span)?;
+                Some((block, statement_index))
+            })
+            .min_by_key(|(block, statement_index)| {
+                pipeline_width(&block.pipelines[*statement_index])
+            });
+
+        let Some((block, statement_index)) = innermost_statement else {
             return self.expand_span_to_full_lines(span);
         };
 
-        // If there's a next pipeline, remove from span.start to next pipeline's
-        // start
-        if let Some(next) = pipelines.get(idx + 1)
-            && let Some(first_elem) = next.elements.first()
+        if let Some(next_element) = block
+            .pipelines
+            .get(statement_index + 1)
+            .and_then(|next_pipeline| next_pipeline.elements.first())
         {
-            return Span::new(span.start, first_elem.expr.span.start);
+            return Span::new(span.start, next_element.expr.span.start);
         }
 
-        // If there's a previous pipeline, remove from previous pipeline's end to
-        // span.end
-        if idx > 0
-            && let Some(prev) = pipelines.get(idx - 1)
-            && let Some(last_elem) = prev.elements.last()
+        if let Some(previous_element) = statement_index
+            .checked_sub(1)
+            .and_then(|previous_index| block.pipelines.get(previous_index))
+            .and_then(|previous_pipeline| previous_pipeline.elements.last())
         {
-            return Span::new(last_elem.expr.span.end, span.end);
+            return Span::new(previous_element.expr.span.end, span.end);
         }
 
-        // Only pipeline - expand to full line
-        self.expand_span_to_full_lines(span)
+        if ptr::eq(block, self.ast) {
+            return self.expand_span_to_full_lines(span);
+        }
+        span
     }
 
     /// Collect detected violations with associated fix data using a closure

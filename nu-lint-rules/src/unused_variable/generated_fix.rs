@@ -137,3 +137,19 @@ fn no_fix_when_effect_is_nested_in_closure() {
 fn fix_removes_side_effect_free_pipeline() {
     RULE.assert_fix_erases("let total = ([1 2] | math sum)", "let total");
 }
+
+#[test]
+fn fix_keeps_rest_of_function_body() {
+    RULE.assert_fixed_is(
+        "def compute [] {\n  let unused = 1; let kept = 2\n  print $kept\n}\nprint done\n",
+        "def compute [] {\n  let kept = 2\n  print $kept\n}\nprint done\n",
+    );
+}
+
+#[test]
+fn fix_keeps_braces_when_declaration_is_only_statement() {
+    RULE.assert_fixed_is(
+        "def compute [] { let unused = 1 }\n",
+        "def compute [] {  }\n",
+    );
+}

@@ -81,3 +81,32 @@ fn test_iterative_fixes_preserve_utf8() {
         "Result should contain valid characters"
     );
 }
+
+fn fix_with_all_rules(source: &str) -> String {
+    let engine = lint_engine_with_all_rules(Config::default());
+    apply_fixes_iteratively(source, &engine).0
+}
+
+#[test]
+fn fixes_keep_the_split_result_expression() {
+    let fixed = fix_with_all_rules("let parts = (\"a:b:c\" | split row \":\")\n$parts | get 1\n");
+    assert!(fixed.contains("parse"), "fixed source: {fixed:?}");
+}
+
+#[test]
+fn fixes_keep_statements_between_split_and_access() {
+    let fixed = fix_with_all_rules(
+        "let parts = (\"a:b:c\" | split row \":\")\nprint \"keep me\"\n$parts | get 1\n",
+    );
+    assert!(
+        fixed.contains("print \"keep me\""),
+        "fixed source: {fixed:?}"
+    );
+    assert!(fixed.contains("$parts"), "fixed source: {fixed:?}");
+}
+
+#[test]
+fn fixes_keep_unused_variables_with_side_effects() {
+    let source = "let removed = (rm data.txt)\nprint done\n";
+    assert!(fix_with_all_rules(source).contains("rm data.txt"));
+}

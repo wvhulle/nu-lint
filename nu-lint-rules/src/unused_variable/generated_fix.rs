@@ -107,3 +107,33 @@ fn test_fix_semicolon_preserves_following_command() {
     let expected = r#"head -n 10 README.md"#;
     RULE.assert_fixed_is(code, expected);
 }
+
+#[test]
+fn no_fix_when_value_runs_external_command() {
+    RULE.assert_detects_without_fix("let response = (^curl -X POST https://example.com)");
+}
+
+#[test]
+fn no_fix_when_value_changes_files() {
+    RULE.assert_detects_without_fix("let removed = (rm data.txt)");
+}
+
+#[test]
+fn no_fix_when_value_uses_network() {
+    RULE.assert_detects_without_fix("let response = (http post https://example.com body)");
+}
+
+#[test]
+fn no_fix_when_value_calls_custom_command() {
+    RULE.assert_detects_without_fix("def deploy [] { ^make deploy }\nlet deployed = (deploy)");
+}
+
+#[test]
+fn no_fix_when_effect_is_nested_in_closure() {
+    RULE.assert_detects_without_fix("let removed = ([a b] | each { |file| rm $file })");
+}
+
+#[test]
+fn fix_removes_side_effect_free_pipeline() {
+    RULE.assert_fix_erases("let total = ([1 2] | math sum)", "let total");
+}

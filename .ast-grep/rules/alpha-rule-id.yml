@@ -3,7 +3,7 @@
 
 id: alpha-rule-id
 message: IDs of rules should be lowercase letters separated by underscores.
-severity: warning # error, warning, info, hint
+severity: error
 language: Rust
 rule:
     kind: string_literal

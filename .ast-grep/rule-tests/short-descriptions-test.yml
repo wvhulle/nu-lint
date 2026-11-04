@@ -1,0 +1,9 @@
+id: short-descriptions
+valid:
+  - |
+    fn short_description(&self) -> &'static str { "Variable is declared but never read" }
+invalid:
+  - |
+    fn short_description(&self) -> &'static str { "Too short" }
+  - |
+    fn short_description(&self) -> &'static str { "This description keeps going for far longer than the limit of seventy characters" }

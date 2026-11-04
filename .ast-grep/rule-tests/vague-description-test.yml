@@ -1,0 +1,15 @@
+id: vague-description
+valid:
+  - |
+    fn short_description(&self) -> &'static str { "Run scripts with the `run` keyword" }
+  - |
+    fn short_description(&self) -> &'static str { "Run Nu scripts with the `run` keyword" }
+  - |
+    fn long_description(&self) -> Option<&'static str> { Some("Removed in Nushell 0.116.0") }
+invalid:
+  - |
+    fn short_description(&self) -> &'static str { "Prefer `first` over `get 0`" }
+  - |
+    fn short_description(&self) -> &'static str { "Replaceable with Nushell pipeline" }
+  - |
+    fn long_description(&self) -> Option<&'static str> { Some("Nu pipelines stream") }

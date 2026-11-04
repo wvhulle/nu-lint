@@ -1,25 +1,44 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
 
 id: source-text-search
-message: String search or trimming on source text. Match on the AST (Expr, Call, spans) instead.
-severity: warning
+message: String search, comparison, slicing or trimming on source text. Match on the AST (Expr, Call, spans) instead.
+severity: error
 language: Rust
 files:
   - nu-lint-rules/src/**
+ignores:
+  - nu-lint-rules/src/spacing/**
+  - nu-lint-rules/src/documentation/add_doc_comment_exported_fn/**
+  - nu-lint-rules/src/filesystem/string_param_as_path/**
+  - nu-lint-rules/src/unused_parameter/**
+utils:
+  bound-to-source-text:
+    inside:
+      kind: function_item
+      stopBy: end
+      has:
+        stopBy: end
+        pattern: let $SOURCE_TEXT = $CTX.$SOURCE_ACCESSOR($$$);
 rule:
   any:
     - pattern: $CTX.source_contains($$$)
     - pattern: $CTX.$SOURCE_ACCESSOR($$$).$STRING_METHOD($$$)
-    - pattern: $SOURCE_TEXT.$STRING_METHOD($$$)
-      inside:
-        kind: function_item
-        stopBy: end
-        has:
-          stopBy: end
-          pattern: let $SOURCE_TEXT = $CTX.$SOURCE_ACCESSOR($$$);
+    - pattern: $CTX.$SOURCE_ACCESSOR($$$) == $LITERAL
+    - pattern: $CTX.$SOURCE_ACCESSOR($$$) != $LITERAL
+    - all:
+        - any:
+            - pattern: $SOURCE_TEXT.$STRING_METHOD($$$)
+            - pattern: $SOURCE_TEXT == $LITERAL
+            - pattern: $SOURCE_TEXT != $LITERAL
+            - pattern: $SOURCE_TEXT[$RANGE]
+        - matches: bound-to-source-text
 constraints:
   SOURCE_ACCESSOR:
     regex: ^(span_text|expr_text|source_before_span|source_after_span|source_between_span_ends)$
   STRING_METHOD:
     regex: ^(contains|starts_with|ends_with|find|rfind|split\w*|rsplit\w*|trim\w*|strip_prefix|strip_suffix|lines|chars|char_indices|bytes|matches|match_indices|replace)$
-note: CONTRIBUTING.md, section Detection.
+  LITERAL:
+    kind: string_literal
+  RANGE:
+    kind: range_expression
+note: Files in ignores inspect comments, separators or layout, which the AST does not contain. See CONTRIBUTING.md, section Detection.

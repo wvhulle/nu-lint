@@ -1,0 +1,23 @@
+id: builtin-name-by-text
+valid:
+  - |
+    fn is_open(call: &Call, context: &LintContext) -> bool {
+        call.builtin_name(context) == Some("open")
+    }
+  - |
+    fn label(call: &Call, context: &LintContext) -> String {
+        format!("{} command", call.get_call_name(context))
+    }
+invalid:
+  - |
+    fn is_open(call: &Call, context: &LintContext) -> bool {
+        call.get_call_name(context) == "open"
+    }
+  - |
+    fn is_parser(call: &Call, context: &LintContext) -> bool {
+        call.get_call_name(context).starts_with("from ")
+    }
+  - |
+    fn is_where(decl: &dyn Command) -> bool {
+        decl.name() != "where"
+    }

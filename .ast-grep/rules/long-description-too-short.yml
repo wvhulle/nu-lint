@@ -2,7 +2,7 @@
 
 id: long-description-too-short
 message: When including a long description, use at least a few sentences. For short descriptions you can use the short_description.
-severity: warning # error, warning, info, hint
+severity: error
 language: rust
 rule:
   kind: string_literal

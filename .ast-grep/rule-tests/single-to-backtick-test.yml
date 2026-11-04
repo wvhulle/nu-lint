@@ -1,0 +1,13 @@
+id: single-to-backtick
+valid:
+  - |
+    fn long_description(&self) -> Option<&'static str> { Some("Use `try` around `open`") }
+  - |
+    fn long_description(&self) -> Option<&'static str> { Some("Scripts don't need it and won't use it") }
+  - |
+    fn explanation_text() -> &'static str { "Use 'try' around 'open'" }
+invalid:
+  - |
+    fn long_description(&self) -> Option<&'static str> { Some("Use 'try' around it") }
+  - |
+    fn short_description(&self) -> &'static str { "'try' is missing" }

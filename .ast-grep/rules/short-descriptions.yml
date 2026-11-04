@@ -2,7 +2,7 @@
 
 id: short-descriptions
 message: Short rule descriptions should not be too long. Move longer explanations to the long description.
-severity: warning # error, warning, info, hint
+severity: error
 language: Rust
 rule:
   kind: string_literal

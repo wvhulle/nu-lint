@@ -3,7 +3,7 @@
 id: vague-description
 message: Rule descriptions should be straightforward. Do not use vague or redundant words such as "prefer" or "Nushell" (version facts like "Nushell 0.116.0" are fine).
 
-severity: warning # error, warning, info, hint
+severity: error
 language: Rust
 rule:
   kind: string_literal
@@ -18,6 +18,6 @@ rule:
     any:
       - regex: (?i)prefer
       - all:
-          - regex: Nushell|Nu's|Nu\s
+          - regex: Nushell|Nu's|Nu\s(?:[^s]|s[^c])
           - not:
               regex: Nushell \d

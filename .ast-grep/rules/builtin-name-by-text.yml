@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
+
+id: builtin-name-by-text
+message: Do not identify a builtin by comparing its display name. Use CallExt::builtin_name, which also rejects custom commands that shadow the name.
+severity: error
+language: Rust
+files:
+  - nu-lint-rules/src/**
+rule:
+  any:
+    - pattern: $CALL.get_call_name($$$) == $NAME
+    - pattern: $CALL.get_call_name($$$) != $NAME
+    - pattern: $CALL.get_call_name($$$).$STRING_METHOD($$$)
+    - pattern: $DECL.name() == $NAME
+    - pattern: $DECL.name() != $NAME
+constraints:
+  STRING_METHOD:
+    regex: ^(as_str|contains|starts_with|ends_with|strip_prefix|strip_suffix|split\w*)$

@@ -1,0 +1,59 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
+
+id: fix-data-plain-text
+message: Fix data should hold semantic data such as spans, not plain text. Read source text from a span when building the fix.
+severity: error
+language: Rust
+files:
+  - nu-lint-rules/src/**
+ignores:
+  - nu-lint-rules/src/add_hat_external_commands/mod.rs
+  - nu-lint-rules/src/custom_log_command/mod.rs
+  - nu-lint-rules/src/explicit_long_flags/mod.rs
+  - nu-lint-rules/src/filesystem/from_after_parsed_open/mod.rs
+  - nu-lint-rules/src/filesystem/open_raw_from_to_open/mod.rs
+  - nu-lint-rules/src/filesystem/string_param_as_path/mod.rs
+  - nu-lint-rules/src/filtering/omit_it_in_row_condition/mod.rs
+  - nu-lint-rules/src/filtering/where_closure_drop_parameter/mod.rs
+  - nu-lint-rules/src/glob_may_drop_quotes/mod.rs
+  - nu-lint-rules/src/if_else_chain_to_match/mod.rs
+  - nu-lint-rules/src/ignore_over_dev_null/mod.rs
+  - nu-lint-rules/src/migrations/ignore_errors_to_optional/mod.rs
+  - nu-lint-rules/src/naming/snake_case_variables/mod.rs
+  - nu-lint-rules/src/never_space_split/mod.rs
+  - nu-lint-rules/src/parsing/lines_each_to_parse/mod.rs
+  - nu-lint-rules/src/parsing/simplify_regex_parse/mod.rs
+  - nu-lint-rules/src/parsing/split_first_to_parse/mod.rs
+  - nu-lint-rules/src/parsing/split_row_get_multistatement/mod.rs
+  - nu-lint-rules/src/positional_to_pipeline/mod.rs
+  - nu-lint-rules/src/redundant_ignore/mod.rs
+  - nu-lint-rules/src/remove_hat_not_builtin/mod.rs
+  - nu-lint-rules/src/side_effects/each_nothing_to_for_loop/mod.rs
+  - nu-lint-rules/src/streaming_hidden_by_complete/mod.rs
+  - nu-lint-rules/src/string_may_be_bare/mod.rs
+  - nu-lint-rules/src/transpose_items/mod.rs
+  - nu-lint-rules/src/unnecessary_mut/mod.rs
+  - nu-lint-rules/src/unused_helper_functions/mod.rs
+  - nu-lint-rules/src/unused_parameter/mod.rs
+  - nu-lint-rules/src/unused_variable/mod.rs
+rule:
+  kind: field_declaration
+  has:
+    field: type
+    regex: \bString\b|\bstr\b
+    not:
+      regex: "'static"
+  inside:
+    stopBy: end
+    kind: struct_item
+    has:
+      field: name
+      pattern: $FIX_STRUCT
+    inside:
+      kind: source_file
+      has:
+        stopBy: end
+        pattern:
+          context: "impl X for Y { type FixInput<'a> = $FIX_STRUCT; }"
+          selector: type_item
+note: See CONTRIBUTING.md, section Implementing auto-fix.

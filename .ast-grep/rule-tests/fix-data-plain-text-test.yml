@@ -1,0 +1,16 @@
+id: fix-data-plain-text
+valid:
+  - |
+    struct FixData { name_span: Span, operator: &'static str }
+    impl DetectFix for Unused { type FixInput<'a> = FixData; }
+  - |
+    struct Unrelated { name: String }
+    struct FixData { name_span: Span }
+    impl DetectFix for Unused { type FixInput<'a> = FixData; }
+invalid:
+  - |
+    struct FixData { var_name: String, name_span: Span }
+    impl DetectFix for Unused { type FixInput<'a> = FixData; }
+  - |
+    struct Rewrite { remaining_params: Vec<String> }
+    impl DetectFix for Unused { type FixInput<'a> = Rewrite; }

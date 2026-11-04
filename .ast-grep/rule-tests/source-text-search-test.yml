@@ -13,6 +13,16 @@ valid:
     fn unrelated_search(names: &[String]) -> bool {
         names.iter().any(|name| name.starts_with("std"))
     }
+  - |
+    fn first_tokens(context: &LintContext, tokens: &[Token], count: usize) -> &[Token] {
+        let text = context.span_text(tokens[0].span);
+        log::trace!("{text}");
+        &tokens[..count]
+    }
+  - |
+    fn is_named(name: &str) -> bool {
+        name == "std/log"
+    }
 invalid:
   - |
     fn has_raw_flag(context: &LintContext, span: Span) -> bool {
@@ -31,4 +41,18 @@ invalid:
   - |
     fn mentions_log(context: &LintContext) -> bool {
         context.source_contains("std/log")
+    }
+  - |
+    fn is_log_import(context: &LintContext, expr: &Expression) -> bool {
+        let text = context.expr_text(expr);
+        text == "std/log"
+    }
+  - |
+    fn is_flag(context: &LintContext, expr: &Expression) -> bool {
+        context.expr_text(expr) != "-c"
+    }
+  - |
+    fn after_param(context: &LintContext, span: Span, offset: usize) -> &str {
+        let signature_text = context.span_text(span);
+        &signature_text[offset..]
     }

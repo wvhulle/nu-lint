@@ -4,7 +4,7 @@
 
 id: link-in-description
 message: Put links in `source_link`, not in descriptions.
-severity: warning # error, warning, info, hint
+severity: error
 language: Rust
 rule:
     kind: string_literal

@@ -1,0 +1,16 @@
+id: long-description-too-short
+valid:
+  - |
+    fn long_description(&self) -> Option<&'static str> {
+        Some("This description is one long line that is clearly wider than eighty-one characters.")
+    }
+  - |
+    fn long_description(&self) -> Option<&'static str> {
+        Some("First line of the text. \
+              Second line of the text.")
+    }
+invalid:
+  - |
+    fn long_description(&self) -> Option<&'static str> {
+        Some("Too short.")
+    }

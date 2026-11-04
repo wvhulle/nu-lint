@@ -2,17 +2,14 @@
 
 id: single-to-backtick
 message: Use backticks instead of single-quotes for adding inline code in strings, since backticks are properly rendered in markdown as inline code blocks.
-severity: warning # error, warning, info, hint
+severity: error
 language: Rust
 rule:
   kind: string_content
-  regex: \'(?<quoted>[^']+)\'
+  regex: (?:^|[\s(])'[^']+'
   inside:
     kind: function_item
     stopBy: end
     has:
       field: name
       regex: description$
-# fix: $quoted
-# utils: Extract repeated rule as local utility here.
-# note: Add detailed explanation for the rule.

@@ -1,0 +1,9 @@
+id: link-in-description
+valid:
+  - |
+    fn short_description(&self) -> &'static str { "Variable is declared but never read" }
+  - |
+    fn source_link(&self) -> Option<&'static str> { Some("https://www.nushell.sh/book/") }
+invalid:
+  - |
+    fn long_description(&self) -> Option<&'static str> { Some("See https://www.nushell.sh/book/") }

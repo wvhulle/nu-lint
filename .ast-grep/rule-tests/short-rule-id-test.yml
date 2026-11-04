@@ -1,0 +1,9 @@
+id: short-rule-id
+valid:
+  - |
+    fn id(&self) -> &'static str { "unused_variable" }
+invalid:
+  - |
+    fn id(&self) -> &'static str { "a_b" }
+  - |
+    fn id(&self) -> &'static str { "unused_variable_in_the_nested_closure_body" }

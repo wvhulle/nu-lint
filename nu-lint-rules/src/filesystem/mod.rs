@@ -59,8 +59,7 @@ pub fn find_open_from_patterns<'a>(
                 return None;
             }
 
-            let open_text = context.span_text(pair.span);
-            let has_raw_flag = open_text.contains("--raw") || open_text.contains("-r ");
+            let has_raw_flag = pair.first.has_named_flag("raw");
 
             Some(OpenFromPattern {
                 open_expr: &pipeline.elements[pair.first_index].expr,

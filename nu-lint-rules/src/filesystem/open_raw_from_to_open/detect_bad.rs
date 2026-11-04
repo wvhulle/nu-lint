@@ -49,3 +49,8 @@ fn detect_double_quoted_filename() {
 fn detect_single_quoted_filename() {
     RULE.assert_detects("open --raw 'my file.json' | from json");
 }
+
+#[test]
+fn detect_short_raw_flag_after_filename() {
+    RULE.assert_detects("open data.json -r | from json");
+}

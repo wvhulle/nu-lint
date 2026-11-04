@@ -15,7 +15,7 @@ steps:
     image: nixos/nix:latest
     environment: *nix_config
     commands:
-      - nix run .#build-and-export-paths -- .#dist
+      - nix run --quiet .#build-and-export-paths -- .#dist
       - mkdir -p dist
       - cp result/* dist/
 
@@ -28,7 +28,7 @@ steps:
       CACHIX_AUTH_TOKEN:
         from_secret: cachix_auth_token
     commands:
-      - nix run .#upload-exported-paths
+      - nix run --quiet .#upload-exported-paths
 
   - name: attach-to-codeberg-release
     image: nixos/nix:latest
@@ -37,4 +37,4 @@ steps:
       CODEBERG_TOKEN:
         from_secret: codeberg_token
     commands:
-      - nix run .#upload-release-assets -- dist
+      - nix run --quiet .#upload-release-assets -- dist

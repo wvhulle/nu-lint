@@ -194,7 +194,7 @@
             exported_paths_dir="$CI_WORKSPACE/.nix-built-paths"
             mkdir -p "$exported_paths_dir"
             read -ra built_paths <<< "$OUT_PATHS"
-            nix copy --to "file://$exported_paths_dir?compression=zstd" "''${built_paths[@]}"
+            nix copy --quiet --to "file://$exported_paths_dir?compression=zstd" "''${built_paths[@]}"
             printf '%s\n' "''${built_paths[@]}" >> "$exported_paths_dir/paths.txt"
           '';
         };
@@ -204,7 +204,32 @@
           text = ''
             export NIX_CONFIG="''${NIX_CONFIG:-}
             post-build-hook = ${pkgs.lib.getExe exportBuiltPathsHook}"
-            nix build --print-build-logs "$@"
+            nix build --quiet --print-build-logs "$@"
+          '';
+        };
+
+        buildUnlessCachedScript = pkgs.writeShellApplication {
+          name = "build-unless-cached";
+          text = ''
+            built_output=$(nix eval --quiet --raw "$1.outPath")
+            if nix path-info --quiet --store https://wvhulle.cachix.org "$built_output" > /dev/null 2>&1; then
+              echo "$built_output is already in Cachix"
+              exit 0
+            fi
+            ${pkgs.lib.getExe buildAndExportPathsScript} "$1"
+          '';
+        };
+
+        importExportedPathsScript = pkgs.writeShellApplication {
+          name = "import-exported-paths";
+          text = ''
+            exported_paths_dir="$CI_WORKSPACE/.nix-built-paths"
+            if [[ ! -s "$exported_paths_dir/paths.txt" ]]; then
+              echo "No exported paths to import"
+              exit 0
+            fi
+            mapfile -t built_paths < "$exported_paths_dir/paths.txt"
+            nix copy --quiet --no-check-sigs --from "file://$exported_paths_dir" "''${built_paths[@]}"
           '';
         };
 
@@ -217,8 +242,8 @@
               echo "No newly built paths to upload"
               exit 0
             fi
+            ${pkgs.lib.getExe importExportedPathsScript}
             mapfile -t built_paths < "$exported_paths_dir/paths.txt"
-            nix copy --no-check-sigs --from "file://$exported_paths_dir" "''${built_paths[@]}"
             cachix push wvhulle "''${built_paths[@]}"
           '';
         };
@@ -269,6 +294,7 @@
           cranelift = craneliftPackage;
           deps = llvmDeps;
           deps-cranelift = craneliftDeps;
+          test-dependencies = devProfileDeps;
         }
         // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
           x86_64-linux-musl = muslPackages.x86_64;
@@ -295,6 +321,8 @@
           release-pr = mkApp (mkReleasePlzOnCodeberg "release-pr");
           check-commits = mkApp checkCommitsScript;
           build-and-export-paths = mkApp buildAndExportPathsScript;
+          build-unless-cached = mkApp buildUnlessCachedScript;
+          import-exported-paths = mkApp importExportedPathsScript;
           upload-exported-paths = mkApp uploadExportedPathsScript;
           upload-release-assets = mkApp uploadReleaseAssetsScript;
         }

@@ -9,19 +9,24 @@ variables:
       build-users-group =
       extra-substituters = https://wvhulle.cachix.org
       extra-trusted-public-keys = wvhulle.cachix.org-1:heXx8DZMiRsKUx6l1TxNoF+Nmtmz66QEdsonQzc1ir0=
-  - &on_trusted_events
-    - event: [push, manual]
   - &on_pull_requests
     - event: pull_request
 
 steps:
-  - name: cargo-test
+  - name: build-test-dependencies
     image: nixos/nix:latest
     depends_on: []
-    when: *on_trusted_events
     environment: *nix_config
     commands:
-      - nix run .#build-and-export-paths -- .#checks.x86_64-linux.tests
+      - nix run --quiet .#build-unless-cached -- .#packages.x86_64-linux.test-dependencies
+
+  - name: cargo-test
+    image: nixos/nix:latest
+    depends_on: [build-test-dependencies]
+    environment: *nix_config
+    commands:
+      - nix run --quiet .#import-exported-paths
+      - nix run --quiet .#build-and-export-paths -- .#checks.x86_64-linux.tests
 
   - name: upload-cargo-test-cache
     image: nixos/nix:latest
@@ -34,29 +39,21 @@ steps:
       CACHIX_AUTH_TOKEN:
         from_secret: cachix_auth_token
     commands:
-      - nix run .#upload-exported-paths
-
-  - name: cargo-test-pr
-    image: nixos/nix:latest
-    depends_on: []
-    when: *on_pull_requests
-    environment: *nix_config
-    commands:
-      - nix build --print-build-logs .#checks.x86_64-linux.tests
+      - nix run --quiet .#upload-exported-paths
 
   - name: rustfmt
     image: nixos/nix:latest
     depends_on: []
     environment: *nix_config
     commands:
-      - nix build .#checks.x86_64-linux.fmt --print-build-logs
+      - nix build --quiet --print-build-logs .#checks.x86_64-linux.fmt
 
   - name: ast-grep
     image: nixos/nix:latest
     depends_on: []
     environment: *nix_config
     commands:
-      - nix build .#checks.x86_64-linux.ast-grep --print-build-logs
+      - nix build --quiet --print-build-logs .#checks.x86_64-linux.ast-grep
 
   - name: conventional-commits
     image: nixos/nix:latest
@@ -65,4 +62,4 @@ steps:
     environment: *nix_config
     commands:
       - git fetch --quiet origin "$${CI_COMMIT_TARGET_BRANCH}"
-      - nix run .#check-commits -- FETCH_HEAD..HEAD
+      - nix run --quiet .#check-commits -- FETCH_HEAD..HEAD

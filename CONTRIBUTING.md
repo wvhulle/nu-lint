@@ -234,7 +234,7 @@ To add a scene, add a `<scene>.tape` to `demos/`.
 
 ## Dependency updates
 
-The `weekly-dependency-update` cron in Woodpecker runs `cargo xtask update-dependencies --open-pr` (`.woodpecker/update-dependencies.yaml`). It moves the Nushell crates to their latest version, updates `Cargo.lock` and `flake.lock`, and opens or updates one pull request from the `bot/dependency-updates` branch. Breaking updates of other crates stay manual.
+The `weekly-dependency-update` cron in Woodpecker runs `cargo xtask update-dependencies --open-pr` (`.woodpecker/update-dependencies.yaml`). It moves the Nushell crates to their latest version, updates `Cargo.lock` and `flake.lock`, and opens or updates one pull request from the `bot/dependency-updates` branch. The checks on that pull request are the trial build. Breaking updates of other crates stay manual.
 
 The commit type decides whether merging releases: a changed `Cargo.toml` gives a `fix(deps)` commit, and lockfile-only changes give a `chore(deps)` commit.
 
@@ -265,6 +265,8 @@ Everything CI runs is a flake output, so it can be run locally in the same way:
 | `nix run .#release` | Publish an unreleased version to crates.io and create its tag and Codeberg release (CI only, needs `CODEBERG_TOKEN`) |
 | `nix run .#release-pr` | Open or update the release PR (CI only, needs `CODEBERG_TOKEN`) |
 | `cargo xtask update-dependencies` | Update the Nushell crates, `Cargo.lock` and `flake.lock`; add `--open-pr` to open a pull request (CI only, needs `CODEBERG_TOKEN`) |
+| `nix run .#build-unless-cached -- <installable>` | Build and export an output unless it is already in Cachix (CI only, needs `CI_WORKSPACE`) |
+| `nix run .#import-exported-paths` | Import paths exported by an earlier step (CI only, needs `CI_WORKSPACE`) |
 | `nix run .#build-and-export-paths -- <installable>` | Build and export newly built paths to the workspace for a later upload step (CI only, needs `CI_WORKSPACE`) |
 | `nix run .#upload-exported-paths` | Push the exported paths to Cachix (CI only, needs `CI_WORKSPACE` and `CACHIX_AUTH_TOKEN`) |
 

@@ -39,10 +39,10 @@ steps:
       - git checkout -B main "$${CI_COMMIT_SHA}"
       - git fetch origin main:refs/remotes/origin/main
       - git branch --set-upstream-to=origin/main main
-      - nix run .#release
+      - nix run --quiet .#release
 
   - name: update-release-pr
     image: nixos/nix:latest
     environment: *release_env
     commands:
-      - nix run .#release-pr
+      - nix run --quiet .#release-pr

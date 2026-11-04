@@ -31,4 +31,4 @@ steps:
     environment: *update_env
     commands:
       - git remote set-url origin "https://wvhulle:$${CODEBERG_TOKEN}@codeberg.org/$${CI_REPO}.git"
-      - nix develop --command cargo xtask update-dependencies --open-pr
+      - nix develop --quiet --command cargo xtask update-dependencies --open-pr

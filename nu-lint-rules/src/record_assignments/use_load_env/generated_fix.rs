@@ -54,3 +54,8 @@ fn fix_wraps_command_value_in_parentheses() {
         "load-env { FIRST: (if true { 1 } else { 2 }), SECOND: 3 }",
     );
 }
+
+#[test]
+fn no_fix_when_later_value_reads_earlier_assignment() {
+    RULE.assert_detects_without_fix("$env.ROOT = 1\n$env.CHILD = $env.ROOT");
+}

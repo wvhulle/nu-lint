@@ -11,7 +11,7 @@ use nu_lint_analysis::{
 };
 use nu_protocol::{
     Span, VarId,
-    ast::{Assignment, Block, Expr, Expression, Operator, PathMember, Pipeline},
+    ast::{Assignment, Block, Expr, Expression, Operator, PathMember, Pipeline, Traverse},
 };
 pub use use_load_env::RULE as USE_LOAD_ENV;
 pub use use_record_spread::RULE as USE_RECORD_SPREAD;
@@ -49,6 +49,20 @@ pub struct FieldAssignment {
     pub full_span: Span,
     pub value_span: Span,
     pub value_is_command: bool,
+    pub value_reads_target: bool,
+}
+
+fn expression_reads_variable(value: &Expression, var_id: VarId, context: &LintContext) -> bool {
+    let mut variable_reads: Vec<Span> = Vec::new();
+    value.flat_map(
+        context.working_set,
+        &|nested_expr| match &nested_expr.expr {
+            Expr::Var(read_var_id) if *read_var_id == var_id => vec![nested_expr.span],
+            _ => vec![],
+        },
+        &mut variable_reads,
+    );
+    !variable_reads.is_empty()
 }
 
 fn value_needs_parentheses(value: &Expression, context: &LintContext) -> bool {
@@ -90,6 +104,16 @@ pub struct AssignmentGroup {
     pub all_flat: bool,
 }
 
+impl AssignmentGroup {
+    #[must_use]
+    pub fn later_value_reads_target(&self) -> bool {
+        self.assignments
+            .iter()
+            .skip(1)
+            .any(|assignment| assignment.value_reads_target)
+    }
+}
+
 fn extract_field_assignment(
     expr: &Expression,
     context: &LintContext,
@@ -125,6 +149,7 @@ fn extract_field_assignment(
             full_span: expr.span,
             value_span: rhs.span,
             value_is_command: value_needs_parentheses(rhs, context),
+            value_reads_target: expression_reads_variable(rhs, *var_id, context),
         },
     ))
 }

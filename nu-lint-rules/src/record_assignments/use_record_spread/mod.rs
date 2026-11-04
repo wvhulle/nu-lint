@@ -63,6 +63,10 @@ impl DetectFix for UseRecordSpread {
     }
 
     fn fix(&self, context: &LintContext, group: &Self::FixInput<'_>) -> Option<Fix> {
+        if group.later_value_reads_target() {
+            return None;
+        }
+
         let fields = group
             .assignments
             .iter()

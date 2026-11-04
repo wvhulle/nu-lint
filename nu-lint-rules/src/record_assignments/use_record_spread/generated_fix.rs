@@ -56,3 +56,10 @@ $cfg.max-retries = 3"#,
 $cfg = {...$cfg, log-level: "info", max-retries: 3}"#,
     );
 }
+
+#[test]
+fn no_fix_when_later_value_reads_earlier_assignment() {
+    RULE.assert_detects_without_fix(
+        "mut config = {}\n$config.root = 1\n$config.child = $config.root",
+    );
+}

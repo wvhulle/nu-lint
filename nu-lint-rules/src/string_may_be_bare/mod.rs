@@ -92,6 +92,12 @@ round brackets ( ), it will be interpreted as an external command."#,
                 | StringFormat::Raw(_) => return ControlFlow::Continue(()),
             };
 
+            let is_record_value =
+                parent.is_some_and(|parent_expr| matches!(parent_expr.expr, Expr::Record(_)));
+            if is_record_value && unquoted_content.contains(':') {
+                return ControlFlow::Continue(());
+            }
+
             // Check if the string actually needs quotes
             if bare_word_needs_quotes(unquoted_content) {
                 log::trace!("String '{unquoted_content}' needs quotes");

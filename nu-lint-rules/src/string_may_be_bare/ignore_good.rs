@@ -346,3 +346,13 @@ fn ignores_string_as_lhs_of_binary_expression_comparison() {
     let code = r#"if "test" == $var { }"#;
     RULE.assert_ignores(code);
 }
+
+#[test]
+fn ignore_comma_that_would_split_a_row() {
+    RULE.assert_ignores(r#"[[symbol]; [","]]"#);
+}
+
+#[test]
+fn ignore_colon_that_is_invalid_in_record_value() {
+    RULE.assert_ignores(r#"{text: "err::pipeline_input"}"#);
+}

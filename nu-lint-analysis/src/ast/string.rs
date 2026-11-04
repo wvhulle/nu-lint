@@ -11,7 +11,7 @@ use crate::{context::LintContext, engine::default_engine_state};
 
 /// Characters that cannot appear in bare words.
 const BARE_WORD_FORBIDDEN: &[char] = &[
-    ' ', '\t', '\n', '\r', '|', ';', '(', ')', '[', ']', '{', '}', '`', '\'', '"', '#',
+    ' ', '\t', '\n', '\r', '|', ';', '(', ')', '[', ']', '{', '}', '`', '\'', '"', '#', ',',
 ];
 
 /// Checks if a string can be represented as a bare word in Nushell.

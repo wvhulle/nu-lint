@@ -147,3 +147,13 @@ fn fix_if_with_else_stays_single_output() {
 fn fix_does_not_guess_output_from_first_signature_of_unknown_input() {
     RULE.assert_fixed_not_contains("def pick [] { first }", "binary");
 }
+
+#[test]
+fn fix_keeps_parameter_default_values() {
+    RULE.assert_fixed_contains("def shift [offset = 1] { 2 }", "[offset = 1]:");
+}
+
+#[test]
+fn fix_keeps_closure_annotation_parseable() {
+    RULE.assert_fixed_contains("def run-it [action: closure] { 1 }", "[action: closure]:");
+}

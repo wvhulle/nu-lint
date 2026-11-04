@@ -10,9 +10,7 @@ use nu_protocol::{
     ast::{Call, Expr},
 };
 
-use super::{
-    FixData, extract_parameters_text, find_signature_span, get_input_type, get_output_type,
-};
+use super::{FixData, find_signature_span, get_input_type, get_output_type, parameter_list_text};
 
 fn detect_def_call(call: &Call, ctx: &LintContext) -> Vec<(Detection, FixData)> {
     let Some(def) = call.custom_command_def(ctx) else {
@@ -99,11 +97,11 @@ impl DetectFix for TypeNuPipelineInput {
         let signature = &block.signature;
 
         // Use AST data: extract parameters and types from signature
-        let params = extract_parameters_text(signature);
+        let parameter_list = parameter_list_text(fix_data.sig_span, ctx)?;
         let input_type = block.infer_input_type(ctx);
         let output_type = get_output_type(signature).unwrap_or(Type::Any);
 
-        let new_signature = format!("[{params}]: {input_type} -> {output_type}");
+        let new_signature = format!("{parameter_list}: {input_type} -> {output_type}");
 
         Some(Fix {
             explanation: format!("Add input type annotation: {new_signature}").into(),

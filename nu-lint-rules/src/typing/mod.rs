@@ -1,4 +1,7 @@
-use nu_lint_analysis::{ast::call::CallExt, context::LintContext};
+use nu_lint_analysis::{
+    ast::{call::CallExt, declaration::parameter_list_span},
+    context::LintContext,
+};
 use nu_protocol::{
     BlockId, Flag, PositionalArg, Span, SyntaxShape, Type,
     ast::{Block, Call},
@@ -37,6 +40,11 @@ pub fn get_output_type(signature: &nu_protocol::Signature) -> Option<Type> {
 pub fn find_signature_span(call: &Call, _ctx: &LintContext) -> Option<Span> {
     let sig_arg = call.get_positional_arg(1)?;
     Some(sig_arg.span)
+}
+
+#[must_use]
+pub fn parameter_list_text<'a>(signature_span: Span, context: &'a LintContext) -> Option<&'a str> {
+    parameter_list_span(signature_span, context).map(|list_span| context.span_text(list_span))
 }
 
 fn format_shape(name: &str, shape: &SyntaxShape) -> String {
@@ -84,25 +92,6 @@ pub fn format_flag(f: &Flag) -> String {
     let short = f.short.map_or_default(|s| format!(" (-{s})"));
     let arg_type = f.arg.as_ref().map_or_default(|s| format!(": {s}"));
     format!("--{}{short}{arg_type}", f.long)
-}
-
-/// Extract parameters from a signature as Nu source text.
-pub fn extract_parameters_text(signature: &nu_protocol::Signature) -> String {
-    signature
-        .required_positional
-        .iter()
-        .map(format_required)
-        .chain(signature.optional_positional.iter().map(format_optional))
-        .chain(signature.rest_positional.iter().map(format_rest))
-        .chain(
-            signature
-                .named
-                .iter()
-                .filter(|f| f.long != "help")
-                .map(format_flag),
-        )
-        .collect::<Vec<_>>()
-        .join(", ")
 }
 
 pub struct FixData {

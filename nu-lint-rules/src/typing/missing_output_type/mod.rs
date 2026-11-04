@@ -11,8 +11,8 @@ use nu_protocol::{
 };
 
 use super::{
-    FixData, extract_parameters_text, find_return_span, find_signature_span, get_input_type,
-    get_output_type,
+    FixData, find_return_span, find_signature_span, get_input_type, get_output_type,
+    parameter_list_text,
 };
 
 fn detect_def_call(call: &Call, ctx: &LintContext) -> Vec<(Detection, FixData)> {
@@ -104,11 +104,11 @@ impl DetectFix for TypeCommandOutput {
         let block = ctx.working_set.get_block(fix_data.body_block_id);
         let signature = &block.signature;
 
-        let params = extract_parameters_text(signature);
+        let parameter_list = parameter_list_text(fix_data.sig_span, ctx)?;
         let input_type = get_input_type(signature).unwrap_or(Type::Any);
         let output_type = block.infer_output_type(ctx);
 
-        let new_signature = format!("[{params}]: {input_type} -> {output_type}");
+        let new_signature = format!("{parameter_list}: {input_type} -> {output_type}");
 
         Some(Fix {
             explanation: format!("Add output type annotation: {new_signature}").into(),

@@ -74,3 +74,8 @@ export def process [] {
 ";
     RULE.assert_fixed_contains(bad_code, "[]: string -> any");
 }
+
+#[test]
+fn fix_keeps_parameter_default_values() {
+    RULE.assert_fixed_contains("def shift [offset = 1] { $in | length }", "[offset = 1]:");
+}

@@ -124,3 +124,27 @@ fn fix_multi_parameter_with_config() {
         "def process-with-config [config] { each { |x| $x * $config.multiplier } }",
     );
 }
+
+#[test]
+fn fix_replaces_whole_parameter_list_with_brackets_in_comment() {
+    RULE.assert_fixed_is(
+        "def get-first [\n    items # see [docs]\n] { $items | first }",
+        "def get-first [] { first }",
+    );
+}
+
+#[test]
+fn fix_keeps_pipeline_when_first_usage_is_not_its_head() {
+    RULE.assert_fixed_contains(
+        "def pick [items] { ls | where name in $items | first; $items | first }",
+        "where name in $in | first",
+    );
+}
+
+#[test]
+fn fix_removes_head_without_spaces_around_pipe() {
+    RULE.assert_fixed_is(
+        "def get-first [items] { $items|first }",
+        "def get-first [] { first }",
+    );
+}

@@ -4,7 +4,10 @@ use nu_lint_analysis::{
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
-use nu_protocol::ast::{Expr, ExternalArgument};
+use nu_protocol::{
+    DeclId,
+    ast::{Expr, ExternalArgument},
+};
 
 /// Data needed to generate a fix for unnecessary hat violations
 pub struct UnnecessaryHatFixData {
@@ -13,8 +16,15 @@ pub struct UnnecessaryHatFixData {
     expr_span: nu_protocol::Span,
 }
 
-fn has_builtin(name: &str, ctx: &LintContext) -> bool {
-    ctx.engine_state.find_decl(name.as_bytes(), &[]).is_some()
+fn name_resolves_to_known_command(external_name: &str, ctx: &LintContext) -> bool {
+    (0..ctx.working_set.num_decls()).any(|decl_index| {
+        ctx.working_set
+            .get_decl(DeclId::new(decl_index))
+            .name()
+            .split(' ')
+            .next()
+            .is_some_and(|first_word| first_word == external_name)
+    })
 }
 
 struct RemoveHatNotBuiltin;
@@ -62,7 +72,7 @@ impl DetectFix for RemoveHatNotBuiltin {
             }
 
             let cmd = ctx.expr_text(head);
-            if has_builtin(cmd, ctx) {
+            if name_resolves_to_known_command(cmd, ctx) {
                 return vec![];
             }
 

@@ -68,3 +68,18 @@ fn ignores_hat_with_env_variable_command() {
     // Environment variable as command - hat is required for safety
     RULE.assert_ignores("^$env.SHELL --version");
 }
+
+#[test]
+fn ignore_external_shadowed_by_extern_in_file() {
+    RULE.assert_ignores("extern git [--verbose]\n^git status --porcelain");
+}
+
+#[test]
+fn ignore_external_shadowed_by_extern_subcommand_in_file() {
+    RULE.assert_ignores("extern \"git status\" []\n^git status");
+}
+
+#[test]
+fn ignore_external_shadowed_by_custom_command() {
+    RULE.assert_ignores("def deploy [] { }\n^deploy");
+}

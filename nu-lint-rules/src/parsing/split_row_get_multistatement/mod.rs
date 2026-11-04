@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use nu_lint_analysis::{
     Fix, LintLevel, Replacement,
-    ast::call::CallExt,
+    ast::{block::BlockExt, call::CallExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
@@ -20,6 +20,8 @@ use super::{
 #[derive(Debug, Clone)]
 struct SplitVariable {
     var_id: VarId,
+    declaration_span: Span,
+    declared_at_pipeline: usize,
     split_span: Span,
     input_span: Span,
     literal_field_count: Option<usize>,
@@ -80,8 +82,8 @@ impl SplitVariableTracker {
 }
 
 pub struct WithDelimiter {
-    /// Span covering the entire pattern from assignment to index access
-    full_span: Span,
+    /// Span covering the entire pattern from `let` to index access
+    replaced_span: Span,
     /// Span of the input expression being split (e.g., "a:b:c" in the
     /// subexpression)
     input_span: Span,
@@ -164,7 +166,8 @@ fn find_split_in_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<
         let delimiter = extract_delimiter_from_split_call(call, context);
         PipelineSplit {
             input_span: input.span,
-            literal_field_count: count_literal_fields(input, delimiter.as_deref()),
+            literal_field_count: count_literal_fields(input, delimiter.as_deref())
+                .filter(|_| pipeline.elements.len() == 2),
             split_call: call.clone(),
             has_filter,
         }
@@ -187,7 +190,11 @@ fn is_filter_operation(call: &Call, context: &LintContext) -> bool {
 
 /// Detect if a pipeline contains a variable assignment with a split row
 /// expression Example: let split = ("a:b:c" | split row ":")
-fn detect_split_assignment(pipeline: &Pipeline, context: &LintContext) -> Option<SplitVariable> {
+fn detect_split_assignment(
+    pipeline: &Pipeline,
+    pipeline_index: usize,
+    context: &LintContext,
+) -> Option<SplitVariable> {
     let first_expr = &pipeline.elements.first()?.expr;
     let Expr::Call(call) = &first_expr.expr else {
         return None;
@@ -207,6 +214,8 @@ fn detect_split_assignment(pipeline: &Pipeline, context: &LintContext) -> Option
 
     Some(SplitVariable {
         var_id,
+        declaration_span: first_expr.span,
+        declared_at_pipeline: pipeline_index,
         split_span: value_expr.span,
         input_span: split.input_span,
         literal_field_count: split.literal_field_count,
@@ -269,7 +278,10 @@ fn detect_index_access(
     })
 }
 
-fn create_violation(match_info: &MatchInfo, _context: &LintContext) -> (Detection, WithDelimiter) {
+fn create_violation(
+    match_info: &MatchInfo,
+    can_replace_statements: bool,
+) -> (Detection, WithDelimiter) {
     let full_span = Span::new(
         match_info.split_info.split_span.start,
         match_info.access_span.end,
@@ -284,9 +296,15 @@ fn create_violation(match_info: &MatchInfo, _context: &LintContext) -> (Detectio
     .with_extra_label("accessed by index here", match_info.access_span);
 
     let fix_data = WithDelimiter {
-        full_span,
+        replaced_span: Span::new(
+            match_info.split_info.declaration_span.start,
+            match_info.access_span.end,
+        ),
         input_span: match_info.split_info.input_span,
-        literal_field_count: match_info.split_info.literal_field_count,
+        literal_field_count: match_info
+            .split_info
+            .literal_field_count
+            .filter(|_| can_replace_statements),
         split_call: match_info.split_info.split_call.clone(),
         index: match_info.index,
     };
@@ -301,11 +319,11 @@ fn check_block(
 ) {
     let mut tracker = SplitVariableTracker::new();
 
-    for pipeline in &block.pipelines {
+    for (pipeline_index, pipeline) in block.pipelines.iter().enumerate() {
         // Invalidate variables that are being reassigned
         tracker.invalidate_reassigned_vars(pipeline, context);
 
-        if let Some(split_var) = detect_split_assignment(pipeline, context) {
+        if let Some(split_var) = detect_split_assignment(pipeline, pipeline_index, context) {
             tracker.register_split(split_var);
         }
 
@@ -315,7 +333,13 @@ fn check_block(
 
         if let Some(match_info) = detect_index_access(pipeline, context, &tracker) {
             let var_id = match_info.split_info.var_id;
-            violations.push(create_violation(&match_info, context));
+            let directly_follows_declaration =
+                pipeline_index == match_info.split_info.declared_at_pipeline + 1;
+            let is_only_usage = block.var_usages(var_id, context).len() == 1;
+            violations.push(create_violation(
+                &match_info,
+                directly_follows_declaration && is_only_usage,
+            ));
             tracker.consume_split(var_id);
         }
     }
@@ -371,7 +395,7 @@ impl DetectFix for SplitRowGetMultistatement {
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let WithDelimiter {
-            full_span,
+            replaced_span,
             input_span,
             literal_field_count,
             split_call,
@@ -401,7 +425,7 @@ impl DetectFix for SplitRowGetMultistatement {
                  0.field{index}'"
             )
             .into(),
-            replacements: vec![Replacement::new(*full_span, replacement)],
+            replacements: vec![Replacement::new(*replaced_span, replacement)],
         })
     }
 }

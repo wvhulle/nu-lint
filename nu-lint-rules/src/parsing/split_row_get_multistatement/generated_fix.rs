@@ -21,14 +21,13 @@ $parts | get 1
 }
 
 #[test]
-fn test_fix_with_filter() {
-    let bad_code = r#"
+fn test_no_fix_when_split_result_is_filtered() {
+    RULE.assert_detects_without_fix(
+        r#"
 let split = ("a,b,c" | split row "," | filter {|x| $x != "b"})
 $split | get 0
-"#;
-    // Note: This fix won't preserve filter semantics perfectly, but suggests parse
-    RULE.assert_fixed_contains(bad_code, r#"parse "{field0},{field1},{field2}""#);
-    RULE.assert_fixed_contains(bad_code, "get 0.field0");
+"#,
+    );
 }
 
 #[test]
@@ -73,29 +72,13 @@ $parts | get 1
 }
 
 #[test]
-fn test_fix_with_where_filter() {
-    let bad_code = r#"
+fn test_no_fix_when_split_result_is_filtered_with_where() {
+    RULE.assert_detects_without_fix(
+        r#"
 let split = ("a  b  c" | split row " " | where $it != "")
 $split | get 1
-"#;
-    // The fix suggests parse but won't perfectly replicate the where filter
-    // behavior
-    RULE.assert_fixed_contains(
-        bad_code,
-        r#"parse "{field0} {field1} {field2} {field3} {field4}""#,
+"#,
     );
-    RULE.assert_fixed_contains(bad_code, "get 0.field1");
-}
-
-#[test]
-fn test_fix_statements_in_between() {
-    let bad_code = r#"
-let split = ("a:b:c" | split row ":")
-let x = 42
-$split | get 2
-"#;
-    RULE.assert_fixed_contains(bad_code, r#"parse "{field0}:{field1}:{field2}""#);
-    RULE.assert_fixed_contains(bad_code, "get 0.field2");
 }
 
 #[test]
@@ -126,6 +109,46 @@ fn test_no_fix_when_input_is_not_a_literal() {
 let line = "a:b:c"
 let parts = ($line | split row ":")
 $parts | get 2
+"#,
+    );
+}
+
+#[test]
+fn test_fix_replaces_whole_declaration() {
+    RULE.assert_fixed_is(
+        "let parts = (\"a:b:c\" | split row \":\")\n$parts | get 1\n",
+        "\"a:b:c\" | parse \"{field0}:{field1}:{field2}\" | get 0.field1\n",
+    );
+}
+
+#[test]
+fn test_no_fix_when_statement_sits_between() {
+    RULE.assert_detects_without_fix(
+        r#"
+let parts = ("a:b:c" | split row ":")
+print "keep me"
+$parts | get 1
+"#,
+    );
+}
+
+#[test]
+fn test_no_fix_when_variable_is_used_again() {
+    RULE.assert_detects_without_fix(
+        r#"
+let parts = ("a:b:c" | split row ":")
+$parts | get 0
+print $parts
+"#,
+    );
+}
+
+#[test]
+fn test_no_fix_when_input_has_earlier_stage() {
+    RULE.assert_detects_without_fix(
+        r#"
+let parts = ("a:b:c" | str trim | split row ":")
+$parts | get 1
 "#,
     );
 }

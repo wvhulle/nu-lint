@@ -22,6 +22,14 @@ struct SplitVariable {
     var_id: VarId,
     split_span: Span,
     input_span: Span,
+    literal_field_count: Option<usize>,
+    delimiter: Option<String>,
+    has_filter: bool,
+}
+
+struct PipelineSplit {
+    input_span: Span,
+    literal_field_count: Option<usize>,
     delimiter: Option<String>,
     has_filter: bool,
 }
@@ -77,6 +85,8 @@ pub struct WithDelimiter {
     /// Span of the input expression being split (e.g., "a:b:c" in the
     /// subexpression)
     input_span: Span,
+    /// Number of fields in the input, known only for a string literal
+    literal_field_count: Option<usize>,
     /// Delimiter extracted from the split call
     delimiter: String,
     /// Index being accessed
@@ -117,13 +127,9 @@ fn unwrap_single_pipeline<'a>(
 }
 
 /// Search a pipeline for a split row call, optionally followed by filter
-/// operations Returns `(span, input_span, delimiter, has_filter)` if found
-fn find_split_in_pipeline(
-    pipeline: &Pipeline,
-    context: &LintContext,
-) -> Option<(Span, Span, Option<String>, bool)> {
-    let mut split_span: Option<Span> = None;
-    let mut input_span: Option<Span> = None;
+/// operations
+fn find_split_in_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<PipelineSplit> {
+    let mut input_expr: Option<&Expression> = None;
     let mut delimiter: Option<String> = None;
     let mut has_filter = false;
 
@@ -147,18 +153,26 @@ fn find_split_in_pipeline(
         };
 
         if is_split_row_call(call, context) {
-            split_span = Some(element.expr.span);
             delimiter = extract_delimiter_from_split_call(call, context);
-            // Get the input expression (first positional arg to split row)
-            if let Some(first_elem) = pipeline.elements.first() {
-                input_span = Some(first_elem.expr.span);
-            }
+            input_expr = pipeline.elements.first().map(|first_elem| &first_elem.expr);
         } else if is_filter_operation(call, context) {
             has_filter = true;
         }
     }
 
-    split_span.and_then(|span| input_span.map(|inp| (span, inp, delimiter, has_filter)))
+    input_expr.map(|input| PipelineSplit {
+        input_span: input.span,
+        literal_field_count: count_literal_fields(input, delimiter.as_deref()),
+        delimiter,
+        has_filter,
+    })
+}
+
+fn count_literal_fields(input: &Expression, delimiter: Option<&str>) -> Option<usize> {
+    let (Expr::String(literal) | Expr::RawString(literal)) = &input.expr else {
+        return None;
+    };
+    Some(literal.matches(delimiter?).count() + 1)
 }
 
 fn is_filter_operation(call: &Call, context: &LintContext) -> bool {
@@ -186,15 +200,15 @@ fn detect_split_assignment(pipeline: &Pipeline, context: &LintContext) -> Option
         _ => return None,
     };
 
-    let (_split_span, input_span, delimiter, has_filter) =
-        find_split_in_pipeline(inner_pipeline, context)?;
+    let split = find_split_in_pipeline(inner_pipeline, context)?;
 
     Some(SplitVariable {
         var_id,
         split_span: value_expr.span,
-        input_span,
-        delimiter,
-        has_filter,
+        input_span: split.input_span,
+        literal_field_count: split.literal_field_count,
+        delimiter: split.delimiter,
+        has_filter: split.has_filter,
     })
 }
 
@@ -275,6 +289,7 @@ fn create_violation(match_info: &MatchInfo, _context: &LintContext) -> (Detectio
     let fix_data = WithDelimiter {
         full_span,
         input_span: match_info.split_info.input_span,
+        literal_field_count: match_info.split_info.literal_field_count,
         delimiter: delimiter.clone(),
         index: match_info.index,
     };
@@ -361,15 +376,14 @@ impl DetectFix for SplitRowGetMultistatement {
         let WithDelimiter {
             full_span,
             input_span,
+            literal_field_count,
             delimiter,
             index,
         } = fix_data;
 
-        let input_text = context.span_text(*input_span);
+        let num_fields = (*literal_field_count)?;
 
-        // Calculate the number of fields by counting delimiters in the input
-        // This gives us the actual field count from the original split
-        let num_fields = input_text.matches(delimiter.as_str()).count() + 1;
+        let input_text = context.span_text(*input_span);
 
         // Generate parse pattern with the correct number of fields
         let (pattern, needs_regex) = super::generate_parse_pattern(delimiter, num_fields);

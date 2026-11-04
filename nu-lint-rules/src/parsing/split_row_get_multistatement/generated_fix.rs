@@ -108,3 +108,24 @@ $parts | get 0
     RULE.assert_fixed_contains(bad_code, "parse --regex");
     RULE.assert_fixed_contains(bad_code, "get 0.field0");
 }
+
+#[test]
+fn test_fix_counts_escaped_delimiter_in_string_value() {
+    let bad_code = r#"
+let parts = ("a\tb\tc" | split row "\t")
+$parts | get 2
+"#;
+    RULE.assert_fixed_contains(bad_code, "get 0.field2");
+    RULE.assert_fixed_contains(bad_code, "field1");
+}
+
+#[test]
+fn test_no_fix_when_input_is_not_a_literal() {
+    RULE.assert_detects_without_fix(
+        r#"
+let line = "a:b:c"
+let parts = ($line | split row ":")
+$parts | get 2
+"#,
+    );
+}

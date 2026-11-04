@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use nu_lint_analysis::{
     LintLevel,
-    ast::{call::CallExt, span::SpanExt},
+    ast::{call::CallExt, span::SpanExt, string::StringFormat},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -16,7 +16,7 @@ use nu_protocol::{
 pub struct FixData {
     call_span: Span,
     msg_expr_span: Option<Span>,
-    is_string_literal: bool,
+    is_bare_word: bool,
 }
 
 fn collect_try_blocks(context: &LintContext) -> HashSet<BlockId> {
@@ -120,18 +120,19 @@ impl DetectFix for UseErrorMakeForCatch {
 
             // Extract message expression info for fix generation
             let msg_expr = call.get_first_positional_arg();
-            let (msg_expr_span, is_string_literal) = msg_expr.map_or((None, false), |e| {
-                let is_str = matches!(
-                    e.expr,
-                    Expr::String(_) | Expr::GlobPattern(_, _) | Expr::RawString(_)
-                );
-                (Some(e.span), is_str)
+            let (msg_expr_span, is_bare_word) = msg_expr.map_or((None, false), |e| {
+                let bare_word = matches!(e.expr, Expr::GlobPattern(..))
+                    || matches!(
+                        StringFormat::from_expression(e, ctx),
+                        Some(StringFormat::BareWord(_))
+                    );
+                (Some(e.span), bare_word)
             });
 
             let fix_data = FixData {
                 call_span: call.span(),
                 msg_expr_span,
-                is_string_literal,
+                is_bare_word,
             };
 
             vec![(violation, fix_data)]
@@ -142,7 +143,7 @@ impl DetectFix for UseErrorMakeForCatch {
         let msg_span = fix_data.msg_expr_span?;
         let text = ctx.span_text(msg_span);
 
-        let msg_text = if fix_data.is_string_literal {
+        let msg_text = if fix_data.is_bare_word {
             format!("\"{text}\"")
         } else {
             text.to_string()

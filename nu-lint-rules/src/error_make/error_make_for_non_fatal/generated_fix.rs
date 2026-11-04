@@ -44,3 +44,11 @@ fn test_fix_in_try_block() {
     RULE.assert_fixed_contains(code, "error make");
     RULE.assert_fixed_contains(code, "Operation failed");
 }
+
+#[test]
+fn fix_does_not_double_existing_quotes() {
+    RULE.assert_fixed_contains(
+        r#"def warn-user [] { print --stderr "WARN: missing" }"#,
+        r#"error make { msg: "WARN: missing" }"#,
+    );
+}

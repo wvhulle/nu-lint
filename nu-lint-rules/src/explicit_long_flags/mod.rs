@@ -16,12 +16,10 @@ struct ShortFlagInfo {
     flag_span: Span,
 }
 
-const MAX_SHORT_FLAG_LENGTH: usize = 3;
-const LONG_FLAG_DASHES: usize = 2;
+const SINGLE_SHORT_FLAG_LENGTH: usize = 2;
 
-const fn is_short_flag_spelling(flag_span: Span, long_name: &str) -> bool {
-    let written_length = flag_span.end - flag_span.start;
-    written_length <= MAX_SHORT_FLAG_LENGTH && written_length < long_name.len() + LONG_FLAG_DASHES
+const fn is_single_short_flag(flag_span: Span) -> bool {
+    flag_span.end - flag_span.start == SINGLE_SHORT_FLAG_LENGTH
 }
 
 fn long_name_of_short_flag(
@@ -60,7 +58,7 @@ fn extract_short_flags(call: &Call, context: &LintContext) -> Vec<ShortFlagInfo>
             let flag_span = spanned_name.span;
             let long_name = &spanned_name.item;
 
-            if is_short_flag_spelling(flag_span, long_name) {
+            if is_single_short_flag(flag_span) {
                 // The parser has already resolved it to the long name
                 // We need to find what short char was used
                 if let Some(short_char) = short_alias.as_ref().and_then(|s| s.item.chars().next()) {

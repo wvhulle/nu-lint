@@ -46,3 +46,8 @@ fn ignore_mixed_with_long() {
 fn ignore_long_flag_spelling() {
     RULE.assert_ignores("ls --all");
 }
+
+#[test]
+fn ignore_grouped_short_flags() {
+    RULE.assert_ignores("ls -am");
+}

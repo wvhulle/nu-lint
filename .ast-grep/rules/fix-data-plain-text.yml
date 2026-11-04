@@ -6,17 +6,6 @@ severity: error
 language: Rust
 files:
   - nu-lint-rules/src/**
-ignores:
-  - nu-lint-rules/src/external_tools/date_to_builtin/mod.rs
-  - nu-lint-rules/src/glob_may_drop_quotes/mod.rs
-  - nu-lint-rules/src/if_else_chain_to_match/mod.rs
-  - nu-lint-rules/src/migrations/ignore_errors_to_optional/mod.rs
-  - nu-lint-rules/src/parsing/lines_each_to_parse/mod.rs
-  - nu-lint-rules/src/parsing/simplify_regex_parse/mod.rs
-  - nu-lint-rules/src/parsing/split_first_to_parse/mod.rs
-  - nu-lint-rules/src/parsing/split_row_get_multistatement/mod.rs
-  - nu-lint-rules/src/string_may_be_bare/mod.rs
-  - nu-lint-rules/src/transpose_items/mod.rs
 rule:
   kind: field_declaration
   has:

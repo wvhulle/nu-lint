@@ -7,14 +7,14 @@ use nu_lint_analysis::{
 };
 use nu_protocol::{
     Span,
-    ast::{Argument, Block, Expr, Pipeline},
+    ast::{Argument, Block, Expr, Expression, Pipeline},
 };
 
 struct FixData {
     /// Span covering `lines | each { ... }`
     span: Span,
-    /// The parse pattern extracted from inside the closure
-    parse_pattern: String,
+    /// The parse pattern argument from inside the closure
+    pattern_expr: Expression,
     /// Whether it uses --regex flag
     uses_regex: bool,
 }
@@ -24,7 +24,7 @@ fn extract_parse_from_closure(
     closure_block: &Block,
     closure_param_id: nu_protocol::VarId,
     ctx: &LintContext,
-) -> Option<(String, bool)> {
+) -> Option<(Expression, bool)> {
     // Must be single pipeline
     if closure_block.pipelines.len() != 1 {
         log::trace!(
@@ -75,10 +75,6 @@ fn extract_parse_from_closure(
 
     // Extract the pattern argument
     let pattern_arg = parse_call.get_first_positional_arg()?;
-    let pattern = match &pattern_arg.expr {
-        Expr::String(s) | Expr::RawString(s) => s.clone(),
-        _ => ctx.expr_text(pattern_arg).to_string(),
-    };
 
     // Check if --regex flag is present
     let uses_regex = parse_call
@@ -86,7 +82,7 @@ fn extract_parse_from_closure(
         .iter()
         .any(|arg| matches!(arg, Argument::Named((name, _, _)) if name.item == "regex"));
 
-    Some((pattern, uses_regex))
+    Some((pattern_arg.clone(), uses_regex))
 }
 
 fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection, FixData)> {
@@ -116,7 +112,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection,
             let param_id = param.var_id?;
 
             // Check if closure body is just `$param | parse "..."`
-            let (parse_pattern, uses_regex) =
+            let (pattern_expr, uses_regex) =
                 extract_parse_from_closure(closure_block, param_id, context)?;
 
             let violation = Detection::from_global_span(
@@ -134,7 +130,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection,
                 violation,
                 FixData {
                     span: pair.span,
-                    parse_pattern,
+                    pattern_expr,
                     uses_regex,
                 },
             ))
@@ -174,11 +170,15 @@ impl DetectFix for LinesEachParseRule {
         context.ast.detect_in_pipelines(context, check_pipeline)
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let parse_pattern = match &fix_data.pattern_expr.expr {
+            Expr::String(literal) | Expr::RawString(literal) => literal.as_str(),
+            _ => context.expr_text(&fix_data.pattern_expr),
+        };
         let replacement = if fix_data.uses_regex {
-            format!("lines | parse --regex \"{}\"", fix_data.parse_pattern)
+            format!("lines | parse --regex \"{parse_pattern}\"")
         } else {
-            format!("lines | parse \"{}\"", fix_data.parse_pattern)
+            format!("lines | parse \"{parse_pattern}\"")
         };
 
         Some(Fix {

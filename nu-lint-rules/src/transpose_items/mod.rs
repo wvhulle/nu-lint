@@ -15,14 +15,13 @@ use nu_protocol::{
 struct CellPathReplacement {
     /// The full span of `$row.col1`
     span: Span,
-    /// The field name (e.g., "col1")
-    field: String,
+    /// The span of the field name (e.g., "col1")
+    field_span: Span,
 }
 
 struct TransposeEachPattern {
     each_call: Call,
-    col1: String,
-    col2: String,
+    transpose_call: Call,
     combined_span: nu_protocol::Span,
     transpose_span: nu_protocol::Span,
     each_span: nu_protocol::Span,
@@ -113,7 +112,7 @@ fn closure_only_uses_fields(
             if field_name == field1 || field_name == field2 {
                 replacements.push(CellPathReplacement {
                     span: expr.span,
-                    field: field_name.to_string(),
+                    field_span: cell_path.tail[0].span(),
                 });
             } else {
                 log::trace!("Invalid field name");
@@ -190,8 +189,7 @@ fn detect_pattern_in_pipeline(
 
             Some(TransposeEachPattern {
                 each_call: pair.second.clone(),
-                col1,
-                col2,
+                transpose_call: pair.first.clone(),
                 combined_span: pair.span,
                 transpose_span: pair.first.head,
                 each_span: pair.second.head,
@@ -263,7 +261,9 @@ impl DetectFix for ItemsInsteadOfTransposeEach {
 
         patterns
             .into_iter()
-            .map(|pattern| {
+            .filter_map(|pattern| {
+                let (first_column, second_column) =
+                    extract_transpose_column_names(&pattern.transpose_call)?;
                 let violation = Detection::from_global_span(
                     "Use 'items' instead of 'transpose | each' when iterating over record entries",
                     pattern.combined_span,
@@ -272,10 +272,10 @@ impl DetectFix for ItemsInsteadOfTransposeEach {
                 .with_extra_label("converts record to table", pattern.transpose_span)
                 .with_extra_label("iterates over rows", pattern.each_span)
                 .with_extra_label(
-                    format!("accesses ${} and ${}", pattern.col1, pattern.col2),
+                    format!("accesses ${first_column} and ${second_column}"),
                     pattern.closure_span,
                 );
-                (violation, pattern)
+                Some((violation, pattern))
             })
             .collect()
     }
@@ -292,6 +292,8 @@ impl DetectFix for ItemsInsteadOfTransposeEach {
             return None;
         };
 
+        let (first_column, second_column) =
+            extract_transpose_column_names(&pattern.transpose_call)?;
         let mut replacements = Vec::new();
 
         // 1. Replace `transpose col1 col2 | each` with `items`
@@ -305,7 +307,7 @@ impl DetectFix for ItemsInsteadOfTransposeEach {
         let param_span = var.declaration_span;
         replacements.push(Replacement::new(
             param_span,
-            format!("{}, {}", pattern.col1, pattern.col2),
+            format!("{first_column}, {second_column}"),
         ));
 
         // 3. Replace each cell path access `$row.col1` with `$col1`, `$row.col2` with
@@ -313,7 +315,7 @@ impl DetectFix for ItemsInsteadOfTransposeEach {
         for cell_path_replacement in &pattern.cell_path_replacements {
             replacements.push(Replacement::new(
                 cell_path_replacement.span,
-                format!("${}", cell_path_replacement.field),
+                format!("${}", context.span_text(cell_path_replacement.field_span)),
             ));
         }
 

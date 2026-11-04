@@ -5,14 +5,10 @@ use nu_lint_analysis::{
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
-use nu_protocol::{
-    Span,
-    ast::{Argument, Call, Expr},
-};
+use nu_protocol::ast::{Argument, Call, Expr, Expression};
 
 struct FixData {
-    quoted_span: Span,
-    pattern: String,
+    quoted_expr: Expression,
 }
 
 /// Checks if a string contains glob metacharacters
@@ -59,8 +55,7 @@ fn check_call(call: &Call, ctx: &LintContext) -> Vec<(Detection, FixData)> {
         results.push((
             violation,
             FixData {
-                quoted_span: arg_expr.span,
-                pattern: pattern.clone(),
+                quoted_expr: arg_expr.clone(),
             },
         ));
     }
@@ -100,11 +95,14 @@ impl DetectFix for GlobMayDropQuotes {
     }
 
     fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let can_be_bare = !bare_glob_needs_quotes(&fix_data.pattern);
+        let Expr::GlobPattern(pattern, _) = &fix_data.quoted_expr.expr else {
+            return None;
+        };
+        let can_be_bare = !bare_glob_needs_quotes(pattern);
         let replacement_text = if can_be_bare {
-            fix_data.pattern.clone()
+            pattern.clone()
         } else {
-            format!("(\"{}\" | into glob)", fix_data.pattern)
+            format!("(\"{pattern}\" | into glob)")
         };
 
         let explanation = if can_be_bare {
@@ -115,7 +113,10 @@ impl DetectFix for GlobMayDropQuotes {
 
         Some(Fix {
             explanation: explanation.into(),
-            replacements: vec![Replacement::new(fix_data.quoted_span, replacement_text)],
+            replacements: vec![Replacement::new(
+                fix_data.quoted_expr.span,
+                replacement_text,
+            )],
         })
     }
 }

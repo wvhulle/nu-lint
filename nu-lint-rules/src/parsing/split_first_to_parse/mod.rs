@@ -14,7 +14,7 @@ use super::{extract_delimiter_from_split_call, is_split_row_call};
 
 struct FixData {
     span: Span,
-    delimiter: String,
+    split_call: Call,
 }
 
 fn is_first_call(call: &Call, ctx: &LintContext) -> bool {
@@ -48,7 +48,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection,
                 violation,
                 FixData {
                     span: pair.span,
-                    delimiter,
+                    split_call: pair.first.clone(),
                 },
             ))
         })
@@ -92,8 +92,9 @@ impl DetectFix for SplitFirstToParse {
         context.ast.detect_in_pipelines(context, check_pipeline)
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let replacement = generate_replacement(&fix_data.delimiter);
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let delimiter = extract_delimiter_from_split_call(&fix_data.split_call, context)?;
+        let replacement = generate_replacement(&delimiter);
         Some(Fix {
             explanation: "replace".into(),
             replacements: vec![Replacement::new(fix_data.span, replacement)],

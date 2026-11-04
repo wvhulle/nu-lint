@@ -15,7 +15,7 @@ use regex::Regex;
 
 pub struct FixData {
     span: Span,
-    simplified_pattern: String,
+    parse_call: Call,
 }
 
 fn extract_regex_pattern(call: &Call, context: &LintContext) -> Option<String> {
@@ -88,7 +88,7 @@ fn check_parse_regex(expr: &Expr, ctx: &LintContext) -> Option<(Detection, FixDa
     };
 
     let pattern = extract_regex_pattern(call, ctx)?;
-    let simplified = can_simplify_regex_pattern(&pattern)?;
+    can_simplify_regex_pattern(&pattern)?;
 
     let violation = Detection::from_global_span(
         "Simplify 'parse --regex' to 'parse' with pattern syntax",
@@ -100,7 +100,7 @@ fn check_parse_regex(expr: &Expr, ctx: &LintContext) -> Option<(Detection, FixDa
         violation,
         FixData {
             span: call.span(),
-            simplified_pattern: simplified,
+            parse_call: call.as_ref().clone(),
         },
     ))
 }
@@ -140,15 +140,14 @@ impl DetectFix for SimplifyRegexRule {
         })
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let replacement = format!("parse \"{}\"", fix_data.simplified_pattern);
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let pattern = extract_regex_pattern(&fix_data.parse_call, context)?;
+        let simplified_pattern = can_simplify_regex_pattern(&pattern)?;
+        let replacement = format!("parse \"{simplified_pattern}\"");
 
         Some(Fix {
-            explanation: format!(
-                "Simplify 'parse --regex' to 'parse \"{}\"'",
-                fix_data.simplified_pattern
-            )
-            .into(),
+            explanation: format!("Simplify 'parse --regex' to 'parse \"{simplified_pattern}\"'")
+                .into(),
             replacements: vec![Replacement::new(fix_data.span, replacement)],
         })
     }

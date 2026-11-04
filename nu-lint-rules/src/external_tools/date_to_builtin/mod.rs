@@ -9,7 +9,7 @@ use nu_lint_analysis::{
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
-use nu_protocol::Span;
+use nu_protocol::{Span, ast::Expression};
 
 const UTC: Flag = Flag::switch('u', "utc");
 
@@ -24,34 +24,41 @@ const NOTE: &str = "'date now' returns a datetime value that can be compared, sh
 pub struct CurrentDate<'a> {
     span: Span,
     utc: bool,
-    format: Option<&'a str>,
+    format_operand: Option<&'a Expression>,
 }
 
 impl<'a> CurrentDate<'a> {
     fn from_invocation(invocation: &ExternalInvocation<'a>) -> Option<Self> {
         let parsed = invocation.parse(&SPEC)?;
-        let format = match parsed.operands.as_slice() {
+        let format_operand = match parsed.operands.as_slice() {
             [] => None,
-            [operand] => Some(chrono_compatible_format(literal_content(operand)?)?),
+            [operand] => {
+                chrono_compatible_format(literal_content(operand)?)?;
+                Some(*operand)
+            }
             _ => return None,
         };
         Some(Self {
             span: invocation.span,
             utc: parsed.has(UTC),
-            format,
+            format_operand,
         })
     }
 
-    fn to_nu(&self) -> String {
+    fn to_nu(&self) -> Option<String> {
         let timezone = if self.utc {
             " | date to-timezone UTC"
         } else {
             ""
         };
-        let formatting = self.format.map_or(String::new(), |format| {
-            format!(" | format date {}", quote_nu_string(format))
-        });
-        format!("date now{timezone}{formatting}")
+        let formatting = match self.format_operand {
+            Some(operand) => format!(
+                " | format date {}",
+                quote_nu_string(chrono_compatible_format(literal_content(operand)?)?)
+            ),
+            None => String::new(),
+        };
+        Some(format!("date now{timezone}{formatting}"))
     }
 }
 
@@ -90,7 +97,7 @@ impl DetectFix for DateToBuiltin {
     }
 
     fn fix(&self, _context: &LintContext, date: &Self::FixInput<'_>) -> Option<Fix> {
-        let replacement = date.to_nu();
+        let replacement = date.to_nu()?;
         Some(Fix {
             explanation: "Get the date with the built-in `date` commands".into(),
             replacements: vec![Replacement::new(date.span, replacement)],

@@ -1,3 +1,5 @@
+use std::iter::once;
+
 use heck::ToSnakeCase;
 use nu_lint_analysis::{
     LintLevel,
@@ -112,7 +114,7 @@ impl DetectFix for SnakeCaseVariables {
         let var_name = context.span_text(fix_data.var_name_span);
         let snake_case_name = var_name.to_snake_case();
         let usage_replacement = format!("${snake_case_name}");
-        let replacements = std::iter::once(Replacement::new(
+        let replacements = once(Replacement::new(
             fix_data.var_name_span,
             snake_case_name.clone(),
         ))

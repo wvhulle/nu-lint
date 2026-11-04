@@ -4,7 +4,7 @@ use nu_lint_analysis::{
     rule::{DetectFix, Rule},
     violation::{Detection, DiagnosticTag, Fix, Replacement},
 };
-use nu_protocol::Span;
+use nu_protocol::{DeclId, Span};
 
 use super::deprecated_usage::{MigratedCall, MigratedDeprecation, migrated_calls};
 
@@ -16,20 +16,30 @@ pub const MIGRATIONS: &[MigratedDeprecation] = &[
 
 struct OptionalFlagRename {
     flag_span: Span,
-    successor_flag: String,
+    decl_id: DeclId,
+    successor_long_name: &'static str,
+    is_written_long: bool,
+}
+
+fn successor_flag_spelling(rename: &OptionalFlagRename, context: &LintContext) -> Option<String> {
+    let signature = context.working_set.get_decl(rename.decl_id).signature();
+    let successor = signature.get_long_flag(rename.successor_long_name)?;
+    Some(match successor.short {
+        Some(short) if !rename.is_written_long => format!("-{short}"),
+        _ => format!("--{}", successor.long),
+    })
 }
 
 fn optional_flag_rename(call: &MigratedCall, context: &LintContext) -> Option<OptionalFlagRename> {
     let deprecated_flag = call.flag.as_ref()?;
+    let successor_long_name = call.migration.successor?;
     let signature = context.working_set.get_decl(call.decl_id).signature();
-    let successor = signature.get_long_flag(call.migration.successor?)?;
-    let successor_flag = match successor.short {
-        Some(short) if !deprecated_flag.is_written_long => format!("-{short}"),
-        _ => format!("--{}", successor.long),
-    };
+    signature.get_long_flag(successor_long_name)?;
     Some(OptionalFlagRename {
         flag_span: deprecated_flag.span,
-        successor_flag,
+        decl_id: call.decl_id,
+        successor_long_name,
+        is_written_long: deprecated_flag.is_written_long,
     })
 }
 
@@ -81,13 +91,11 @@ impl DetectFix for IgnoreErrorsToOptional {
             .collect()
     }
 
-    fn fix(&self, _context: &LintContext, rename: &Self::FixInput<'_>) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, rename: &Self::FixInput<'_>) -> Option<Fix> {
+        let successor_flag = successor_flag_spelling(rename, context)?;
         Some(Fix {
-            explanation: format!("Rename the flag to `{}`", rename.successor_flag).into(),
-            replacements: vec![Replacement::new(
-                rename.flag_span,
-                rename.successor_flag.clone(),
-            )],
+            explanation: format!("Rename the flag to `{successor_flag}`").into(),
+            replacements: vec![Replacement::new(rename.flag_span, successor_flag)],
         })
     }
 }

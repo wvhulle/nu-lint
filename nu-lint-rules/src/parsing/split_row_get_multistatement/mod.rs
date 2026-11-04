@@ -23,14 +23,14 @@ struct SplitVariable {
     split_span: Span,
     input_span: Span,
     literal_field_count: Option<usize>,
-    delimiter: Option<String>,
+    split_call: Call,
     has_filter: bool,
 }
 
 struct PipelineSplit {
     input_span: Span,
     literal_field_count: Option<usize>,
-    delimiter: Option<String>,
+    split_call: Call,
     has_filter: bool,
 }
 
@@ -87,8 +87,8 @@ pub struct WithDelimiter {
     input_span: Span,
     /// Number of fields in the input, known only for a string literal
     literal_field_count: Option<usize>,
-    /// Delimiter extracted from the split call
-    delimiter: String,
+    /// The split call holding the delimiter
+    split_call: Call,
     /// Index being accessed
     index: usize,
 }
@@ -130,7 +130,7 @@ fn unwrap_single_pipeline<'a>(
 /// operations
 fn find_split_in_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<PipelineSplit> {
     let mut input_expr: Option<&Expression> = None;
-    let mut delimiter: Option<String> = None;
+    let mut split_call: Option<&Call> = None;
     let mut has_filter = false;
 
     for element in &pipeline.elements {
@@ -153,18 +153,21 @@ fn find_split_in_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<
         };
 
         if is_split_row_call(call, context) {
-            delimiter = extract_delimiter_from_split_call(call, context);
+            split_call = Some(call);
             input_expr = pipeline.elements.first().map(|first_elem| &first_elem.expr);
         } else if is_filter_operation(call, context) {
             has_filter = true;
         }
     }
 
-    input_expr.map(|input| PipelineSplit {
-        input_span: input.span,
-        literal_field_count: count_literal_fields(input, delimiter.as_deref()),
-        delimiter,
-        has_filter,
+    input_expr.zip(split_call).map(|(input, call)| {
+        let delimiter = extract_delimiter_from_split_call(call, context);
+        PipelineSplit {
+            input_span: input.span,
+            literal_field_count: count_literal_fields(input, delimiter.as_deref()),
+            split_call: call.clone(),
+            has_filter,
+        }
     })
 }
 
@@ -207,7 +210,7 @@ fn detect_split_assignment(pipeline: &Pipeline, context: &LintContext) -> Option
         split_span: value_expr.span,
         input_span: split.input_span,
         literal_field_count: split.literal_field_count,
-        delimiter: split.delimiter,
+        split_call: split.split_call,
         has_filter: split.has_filter,
     })
 }
@@ -272,12 +275,6 @@ fn create_violation(match_info: &MatchInfo, _context: &LintContext) -> (Detectio
         match_info.access_span.end,
     );
 
-    let delimiter = match_info
-        .split_info
-        .delimiter
-        .as_ref()
-        .expect("create_violation should only be called when delimiter is available");
-
     let violation = Detection::from_global_span(
         "Extract field directly with 'parse' instead of storing split result",
         full_span,
@@ -290,7 +287,7 @@ fn create_violation(match_info: &MatchInfo, _context: &LintContext) -> (Detectio
         full_span,
         input_span: match_info.split_info.input_span,
         literal_field_count: match_info.split_info.literal_field_count,
-        delimiter: delimiter.clone(),
+        split_call: match_info.split_info.split_call.clone(),
         index: match_info.index,
     };
 
@@ -377,7 +374,7 @@ impl DetectFix for SplitRowGetMultistatement {
             full_span,
             input_span,
             literal_field_count,
-            delimiter,
+            split_call,
             index,
         } = fix_data;
 
@@ -386,7 +383,8 @@ impl DetectFix for SplitRowGetMultistatement {
         let input_text = context.span_text(*input_span);
 
         // Generate parse pattern with the correct number of fields
-        let (pattern, needs_regex) = super::generate_parse_pattern(delimiter, num_fields);
+        let delimiter = extract_delimiter_from_split_call(split_call, context)?;
+        let (pattern, needs_regex) = super::generate_parse_pattern(&delimiter, num_fields);
         let parse_cmd = if needs_regex {
             format!("parse --regex '{pattern}'")
         } else {

@@ -7,14 +7,10 @@ use nu_lint_analysis::{
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
 };
-use nu_protocol::{
-    Span,
-    ast::{Expr, Expression},
-};
+use nu_protocol::ast::{Expr, Expression};
 
 struct FixData {
-    quoted_span: Span,
-    unquoted_content: String,
+    quoted_expr: Expression,
 }
 
 /// Check if an expression is in command position where a bare word would be
@@ -114,8 +110,7 @@ round brackets ( ), it will be interpreted as an external command."#,
             results.push((
                 violation,
                 FixData {
-                    quoted_span: expr.span,
-                    unquoted_content: unquoted_content.clone(),
+                    quoted_expr: expr.clone(),
                 },
             ));
             ControlFlow::Continue(())
@@ -124,12 +119,14 @@ round brackets ( ), it will be interpreted as an external command."#,
         results
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let string_format = StringFormat::from_expression(&fix_data.quoted_expr, context)?;
+        let unquoted_content = string_format.content();
         Some(Fix {
-            explanation: format!("Remove quotes from '{}'", fix_data.unquoted_content).into(),
+            explanation: format!("Remove quotes from '{unquoted_content}'").into(),
             replacements: vec![Replacement::new(
-                fix_data.quoted_span,
-                fix_data.unquoted_content.clone(),
+                fix_data.quoted_expr.span,
+                unquoted_content.to_string(),
             )],
         })
     }

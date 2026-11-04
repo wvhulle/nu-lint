@@ -12,7 +12,17 @@ use nu_protocol::{
     ast::{Call, Comparison, Expr, Expression, Operator},
 };
 
-fn extract_compared_variable(expr: &Expression, context: &LintContext) -> Option<String> {
+fn variable_declaration_span(expr: &Expression, context: &LintContext) -> Option<Span> {
+    match &expr.expr {
+        Expr::Var(var_id) | Expr::VarDecl(var_id) => {
+            Some(context.working_set.get_variable(*var_id).declaration_span)
+        }
+        Expr::FullCellPath(cell_path) => variable_declaration_span(&cell_path.head, context),
+        _ => None,
+    }
+}
+
+fn extract_compared_variable(expr: &Expression, context: &LintContext) -> Option<Span> {
     let Expr::BinaryOp(left, op, right) = &expr.expr else {
         return None;
     };
@@ -22,35 +32,35 @@ fn extract_compared_variable(expr: &Expression, context: &LintContext) -> Option
         return None;
     };
 
-    if let Some(var_name) = left.extract_variable_name(context) {
-        return Some(var_name);
+    if let Some(declaration_span) = variable_declaration_span(left, context) {
+        return Some(declaration_span);
     }
 
     if let Expr::FullCellPath(cell_path) = &left.expr {
-        return Some(context.expr_text(&cell_path.head).to_string());
+        return Some(cell_path.head.span);
     }
 
-    if let Some(var_name) = right.extract_variable_name(context) {
-        return Some(var_name);
+    if let Some(declaration_span) = variable_declaration_span(right, context) {
+        return Some(declaration_span);
     }
 
     if let Expr::FullCellPath(cell_path) = &right.expr {
-        Some(context.expr_text(&cell_path.head).to_string())
+        Some(cell_path.head.span)
     } else {
         None
     }
 }
 
-fn extract_comparison_value(expr: &Expression, context: &LintContext) -> Option<String> {
+fn extract_comparison_value(expr: &Expression, context: &LintContext) -> Option<Span> {
     let Expr::BinaryOp(left, _op, right) = &expr.expr else {
         return None;
     };
 
     if left.extract_variable_name(context).is_some() || matches!(&left.expr, Expr::FullCellPath(_))
     {
-        Some(context.expr_text(right).to_string())
+        Some(right.span)
     } else {
-        Some(context.expr_text(left).to_string())
+        Some(left.span)
     }
 }
 
@@ -59,12 +69,12 @@ fn extract_comparison_value(expr: &Expression, context: &LintContext) -> Option<
 pub struct FixData {
     /// Span of the entire if-else-if chain to replace
     call_span: Span,
-    /// Variable name being compared
-    compared_var: String,
-    /// Collected branches with pattern and body text
+    /// Span of the variable name being compared
+    compared_var_span: Span,
+    /// Collected branches with pattern and body spans
     branches: Vec<MatchBranch>,
     /// Optional final else body
-    final_else: Option<String>,
+    final_else: Option<Span>,
 }
 
 /// Properties of an if-else-if chain
@@ -77,8 +87,8 @@ struct ChainAnalysis {
 
 /// Represents a single branch in the if-else-if chain
 struct MatchBranch {
-    pattern: String,
-    body: String,
+    pattern_span: Span,
+    body_span: Span,
 }
 
 /// Result of iterating through an if-else-if chain
@@ -86,14 +96,14 @@ enum ChainIterResult {
     /// A branch with pattern and body
     Branch(MatchBranch),
     /// The final else clause
-    FinalElse(String),
+    FinalElse(Span),
 }
 
 /// Iterator over if-else-if chain branches
 struct ChainIterator<'a> {
     current: Option<&'a Call>,
     context: &'a LintContext<'a>,
-    final_else_pending: Option<String>,
+    final_else_pending: Option<Span>,
 }
 
 impl<'a> ChainIterator<'a> {
@@ -118,15 +128,16 @@ impl Iterator for ChainIterator<'_> {
         let call = self.current?;
 
         // Extract pattern and body from current branch
-        let pattern = call
+        let pattern_span = call
             .get_first_positional_arg()
             .and_then(|arg| extract_comparison_value(arg, self.context))?;
 
-        let body = call
-            .get_positional_arg(1)
-            .map(|arg| self.context.span_text(arg.span).to_string())?;
+        let body_span = call.get_positional_arg(1).map(|arg| arg.span)?;
 
-        let branch = MatchBranch { pattern, body };
+        let branch = MatchBranch {
+            pattern_span,
+            body_span,
+        };
 
         // Check for else/else-if branch
         match call.get_else_branch() {
@@ -138,8 +149,7 @@ impl Iterator for ChainIterator<'_> {
             }
             Some((false, final_else_expr)) => {
                 self.current = None;
-                self.final_else_pending =
-                    Some(self.context.span_text(final_else_expr.span).to_string());
+                self.final_else_pending = Some(final_else_expr.span);
             }
             None => {
                 self.current = None;
@@ -150,10 +160,7 @@ impl Iterator for ChainIterator<'_> {
 }
 
 /// Collects all branches from an if-else-if chain
-fn collect_chain_branches(
-    call: &Call,
-    context: &LintContext,
-) -> (Vec<MatchBranch>, Option<String>) {
+fn collect_chain_branches(call: &Call, context: &LintContext) -> (Vec<MatchBranch>, Option<Span>) {
     let mut branches = Vec::new();
     let mut final_else = None;
 
@@ -182,7 +189,7 @@ fn walk_if_else_chain(
         let compares_same_var = current_call
             .get_first_positional_arg()
             .and_then(|arg| extract_compared_variable(arg, context))
-            .is_some_and(|var| var == compared_var);
+            .is_some_and(|var_span| context.span_text(var_span) == compared_var);
 
         // Try to get the next else-if branch
         let (is_else_if, else_expr) = current_call.get_else_branch()?;
@@ -211,9 +218,10 @@ fn walk_if_else_chain(
 /// Analyze an if-call and its else branch to detect if-else-if chains
 fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<(Detection, FixData)> {
     // Get the condition expression and check if it compares a variable
-    let compared_var = call
+    let compared_var_span = call
         .get_first_positional_arg()
         .and_then(|arg| extract_compared_variable(arg, context))?;
+    let compared_var = context.span_text(compared_var_span);
 
     // Verify this is an else-if chain (not just a final else)
     let (is_else_if, else_expr) = call.get_else_branch()?;
@@ -229,7 +237,7 @@ fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<(Detection, Fi
     (nested_call.builtin_name(context) == Some("if")).then_some(())?;
 
     // Analyze chain properties
-    let analysis = walk_if_else_chain(nested_call, &compared_var, context);
+    let analysis = walk_if_else_chain(nested_call, compared_var, context);
 
     // Only flag chains with 3+ branches (at least 2 else-if)
     (analysis.length >= 3).then_some(())?;
@@ -266,7 +274,7 @@ fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<(Detection, Fi
 
     let fix_data = FixData {
         call_span: call.span(),
-        compared_var,
+        compared_var_span,
         branches,
         final_else,
     };
@@ -306,7 +314,7 @@ impl DetectFix for ReplaceIfElseChainWithMatch {
         })
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         // Only generate fix if we have branch data (consistent variable case)
         if fix_data.branches.is_empty() {
             return None;
@@ -316,20 +324,27 @@ impl DetectFix for ReplaceIfElseChainWithMatch {
         let match_arms = fix_data
             .branches
             .iter()
-            .map(|branch| format!("    {} => {},", branch.pattern, branch.body))
+            .map(|branch| {
+                format!(
+                    "    {} => {},",
+                    context.span_text(branch.pattern_span),
+                    context.span_text(branch.body_span)
+                )
+            })
             .chain(
                 fix_data
                     .final_else
                     .iter()
-                    .map(|body| format!("    _ => {body}")),
+                    .map(|body_span| format!("    _ => {}", context.span_text(*body_span))),
             )
             .collect::<Vec<_>>()
             .join("\n");
 
-        let match_text = format!("match {} {{\n{match_arms}\n}}", fix_data.compared_var);
+        let compared_var = context.span_text(fix_data.compared_var_span);
+        let match_text = format!("match {compared_var} {{\n{match_arms}\n}}");
 
         Some(Fix {
-            explanation: format!("Convert to match expression on {}", fix_data.compared_var).into(),
+            explanation: format!("Convert to match expression on {compared_var}").into(),
             replacements: vec![Replacement::new(fix_data.call_span, match_text)],
         })
     }

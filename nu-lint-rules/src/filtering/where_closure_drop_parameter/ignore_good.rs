@@ -103,3 +103,8 @@ fn ignore_user_defined_filter() {
         "def filter [condition: closure] { $in }\n[1 null] | filter {|entry| $entry != null}",
     );
 }
+
+#[test]
+fn ignore_row_condition_using_it() {
+    RULE.assert_ignores("ls | where $it.size > 100");
+}

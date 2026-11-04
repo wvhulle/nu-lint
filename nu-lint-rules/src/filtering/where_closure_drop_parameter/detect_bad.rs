@@ -131,3 +131,8 @@ fn detect_closure_with_utf8_characters() {
     // UTF-8 safety: parameter and surrounding text contain multi-byte characters
     RULE.assert_detects(r#"["测试", "テスト", "🎉"] | where {|文字| $文字 == "测试"}"#);
 }
+
+#[test]
+fn detect_closure_with_spaces_inside_pipes() {
+    RULE.assert_detects("ls | where {| file | $file.size > 100 }");
+}

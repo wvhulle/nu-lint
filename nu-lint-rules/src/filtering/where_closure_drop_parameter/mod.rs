@@ -19,6 +19,8 @@ struct RowConditionFixData {
     param_var_id: VarId,
 }
 
+const ROW_CONDITION_PARAMETER: &str = "$it";
+
 struct ClosureParameter {
     name: String,
     var_id: VarId,
@@ -39,6 +41,10 @@ fn extract_closure_parameter(block_id: BlockId, context: &LintContext) -> Option
     let [param] = block.signature.required_positional.as_slice() else {
         return None;
     };
+
+    if param.name == ROW_CONDITION_PARAMETER {
+        return None;
+    }
 
     let var_id = param.var_id?;
     let var = context.working_set.get_variable(var_id);
@@ -94,14 +100,7 @@ fn check_where_or_filter_call(
     // Extract the single parameter
     let param = extract_closure_parameter(block_id, context)?;
 
-    // Skip if already using `it`
     if param.name == "it" {
-        return None;
-    }
-
-    // Verify the closure has explicit pipe syntax (not a block)
-    let arg_text = context.expr_text(arg_expr);
-    if !arg_text.contains(&format!("|{}|", param.name)) {
         return None;
     }
 

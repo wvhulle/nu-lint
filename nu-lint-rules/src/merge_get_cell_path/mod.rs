@@ -119,7 +119,7 @@ impl DetectFix for MergeGetCellPath {
     }
 
     fn short_description(&self) -> &'static str {
-        "Combine chained 'get' commands into cell paths"
+        "Combine chained `get` commands into cell paths"
     }
 
     fn source_link(&self) -> Option<&'static str> {

@@ -86,9 +86,9 @@ impl DetectFix for UnhandledExternalError {
     fn long_description(&self) -> Option<&'static str> {
         Some(
             "External commands can fail with non-zero exit codes. Since nushell 0.98.0, these \
-             raise errors that 'try' blocks can catch. For cases where you need to inspect \
-             stdout, stderr, and exit_code separately, use '| complete' to capture them in a \
-             record. Without 'try' or 'complete', failures may go unnoticed and cause silent data \
+             raise errors that `try` blocks can catch. For cases where you need to inspect \
+             stdout, stderr, and exit_code separately, use `| complete` to capture them in a \
+             record. Without `try` or `complete`, failures may go unnoticed and cause silent data \
              corruption or unexpected behavior downstream.",
         )
     }

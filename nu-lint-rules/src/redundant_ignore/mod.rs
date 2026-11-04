@@ -94,7 +94,7 @@ impl DetectFix for RedundantIgnore {
     }
 
     fn short_description(&self) -> &'static str {
-        "Commands producing output that is discarded with '| ignore'"
+        "Commands producing output that is discarded with `| ignore`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

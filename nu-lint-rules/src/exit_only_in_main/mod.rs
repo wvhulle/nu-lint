@@ -22,7 +22,7 @@ impl DetectFix for ExitOnlyInMain {
     }
 
     fn short_description(&self) -> &'static str {
-        "Avoid using 'exit' in functions other than 'main'"
+        "Avoid using `exit` in functions other than `main`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

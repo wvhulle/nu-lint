@@ -68,7 +68,7 @@ impl DetectFix for UnsafeDynamicRecordAccess {
     }
 
     fn short_description(&self) -> &'static str {
-        "Use 'get -o' for dynamic keys to handle missing keys safely"
+        "Use `get -o` for dynamic keys to handle missing keys safely"
     }
 
     fn source_link(&self) -> Option<&'static str> {

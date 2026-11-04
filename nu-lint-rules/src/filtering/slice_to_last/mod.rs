@@ -34,7 +34,7 @@ impl DetectFix for SliceToLast {
     }
 
     fn short_description(&self) -> &'static str {
-        "Use 'last' instead of 'slice (-N)..' to get last N elements"
+        "Use `last` instead of `slice (-N)..` to get last N elements"
     }
 
     fn source_link(&self) -> Option<&'static str> {

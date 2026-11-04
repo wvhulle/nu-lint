@@ -100,7 +100,7 @@ impl DetectFix for ChainedAppend {
     }
 
     fn short_description(&self) -> &'static str {
-        "Use spread syntax instead of chained 'append' commands"
+        "Use spread syntax instead of chained `append` commands"
     }
 
     fn source_link(&self) -> Option<&'static str> {

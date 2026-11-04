@@ -56,7 +56,7 @@ impl DetectFix for ScriptExportMain {
     }
 
     fn short_description(&self) -> &'static str {
-        "In scripts, 'def main' is the entry point and doesn't need 'export'"
+        "In scripts, `def main` is the entry point and doesn't need `export`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

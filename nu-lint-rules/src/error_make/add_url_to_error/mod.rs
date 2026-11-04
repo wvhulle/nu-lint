@@ -19,7 +19,7 @@ impl DetectFix for AddUrlToError {
     }
 
     fn short_description(&self) -> &'static str {
-        "error make should include 'url' field to link to documentation"
+        "error make should include `url` field to link to documentation"
     }
 
     fn source_link(&self) -> Option<&'static str> {

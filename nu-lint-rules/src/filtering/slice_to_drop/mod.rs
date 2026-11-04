@@ -34,7 +34,7 @@ impl DetectFix for SliceToDrop {
     }
 
     fn short_description(&self) -> &'static str {
-        "Use 'drop' instead of 'slice ..-N' to drop last N-1 elements"
+        "Use `drop` instead of `slice ..-N` to drop last N-1 elements"
     }
 
     fn source_link(&self) -> Option<&'static str> {

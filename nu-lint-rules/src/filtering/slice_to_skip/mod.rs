@@ -34,7 +34,7 @@ impl DetectFix for SliceToSkip {
     }
 
     fn short_description(&self) -> &'static str {
-        "Use 'skip' instead of 'slice N..' to skip first N elements"
+        "Use `skip` instead of `slice N..` to skip first N elements"
     }
 
     fn source_link(&self) -> Option<&'static str> {

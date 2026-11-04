@@ -56,7 +56,7 @@ impl DetectFix for UseErrorMakeForCatch {
     }
 
     fn short_description(&self) -> &'static str {
-        "Use 'error make' for catchable errors in functions and try blocks"
+        "Use `error make` for catchable errors in functions and try blocks"
     }
 
     fn source_link(&self) -> Option<&'static str> {

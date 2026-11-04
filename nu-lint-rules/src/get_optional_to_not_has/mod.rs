@@ -83,7 +83,7 @@ impl DetectFix for GetOptionalToNotHas {
     fn long_description(&self) -> Option<&'static str> {
         Some(
             "The pattern `$record | get -o $key | is-empty` can be written more idiomatically as \
-             `$record not-has $key`. The 'not-has' operator directly checks if a key is absent \
+             `$record not-has $key`. The `not-has` operator directly checks if a key is absent \
              from a record.",
         )
     }

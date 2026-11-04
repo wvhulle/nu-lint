@@ -99,12 +99,12 @@ impl DetectFix for SplitRowSpaceToSplitWords {
     }
 
     fn short_description(&self) -> &'static str {
-        "Use 'split words' for whitespace splitting"
+        "Use `split words` for whitespace splitting"
     }
 
     fn long_description(&self) -> Option<&'static str> {
         Some(
-            "The command 'split words' is optimized for splitting on whitespace. It handles \
+            "The command `split words` is optimized for splitting on whitespace. It handles \
              multiple spaces and different whitespace characters better than 'split row \" \"', \
              which only splits on single space characters.",
         )

@@ -117,8 +117,8 @@ impl DetectFix for PreferLongFlags {
 
     fn long_description(&self) -> Option<&'static str> {
         Some(
-            "Short flags like '-a' or '-f' are convenient for interactive use but reduce code \
-             readability in scripts. Long flags like '--all' or '--force' are self-documenting \
+            "Short flags like `-a` or `-f` are convenient for interactive use but reduce code \
+             readability in scripts. Long flags like `--all` or `--force` are self-documenting \
              and make the code easier to understand for others reading it. ",
         )
     }

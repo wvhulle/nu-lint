@@ -22,9 +22,9 @@ impl DetectFix for UseOverSource {
 
     fn long_description(&self) -> Option<&'static str> {
         Some(
-            "The 'use' command imports exported module definitions with namespace control and \
-             selective imports. The 'source' command executes scripts directly, causing namespace \
-             pollution. Only use 'source' for scripts with side effects, not for importing \
+            "The `use` command imports exported module definitions with namespace control and \
+             selective imports. The `source` command executes scripts directly, causing namespace \
+             pollution. Only use `source` for scripts with side effects, not for importing \
              definitions.",
         )
     }

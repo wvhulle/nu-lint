@@ -74,13 +74,13 @@ impl DetectFix for ColumnsInToHas {
     }
 
     fn short_description(&self) -> &'static str {
-        "Use 'has' operator instead of 'in ($record | columns)'"
+        "Use `has` operator instead of `in ($record | columns)`"
     }
 
     fn long_description(&self) -> Option<&'static str> {
         Some(
             "The pattern `$key in ($record | columns)` can be written more idiomatically as \
-             `$record has $key`. The 'has' operator directly checks if a key exists in a record.",
+             `$record has $key`. The `has` operator directly checks if a key exists in a record.",
         )
     }
 

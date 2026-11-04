@@ -131,10 +131,10 @@ impl DetectFix for ChainedStrReplace {
 
     fn long_description(&self) -> Option<&'static str> {
         Some(
-            "Multiple consecutive 'str replace -a' calls with the same replacement value can be \
-             combined into a single 'str replace -ar' using regex alternation (e.g., 'a|b'). This \
+            "Multiple consecutive `str replace -a` calls with the same replacement value can be \
+             combined into a single `str replace -ar` using regex alternation (e.g., `a|b`). This \
              processes the string once and produces cleaner code. Auto-fix applies when all calls \
-             use '-a', have the same replacement, use literal patterns, and patterns don't \
+             use `-a`, have the same replacement, use literal patterns, and patterns don't \
              overlap (no pattern is a substring of another).",
         )
     }

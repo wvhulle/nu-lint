@@ -169,7 +169,7 @@ impl DetectFix for UniqToSetOperation {
     }
 
     fn short_description(&self) -> &'static str {
-        "Use `union`, `intersect` or `difference` instead of combining lists and `uniq`"
+        "Combining lists and `uniq` replaceable with `union` or `intersect`"
     }
 
     fn long_description(&self) -> Option<&'static str> {

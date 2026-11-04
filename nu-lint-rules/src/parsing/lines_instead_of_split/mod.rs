@@ -31,12 +31,12 @@ impl DetectFix for LinesInsteadOfSplit {
     }
 
     fn short_description(&self) -> &'static str {
-        "Use 'lines' command for splitting by newlines"
+        "Use `lines` command for splitting by newlines"
     }
 
     fn long_description(&self) -> Option<&'static str> {
         Some(
-            "The 'lines' command is optimized for splitting text by newlines and handles both \
+            "The `lines` command is optimized for splitting text by newlines and handles both \
              Unix (\\n) and Windows (\\r\\n) line endings automatically.",
         )
     }

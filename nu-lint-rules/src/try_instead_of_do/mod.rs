@@ -58,7 +58,7 @@ impl DetectFix for TryInsteadOfDo {
     }
 
     fn short_description(&self) -> &'static str {
-        "Use 'try' blocks instead of 'do' blocks for error-prone operations"
+        "Use `try` blocks instead of `do` blocks for error-prone operations"
     }
 
     fn source_link(&self) -> Option<&'static str> {

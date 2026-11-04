@@ -69,12 +69,12 @@ impl DetectFix for SplitFirstToParse {
     }
 
     fn short_description(&self) -> &'static str {
-        "Extract first field with 'parse' pattern"
+        "Extract first field with `parse` pattern"
     }
 
     fn long_description(&self) -> Option<&'static str> {
         Some(
-            "The pattern 'split row <delim> | first' creates an intermediate list just to get the \
+            "The pattern `split row <delim> | first` creates an intermediate list just to get the \
              first element. Use 'parse \"{first}<delim>{_}\" | get first' instead, which directly \
              extracts the first field without allocating a list.",
         )

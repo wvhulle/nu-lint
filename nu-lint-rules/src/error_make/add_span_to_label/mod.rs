@@ -81,7 +81,7 @@ impl DetectFix for AddSpanToLabel {
     }
 
     fn short_description(&self) -> &'static str {
-        "labels should include 'span' to highlight error location in user code"
+        "labels should include `span` to highlight error location in user code"
     }
 
     fn source_link(&self) -> Option<&'static str> {

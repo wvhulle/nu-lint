@@ -189,7 +189,7 @@ impl DetectFix for WhereClosureToIt {
     }
 
     fn short_description(&self) -> &'static str {
-        "You can drop the closure and its parameter in 'where' and 'filter'."
+        "You can drop the closure and its parameter in `where` and `filter`."
     }
 
     fn source_link(&self) -> Option<&'static str> {

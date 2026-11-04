@@ -87,14 +87,14 @@ impl DetectFix for UncheckedGetIndex {
     }
 
     fn short_description(&self) -> &'static str {
-        "Prefer optional cell path `$list.0?` over `get` for index access"
+        "Use optional cell path `$list.0?` over `get` for index access"
     }
 
     fn long_description(&self) -> Option<&'static str> {
         Some(
-            "Using 'get' with numeric indices may panic if the index is out of bounds. Prefer \
+            "Using `get` with numeric indices may panic if the index is out of bounds. Use \
              optional cell path syntax (e.g., `$list.0?`) which is more concise and returns null \
-             instead of panicking. Alternatively, add the -o flag to 'get' for safe access.",
+             instead of panicking. Alternatively, add the -o flag to `get` for safe access.",
         )
     }
 

@@ -84,7 +84,7 @@ impl DetectFix for SerializeDataForExternal {
     }
 
     fn short_description(&self) -> &'static str {
-        "Structured data piped to a JSON or CSV tool without `to json` or `to csv`"
+        "Structured data piped to a JSON or CSV tool without serializing"
     }
 
     fn source_link(&self) -> Option<&'static str> {

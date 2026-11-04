@@ -152,13 +152,13 @@ impl DetectFix for LinesEachParseRule {
     }
 
     fn short_description(&self) -> &'static str {
-        "Remove redundant 'each' wrapper around 'parse'"
+        "Remove redundant `each` wrapper around `parse`"
     }
 
     fn long_description(&self) -> Option<&'static str> {
         Some(
-            "The 'parse' command already operates on each line when used after 'lines'. Wrapping \
-             it in 'each { |l| $l | parse ... }' is redundant. Use 'lines | parse ...' directly.",
+            "The `parse` command already operates on each line when used after `lines`. Wrapping \
+             it in `each { |l| $l | parse ... }` is redundant. Use `lines | parse ...` directly.",
         )
     }
 

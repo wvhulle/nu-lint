@@ -19,7 +19,7 @@ impl DetectFix for AddLabelToError {
     }
 
     fn short_description(&self) -> &'static str {
-        "error make should include 'label'"
+        "error make should include `label`"
     }
 
     fn long_description(&self) -> Option<&'static str> {

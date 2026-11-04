@@ -34,7 +34,7 @@ impl DetectFix for SliceToTake {
     }
 
     fn short_description(&self) -> &'static str {
-        "Use 'take' instead of 'slice 0..N' to take first N elements"
+        "Use `take` instead of `slice 0..N` to take first N elements"
     }
 
     fn source_link(&self) -> Option<&'static str> {

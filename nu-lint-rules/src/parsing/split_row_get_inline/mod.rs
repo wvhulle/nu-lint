@@ -58,13 +58,13 @@ impl DetectFix for SplitGetRule {
     }
 
     fn short_description(&self) -> &'static str {
-        "Extract field by name with 'parse' pattern"
+        "Extract field by name with `parse` pattern"
     }
 
     fn long_description(&self) -> Option<&'static str> {
         Some(
-            "Chaining 'split row' with indexed 'get' requires counting field positions manually \
-             and doesn't show what each field represents. Use 'parse' to create records with \
+            "Chaining `split row` with indexed `get` requires counting field positions manually \
+             and doesn't show what each field represents. Use `parse` to create records with \
              named fields that you can access by name instead of index.",
         )
     }

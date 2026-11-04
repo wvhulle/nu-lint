@@ -105,7 +105,7 @@ impl DetectFix for JqToNuPipeline {
     }
 
     fn short_description(&self) -> &'static str {
-        "Simple `jq` filter replaceable with Nushell pipeline"
+        "Simple `jq` filter replaceable with a native pipeline"
     }
 
     fn source_link(&self) -> Option<&'static str> {

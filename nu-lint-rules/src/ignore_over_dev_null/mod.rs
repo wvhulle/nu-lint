@@ -147,7 +147,7 @@ impl DetectFix for IgnoreOverDevNull {
     }
 
     fn short_description(&self) -> &'static str {
-        "Use '| ignore' instead of redirecting to /dev/null"
+        "Use `| ignore` instead of redirecting to /dev/null"
     }
 
     fn source_link(&self) -> Option<&'static str> {

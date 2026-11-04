@@ -90,9 +90,9 @@ impl DetectFix for NothingOutsideFunctionSignature {
 
     fn long_description(&self) -> Option<&'static str> {
         Some(
-            r#"'nothing' is a type annotation keyword for function signatures. It indicates that a function returns no value.
+            r#"`nothing` is a type annotation keyword for function signatures. It indicates that a function returns no value.
 
-To represent the absence of a value in a function body, use 'null' instead."#,
+To represent the absence of a value in a function body, use `null` instead."#,
         )
     }
 

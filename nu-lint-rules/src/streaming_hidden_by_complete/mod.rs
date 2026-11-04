@@ -74,15 +74,15 @@ impl DetectFix for RedundantCompleteStreaming {
     }
 
     fn short_description(&self) -> &'static str {
-        "Streaming commands should not be wrapped with 'complete'"
+        "Streaming commands should not be wrapped with `complete`"
     }
 
     fn long_description(&self) -> Option<&'static str> {
         Some(
-            "Commands like 'cargo build', 'docker pull', 'git clone', etc. produce streaming \
+            "Commands like `cargo build`, `docker pull`, `git clone`, etc. produce streaming \
              output (progress bars, build logs) that is useful to see in real-time. Wrapping \
-             these with '| complete' buffers all output until the command finishes, hiding \
-             progress information. Remove 'complete' to see live output.",
+             these with `| complete` buffers all output until the command finishes, hiding \
+             progress information. Remove `complete` to see live output.",
         )
     }
 

@@ -288,7 +288,7 @@ impl DetectFix for ReplaceIfElseChainWithMatch {
     }
 
     fn short_description(&self) -> &'static str {
-        "Use 'match' for value-based branching instead of if-else-if chains"
+        "Use `match` for value-based branching instead of if-else-if chains"
     }
 
     fn source_link(&self) -> Option<&'static str> {

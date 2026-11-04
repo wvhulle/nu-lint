@@ -153,7 +153,7 @@ impl DetectFix for OmitItInRowCondition {
     }
 
     fn short_description(&self) -> &'static str {
-        "Field names in 'where' row conditions don't need `$it.` prefix"
+        "Field names in `where` row conditions don't need `$it.` prefix"
     }
 
     fn source_link(&self) -> Option<&'static str> {

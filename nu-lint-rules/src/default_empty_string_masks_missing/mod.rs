@@ -42,14 +42,14 @@ impl DetectFix for DefaultEmptyStringMasksMissing {
     }
 
     fn short_description(&self) -> &'static str {
-        r#"Avoid '| default ""'; it masks a missing value as an empty string"#
+        r#"Avoid `| default ""`; it masks a missing value as an empty string"#
     }
 
     fn long_description(&self) -> Option<&'static str> {
         Some(
-            "'default' (without '--empty') only replaces 'null' values, so 'default \"\"' \
+            "`default` (without `--empty`) only replaces `null` values, so 'default \"\"' \
              silently turns a missing value into an indistinguishable empty string. Handle the \
-             null case directly instead, e.g. 'match $x { null => ... _ => ... }' or 'if $x == \
+             null case directly instead, e.g. `match $x { null => ... _ => ... }` or 'if $x == \
              null { error make {...} }'.",
         )
     }

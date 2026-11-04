@@ -88,7 +88,7 @@ impl DetectFix for UncheckedCellPathIndex {
             "Accessing list elements by numeric index using cell paths (e.g., $list.0) without \
              checking if the list is empty can cause a runtime panic. Use optional access with \
              `?` (e.g., $list.0?) which returns null instead of panicking. Alternatively, wrap in \
-             a 'try' block or check with 'is-empty' first.",
+             a `try` block or check with `is-empty` first.",
         )
     }
 

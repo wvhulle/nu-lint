@@ -25,7 +25,7 @@ impl DetectFix for AlwaysHatExtCall {
     }
 
     fn short_description(&self) -> &'static str {
-        "Always use the '^' prefix on external commands"
+        "Always use the `^` prefix on external commands"
     }
 
     fn source_link(&self) -> Option<&'static str> {

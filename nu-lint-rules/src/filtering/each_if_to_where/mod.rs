@@ -150,7 +150,7 @@ impl DetectFix for WhereInsteadEachThenIf {
     }
 
     fn short_description(&self) -> &'static str {
-        "Use 'where' for filtering instead of 'each' with 'if'"
+        "Use `where` for filtering instead of `each` with `if`"
     }
 
     fn source_link(&self) -> Option<&'static str> {

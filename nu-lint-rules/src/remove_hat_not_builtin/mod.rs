@@ -27,7 +27,7 @@ impl DetectFix for RemoveHatNotBuiltin {
     }
 
     fn short_description(&self) -> &'static str {
-        "Detect unnecessary '^' prefix on external commands"
+        "Detect unnecessary `^` prefix on external commands"
     }
 
     fn source_link(&self) -> Option<&'static str> {

@@ -117,7 +117,7 @@ impl DetectFix for UseRegexOperators {
     }
 
     fn short_description(&self) -> &'static str {
-        "Use =~ and !~ operators instead of verbose 'str contains' checks"
+        "Use =~ and !~ operators instead of verbose `str contains` checks"
     }
 
     fn source_link(&self) -> Option<&'static str> {

@@ -115,13 +115,13 @@ impl DetectFix for SimplifyRegexRule {
     }
 
     fn short_description(&self) -> &'static str {
-        "Simplify 'parse --regex' to 'parse' with pattern syntax"
+        "Simplify `parse --regex` to `parse` with pattern syntax"
     }
 
     fn long_description(&self) -> Option<&'static str> {
         Some(
-            "When a 'parse --regex' pattern only uses simple capture groups like '(?P<name>.*)' \
-             separated by literal delimiters, it can be rewritten using the simpler '{name}' \
+            "When a `parse --regex` pattern only uses simple capture groups like `(?P<name>.*)` \
+             separated by literal delimiters, it can be rewritten using the simpler `{name}` \
              pattern syntax without the --regex flag.",
         )
     }

@@ -48,16 +48,16 @@ impl DetectFix for CatchBuiltinErrorTry {
     }
 
     fn short_description(&self) -> &'static str {
-        "Catch runtime errors from built-in commands using 'try' blocks"
+        "Catch runtime errors from built-in commands using `try` blocks"
     }
 
     fn long_description(&self) -> Option<&'static str> {
         Some(
-            "Commands like 'http get', 'open', 'from json', and file operations can fail at \
+            "Commands like `http get`, `open`, `from json`, and file operations can fail at \
              runtime due to network issues, missing files, or invalid data. These are runtime \
-             errors that can be caught with 'try' blocks. Without error handling, failures \
-             produce cryptic downstream errors. Note: parse-time errors (like 'source' with a \
-             missing file) cannot be caught by 'try', and 'exit' bypasses error handling entirely.",
+             errors that can be caught with `try` blocks. Without error handling, failures \
+             produce cryptic downstream errors. Note: parse-time errors (like `source` with a \
+             missing file) cannot be caught by `try`, and `exit` bypasses error handling entirely.",
         )
     }
 

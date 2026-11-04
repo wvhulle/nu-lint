@@ -212,24 +212,24 @@ Most rules have automatic fixes. Run `nu-lint rules` to see the rules with their
 <details>
 <summary><code>catch-runtime-failures</code> (22 rules): Stop scripts that parse fine from failing or misbehaving at runtime.</summary>
 
-- `add_hat_external_commands` (auto-fix): Always use the '^' prefix on external commands
+- `add_hat_external_commands` (auto-fix): Always use the `^` prefix on external commands
 - `fragile_last_exit_code` (auto-fix): Fragile `LAST_EXIT_CODE` check
 - `check_complete_exit_code`: Unchecked exit code after `complete`
-- `serialize_data_for_external` (auto-fix): Structured data piped to a JSON or CSV tool without `to json` or `to csv`
+- `serialize_data_for_external` (auto-fix): Structured data piped to a JSON or CSV tool without serializing
 - `unescaped_interpolation`: Unescaped braces in string interpolation
-- `exit_only_in_main`: Avoid using 'exit' in functions other than 'main'
+- `exit_only_in_main`: Avoid using `exit` in functions other than `main`
 - `check_typed_flag_before_use`: Typed flag used without null check
 - `non_final_failure_check`: Non-final pipeline command exit code ignored
-- `error_make_for_non_fatal` (auto-fix): Use 'error make' for catchable errors in functions and try blocks
-- `try_instead_of_do`: Use 'try' blocks instead of 'do' blocks for error-prone operations
-- `unsafe_dynamic_record_access` (auto-fix): Use 'get -o' for dynamic keys to handle missing keys safely
+- `error_make_for_non_fatal` (auto-fix): Use `error make` for catchable errors in functions and try blocks
+- `try_instead_of_do`: Use `try` blocks instead of `do` blocks for error-prone operations
+- `unsafe_dynamic_record_access` (auto-fix): Use `get -o` for dynamic keys to handle missing keys safely
 - `missing_stdin_in_shebang` (auto-fix): Shebang missing `--stdin` for input
 - `dynamic_script_import`: Dynamic import path not statically validated
 - `self_import`: Circular import: script imports itself
-- `catch_builtin_error_try`: Catch runtime errors from built-in commands using 'try' blocks
-- `default_empty_string_masks_missing`: Avoid '| default ""'; it masks a missing value as an empty string
+- `catch_builtin_error_try`: Catch runtime errors from built-in commands using `try` blocks
+- `default_empty_string_masks_missing`: Avoid `| default ""`; it masks a missing value as an empty string
 - `unchecked_cell_path_index` (auto-fix): Cell path numeric index access may panic on empty lists
-- `unchecked_get_index` (auto-fix): Prefer optional cell path `$list.0?` over `get` for index access
+- `unchecked_get_index` (auto-fix): Use optional cell path `$list.0?` over `get` for index access
 - `unhandled_external_error`: Unhandled external command error
 - `spread_list_to_external` (auto-fix): List variables passed to external commands should be spread with `...`
 - `glob_may_drop_quotes` (auto-fix): Quoted glob pattern treated as literal
@@ -265,29 +265,29 @@ Most rules have automatic fixes. Run `nu-lint rules` to see the rules with their
 <summary><code>adopt-nu-syntax</code> (27 rules): Replace verbose code with Nu operators, spread, assignment forms and the standard library.</summary>
 
 - `not_is_empty_to_is_not_empty` (auto-fix): Simplify `not ... is-empty` to `is-not-empty`
-- `columns_in_to_has` (auto-fix): Use 'has' operator instead of 'in ($record | columns)'
+- `columns_in_to_has` (auto-fix): Use `has` operator instead of `in ($record | columns)`
 - `columns_not_in_to_not_has` (auto-fix): Simplify `not-in columns` to `not-has`
 - `dispatch_with_subcommands`: Match dispatch replaceable with subcommands
 - `get_optional_to_has` (auto-fix): Simplify `get -o | is-not-empty` to `has`
 - `get_optional_to_not_has` (auto-fix): Simplify `get -o | is-empty` to `not-has`
 - `hardcoded_math_constants` (auto-fix): Hardcoded mathematical constants should use std/math constants instead
-- `merge_get_cell_path` (auto-fix): Combine chained 'get' commands into cell paths
+- `merge_get_cell_path` (auto-fix): Combine chained `get` commands into cell paths
 - `get_optional_to_cell_path` (auto-fix): Simplify `$record | get -o a.b` to `$record.a?.b?`
 - `merge_multiline_print` (auto-fix): Consecutive prints mergeable into one
 - `source_to_use`: `source` replaceable with `use`
 - `compound_assignment` (auto-fix): Compound assignment operators simplify simple arithmetic.
-- `contains_to_regex_op` (auto-fix): Use =~ and !~ operators instead of verbose 'str contains' checks
+- `contains_to_regex_op` (auto-fix): Use =~ and !~ operators instead of verbose `str contains` checks
 - `ansi_over_escape_codes` (auto-fix): Raw ANSI escape replaceable with `ansi`
 - `append_to_concat_assign` (auto-fix): Use ++= operator instead of verbose append in assignment
 - `custom_log_command` (auto-fix): Custom log command shadows stdlib. Use `use std/log` instead
-- `chained_append` (auto-fix): Use spread syntax instead of chained 'append' commands
+- `chained_append` (auto-fix): Use spread syntax instead of chained `append` commands
 - `merge_with_record_spread` (auto-fix): Use record spread for consecutive field assignments
 - `use_load_env` (auto-fix): Use load-env for multiple $env assignments
-- `remove_hat_not_builtin` (auto-fix): Detect unnecessary '^' prefix on external commands
+- `remove_hat_not_builtin` (auto-fix): Detect unnecessary `^` prefix on external commands
 - `division_to_format_duration`: Duration divided by a duration literal to get a number
 - `datetime_epoch_arithmetic`: Datetime converted to an integer for time arithmetic
 - `manual_duration_decomposition`: Integer division and modulo used to split a duration
-- `ignore_over_dev_null` (auto-fix): Use '| ignore' instead of redirecting to /dev/null
+- `ignore_over_dev_null` (auto-fix): Use `| ignore` instead of redirecting to /dev/null
 - `redundant_echo` (auto-fix): Redundant `echo` (identity function)
 - `if_null_to_default` (auto-fix): Simplify if-null pattern to `| default`
 - `list_param_to_variadic` (auto-fix): Use variadic `...args` instead of a single list parameter
@@ -297,17 +297,17 @@ Most rules have automatic fixes. Run `nu-lint rules` to see the rules with their
 <details>
 <summary><code>pipe-instead-of-loop</code> (16 rules): Turn loops, counters, slices and manual filters into pipeline commands.</summary>
 
-- `each_if_to_where` (auto-fix): Use 'where' for filtering instead of 'each' with 'if'
-- `for_filter_to_where`: Use 'where' filter instead of for loop with if and append
-- `omit_it_in_row_condition` (auto-fix): Field names in 'where' row conditions don't need `$it.` prefix
+- `each_if_to_where` (auto-fix): Use `where` for filtering instead of `each` with `if`
+- `for_filter_to_where`: Use `where` filter instead of for loop with if and append
+- `omit_it_in_row_condition` (auto-fix): Field names in `where` row conditions don't need `$it.` prefix
 - `where_not_null_to_compact` (auto-fix): Simplify `where $it != null` to `compact`
 - `where_not_empty_to_compact`: Empty string filter may be replaceable with `compact --empty`
-- `slice_to_drop` (auto-fix): Use 'drop' instead of 'slice ..-N' to drop last N-1 elements
-- `slice_to_last` (auto-fix): Use 'last' instead of 'slice (-N)..' to get last N elements
-- `slice_to_skip` (auto-fix): Use 'skip' instead of 'slice N..' to skip first N elements
-- `slice_to_take` (auto-fix): Use 'take' instead of 'slice 0..N' to take first N elements
-- `uniq_to_set_operation` (auto-fix): Use `union`, `intersect` or `difference` instead of combining lists and `uniq`
-- `where_closure_drop_parameter` (auto-fix): You can drop the closure and its parameter in 'where' and 'filter'.
+- `slice_to_drop` (auto-fix): Use `drop` instead of `slice ..-N` to drop last N-1 elements
+- `slice_to_last` (auto-fix): Use `last` instead of `slice (-N)..` to get last N elements
+- `slice_to_skip` (auto-fix): Use `skip` instead of `slice N..` to skip first N elements
+- `slice_to_take` (auto-fix): Use `take` instead of `slice 0..N` to take first N elements
+- `uniq_to_set_operation` (auto-fix): Combining lists and `uniq` replaceable with `union` or `intersect`
+- `where_closure_drop_parameter` (auto-fix): You can drop the closure and its parameter in `where` and `filter`.
 - `remove_redundant_in` (auto-fix): Redundant `$in` at pipeline start
 - `loop_counter_to_range`: Loop counter to range iteration
 - `while_counter_to_range`: Counter while-loop to range iteration
@@ -319,14 +319,14 @@ Most rules have automatic fixes. Run `nu-lint rules` to see the rules with their
 <details>
 <summary><code>parse-structured-data</code> (10 rules): Get structured data from text and files with `parse`, `lines` and `open`.</summary>
 
-- `lines_instead_of_split` (auto-fix): Use 'lines' command for splitting by newlines
+- `lines_instead_of_split` (auto-fix): Use `lines` command for splitting by newlines
 - `never_space_split` (auto-fix): Unnecessary quotes around variable
-- `lines_each_to_parse` (auto-fix): Remove redundant 'each' wrapper around 'parse'
-- `simplify_regex_parse` (auto-fix): Simplify 'parse --regex' to 'parse' with pattern syntax
-- `split_row_get_multistatement` (auto-fix): Extract field directly with 'parse' instead of storing split result
-- `split_first_to_parse` (auto-fix): Extract first field with 'parse' pattern
-- `split_row_get_inline` (auto-fix): Extract field by name with 'parse' pattern
-- `split_row_space_to_split_words` (auto-fix): Use 'split words' for whitespace splitting
+- `lines_each_to_parse` (auto-fix): Remove redundant `each` wrapper around `parse`
+- `simplify_regex_parse` (auto-fix): Simplify `parse --regex` to `parse` with pattern syntax
+- `split_row_get_multistatement` (auto-fix): Extract field directly with `parse` instead of storing split result
+- `split_first_to_parse` (auto-fix): Extract first field with `parse` pattern
+- `split_row_get_inline` (auto-fix): Extract field by name with `parse` pattern
+- `split_row_space_to_split_words` (auto-fix): Use `split words` for whitespace splitting
 - `from_after_parsed_open` (auto-fix): `open` already parses known formats into structured data
 - `open_raw_from_to_open` (auto-fix): Simplify `open --raw | from` to `open`
 
@@ -342,7 +342,7 @@ Most rules have automatic fixes. Run `nu-lint rules` to see the rules with their
 - `find_to_glob` (auto-fix): `find` by name or type replaceable with `glob`
 - `grep_to_where` (auto-fix): `grep` filtering lines replaceable with `where`
 - `head_tail_to_first_last` (auto-fix): `head` or `tail` on lines replaceable with `first` or `last`
-- `jq_to_nu_pipeline` (auto-fix): Simple `jq` filter replaceable with Nushell pipeline
+- `jq_to_nu_pipeline` (auto-fix): Simple `jq` filter replaceable with a native pipeline
 - `ls_to_builtin` (auto-fix): External `ls` replaceable with built-in `ls`
 - `read_to_input` (auto-fix): External `read` replaceable with `input`
 - `sed_to_str_replace` (auto-fix): `sed` literal substitution replaceable with `str replace`
@@ -360,7 +360,7 @@ Most rules have automatic fixes. Run `nu-lint rules` to see the rules with their
 - `nu_script_to_run`: Run Nu scripts with the `run` keyword instead of a `nu` subprocess
 - `positional_to_pipeline` (auto-fix): Data parameter convertible to pipeline input
 - `chained_str_transform` (auto-fix): Consecutive `str replace` combinable
-- `streaming_hidden_by_complete` (auto-fix): Streaming commands should not be wrapped with 'complete'
+- `streaming_hidden_by_complete` (auto-fix): Streaming commands should not be wrapped with `complete`
 
 </details>
 
@@ -369,12 +369,12 @@ Most rules have automatic fixes. Run `nu-lint rules` to see the rules with their
 
 - `assign_then_return` (auto-fix): Redundant variable before return
 - `do_not_compare_booleans` (auto-fix): Redundant comparison with boolean literal
-- `redundant_ignore` (auto-fix): Commands producing output that is discarded with '| ignore'
+- `redundant_ignore` (auto-fix): Commands producing output that is discarded with `| ignore`
 - `unnecessary_mut` (auto-fix): Variable marked `mut` but never reassigned
 - `unused_helper_functions` (auto-fix): Function unreachable from entry points
 - `unused_parameter` (auto-fix): Function parameter declared but never used
 - `unused_variable` (auto-fix): Variable declared but never used
-- `script_export_main` (auto-fix): In scripts, 'def main' is the entry point and doesn't need 'export'
+- `script_export_main` (auto-fix): In scripts, `def main` is the entry point and doesn't need `export`
 
 </details>
 
@@ -384,7 +384,7 @@ Most rules have automatic fixes. Run `nu-lint rules` to see the rules with their
 - `collapsible_if` (auto-fix): Nested if-statements collapsible with `and`
 - `forbid_excessive_nesting`: Avoid excessive nesting (more than 4 levels deep)
 - `max_function_body_length`: Function bodies should be short to maintain readability
-- `if_else_chain_to_match` (auto-fix): Use 'match' for value-based branching instead of if-else-if chains
+- `if_else_chain_to_match` (auto-fix): Use `match` for value-based branching instead of if-else-if chains
 - `max_positional_params`: Custom commands should have ≤ 2 positional parameters
 - `explicit_long_flags` (auto-fix): Replace short flags (-f) with long flags (--flag)
 - `single_call_command` (auto-fix): Single-line command called only once
@@ -394,7 +394,7 @@ Most rules have automatic fixes. Run `nu-lint rules` to see the rules with their
 <details>
 <summary><code>format-whitespace</code> (12 rules): Fix spacing, line width and quoting according to the style guide.</summary>
 
-- `block_brace_spacing` (auto-fix): Block or closure without parameters needs spaces inside braces: `{ body }` not `{body}`
+- `block_brace_spacing` (auto-fix): Block without parameters needs spaces inside braces: `{ body }`
 - `closure_brace_pipe_spacing` (auto-fix): Closure opening brace should touch parameter pipe: `{|x|` not `{ |x|`
 - `closure_pipe_body_spacing` (auto-fix): Closure body needs spaces: `{|x| body }` not `{|x|body}`
 - `no_trailing_spaces` (auto-fix): Eliminate trailing spaces at the end of lines
@@ -423,10 +423,10 @@ Most rules have automatic fixes. Run `nu-lint rules` to see the rules with their
 
 - `add_doc_comment_exported_fn`: Exported functions should have documentation comments
 - `descriptive_error_messages`: Error messages should be descriptive and actionable
-- `add_label_to_error`: error make should include 'label'
+- `add_label_to_error`: error make should include `label`
 - `add_help_to_error`: `error make` missing `help` field
-- `add_span_to_label`: labels should include 'span' to highlight error location in user code
-- `add_url_to_error`: error make should include 'url' field to link to documentation
+- `add_span_to_label`: labels should include `span` to highlight error location in user code
+- `add_url_to_error`: error make should include `url` field to link to documentation
 - `main_positional_args_docs`: Missing docs on main positional parameter
 - `main_named_args_docs`: Missing docs on main flag parameter
 

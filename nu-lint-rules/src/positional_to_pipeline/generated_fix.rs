@@ -134,10 +134,16 @@ fn fix_replaces_whole_parameter_list_with_brackets_in_comment() {
 }
 
 #[test]
-fn fix_keeps_pipeline_when_first_usage_is_not_its_head() {
-    RULE.assert_fixed_contains(
+fn no_fix_when_usage_is_not_a_pipeline_head() {
+    RULE.assert_detects_without_fix(
         "def pick [items] { ls | where name in $items | first; $items | first }",
-        "where name in $in | first",
+    );
+}
+
+#[test]
+fn no_fix_when_usage_is_inside_a_closure() {
+    RULE.assert_detects_without_fix(
+        "def scale [items] { $items | each { |value| $value * ($items | length) } }",
     );
 }
 

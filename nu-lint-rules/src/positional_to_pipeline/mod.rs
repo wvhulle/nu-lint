@@ -243,6 +243,18 @@ impl DetectFix for TurnPositionalIntoStreamInput {
         var_spans.sort_by_key(|span| span.start);
         var_spans.dedup();
 
+        let is_top_level_pipeline_head = |usage_span: &Span| {
+            block.pipelines.iter().any(|pipeline| {
+                pipeline
+                    .elements
+                    .first()
+                    .is_some_and(|head| head.expr.span.start == usage_span.start)
+            })
+        };
+        if !var_spans.iter().all(is_top_level_pipeline_head) {
+            return None;
+        }
+
         let first_span = *var_spans.first()?;
         let next_element_start = block.pipelines.iter().find_map(|pipeline| {
             let (head, next_element) = (pipeline.elements.first()?, pipeline.elements.get(1)?);

@@ -101,3 +101,11 @@ fn test_snake_case_no_change_for_correct_name() {
     let fixed = apply_fix(good_code);
     assert_eq!(fixed, good_code);
 }
+
+#[test]
+fn fix_renames_cell_path_head_once() {
+    RULE.assert_fixed_is(
+        "let currentArg = {content: 1}\nprint $currentArg.content",
+        "let current_arg = {content: 1}\nprint $current_arg.content",
+    );
+}

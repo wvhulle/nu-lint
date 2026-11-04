@@ -34,6 +34,8 @@ fn find_variable_usages(var_id: VarId, context: &LintContext) -> Vec<Span> {
         },
         &mut usages,
     );
+    usages.sort_by_key(|usage_span| usage_span.start);
+    usages.dedup();
     usages
 }
 

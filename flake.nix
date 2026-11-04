@@ -32,7 +32,12 @@
 
         src = pkgs.lib.cleanSourceWith {
           src = pkgs.lib.cleanSource ./.;
-          filter = path: _: baseNameOf path != "demos";
+          filter =
+            path: _:
+            !builtins.elem (baseNameOf path) [
+              "demos"
+              "xtask"
+            ];
         };
 
         #
@@ -71,16 +76,27 @@
           }
         );
 
-        xtaskPackage = stableCrane.buildPackage (
-          commonArgs
+        xtaskArgs = {
+          src = ciCrane.cleanCargoSource ./xtask;
+          pname = "xtask";
+          version = "0.0.0";
+          strictDeps = true;
+          cargoExtraArgs = "--locked";
+        };
+        xtaskDeps = ciCrane.buildDepsOnly xtaskArgs;
+        xtaskPackage = ciCrane.buildPackage (
+          xtaskArgs
           // {
-            pname = "xtask";
-            cargoArtifacts = llvmDeps;
-            cargoExtraArgs = "--locked --package xtask";
+            cargoArtifacts = xtaskDeps;
             doCheck = false;
             meta.mainProgram = "xtask";
           }
         );
+        xtaskTests = ciCrane.cargoTest (xtaskArgs // { cargoArtifacts = xtaskDeps; });
+        xtaskTool = import ./nix/xtask-tool.nix {
+          inherit pkgs;
+          xtask = xtaskPackage;
+        };
 
         recordings = import ./demos {
           inherit pkgs;
@@ -247,104 +263,35 @@
           program = pkgs.lib.getExe drv;
         };
 
-        mkReleasePlzOnCodeberg =
-          subcommand:
-          pkgs.writeShellApplication {
-            name = subcommand;
+        mkXtaskApp = toolArgs: mkApp (xtaskTool toolArgs);
+
+        exportBuiltPathsHook = xtaskTool {
+          name = "export-built-paths-hook";
+          runtimeInputs = [ ];
+        };
+
+        mkExportingBuildApp =
+          name:
+          mkXtaskApp {
+            inherit name;
+            runtimeInputs = [ ];
+            wrapperArgs = [
+              "--set"
+              "EXPORT_HOOK_PROGRAM"
+              (pkgs.lib.getExe exportBuiltPathsHook)
+            ];
+          };
+
+        mkReleasePlzApp =
+          name:
+          mkXtaskApp {
+            inherit name;
             runtimeInputs = [
               ciToolchain
               pkgs.release-plz
               pkgs.gitMinimal
             ];
-            text = ''
-              release-plz ${subcommand} --forge gitea --git-token "$CODEBERG_TOKEN"
-            '';
           };
-
-        exportBuiltPathsHook = pkgs.writeShellApplication {
-          name = "export-built-paths-hook";
-          text = ''
-            exported_paths_dir="$CI_WORKSPACE/.nix-built-paths"
-            mkdir -p "$exported_paths_dir"
-            read -ra built_paths <<< "$OUT_PATHS"
-            nix copy --quiet --to "file://$exported_paths_dir?compression=zstd" "''${built_paths[@]}"
-            printf '%s\n' "''${built_paths[@]}" >> "$exported_paths_dir/paths.txt"
-          '';
-        };
-
-        buildAndExportPathsScript = pkgs.writeShellApplication {
-          name = "build-and-export-paths";
-          text = ''
-            export NIX_CONFIG="''${NIX_CONFIG:-}
-            post-build-hook = ${pkgs.lib.getExe exportBuiltPathsHook}"
-            nix build --quiet --print-build-logs "$@"
-          '';
-        };
-
-        buildUnlessCachedScript = pkgs.writeShellApplication {
-          name = "build-unless-cached";
-          text = ''
-            built_output=$(nix eval --quiet --raw "$1.outPath")
-            if nix path-info --quiet --store https://wvhulle.cachix.org "$built_output" > /dev/null 2>&1; then
-              echo "$built_output is already in Cachix"
-              exit 0
-            fi
-            ${pkgs.lib.getExe buildAndExportPathsScript} "$1"
-          '';
-        };
-
-        importExportedPathsScript = pkgs.writeShellApplication {
-          name = "import-exported-paths";
-          text = ''
-            exported_paths_dir="$CI_WORKSPACE/.nix-built-paths"
-            if [[ ! -s "$exported_paths_dir/paths.txt" ]]; then
-              echo "No exported paths to import"
-              exit 0
-            fi
-            mapfile -t built_paths < "$exported_paths_dir/paths.txt"
-            nix copy --quiet --no-check-sigs --from "file://$exported_paths_dir" "''${built_paths[@]}"
-          '';
-        };
-
-        uploadExportedPathsScript = pkgs.writeShellApplication {
-          name = "upload-exported-paths";
-          runtimeInputs = [ pkgs.cachix ];
-          text = ''
-            exported_paths_dir="$CI_WORKSPACE/.nix-built-paths"
-            if [[ ! -s "$exported_paths_dir/paths.txt" ]]; then
-              echo "No newly built paths to upload"
-              exit 0
-            fi
-            ${pkgs.lib.getExe importExportedPathsScript}
-            mapfile -t built_paths < "$exported_paths_dir/paths.txt"
-            cachix push wvhulle "''${built_paths[@]}"
-          '';
-        };
-
-        uploadReleaseAssetsScript = pkgs.writeShellApplication {
-          name = "upload-release-assets";
-          runtimeInputs = [
-            pkgs.tea
-            pkgs.coreutils
-          ];
-          text = ''
-            cd "$1"
-            sha256sum -- *.tar.gz > sha256sum.txt
-            tea login add --name codeberg --url "$CI_FORGE_URL" --token "$CODEBERG_TOKEN"
-            tea releases assets create --login codeberg --repo "$CI_REPO" "$CI_COMMIT_TAG" ./*
-          '';
-        };
-
-        checkCommitsScript = pkgs.writeShellApplication {
-          name = "check-commits";
-          runtimeInputs = [
-            pkgs.convco
-            pkgs.gitMinimal
-          ];
-          text = ''
-            convco check "$@"
-          '';
-        };
 
         muslPackages = {
           x86_64 = mkMuslPackage "x86_64";
@@ -386,6 +333,7 @@
 
         checks = {
           inherit tests;
+          xtask-tests = xtaskTests;
           fmt = rustfmtCrane.cargoFmt { inherit src; };
           ast-grep = astGrepCheck;
         };
@@ -393,14 +341,45 @@
         apps = {
           default = mkApp self.packages.${system}.default;
           cranelift = mkApp self.packages.${system}.cranelift;
-          release = mkApp (mkReleasePlzOnCodeberg "release");
-          release-pr = mkApp (mkReleasePlzOnCodeberg "release-pr");
-          check-commits = mkApp checkCommitsScript;
-          build-and-export-paths = mkApp buildAndExportPathsScript;
-          build-unless-cached = mkApp buildUnlessCachedScript;
-          import-exported-paths = mkApp importExportedPathsScript;
-          upload-exported-paths = mkApp uploadExportedPathsScript;
-          upload-release-assets = mkApp uploadReleaseAssetsScript;
+          release = mkReleasePlzApp "release";
+          release-pr = mkReleasePlzApp "release-pr";
+          check-commits = mkXtaskApp {
+            name = "check-commits";
+            runtimeInputs = [
+              pkgs.convco
+              pkgs.gitMinimal
+            ];
+          };
+          build-and-export-paths = mkExportingBuildApp "build-and-export-paths";
+          build-unless-cached = mkExportingBuildApp "build-unless-cached";
+          import-exported-paths = mkXtaskApp {
+            name = "import-exported-paths";
+            runtimeInputs = [ ];
+          };
+          upload-exported-paths = mkXtaskApp {
+            name = "upload-exported-paths";
+            runtimeInputs = [ pkgs.cachix ];
+          };
+          collect-release-archives = mkXtaskApp {
+            name = "collect-release-archives";
+            runtimeInputs = [ ];
+          };
+          upload-release-assets = mkXtaskApp {
+            name = "upload-release-assets";
+            runtimeInputs = [
+              pkgs.tea
+              pkgs.coreutils
+            ];
+          };
+          update-dependencies = mkXtaskApp {
+            name = "update-dependencies";
+            runtimeInputs = [
+              ciToolchain
+              pkgs.cargo-edit
+              pkgs.gitMinimal
+              pkgs.tea
+            ];
+          };
         }
         // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
           publish-recordings = mkApp recordings.publish-recordings;

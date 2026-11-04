@@ -16,8 +16,7 @@ steps:
     environment: *nix_config
     commands:
       - nix run --quiet .#build-and-export-paths -- .#dist
-      - mkdir -p dist
-      - cp result/* dist/
+      - nix run --quiet .#collect-release-archives -- result dist
 
   - name: upload-musl-cache
     image: nixos/nix:latest
@@ -35,8 +34,7 @@ steps:
     environment: *nix_config
     commands:
       - nix build --quiet --print-build-logs .#dist-macos --out-link macos-result
-      - mkdir -p dist
-      - cp macos-result/* dist/
+      - nix run --quiet .#collect-release-archives -- macos-result dist
 
   - name: attach-to-codeberg-release
     image: nixos/nix:latest

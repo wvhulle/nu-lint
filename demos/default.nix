@@ -6,23 +6,7 @@
 let
   inherit (pkgs) lib;
 
-  xtaskTool =
-    {
-      name,
-      runtimeInputs,
-      wrapperArgs ? [ ],
-    }:
-    pkgs.runCommand name
-      {
-        nativeBuildInputs = [ pkgs.makeBinaryWrapper ];
-        meta.mainProgram = name;
-      }
-      ''
-        makeWrapper ${lib.getExe xtask} $out/bin/${name} \
-          --add-flag ${name} \
-          --prefix PATH : ${lib.makeBinPath runtimeInputs} \
-          ${lib.escapeShellArgs wrapperArgs}
-      '';
+  xtaskTool = import ../nix/xtask-tool.nix { inherit pkgs xtask; };
 
   record-scene = xtaskTool {
     name = "record-scene";

@@ -1,17 +1,17 @@
-use std::{env, io, process::Command};
+use std::{io, process::Command};
+
+use crate::command_runner::{required_variable, run_checked, run_streaming};
 
 const TEA_LOGIN_NAME: &str = "codeberg";
+const CODEBERG_USER: &str = "wvhulle";
 
-pub fn run_checked(program: &str, arguments: &[&str]) -> io::Result<String> {
-    let output = Command::new(program).args(arguments).output()?;
-    if !output.status.success() {
-        return Err(io::Error::other(format!(
-            "{program} {} failed: {}",
-            arguments.join(" "),
-            String::from_utf8_lossy(&output.stderr)
-        )));
-    }
-    Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+pub fn authenticate_git_origin() -> io::Result<()> {
+    let codeberg_token = required_variable("CODEBERG_TOKEN")?;
+    let repository_slug = required_variable("CI_REPO")?;
+    let authenticated_url =
+        format!("https://{CODEBERG_USER}:{codeberg_token}@codeberg.org/{repository_slug}.git");
+    run_checked("git", &["remote", "set-url", "origin", &authenticated_url])?;
+    Ok(())
 }
 
 pub struct CodebergRepository {
@@ -20,9 +20,9 @@ pub struct CodebergRepository {
 
 impl CodebergRepository {
     pub fn log_in() -> io::Result<Self> {
-        let forge_url = env::var("CI_FORGE_URL").map_err(io::Error::other)?;
-        let codeberg_token = env::var("CODEBERG_TOKEN").map_err(io::Error::other)?;
-        let repository_slug = env::var("CI_REPO").map_err(io::Error::other)?;
+        let forge_url = required_variable("CI_FORGE_URL")?;
+        let codeberg_token = required_variable("CODEBERG_TOKEN")?;
+        let repository_slug = required_variable("CI_REPO")?;
         run_checked(
             "tea",
             &[
@@ -91,5 +91,18 @@ impl CodebergRepository {
         )?;
         println!("Opened pull request from {branch_name}");
         Ok(())
+    }
+
+    pub fn attach_release_assets(
+        &self,
+        release_tag: &str,
+        asset_paths: &[String],
+    ) -> io::Result<()> {
+        run_streaming(
+            Command::new("tea")
+                .args(["releases", "assets", "create", "--login", TEA_LOGIN_NAME])
+                .args(["--repo", &self.repository_slug, release_tag])
+                .args(asset_paths),
+        )
     }
 }

@@ -1,4 +1,5 @@
 /target
+/xtask/target
 /dist
 .direnv
 .env

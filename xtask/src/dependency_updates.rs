@@ -1,10 +1,14 @@
 use std::io;
 
-use crate::codeberg_pull_request::{CodebergRepository, run_checked};
+use crate::{
+    codeberg_pull_request::{CodebergRepository, authenticate_git_origin},
+    command_runner::run_checked,
+};
 
 const UPDATE_BRANCH: &str = "bot/dependency-updates";
 const UPDATE_BOT_AUTHOR: &str = "nu-lint-bot";
 const MANIFEST_FILE_NAME: &str = "Cargo.toml";
+const XTASK_MANIFEST_PATH: &str = "xtask/Cargo.toml";
 const MANIFEST_COMMIT_MESSAGE: &str = "fix(deps): update nushell crates and lockfiles";
 const LOCKFILE_COMMIT_MESSAGE: &str = "chore(deps): update lockfiles";
 const PULL_REQUEST_DESCRIPTION: &str = "Updated with `cargo xtask update-dependencies --open-pr`. \
@@ -47,6 +51,7 @@ fn upgrade_dependency_versions() -> io::Result<()> {
         .collect();
     run_checked("cargo", &upgrade_arguments)?;
     run_checked("cargo", &["update"])?;
+    run_checked("cargo", &["update", "--manifest-path", XTASK_MANIFEST_PATH])?;
     run_checked("nix", &["flake", "update"])?;
     Ok(())
 }
@@ -78,6 +83,7 @@ fn update_branch_has_hand_written_commits() -> io::Result<bool> {
 }
 
 fn open_dependency_update_pr() -> io::Result<()> {
+    authenticate_git_origin()?;
     let codeberg_repository = CodebergRepository::log_in()?;
     fetch_remote_branch("main")?;
     let remote_commit = remote_update_branch_commit()?;

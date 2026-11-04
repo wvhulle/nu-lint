@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::codeberg_pull_request::run_checked;
+use crate::command_runner::run_checked;
 
 const RECORDINGS_BOOKMARK: &str = "recordings";
 const RECORDINGS_COMMIT_MESSAGE: &str = "docs: regenerate recordings [skip ci]";

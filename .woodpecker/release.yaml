@@ -35,10 +35,6 @@ steps:
     image: nixos/nix:latest
     environment: *release_env
     commands:
-      - git remote set-url origin "https://wvhulle:$${CODEBERG_TOKEN}@codeberg.org/$${CI_REPO}.git"
-      - git checkout -B main "$${CI_COMMIT_SHA}"
-      - git fetch origin main:refs/remotes/origin/main
-      - git branch --set-upstream-to=origin/main main
       - nix run --quiet .#release
 
   - name: update-release-pr

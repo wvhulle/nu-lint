@@ -234,13 +234,13 @@ To add a scene, add a `<scene>.tape` to `demos/`.
 
 ## Dependency updates
 
-The `weekly-dependency-update` cron in Woodpecker runs `cargo xtask update-dependencies --open-pr` (`.woodpecker/update-dependencies.yaml`). It moves the Nushell crates to their latest version, updates `Cargo.lock` and `flake.lock`, and opens or updates one pull request from the `bot/dependency-updates` branch. The checks on that pull request are the trial build. Breaking updates of other crates stay manual.
+The `weekly-dependency-update` cron in Woodpecker runs `nix run .#update-dependencies -- --open-pr` (`.woodpecker/update-dependencies.yaml`). It moves the Nushell crates to their latest version, updates `Cargo.lock` and `flake.lock`, and opens or updates one pull request from the `bot/dependency-updates` branch. The checks on that pull request are the trial build. Breaking updates of other crates stay manual.
 
 The commit type decides whether merging releases: a changed `Cargo.toml` gives a `fix(deps)` commit, and lockfile-only changes give a `chore(deps)` commit.
 
 When a Nushell update breaks the build, push the fixes to `bot/dependency-updates`. Commits by anyone other than `nu-lint-bot` stop further updates to that branch while its pull request is open, so they are not overwritten.
 
-To update the working copy without opening a pull request, run `cargo xtask update-dependencies`.
+To update the working copy without opening a pull request, run `nix run .#update-dependencies`.
 
 ## Releasing
 
@@ -256,7 +256,7 @@ To preview the next version and changelog locally, run `nix develop -c release-p
 
 ## Checks and entry points
 
-Everything CI runs is a flake output, so it can be run locally in the same way:
+Everything CI runs is a flake app wrapping a task in the standalone `xtask` crate, so workflows hold no shell logic and the tasks can be run locally in the same way:
 
 | Command | Purpose |
 |---------|---------|
@@ -267,10 +267,12 @@ Everything CI runs is a flake output, so it can be run locally in the same way:
 | `nix build .#dist-macos` | macOS release binaries as `.tar.gz`, cross-compiled from Linux |
 | `nix run .#release` | Publish an unreleased version to crates.io and create its tag and Codeberg release (CI only, needs `CODEBERG_TOKEN`) |
 | `nix run .#release-pr` | Open or update the release PR (CI only, needs `CODEBERG_TOKEN`) |
-| `cargo xtask update-dependencies` | Update the Nushell crates, `Cargo.lock` and `flake.lock`; add `--open-pr` to open a pull request (CI only, needs `CODEBERG_TOKEN`) |
+| `nix run .#update-dependencies` | Update the Nushell crates and lockfiles; add `-- --open-pr` to open a pull request (CI only, needs `CODEBERG_TOKEN`) |
 | `nix run .#build-unless-cached -- <installable>` | Build and export an output unless it is already in Cachix (CI only, needs `CI_WORKSPACE`) |
 | `nix run .#import-exported-paths` | Import paths exported by an earlier step (CI only, needs `CI_WORKSPACE`) |
 | `nix run .#build-and-export-paths -- <installable>` | Build and export newly built paths to the workspace for a later upload step (CI only, needs `CI_WORKSPACE`) |
+| `nix run .#collect-release-archives -- <result> <dist>` | Copy the archives of a build result into a release directory |
+| `nix run .#upload-release-assets -- <dist>` | Checksum a release directory and attach it to the Codeberg release (CI only, needs `CODEBERG_TOKEN`) |
 | `nix run .#upload-exported-paths` | Push the exported paths to Cachix (CI only, needs `CI_WORKSPACE` and `CACHIX_AUTH_TOKEN`) |
 
 Git hooks are optional. Install them with [prek](https://github.com/j178/prek) (`prek install`) or [pre-commit](https://pre-commit.com) (`pre-commit install`) to run the commit message and formatting checks from `.pre-commit-config.yaml` locally.

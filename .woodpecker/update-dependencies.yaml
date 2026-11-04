@@ -30,5 +30,4 @@ steps:
     image: nixos/nix:latest
     environment: *update_env
     commands:
-      - git remote set-url origin "https://wvhulle:$${CODEBERG_TOKEN}@codeberg.org/$${CI_REPO}.git"
-      - nix develop --quiet --command cargo xtask update-dependencies --open-pr
+      - nix run --quiet .#update-dependencies -- --open-pr

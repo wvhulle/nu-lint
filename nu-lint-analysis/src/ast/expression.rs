@@ -129,7 +129,7 @@ fn type_from_operator_peer(operator: Operator, peer: &Expression) -> Option<Type
             scalar_peer_type(peer)
         }
         Operator::Math(math) if math != Math::Concatenate => {
-            scalar_peer_type(peer).or(Some(Type::Int))
+            scalar_peer_type(peer).or_else(|| peer.extract_direct_var().map(|_| Type::Int))
         }
         _ => None,
     }

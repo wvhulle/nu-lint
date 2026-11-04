@@ -580,3 +580,11 @@ fn fix_infers_record_from_field_arithmetic() {
         "state: record",
     );
 }
+
+#[test]
+fn fix_does_not_guess_int_when_added_to_untyped_value() {
+    RULE.assert_fixed_not_contains(
+        "def later [interval] { ($env.START | into datetime) + $interval }",
+        "interval: int",
+    );
+}

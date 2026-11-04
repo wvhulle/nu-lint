@@ -3,8 +3,8 @@ use std::ops::ControlFlow;
 use nu_protocol::{
     BlockId, ENV_VARIABLE_ID, IN_VARIABLE_ID, NU_VARIABLE_ID, Span, Type, VarId,
     ast::{
-        Argument, Call, Expr, Expression, FullCellPath, ListItem, Operator, PathMember, RecordItem,
-        Traverse,
+        Argument, Call, Comparison, Expr, Expression, FullCellPath, ListItem, Math, Operator,
+        PathMember, RecordItem, Traverse,
     },
     engine::Variable,
 };
@@ -94,6 +94,45 @@ pub trait ExpressionExt: Traverse {
         callback: &mut F,
     ) where
         F: FnMut(&'a Expression, Option<&'a Expression>) -> ControlFlow<()>;
+}
+
+fn scalar_peer_type(peer: &Expression) -> Option<Type> {
+    matches!(
+        peer.ty,
+        Type::Bool
+            | Type::Date
+            | Type::Duration
+            | Type::Filesize
+            | Type::Float
+            | Type::Int
+            | Type::String
+    )
+    .then(|| peer.ty.clone())
+}
+
+fn type_from_operator_peer(operator: Operator, peer: &Expression) -> Option<Type> {
+    match operator {
+        Operator::Comparison(
+            Comparison::RegexMatch
+            | Comparison::NotRegexMatch
+            | Comparison::StartsWith
+            | Comparison::NotStartsWith
+            | Comparison::EndsWith
+            | Comparison::NotEndsWith,
+        ) => Some(Type::String),
+        Operator::Comparison(comparison)
+            if !matches!(
+                comparison,
+                Comparison::In | Comparison::NotIn | Comparison::Has | Comparison::NotHas
+            ) =>
+        {
+            scalar_peer_type(peer)
+        }
+        Operator::Math(math) if math != Math::Concatenate => {
+            scalar_peer_type(peer).or(Some(Type::Int))
+        }
+        _ => None,
+    }
 }
 
 #[must_use]
@@ -435,11 +474,15 @@ impl ExpressionExt for Expression {
             }
             Expr::BinaryOp(left, op_expr, right) => {
                 log::trace!("  -> BinaryOp, checking if math/comparison with variable");
-                if matches!(&op_expr.expr, Expr::Operator(op) if matches!(op, Operator::Math(_) | Operator::Comparison(_)))
-                    && (left.contains_variable(in_var_id) || right.contains_variable(in_var_id))
-                {
-                    log::trace!("  -> Found math/comparison op with variable, returning Int");
-                    return Some(Type::Int);
+                let direct_peer = if left.matches_var(in_var_id) {
+                    Some(right)
+                } else if right.matches_var(in_var_id) {
+                    Some(left)
+                } else {
+                    None
+                };
+                if let (Expr::Operator(operator), Some(peer)) = (&op_expr.expr, direct_peer) {
+                    return type_from_operator_peer(*operator, peer);
                 }
 
                 log::trace!("  -> Recursing into BinaryOp operands");
@@ -542,7 +585,7 @@ impl ExpressionExt for Expression {
     }
 
     fn is_counter_increment(&self, counter_name: &str, context: &LintContext) -> bool {
-        use nu_protocol::ast::{Assignment, Math};
+        use nu_protocol::ast::Assignment;
 
         let Expr::BinaryOp(lhs, op, rhs) = &self.expr else {
             return false;

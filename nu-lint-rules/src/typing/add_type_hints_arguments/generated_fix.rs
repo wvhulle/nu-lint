@@ -549,3 +549,26 @@ def f [replacement: oneof<string, closure>] {
 ",
     );
 }
+
+#[test]
+fn fix_infers_string_from_string_comparison() {
+    RULE.assert_fixed_contains(
+        r#"def check [os] { if ($os == "windows") { print yes } }"#,
+        "os: string",
+    );
+}
+
+#[test]
+fn fix_infers_string_from_regex_match() {
+    RULE.assert_fixed_contains(r#"def check [os] { $os =~ "mac" }"#, "os: string");
+}
+
+#[test]
+fn fix_does_not_guess_int_from_membership_test() {
+    RULE.assert_fixed_not_contains(r#"def check [os] { $os in ["linux"] }"#, "os: int");
+}
+
+#[test]
+fn fix_does_not_guess_int_from_comparison_to_null() {
+    RULE.assert_fixed_not_contains(r#"def check [os] { $os == null }"#, "os: int");
+}

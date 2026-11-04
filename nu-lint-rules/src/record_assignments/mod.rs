@@ -48,6 +48,38 @@ pub struct FieldAssignment {
     pub path: Vec<PathSegment>,
     pub full_span: Span,
     pub value_span: Span,
+    pub value_is_command: bool,
+}
+
+fn value_needs_parentheses(value: &Expression, context: &LintContext) -> bool {
+    match &value.expr {
+        Expr::Call(_) | Expr::ExternalCall(..) => true,
+        Expr::Subexpression(block_id) => context
+            .working_set
+            .get_block(*block_id)
+            .pipelines
+            .first()
+            .is_some_and(|pipeline| {
+                pipeline.elements.first().is_some_and(|head| {
+                    head.expr.span.start == value.span.start
+                        && (pipeline.elements.len() > 1
+                            || matches!(head.expr.expr, Expr::Call(_) | Expr::ExternalCall(..)))
+                })
+            }),
+        _ => false,
+    }
+}
+
+impl FieldAssignment {
+    #[must_use]
+    pub fn record_value_text(&self, context: &LintContext) -> String {
+        let value_text = context.span_text(self.value_span);
+        if self.value_is_command {
+            format!("({value_text})")
+        } else {
+            value_text.to_string()
+        }
+    }
 }
 
 pub struct AssignmentGroup {
@@ -92,6 +124,7 @@ fn extract_field_assignment(
             path,
             full_span: expr.span,
             value_span: rhs.span,
+            value_is_command: value_needs_parentheses(rhs, context),
         },
     ))
 }

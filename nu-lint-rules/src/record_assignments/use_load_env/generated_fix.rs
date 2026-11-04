@@ -46,3 +46,11 @@ $env.OTHER_VAR = "b""#,
         r#"load-env { MY_VAR: "a", OTHER_VAR: "b" }"#,
     );
 }
+
+#[test]
+fn fix_wraps_command_value_in_parentheses() {
+    RULE.assert_fixed_is(
+        "$env.FIRST = if true { 1 } else { 2 }\n$env.SECOND = 3",
+        "load-env { FIRST: (if true { 1 } else { 2 }), SECOND: 3 }",
+    );
+}

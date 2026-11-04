@@ -70,7 +70,7 @@ impl DetectFix for UseRecordSpread {
                 format!(
                     "{}: {}",
                     a.path[0].to_record_key(),
-                    context.span_text(a.value_span)
+                    a.record_value_text(context)
                 )
             })
             .collect::<Vec<_>>()

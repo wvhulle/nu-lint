@@ -8,7 +8,7 @@ use nu_protocol::ast::{Expr, ExternalArgument};
 
 /// Data needed to generate a fix for unnecessary hat violations
 pub struct UnnecessaryHatFixData {
-    cmd: Box<str>,
+    command_span: nu_protocol::Span,
     args: Box<[ExternalArgument]>,
     expr_span: nu_protocol::Span,
 }
@@ -76,7 +76,7 @@ impl DetectFix for RemoveHatNotBuiltin {
             .with_extra_label("has no built-in equivalent", head.span);
 
             let fix_data = UnnecessaryHatFixData {
-                cmd: cmd.into(),
+                command_span: head.span,
                 args: args.to_vec().into_boxed_slice(),
                 expr_span: expr.span,
             };
@@ -95,10 +95,11 @@ impl DetectFix for RemoveHatNotBuiltin {
             .collect::<Vec<_>>()
             .join(" ");
 
+        let command_text = context.span_text(fix_data.command_span);
         let replacement = if args_text.is_empty() {
-            fix_data.cmd.to_string()
+            command_text.to_string()
         } else {
-            format!("{} {args_text}", fix_data.cmd)
+            format!("{command_text} {args_text}")
         };
 
         Some(Fix {

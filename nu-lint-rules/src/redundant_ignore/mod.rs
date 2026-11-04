@@ -24,7 +24,7 @@ fn element_before_ignore<'a>(
 
 struct RedundantIgnoreFixData {
     pipeline_span: nu_protocol::Span,
-    pipeline_text: String,
+    kept_pipeline_span: nu_protocol::Span,
 }
 
 fn command_produces_output(expr: &Expression, context: &LintContext) -> bool {
@@ -64,8 +64,7 @@ fn check_pipeline(
     let elements_without_ignore = &pipeline.elements[..pipeline.elements.len() - 1];
     let start_span = elements_without_ignore.first()?.expr.span;
     let end_span = elements_without_ignore.last()?.expr.span;
-    let combined_span = nu_protocol::Span::new(start_span.start, end_span.end);
-    let pipeline_text = context.span_text(combined_span);
+    let kept_pipeline_span = nu_protocol::Span::new(start_span.start, end_span.end);
 
     let violation =
         Detection::from_global_span("Discarding command output with '| ignore'", ignore_span)
@@ -78,7 +77,7 @@ fn check_pipeline(
 
     let fix_data = RedundantIgnoreFixData {
         pipeline_span,
-        pipeline_text: pipeline_text.to_string(),
+        kept_pipeline_span,
     };
 
     Some((violation, fix_data))
@@ -134,12 +133,12 @@ impl DetectFix for RedundantIgnore {
         violations
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         Some(Fix {
             explanation: "Remove unnecessary '| ignore'".into(),
             replacements: vec![Replacement::new(
                 fix_data.pipeline_span,
-                fix_data.pipeline_text.clone(),
+                context.span_text(fix_data.kept_pipeline_span).to_string(),
             )],
         })
     }

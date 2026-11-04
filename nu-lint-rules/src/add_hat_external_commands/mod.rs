@@ -10,7 +10,7 @@ use crate::remove_hat_not_builtin;
 
 /// Data needed to generate a fix for unnecessary hat violations
 pub struct FixData {
-    cmd: Box<str>,
+    command_span: nu_protocol::Span,
     args: Box<[ExternalArgument]>,
     expr_span: nu_protocol::Span,
 }
@@ -59,7 +59,7 @@ impl DetectFix for AlwaysHatExtCall {
                     )
                     .with_primary_label("missing '^' prefix"),
                     FixData {
-                        cmd: ctx.span_text(head.span).into(),
+                        command_span: head.span,
                         args: args.to_vec().into_boxed_slice(),
                         expr_span: expr.span,
                     },
@@ -79,7 +79,7 @@ impl DetectFix for AlwaysHatExtCall {
             .collect::<Vec<_>>()
             .join(" ");
 
-        let replacement = format!("^{} {args_text}", fix_data.cmd);
+        let replacement = format!("^{} {args_text}", context.span_text(fix_data.command_span));
 
         Some(Fix {
             explanation: "Add missing '^' prefix".into(),

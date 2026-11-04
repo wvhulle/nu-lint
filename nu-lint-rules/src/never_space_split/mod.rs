@@ -8,10 +8,10 @@ use nu_protocol::ast::{Expr, Expression};
 
 struct FixData {
     interpolation_span: nu_protocol::Span,
-    variable_text: String,
+    variable_span: nu_protocol::Span,
 }
 
-fn is_single_variable_interpolation(exprs: &[Expression], context: &LintContext) -> Option<String> {
+fn single_variable_span(exprs: &[Expression], context: &LintContext) -> Option<nu_protocol::Span> {
     if exprs.len() != 1 {
         return None;
     }
@@ -34,10 +34,7 @@ fn is_single_variable_interpolation(exprs: &[Expression], context: &LintContext)
             let pipeline_expr = &block.pipelines[0].elements[0].expr;
 
             match &pipeline_expr.expr {
-                Expr::Var(_) | Expr::VarDecl(_) | Expr::FullCellPath(_) => {
-                    let var_text = context.expr_text(pipeline_expr);
-                    Some(var_text.to_string())
-                }
+                Expr::Var(_) | Expr::VarDecl(_) | Expr::FullCellPath(_) => Some(pipeline_expr.span),
                 _ => None,
             }
         }
@@ -50,7 +47,8 @@ fn check_interpolation(expr: &Expression, context: &LintContext) -> Option<(Dete
         return None;
     };
 
-    let variable_text = is_single_variable_interpolation(exprs, context)?;
+    let variable_span = single_variable_span(exprs, context)?;
+    let variable_text = context.span_text(variable_span);
 
     let violation = Detection::from_global_span(
         format!("Unnecessary string interpolation around variable '{variable_text}'"),
@@ -60,7 +58,7 @@ fn check_interpolation(expr: &Expression, context: &LintContext) -> Option<(Dete
 
     let fix_data = FixData {
         interpolation_span: expr.span,
-        variable_text,
+        variable_span,
     };
 
     Some((violation, fix_data))
@@ -92,16 +90,14 @@ impl DetectFix for NeverSpaceSplit {
             .detect_with_fix_data(|expr, ctx| check_interpolation(expr, ctx).into_iter().collect())
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let variable_text = context.span_text(fix_data.variable_span);
         Some(Fix {
-            explanation: format!(
-                "Remove unnecessary interpolation around '{}'",
-                fix_data.variable_text
-            )
-            .into(),
+            explanation: format!("Remove unnecessary interpolation around '{variable_text}'")
+                .into(),
             replacements: vec![Replacement::new(
                 fix_data.interpolation_span,
-                fix_data.variable_text.clone(),
+                variable_text.to_string(),
             )],
         })
     }

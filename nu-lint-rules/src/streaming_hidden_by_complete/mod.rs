@@ -15,8 +15,8 @@ use nu_protocol::{
 pub struct FixData {
     /// Span of the entire pipeline element including `| complete`
     full_span: Span,
-    /// The external command text to preserve
-    external_text: String,
+    /// Span of the external command to preserve
+    external_span: Span,
 }
 
 fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection, FixData)> {
@@ -56,7 +56,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection,
 
             let fix_data = FixData {
                 full_span: Span::new(first.expr.span.start, second.expr.span.end),
-                external_text: context.expr_text(&first.expr).to_owned(),
+                external_span: first.expr.span,
             };
 
             Some((detection, fix_data))
@@ -98,12 +98,12 @@ impl DetectFix for RedundantCompleteStreaming {
         context.ast.detect_in_pipelines(context, check_pipeline)
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         Some(Fix {
             explanation: "Remove 'complete' to see streaming output".into(),
             replacements: vec![Replacement::new(
                 fix_data.full_span,
-                fix_data.external_text.clone(),
+                context.span_text(fix_data.external_span).to_string(),
             )],
         })
     }

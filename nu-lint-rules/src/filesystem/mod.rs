@@ -17,8 +17,10 @@ pub struct OpenFromPattern<'a> {
     pub from_expr: &'a Expression,
     /// Original filename text from source (including quotes)
     pub filename: String,
+    pub filename_span: Span,
     /// The format name (e.g., "json", "toml")
     pub format: String,
+    pub from_decl_id: nu_protocol::DeclId,
     pub has_raw_flag: bool,
 }
 
@@ -65,6 +67,8 @@ pub fn find_open_from_patterns<'a>(
                 open_expr: &pipeline.elements[pair.first_index].expr,
                 from_expr: &pipeline.elements[pair.second_index].expr,
                 filename: filename.to_string(),
+                filename_span: filename_arg.span,
+                from_decl_id: pair.second.decl_id,
                 format: format.to_string(),
                 has_raw_flag,
             })

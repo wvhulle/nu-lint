@@ -11,7 +11,7 @@ use super::{find_open_from_patterns, open_from_span};
 
 pub struct FixData {
     full_span: Span,
-    filename: String,
+    filename_span: Span,
 }
 
 fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection, FixData)> {
@@ -35,7 +35,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection,
 
             let fix_data = FixData {
                 full_span,
-                filename: filename.clone(),
+                filename_span: pattern.filename_span,
             };
 
             (detected, fix_data)
@@ -71,16 +71,14 @@ impl DetectFix for OpenRawFromToOpen {
         context.ast.detect_in_pipelines(context, check_pipeline)
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let filename = context.span_text(fix_data.filename_span);
         Some(Fix {
-            explanation: format!(
-                "Simplify to 'open {}' - Nu auto-parses this format",
-                fix_data.filename
-            )
-            .into(),
+            explanation: format!("Simplify to 'open {filename}' - Nu auto-parses this format")
+                .into(),
             replacements: vec![Replacement::new(
                 fix_data.full_span,
-                format!("open {}", fix_data.filename),
+                format!("open {filename}"),
             )],
         })
     }

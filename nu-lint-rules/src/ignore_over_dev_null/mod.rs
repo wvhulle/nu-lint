@@ -12,13 +12,33 @@ use nu_protocol::ast::{
 
 struct IgnoreFixData {
     replace_span: nu_protocol::Span,
-    replacement_text: String,
+    redirect_type: DevNullRedirect,
+    element_spans: Vec<nu_protocol::Span>,
 }
 
+#[derive(Clone, Copy)]
 enum DevNullRedirect {
     StderrOnly,
     StdoutOnly,
     Both,
+}
+
+impl DevNullRedirect {
+    const fn ignore_suffix(self) -> &'static str {
+        match self {
+            Self::StderrOnly => "e>| ignore",
+            Self::StdoutOnly => "o>| ignore",
+            Self::Both => "o+e>| ignore",
+        }
+    }
+
+    const fn stream_description(self) -> &'static str {
+        match self {
+            Self::StderrOnly => "stderr",
+            Self::StdoutOnly => "stdout",
+            Self::Both => "both streams",
+        }
+    }
 }
 
 fn detect_dev_null_redirect(element: &PipelineElement) -> Option<DevNullRedirect> {
@@ -84,35 +104,12 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection,
 
     let cmd_name = context.expr_text(head);
 
-    let (message, replacement_suffix) = match redirect_type {
-        DevNullRedirect::StderrOnly => (
-            format!("'{cmd_name}' redirects stderr to /dev/null"),
-            "e>| ignore",
-        ),
-        DevNullRedirect::StdoutOnly => (
-            format!("'{cmd_name}' redirects stdout to /dev/null"),
-            "o>| ignore",
-        ),
-        DevNullRedirect::Both => (
-            format!("'{cmd_name}' redirects both streams to /dev/null"),
-            "o+e>| ignore",
-        ),
-    };
+    let message = format!(
+        "'{cmd_name}' redirects {} to /dev/null",
+        redirect_type.stream_description()
+    );
 
     let violation_span = first_element.expr.span;
-
-    let external_cmd_text = context.expr_text(&first_element.expr);
-    let mut replacement_parts = vec![
-        external_cmd_text.to_string(),
-        replacement_suffix.to_string(),
-    ];
-
-    for element in &pipeline.elements[1..] {
-        replacement_parts.push("|".to_string());
-        replacement_parts.push(context.expr_text(&element.expr).to_string());
-    }
-
-    let replacement_text = replacement_parts.join(" ");
 
     let pipeline_start = first_element.expr.span.start;
     let pipeline_end = pipeline
@@ -121,17 +118,17 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection,
         .map_or(first_element.expr.span.end, |e| e.expr.span.end);
     let replace_span = nu_protocol::Span::new(pipeline_start, pipeline_end);
 
-    log::trace!(
-        "Fix: pipeline_start={pipeline_start}, pipeline_end={pipeline_end}, \
-         replace_text='{replacement_text}'"
-    );
-
     let violation =
         Detection::from_global_span(message, violation_span).with_primary_label("redirect");
 
     let fix_data = IgnoreFixData {
         replace_span,
-        replacement_text,
+        redirect_type,
+        element_spans: pipeline
+            .elements
+            .iter()
+            .map(|element| element.expr.span)
+            .collect(),
     };
 
     vec![(violation, fix_data)]
@@ -162,12 +159,21 @@ impl DetectFix for IgnoreOverDevNull {
         context.ast.detect_in_pipelines(context, check_pipeline)
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+        let (external_span, later_spans) = fix_data.element_spans.split_first()?;
+        let mut replacement_parts = vec![
+            context.span_text(*external_span),
+            fix_data.redirect_type.ignore_suffix(),
+        ];
+        for later_span in later_spans {
+            replacement_parts.push("|");
+            replacement_parts.push(context.span_text(*later_span));
+        }
         Some(Fix {
             explanation: "Use pipe to ignore".into(),
             replacements: vec![Replacement::new(
                 fix_data.replace_span,
-                fix_data.replacement_text.clone(),
+                replacement_parts.join(" "),
             )],
         })
     }

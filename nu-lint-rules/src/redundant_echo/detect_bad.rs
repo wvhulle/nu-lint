@@ -52,3 +52,21 @@ echo "second"
 "#;
     RULE.assert_count(bad_code, 2);
 }
+
+#[test]
+fn detect_echo_inside_attribute_argument_block() {
+    let bad_code = r#"
+@example "greet" { echo hi }
+def main [] { 1 }
+"#;
+    RULE.assert_count(bad_code, 1);
+}
+
+#[test]
+fn detect_aliased_echo_call() {
+    let bad_code = "
+alias say = echo
+say hello
+";
+    RULE.assert_count(bad_code, 2);
+}

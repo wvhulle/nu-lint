@@ -43,3 +43,16 @@ fn ignore_external_echo_printing_text() {
     RULE.assert_ignores(r#"^echo "hello world""#);
     RULE.assert_ignores("^echo -n hello");
 }
+
+#[test]
+fn ignore_aliased_echo_attribute_on_def() {
+    let good_code = r#"
+use std/testing *
+
+@test
+export def "test 1" [] {
+    1
+}
+"#;
+    RULE.assert_ignores(good_code);
+}

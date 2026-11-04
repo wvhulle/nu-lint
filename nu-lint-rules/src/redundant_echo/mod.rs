@@ -1,3 +1,5 @@
+use std::ops::ControlFlow;
+
 use nu_lint_analysis::{
     LintLevel,
     ast::{
@@ -23,52 +25,45 @@ enum EchoedValue {
 }
 
 pub struct FixData {
-    span: Span,
-    echoed: EchoedValue,
+    echo_span: Span,
+    echoed_value: EchoedValue,
 }
 
-fn positional_arguments(call: &Call) -> Option<Vec<&Expression>> {
-    call.arguments
+fn echoed_value(call: &Call, context: &LintContext) -> Option<EchoedValue> {
+    let positional_arguments = call
+        .arguments
         .iter()
-        .map(|argument| match argument {
-            Argument::Positional(value) | Argument::Unknown(value) => Some(value),
+        .map(|call_argument| match call_argument {
+            Argument::Positional(echo_value) | Argument::Unknown(echo_value) => Some(echo_value),
             Argument::Named(_) | Argument::Spread(_) => None,
         })
-        .collect()
-}
-
-fn echoed_value(arguments: &[&Expression], context: &LintContext) -> Option<EchoedValue> {
-    match arguments {
+        .collect::<Option<Vec<_>>>()?;
+    match positional_arguments.as_slice() {
         [] => None,
-        [single] => match StringFormat::from_expression(single, context) {
-            Some(StringFormat::BareWord(_)) => Some(EchoedValue::BareWord(single.span)),
-            _ => Some(EchoedValue::Value(single.span)),
+        [single_argument] => match StringFormat::from_expression(single_argument, context) {
+            Some(StringFormat::BareWord(_)) => Some(EchoedValue::BareWord(single_argument.span)),
+            _ => Some(EchoedValue::Value(single_argument.span)),
         },
-        [first, .., last] => Some(EchoedValue::Several(Span::new(
-            first.span.start,
-            last.span.end,
-        ))),
+        [first_argument, .., last_argument] => Some(EchoedValue::Several(
+            first_argument.span.merge(last_argument.span),
+        )),
     }
 }
 
-fn fix_data(expr: &Expression, call: &Call, context: &LintContext) -> Option<FixData> {
-    let arguments = positional_arguments(call)?;
-    Some(FixData {
-        span: expr.span,
-        echoed: echoed_value(&arguments, context)?,
-    })
-}
-
-fn detect_echo(expr: &Expression, context: &LintContext) -> Vec<(Detection, Option<FixData>)> {
+fn detect_echo(expr: &Expression, context: &LintContext) -> Option<(Detection, Option<FixData>)> {
     let Expr::Call(call) = &expr.expr else {
-        return vec![];
+        return None;
     };
     if call.builtin_name(context) != Some("echo") {
-        return vec![];
+        return None;
     }
     let detection =
         Detection::from_global_span(NOTE, expr.span).with_primary_label("identity 'echo'");
-    vec![(detection, fix_data(expr, call, context))]
+    let fix_data = echoed_value(call, context).map(|echoed_value| FixData {
+        echo_span: expr.span,
+        echoed_value,
+    });
+    Some((detection, fix_data))
 }
 
 struct RedundantEcho;
@@ -93,19 +88,26 @@ impl DetectFix for RedundantEcho {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        context.detect_with_fix_data(detect_echo)
+        let mut echo_detections = Vec::new();
+        context.traverse_with_parent(|expr, parent_expr| {
+            if !parent_expr.is_some_and(|parent| matches!(parent.expr, Expr::AttributeBlock(_))) {
+                echo_detections.extend(detect_echo(expr, context));
+            }
+            ControlFlow::Continue(())
+        });
+        echo_detections
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let fix_data = fix_data.as_ref()?;
-        let replacement = match fix_data.echoed {
-            EchoedValue::BareWord(span) => quote_nu_string(context.span_text(span)),
-            EchoedValue::Value(span) => context.span_text(span).to_string(),
-            EchoedValue::Several(span) => format!("[{}]", context.span_text(span)),
+        let replacement_text = match fix_data.echoed_value {
+            EchoedValue::BareWord(value_span) => quote_nu_string(context.span_text(value_span)),
+            EchoedValue::Value(value_span) => context.span_text(value_span).to_string(),
+            EchoedValue::Several(values_span) => format!("[{}]", context.span_text(values_span)),
         };
         Some(Fix {
             explanation: "Use the value directly instead of `echo`".into(),
-            replacements: vec![Replacement::new(fix_data.span, replacement)],
+            replacements: vec![Replacement::new(fix_data.echo_span, replacement_text)],
         })
     }
 }

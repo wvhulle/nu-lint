@@ -134,3 +134,16 @@ fn ignore_dollar_in_inside_closure() {
         "#!/usr/bin/env nu\ndef main [] {\n  [1 2] | each {|value| $in + $value } | print\n}\n",
     );
 }
+
+#[test]
+fn ignore_arrow_inside_parameter_comment() {
+    RULE.assert_ignores(
+        r#"#!/usr/bin/env nu
+def main [
+    name: string # maps a -> b
+] {
+    print $name
+}
+"#,
+    );
+}

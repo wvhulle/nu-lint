@@ -16,18 +16,34 @@ fn is_rest_type_annotated(rest: &PositionalArg, context: &LintContext) -> bool {
         .is_some_and(|var_id| context.working_set.get_variable(var_id).ty != Type::Any)
 }
 
-fn parameter_list_interior(signature_span: Span, context: &LintContext) -> Option<Span> {
-    let (tokens, _) = nu_parser::lex(
+fn lex_signature_tokens(signature_span: Span, context: &LintContext) -> Vec<nu_parser::Token> {
+    nu_parser::lex(
         context.working_set.get_span_contents(signature_span),
         signature_span.start,
         &[],
         b":",
         true,
-    );
-    let parameter_list = tokens.first()?.span;
+    )
+    .0
+}
+
+#[must_use]
+pub fn parameter_list_span(signature_span: Span, context: &LintContext) -> Option<Span> {
+    let parameter_list = lex_signature_tokens(signature_span, context).first()?.span;
     let contents = context.working_set.get_span_contents(parameter_list);
-    (contents.first() == Some(&b'[') && contents.last() == Some(&b']'))
-        .then(|| Span::new(parameter_list.start + 1, parameter_list.end - 1))
+    (contents.first() == Some(&b'[') && contents.last() == Some(&b']')).then_some(parameter_list)
+}
+
+fn parameter_list_interior(signature_span: Span, context: &LintContext) -> Option<Span> {
+    let parameter_list = parameter_list_span(signature_span, context)?;
+    Some(Span::new(parameter_list.start + 1, parameter_list.end - 1))
+}
+
+#[must_use]
+pub fn has_input_output_annotation(signature_span: Span, context: &LintContext) -> bool {
+    lex_signature_tokens(signature_span, context)
+        .get(1)
+        .is_some_and(|token| context.working_set.get_span_contents(token.span) == b":")
 }
 
 #[must_use]

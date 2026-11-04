@@ -1,6 +1,8 @@
 use nu_lint_analysis::{
     LintLevel,
-    ast::{call::CallExt, expression::is_pipeline_input_var},
+    ast::{
+        call::CallExt, declaration::has_input_output_annotation, expression::is_pipeline_input_var,
+    },
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -126,18 +128,6 @@ fn create_fix_data_for_shebang(context: &LintContext) -> Option<ShebangFixData> 
     })
 }
 
-fn has_explicit_type_annotation(
-    signature_span: Option<nu_protocol::Span>,
-    ctx: &LintContext,
-) -> bool {
-    signature_span.is_some_and(|span| ctx.span_text(span).contains("->"))
-}
-
-fn find_signature_span(call: &Call, _ctx: &LintContext) -> Option<nu_protocol::Span> {
-    let sig_arg = call.get_positional_arg(1)?;
-    Some(sig_arg.span)
-}
-
 fn check_main_function(
     call: &Call,
     context: &LintContext,
@@ -152,11 +142,9 @@ fn check_main_function(
 
     let block = context.working_set.get_block(def.body);
     let signature = &block.signature;
-    let sig_span = find_signature_span(call, context);
-
     let uses_in = block_uses_pipeline_input_directly(block, context);
 
-    let has_explicit_annotation = has_explicit_type_annotation(sig_span, context);
+    let has_explicit_annotation = has_input_output_annotation(def.signature_span, context);
 
     let has_non_nothing_input = has_explicit_annotation
         && signature

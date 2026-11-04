@@ -147,7 +147,12 @@ impl Config {
     pub fn get_lint_level(&self, rule: &dyn Rule, groups: &[Group]) -> LintLevel {
         let rule_id = rule.id();
 
-        if let Some(level) = self.rules.get(rule_id) {
+        let configured_level = self.rules.get(rule_id).or_else(|| {
+            rule.former_ids()
+                .iter()
+                .find_map(|former_id| self.rules.get(*former_id))
+        });
+        if let Some(level) = configured_level {
             log::trace!(
                 "Rule '{rule_id}' has individual level '{level:?}' in config, overriding set \
                  levels"

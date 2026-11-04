@@ -2,6 +2,7 @@ use std::{
     env,
     error::Error,
     fmt, fs, io,
+    iter::once,
     path::{Path, PathBuf},
     sync::{LazyLock, Mutex},
 };
@@ -223,7 +224,14 @@ impl LintEngine {
             .into_iter()
             .filter(|v| {
                 let rule_id = v.rule_id.as_deref().unwrap_or("");
-                !ignore_index.should_ignore(v.file_span().start, rule_id)
+                let former_ids = self
+                    .enabled_rules
+                    .iter()
+                    .find(|(rule, _)| rule.id() == rule_id)
+                    .map_or(&[][..], |(rule, _)| rule.former_ids());
+                !once(rule_id)
+                    .chain(former_ids.iter().copied())
+                    .any(|ignored_id| ignore_index.should_ignore(v.file_span().start, ignored_id))
             })
             .collect()
     }

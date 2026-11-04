@@ -42,6 +42,10 @@ pub trait DetectFix: Send + Sync + 'static {
         None
     }
 
+    fn former_ids(&self) -> &'static [&'static str] {
+        &[]
+    }
+
     /// Rules that conflict with this rule. When both rules are enabled,
     /// the linter will error at startup.
     fn conflicts_with(&self) -> &'static [&'static dyn Rule] {
@@ -78,6 +82,7 @@ pub trait DetectFix: Send + Sync + 'static {
 /// impl.
 pub trait Rule: Send + Sync {
     fn id(&self) -> &'static str;
+    fn former_ids(&self) -> &'static [&'static str];
     fn short_description(&self) -> &'static str;
     fn source_link(&self) -> Option<&'static str>;
     fn level(&self) -> LintLevel;
@@ -90,6 +95,10 @@ pub trait Rule: Send + Sync {
 impl<T: DetectFix> Rule for T {
     fn id(&self) -> &'static str {
         DetectFix::id(self)
+    }
+
+    fn former_ids(&self) -> &'static [&'static str] {
+        DetectFix::former_ids(self)
     }
 
     fn short_description(&self) -> &'static str {

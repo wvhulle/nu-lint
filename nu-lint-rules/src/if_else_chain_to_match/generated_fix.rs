@@ -77,3 +77,31 @@ def classify [kind: string, other: string] {
 "#,
     );
 }
+
+#[test]
+fn fix_matches_on_local_variable_with_dollar() {
+    RULE.assert_fixed_contains(
+        r#"let picked = 1
+if $picked == 1 { "a" } else if $picked == 2 { "b" } else if $picked == 3 { "c" }"#,
+        "match $picked {",
+    );
+}
+
+#[test]
+fn fix_matches_on_flag_variable() {
+    RULE.assert_fixed_contains(
+        r#"def pick [--variant: int] {
+    if $variant == 1 { "a" } else if $variant == 2 { "b" } else if $variant == 3 { "c" }
+}"#,
+        "match $variant {",
+    );
+}
+
+#[test]
+fn no_fix_when_branches_compare_different_fields() {
+    RULE.assert_detects_without_fix(
+        r#"def pick [row: list] {
+    if $row.0 == 1 { "a" } else if $row.1 == 2 { "b" } else if $row.0 == 3 { "c" }
+}"#,
+    );
+}

@@ -10,17 +10,11 @@ use nu_protocol::{
     ast::{Call, Comparison, Expr, Expression, Operator},
 };
 
-fn variable_declaration_span(expr: &Expression, context: &LintContext) -> Option<Span> {
-    match &expr.expr {
-        Expr::Var(var_id) | Expr::VarDecl(var_id) => {
-            Some(context.working_set.get_variable(*var_id).declaration_span)
-        }
-        Expr::FullCellPath(cell_path) => variable_declaration_span(&cell_path.head, context),
-        _ => None,
-    }
+fn compared_operand_span(operand: &Expression) -> Option<Span> {
+    matches!(operand.expr, Expr::Var(_) | Expr::FullCellPath(_)).then_some(operand.span)
 }
 
-fn extract_compared_variable(expr: &Expression, context: &LintContext) -> Option<Span> {
+fn extract_compared_variable(expr: &Expression) -> Option<Span> {
     let Expr::BinaryOp(left, op, right) = &expr.expr else {
         return None;
     };
@@ -30,23 +24,7 @@ fn extract_compared_variable(expr: &Expression, context: &LintContext) -> Option
         return None;
     };
 
-    if let Some(declaration_span) = variable_declaration_span(left, context) {
-        return Some(declaration_span);
-    }
-
-    if let Expr::FullCellPath(cell_path) = &left.expr {
-        return Some(cell_path.head.span);
-    }
-
-    if let Some(declaration_span) = variable_declaration_span(right, context) {
-        return Some(declaration_span);
-    }
-
-    if let Expr::FullCellPath(cell_path) = &right.expr {
-        Some(cell_path.head.span)
-    } else {
-        None
-    }
+    compared_operand_span(left).or_else(|| compared_operand_span(right))
 }
 
 fn extract_comparison_value(expr: &Expression, context: &LintContext) -> Option<Span> {
@@ -185,7 +163,7 @@ fn walk_if_else_chain(
     loop {
         consistent_variable &= current_call
             .get_first_positional_arg()
-            .and_then(|arg| extract_compared_variable(arg, context))
+            .and_then(extract_compared_variable)
             .is_some_and(|var_span| context.span_text(var_span) == compared_var);
 
         match next_else_if_call(current_call, context) {
@@ -251,7 +229,7 @@ fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<(Detection, Fi
     // Get the condition expression and check if it compares a variable
     let compared_var_span = call
         .get_first_positional_arg()
-        .and_then(|arg| extract_compared_variable(arg, context))?;
+        .and_then(extract_compared_variable)?;
     let compared_var = context.span_text(compared_var_span);
 
     // Verify this is an else-if chain (not just a final else)

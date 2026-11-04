@@ -98,8 +98,8 @@ impl DetectFix for GetOptionalToHas {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let record_text = context.span_text(fix_data.record_span).trim();
-        let key_text = context.span_text(fix_data.key_span).trim();
+        let record_text = context.span_text(fix_data.record_span);
+        let key_text = context.span_text(fix_data.key_span);
 
         let replacement = format!("{record_text} has {key_text}");
 

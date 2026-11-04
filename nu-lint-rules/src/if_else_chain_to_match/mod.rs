@@ -124,7 +124,7 @@ impl Iterator for ChainIterator<'_> {
 
         let body = call
             .get_positional_arg(1)
-            .map(|arg| self.context.span_text(arg.span).trim().to_string())?;
+            .map(|arg| self.context.span_text(arg.span).to_string())?;
 
         let branch = MatchBranch { pattern, body };
 
@@ -138,12 +138,8 @@ impl Iterator for ChainIterator<'_> {
             }
             Some((false, final_else_expr)) => {
                 self.current = None;
-                self.final_else_pending = Some(
-                    self.context
-                        .span_text(final_else_expr.span)
-                        .trim()
-                        .to_string(),
-                );
+                self.final_else_pending =
+                    Some(self.context.span_text(final_else_expr.span).to_string());
             }
             None => {
                 self.current = None;

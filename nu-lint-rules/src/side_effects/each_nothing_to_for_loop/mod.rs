@@ -174,10 +174,10 @@ impl DetectFix for UseForOverEach {
         let list = if fix_data.list_span.is_empty() {
             return None;
         } else {
-            context.span_text(fix_data.list_span).trim()
+            context.span_text(fix_data.list_span)
         };
 
-        let body = context.span_text(fix_data.body_span).trim();
+        let body = context.span_text(fix_data.body_span);
         let fix_text = format!("for {} in {} {{ {} }}", fix_data.param_name, list, body);
 
         Some(Fix {

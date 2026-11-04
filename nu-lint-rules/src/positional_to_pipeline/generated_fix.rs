@@ -201,3 +201,10 @@ fn no_fix_when_signature_declares_input_type() {
         "def repo-name [path: string]: nothing -> string { $path | path basename }",
     );
 }
+
+#[test]
+fn no_fix_when_command_is_called_in_file() {
+    RULE.assert_detects_without_fix(
+        "def pick [items] { $items | first }\ndef main [] { pick [1 2] }",
+    );
+}

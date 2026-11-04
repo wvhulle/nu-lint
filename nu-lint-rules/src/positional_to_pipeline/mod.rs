@@ -12,7 +12,7 @@ use nu_lint_analysis::{
 };
 use nu_protocol::{
     Span, SyntaxShape, VarId,
-    ast::{Expr, Pipeline},
+    ast::{Expr, Pipeline, Traverse},
 };
 
 pub struct FixData {
@@ -22,6 +22,23 @@ pub struct FixData {
     block_id: nu_protocol::BlockId,
     /// `VarId` of the parameter being converted
     param_var_id: VarId,
+}
+
+fn command_has_call_sites(body_block_id: nu_protocol::BlockId, context: &LintContext) -> bool {
+    let mut call_site_spans: Vec<Span> = Vec::new();
+    context.ast.flat_map(
+        context.working_set,
+        &|expr| match &expr.expr {
+            Expr::Call(call)
+                if context.working_set.get_decl(call.decl_id).block_id() == Some(body_block_id) =>
+            {
+                vec![expr.span]
+            }
+            _ => vec![],
+        },
+        &mut call_site_spans,
+    );
+    !call_site_spans.is_empty()
 }
 
 /// Check if a parameter is a data type that would benefit from pipeline input
@@ -216,7 +233,9 @@ impl DetectFix for TurnPositionalIntoStreamInput {
         var_spans.sort_by_key(|span| span.start);
         var_spans.dedup();
 
-        if has_input_output_annotation(fix_data.signature_span, context) {
+        if command_has_call_sites(fix_data.block_id, context)
+            || has_input_output_annotation(fix_data.signature_span, context)
+        {
             return None;
         }
 

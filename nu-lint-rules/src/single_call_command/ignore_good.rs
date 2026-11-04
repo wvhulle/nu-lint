@@ -172,3 +172,21 @@ def main [] {
 ",
     );
 }
+
+#[test]
+fn ignore_multi_statement_body_reading_pipeline_input() {
+    RULE.assert_ignores(
+        "
+def helper [] {
+    let target = ($in | get target)
+    mut collected = []
+    $collected ++= [$target]
+    $collected
+}
+
+def main [] {
+    print ({target: 1} | helper)
+}
+",
+    );
+}

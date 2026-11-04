@@ -2,7 +2,9 @@ use std::cmp::Ordering;
 
 use nu_lint_analysis::{
     Fix, LintLevel, Replacement,
-    ast::{block::BlockExt, declaration::CustomCommandDef, expression::ExpressionExt},
+    ast::{
+        block::BlockExt, call::CallExt, declaration::CustomCommandDef, expression::ExpressionExt,
+    },
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
@@ -42,7 +44,14 @@ fn unwrap_body_pipeline<'a>(
     if let Expr::Collect(_, inner) = &first.expr.expr
         && let Expr::Subexpression(block_id) = &inner.expr
     {
-        let inner_pipeline = context.working_set.get_block(*block_id).pipelines.first()?;
+        let [inner_pipeline] = context
+            .working_set
+            .get_block(*block_id)
+            .pipelines
+            .as_slice()
+        else {
+            return None;
+        };
         return Some((&inner_pipeline.elements, &first.expr, true));
     }
 
@@ -155,6 +164,12 @@ impl DetectFix for InlineSingleUseFunction {
                 })?;
 
                 let (elements, _, has_dollar_in) = unwrap_body_pipeline(pipeline, context)?;
+                let body_declares_variable = elements.iter().any(|element| {
+                    matches!(
+                        &element.expr.expr,
+                        Expr::Call(call) if call.extract_variable_declaration(context).is_some()
+                    )
+                });
                 let first = elements.first()?;
                 let last = elements.last()?;
                 let body_span = Span::new(first.expr.span.start, last.expr.span.end);
@@ -209,7 +224,7 @@ impl DetectFix for InlineSingleUseFunction {
 
                 Some((
                     detection,
-                    Some(FixData {
+                    (!body_declares_variable).then(|| FixData {
                         definition_span: context.expand_span_to_statement(def.definition_span),
                         call_span,
                         body_span,

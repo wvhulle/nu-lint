@@ -221,3 +221,18 @@ def main [] {
     // Command with pipeline
     RULE.assert_fixed_contains(code, "ls . | length");
 }
+
+#[test]
+fn no_fix_when_body_declares_variable() {
+    RULE.assert_detects_without_fix(
+        "
+def helper [] {
+    let value = 1
+}
+
+def main [] {
+    helper
+}
+",
+    );
+}

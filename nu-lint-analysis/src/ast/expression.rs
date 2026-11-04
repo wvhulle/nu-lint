@@ -474,9 +474,9 @@ impl ExpressionExt for Expression {
             }
             Expr::BinaryOp(left, op_expr, right) => {
                 log::trace!("  -> BinaryOp, checking if math/comparison with variable");
-                let direct_peer = if left.matches_var(in_var_id) {
+                let direct_peer = if left.extract_direct_var() == Some(in_var_id) {
                     Some(right)
-                } else if right.matches_var(in_var_id) {
+                } else if right.extract_direct_var() == Some(in_var_id) {
                     Some(left)
                 } else {
                     None

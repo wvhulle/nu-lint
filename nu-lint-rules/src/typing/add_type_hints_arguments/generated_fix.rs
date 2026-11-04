@@ -572,3 +572,11 @@ fn fix_does_not_guess_int_from_membership_test() {
 fn fix_does_not_guess_int_from_comparison_to_null() {
     RULE.assert_fixed_not_contains(r#"def check [os] { $os == null }"#, "os: int");
 }
+
+#[test]
+fn fix_infers_record_from_field_arithmetic() {
+    RULE.assert_fixed_contains(
+        "def demand [state] { 1.1 ** ($state.market.level - 1) }",
+        "state: record",
+    );
+}

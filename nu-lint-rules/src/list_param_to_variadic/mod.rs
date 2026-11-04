@@ -2,7 +2,10 @@ use std::iter::once;
 
 use nu_lint_analysis::{
     LintLevel,
-    ast::{call::CallExt, expression::ExpressionExt, span::SpanExt},
+    ast::{
+        call::CallExt, declaration::annotated_parameter_span, expression::ExpressionExt,
+        span::SpanExt,
+    },
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -12,7 +15,7 @@ use nu_protocol::{
     ast::{Argument, Call, Expr, Expression, ListItem, Traverse},
 };
 
-use crate::typing::{format_flag, format_optional, format_required, format_rest_with_shape};
+use crate::typing::format_rest_with_shape;
 
 struct FixData {
     signature_span: Span,
@@ -226,41 +229,24 @@ impl DetectFix for ListParamToVariadic {
     fn fix(&self, ctx: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let sig = &ctx.working_set.get_block(fix_data.body_block_id).signature;
 
-        let format_positional = |i: usize, p: &nu_protocol::PositionalArg, is_optional: bool| {
-            if i == fix_data.param_index {
-                let inner = inner_list_type(&p.shape).unwrap_or(SyntaxShape::Any);
-                format_rest_with_shape(&p.name, &inner)
-            } else if is_optional {
-                format_optional(p)
-            } else {
-                format_required(p)
-            }
-        };
-
-        let parts: Vec<_> =
-            sig.required_positional
-                .iter()
-                .enumerate()
-                .map(|(i, p)| format_positional(i, p, false))
-                .chain(
-                    sig.optional_positional.iter().enumerate().map(|(i, p)| {
-                        format_positional(sig.required_positional.len() + i, p, true)
-                    }),
-                )
-                .chain(
-                    sig.named
-                        .iter()
-                        .filter(|f| f.long != "help")
-                        .map(format_flag),
-                )
-                .collect();
+        let converted_param = sig
+            .required_positional
+            .iter()
+            .chain(&sig.optional_positional)
+            .nth(fix_data.param_index)?;
+        let name_span = ctx
+            .working_set
+            .get_variable(converted_param.var_id?)
+            .declaration_span;
+        let param_entry_span = annotated_parameter_span(name_span, fix_data.signature_span, ctx)?;
+        let inner_shape = inner_list_type(&converted_param.shape).unwrap_or(SyntaxShape::Any);
 
         let call_site_replacements =
             find_call_site_replacements(fix_data.decl_id, fix_data.param_index, ctx);
 
         let replacements: Vec<_> = once(Replacement::new(
-            fix_data.signature_span,
-            format!("[{}]", parts.join(", ")),
+            param_entry_span,
+            format_rest_with_shape(&converted_param.name, &inner_shape),
         ))
         .chain(call_site_replacements.iter().cloned())
         .collect();

@@ -47,6 +47,45 @@ pub fn has_input_output_annotation(signature_span: Span, context: &LintContext) 
         .is_some_and(|token| context.working_set.get_span_contents(token.span) == b":")
 }
 
+fn lex_parameter_tokens(interior: Span, context: &LintContext) -> Vec<nu_parser::Token> {
+    nu_parser::lex_signature(
+        context.working_set.get_span_contents(interior),
+        interior.start,
+        b"\n\r",
+        b":=,",
+        false,
+    )
+    .0
+}
+
+fn token_has_text(
+    token: Option<&nu_parser::Token>,
+    expected: &[u8],
+    context: &LintContext,
+) -> bool {
+    token.is_some_and(|present| context.working_set.get_span_contents(present.span) == expected)
+}
+
+fn find_parameter_token(tokens: &[nu_parser::Token], name_span: Span) -> Option<usize> {
+    tokens
+        .iter()
+        .position(|token| token.span.start <= name_span.start && name_span.start < token.span.end)
+}
+
+fn skip_short_flag_token(
+    tokens: &[nu_parser::Token],
+    token_index: usize,
+    context: &LintContext,
+) -> usize {
+    let is_short_flag = tokens.get(token_index).is_some_and(|token| {
+        context
+            .working_set
+            .get_span_contents(token.span)
+            .starts_with(b"(-")
+    });
+    token_index + usize::from(is_short_flag)
+}
+
 #[must_use]
 pub fn parameter_removal_span(
     name_span: Span,
@@ -54,29 +93,16 @@ pub fn parameter_removal_span(
     context: &LintContext,
 ) -> Option<Span> {
     let interior = parameter_list_interior(signature_span, context)?;
-    let (tokens, _) = nu_parser::lex_signature(
-        context.working_set.get_span_contents(interior),
-        interior.start,
-        b"\n\r",
-        b":=,",
-        false,
-    );
-    let token_is = |token_index: usize, expected: &[u8]| {
-        tokens
-            .get(token_index)
-            .is_some_and(|token| context.working_set.get_span_contents(token.span) == expected)
-    };
-    let name_index = tokens
-        .iter()
-        .position(|token| token.span.start == name_span.start)?;
+    let tokens = lex_parameter_tokens(interior, context);
+    let name_index = find_parameter_token(&tokens, name_span)?;
 
-    let mut next_index = name_index + 1;
+    let mut next_index = skip_short_flag_token(&tokens, name_index + 1, context);
     for annotation_separator in [b":", b"="] {
-        if token_is(next_index, annotation_separator) {
+        if token_has_text(tokens.get(next_index), annotation_separator, context) {
             next_index += 2;
         }
     }
-    if token_is(next_index, b",") {
+    if token_has_text(tokens.get(next_index), b",", context) {
         next_index += 1;
     }
     while tokens
@@ -87,14 +113,42 @@ pub fn parameter_removal_span(
     }
 
     if let Some(next_token) = tokens.get(next_index) {
-        return Some(Span::new(name_span.start, next_token.span.start));
+        return Some(Span::new(
+            tokens[name_index].span.start,
+            next_token.span.start,
+        ));
     }
 
-    let removal_start = (0..name_index)
+    let previous_token = tokens[..name_index]
+        .iter()
         .rev()
-        .find(|&token_index| !token_is(token_index, b","))
-        .map_or(interior.start, |token_index| tokens[token_index].span.end);
+        .find(|token| !token_has_text(Some(token), b",", context));
+    let removal_start = match previous_token {
+        Some(token) if token.contents == TokenContents::Comment => tokens[name_index].span.start,
+        Some(token) => token.span.end,
+        None => interior.start,
+    };
     Some(Span::new(removal_start, interior.end))
+}
+
+#[must_use]
+pub fn annotated_parameter_span(
+    name_span: Span,
+    signature_span: Span,
+    context: &LintContext,
+) -> Option<Span> {
+    let interior = parameter_list_interior(signature_span, context)?;
+    let tokens = lex_parameter_tokens(interior, context);
+    let name_index = find_parameter_token(&tokens, name_span)?;
+    if !token_has_text(tokens.get(name_index + 1), b":", context)
+        || token_has_text(tokens.get(name_index + 3), b"=", context)
+    {
+        return None;
+    }
+    Some(Span::new(
+        tokens[name_index].span.start,
+        tokens.get(name_index + 2)?.span.end,
+    ))
 }
 
 #[must_use]

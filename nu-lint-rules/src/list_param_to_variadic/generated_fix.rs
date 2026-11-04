@@ -138,3 +138,24 @@ process []"#,
 process "#,
     );
 }
+
+#[test]
+fn fix_keeps_flag_and_comments() {
+    RULE.assert_fixed_is(
+        "def show [\n    --loud # shout\n    names: list<string> # all names\n] { print $names }\n",
+        "def show [\n    --loud # shout\n    ...names: string # all names\n] { print $names }\n",
+    );
+}
+
+#[test]
+fn fix_keeps_input_output_annotation() {
+    RULE.assert_fixed_contains(
+        "def show [names: list<string>]: nothing -> nothing { print $names }",
+        "def show [...names: string]: nothing -> nothing {",
+    );
+}
+
+#[test]
+fn no_fix_when_parameter_has_default_value() {
+    RULE.assert_detects_without_fix("def show [names: list<string> = []] { print $names }");
+}

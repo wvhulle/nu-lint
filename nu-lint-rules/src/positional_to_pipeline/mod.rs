@@ -3,7 +3,7 @@ use nu_lint_analysis::{
     ast::{
         block::BlockExt,
         call::CallExt,
-        declaration::{CustomCommandDef, parameter_removal_span},
+        declaration::{CustomCommandDef, has_input_output_annotation, parameter_removal_span},
         expression::ExpressionExt,
     },
     context::LintContext,
@@ -215,6 +215,10 @@ impl DetectFix for TurnPositionalIntoStreamInput {
         // Sort spans by start position
         var_spans.sort_by_key(|span| span.start);
         var_spans.dedup();
+
+        if has_input_output_annotation(fix_data.signature_span, context) {
+            return None;
+        }
 
         let is_top_level_pipeline_head = |usage_span: &Span| {
             block.pipelines.iter().any(|pipeline| {

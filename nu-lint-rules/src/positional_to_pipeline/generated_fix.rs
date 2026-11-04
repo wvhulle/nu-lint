@@ -194,3 +194,10 @@ fn fix_removes_last_parameter_without_trailing_comma() {
         "def pick [--reverse] { first }",
     );
 }
+
+#[test]
+fn no_fix_when_signature_declares_input_type() {
+    RULE.assert_detects_without_fix(
+        "def repo-name [path: string]: nothing -> string { $path | path basename }",
+    );
+}

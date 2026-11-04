@@ -17,3 +17,9 @@ invalid:
   - |
     struct FixData<'a> { variable: &'a str }
     impl DetectFix for Unused { type FixInput<'a> = FixData<'a>; }
+  - |
+    struct FixData { var_name: String }
+    impl DetectFix for Unused { type FixInput<'a> = Option<FixData>; }
+  - |
+    struct FixData<'a> { variable: &'a str }
+    impl DetectFix for Unused { type FixInput<'a> = Option<FixData<'a>>; }

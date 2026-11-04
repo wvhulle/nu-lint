@@ -40,4 +40,30 @@ rule:
             pattern:
               context: "impl X for Y { type FixInput<'a> = $FIX_STRUCT<'a>; }"
               selector: type_item
+    - inside:
+        stopBy: end
+        kind: struct_item
+        has:
+          field: name
+          pattern: $FIX_STRUCT
+        inside:
+          kind: source_file
+          has:
+            stopBy: end
+            pattern:
+              context: "impl X for Y { type FixInput<'a> = Option<$FIX_STRUCT>; }"
+              selector: type_item
+    - inside:
+        stopBy: end
+        kind: struct_item
+        has:
+          field: name
+          pattern: $FIX_STRUCT
+        inside:
+          kind: source_file
+          has:
+            stopBy: end
+            pattern:
+              context: "impl X for Y { type FixInput<'a> = Option<$FIX_STRUCT<'a>>; }"
+              selector: type_item
 note: See CONTRIBUTING.md, section Implementing auto-fix.

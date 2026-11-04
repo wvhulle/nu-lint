@@ -11,11 +11,19 @@ use nu_protocol::{
 };
 
 pub struct FixData {
-    replace_span: Span,
-    list_span: Span,
+    each_span: Span,
+    position: EachPipelinePosition,
     param_declaration_span: Option<Span>,
     body_span: Span,
-    pipeline_elements_before_each: usize,
+    body_uses_pipeline_input: bool,
+}
+
+#[derive(Default)]
+struct EachPipelinePosition {
+    list_span: Option<Span>,
+    elements_before_each: usize,
+    has_later_elements: bool,
+    list_is_command: bool,
 }
 
 /// Checks if an expression returns Nothing (only side effects, no data)
@@ -61,14 +69,21 @@ fn block_has_only_side_effects(block_id: nu_protocol::BlockId, ctx: &LintContext
     false
 }
 
-fn extract_pipeline_info(expr: &Expression, ctx: &LintContext) -> Option<(Span, usize)> {
+fn find_each_position(expr: &Expression, ctx: &LintContext) -> Option<EachPipelinePosition> {
     for pipeline in &ctx.ast.pipelines {
-        for (i, elem) in pipeline.elements.iter().enumerate() {
-            if elem.expr.span.contains_span(expr.span) && i > 0 {
+        for (element_index, elem) in pipeline.elements.iter().enumerate() {
+            if elem.expr.span.contains_span(expr.span) && element_index > 0 {
                 let first = &pipeline.elements[0];
-                let last_before = &pipeline.elements[i - 1];
-                let span = Span::new(first.expr.span.start, last_before.expr.span.end);
-                return Some((span, i));
+                let last_before = &pipeline.elements[element_index - 1];
+                return Some(EachPipelinePosition {
+                    list_span: Some(Span::new(first.expr.span.start, last_before.expr.span.end)),
+                    elements_before_each: element_index,
+                    has_later_elements: element_index + 1 < pipeline.elements.len(),
+                    list_is_command: matches!(
+                        first.expr.expr,
+                        Expr::Call(_) | Expr::ExternalCall(..)
+                    ),
+                });
             }
         }
     }
@@ -141,8 +156,8 @@ impl DetectFix for UseForOverEach {
                     return vec![];
                 };
 
-                let (list_span, pipeline_elements_before_each) = extract_pipeline_info(expr, ctx)
-                    .unwrap_or_else(|| (Span::new(call.span().start, call.span().start), 0));
+                let position = find_each_position(expr, ctx).unwrap_or_default();
+                let body_uses_pipeline_input = block.find_pipeline_input(ctx).is_some();
 
                 let violation = Detection::from_global_span(
                     "Consider using a 'for' loop for side effects only",
@@ -151,11 +166,11 @@ impl DetectFix for UseForOverEach {
                 .with_primary_label("closure returns nothing");
 
                 let fix_data = FixData {
-                    replace_span: call.span(),
-                    list_span,
+                    each_span: call.span(),
+                    position,
                     param_declaration_span,
                     body_span,
-                    pipeline_elements_before_each,
+                    body_uses_pipeline_input,
                 };
 
                 vec![(violation, fix_data)]
@@ -168,14 +183,20 @@ impl DetectFix for UseForOverEach {
         // Only provide auto-fix when clean conversion to for loop is possible
         // (single pipeline element before each). Multi-stage pipelines are more
         // complex and require manual refactoring.
-        if fix_data.pipeline_elements_before_each != 1 {
+        let position = &fix_data.position;
+        if position.elements_before_each != 1
+            || position.has_later_elements
+            || fix_data.body_uses_pipeline_input
+        {
             return None;
         }
 
-        let list = if fix_data.list_span.is_empty() {
-            return None;
+        let list_span = position.list_span?;
+        let list_text = context.span_text(list_span);
+        let list = if position.list_is_command {
+            format!("({list_text})")
         } else {
-            context.span_text(fix_data.list_span)
+            list_text.to_string()
         };
 
         let body = context.span_text(fix_data.body_span);
@@ -186,7 +207,10 @@ impl DetectFix for UseForOverEach {
 
         Some(Fix {
             explanation: "Convert each to for loop".into(),
-            replacements: vec![Replacement::new(fix_data.replace_span, fix_text)],
+            replacements: vec![Replacement::new(
+                Span::new(list_span.start, fix_data.each_span.end),
+                fix_text,
+            )],
         })
     }
 }

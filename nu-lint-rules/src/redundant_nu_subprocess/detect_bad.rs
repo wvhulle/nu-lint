@@ -41,3 +41,8 @@ def dispatch [cmd: string] {
 "#;
     RULE.assert_detects(bad_code);
 }
+
+#[test]
+fn detect_quoted_commands_flag() {
+    RULE.assert_detects(r#"^nu "--commands" "ls""#);
+}

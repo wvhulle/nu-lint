@@ -3,7 +3,7 @@ use nu_lint_analysis::{
     context::LintContext,
 };
 use nu_protocol::{
-    BlockId, Flag, PositionalArg, Span, SyntaxShape, Type,
+    BlockId, Span, SyntaxShape, Type,
     ast::{Block, Call},
 };
 
@@ -47,35 +47,6 @@ pub fn parameter_list_text<'a>(signature_span: Span, context: &'a LintContext) -
     parameter_list_span(signature_span, context).map(|list_span| context.span_text(list_span))
 }
 
-fn format_shape(name: &str, shape: &SyntaxShape) -> String {
-    match shape {
-        SyntaxShape::Any => name.to_string(),
-        s => format!("{name}: {s}"),
-    }
-}
-
-/// Format a required positional parameter: `name: type`
-#[must_use]
-pub fn format_required(p: &PositionalArg) -> String {
-    format_shape(&p.name, &p.shape)
-}
-
-/// Format an optional positional parameter: `name?: type`
-#[must_use]
-pub fn format_optional(p: &PositionalArg) -> String {
-    if matches!(p.shape, SyntaxShape::Any) {
-        format!("{}?", p.name)
-    } else {
-        format!("{}?: {}", p.name, p.shape)
-    }
-}
-
-/// Format a rest/variadic parameter: `...name: type`
-#[must_use]
-pub fn format_rest(p: &PositionalArg) -> String {
-    format_rest_with_shape(&p.name, &p.shape)
-}
-
 /// Format a rest/variadic parameter with a custom shape (for list<T> -> T
 /// conversion)
 #[must_use]
@@ -84,14 +55,6 @@ pub fn format_rest_with_shape(name: &str, shape: &SyntaxShape) -> String {
         SyntaxShape::Any | SyntaxShape::ExternalArgument => format!("...{name}"),
         s => format!("...{name}: {s}"),
     }
-}
-
-/// Format a flag/named parameter.
-#[must_use]
-pub fn format_flag(f: &Flag) -> String {
-    let short = f.short.map_or_default(|s| format!(" (-{s})"));
-    let arg_type = f.arg.as_ref().map_or_default(|s| format!(": {s}"));
-    format!("--{}{short}{arg_type}", f.long)
 }
 
 pub struct FixData {

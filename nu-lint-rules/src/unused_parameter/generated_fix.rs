@@ -206,3 +206,52 @@ def main [] {
 }"#;
     RULE.assert_fixed_contains(code, "def helper []");
 }
+
+#[test]
+fn fix_keeps_default_value_of_other_parameter() {
+    RULE.assert_fixed_contains(
+        r#"def greet [unused_value: string, name: string = "x"] { print $name }"#,
+        r#"def greet [name: string = "x"] { print $name }"#,
+    );
+}
+
+#[test]
+fn fix_keeps_comment_of_other_parameter() {
+    RULE.assert_fixed_contains(
+        "def greet [\n    unused_value: string # not needed\n    name: string # who\n] { print \
+         $name }",
+        "def greet [\n    name: string # who\n] { print $name }",
+    );
+}
+
+#[test]
+fn fix_keeps_input_output_annotation() {
+    RULE.assert_fixed_contains(
+        "def greet [unused_value: string, name: string]: nothing -> nothing { print $name }",
+        "def greet [name: string]: nothing -> nothing {",
+    );
+}
+
+#[test]
+fn fix_removes_flag_with_short_form() {
+    RULE.assert_fixed_contains(
+        "def greet [--loud (-l), name: string] { print $name }",
+        "def greet [name: string] { print $name }",
+    );
+}
+
+#[test]
+fn fix_removes_rest_parameter() {
+    RULE.assert_fixed_contains(
+        "def greet [name: string, ...others] { print $name }",
+        "def greet [name: string] { print $name }",
+    );
+}
+
+#[test]
+fn fix_keeps_closing_bracket_out_of_previous_comment() {
+    RULE.assert_fixed_contains(
+        "def greet [\n    name: string # who\n    --loud # shout\n] { print $name }",
+        "name: string # who\n",
+    );
+}

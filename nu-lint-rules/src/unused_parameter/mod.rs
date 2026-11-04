@@ -1,6 +1,6 @@
 use nu_lint_analysis::{
     LintLevel,
-    ast::{block::BlockExt, call::CallExt},
+    ast::{block::BlockExt, call::CallExt, declaration::parameter_removal_span},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, DiagnosticTag, Fix, Replacement},
@@ -9,8 +9,6 @@ use nu_protocol::{
     DeclId, Span, VarId,
     ast::{self, Argument, Expr, Traverse},
 };
-
-use crate::typing::{format_flag, format_optional, format_required, format_rest};
 
 #[derive(Clone)]
 enum ParamType {
@@ -155,7 +153,10 @@ impl DetectFix for UnusedParameter {
         }
 
         // For non-exported functions, remove the parameter and update call sites
-        let mut replacements = vec![remove_param_from_signature(fix_data)];
+        let mut replacements = vec![Replacement::new(
+            parameter_removal_span(fix_data.name_span, fix_data.signature_span, context)?,
+            String::new(),
+        )];
         replacements.extend(find_call_site_removals(fix_data, context));
 
         Some(Fix {
@@ -224,48 +225,6 @@ fn check_parameter(
             signature: ctx.signature.clone(),
         },
     ))
-}
-
-/// Generate new signature text with the specified parameter removed
-fn remove_param_from_signature(fix_data: &FixData) -> Replacement {
-    let sig = &fix_data.signature;
-
-    let parts: Vec<String> = sig
-        .required_positional
-        .iter()
-        .enumerate()
-        .filter(|(idx, _)| !matches!(fix_data.param_type, ParamType::Required(i) if i == *idx))
-        .map(|(_, p)| format_required(p))
-        .chain(
-            sig.optional_positional
-                .iter()
-                .enumerate()
-                .filter(|(idx, _)| {
-                    let full_idx = sig.required_positional.len() + idx;
-                    !matches!(fix_data.param_type, ParamType::Optional(i) if i == full_idx)
-                })
-                .map(|(_, p)| format_optional(p)),
-        )
-        .chain(
-            sig.rest_positional
-                .iter()
-                .filter(|_| !matches!(fix_data.param_type, ParamType::Rest(_)))
-                .map(format_rest),
-        )
-        .chain(
-            sig.named
-                .iter()
-                .enumerate()
-                .filter(|(_, flag)| flag.long != "help")
-                .filter(|(flag_index, _)| {
-                    !matches!(fix_data.param_type, ParamType::Named(removed) if removed == *flag_index)
-                })
-                .map(|(_, flag)| format_flag(flag)),
-        )
-        .collect();
-
-    let new_sig = format!("[{}]", parts.join(", "));
-    Replacement::new(fix_data.signature_span, new_sig)
 }
 
 /// Find all call sites and generate replacements to remove the corresponding

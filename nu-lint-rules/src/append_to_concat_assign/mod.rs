@@ -10,14 +10,10 @@ use nu_protocol::{
     ast::{Assignment, Expr, Expression, Operator, Pipeline},
 };
 
-fn refers_to_same_variable(expr1: &Expression, expr2: &Expression, context: &LintContext) -> bool {
-    match (
-        expr1.extract_variable_name(context),
-        expr2.extract_variable_name(context),
-    ) {
-        (Some(name1), Some(name2)) => name1 == name2,
-        _ => false,
-    }
+fn refers_to_same_variable(expr1: &Expression, expr2: &Expression) -> bool {
+    expr1
+        .variable_path()
+        .is_some_and(|path| expr2.variable_path() == Some(path))
 }
 
 fn is_list_expression(expr: &Expression) -> bool {
@@ -94,7 +90,7 @@ fn detect_pipeline_level_pattern(
     };
 
     // Check if RHS of assignment matches LHS (same variable)
-    if !refers_to_same_variable(left, right, ctx) {
+    if !refers_to_same_variable(left, right) {
         return Vec::new();
     }
 
@@ -164,7 +160,7 @@ fn detect_append_assignment(expr: &Expression, ctx: &LintContext) -> Option<(Det
     let second_elem = &actual_pipeline.elements[1].expr;
 
     // First element must match the LHS variable
-    if !refers_to_same_variable(left, first_elem, ctx) {
+    if !refers_to_same_variable(left, first_elem) {
         return None;
     }
 

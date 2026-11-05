@@ -63,3 +63,13 @@ def process [] {
 "#;
     RULE.assert_ignores(good_code);
 }
+
+#[test]
+fn ignore_append_from_other_field_of_same_record() {
+    RULE.assert_ignores(
+        r#"
+mut state = {done: [], todo: [1]}
+$state.done = ($state.todo | append 2)
+"#,
+    );
+}

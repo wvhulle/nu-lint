@@ -123,12 +123,10 @@ pub fn parameter_removal_span(
         .iter()
         .rev()
         .find(|token| !token_has_text(Some(token), b",", context));
-    let removal_start = match previous_token {
-        Some(token) if token.contents == TokenContents::Comment => tokens[name_index].span.start,
-        Some(token) => token.span.end,
-        None => interior.start,
+    let Some(previous_token) = previous_token else {
+        return Some(interior);
     };
-    Some(Span::new(removal_start, interior.end))
+    Some(Span::new(previous_token.span.end, tokens.last()?.span.end))
 }
 
 #[must_use]

@@ -209,7 +209,7 @@ def main [] {
 
 #[test]
 fn fix_keeps_default_value_of_other_parameter() {
-    RULE.assert_fixed_contains(
+    RULE.assert_fixed_is(
         r#"def greet [unused_value: string, name: string = "x"] { print $name }"#,
         r#"def greet [name: string = "x"] { print $name }"#,
     );
@@ -217,7 +217,7 @@ fn fix_keeps_default_value_of_other_parameter() {
 
 #[test]
 fn fix_keeps_comment_of_other_parameter() {
-    RULE.assert_fixed_contains(
+    RULE.assert_fixed_is(
         "def greet [\n    unused_value: string # not needed\n    name: string # who\n] { print \
          $name }",
         "def greet [\n    name: string # who\n] { print $name }",
@@ -226,15 +226,15 @@ fn fix_keeps_comment_of_other_parameter() {
 
 #[test]
 fn fix_keeps_input_output_annotation() {
-    RULE.assert_fixed_contains(
+    RULE.assert_fixed_is(
         "def greet [unused_value: string, name: string]: nothing -> nothing { print $name }",
-        "def greet [name: string]: nothing -> nothing {",
+        "def greet [name: string]: nothing -> nothing { print $name }",
     );
 }
 
 #[test]
 fn fix_removes_flag_with_short_form() {
-    RULE.assert_fixed_contains(
+    RULE.assert_fixed_is(
         "def greet [--loud (-l), name: string] { print $name }",
         "def greet [name: string] { print $name }",
     );
@@ -242,7 +242,7 @@ fn fix_removes_flag_with_short_form() {
 
 #[test]
 fn fix_removes_rest_parameter() {
-    RULE.assert_fixed_contains(
+    RULE.assert_fixed_is(
         "def greet [name: string, ...others] { print $name }",
         "def greet [name: string] { print $name }",
     );
@@ -250,8 +250,8 @@ fn fix_removes_rest_parameter() {
 
 #[test]
 fn fix_keeps_closing_bracket_out_of_previous_comment() {
-    RULE.assert_fixed_contains(
+    RULE.assert_fixed_is(
         "def greet [\n    name: string # who\n    --loud # shout\n] { print $name }",
-        "name: string # who\n",
+        "def greet [\n    name: string # who\n] { print $name }",
     );
 }

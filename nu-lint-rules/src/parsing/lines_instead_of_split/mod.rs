@@ -14,11 +14,8 @@ pub struct FixData {
     replace_span: Span,
 }
 
-fn is_newline_string(expr: &Expression, context: &LintContext) -> bool {
-    let text = context.expr_text(expr);
-    // Only double-quoted strings interpret \n as newline in Nushell
-    // Single-quoted strings are raw and treat \n literally
-    matches!(text, "\"\\n\"" | "\"\\r\\n\"")
+fn is_newline_string(expr: &Expression) -> bool {
+    matches!(&expr.expr, Expr::String(value) if matches!(value.as_str(), "\n" | "\r\n"))
 }
 
 struct LinesInsteadOfSplit;
@@ -63,7 +60,7 @@ impl DetectFix for LinesInsteadOfSplit {
                 return vec![];
             };
 
-            if !is_newline_string(separator_arg, ctx) {
+            if !is_newline_string(separator_arg) {
                 return vec![];
             }
 

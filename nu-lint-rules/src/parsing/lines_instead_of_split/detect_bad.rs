@@ -19,3 +19,8 @@ def process-text [] {
 
     RULE.assert_detects(bad_code);
 }
+
+#[test]
+fn detect_newline_written_as_unicode_escape() {
+    RULE.assert_detects(r#"$text | split row "\u{a}""#);
+}

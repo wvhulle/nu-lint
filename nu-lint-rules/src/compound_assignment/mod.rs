@@ -1,6 +1,5 @@
 use nu_lint_analysis::{
     LintLevel,
-    ast::expression::ExpressionExt,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -10,17 +9,12 @@ use nu_protocol::{
     ast::{Assignment, Expr, Expression, Math, Operator, PathMember},
 };
 
-fn refers_to_same_variable(expr1: &Expression, expr2: &Expression, context: &LintContext) -> bool {
+fn refers_to_same_variable(expr1: &Expression, expr2: &Expression) -> bool {
     match (&expr1.expr, &expr2.expr) {
-        (Expr::Var(_) | Expr::VarDecl(_), Expr::Var(_) | Expr::VarDecl(_)) => {
-            match (
-                expr1.extract_variable_name(context),
-                expr2.extract_variable_name(context),
-            ) {
-                (Some(name1), Some(name2)) => name1 == name2,
-                _ => false,
-            }
-        }
+        (
+            Expr::Var(first_var_id) | Expr::VarDecl(first_var_id),
+            Expr::Var(second_var_id) | Expr::VarDecl(second_var_id),
+        ) => first_var_id == second_var_id,
         (Expr::FullCellPath(fcp1), Expr::FullCellPath(fcp2)) => {
             fcp1.head.expr == fcp2.head.expr && {
                 fcp1.tail
@@ -102,7 +96,7 @@ fn detect_compound_assignment(
         return None;
     };
 
-    if !refers_to_same_variable(left, sub_left, ctx) {
+    if !refers_to_same_variable(left, sub_left) {
         return None;
     }
 

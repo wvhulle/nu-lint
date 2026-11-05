@@ -6,15 +6,26 @@ use nu_lint_analysis::{
     violation::{Detection, Fix, Replacement},
 };
 use nu_protocol::{
-    Span,
-    ast::{Call, Comparison, Expr, Expression, Operator},
+    Span, VarId,
+    ast::{Call, Comparison, Expr, Expression, Operator, PathMember},
 };
 
-fn compared_operand_span(operand: &Expression) -> Option<Span> {
-    matches!(operand.expr, Expr::Var(_) | Expr::FullCellPath(_)).then_some(operand.span)
+const fn is_compared_operand(operand: &Expression) -> bool {
+    matches!(operand.expr, Expr::Var(_) | Expr::FullCellPath(_))
 }
 
-fn extract_compared_variable(expr: &Expression) -> Option<Span> {
+fn variable_path_of_operand(operand: &Expression) -> Option<(VarId, &[PathMember])> {
+    match &operand.expr {
+        Expr::Var(var_id) => Some((*var_id, &[])),
+        Expr::FullCellPath(cell_path) => match cell_path.head.expr {
+            Expr::Var(var_id) => Some((var_id, cell_path.tail.as_slice())),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+fn extract_compared_operand(expr: &Expression) -> Option<&Expression> {
     let Expr::BinaryOp(left, op, right) = &expr.expr else {
         return None;
     };
@@ -24,7 +35,10 @@ fn extract_compared_variable(expr: &Expression) -> Option<Span> {
         return None;
     };
 
-    compared_operand_span(left).or_else(|| compared_operand_span(right))
+    [left, right]
+        .into_iter()
+        .find(|operand| is_compared_operand(operand))
+        .map(AsRef::as_ref)
 }
 
 fn extract_comparison_value(expr: &Expression, context: &LintContext) -> Option<Span> {
@@ -151,7 +165,7 @@ fn collect_chain_branches(call: &Call, context: &LintContext) -> (Vec<MatchBranc
 /// Walks the else-if chain and analyzes its properties
 fn walk_if_else_chain(
     first_call: &Call,
-    compared_var: &str,
+    compared_path: Option<(VarId, &[PathMember])>,
     context: &LintContext,
 ) -> ChainAnalysis {
     let mut current_call = first_call;
@@ -161,8 +175,9 @@ fn walk_if_else_chain(
     loop {
         consistent_variable &= current_call
             .get_first_positional_arg()
-            .and_then(extract_compared_variable)
-            .is_some_and(|var_span| context.span_text(var_span) == compared_var);
+            .and_then(extract_compared_operand)
+            .and_then(variable_path_of_operand)
+            .is_some_and(|branch_path| Some(branch_path) == compared_path);
 
         match next_else_if_call(current_call, context) {
             Some(next_call) => {
@@ -225,9 +240,10 @@ fn chain_compares_literals_only(first_call: &Call, context: &LintContext) -> boo
 /// Analyze an if-call and its else branch to detect if-else-if chains
 fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<(Detection, FixData)> {
     // Get the condition expression and check if it compares a variable
-    let compared_var_span = call
+    let compared_operand = call
         .get_first_positional_arg()
-        .and_then(extract_compared_variable)?;
+        .and_then(extract_compared_operand)?;
+    let compared_var_span = compared_operand.span;
     let compared_var = context.span_text(compared_var_span);
 
     // Verify this is an else-if chain (not just a final else)
@@ -244,7 +260,11 @@ fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<(Detection, Fi
     (nested_call.builtin_name(context) == Some("if")).then_some(())?;
 
     // Analyze chain properties
-    let analysis = walk_if_else_chain(nested_call, compared_var, context);
+    let analysis = walk_if_else_chain(
+        nested_call,
+        variable_path_of_operand(compared_operand),
+        context,
+    );
 
     // Only flag chains with 3+ branches (at least 2 else-if)
     (analysis.length >= 3).then_some(())?;

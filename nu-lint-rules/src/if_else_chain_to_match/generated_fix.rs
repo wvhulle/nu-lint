@@ -6,6 +6,7 @@ use super::RULE;
 fn test_simple_string_chain_fix() {
     init_test_log();
     let bad_code = r#"
+let status = "ok"
 if $status == "ok" {
     "success"
 } else if $status == "error" {
@@ -28,6 +29,7 @@ if $status == "ok" {
 #[test]
 fn test_numeric_chain_fix() {
     let bad_code = r#"
+let code = 200
 if $code == 200 {
     "ok"
 } else if $code == 404 {
@@ -110,5 +112,17 @@ fn no_fix_when_branches_compare_different_fields() {
         r#"def pick [row: list] {
     if $row.0 == 1 { "a" } else if $row.1 == 2 { "b" } else if $row.0 == 3 { "c" }
 }"#,
+    );
+}
+
+#[test]
+fn fix_treats_quoted_and_bare_field_as_same_operand() {
+    RULE.assert_fixed_is(
+        r#"def pick [config] { if $config.mode == 1 { "a" } else if $config."mode" == 2 { "b" } else if $config.mode == 3 { "c" } }"#,
+        r#"def pick [config] { match $config.mode {
+    1 => { "a" },
+    2 => { "b" },
+    3 => { "c" },
+} }"#,
     );
 }

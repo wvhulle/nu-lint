@@ -25,6 +25,10 @@ valid:
     }
 invalid:
   - |
+    fn same_operand(context: &LintContext, span: Span, expected: &str) -> bool {
+        context.span_text(span) == expected
+    }
+  - |
     fn has_raw_flag(context: &LintContext, span: Span) -> bool {
         context.span_text(span).contains("--raw")
     }

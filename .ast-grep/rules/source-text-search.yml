@@ -22,13 +22,15 @@ rule:
   any:
     - pattern: $CTX.source_contains($$$)
     - pattern: $CTX.$SOURCE_ACCESSOR($$$).$STRING_METHOD($$$)
-    - pattern: $CTX.$SOURCE_ACCESSOR($$$) == $LITERAL
-    - pattern: $CTX.$SOURCE_ACCESSOR($$$) != $LITERAL
+    - pattern: $CTX.$SOURCE_ACCESSOR($$$) == $OTHER
+    - pattern: $CTX.$SOURCE_ACCESSOR($$$) != $OTHER
+    - pattern: $OTHER == $CTX.$SOURCE_ACCESSOR($$$)
+    - pattern: $OTHER != $CTX.$SOURCE_ACCESSOR($$$)
     - all:
         - any:
             - pattern: $SOURCE_TEXT.$STRING_METHOD($$$)
-            - pattern: $SOURCE_TEXT == $LITERAL
-            - pattern: $SOURCE_TEXT != $LITERAL
+            - pattern: $SOURCE_TEXT == $OTHER
+            - pattern: $SOURCE_TEXT != $OTHER
             - pattern: $SOURCE_TEXT[$RANGE]
         - matches: bound-to-source-text
 constraints:
@@ -36,8 +38,6 @@ constraints:
     regex: ^(span_text|expr_text|source_before_span|source_after_span|source_between_span_ends)$
   STRING_METHOD:
     regex: ^(contains|starts_with|ends_with|find|rfind|split\w*|rsplit\w*|trim\w*|strip_prefix|strip_suffix|lines|chars|char_indices|bytes|matches|match_indices|replace)$
-  LITERAL:
-    kind: string_literal
   RANGE:
     kind: range_expression
 note: Files in ignores inspect comments, separators or layout, which the AST does not contain. See CONTRIBUTING.md, section Detection.

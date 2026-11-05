@@ -46,3 +46,15 @@ for x in [1 2 3] {
 ";
     RULE.assert_ignores(good);
 }
+
+#[test]
+fn test_field_of_loop_variable_is_a_transformation() {
+    RULE.assert_ignores(
+        r"
+mut names = []
+for row in [{name: a}] {
+    $names = ($names | append $row.name)
+}
+",
+    );
+}

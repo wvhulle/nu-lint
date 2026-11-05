@@ -28,13 +28,13 @@ fn is_literal_list(expr: &Expression) -> bool {
 fn matches_transformation_pattern(
     expr: &Expression,
     context: &LintContext,
-    loop_var_name: &str,
+    loop_var_id: VarId,
 ) -> bool {
     match &expr.expr {
         Expr::Call(call) => call.builtin_name(context) == Some("if"),
         Expr::BinaryOp(_lhs, op, rhs) => {
             matches!(op.expr, Expr::Operator(Operator::Assignment(_)))
-                && has_transformation_in_append(rhs, context, loop_var_name)
+                && has_transformation_in_append(rhs, context, loop_var_id)
         }
         _ => false,
     }
@@ -43,19 +43,19 @@ fn matches_transformation_pattern(
 fn has_transformation_or_filter(
     block_id: nu_protocol::BlockId,
     context: &LintContext,
-    loop_var_name: &str,
+    loop_var_id: VarId,
 ) -> bool {
     let block = context.working_set.get_block(block_id);
     block
         .all_elements()
         .iter()
-        .any(|elem| matches_transformation_pattern(&elem.expr, context, loop_var_name))
+        .any(|elem| matches_transformation_pattern(&elem.expr, context, loop_var_id))
 }
 
 fn has_transformation_in_append(
     expr: &Expression,
     context: &LintContext,
-    loop_var_name: &str,
+    loop_var_id: VarId,
 ) -> bool {
     match &expr.expr {
         Expr::Call(call) if call.builtin_name(context) == Some("append") => {
@@ -68,26 +68,23 @@ fn has_transformation_in_append(
             };
 
             match &arg_expr.expr {
-                Expr::Var(_) => {
-                    let var_name = arg_expr.span_text(context);
-                    var_name != loop_var_name
-                }
+                Expr::Var(read_var_id) => *read_var_id != loop_var_id,
                 Expr::FullCellPath(cell_path) if matches!(&cell_path.head.expr, Expr::Var(_)) => {
-                    let var_name = cell_path.head.span_text(context);
-                    var_name == loop_var_name && !cell_path.tail.is_empty()
+                    cell_path.head.extract_direct_var() == Some(loop_var_id)
+                        && !cell_path.tail.is_empty()
                 }
                 _ => true,
             }
         }
         Expr::FullCellPath(cell_path) => {
-            has_transformation_in_append(&cell_path.head, context, loop_var_name)
+            has_transformation_in_append(&cell_path.head, context, loop_var_id)
         }
         Expr::Block(block_id) | Expr::Subexpression(block_id) => {
             let block = context.working_set.get_block(*block_id);
             block
                 .all_elements()
                 .iter()
-                .any(|elem| has_transformation_in_append(&elem.expr, context, loop_var_name))
+                .any(|elem| has_transformation_in_append(&elem.expr, context, loop_var_id))
         }
         _ => false,
     }
@@ -164,10 +161,13 @@ fn is_direct_copy_for_loop(
     context: &LintContext,
 ) -> Option<(String, nu_protocol::BlockId)> {
     let loop_var_name = call.loop_var_from_for(context)?;
+    let Expr::VarDecl(loop_var_id) = call.get_first_positional_arg()?.expr else {
+        return None;
+    };
     let iter_expr = call.get_for_loop_iterator()?;
     let block_id = call.get_for_loop_body()?;
 
-    (is_literal_list(iter_expr) && !has_transformation_or_filter(block_id, context, &loop_var_name))
+    (is_literal_list(iter_expr) && !has_transformation_or_filter(block_id, context, loop_var_id))
         .then_some((loop_var_name, block_id))
 }
 

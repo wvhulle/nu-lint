@@ -13,6 +13,7 @@ use nu_lint_analysis::{
 use nu_protocol::{
     Span, VarId,
     ast::{Assignment, Block, Expr, Expression, Operator, PathMember, Pipeline, Traverse},
+    engine::ENV_VARIABLE_ID,
 };
 pub use use_record_spread::RULE as USE_RECORD_SPREAD;
 
@@ -265,7 +266,7 @@ impl GroupBuilder {
             );
             let all_flat = self.assignments.iter().all(|a| a.path.len() == 1);
             AssignmentGroup {
-                is_env: self.root_var_name == "env",
+                is_env: self.root_var_id == ENV_VARIABLE_ID,
                 root_var_name: self.root_var_name,
                 assignments: self.assignments,
                 combined_span,

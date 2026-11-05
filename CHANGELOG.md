@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.1](https://codeberg.org/wvhulle/nu-lint/compare/v1.9.0...v1.9.1) - 2026-11-05
+
+### Build
+
+- *(nix)* split flake.nix by concern
+
+### CI
+
+- move CI tasks into Nushell scripts
+- name workflows, steps and tasks after what they do
+
+### Fixed
+
+- *(release)* link macOS binaries with zig 0.15
+
 ## [1.9.0](https://codeberg.org/wvhulle/nu-lint/compare/v1.8.0...v1.9.0) - 2026-11-05
 
 ### Added

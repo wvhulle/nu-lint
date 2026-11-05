@@ -41,3 +41,8 @@ def main [...args: string] {
 "#;
     RULE.assert_ignores(good_code);
 }
+
+#[test]
+fn test_ignore_string_that_only_mentions_the_current_file() {
+    RULE.assert_ignores(r#"source "$env.CURRENT_FILE.nu""#);
+}

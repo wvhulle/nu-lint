@@ -5,7 +5,10 @@ use nu_lint_analysis::{
     rule::{DetectFix, Rule},
     violation::Detection,
 };
-use nu_protocol::ast::{Argument, Expr, Expression};
+use nu_protocol::{
+    ENV_VARIABLE_ID, NU_VARIABLE_ID, Span,
+    ast::{Argument, Expr, Expression, PathMember, Traverse},
+};
 
 struct AvoidSelfImport;
 
@@ -50,8 +53,7 @@ impl AvoidSelfImport {
                 Argument::Named(_) => return false,
             };
 
-            let arg_text = ctx.expr_text(arg_expr);
-            Self::contains_current_file_reference(arg_text)
+            Self::reads_current_file(arg_expr, ctx)
         });
 
         if !has_self_reference {
@@ -70,10 +72,38 @@ impl AvoidSelfImport {
         ]
     }
 
-    fn contains_current_file_reference(text: &str) -> bool {
-        text.contains("$env.CURRENT_FILE")
-            || text.contains("$nu.current-file")
-            || text.contains("(path self)")
+    fn is_current_file_reference(expr: &Expression, ctx: &LintContext) -> bool {
+        match &expr.expr {
+            Expr::FullCellPath(cell_path) => {
+                let first_member = match cell_path.tail.first() {
+                    Some(PathMember::String { val, .. }) => val.as_str(),
+                    _ => return false,
+                };
+                match cell_path.head.expr {
+                    Expr::Var(ENV_VARIABLE_ID) => first_member == "CURRENT_FILE",
+                    Expr::Var(NU_VARIABLE_ID) => first_member == "current-file",
+                    _ => false,
+                }
+            }
+            Expr::Call(call) => call.builtin_name(ctx) == Some("path self"),
+            _ => false,
+        }
+    }
+
+    fn reads_current_file(arg_expr: &Expression, ctx: &LintContext) -> bool {
+        let mut references: Vec<Span> = Vec::new();
+        arg_expr.flat_map(
+            ctx.working_set,
+            &|expr| {
+                if Self::is_current_file_reference(expr, ctx) {
+                    vec![expr.span]
+                } else {
+                    vec![]
+                }
+            },
+            &mut references,
+        );
+        !references.is_empty()
     }
 }
 

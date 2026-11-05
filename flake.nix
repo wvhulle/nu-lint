@@ -191,10 +191,8 @@
                   else
                     vendoredCrate;
               };
-              nativeBuildInputs = [
-                pkgs.cargo-zigbuild
-                pkgs.zig
-              ];
+              nativeBuildInputs = [ pkgs.cargo-zigbuild ];
+              CARGO_ZIGBUILD_ZIG_COMMAND = pkgs.lib.getExe pkgs.zig_0_15;
               CARGO_BUILD_TARGET = macosTarget;
               MACOSX_DEPLOYMENT_TARGET = "11.0";
               SDKROOT = macosSdkRoot;

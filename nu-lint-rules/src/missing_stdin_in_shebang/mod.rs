@@ -1,8 +1,6 @@
 use nu_lint_analysis::{
     LintLevel,
-    ast::{
-        call::CallExt, declaration::has_input_output_annotation, expression::is_pipeline_input_var,
-    },
+    ast::{call::CallExt, expression::is_pipeline_input_var},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -142,7 +140,7 @@ fn check_main_function(
     let signature = &block.signature;
     let uses_in = block_uses_pipeline_input_directly(block, context);
 
-    let has_explicit_annotation = has_input_output_annotation(def.signature_span, context);
+    let has_explicit_annotation = !def.signature.input_output_types.is_empty();
 
     let has_non_nothing_input = has_explicit_annotation
         && signature

@@ -208,3 +208,10 @@ fn no_fix_when_command_is_called_in_file() {
         "def pick [items] { $items | first }\ndef main [] { pick [1 2] }",
     );
 }
+
+#[test]
+fn no_fix_when_signature_declares_any_types() {
+    RULE.assert_detects_without_fix(
+        "def repo-name [path: string]: any -> any { $path | path basename }",
+    );
+}

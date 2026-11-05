@@ -3,7 +3,7 @@ use nu_lint_analysis::{
     ast::{
         block::BlockExt,
         call::CallExt,
-        declaration::{CustomCommandDef, has_input_output_annotation, parameter_removal_span},
+        declaration::{CustomCommandDef, parameter_removal_span},
         expression::ExpressionExt,
     },
     context::LintContext,
@@ -17,6 +17,7 @@ use nu_protocol::{
 
 pub struct FixData {
     signature_span: Span,
+    signature_is_annotated: bool,
     /// Block containing the function body
     block_id: nu_protocol::BlockId,
     /// `VarId` of the parameter being converted
@@ -112,15 +113,7 @@ fn analyze_function_from_ast(def: &CustomCommandDef, context: &LintContext) -> V
 
     pipeline_params
         .into_iter()
-        .filter_map(|param| {
-            create_violation_with_span(
-                param,
-                def_span,
-                def.signature_span,
-                def.body,
-                def.is_exported(),
-            )
-        })
+        .filter_map(|param| create_violation_with_span(param, def_span, def))
         .collect()
 }
 
@@ -151,6 +144,7 @@ fn create_violation(
 
     let fix_data = FixData {
         signature_span: def.signature_span,
+        signature_is_annotated: !def.signature.input_output_types.is_empty(),
         block_id,
         param_var_id: param.var_id?,
     };
@@ -161,17 +155,16 @@ fn create_violation(
 fn create_violation_with_span(
     param: &nu_protocol::PositionalArg,
     def_span: nu_protocol::Span,
-    signature_span: Span,
-    block_id: nu_protocol::BlockId,
-    _is_exported: bool,
+    def: &CustomCommandDef,
 ) -> Option<ViolationPair> {
     let violation =
         Detection::from_global_span("Use pipeline input instead of parameter", def_span)
             .with_primary_label("function with single data parameter");
 
     let fix_data = FixData {
-        signature_span,
-        block_id,
+        signature_span: def.signature_span,
+        signature_is_annotated: !def.signature.input_output_types.is_empty(),
+        block_id: def.body,
         param_var_id: param.var_id?,
     };
 
@@ -232,9 +225,7 @@ impl DetectFix for TurnPositionalIntoStreamInput {
         var_spans.sort_by_key(|span| span.start);
         var_spans.dedup();
 
-        if command_has_call_sites(fix_data.block_id, context)
-            || has_input_output_annotation(fix_data.signature_span, context)
-        {
+        if command_has_call_sites(fix_data.block_id, context) || fix_data.signature_is_annotated {
             return None;
         }
 

@@ -40,13 +40,6 @@ fn parameter_list_interior(signature_span: Span, context: &LintContext) -> Optio
     Some(Span::new(parameter_list.start + 1, parameter_list.end - 1))
 }
 
-#[must_use]
-pub fn has_input_output_annotation(signature_span: Span, context: &LintContext) -> bool {
-    lex_signature_tokens(signature_span, context)
-        .get(1)
-        .is_some_and(|token| context.working_set.get_span_contents(token.span) == b":")
-}
-
 fn lex_parameter_tokens(interior: Span, context: &LintContext) -> Vec<nu_parser::Token> {
     nu_parser::lex_signature(
         context.working_set.get_span_contents(interior),

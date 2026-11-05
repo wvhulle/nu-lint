@@ -13,17 +13,17 @@ use nu_protocol::{
 };
 
 struct FixData {
-    var_name_span: Span,
+    variable_name_span: Span,
     declaration_span: Span,
     value_is_removable: bool,
 }
 
 fn builtin_is_side_effect_free(call: &Call, context: &LintContext) -> bool {
-    let decl = context.working_set.get_decl(call.decl_id);
-    if !decl.is_builtin() {
+    let command_decl = context.working_set.get_decl(call.decl_id);
+    if !command_decl.is_builtin() {
         return false;
     }
-    match decl.signature().category {
+    match command_decl.signature().category {
         Category::Bytes
         | Category::Conversions
         | Category::Date
@@ -89,7 +89,7 @@ impl DetectFix for UnusedVariable {
                 let Expr::Call(call) = &expr.expr else {
                     return vec![];
                 };
-                let Some((var_id, var_name, var_name_span)) =
+                let Some((var_id, var_name, variable_name_span)) =
                     call.extract_variable_declaration(context)
                 else {
                     return vec![];
@@ -101,7 +101,7 @@ impl DetectFix for UnusedVariable {
                 let value_is_removable = call
                     .get_positional_arg(1)
                     .is_some_and(|value| value_is_side_effect_free(value, context));
-                vec![(var_id, var_name_span, expr.span, value_is_removable)]
+                vec![(var_id, variable_name_span, expr.span, value_is_removable)]
             },
             &mut declarations,
         );
@@ -126,11 +126,11 @@ impl DetectFix for UnusedVariable {
         decl_map
             .into_iter()
             .filter(|(var_id, _)| !used_vars.contains(var_id))
-            .map(|(_, (var_name_span, span, value_is_removable))| {
+            .map(|(_, (variable_name_span, span, value_is_removable))| {
                 let detection = Detection::from_global_span(
                     format!(
                         "Variable '{}' is declared but never used",
-                        context.span_text(var_name_span)
+                        context.span_text(variable_name_span)
                     ),
                     span,
                 )
@@ -139,7 +139,7 @@ impl DetectFix for UnusedVariable {
                 (
                     detection,
                     FixData {
-                        var_name_span,
+                        variable_name_span,
                         declaration_span: span,
                         value_is_removable,
                     },
@@ -158,7 +158,7 @@ impl DetectFix for UnusedVariable {
         Some(Fix {
             explanation: format!(
                 "Remove unused variable '{}'",
-                context.span_text(fix_data.var_name_span)
+                context.span_text(fix_data.variable_name_span)
             )
             .into(),
             replacements: vec![Replacement::new(removal_span, String::new())],

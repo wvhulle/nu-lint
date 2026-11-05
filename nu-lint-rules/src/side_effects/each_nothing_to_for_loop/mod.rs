@@ -13,7 +13,7 @@ use nu_protocol::{
 pub struct FixData {
     each_span: Span,
     position: EachPipelinePosition,
-    param_declaration_span: Option<Span>,
+    parameter_declaration_span: Option<Span>,
     body_span: Span,
     body_uses_pipeline_input: bool,
 }
@@ -71,8 +71,8 @@ fn block_has_only_side_effects(block_id: nu_protocol::BlockId, ctx: &LintContext
 
 fn find_each_position(expr: &Expression, ctx: &LintContext) -> Option<EachPipelinePosition> {
     for pipeline in &ctx.ast.pipelines {
-        for (element_index, elem) in pipeline.elements.iter().enumerate() {
-            if elem.expr.span.contains_span(expr.span) && element_index > 0 {
+        for (element_index, pipeline_element) in pipeline.elements.iter().enumerate() {
+            if pipeline_element.expr.span.contains_span(expr.span) && element_index > 0 {
                 let first = &pipeline.elements[0];
                 let last_before = &pipeline.elements[element_index - 1];
                 return Some(EachPipelinePosition {
@@ -145,7 +145,7 @@ impl DetectFix for UseForOverEach {
 
                 let block = ctx.working_set.get_block(*block_id);
 
-                let param_declaration_span = block
+                let parameter_declaration_span = block
                     .signature
                     .required_positional
                     .first()
@@ -168,7 +168,7 @@ impl DetectFix for UseForOverEach {
                 let fix_data = FixData {
                     each_span: call.span(),
                     position,
-                    param_declaration_span,
+                    parameter_declaration_span,
                     body_span,
                     body_uses_pipeline_input,
                 };
@@ -201,7 +201,7 @@ impl DetectFix for UseForOverEach {
 
         let body = context.span_text(fix_data.body_span);
         let param_name = fix_data
-            .param_declaration_span
+            .parameter_declaration_span
             .map_or("item", |span| context.span_text(span));
         let fix_text = format!("for {param_name} in {list} {{ {body} }}");
 

@@ -59,7 +59,7 @@ fn extract_comparison_value(expr: &Expression, context: &LintContext) -> Option<
 pub struct FixData {
     /// Span of the entire if-else-if chain to replace
     call_span: Span,
-    compared_var_span: Span,
+    compared_operand_span: Span,
     branches: Vec<MatchBranch>,
     /// Optional final else body
     final_else: Option<Span>,
@@ -203,7 +203,7 @@ fn next_else_if_call<'a>(call: &'a Call, context: &LintContext) -> Option<&'a Ca
 }
 
 fn is_equality_with_literal(condition: &Expression) -> bool {
-    let Expr::BinaryOp(left, op, right) = &condition.expr else {
+    let Expr::BinaryOp(left, comparison_op, right) = &condition.expr else {
         return false;
     };
     let is_literal = |operand: &Expression| {
@@ -218,7 +218,7 @@ fn is_equality_with_literal(condition: &Expression) -> bool {
         )
     };
     matches!(
-        op.expr,
+        comparison_op.expr,
         Expr::Operator(Operator::Comparison(Comparison::Equal))
     ) && (is_literal(left) || is_literal(right))
 }
@@ -243,8 +243,8 @@ fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<(Detection, Fi
     let compared_operand = call
         .get_first_positional_arg()
         .and_then(extract_compared_operand)?;
-    let compared_var_span = compared_operand.span;
-    let compared_var = context.span_text(compared_var_span);
+    let compared_operand_span = compared_operand.span;
+    let compared_operand_text = context.span_text(compared_operand_span);
 
     // Verify this is an else-if chain (not just a final else)
     let (is_else_if, else_expr) = call.get_else_branch()?;
@@ -274,14 +274,14 @@ fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<(Detection, Fi
     let violation = if analysis.consistent_variable {
         let mut v = Detection::from_global_span(
             format!(
-                "If-else-if chain comparing '{compared_var}' to different values - consider using \
-                 'match'"
+                "If-else-if chain comparing '{compared_operand_text}' to different values - \
+                 consider using 'match'"
             ),
             call.head,
         )
         .with_primary_label("if keyword");
         if let Some(cond_span) = first_branch_span {
-            v = v.with_extra_label(format!("comparing '{compared_var}'"), cond_span);
+            v = v.with_extra_label(format!("comparing '{compared_operand_text}'"), cond_span);
         }
         v
     } else {
@@ -302,7 +302,7 @@ fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<(Detection, Fi
 
     let fix_data = FixData {
         call_span: call.span(),
-        compared_var_span,
+        compared_operand_span,
         branches,
         final_else,
     };
@@ -368,11 +368,11 @@ impl DetectFix for ReplaceIfElseChainWithMatch {
             .collect::<Vec<_>>()
             .join("\n");
 
-        let compared_var = context.span_text(fix_data.compared_var_span);
-        let match_text = format!("match {compared_var} {{\n{match_arms}\n}}");
+        let compared_operand_text = context.span_text(fix_data.compared_operand_span);
+        let match_text = format!("match {compared_operand_text} {{\n{match_arms}\n}}");
 
         Some(Fix {
-            explanation: format!("Convert to match expression on {compared_var}").into(),
+            explanation: format!("Convert to match expression on {compared_operand_text}").into(),
             replacements: vec![Replacement::new(fix_data.call_span, match_text)],
         })
     }

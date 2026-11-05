@@ -15,7 +15,7 @@ use nu_protocol::{
 /// Semantic fix data: stores the call span and message expression span
 pub struct FixData {
     call_span: Span,
-    msg_expr_span: Option<Span>,
+    message_span: Option<Span>,
     is_bare_word: bool,
 }
 
@@ -119,19 +119,20 @@ impl DetectFix for UseErrorMakeForCatch {
             .with_primary_label("stderr output in catchable context");
 
             // Extract message expression info for fix generation
-            let msg_expr = call.get_first_positional_arg();
-            let (msg_expr_span, is_bare_word) = msg_expr.map_or((None, false), |e| {
-                let bare_word = matches!(e.expr, Expr::GlobPattern(..))
-                    || matches!(
-                        StringFormat::from_expression(e, ctx),
-                        Some(StringFormat::BareWord(_))
-                    );
-                (Some(e.span), bare_word)
-            });
+            let message_expr = call.get_first_positional_arg();
+            let (message_span, is_bare_word) =
+                message_expr.map_or((None, false), |message_operand| {
+                    let written_bare = matches!(message_operand.expr, Expr::GlobPattern(..))
+                        || matches!(
+                            StringFormat::from_expression(message_operand, ctx),
+                            Some(StringFormat::BareWord(_))
+                        );
+                    (Some(message_operand.span), written_bare)
+                });
 
             let fix_data = FixData {
                 call_span: call.span(),
-                msg_expr_span,
+                message_span,
                 is_bare_word,
             };
 
@@ -140,7 +141,7 @@ impl DetectFix for UseErrorMakeForCatch {
     }
 
     fn fix(&self, ctx: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let msg_span = fix_data.msg_expr_span?;
+        let msg_span = fix_data.message_span?;
         let text = ctx.span_text(msg_span);
 
         let msg_text = if fix_data.is_bare_word {

@@ -15,7 +15,7 @@ use nu_protocol::{
 /// Semantic fix data: stores the parameter name, span, and whether it's
 /// optional
 pub struct FixData {
-    param_name_span: Span,
+    parameter_name_span: Span,
     replace_span: Span,
 }
 
@@ -71,7 +71,7 @@ fn detect_parameter(
         Detection::from_global_span(message, param_span).with_primary_label("used as path");
 
     let fix_data = FixData {
-        param_name_span: param_span,
+        parameter_name_span: param_span,
         replace_span,
     };
 
@@ -153,7 +153,7 @@ impl DetectFix for StringAsPath {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let param_name = context.span_text(fix_data.param_name_span);
+        let param_name = context.span_text(fix_data.parameter_name_span);
         Some(Fix {
             explanation: format!("Change `{param_name}` type to `path`").into(),
             replacements: vec![Replacement::new(

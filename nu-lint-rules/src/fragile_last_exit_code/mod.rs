@@ -63,7 +63,7 @@ fn check_pipeline_pairs(block: &Block, context: &LintContext) -> Vec<(Detection,
         .enumerate()
         .filter_map(|(idx, pipeline)| {
             // Find external command in current pipeline
-            let cmd_span = find_external_command(pipeline)?;
+            let external_command_span = find_external_command(pipeline)?;
 
             // Check next pipeline for LAST_EXIT_CODE access
             let next_pipeline = block.pipelines.get(idx + 1)?;
@@ -71,7 +71,7 @@ fn check_pipeline_pairs(block: &Block, context: &LintContext) -> Vec<(Detection,
 
             // Build fix data and detection
             let fix_data = FixData {
-                external_cmd_span: cmd_span,
+                external_cmd_span: external_command_span,
                 last_exit_code_span: exit_code_span,
             };
 

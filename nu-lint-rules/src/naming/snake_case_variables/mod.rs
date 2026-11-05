@@ -14,7 +14,7 @@ use nu_protocol::{
 };
 
 struct SnakeCaseFixData {
-    var_name_span: Span,
+    variable_name_span: Span,
     usage_spans: Vec<Span>,
 }
 
@@ -74,7 +74,7 @@ fn check_call(call: &Call, ctx: &LintContext) -> Option<(Detection, SnakeCaseFix
     .with_primary_label("non-snake_case name");
 
     let fix_data = SnakeCaseFixData {
-        var_name_span: name_expr.span,
+        variable_name_span: name_expr.span,
         usage_spans: find_variable_usages(*var_id, ctx),
     };
 
@@ -113,11 +113,11 @@ impl DetectFix for SnakeCaseVariables {
     }
 
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
-        let var_name = context.span_text(fix_data.var_name_span);
+        let var_name = context.span_text(fix_data.variable_name_span);
         let snake_case_name = var_name.to_snake_case();
         let usage_replacement = format!("${snake_case_name}");
         let replacements = once(Replacement::new(
-            fix_data.var_name_span,
+            fix_data.variable_name_span,
             snake_case_name.clone(),
         ))
         .chain(

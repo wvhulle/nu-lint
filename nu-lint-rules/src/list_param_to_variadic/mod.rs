@@ -229,24 +229,25 @@ impl DetectFix for ListParamToVariadic {
     fn fix(&self, ctx: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         let sig = &ctx.working_set.get_block(fix_data.body_block_id).signature;
 
-        let converted_param = sig
+        let converted_parameter = sig
             .required_positional
             .iter()
             .chain(&sig.optional_positional)
             .nth(fix_data.param_index)?;
         let name_span = ctx
             .working_set
-            .get_variable(converted_param.var_id?)
+            .get_variable(converted_parameter.var_id?)
             .declaration_span;
-        let param_entry_span = annotated_parameter_span(name_span, fix_data.signature_span, ctx)?;
-        let inner_shape = inner_list_type(&converted_param.shape).unwrap_or(SyntaxShape::Any);
+        let parameter_entry_span =
+            annotated_parameter_span(name_span, fix_data.signature_span, ctx)?;
+        let inner_shape = inner_list_type(&converted_parameter.shape).unwrap_or(SyntaxShape::Any);
 
         let call_site_replacements =
             find_call_site_replacements(fix_data.decl_id, fix_data.param_index, ctx);
 
         let replacements: Vec<_> = once(Replacement::new(
-            param_entry_span,
-            format_rest_with_shape(&converted_param.name, &inner_shape),
+            parameter_entry_span,
+            format_rest_with_shape(&converted_parameter.name, &inner_shape),
         ))
         .chain(call_site_replacements.iter().cloned())
         .collect();

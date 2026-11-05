@@ -65,25 +65,25 @@ fn collect_completer_block_ids(context: &LintContext) -> HashSet<BlockId> {
         context.working_set,
         &|expr| {
             let mut ids = Vec::new();
-            if let Expr::Signature(sig) = &expr.expr {
-                for param in &sig.required_positional {
+            if let Expr::Signature(signature) = &expr.expr {
+                for param in &signature.required_positional {
                     if let Some(id) = extract_completer_block_id(param.completion.as_ref(), context)
                     {
                         ids.push(id);
                     }
                 }
-                for param in &sig.optional_positional {
+                for param in &signature.optional_positional {
                     if let Some(id) = extract_completer_block_id(param.completion.as_ref(), context)
                     {
                         ids.push(id);
                     }
                 }
-                if let Some(param) = &sig.rest_positional
+                if let Some(param) = &signature.rest_positional
                     && let Some(id) = extract_completer_block_id(param.completion.as_ref(), context)
                 {
                     ids.push(id);
                 }
-                for flag in &sig.named {
+                for flag in &signature.named {
                     if let Some(id) = extract_completer_block_id(flag.completion.as_ref(), context)
                     {
                         ids.push(id);

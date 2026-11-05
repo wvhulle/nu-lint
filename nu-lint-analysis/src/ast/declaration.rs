@@ -63,7 +63,9 @@ fn token_has_text(
     expected: &[u8],
     context: &LintContext,
 ) -> bool {
-    token.is_some_and(|present| context.working_set.get_span_contents(present.span) == expected)
+    token.is_some_and(|present_token| {
+        context.working_set.get_span_contents(present_token.span) == expected
+    })
 }
 
 fn find_parameter_token(tokens: &[nu_parser::Token], name_span: Span) -> Option<usize> {

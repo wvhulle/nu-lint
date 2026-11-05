@@ -45,9 +45,7 @@ fn extract_comparison_value(expr: &Expression, context: &LintContext) -> Option<
 pub struct FixData {
     /// Span of the entire if-else-if chain to replace
     call_span: Span,
-    /// Span of the variable name being compared
     compared_var_span: Span,
-    /// Collected branches with pattern and body spans
     branches: Vec<MatchBranch>,
     /// Optional final else body
     final_else: Option<Span>,

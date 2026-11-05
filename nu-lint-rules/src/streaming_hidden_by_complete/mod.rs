@@ -15,7 +15,6 @@ use nu_protocol::{
 pub struct FixData {
     /// Span of the entire pipeline element including `| complete`
     full_span: Span,
-    /// Span of the external command to preserve
     external_span: Span,
 }
 

@@ -16,7 +16,6 @@ use nu_protocol::{
 };
 
 pub struct FixData {
-    /// Signature span, covering the parameter list and any type annotation
     signature_span: Span,
     /// Block containing the function body
     block_id: nu_protocol::BlockId,

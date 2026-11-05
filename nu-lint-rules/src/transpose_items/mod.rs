@@ -15,7 +15,6 @@ use nu_protocol::{
 struct CellPathReplacement {
     /// The full span of `$row.col1`
     span: Span,
-    /// The span of the field name (e.g., "col1")
     field_span: Span,
 }
 

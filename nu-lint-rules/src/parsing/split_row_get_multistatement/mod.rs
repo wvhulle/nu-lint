@@ -82,14 +82,11 @@ impl SplitVariableTracker {
 }
 
 pub struct WithDelimiter {
-    /// Span covering the entire pattern from `let` to index access
     replaced_span: Span,
     /// Span of the input expression being split (e.g., "a:b:c" in the
     /// subexpression)
     input_span: Span,
-    /// Number of fields in the input, known only for a string literal
     literal_field_count: Option<usize>,
-    /// The split call holding the delimiter
     split_call: Call,
     /// Index being accessed
     index: usize,
@@ -128,8 +125,6 @@ fn unwrap_single_pipeline<'a>(
     (block.pipelines.len() == 1).then(|| &block.pipelines[0])
 }
 
-/// Search a pipeline for a split row call, optionally followed by filter
-/// operations
 fn find_split_in_pipeline(pipeline: &Pipeline, context: &LintContext) -> Option<PipelineSplit> {
     let mut input_expr: Option<&Expression> = None;
     let mut split_call: Option<&Call> = None;

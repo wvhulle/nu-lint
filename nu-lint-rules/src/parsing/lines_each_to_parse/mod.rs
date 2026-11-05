@@ -13,7 +13,6 @@ use nu_protocol::{
 struct FixData {
     /// Span covering `lines | each { ... }`
     span: Span,
-    /// The parse pattern argument from inside the closure
     pattern_expr: Expression,
     /// Whether it uses --regex flag
     uses_regex: bool,

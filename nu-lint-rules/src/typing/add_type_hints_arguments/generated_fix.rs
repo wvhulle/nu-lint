@@ -223,8 +223,14 @@ def multiply [a, b] {
     $a * $b
 }
 ";
-    RULE.assert_fixed_contains(bad_code, "a: int");
-    RULE.assert_fixed_contains(bad_code, "b: int");
+    RULE.assert_fixed_is(
+        bad_code,
+        r"
+def multiply [a: any, b: any] {
+    $a * $b
+}
+",
+    );
 }
 
 #[test]

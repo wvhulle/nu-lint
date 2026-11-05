@@ -7,7 +7,7 @@ use nu_lint_analysis::{
 };
 use nu_protocol::{
     Span,
-    ast::{Argument, Call, Expr, Expression, Pipeline, Traverse},
+    ast::{Argument, Call, Expr, Expression, PathMember, Pipeline, Traverse},
 };
 
 /// Represents a cell path access like `$row.col1` that needs to be replaced
@@ -15,7 +15,7 @@ use nu_protocol::{
 struct CellPathReplacement {
     /// The full span of `$row.col1`
     span: Span,
-    field_span: Span,
+    reads_first_column: bool,
 }
 
 struct TransposeEachPattern {
@@ -104,14 +104,17 @@ fn closure_only_uses_fields(
 
     for expr in &field_accesses {
         if let Expr::FullCellPath(cell_path) = &expr.expr
-            && cell_path.tail.len() == 1
+            && let [
+                PathMember::String {
+                    val: field_name, ..
+                },
+            ] = cell_path.tail.as_slice()
         {
-            let field_name = context.span_text(cell_path.tail[0].span());
             log::trace!("Field access: {field_name} (expecting {field1} or {field2})");
             if field_name == field1 || field_name == field2 {
                 replacements.push(CellPathReplacement {
                     span: expr.span,
-                    field_span: cell_path.tail[0].span(),
+                    reads_first_column: field_name == field1,
                 });
             } else {
                 log::trace!("Invalid field name");
@@ -314,7 +317,14 @@ impl DetectFix for ItemsInsteadOfTransposeEach {
         for cell_path_replacement in &pattern.cell_path_replacements {
             replacements.push(Replacement::new(
                 cell_path_replacement.span,
-                format!("${}", context.span_text(cell_path_replacement.field_span)),
+                format!(
+                    "${}",
+                    if cell_path_replacement.reads_first_column {
+                        &first_column
+                    } else {
+                        &second_column
+                    }
+                ),
             ));
         }
 

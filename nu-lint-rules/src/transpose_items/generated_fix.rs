@@ -29,3 +29,11 @@ fn test_fix_with_computation() {
     let expected = r#"{a: [1, 2, 3], b: [4, 5]} | items {|name, values| ($values | math sum)}"#;
     RULE.assert_fixed_is(bad_code, expected);
 }
+
+#[test]
+fn fix_reads_quoted_field_as_the_column_name() {
+    RULE.assert_fixed_is(
+        r#"$record | transpose key value | each { |row| print $row."key" $row.value }"#,
+        r#"$record | items { |key, value| print $key $value }"#,
+    );
+}

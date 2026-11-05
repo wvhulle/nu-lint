@@ -6,17 +6,16 @@ use nu_lint_analysis::{
     violation::Detection,
 };
 use nu_protocol::{
-    SyntaxShape, Value,
+    SyntaxShape, Value, VarId,
     ast::{Call, Expr, MatchPattern, Pattern},
 };
 
-fn string_param_names(def: &CustomCommandDef) -> impl Iterator<Item = &str> {
+fn string_params(def: &CustomCommandDef) -> impl Iterator<Item = &nu_protocol::PositionalArg> {
     def.signature
         .required_positional
         .iter()
         .chain(def.signature.optional_positional.iter())
         .filter(|p| matches!(p.shape, SyntaxShape::String))
-        .map(|p| p.name.as_str())
 }
 
 fn is_string_literal_pattern(pattern: &MatchPattern) -> bool {
@@ -27,10 +26,10 @@ fn is_string_literal_pattern(pattern: &MatchPattern) -> bool {
     }
 }
 
-fn matches_dispatch_variable(call: &Call, var_name: &str, context: &LintContext) -> bool {
+fn matches_dispatch_variable(call: &Call, param_var_id: VarId) -> bool {
     call.get_first_positional_arg()
-        .and_then(|cond| cond.extract_variable_name(context))
-        .is_some_and(|v| v.trim_start_matches('$').trim_end_matches('?') == var_name)
+        .and_then(ExpressionExt::extract_direct_var)
+        == Some(param_var_id)
 }
 
 fn has_string_patterns(call: &Call) -> bool {
@@ -44,7 +43,7 @@ fn has_string_patterns(call: &Call) -> bool {
 
 fn find_match_dispatch<'a>(
     block_id: nu_protocol::BlockId,
-    param_name: &str,
+    param_var_id: VarId,
     context: &'a LintContext<'a>,
 ) -> Option<&'a Call> {
     context
@@ -59,7 +58,7 @@ fn find_match_dispatch<'a>(
         })
         .find(|call| {
             call.builtin_name(context) == Some("match")
-                && matches_dispatch_variable(call, param_name, context)
+                && matches_dispatch_variable(call, param_var_id)
                 && has_string_patterns(call)
         })
 }
@@ -109,10 +108,10 @@ impl DetectFix for DispatchWithSubcommands {
                 return vec![];
             }
 
-            string_param_names(&def)
+            string_params(&def)
                 .filter_map(|param| {
-                    find_match_dispatch(def.body, param, ctx)
-                        .map(|call| build_violation(param, call))
+                    find_match_dispatch(def.body, param.var_id?, ctx)
+                        .map(|call| build_violation(&param.name, call))
                 })
                 .collect()
         }))

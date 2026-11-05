@@ -157,3 +157,18 @@ def main [
 
     RULE.assert_ignores(good);
 }
+
+#[test]
+fn ignore_match_on_local_that_shadows_the_parameter() {
+    RULE.assert_ignores(
+        r#"
+def main [command: string] {
+    let command = (date now | format date "%A")
+    match $command {
+        "Monday" => { print a }
+        "Friday" => { print b }
+    }
+}
+"#,
+    );
+}

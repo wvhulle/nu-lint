@@ -7,6 +7,118 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.0](https://codeberg.org/wvhulle/nu-lint/compare/v1.8.0...v1.9.0) - 2026-11-05
+
+### Added
+
+- *(release)* attach macOS binaries to releases
+- *(config)* keep accepting former rule ids
+
+### Build
+
+- *(ast-grep)* make every rule an error and add rule tests
+- *(hooks)* hide convco repository warnings in the commit message hook
+- *(ast-grep)* check generic fix structs in fix-data-plain-text
+- *(ast-grep)* check optional fix structs in fix-data-plain-text
+- *(ast-grep)* enforce the abstraction level of rules
+
+### CI
+
+- upload to cachix in separate steps
+- open a weekly pull request updating dependencies
+- separate dependency builds and quiet nix output in logs
+- run formatting and ast-grep checks through prek
+
+### Changed
+
+- *(rules)* stop trimming operand text when building fixes
+- *(rules)* replace source text checks with spans and variable ids
+- *(rules)* keep source spans instead of command text in fix data
+- *(rules)* derive parameter and variable names from the AST in fixes
+- *(rules)* keep AST nodes instead of decoded text in fix data
+- *(rules)* keep spans and AST nodes in optional fix data
+- *(rules)* remove doc comments added to fix data
+- *(snake_case_variables)* read the name through the variable helper
+- *(rules)* use descriptive names for identifiers added to rules
+- *(rules)* move renamed rules to directories matching their ids
+- *(split_row_get_inline)* keep the split call instead of delimiter text
+- *(rules)* read input and output annotations from the signature
+- *(analysis)* put all signature layout behind one type
+- *(compound_assignment)* compare variables by id
+- *(record_assignments)* identify `$env` by its variable id
+- *(error_make)* compare only literal record keys
+- *(list_param_to_variadic)* label spans from the variable and signature layout
+- *(rules)* share the implicit row condition parameter check
+- *(not_is_empty_to_is_not_empty)* stop trimming fix text
+- *(effects)* read literal argument values before source text
+- *(analysis)* move comment inspection next to source lines
+
+### Documentation
+
+- *(rules)* use backticks for inline code in rule descriptions
+- *(rules)* restore details dropped from rule descriptions
+
+### Fixed
+
+- *(redundant_echo)* ignore attributes that alias echo
+- *(deps)* update nushell crates and lockfiles
+- *(missing_stdin_in_shebang)* ignore arrows in parameter comments
+- *(positional_to_pipeline)* find the parameter list and pipeline head from the AST
+- *(where_closure_drop_parameter)* detect closures with spaces inside the pipes
+- *(split_row_get_multistatement)* count fields from the string value
+- *(custom_log_command)* recognize `use std log` as a stdlib import
+- *(redundant_nu_subprocess)* detect quoted command flags
+- *(filesystem)* read the raw flag of `open` from the call
+- *(positional_to_pipeline)* offer no fix when `$in` would change meaning
+- *(rules)* rename rule ids that were vague or too long
+- *(split_row_get_multistatement)* stop deleting code in the fix
+- *(unused_variable)* keep values with side effects
+- *(positional_to_pipeline)* remove only the converted parameter
+- *(explicit_long_flags)* ignore grouped short flags
+- *(missing_output_type)* do not guess output from an unknown input
+- *(each_nothing_to_for_loop)* produce a valid `for` statement
+- *(positional_to_pipeline)* offer no fix for annotated signatures
+- *(remove_hat_not_builtin)* keep the hat when a command shadows the name
+- *(rules)* offer no parse fix for `split row` with flags
+- *(add_type_hints_arguments)* infer parameter types from the compared value
+- *(snake_case_variables)* replace each usage of a cell path head once
+- *(unused_variable)* remove only the declaration inside nested blocks
+- *(positional_to_pipeline)* offer no fix when the command has callers
+- *(single_call_command)* do not inline multi-statement bodies
+- *(unused_helper_functions)* count completers of `extern` signatures as usages
+- *(missing_in_type)* only count `$in` at the head of a pipeline as input
+- *(string_may_be_bare)* keep quotes where a bare word is invalid
+- *(rules)* parenthesize command values in generated records
+- *(error_make_for_non_fatal)* only quote bare word messages
+- *(if_else_chain_to_match)* only rewrite equality with literals
+- *(string_param_as_path)* replace only the type annotation
+- *(add_type_hints_arguments)* do not take field arithmetic as the parameter type
+- *(rules)* keep the written parameter list when adding type annotations
+- *(if_else_chain_to_match)* match on the compared expression
+- *(rules)* offer no record fix when a value reads an earlier assignment
+- *(add_type_hints_arguments)* do not guess `int` from arithmetic with other values
+- *(list_param_to_variadic)* rewrite only the converted parameter
+- *(unused_parameter)* remove only the unused parameter
+- *(unused_parameter)* keep the closing bracket on its own line
+- *(transpose_items)* compare field names from the cell path
+- *(unnecessary_accumulate)* compare the loop variable by id
+- *(if_else_chain_to_match)* compare operands by variable and cell path
+- *(add_type_hints_arguments)* do not guess `int` from arithmetic between variables
+- *(rules)* infer types only where the operator proves them
+- *(rules)* compare loop and counter variables by id
+- *(dispatch_with_subcommands)* match the parameter by id
+- *(append_to_concat_assign)* compare the whole cell path
+- *(rules)* identify external commands by their parsed value
+- *(rules)* read numeric arguments from the parsed value
+- *(lines_instead_of_split)* compare the string value
+- *(self_import)* find current file references in the AST
+- *(filesystem)* read file extensions from literal paths only
+- *(unused_parameter)* remove call arguments by argument spans
+
+### Testing
+
+- *(rules)* assert the complete fix output
+
 ## [1.8.0](https://codeberg.org/wvhulle/nu-lint/compare/v1.7.1...v1.8.0) - 2026-11-02
 
 ### Added

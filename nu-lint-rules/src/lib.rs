@@ -25,7 +25,7 @@ pub mod contains_to_regex_op;
 pub mod custom_log_command;
 pub mod dangerous_file_operations;
 pub mod datetime_epoch_arithmetic;
-pub mod default_empty_string_masks_missing;
+pub mod default_empty_masks_missing;
 pub mod dispatch_with_subcommands;
 pub mod division_to_format_duration;
 pub mod do_not_compare_booleans;
@@ -121,7 +121,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     contains_to_regex_op::RULE,
     custom_log_command::RULE,
     dangerous_file_operations::RULE,
-    default_empty_string_masks_missing::RULE,
+    default_empty_masks_missing::RULE,
     dispatch_with_subcommands::RULE,
     do_not_compare_booleans::RULE,
     documentation::add_doc_comment_exported_fn::RULE,
@@ -190,7 +190,7 @@ pub const USED_RULES: &[&dyn Rule] = &[
     migrations::legacy_completer_inputs::RULE,
     migrations::str_case_full_names::RULE,
     record_assignments::USE_RECORD_SPREAD,
-    record_assignments::USE_LOAD_ENV,
+    record_assignments::ENV_ASSIGNMENTS_TO_LOAD_ENV,
     merge_multiline_print::RULE,
     missing_stdin_in_shebang::RULE,
     naming::kebab_case_commands::RULE,

@@ -46,7 +46,6 @@ $config.b = 2
 
 #[test]
 fn test_no_conflict_with_use_record_spread() {
-    // Flat non-$env should not trigger use_load_env
     RULE.assert_count(
         r#"
 mut data = {}
@@ -59,7 +58,6 @@ $data.y = 2
 
 #[test]
 fn test_nested_non_env_not_detected() {
-    // Nested non-$env should not trigger use_load_env
     RULE.assert_count(
         r#"
 mut config = {}

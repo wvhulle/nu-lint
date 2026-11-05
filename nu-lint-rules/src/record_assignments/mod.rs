@@ -1,6 +1,7 @@
-mod use_load_env;
+mod env_assignments_to_load_env;
 mod use_record_spread;
 
+pub use env_assignments_to_load_env::RULE as ENV_ASSIGNMENTS_TO_LOAD_ENV;
 use nu_lint_analysis::{
     ast::{
         expression::var_name_from_expr,
@@ -13,7 +14,6 @@ use nu_protocol::{
     Span, VarId,
     ast::{Assignment, Block, Expr, Expression, Operator, PathMember, Pipeline, Traverse},
 };
-pub use use_load_env::RULE as USE_LOAD_ENV;
 pub use use_record_spread::RULE as USE_RECORD_SPREAD;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

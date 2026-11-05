@@ -12,7 +12,6 @@ $config.debug = true
 
 #[test]
 fn test_env_assignments() {
-    // $env should be handled by use_load_env, not this rule
     RULE.assert_ignores(
         r#"
 $env.VAR1 = "a"
@@ -46,7 +45,7 @@ $data.b = 2
 }
 
 #[test]
-fn test_no_conflict_with_use_load_env() {
+fn test_no_conflict_with_env_assignments_rule() {
     // Flat $env should not trigger use_record_spread
     RULE.assert_count(
         r#"

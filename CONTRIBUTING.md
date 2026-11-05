@@ -83,6 +83,8 @@ After implementing your rule, register it in two places:
 1. **`nu-lint-rules/src/lib.rs`**: Add the module declaration and add your rule to `USED_RULES`
 2. **`nu-lint-rules/src/groups.rs`**: Add your rule to the appropriate group(s)
 
+When you rename a rule, move its directory to the new id and return the old id from `DetectFix::former_ids`, so existing configs and ignore comments keep working.
+
 Once your rule is added, you can run it as part of the whole test suite, but first you will want to run the test for this rule in particular with debug output (in case of failure):
 
 ```bash

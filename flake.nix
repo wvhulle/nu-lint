@@ -43,7 +43,16 @@
 
         nativeBuilds = import ./nix/native-builds.nix { inherit pkgs crane src; };
         releaseBuilds = import ./nix/release-builds.nix { inherit pkgs crane src; };
-        ciTaskApps = import ./nix/ci-tasks.nix { inherit pkgs mkApp; };
+        ciTaskApps = import ./nix/ci-tasks.nix {
+          inherit pkgs mkApp;
+          cargoToolchain = pkgs.rust-bin.stable.latest.minimal;
+          preCommitInputs = [
+            pkgs.ast-grep
+            (pkgs.rust-bin.selectLatestNightlyWith (
+              toolchain: toolchain.minimal.override { extensions = [ "rustfmt" ]; }
+            ))
+          ];
+        };
         recordings = import ./demos {
           inherit pkgs;
           nu-lint = nativeBuilds.llvmPackage;
@@ -79,6 +88,7 @@
           }
           // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
             publish-recordings = mkApp recordings.publish-recordings;
+            publish-recordings-to-codeberg = mkApp recordings.publish-recordings-to-codeberg;
           };
 
         devShells.default = nativeBuilds.nightlyCrane.devShell {

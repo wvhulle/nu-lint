@@ -8,6 +8,7 @@ use crate::codeberg_pull_request::run_checked;
 const RECORDINGS_BOOKMARK: &str = "recordings";
 const RECORDINGS_COMMIT_MESSAGE: &str = "docs: regenerate recordings [skip ci]";
 const STAGING_DIRECTORY_NAME: &str = "nu-lint-recordings";
+const CODEBERG_PUSH_USER: &str = "wvhulle-bot";
 
 pub fn record_scene(tape: &Path, output_directory: &Path) -> io::Result<()> {
     let scene_name = tape
@@ -78,6 +79,14 @@ fn run_jj(staging_directory: &Path, arguments: &[&str]) -> io::Result<String> {
     let staging_path = staging_directory.to_string_lossy();
     let repository_arguments = [&["--repository", staging_path.as_ref()], arguments].concat();
     run_checked("jj", &repository_arguments)
+}
+
+pub fn publish_recordings_to_codeberg(recordings: &Path) -> io::Result<()> {
+    let codeberg_token = env::var("CODEBERG_TOKEN").map_err(io::Error::other)?;
+    let repository_slug = env::var("CI_REPO").map_err(io::Error::other)?;
+    let remote_url =
+        format!("https://{CODEBERG_PUSH_USER}:{codeberg_token}@codeberg.org/{repository_slug}.git");
+    publish_recordings(recordings, &remote_url)
 }
 
 pub fn publish_recordings(recordings: &Path, remote_url: &str) -> io::Result<()> {

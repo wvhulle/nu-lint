@@ -52,6 +52,10 @@ enum XtaskCommand {
         recordings: PathBuf,
         remote_url: String,
     },
+    #[command(
+        about = "Replace the recordings branch on Codeberg, pushing with CODEBERG_TOKEN to CI_REPO"
+    )]
+    PublishRecordingsToCodeberg { recordings: PathBuf },
 }
 
 fn configuration_doc_path() -> PathBuf {
@@ -117,6 +121,9 @@ fn main() -> ExitCode {
             recordings,
             remote_url,
         } => recordings::publish_recordings(&recordings, &remote_url),
+        XtaskCommand::PublishRecordingsToCodeberg { recordings } => {
+            recordings::publish_recordings_to_codeberg(&recordings)
+        }
     };
     match task_outcome {
         Ok(()) => ExitCode::SUCCESS,

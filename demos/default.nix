@@ -81,6 +81,12 @@ let
     };
 
   scenes = lib.genAttrs sceneNames recordScene;
+
+  recordingPublishInputs = [
+    pkgs.git
+    pkgs.jujutsu
+    pkgs.openssh
+  ];
 in
 {
   inherit scenes;
@@ -90,10 +96,10 @@ in
   };
   publish-recordings = xtaskTool {
     name = "publish-recordings";
-    runtimeInputs = [
-      pkgs.git
-      pkgs.jujutsu
-      pkgs.openssh
-    ];
+    runtimeInputs = recordingPublishInputs;
+  };
+  publish-recordings-to-codeberg = xtaskTool {
+    name = "publish-recordings-to-codeberg";
+    runtimeInputs = recordingPublishInputs;
   };
 }

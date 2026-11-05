@@ -74,6 +74,20 @@ def "main upload-exported-paths" []: nothing -> nothing {
   }
 }
 
+def "main copy-build-output" [
+  build_output: path
+  destination: path
+]: nothing -> nothing {
+  if ($build_output | path expand | path type) == dir {
+    mkdir $destination
+    for output_entry in (ls $build_output | get name) {
+      cp --recursive --preserve [] $output_entry $destination
+    }
+  } else {
+    cp --preserve [] $build_output $destination
+  }
+}
+
 def main []: nothing -> nothing {
   print "Run a subcommand, for example: build-and-export-paths"
 }

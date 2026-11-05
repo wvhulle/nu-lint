@@ -42,7 +42,7 @@ steps:
         from_secret: bot_token
     commands:
       - nix run --quiet .#build-and-export-paths -- .#recordings --max-jobs 1
-      - nix run --quiet .#publish-recordings -- result "https://wvhulle-bot:$${CODEBERG_TOKEN}@codeberg.org/$${CI_REPO}.git"
+      - nix run --quiet .#publish-recordings-to-codeberg -- result
 
   - name: upload-demo-recordings-to-cachix
     image: nixos/nix:latest

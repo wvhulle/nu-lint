@@ -1,11 +1,15 @@
-{ pkgs, mkApp }:
+{
+  pkgs,
+  mkApp,
+  cargoToolchain ? null,
+  preCommitInputs ? [ ],
+  extraReleaseInputs ? [ ],
+  releaseWrapperArgs ? [ ],
+}:
 let
   inherit (pkgs) lib;
 
-  ciToolchain = pkgs.rust-bin.stable.latest.minimal;
-  rustfmtToolchain = pkgs.rust-bin.selectLatestNightlyWith (
-    toolchain: toolchain.minimal.override { extensions = [ "rustfmt" ]; }
-  );
+  cargoInputs = lib.optional (cargoToolchain != null) cargoToolchain;
 
   nuScriptTool =
     {
@@ -42,11 +46,20 @@ let
       ];
     });
 
-  releasePlzInputs = [
-    ciToolchain
-    pkgs.release-plz
-    pkgs.gitMinimal
-  ];
+  releasePlzApp =
+    name:
+    mkApp (nuScriptTool {
+      inherit name;
+      script = ../ci/release-tasks.nu;
+      runtimeInputs =
+        cargoInputs
+        ++ [
+          pkgs.release-plz
+          pkgs.gitMinimal
+        ]
+        ++ extraReleaseInputs;
+      wrapperArgs = releaseWrapperArgs;
+    });
 
   releaseTaskApps =
     lib.mapAttrs
@@ -58,8 +71,6 @@ let
         })
       )
       {
-        publish-unreleased-crate-version = releasePlzInputs;
-        open-or-update-release-pr = releasePlzInputs;
         authenticate-git-origin = [ pkgs.gitMinimal ];
         collect-release-archives = [ ];
         upload-release-assets = [ pkgs.tea ];
@@ -78,22 +89,29 @@ let
       ''
         makeWrapper ${lib.getExe pkgs.prek} $out/bin/run-pre-commit-hooks \
           --add-flags "run --all-files --show-diff-on-failure" \
-          --prefix PATH : ${
-            lib.makeBinPath [
-              pkgs.ast-grep
-              pkgs.gitMinimal
-              rustfmtToolchain
-            ]
-          }
+          --prefix PATH : ${lib.makeBinPath ([ pkgs.gitMinimal ] ++ preCommitInputs)}
       '';
 in
 releaseTaskApps
 // {
+  publish-unreleased-crate-version = releasePlzApp "publish-unreleased-crate-version";
+  open-or-update-release-pr = releasePlzApp "open-or-update-release-pr";
+  open-dependency-update-pr = mkApp (nuScriptTool {
+    name = "open-dependency-update-pr";
+    script = ../ci/dependency-updates.nu;
+    runtimeInputs = cargoInputs ++ [
+      pkgs.gitMinimal
+      pkgs.tea
+    ];
+  });
   run-pre-commit-hooks = mkApp preCommitHooksTool;
   build-and-export-paths = exportingBuildApp "build-and-export-paths";
   build-unless-cached = exportingBuildApp "build-unless-cached";
   import-exported-paths = mkApp (nixBuiltPathsTool {
     name = "import-exported-paths";
+  });
+  copy-build-output = mkApp (nixBuiltPathsTool {
+    name = "copy-build-output";
   });
   upload-exported-paths = mkApp (nixBuiltPathsTool {
     name = "upload-exported-paths";

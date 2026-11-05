@@ -3,7 +3,7 @@ use std::iter::once;
 use heck::ToSnakeCase;
 use nu_lint_analysis::{
     LintLevel,
-    ast::call::CallExt,
+    ast::{call::CallExt, expression::ExpressionExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -54,7 +54,7 @@ fn check_call(call: &Call, ctx: &LintContext) -> Option<(Detection, SnakeCaseFix
         return None;
     };
 
-    let var_name = ctx.expr_text(name_expr);
+    let var_name = name_expr.extract_variable_name(ctx)?;
     let snake_case_name = var_name.to_snake_case();
 
     if var_name == snake_case_name {

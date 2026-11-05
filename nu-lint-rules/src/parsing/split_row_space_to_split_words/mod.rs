@@ -1,6 +1,6 @@
 use nu_lint_analysis::{
     Fix, LintLevel, Replacement,
-    ast::{block::BlockExt, call::CallExt, pipeline::PipelineExt},
+    ast::{block::BlockExt, call::CallExt, expression::ExpressionExt, pipeline::PipelineExt},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
@@ -26,14 +26,14 @@ fn is_first_call(call: &Call, ctx: &LintContext) -> bool {
     call.builtin_name(ctx) == Some("first")
         && call
             .get_first_positional_arg()
-            .is_none_or(|arg| ctx.expr_text(arg).parse::<usize>().is_ok_and(|n| n == 1))
+            .is_none_or(|arg| arg.extract_int_value(ctx) == Some(1))
 }
 
 fn is_last_call(call: &Call, ctx: &LintContext) -> bool {
     call.builtin_name(ctx) == Some("last")
         && call
             .get_first_positional_arg()
-            .is_none_or(|arg| ctx.expr_text(arg).parse::<usize>().is_ok_and(|n| n == 1))
+            .is_none_or(|arg| arg.extract_int_value(ctx) == Some(1))
 }
 
 fn is_first_or_last(call: &Call, ctx: &LintContext) -> bool {

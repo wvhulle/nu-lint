@@ -1,12 +1,13 @@
 use nu_lint_analysis::{
     ast::{
         call::CallExt,
+        expression::ExpressionExt,
         regex::{contains_regex_special_chars, escape_regex},
         string::StringFormat,
     },
     context::LintContext,
 };
-use nu_protocol::ast::{Argument, Call, Expr};
+use nu_protocol::ast::{Argument, Call, Expr, PathMember};
 
 pub mod lines_each_to_parse;
 pub mod lines_instead_of_split;
@@ -39,8 +40,14 @@ pub fn is_indexed_access_call(call: &Call, context: &LintContext) -> bool {
 
 #[must_use]
 pub fn extract_index_from_call(call: &Call, context: &LintContext) -> Option<usize> {
-    call.get_first_positional_arg()
-        .and_then(|arg| context.expr_text(arg).parse().ok())
+    let index_arg = call.get_first_positional_arg()?;
+    if let Expr::CellPath(cell_path) = &index_arg.expr {
+        return match cell_path.members.as_slice() {
+            [PathMember::Int { val, .. }] => Some(*val),
+            _ => None,
+        };
+    }
+    usize::try_from(index_arg.extract_int_value(context)?).ok()
 }
 
 #[must_use]

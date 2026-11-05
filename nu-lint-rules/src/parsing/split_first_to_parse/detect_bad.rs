@@ -11,3 +11,8 @@ fn test_detect_split_row_first_with_1() {
     let bad_code = r#""path/to/file" | split row "/" | first 1"#;
     RULE.assert_detects(bad_code);
 }
+
+#[test]
+fn detect_first_with_parenthesized_count() {
+    RULE.assert_detects(r#""a:b" | split row ":" | first (1)"#);
+}

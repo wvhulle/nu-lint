@@ -568,6 +568,9 @@ impl ExpressionExt for Expression {
     fn extract_int_value(&self, context: &LintContext) -> Option<i64> {
         match &self.expr {
             Expr::Int(n) => Some(*n),
+            Expr::FullCellPath(cell_path) if cell_path.tail.is_empty() => {
+                cell_path.head.extract_int_value(context)
+            }
             Expr::Block(block_id) | Expr::Subexpression(block_id) => {
                 let block = context.working_set.get_block(*block_id);
                 block

@@ -1,6 +1,6 @@
 use nu_lint_analysis::{
     LintLevel,
-    ast::{call::CallExt, span::SpanExt},
+    ast::{call::CallExt, source_line::has_inline_doc_comment},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
@@ -29,7 +29,7 @@ fn check_main_function(call: &Call, context: &LintContext) -> Vec<Detection> {
         let var = context.working_set.get_variable(var_id);
         let flag_span = var.declaration_span;
 
-        if !flag_span.has_inline_doc_comment(context) {
+        if !has_inline_doc_comment(flag_span, context) {
             let flag_name = flag.short.map_or_else(
                 || format!("--{}", flag.long),
                 |short| format!("--{} (-{})", flag.long, short),

@@ -1,3 +1,5 @@
+use nu_protocol::Span;
+
 use crate::{ast::lexed_statement::user_file_span, context::LintContext};
 
 pub struct SourceLine {
@@ -44,4 +46,13 @@ pub fn line_index_at(source_lines: &[SourceLine], global_position: usize) -> usi
     source_lines
         .partition_point(|source_line| source_line.next_line_start <= global_position)
         .min(source_lines.len().saturating_sub(1))
+}
+
+#[must_use]
+pub fn has_inline_doc_comment(declaration_span: Span, context: &LintContext) -> bool {
+    let after_declaration = context.source_after_span(declaration_span);
+    let line_end = after_declaration
+        .find('\n')
+        .unwrap_or(after_declaration.len());
+    after_declaration[..line_end].contains(" # ")
 }

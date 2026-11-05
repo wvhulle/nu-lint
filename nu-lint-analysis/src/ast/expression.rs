@@ -181,10 +181,7 @@ pub fn var_name_from_expr(expr: &Expression, context: &LintContext) -> Option<St
         return Some(name.to_string());
     }
 
-    context
-        .span_text(expr.span)
-        .strip_prefix('$')
-        .map(String::from)
+    expr.extract_variable_name(context)
 }
 
 impl ExpressionExt for Expression {

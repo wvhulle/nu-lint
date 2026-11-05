@@ -1,6 +1,6 @@
 use nu_lint_analysis::{
     LintLevel,
-    ast::{call::CallExt, span::SpanExt},
+    ast::{call::CallExt, source_line::has_inline_doc_comment},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
@@ -19,7 +19,7 @@ fn check_positional_param(
     let var = context.working_set.get_variable(var_id);
     let param_span = var.declaration_span;
 
-    if param_span.has_inline_doc_comment(context) {
+    if has_inline_doc_comment(param_span, context) {
         return None;
     }
 

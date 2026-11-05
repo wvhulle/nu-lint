@@ -11,6 +11,11 @@ use crate::{
     span::FileSpan,
 };
 
+#[must_use]
+pub fn is_implicit_row_parameter(param: &PositionalArg) -> bool {
+    param.name == "$it"
+}
+
 fn is_rest_type_annotated(rest: &PositionalArg, context: &LintContext) -> bool {
     rest.var_id
         .is_some_and(|var_id| context.working_set.get_variable(var_id).ty != Type::Any)

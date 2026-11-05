@@ -1,6 +1,6 @@
 use nu_lint_analysis::{
     LintLevel,
-    ast::call::CallExt,
+    ast::{call::CallExt, declaration::is_implicit_row_parameter},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -9,8 +9,6 @@ use nu_protocol::{
     VarId,
     ast::{Argument, Expr, Expression, Operator, PathMember, Traverse},
 };
-
-const ROW_CONDITION_PARAMETER: &str = "$it";
 
 struct ItFieldAccess {
     full_span: nu_protocol::Span,
@@ -131,7 +129,7 @@ fn check_where_row_condition(
         .signature
         .required_positional
         .first()
-        .filter(|row_param| row_param.name == ROW_CONDITION_PARAMETER)
+        .filter(|row_param| is_implicit_row_parameter(row_param))
         .and_then(|row_param| row_param.var_id)
     else {
         return vec![];

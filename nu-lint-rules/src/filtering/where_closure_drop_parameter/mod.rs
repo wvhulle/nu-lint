@@ -1,6 +1,6 @@
 use nu_lint_analysis::{
     LintLevel,
-    ast::{block::BlockExt, call::CallExt},
+    ast::{block::BlockExt, call::CallExt, declaration::is_implicit_row_parameter},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -17,8 +17,6 @@ struct RowConditionFixData {
     block_id: BlockId,
     param_var_id: VarId,
 }
-
-const ROW_CONDITION_PARAMETER: &str = "$it";
 
 struct ClosureParameter {
     name: String,
@@ -41,7 +39,7 @@ fn extract_closure_parameter(block_id: BlockId, context: &LintContext) -> Option
         return None;
     };
 
-    if param.name == ROW_CONDITION_PARAMETER {
+    if is_implicit_row_parameter(param) {
         return None;
     }
 

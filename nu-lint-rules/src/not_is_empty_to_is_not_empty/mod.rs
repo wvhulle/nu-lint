@@ -77,7 +77,7 @@ fn extract_pipeline_text(pipeline: &Pipeline, context: &LintContext) -> Option<S
     let combined_span = nu_protocol::Span::new(start_span.start, end_span.end);
     let expr_text = context.span_text(combined_span);
     // Preserve parentheses to maintain correct precedence/grouping
-    Some(format!("({} | is-not-empty)", expr_text.trim()))
+    Some(format!("({expr_text} | is-not-empty)"))
 }
 fn generate_fix_from_subexpression(
     block_id: nu_protocol::BlockId,

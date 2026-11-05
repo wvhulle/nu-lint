@@ -13,6 +13,7 @@ when:
         - Cargo.toml
         - Cargo.lock
         - flake.nix
+        - nix/**
         - flake.lock
   - repo: wvhulle/nu-lint
     event: manual

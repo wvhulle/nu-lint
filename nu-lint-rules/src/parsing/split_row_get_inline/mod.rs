@@ -5,7 +5,10 @@ use nu_lint_analysis::{
     rule::{DetectFix, Rule},
     violation::Detection,
 };
-use nu_protocol::{Span, ast::Pipeline};
+use nu_protocol::{
+    Span,
+    ast::{Call, Pipeline},
+};
 
 use super::{
     extract_delimiter_from_split_call, extract_index_from_call, generate_parse_replacement,
@@ -15,7 +18,7 @@ use super::{
 pub enum FixData {
     WithDelimiter {
         span: Span,
-        delimiter: String,
+        split_call: Call,
         index: usize,
     },
     NoFix,
@@ -27,7 +30,8 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection,
         .into_iter()
         .filter_map(|pair| {
             let index = extract_index_from_call(pair.second, context)?;
-            let delimiter = extract_delimiter_from_split_call(pair.first, context);
+            let has_literal_delimiter =
+                extract_delimiter_from_split_call(pair.first, context).is_some();
 
             let violation = Detection::from_global_span(
                 "Extract field by name with 'parse' instead of 'split row | get INDEX'",
@@ -37,11 +41,15 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<(Detection,
             .with_extra_label("splits into list", pair.first.span())
             .with_extra_label("accesses by numeric index", pair.second.span());
 
-            let fix_data = delimiter.map_or(FixData::NoFix, |delim| FixData::WithDelimiter {
-                span: pair.span,
-                delimiter: delim,
-                index,
-            });
+            let fix_data = if has_literal_delimiter {
+                FixData::WithDelimiter {
+                    span: pair.span,
+                    split_call: pair.first.clone(),
+                    index,
+                }
+            } else {
+                FixData::NoFix
+            };
 
             Some((violation, fix_data))
         })
@@ -81,14 +89,15 @@ impl DetectFix for SplitGetRule {
         context.ast.detect_in_pipelines(context, check_pipeline)
     }
 
-    fn fix(&self, _context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
+    fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         match fix_data {
             FixData::WithDelimiter {
                 span,
-                delimiter,
+                split_call,
                 index,
             } => {
-                let replacement = generate_parse_replacement(delimiter, &[*index]);
+                let delimiter = extract_delimiter_from_split_call(split_call, context)?;
+                let replacement = generate_parse_replacement(&delimiter, &[*index]);
                 Some(Fix {
                     explanation: "replace".into(),
                     replacements: vec![Replacement::new(*span, replacement)],

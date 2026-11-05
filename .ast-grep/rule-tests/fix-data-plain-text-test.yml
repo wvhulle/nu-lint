@@ -9,6 +9,14 @@ valid:
     impl DetectFix for Unused { type FixInput<'a> = FixData; }
 invalid:
   - |
+    pub enum VariantFixData {
+        WithDelimiter { span: Span, delimiter: String },
+        NoFix,
+    }
+    impl DetectFix for VariantRule {
+        type FixInput<'a> = VariantFixData;
+    }
+  - |
     struct FixData { var_name: String, name_span: Span }
     impl DetectFix for Unused { type FixInput<'a> = FixData; }
   - |

@@ -16,7 +16,9 @@ rule:
   any:
     - inside:
         stopBy: end
-        kind: struct_item
+        any:
+          - kind: struct_item
+          - kind: enum_item
         has:
           field: name
           pattern: $FIX_STRUCT
@@ -29,7 +31,9 @@ rule:
               selector: type_item
     - inside:
         stopBy: end
-        kind: struct_item
+        any:
+          - kind: struct_item
+          - kind: enum_item
         has:
           field: name
           pattern: $FIX_STRUCT
@@ -42,7 +46,9 @@ rule:
               selector: type_item
     - inside:
         stopBy: end
-        kind: struct_item
+        any:
+          - kind: struct_item
+          - kind: enum_item
         has:
           field: name
           pattern: $FIX_STRUCT
@@ -55,7 +61,9 @@ rule:
               selector: type_item
     - inside:
         stopBy: end
-        kind: struct_item
+        any:
+          - kind: struct_item
+          - kind: enum_item
         has:
           field: name
           pattern: $FIX_STRUCT

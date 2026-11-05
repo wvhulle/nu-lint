@@ -10,9 +10,9 @@ use nu_protocol::ast::{Expr, Expression, ListItem, RecordItem};
 use super::{extract_record_from_expr, get_labels_value, has_field};
 
 /// Check if a label record has 'text' but is missing 'span'
-fn label_missing_span(record: &[RecordItem], context: &LintContext) -> bool {
-    let has_text = has_field(record, "text", context);
-    let has_span = has_field(record, "span", context);
+fn label_missing_span(record: &[RecordItem]) -> bool {
+    let has_text = has_field(record, "text");
+    let has_span = has_field(record, "span");
     log::trace!("label_missing_span: has_text={has_text}, has_span={has_span}");
     has_text && !has_span
 }
@@ -25,10 +25,7 @@ const fn list_item_expr(item: &ListItem) -> &Expression {
 
 /// Extract label records from labels expression (handles both single record and
 /// list)
-fn extract_labels_missing_span<'a>(
-    labels_expr: &'a Expression,
-    context: &LintContext,
-) -> Vec<&'a Expression> {
+fn extract_labels_missing_span(labels_expr: &Expression) -> Vec<&Expression> {
     log::trace!("extract_labels_missing_span: expr = {:?}", labels_expr.expr);
 
     // Handle FullCellPath wrapping by extracting the head expression
@@ -44,7 +41,7 @@ fn extract_labels_missing_span<'a>(
         // Single label record: labels: { text: "...", span: ... }
         Expr::Record(record) => {
             log::trace!("Found Record with {} items", record.len());
-            let missing = label_missing_span(record, context);
+            let missing = label_missing_span(record);
             log::trace!("label_missing_span returned {missing}");
             if missing {
                 vec![effective_expr]
@@ -59,7 +56,7 @@ fn extract_labels_missing_span<'a>(
                 .iter()
                 .filter(|item| {
                     extract_record_from_expr(list_item_expr(item))
-                        .is_some_and(|record| label_missing_span(record, context))
+                        .is_some_and(|record| label_missing_span(record))
                 })
                 .map(list_item_expr)
                 .collect()
@@ -113,13 +110,13 @@ impl DetectFix for AddSpanToLabel {
             };
             log::trace!("Found error record with {} items", error_record.len());
 
-            let Some(labels_expr) = get_labels_value(error_record, ctx) else {
+            let Some(labels_expr) = get_labels_value(error_record) else {
                 log::trace!("No labels field found");
                 return vec![];
             };
             log::trace!("Found labels field");
 
-            let labels_missing_span = extract_labels_missing_span(labels_expr, ctx);
+            let labels_missing_span = extract_labels_missing_span(labels_expr);
             log::trace!("labels_missing_span count = {}", labels_missing_span.len());
             if labels_missing_span.is_empty() {
                 log::trace!("No labels missing span, returning empty");

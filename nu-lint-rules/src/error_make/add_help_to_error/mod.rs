@@ -25,7 +25,7 @@ fn check_error_make_call(expr: &Expression, ctx: &LintContext) -> Vec<Detection>
         return vec![];
     };
 
-    if !has_field(record, "msg", ctx) || has_field(record, "help", ctx) {
+    if !has_field(record, "msg") || has_field(record, "help") {
         return vec![];
     }
 

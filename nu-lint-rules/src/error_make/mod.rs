@@ -1,7 +1,4 @@
-use nu_lint_analysis::{
-    ast::{expression::ExpressionExt, string::StringFormat},
-    context::LintContext,
-};
+use nu_lint_analysis::ast::external::literal_content;
 use nu_protocol::ast::{Expr, Expression, RecordItem};
 
 pub mod add_help_to_error;
@@ -11,17 +8,14 @@ pub mod add_url_to_error;
 pub mod error_make_for_non_fatal;
 
 #[must_use]
-pub fn extract_field_name(key: &Expression, context: &LintContext) -> String {
-    StringFormat::from_expression(key, context).map_or_else(
-        || key.span_text(context).to_string(),
-        |format| format.content().to_string(),
-    )
+pub fn extract_field_name(key: &Expression) -> Option<&str> {
+    literal_content(key)
 }
 
 #[must_use]
-pub fn has_field(record: &[RecordItem], field_name: &str, context: &LintContext) -> bool {
+pub fn has_field(record: &[RecordItem], field_name: &str) -> bool {
     record.iter().any(|item| {
-        matches!(item, RecordItem::Pair(key, _) if extract_field_name(key, context) == field_name)
+        matches!(item, RecordItem::Pair(key, _) if extract_field_name(key) == Some(field_name))
     })
 }
 
@@ -38,14 +32,10 @@ pub fn extract_record_from_expr(expr: &Expression) -> Option<&Vec<RecordItem>> {
 }
 
 #[must_use]
-pub fn get_labels_value<'a>(
-    record: &'a [RecordItem],
-    context: &LintContext,
-) -> Option<&'a Expression> {
+pub fn get_labels_value(record: &[RecordItem]) -> Option<&Expression> {
     record.iter().find_map(|item| match item {
         RecordItem::Pair(key, value) => {
-            let name = extract_field_name(key, context);
-            (name == "labels" || name == "label").then_some(value)
+            matches!(extract_field_name(key), Some("labels" | "label")).then_some(value)
         }
         RecordItem::Spread(..) => None,
     })

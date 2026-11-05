@@ -43,7 +43,7 @@ impl DetectFix for AddUrlToError {
             call.get_first_positional_arg()
                 .and_then(extract_record_from_expr)
                 .and_then(|record| {
-                    if !has_field(record, "msg", ctx) || has_field(record, "url", ctx) {
+                    if !has_field(record, "msg") || has_field(record, "url") {
                         return None;
                     }
 

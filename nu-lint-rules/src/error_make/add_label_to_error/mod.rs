@@ -54,9 +54,9 @@ impl DetectFix for AddLabelToError {
                 return vec![];
             };
 
-            if !has_field(record, "msg", ctx)
-                || has_field(record, "labels", ctx)
-                || has_field(record, "label", ctx)
+            if !has_field(record, "msg")
+                || has_field(record, "labels")
+                || has_field(record, "label")
             {
                 return vec![];
             }

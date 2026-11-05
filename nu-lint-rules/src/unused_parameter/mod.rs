@@ -1,6 +1,6 @@
 use nu_lint_analysis::{
     LintLevel,
-    ast::{block::BlockExt, call::CallExt, declaration::parameter_removal_span},
+    ast::{block::BlockExt, call::CallExt, signature_layout::SignatureLayout},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, DiagnosticTag, Fix, Replacement},
@@ -19,6 +19,7 @@ enum ParamType {
 }
 
 struct FixData {
+    var_id: VarId,
     name_span: Span,
     signature_span: Span,
     decl_id: Option<DeclId>,
@@ -154,7 +155,8 @@ impl DetectFix for UnusedParameter {
 
         // For non-exported functions, remove the parameter and update call sites
         let mut replacements = vec![Replacement::new(
-            parameter_removal_span(fix_data.name_span, fix_data.signature_span, context)?,
+            SignatureLayout::parse(fix_data.signature_span, context)?
+                .removal_span(fix_data.var_id, context)?,
             String::new(),
         )];
         replacements.extend(find_call_site_removals(fix_data, context));
@@ -217,6 +219,7 @@ fn check_parameter(
     Some((
         detection,
         FixData {
+            var_id,
             name_span: param_span,
             signature_span: ctx.signature_span,
             decl_id: ctx.decl_id,

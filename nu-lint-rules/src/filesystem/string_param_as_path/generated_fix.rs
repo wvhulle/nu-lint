@@ -34,3 +34,11 @@ fn fix_keeps_default_value() {
         r#"def read-file [file: path = "a,b", other?: int] { open $file; print $other }"#,
     );
 }
+
+#[test]
+fn fix_replaces_annotation_of_optional_parameter() {
+    RULE.assert_fixed_is(
+        "def read-file [file?: string] { open $file }",
+        "def read-file [file?: path] { open $file }",
+    );
+}

@@ -6,6 +6,7 @@ pub mod external;
 pub mod lexed_statement;
 pub mod pipeline;
 pub mod regex;
+pub mod signature_layout;
 pub mod source_line;
 pub mod span;
 pub mod string;

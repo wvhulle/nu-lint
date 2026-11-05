@@ -3,8 +3,7 @@ use std::iter::once;
 use nu_lint_analysis::{
     LintLevel,
     ast::{
-        call::CallExt, declaration::annotated_parameter_span, expression::ExpressionExt,
-        span::SpanExt,
+        call::CallExt, expression::ExpressionExt, signature_layout::SignatureLayout, span::SpanExt,
     },
     context::LintContext,
     rule::{DetectFix, Rule},
@@ -234,12 +233,8 @@ impl DetectFix for ListParamToVariadic {
             .iter()
             .chain(&sig.optional_positional)
             .nth(fix_data.param_index)?;
-        let name_span = ctx
-            .working_set
-            .get_variable(converted_parameter.var_id?)
-            .declaration_span;
-        let parameter_entry_span =
-            annotated_parameter_span(name_span, fix_data.signature_span, ctx)?;
+        let parameter_entry_span = SignatureLayout::parse(fix_data.signature_span, ctx)?
+            .annotated_entry_span(converted_parameter.var_id?, ctx)?;
         let inner_shape = inner_list_type(&converted_parameter.shape).unwrap_or(SyntaxShape::Any);
 
         let call_site_replacements =

@@ -1,11 +1,8 @@
 use nu_lint_analysis::{
     LintLevel,
     ast::{
-        block::BlockExt,
-        call::CallExt,
-        declaration::{CustomCommandDef, param_type_annotation_span},
-        expression::ExpressionExt,
-        pipeline::PipelineExt,
+        block::BlockExt, call::CallExt, declaration::CustomCommandDef, expression::ExpressionExt,
+        pipeline::PipelineExt, signature_layout::SignatureLayout,
     },
     context::LintContext,
     rule::{DetectFix, Rule},
@@ -80,7 +77,8 @@ impl AnnotationEdit {
     ) -> Option<Self> {
         let var_id = param.var_id?;
         let name_span = declaration_span(var_id, ctx);
-        let existing_annotation = param_type_annotation_span(param, signature_span, ctx);
+        let existing_annotation =
+            SignatureLayout::parse(signature_span, ctx)?.annotation_span(var_id, ctx);
         Some(Self {
             var_id,
             target_span: existing_annotation.unwrap_or(Span::new(name_span.end, name_span.end)),

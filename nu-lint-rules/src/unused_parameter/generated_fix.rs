@@ -255,3 +255,11 @@ fn fix_keeps_closing_bracket_out_of_previous_comment() {
         "def greet [\n    name: string # who\n] { print $name }",
     );
 }
+
+#[test]
+fn fix_removes_annotated_flag_with_short_form() {
+    RULE.assert_fixed_is(
+        "def greet [--loud (-l): int, name: string] { print $name }",
+        "def greet [name: string] { print $name }",
+    );
+}

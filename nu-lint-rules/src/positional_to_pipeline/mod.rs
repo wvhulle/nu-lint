@@ -1,10 +1,8 @@
 use nu_lint_analysis::{
     LintLevel,
     ast::{
-        block::BlockExt,
-        call::CallExt,
-        declaration::{CustomCommandDef, parameter_removal_span},
-        expression::ExpressionExt,
+        block::BlockExt, call::CallExt, declaration::CustomCommandDef, expression::ExpressionExt,
+        signature_layout::SignatureLayout,
     },
     context::LintContext,
     rule::{DetectFix, Rule},
@@ -257,12 +255,9 @@ impl DetectFix for TurnPositionalIntoStreamInput {
             })
             .collect();
 
-        let parameter_name_span = context
-            .working_set
-            .get_variable(fix_data.param_var_id)
-            .declaration_span;
         replacements.push(Replacement::new(
-            parameter_removal_span(parameter_name_span, fix_data.signature_span, context)?,
+            SignatureLayout::parse(fix_data.signature_span, context)?
+                .removal_span(fix_data.param_var_id, context)?,
             String::new(),
         ));
 

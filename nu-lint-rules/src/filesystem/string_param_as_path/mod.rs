@@ -2,7 +2,7 @@ use std::ops::ControlFlow;
 
 use nu_lint_analysis::{
     LintLevel,
-    ast::{call::CallExt, declaration::param_type_annotation_span},
+    ast::{call::CallExt, signature_layout::SignatureLayout},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -64,7 +64,8 @@ fn detect_parameter(
         }
     );
 
-    let replace_span = param_type_annotation_span(param, signature_span, context)
+    let replace_span = SignatureLayout::parse(signature_span, context)?
+        .annotation_span(param_var_id, context)
         .unwrap_or_else(|| Span::new(param_span.end, param_span.end));
 
     let violation =

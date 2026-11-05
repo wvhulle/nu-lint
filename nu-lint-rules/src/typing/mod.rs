@@ -1,7 +1,4 @@
-use nu_lint_analysis::{
-    ast::{call::CallExt, declaration::parameter_list_span},
-    context::LintContext,
-};
+use nu_lint_analysis::{ast::call::CallExt, context::LintContext};
 use nu_protocol::{
     BlockId, Span, SyntaxShape, Type,
     ast::{Block, Call},
@@ -40,11 +37,6 @@ pub fn get_output_type(signature: &nu_protocol::Signature) -> Option<Type> {
 pub fn find_signature_span(call: &Call, _ctx: &LintContext) -> Option<Span> {
     let sig_arg = call.get_positional_arg(1)?;
     Some(sig_arg.span)
-}
-
-#[must_use]
-pub fn parameter_list_text<'a>(signature_span: Span, context: &'a LintContext) -> Option<&'a str> {
-    parameter_list_span(signature_span, context).map(|list_span| context.span_text(list_span))
 }
 
 /// Format a rest/variadic parameter with a custom shape (for list<T> -> T

@@ -9,7 +9,7 @@ def export-directory []: nothing -> path {
   $env.CI_WORKSPACE | path join $EXPORT_DIRECTORY_NAME
 }
 
-export def store-paths-from-lines []: string -> list<string> {
+def store-paths-from-lines []: string -> list<string> {
   lines | compact --empty
 }
 
@@ -22,7 +22,7 @@ def exported-store-paths []: nothing -> list<string> {
   }
 }
 
-export def nix-config-with-hook [existing_config: string, hook_program: string]: nothing -> string {
+def nix-config-with-hook [existing_config: string, hook_program: string]: nothing -> string {
   $"($existing_config)\npost-build-hook = ($hook_program)"
 }
 

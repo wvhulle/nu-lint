@@ -31,7 +31,7 @@ variables:
       extra-trusted-public-keys = wvhulle.cachix.org-1:heXx8DZMiRsKUx6l1TxNoF+Nmtmz66QEdsonQzc1ir0=
 
 steps:
-  - name: record-and-publish
+  - name: record-and-push-demo-recordings
     image: nixos/nix:latest
     environment:
       <<: *nix_config
@@ -43,7 +43,7 @@ steps:
       - nix run --quiet .#build-and-export-paths -- .#recordings --max-jobs 1
       - nix run --quiet .#publish-recordings -- result "https://wvhulle-bot:$${CODEBERG_TOKEN}@codeberg.org/$${CI_REPO}.git"
 
-  - name: upload-recordings-cache
+  - name: upload-demo-recordings-to-cachix
     image: nixos/nix:latest
     when:
       - status: [success, failure]

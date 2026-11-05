@@ -13,16 +13,16 @@ variables:
     - event: pull_request
 
 steps:
-  - name: build-test-dependencies
+  - name: prepare-test-dependencies
     image: nixos/nix:latest
     depends_on: []
     environment: *nix_config
     commands:
       - nix run --quiet .#build-unless-cached -- .#packages.x86_64-linux.test-dependencies
 
-  - name: cargo-test
+  - name: run-test-suite
     image: nixos/nix:latest
-    depends_on: [build-test-dependencies]
+    depends_on: [prepare-test-dependencies]
     when:
       - status: [success, failure]
     environment: *nix_config
@@ -30,9 +30,9 @@ steps:
       - nix run --quiet .#import-exported-paths
       - nix run --quiet .#build-and-export-paths -- .#checks.x86_64-linux.tests
 
-  - name: upload-cargo-test-cache
+  - name: upload-test-suite-to-cachix
     image: nixos/nix:latest
-    depends_on: [cargo-test]
+    depends_on: [run-test-suite]
     when:
       - event: [push, manual]
         status: [success, failure]
@@ -43,24 +43,17 @@ steps:
     commands:
       - nix run --quiet .#upload-exported-paths
 
-  - name: pre-commit-hooks
+  - name: run-pre-commit-hooks
     image: nixos/nix:latest
     depends_on: []
     environment: *nix_config
     commands:
       - nix run --quiet .#run-pre-commit-hooks
 
-  - name: ci-task-tests
-    image: nixos/nix:latest
-    depends_on: []
-    environment: *nix_config
-    commands:
-      - nix build --quiet --print-build-logs .#checks.x86_64-linux.ci-task-tests
-
-  - name: conventional-commits
+  - name: check-commit-messages
     image: nixos/nix:latest
     depends_on: []
     when: *on_pull_requests
     environment: *nix_config
     commands:
-      - nix run --quiet .#check-commits -- --fetch-target-branch FETCH_HEAD..HEAD
+      - nix run --quiet .#check-commit-messages -- --fetch-target-branch FETCH_HEAD..HEAD

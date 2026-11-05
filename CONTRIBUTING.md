@@ -232,7 +232,7 @@ Each tape is its own derivation, so only tapes whose inputs changed are recorded
 nix build .#recordings
 ```
 
-`.woodpecker/recordings.yaml` records and publishes them after the checks pass, on every push to `main` that touches the crates, `xtask/`, `demos/` or the build inputs, and on manual runs. Recordings are not byte-reproducible, so each of those runs replaces the single commit of the branch.
+`.woodpecker/demo-recordings.yaml` records and publishes them after the checks pass, on every push to `main` that touches the crates, `xtask/`, `demos/` or the build inputs, and on manual runs. Recordings are not byte-reproducible, so each of those runs replaces the single commit of the branch.
 
 To publish by hand, replacing the branch contents:
 
@@ -244,7 +244,7 @@ To add a scene, add a `<scene>.tape` to `demos/`.
 
 ## Dependency updates
 
-The `weekly-dependency-update` cron in Woodpecker runs `cargo xtask update-dependencies --open-pr` (`.woodpecker/update-dependencies.yaml`). It moves the Nushell crates to their latest version, updates `Cargo.lock` and `flake.lock`, and opens or updates one pull request from the `bot/dependency-updates` branch. The checks on that pull request are the trial build. Breaking updates of other crates stay manual.
+The `weekly-dependency-update` cron in Woodpecker runs `cargo xtask update-dependencies --open-pr` (`.woodpecker/dependency-update-pr.yaml`). It moves the Nushell crates to their latest version, updates `Cargo.lock` and `flake.lock`, and opens or updates one pull request from the `bot/dependency-updates` branch. The checks on that pull request are the trial build. Breaking updates of other crates stay manual.
 
 The commit type decides whether merging releases: a changed `Cargo.toml` gives a `fix(deps)` commit, and lockfile-only changes give a `chore(deps)` commit.
 
@@ -270,14 +270,14 @@ Everything CI runs is a flake app, so it can be run locally in the same way. CI 
 
 | Command | Purpose |
 |---------|---------|
-| `nix flake check` | Tests and CI task tests |
+| `nix flake check` | Tests |
 | `nix run .#run-pre-commit-hooks` | `cargo fmt`, the ast-grep rule tests and `ast-grep scan`, as defined in `.pre-commit-config.yaml` |
 | `ast-grep scan` / `ast-grep test` | Project-specific ast-grep rules in `.ast-grep/rules/` and their tests in `.ast-grep/rule-tests/` |
-| `nix run .#check-commits -- main..@` | Conventional commit message check for a revision range |
+| `nix run .#check-commit-messages -- main..@` | Conventional commit message check for a revision range |
 | `nix build .#dist` | Static release binaries as `.tar.gz` |
 | `nix build .#dist-macos` | macOS release binaries as `.tar.gz`, cross-compiled from Linux |
-| `nix run .#release` | Publish an unreleased version to crates.io and create its tag and Codeberg release (CI only, needs `CODEBERG_TOKEN`) |
-| `nix run .#release-pr` | Open or update the release PR (CI only, needs `CODEBERG_TOKEN`) |
+| `nix run .#publish-unreleased-crate-version` | Publish an unreleased version to crates.io and create its tag and Codeberg release (CI only, needs `CODEBERG_TOKEN`) |
+| `nix run .#open-or-update-release-pr` | Open or update the release PR (CI only, needs `CODEBERG_TOKEN`) |
 | `nix run .#collect-release-archives -- <result> <dist>` | Copy the archives of a build result into a release directory |
 | `nix run .#upload-release-assets -- <dist>` | Checksum the archives in a release directory and attach them to the Codeberg release (CI only, needs `CODEBERG_TOKEN`) |
 | `nix run .#authenticate-git-origin` | Add `CODEBERG_TOKEN` to the `origin` URL before a CI task pushes (CI only) |

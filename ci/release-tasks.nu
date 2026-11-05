@@ -5,7 +5,7 @@ const TEA_LOGIN_NAME = "codeberg"
 const RELEASE_ARCHIVE_PATTERN = "*.tar.gz"
 const CHECKSUM_FILE_NAME = "sha256sum.txt"
 
-export def checksum-line [archive_digest: string, archive_name: string]: nothing -> string {
+def checksum-line [archive_digest: string, archive_name: string]: nothing -> string {
   $"($archive_digest)  ($archive_name)\n"
 }
 
@@ -17,7 +17,7 @@ def "main authenticate-git-origin" []: nothing -> nothing {
   ^git remote set-url origin $"https://($CODEBERG_USER):($env.CODEBERG_TOKEN)@codeberg.org/($env.CI_REPO).git"
 }
 
-def "main release" []: nothing -> nothing {
+def "main publish-unreleased-crate-version" []: nothing -> nothing {
   main authenticate-git-origin
   ^git checkout -B main $env.CI_COMMIT_SHA
   ^git fetch origin main:refs/remotes/origin/main
@@ -25,7 +25,7 @@ def "main release" []: nothing -> nothing {
   run-release-plz release
 }
 
-def "main release-pr" []: nothing -> nothing {
+def "main open-or-update-release-pr" []: nothing -> nothing {
   run-release-plz release-pr
 }
 
@@ -54,7 +54,7 @@ def "main upload-release-assets" [
   ^tea releases assets create --login $TEA_LOGIN_NAME --repo $env.CI_REPO $env.CI_COMMIT_TAG ...$archive_paths $checksum_file
 }
 
-def "main check-commits" [
+def "main check-commit-messages" [
   --fetch-target-branch
   ...revision_ranges: string
 ]: nothing -> nothing {
@@ -65,5 +65,5 @@ def "main check-commits" [
 }
 
 def main []: nothing -> nothing {
-  print "Run a subcommand, for example: check-commits"
+  print "Run a subcommand, for example: check-commit-messages"
 }

@@ -1,13 +1,18 @@
 when:
   - repo: wvhulle/nu-lint
-    event: [push, manual]
-    branch: main
+    event: cron
+    cron: weekly-dependency-update
 
-depends_on:
-  - checks
+clone:
+  - name: clone-with-history
+    image: woodpeckerci/plugin-git
+    settings:
+      depth: 0
+      partial: false
+      tags: true
 
 variables:
-  - &docs_env
+  - &update_env
     NIX_CONFIG: |
       experimental-features = nix-command flakes
       build-users-group =
@@ -21,9 +26,9 @@ variables:
       from_secret: bot_token
 
 steps:
-  - name: update-example-config-pr
+  - name: open-dependency-update-pr
     image: nixos/nix:latest
-    environment: *docs_env
+    environment: *update_env
     commands:
       - nix run --quiet .#authenticate-git-origin
-      - nix develop --quiet --command cargo xtask update-example-config --open-pr
+      - nix develop --quiet --command cargo xtask update-dependencies --open-pr

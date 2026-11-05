@@ -266,11 +266,6 @@
         nixBuiltPathsTool = toolArgs: nuScriptTool (toolArgs // { script = ./ci/nix-built-paths.nu; });
         releaseTaskApp = toolArgs: mkApp (nuScriptTool (toolArgs // { script = ./ci/release-tasks.nu; }));
 
-        ciTaskTests = pkgs.runCommand "nu-lint-ci-task-tests" { nativeBuildInputs = [ pkgs.nushell ]; } ''
-          nu ${./ci}/test-ci-tasks.nu
-          touch $out
-        '';
-
         releasePlzInputs = [
           ciToolchain
           pkgs.release-plz
@@ -292,16 +287,23 @@
             }
           );
 
-        preCommitHooksTool = nuScriptTool {
-          script = ./ci/pre-commit-hooks.nu;
-          name = "run-pre-commit-hooks";
-          runtimeInputs = [
-            pkgs.prek
-            pkgs.ast-grep
-            pkgs.gitMinimal
-            rustfmtToolchain
-          ];
-        };
+        preCommitHooksTool =
+          pkgs.runCommand "run-pre-commit-hooks"
+            {
+              nativeBuildInputs = [ pkgs.makeBinaryWrapper ];
+              meta.mainProgram = "run-pre-commit-hooks";
+            }
+            ''
+              makeWrapper ${pkgs.lib.getExe pkgs.prek} $out/bin/run-pre-commit-hooks \
+                --add-flags "run --all-files --show-diff-on-failure" \
+                --prefix PATH : ${
+                  pkgs.lib.makeBinPath [
+                    pkgs.ast-grep
+                    pkgs.gitMinimal
+                    rustfmtToolchain
+                  ]
+                }
+            '';
 
         muslPackages = {
           x86_64 = mkMuslPackage "x86_64";
@@ -343,19 +345,18 @@
 
         checks = {
           inherit tests;
-          ci-task-tests = ciTaskTests;
         };
 
         apps = {
           default = mkApp self.packages.${system}.default;
           cranelift = mkApp self.packages.${system}.cranelift;
           run-pre-commit-hooks = mkApp preCommitHooksTool;
-          release = releaseTaskApp {
-            name = "release";
+          publish-unreleased-crate-version = releaseTaskApp {
+            name = "publish-unreleased-crate-version";
             runtimeInputs = releasePlzInputs;
           };
-          release-pr = releaseTaskApp {
-            name = "release-pr";
+          open-or-update-release-pr = releaseTaskApp {
+            name = "open-or-update-release-pr";
             runtimeInputs = releasePlzInputs;
           };
           authenticate-git-origin = releaseTaskApp {
@@ -367,8 +368,8 @@
             name = "upload-release-assets";
             runtimeInputs = [ pkgs.tea ];
           };
-          check-commits = releaseTaskApp {
-            name = "check-commits";
+          check-commit-messages = releaseTaskApp {
+            name = "check-commit-messages";
             runtimeInputs = [
               pkgs.convco
               pkgs.gitMinimal

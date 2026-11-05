@@ -2,9 +2,7 @@ use std::iter::once;
 
 use nu_lint_analysis::{
     LintLevel,
-    ast::{
-        call::CallExt, expression::ExpressionExt, signature_layout::SignatureLayout, span::SpanExt,
-    },
+    ast::{call::CallExt, expression::ExpressionExt, signature_layout::SignatureLayout},
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -158,19 +156,19 @@ fn detect_in_def(call: &Call, ctx: &LintContext) -> Option<(Detection, FixData)>
     let inner_type = inner_list_type(&param.shape)?;
     let decl_id = ctx.working_set.find_decl(cmd_def.name.as_bytes())?;
     let signature_span = sig_expr.span;
+    let param_var_id = param.var_id?;
+    let annotation_span =
+        SignatureLayout::parse(signature_span, ctx)?.annotation_span(param_var_id, ctx)?;
 
     let detection = Detection::from_global_span(
         format!(
             "Parameter `{}` could be variadic `...{}` for better CLI ergonomics",
             param.name, param.name
         ),
-        signature_span.find_substring_span(&param.name, ctx),
+        ctx.working_set.get_variable(param_var_id).declaration_span,
     )
     .with_primary_label("last positional parameter")
-    .with_extra_label(
-        format!("has list type `{}`", param.shape),
-        signature_span.find_substring_span(&param.shape.to_string(), ctx),
-    )
+    .with_extra_label(format!("has list type `{}`", param.shape), annotation_span)
     .with_extra_label(
         format!("use `...{}: {inner_type}` instead", param.name),
         signature_span,

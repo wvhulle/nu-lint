@@ -17,10 +17,6 @@ pub trait SpanExt {
         context: &LintContext,
     ) -> Option<&'a CustomCommandDef>;
     #[must_use]
-    /// Finds the span of a substring within this span. Example: finding
-    /// parameter name within signature span
-    fn find_substring_span(&self, substring: &str, context: &LintContext) -> Span;
-    #[must_use]
     /// Check if there's a documentation comment on the same line as this span
     /// This is used for inline parameter documentation: `param # Description`
     fn has_inline_doc_comment(&self, context: &LintContext) -> bool;
@@ -42,17 +38,6 @@ impl SpanExt for Span {
             .min_by_key(|def| {
                 let block = context.working_set.get_block(def.body);
                 block.span.map_or(usize::MAX, |s| s.end - s.start)
-            })
-    }
-
-    fn find_substring_span(&self, substring: &str, context: &LintContext) -> Span {
-        context
-            .span_text(*self)
-            .as_bytes()
-            .windows(substring.len())
-            .position(|window| window == substring.as_bytes())
-            .map_or(*self, |offset| {
-                Self::new(self.start + offset, self.start + offset + substring.len())
             })
     }
 

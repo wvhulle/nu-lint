@@ -1,10 +1,10 @@
 use nu_lint_analysis::{
-    ast::{call::CallExt, pipeline::PipelineExt},
+    ast::{call::CallExt, external::literal_content, pipeline::PipelineExt},
     context::LintContext,
 };
 use nu_protocol::{
     Span,
-    ast::{Expr, Expression, Pipeline},
+    ast::{Expression, Pipeline},
 };
 
 pub mod from_after_parsed_open;
@@ -50,12 +50,7 @@ pub fn find_open_from_patterns<'a>(
             let filename_arg = pair.first.get_first_positional_arg()?;
             let filename = context.expr_text(filename_arg);
 
-            let filename_content = match &filename_arg.expr {
-                Expr::String(s) | Expr::RawString(s) | Expr::GlobPattern(s, _) => s.as_str(),
-                _ => filename,
-            };
-
-            let file_format = context.format_for_extension(filename_content)?;
+            let file_format = context.format_for_extension(literal_content(filename_arg)?)?;
 
             if file_format != format {
                 return None;

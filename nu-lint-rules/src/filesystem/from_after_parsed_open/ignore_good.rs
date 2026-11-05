@@ -38,3 +38,8 @@ fn ignore_mismatched_format() {
 fn ignore_http_get_from() {
     RULE.assert_ignores("http get https://api.example.com/data | from json");
 }
+
+#[test]
+fn ignore_variable_field_named_like_an_extension() {
+    RULE.assert_ignores("def load [paths] { open $paths.json | from json }");
+}

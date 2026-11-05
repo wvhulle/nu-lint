@@ -96,18 +96,12 @@ pub trait ExpressionExt: Traverse {
         F: FnMut(&'a Expression, Option<&'a Expression>) -> ControlFlow<()>;
 }
 
-fn scalar_peer_type(peer: &Expression) -> Option<Type> {
-    matches!(
-        peer.ty,
-        Type::Bool
-            | Type::Date
-            | Type::Duration
-            | Type::Filesize
-            | Type::Float
-            | Type::Int
-            | Type::String
-    )
-    .then(|| peer.ty.clone())
+fn ordered_operand_type(peer: &Expression) -> Option<Type> {
+    match peer.ty {
+        Type::Int | Type::Float | Type::Number => Some(Type::Number),
+        Type::Date | Type::Duration | Type::Filesize | Type::String => Some(peer.ty.clone()),
+        _ => None,
+    }
 }
 
 fn type_from_operator_peer(operator: Operator, peer: &Expression) -> Option<Type> {
@@ -120,15 +114,12 @@ fn type_from_operator_peer(operator: Operator, peer: &Expression) -> Option<Type
             | Comparison::EndsWith
             | Comparison::NotEndsWith,
         ) => Some(Type::String),
-        Operator::Comparison(comparison)
-            if !matches!(
-                comparison,
-                Comparison::In | Comparison::NotIn | Comparison::Has | Comparison::NotHas
-            ) =>
-        {
-            scalar_peer_type(peer)
-        }
-        Operator::Math(math) if math != Math::Concatenate => scalar_peer_type(peer),
+        Operator::Comparison(
+            Comparison::LessThan
+            | Comparison::LessThanOrEqual
+            | Comparison::GreaterThan
+            | Comparison::GreaterThanOrEqual,
+        ) => ordered_operand_type(peer),
         _ => None,
     }
 }
@@ -871,10 +862,9 @@ fn infer_expr_output_type(expr: &Expr, ty: &Type, context: &LintContext) -> Opti
 
 const fn infer_binary_op_type(left: Option<&Type>, right: Option<&Type>) -> Option<Type> {
     match (left, right) {
-        (Some(Type::Float), _) | (_, Some(Type::Float)) => Some(Type::Float),
-        (Some(Type::Int | Type::Any), Some(Type::Int)) | (Some(Type::Int), Some(Type::Any)) => {
-            Some(Type::Int)
-        }
+        (Some(Type::Float), Some(Type::Float | Type::Int))
+        | (Some(Type::Int), Some(Type::Float)) => Some(Type::Float),
+        (Some(Type::Int), Some(Type::Int)) => Some(Type::Int),
         _ => None,
     }
 }

@@ -14,13 +14,20 @@ def process [text] {
 }
 
 #[test]
-fn test_infer_int_type_from_math_operations() {
+fn test_math_operation_does_not_prove_a_type() {
     let bad_code = r"
 def add_ten [num] {
     $num + 10
 }
 ";
-    RULE.assert_fixed_contains(bad_code, "num: int");
+    RULE.assert_fixed_is(
+        bad_code,
+        r"
+def add_ten [num: any] {
+    $num + 10
+}
+",
+    );
 }
 
 #[test]
@@ -61,8 +68,15 @@ def combine [text, num] {
     $num + 5
 }
 ";
-    RULE.assert_fixed_contains(bad_code, "text: string");
-    RULE.assert_fixed_contains(bad_code, "num: int");
+    RULE.assert_fixed_is(
+        bad_code,
+        r"
+def combine [text: string, num: any] {
+    $text | str trim
+    $num + 5
+}
+",
+    );
 }
 
 #[test]
@@ -72,8 +86,14 @@ def process [text: string, num] {
     $num + 1
 }
 ";
-    RULE.assert_fixed_contains(bad_code, "num: int");
-    RULE.assert_fixed_contains(bad_code, "text: string");
+    RULE.assert_fixed_is(
+        bad_code,
+        r"
+def process [text: string, num: any] {
+    $num + 1
+}
+",
+    );
 }
 
 #[test]
@@ -114,7 +134,7 @@ def f [x, --verbose] {
     RULE.assert_fixed_is(
         bad_code,
         r"
-def f [x: int, --verbose] {
+def f [x: any, --verbose] {
     $x + 1
 }
 ",
@@ -133,7 +153,18 @@ def process [value] {
     }
 }
 ";
-    RULE.assert_fixed_contains(bad_code, "value: int");
+    RULE.assert_fixed_is(
+        bad_code,
+        r"
+def process [value: number] {
+    if ($value > 10) {
+        $value + 5
+    } else {
+        $value - 5
+    }
+}
+",
+    );
 }
 
 #[test]
@@ -155,7 +186,15 @@ def calculate [x] {
     $result
 }
 ";
-    RULE.assert_fixed_contains(bad_code, "x: int");
+    RULE.assert_fixed_is(
+        bad_code,
+        r"
+def calculate [x: any] {
+    let result = ($x + 10)
+    $result
+}
+",
+    );
 }
 
 #[test]
@@ -201,19 +240,33 @@ def process [text, items, count] {
     $count + 10
 }
 ";
-    RULE.assert_fixed_contains(bad_code, "text: string");
-    RULE.assert_fixed_contains(bad_code, "items: list");
-    RULE.assert_fixed_contains(bad_code, "count: int");
+    RULE.assert_fixed_is(
+        bad_code,
+        r"
+def process [text: string, items: list<any>, count: any] {
+    $text | str trim
+    $items | each { |x| $x + 1 }
+    $count + 10
+}
+",
+    );
 }
 
 #[test]
-fn test_param_used_in_comparison() {
+fn test_ordering_with_number_proves_number() {
     let bad_code = r"
 def is_greater [value] {
     $value > 100
 }
 ";
-    RULE.assert_fixed_contains(bad_code, "value: int");
+    RULE.assert_fixed_is(
+        bad_code,
+        r"
+def is_greater [value: number] {
+    $value > 100
+}
+",
+    );
 }
 
 #[test]
@@ -242,9 +295,16 @@ def process [data: string, count, items] {
     $items | each { |x| $x }
 }
 ";
-    RULE.assert_fixed_contains(bad_code, "data: string");
-    RULE.assert_fixed_contains(bad_code, "count: int");
-    RULE.assert_fixed_contains(bad_code, "items: list");
+    RULE.assert_fixed_is(
+        bad_code,
+        r"
+def process [data: string, count: any, items: list<any>] {
+    $data | str trim
+    $count + 1
+    $items | each { |x| $x }
+}
+",
+    );
 }
 
 #[test]
@@ -329,7 +389,16 @@ def compute [x] {
     $doubled + $tripled
 }
 ";
-    RULE.assert_fixed_contains(bad_code, "x: int");
+    RULE.assert_fixed_is(
+        bad_code,
+        r"
+def compute [x: any] {
+    let doubled = ($x * 2)
+    let tripled = ($x * 3)
+    $doubled + $tripled
+}
+",
+    );
 }
 
 #[test]
@@ -365,7 +434,16 @@ def outer [value] {
     }
 }
 ";
-    RULE.assert_fixed_contains(bad_code, "value: int");
+    RULE.assert_fixed_is(
+        bad_code,
+        r"
+def outer [value: any] {
+    do {
+        $value + 10
+    }
+}
+",
+    );
 }
 
 #[test]
@@ -406,7 +484,22 @@ def nested_logic [val] {
     }
 }
 ";
-    RULE.assert_fixed_contains(bad_code, "val: int");
+    RULE.assert_fixed_is(
+        bad_code,
+        r"
+def nested_logic [val: number] {
+    if ($val > 0) {
+        if ($val > 10) {
+            $val * 2
+        } else {
+            $val + 1
+        }
+    } else {
+        $val - 1
+    }
+}
+",
+    );
 }
 
 #[test]
@@ -423,16 +516,16 @@ def has_word [text] {
 fn test_explicit_any_is_replaced_by_inferred_type() {
     let bad_code = r"
 def f [x: any, y] {
-    $x + 1
-    $y + 1
+    $x > 1
+    $y > 1
 }
 ";
     RULE.assert_fixed_is(
         bad_code,
         r"
-def f [x: int, y: int] {
-    $x + 1
-    $y + 1
+def f [x: number, y: number] {
+    $x > 1
+    $y > 1
 }
 ",
     );
@@ -475,7 +568,7 @@ def f [x]: nothing -> int {
     RULE.assert_fixed_is(
         bad_code,
         r"
-def f [x: int]: nothing -> int {
+def f [x: any]: nothing -> int {
     $x + 1
 }
 ",
@@ -496,7 +589,7 @@ def f [
         bad_code,
         r"
 def f [
-    x: int # the input
+    x: any # the input
     --verbose # be loud
 ] {
     $x + 1
@@ -557,10 +650,10 @@ def f [replacement: oneof<string, closure>] {
 }
 
 #[test]
-fn fix_infers_string_from_string_comparison() {
+fn fix_does_not_infer_a_type_from_equality() {
     RULE.assert_fixed_is(
         r#"def check [os] { if ($os == "windows") { print yes } }"#,
-        r#"def check [os: string] { if ($os == "windows") { print yes } }"#,
+        r#"def check [os: any] { if ($os == "windows") { print yes } }"#,
     );
 }
 
@@ -595,5 +688,29 @@ fn fix_does_not_guess_int_when_added_to_untyped_value() {
     RULE.assert_fixed_not_contains(
         "def later [interval] { ($env.START | into datetime) + $interval }",
         "interval: int",
+    );
+}
+
+#[test]
+fn fix_widens_ordering_with_float_to_number() {
+    RULE.assert_fixed_is(
+        "def check [ratio] { $ratio < 0.5 }",
+        "def check [ratio: number] { $ratio < 0.5 }",
+    );
+}
+
+#[test]
+fn fix_keeps_ordering_with_duration() {
+    RULE.assert_fixed_is(
+        "def check [wait] { $wait > 1sec }",
+        "def check [wait: duration] { $wait > 1sec }",
+    );
+}
+
+#[test]
+fn fix_does_not_infer_from_multiplying_a_literal() {
+    RULE.assert_fixed_is(
+        "def double [amount] { $amount * 2 }",
+        "def double [amount: any] { $amount * 2 }",
     );
 }

@@ -60,4 +60,5 @@ pub fn format_rest_with_shape(name: &str, shape: &SyntaxShape) -> String {
 pub struct FixData {
     pub sig_span: Span,
     pub body_block_id: BlockId,
+    pub signature_is_annotated: bool,
 }

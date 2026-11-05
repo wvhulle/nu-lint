@@ -49,6 +49,7 @@ fn detect_def_call(call: &Call, ctx: &LintContext) -> Vec<(Detection, FixData)> 
     let fix_data = FixData {
         sig_span,
         body_block_id: def.body,
+        signature_is_annotated: !def.signature.input_output_types.is_empty(),
     };
 
     let mut violation = Detection::from_global_span(
@@ -99,6 +100,9 @@ impl DetectFix for TypeNuPipelineInput {
         // Use AST data: extract parameters and types from signature
         let parameter_list = parameter_list_text(fix_data.sig_span, ctx)?;
         let input_type = block.infer_input_type(ctx);
+        if input_type == Type::Any && fix_data.signature_is_annotated {
+            return None;
+        }
         let output_type = get_output_type(signature).unwrap_or(Type::Any);
 
         let new_signature = format!("{parameter_list}: {input_type} -> {output_type}");

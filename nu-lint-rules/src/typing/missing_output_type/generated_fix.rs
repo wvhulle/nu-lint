@@ -163,3 +163,11 @@ fn fix_keeps_closure_annotation_parseable() {
         "def run-it [action: closure]: any -> int { 1 }",
     );
 }
+
+#[test]
+fn fix_does_not_guess_output_of_arithmetic_on_any() {
+    RULE.assert_fixed_is(
+        "def double [amount: any] { $amount * 2 }",
+        "def double [amount: any]: any -> any { $amount * 2 }",
+    );
+}

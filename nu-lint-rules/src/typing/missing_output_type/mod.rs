@@ -57,6 +57,7 @@ fn detect_def_call(call: &Call, ctx: &LintContext) -> Vec<(Detection, FixData)> 
     let fix_data = FixData {
         sig_span,
         body_block_id: def.body,
+        signature_is_annotated: !def.signature.input_output_types.is_empty(),
     };
 
     let mut violation = Detection::from_global_span(

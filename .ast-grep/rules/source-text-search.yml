@@ -6,10 +6,15 @@ severity: error
 language: Rust
 files:
   - nu-lint-rules/src/**
+  - nu-lint-analysis/src/**
 ignores:
   - nu-lint-rules/src/spacing/**
   - nu-lint-rules/src/documentation/add_doc_comment_exported_fn/**
-  - nu-lint-rules/src/unused_parameter/**
+  - nu-lint-analysis/src/context.rs
+  - nu-lint-analysis/src/ast/string.rs
+  - nu-lint-analysis/src/ast/source_line.rs
+  - nu-lint-analysis/src/ast/lexed_statement.rs
+  - nu-lint-analysis/src/ast/signature_layout.rs
 utils:
   bound-to-source-text:
     inside:

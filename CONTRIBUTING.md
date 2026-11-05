@@ -152,6 +152,14 @@ Check existing rules for examples of common detection patterns.
 
 Do not search, split or trim source text (`span_text`, `expr_text`, `source_before_span`, …) with string methods such as `contains`, `starts_with`, `find` or `trim`. Match on the AST nodes and spans instead, and add a helper to `nu-lint-analysis/src/ast/` when one is missing. The `source-text-search` ast-grep rule reports violations (see [Checks and entry points](#checks-and-entry-points)).
 
+Decide at the highest level the parser supports, so a rule covers more cases and stays correct:
+
+1. **Semantic:** variable and declaration ids, parsed values such as `Expr::Int` and `Expr::String`, types and signatures. Compare variables by `VarId`, because two variables can share a name through shadowing. For example, use `root_var_id`, `variable_path`, `extract_direct_var`, `extract_int_value` and `literal_content`.
+2. **Structural:** the shape of the AST and the spans of its nodes.
+3. **Layout:** tokens or raw source, only behind a helper in `nu-lint-analysis/src/ast/`, and only when the AST lacks the data or the source spelling is the subject of the rule. Spacing and comments are examples. `SignatureLayout` covers signature annotations, defaults, commas and comments, which have no spans in the AST. It is for fix layout and should not decide detection.
+
+Moving a text search into a helper does not raise its level. The `no-raw-source-in-rules`, `lexing-only-in-layout-modules` and `variable-identity-by-name` ast-grep rules enforce part of this.
+
 ## Debugging
 
 You can debug the code in two ways:

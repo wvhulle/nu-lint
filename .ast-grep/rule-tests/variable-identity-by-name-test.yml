@@ -1,0 +1,23 @@
+id: variable-identity-by-name
+valid:
+  - |
+    fn same_variable(first: &Expression, second: &Expression) -> bool {
+        first.root_var_id() == second.root_var_id()
+    }
+  - |
+    fn display_name(expr: &Expression, context: &LintContext) -> Option<String> {
+        expr.extract_variable_name(context)
+    }
+invalid:
+  - |
+    fn same_name(first: &Expression, second: &Expression, context: &LintContext) -> bool {
+        first.extract_variable_name(context) == second.extract_variable_name(context)
+    }
+  - |
+    fn is_named(expr: &Expression, wanted: &str, context: &LintContext) -> bool {
+        expr.extract_variable_name(context).as_deref() == Some(wanted)
+    }
+  - |
+    fn is_named(expr: &Expression, wanted: &str, context: &LintContext) -> bool {
+        expr.extract_variable_name(context).is_some_and(|name| name == wanted)
+    }

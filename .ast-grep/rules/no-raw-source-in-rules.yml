@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
+
+id: no-raw-source-in-rules
+message: Rules should not read raw source bytes. Use parsed values and AST nodes, or add a helper to nu-lint-analysis when the AST lacks the data.
+severity: error
+language: Rust
+files:
+  - nu-lint-rules/src/**
+ignores:
+  - nu-lint-rules/src/bash_syntax/shell_line_continuation/**
+rule:
+  pattern: $WORKING_SET.get_span_contents($$$)
+note: shell_line_continuation is exempt because a trailing backslash is not a Nu construct and has no AST node. See CONTRIBUTING.md, section Detection.

@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
+
+id: lexing-only-in-layout-modules
+message: Only layout modules may call the lexer. Use the AST, or ask SignatureLayout or the lexed statement helpers.
+severity: error
+language: Rust
+files:
+  - nu-lint-rules/src/**
+  - nu-lint-analysis/src/**
+ignores:
+  - nu-lint-analysis/src/ast/signature_layout.rs
+  - nu-lint-analysis/src/ast/lexed_statement.rs
+rule:
+  any:
+    - pattern: nu_parser::lex($$$)
+    - pattern: nu_parser::lex_signature($$$)
+    - pattern: nu_parser::lex_n_tokens($$$)
+note: Tokens are for fix layout that the AST does not record, not for deciding detection. See CONTRIBUTING.md, section Detection.

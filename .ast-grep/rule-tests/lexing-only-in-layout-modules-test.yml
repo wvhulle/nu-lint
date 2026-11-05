@@ -1,0 +1,15 @@
+id: lexing-only-in-layout-modules
+valid:
+  - |
+    fn parse_layout(span: Span, context: &LintContext) -> Option<SignatureLayout> {
+        SignatureLayout::parse(span, context)
+    }
+invalid:
+  - |
+    fn tokens(contents: &[u8]) -> Vec<Token> {
+        nu_parser::lex_signature(contents, 0, b"", b"", false).0
+    }
+  - |
+    fn tokens(contents: &[u8]) -> Vec<Token> {
+        nu_parser::lex(contents, 0, &[], b"", true).0
+    }

@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
+
+id: variable-identity-by-name
+message: Compare variables by VarId, not by declared name. Use root_var_id, variable_path or extract_direct_var.
+severity: error
+language: Rust
+files:
+  - nu-lint-rules/src/**
+  - nu-lint-analysis/src/**
+rule:
+  any:
+    - pattern: $EXPR.extract_variable_name($$$) == $OTHER
+    - pattern: $EXPR.extract_variable_name($$$) != $OTHER
+    - pattern: $EXPR.extract_variable_name($$$).as_deref() == $OTHER
+    - pattern: $EXPR.extract_variable_name($$$).as_deref() != $OTHER
+    - pattern: $EXPR.extract_variable_name($$$).is_some_and($$$)
+note: Two variables can share a name through shadowing. See CONTRIBUTING.md, section Detection.

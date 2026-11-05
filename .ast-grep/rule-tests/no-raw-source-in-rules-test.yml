@@ -1,0 +1,11 @@
+id: no-raw-source-in-rules
+valid:
+  - |
+    fn literal_value(expr: &Expression) -> Option<&str> {
+        literal_content(expr)
+    }
+invalid:
+  - |
+    fn raw_bytes(context: &LintContext, span: Span) -> &[u8] {
+        context.working_set.get_span_contents(span)
+    }

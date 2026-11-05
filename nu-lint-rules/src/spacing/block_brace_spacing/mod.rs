@@ -60,7 +60,7 @@ impl DetectFix for BlockBraceSpacing {
     }
 
     fn short_description(&self) -> &'static str {
-        "Block without parameters needs spaces inside braces: `{ body }`"
+        "Block or closure without parameters needs spaces inside braces"
     }
 
     fn source_link(&self) -> Option<&'static str> {

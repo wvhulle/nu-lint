@@ -215,7 +215,7 @@ Most rules have automatic fixes. Run `nu-lint rules` to see the rules with their
 - `add_hat_external_commands` (auto-fix): Always use the `^` prefix on external commands
 - `fragile_last_exit_code` (auto-fix): Fragile `LAST_EXIT_CODE` check
 - `check_complete_exit_code`: Unchecked exit code after `complete`
-- `serialize_data_for_external` (auto-fix): Structured data piped to a JSON or CSV tool without serializing
+- `serialize_data_for_external` (auto-fix): Structured data piped to a JSON/CSV tool without `to json` or `to csv`
 - `unescaped_interpolation`: Unescaped braces in string interpolation
 - `exit_only_in_main`: Avoid using `exit` in functions other than `main`
 - `check_typed_flag_before_use`: Typed flag used without null check
@@ -306,7 +306,7 @@ Most rules have automatic fixes. Run `nu-lint rules` to see the rules with their
 - `slice_to_last` (auto-fix): Use `last` instead of `slice (-N)..` to get last N elements
 - `slice_to_skip` (auto-fix): Use `skip` instead of `slice N..` to skip first N elements
 - `slice_to_take` (auto-fix): Use `take` instead of `slice 0..N` to take first N elements
-- `uniq_to_set_operation` (auto-fix): Combining lists and `uniq` replaceable with `union` or `intersect`
+- `uniq_to_set_operation` (auto-fix): Use `union`, `intersect` or `difference` over `uniq` on combined lists
 - `where_closure_drop_parameter` (auto-fix): You can drop the closure and its parameter in `where` and `filter`.
 - `remove_redundant_in` (auto-fix): Redundant `$in` at pipeline start
 - `loop_counter_to_range`: Loop counter to range iteration
@@ -394,7 +394,7 @@ Most rules have automatic fixes. Run `nu-lint rules` to see the rules with their
 <details>
 <summary><code>format-whitespace</code> (12 rules): Fix spacing, line width and quoting according to the style guide.</summary>
 
-- `block_brace_spacing` (auto-fix): Block without parameters needs spaces inside braces: `{ body }`
+- `block_brace_spacing` (auto-fix): Block or closure without parameters needs spaces inside braces
 - `closure_brace_pipe_spacing` (auto-fix): Closure opening brace should touch parameter pipe: `{|x|` not `{ |x|`
 - `closure_pipe_body_spacing` (auto-fix): Closure body needs spaces: `{|x| body }` not `{|x|body}`
 - `no_trailing_spaces` (auto-fix): Eliminate trailing spaces at the end of lines

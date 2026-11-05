@@ -38,7 +38,7 @@ pub trait CallExt {
     #[must_use]
     /// Extracts loop variable from for loop. Example: `for item in $list { }`
     /// returns "item"
-    fn loop_var_from_for(&self, context: &LintContext) -> Option<String>;
+    fn loop_var_id(&self) -> Option<nu_protocol::VarId>;
     #[must_use]
     /// Extracts function definition from `def` or `export def` calls.
     /// Returns `None` for non-function calls or malformed definitions.
@@ -221,9 +221,11 @@ impl CallExt for Call {
             .nth(index)
     }
 
-    fn loop_var_from_for(&self, context: &LintContext) -> Option<String> {
-        let var_arg = self.get_first_positional_arg()?;
-        var_arg.extract_variable_name(context)
+    fn loop_var_id(&self) -> Option<nu_protocol::VarId> {
+        match self.get_first_positional_arg()?.expr {
+            Expr::VarDecl(var_id) => Some(var_id),
+            _ => None,
+        }
     }
 
     fn custom_command_def(&self, context: &LintContext) -> Option<CustomCommandDef> {

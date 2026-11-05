@@ -84,3 +84,17 @@ for it in $params {
 ";
     RULE.assert_ignores(good);
 }
+
+#[test]
+fn ignore_appending_field_of_the_loop_variable() {
+    RULE.assert_ignores(
+        r#"
+mut names = []
+for row in [{name: a}] {
+    if $row.name == "a" {
+        $names = ($names | append $row.name)
+    }
+}
+"#,
+    );
+}

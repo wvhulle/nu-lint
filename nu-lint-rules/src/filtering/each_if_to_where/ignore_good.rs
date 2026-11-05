@@ -56,3 +56,8 @@ ls | each { |f| if $f.size > 100kb { $f } else { null } }
 
     RULE.assert_ignores(good_code);
 }
+
+#[test]
+fn ignore_returning_field_of_the_loop_variable() {
+    RULE.assert_ignores(r#"[{name: a}] | each { |row| if $row.name == "a" { $row.name } }"#);
+}

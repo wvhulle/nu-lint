@@ -7,24 +7,25 @@ use nu_lint_analysis::{
     rule::{DetectFix, Rule},
     violation::Detection,
 };
-use nu_protocol::ast::{Argument, Block, Call, Expr, Expression, Operator, Traverse};
+use nu_protocol::{
+    VarId,
+    ast::{Argument, Block, Call, Expr, Expression, Operator, Traverse},
+};
 
-fn contains_loop_var_append(expr: &Expression, context: &LintContext, loop_var_name: &str) -> bool {
+fn contains_loop_var_append(expr: &Expression, context: &LintContext, loop_var_id: VarId) -> bool {
     match &expr.expr {
         Expr::Call(call) => {
             if call.builtin_name(context) == Some("append")
                 && let Some(arg_expr) = call.get_first_positional_arg()
             {
-                let is_loop_var = arg_expr
-                    .extract_variable_name(context)
-                    .is_some_and(|name| name == loop_var_name);
+                let is_loop_var = arg_expr.extract_direct_var() == Some(loop_var_id);
                 log::trace!("Append argument is loop var: {is_loop_var}");
                 return is_loop_var;
             }
             false
         }
         Expr::FullCellPath(cell_path) => {
-            contains_loop_var_append(&cell_path.head, context, loop_var_name)
+            contains_loop_var_append(&cell_path.head, context, loop_var_id)
         }
         _ => expr.extract_block_id().is_some_and(|block_id| {
             let block = context.working_set.get_block(block_id);
@@ -32,7 +33,7 @@ fn contains_loop_var_append(expr: &Expression, context: &LintContext, loop_var_n
                 .pipelines
                 .iter()
                 .flat_map(|p| &p.elements)
-                .any(|elem| contains_loop_var_append(&elem.expr, context, loop_var_name))
+                .any(|elem| contains_loop_var_append(&elem.expr, context, loop_var_id))
         }),
     }
 }
@@ -40,7 +41,7 @@ fn contains_loop_var_append(expr: &Expression, context: &LintContext, loop_var_n
 fn has_append_without_transformation(
     block_id: nu_protocol::BlockId,
     context: &LintContext,
-    loop_var_name: &str,
+    loop_var_id: VarId,
 ) -> bool {
     let block = context.working_set.get_block(block_id);
     log::trace!(
@@ -51,14 +52,10 @@ fn has_append_without_transformation(
     block
         .all_elements()
         .iter()
-        .any(|elem| matches_append_assignment(&elem.expr, context, loop_var_name))
+        .any(|elem| matches_append_assignment(&elem.expr, context, loop_var_id))
 }
 
-fn matches_append_assignment(
-    expr: &Expression,
-    context: &LintContext,
-    loop_var_name: &str,
-) -> bool {
+fn matches_append_assignment(expr: &Expression, context: &LintContext, loop_var_id: VarId) -> bool {
     let Expr::BinaryOp(_lhs, op, rhs) = &expr.expr else {
         return false;
     };
@@ -67,7 +64,7 @@ fn matches_append_assignment(
         return false;
     }
 
-    let result = contains_loop_var_append(rhs, context, loop_var_name);
+    let result = contains_loop_var_append(rhs, context, loop_var_id);
     log::trace!("Assignment RHS contains loop var append: {result}");
     result
 }
@@ -75,7 +72,7 @@ fn matches_append_assignment(
 fn is_filtering_only_pattern(
     block_id: nu_protocol::BlockId,
     context: &LintContext,
-    loop_var_name: &str,
+    loop_var_id: VarId,
 ) -> bool {
     let block = context.working_set.get_block(block_id);
     log::trace!(
@@ -128,7 +125,7 @@ fn is_filtering_only_pattern(
         return false;
     };
 
-    let result = has_append_without_transformation(then_block_id, context, loop_var_name);
+    let result = has_append_without_transformation(then_block_id, context, loop_var_id);
     log::trace!("has_append_without_transformation: {result}");
     result
 }
@@ -229,7 +226,7 @@ fn extract_filtering_vars(expr: &Expression, context: &LintContext) -> Vec<nu_pr
 
     log::trace!("Found 'for' loop");
 
-    let Some(loop_var_name) = call.loop_var_from_for(context) else {
+    let Some(loop_var_id) = call.loop_var_id() else {
         log::trace!("Could not get loop var name");
         return vec![];
     };
@@ -247,7 +244,7 @@ fn extract_filtering_vars(expr: &Expression, context: &LintContext) -> Vec<nu_pr
         return vec![];
     };
 
-    if !is_filtering_only_pattern(block_id, context, &loop_var_name) {
+    if !is_filtering_only_pattern(block_id, context, loop_var_id) {
         log::trace!("Not a filtering-only pattern");
         return vec![];
     }

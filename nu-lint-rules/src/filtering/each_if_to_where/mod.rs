@@ -6,7 +6,7 @@ use nu_lint_analysis::{
     violation::Detection,
 };
 use nu_protocol::{
-    Span,
+    Span, VarId,
     ast::{Argument, Call, Expr, Expression, Traverse},
 };
 
@@ -15,15 +15,12 @@ struct FixData {
     condition_span: Span,
 }
 
-fn loop_var_from_each(call: &Call, context: &LintContext) -> Option<String> {
+fn loop_var_from_each(call: &Call, context: &LintContext) -> Option<VarId> {
     let first_arg = call.get_first_positional_arg()?;
     let block_id = first_arg.extract_block_id()?;
 
     let block = context.working_set.get_block(block_id);
-    let var_id = block.signature.required_positional.first()?.var_id?;
-
-    let var = context.working_set.get_variable(var_id);
-    Some(context.span_text(var.declaration_span).to_string())
+    block.signature.required_positional.first()?.var_id
 }
 
 fn get_if_then_block(call: &Call) -> Option<&Expression> {
@@ -40,22 +37,19 @@ const fn if_has_no_else_clause(call: &Call) -> bool {
 fn then_block_returns_loop_var(
     block_id: nu_protocol::BlockId,
     context: &LintContext,
-    loop_var_name: &str,
+    loop_var_id: VarId,
 ) -> bool {
     let block = context.working_set.get_block(block_id);
 
     block.pipelines.len() == 1
         && block.pipelines[0].elements.len() == 1
-        && block.pipelines[0].elements[0]
-            .expr
-            .extract_variable_name(context)
-            .is_some_and(|name| name == loop_var_name)
+        && block.pipelines[0].elements[0].expr.extract_direct_var() == Some(loop_var_id)
 }
 
 fn is_filtering_pattern<'a>(
     block_id: nu_protocol::BlockId,
     context: &'a LintContext,
-    loop_var_name: &str,
+    loop_var_id: VarId,
 ) -> Option<&'a Call> {
     let block = context.working_set.get_block(block_id);
 
@@ -83,7 +77,7 @@ fn is_filtering_pattern<'a>(
         return None;
     };
 
-    then_block_returns_loop_var(*then_block_id, context, loop_var_name).then_some(call)
+    then_block_returns_loop_var(*then_block_id, context, loop_var_id).then_some(call)
 }
 
 fn extract_each_block_id(call: &Call) -> Option<nu_protocol::BlockId> {
@@ -105,7 +99,7 @@ fn check_expression(expr: &Expression, context: &LintContext) -> Vec<(Detection,
         return vec![];
     }
 
-    let Some(loop_var_name) = loop_var_from_each(each_call, context) else {
+    let Some(loop_var_id) = loop_var_from_each(each_call, context) else {
         return vec![];
     };
 
@@ -113,7 +107,7 @@ fn check_expression(expr: &Expression, context: &LintContext) -> Vec<(Detection,
         return vec![];
     };
 
-    let Some(if_call) = is_filtering_pattern(block_id, context, &loop_var_name) else {
+    let Some(if_call) = is_filtering_pattern(block_id, context, loop_var_id) else {
         return vec![];
     };
 

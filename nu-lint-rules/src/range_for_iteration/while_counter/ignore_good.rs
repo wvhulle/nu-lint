@@ -53,3 +53,18 @@ fn test_good_range_with_reduce() {
     let good = "1..5 | reduce { |it, acc| $acc + $it }";
     RULE.assert_ignores(good);
 }
+
+#[test]
+fn ignore_while_on_other_variable_with_the_counter_name() {
+    RULE.assert_ignores(
+        r"
+mut index = 0
+def countdown [] {
+    mut index = 5
+    while $index > 0 {
+        $index += 1
+    }
+}
+",
+    );
+}

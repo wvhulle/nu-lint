@@ -156,19 +156,13 @@ fn extract_empty_list_vars(expr: &Expression, context: &LintContext) -> Vec<Empt
     }
 }
 
-fn is_direct_copy_for_loop(
-    call: &Call,
-    context: &LintContext,
-) -> Option<(String, nu_protocol::BlockId)> {
-    let loop_var_name = call.loop_var_from_for(context)?;
-    let Expr::VarDecl(loop_var_id) = call.get_first_positional_arg()?.expr else {
-        return None;
-    };
+fn direct_copy_loop_body(call: &Call, context: &LintContext) -> Option<nu_protocol::BlockId> {
+    let loop_var_id = call.loop_var_id()?;
     let iter_expr = call.get_for_loop_iterator()?;
     let block_id = call.get_for_loop_body()?;
 
     (is_literal_list(iter_expr) && !has_transformation_or_filter(block_id, context, loop_var_id))
-        .then_some((loop_var_name, block_id))
+        .then_some(block_id)
 }
 
 fn extract_direct_copy_patterns(expr: &Expression, context: &LintContext) -> DirectCopyVars {
@@ -180,7 +174,7 @@ fn extract_direct_copy_patterns(expr: &Expression, context: &LintContext) -> Dir
         return vec![];
     }
 
-    if let Some((_, block_id)) = is_direct_copy_for_loop(call, context) {
+    if let Some(block_id) = direct_copy_loop_body(call, context) {
         context
             .working_set
             .get_block(block_id)

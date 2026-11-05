@@ -19,6 +19,8 @@ pub trait ExpressionExt: Traverse {
     /// Extracts the variable name from an expression. Example: `$counter`
     /// returns "counter"
     fn extract_variable_name(&self, context: &LintContext) -> Option<String>;
+    fn root_var_id(&self) -> Option<VarId>;
+    fn variable_path(&self) -> Option<(VarId, &[PathMember])>;
     /// Checks if expression is an assignment operation. Example: `$x = 5` or
     /// `$x += 1`
     fn is_assignment(&self) -> bool;
@@ -80,7 +82,7 @@ pub trait ExpressionExt: Traverse {
     fn unwrap_block_expr<'a>(&'a self, context: &'a LintContext) -> &'a Self;
     /// Checks if expression is a counter increment pattern.
     /// Example: `$i = $i + 1` or `$i += 1` returns true for `counter_name` "i"
-    fn is_counter_increment(&self, counter_name: &str, context: &LintContext) -> bool;
+    fn is_counter_increment(&self, counter_var_id: VarId, context: &LintContext) -> bool;
 
     /// Traverse expression and all descendants with parent tracking.
     /// Calls the callback for each expression with its immediate parent.
@@ -186,6 +188,25 @@ pub fn var_name_from_expr(expr: &Expression, context: &LintContext) -> Option<St
 }
 
 impl ExpressionExt for Expression {
+    fn root_var_id(&self) -> Option<VarId> {
+        match &self.expr {
+            Expr::Var(var_id) | Expr::VarDecl(var_id) => Some(*var_id),
+            Expr::FullCellPath(cell_path) => cell_path.head.root_var_id(),
+            _ => None,
+        }
+    }
+
+    fn variable_path(&self) -> Option<(VarId, &[PathMember])> {
+        match &self.expr {
+            Expr::Var(var_id) | Expr::VarDecl(var_id) => Some((*var_id, &[])),
+            Expr::FullCellPath(cell_path) => match cell_path.head.expr {
+                Expr::Var(var_id) => Some((var_id, cell_path.tail.as_slice())),
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+
     fn extract_variable_name(&self, context: &LintContext) -> Option<String> {
         match &self.expr {
             Expr::Var(var_id) | Expr::VarDecl(var_id) => {
@@ -573,7 +594,7 @@ impl ExpressionExt for Expression {
         }
     }
 
-    fn is_counter_increment(&self, counter_name: &str, context: &LintContext) -> bool {
+    fn is_counter_increment(&self, counter_var_id: VarId, context: &LintContext) -> bool {
         use nu_protocol::ast::Assignment;
 
         let Expr::BinaryOp(lhs, op, rhs) = &self.expr else {
@@ -584,12 +605,12 @@ impl ExpressionExt for Expression {
             return false;
         };
 
-        if lhs.extract_variable_name(context).as_deref() != Some(counter_name) {
+        if lhs.root_var_id() != Some(counter_var_id) {
             return false;
         }
 
         let is_add_one = |left: &Self, op: &Self, right: &Self| -> bool {
-            left.extract_variable_name(context).as_deref() == Some(counter_name)
+            left.root_var_id() == Some(counter_var_id)
                 && matches!(&op.expr, Expr::Operator(Operator::Math(Math::Add)))
                 && matches!(&right.expr, Expr::Int(1))
         };

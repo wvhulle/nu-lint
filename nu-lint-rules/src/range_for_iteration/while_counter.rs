@@ -5,13 +5,16 @@ use nu_lint_analysis::{
     rule::{DetectFix, Rule},
     violation::Detection,
 };
-use nu_protocol::ast::{Call, Comparison, Expr, Expression, Operator};
+use nu_protocol::{
+    VarId,
+    ast::{Call, Comparison, Expr, Expression, Operator},
+};
 
-fn is_counter_comparison(expr: &Expression, counter_name: &str, context: &LintContext) -> bool {
+fn is_counter_comparison(expr: &Expression, counter_var_id: VarId) -> bool {
     matches!(
         &expr.expr,
         Expr::BinaryOp(left, op, _)
-            if left.extract_variable_name(context).as_deref() == Some(counter_name)
+            if left.root_var_id() == Some(counter_var_id)
                 && matches!(
                     &op.expr,
                     Expr::Operator(Operator::Comparison(
@@ -26,7 +29,7 @@ fn is_counter_comparison(expr: &Expression, counter_name: &str, context: &LintCo
 
 fn has_increment_in_block(
     block_id: nu_protocol::BlockId,
-    counter_name: &str,
+    counter_var_id: VarId,
     context: &LintContext,
 ) -> bool {
     context
@@ -35,29 +38,36 @@ fn has_increment_in_block(
         .pipelines
         .iter()
         .flat_map(|pipeline| &pipeline.elements)
-        .any(|element| element.expr.is_counter_increment(counter_name, context))
+        .any(|element| element.expr.is_counter_increment(counter_var_id, context))
 }
 
 fn extract_counter_from_mut(
     expr: &Expression,
     context: &LintContext,
-) -> Option<(String, nu_protocol::Span)> {
+) -> Option<(VarId, String, nu_protocol::Span)> {
     let Expr::Call(call) = &expr.expr else {
         return None;
     };
 
     (call.builtin_name(context) == Some("mut"))
         .then(|| {
-            let var_name = call.get_positional_arg(0)?.extract_variable_name(context)?;
+            let name_arg = call.get_positional_arg(0)?;
+            let counter_var_id = name_arg.root_var_id()?;
+            let var_name = name_arg.extract_variable_name(context)?;
             let init_value = call.get_positional_arg(1)?;
 
-            (init_value.extract_int_value(context) == Some(0)).then_some((var_name, expr.span))
+            (init_value.extract_int_value(context) == Some(0)).then_some((
+                counter_var_id,
+                var_name,
+                expr.span,
+            ))
         })
         .flatten()
 }
 
 fn check_while_loop_for_counter(
     call: &Call,
+    counter_var_id: VarId,
     counter_name: &str,
     counter_span: nu_protocol::Span,
     context: &LintContext,
@@ -66,8 +76,8 @@ fn check_while_loop_for_counter(
     let body_expr = call.get_positional_arg(1)?;
     let block_id = body_expr.extract_block_id()?;
 
-    (is_counter_comparison(condition, counter_name, context)
-        && has_increment_in_block(block_id, counter_name, context))
+    (is_counter_comparison(condition, counter_var_id)
+        && has_increment_in_block(block_id, counter_var_id, context))
     .then(|| {
         Detection::from_global_span(
             format!(
@@ -108,7 +118,7 @@ impl DetectFix for WhileCounter {
             .iter()
             .flat_map(|pipeline| &pipeline.elements)
             .filter_map(|element| extract_counter_from_mut(&element.expr, context))
-            .flat_map(|(counter_name, counter_span)| {
+            .flat_map(|(counter_var_id, counter_name, counter_span)| {
                 context.detect(|expr, ctx| {
                     let Expr::Call(call) = &expr.expr else {
                         return vec![];
@@ -116,7 +126,13 @@ impl DetectFix for WhileCounter {
 
                     (call.builtin_name(ctx) == Some("while"))
                         .then(|| {
-                            check_while_loop_for_counter(call, &counter_name, counter_span, ctx)
+                            check_while_loop_for_counter(
+                                call,
+                                counter_var_id,
+                                &counter_name,
+                                counter_span,
+                                ctx,
+                            )
                         })
                         .flatten()
                         .into_iter()

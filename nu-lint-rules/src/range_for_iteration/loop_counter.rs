@@ -5,12 +5,15 @@ use nu_lint_analysis::{
     rule::{DetectFix, Rule},
     violation::Detection,
 };
-use nu_protocol::ast::{Expr, Expression};
+use nu_protocol::{
+    VarId,
+    ast::{Expr, Expression},
+};
 
 /// Check if an if statement has a break condition comparing counter to a limit
 fn has_break_with_counter_check(
     expr: &Expression,
-    counter_name: &str,
+    counter_var_id: VarId,
     context: &LintContext,
 ) -> bool {
     let Expr::Call(call) = &expr.expr else {
@@ -35,10 +38,9 @@ fn has_break_with_counter_check(
 
     let then_block = context.working_set.get_block(then_block_id);
 
-    let has_counter_in_condition = condition.extract_variable_name(context).as_deref()
-        == Some(counter_name)
+    let has_counter_in_condition = condition.root_var_id() == Some(counter_var_id)
         || matches!(&condition.expr, Expr::BinaryOp(left, _, _)
-            if left.extract_variable_name(context).as_deref() == Some(counter_name));
+            if left.root_var_id() == Some(counter_var_id));
 
     let has_break = then_block.all_elements().iter().any(|elem| {
         matches!(&elem.expr.expr, Expr::Call(call) if call.builtin_name(context) == Some("break"))
@@ -49,7 +51,7 @@ fn has_break_with_counter_check(
 
 fn has_counter_pattern_in_loop_block(
     block_id: nu_protocol::BlockId,
-    counter_name: &str,
+    counter_var_id: VarId,
     context: &LintContext,
 ) -> bool {
     let block = context.working_set.get_block(block_id);
@@ -58,11 +60,11 @@ fn has_counter_pattern_in_loop_block(
 
     let has_break_check = elements
         .iter()
-        .any(|elem| has_break_with_counter_check(&elem.expr, counter_name, context));
+        .any(|elem| has_break_with_counter_check(&elem.expr, counter_var_id, context));
 
     let has_increment = elements
         .iter()
-        .any(|elem| elem.expr.is_counter_increment(counter_name, context));
+        .any(|elem| elem.expr.is_counter_increment(counter_var_id, context));
 
     has_break_check && has_increment
 }
@@ -70,17 +72,23 @@ fn has_counter_pattern_in_loop_block(
 fn extract_counter_from_mut(
     expr: &Expression,
     context: &LintContext,
-) -> Option<(String, nu_protocol::Span)> {
+) -> Option<(VarId, String, nu_protocol::Span)> {
     let Expr::Call(call) = &expr.expr else {
         return None;
     };
 
     (call.builtin_name(context) == Some("mut"))
         .then(|| {
-            let var_name = call.get_positional_arg(0)?.extract_variable_name(context)?;
+            let name_arg = call.get_positional_arg(0)?;
+            let counter_var_id = name_arg.root_var_id()?;
+            let var_name = name_arg.extract_variable_name(context)?;
             let init_value = call.get_positional_arg(1)?;
 
-            (init_value.extract_int_value(context) == Some(0)).then_some((var_name, expr.span))
+            (init_value.extract_int_value(context) == Some(0)).then_some((
+                counter_var_id,
+                var_name,
+                expr.span,
+            ))
         })
         .flatten()
 }
@@ -113,7 +121,7 @@ impl DetectFix for LoopCounter {
             .iter()
             .flat_map(|pipeline| &pipeline.elements)
             .filter_map(|element| extract_counter_from_mut(&element.expr, context))
-            .flat_map(|(counter_name, counter_span)| {
+            .flat_map(|(counter_var_id, counter_name, counter_span)| {
                 context.detect(|expr, ctx| {
                     let Expr::Call(call) = &expr.expr else {
                         return vec![];
@@ -131,7 +139,7 @@ impl DetectFix for LoopCounter {
                         return vec![];
                     };
 
-                    if !has_counter_pattern_in_loop_block(block_id, &counter_name, ctx) {
+                    if !has_counter_pattern_in_loop_block(block_id, counter_var_id, ctx) {
                         return vec![];
                     }
 

@@ -852,8 +852,7 @@ fn infer_expr_output_type(expr: &Expr, ty: &Type, context: &LintContext) -> Opti
                 .infer_output_type(context),
         ),
         Expr::ExternalCall(call, args) => {
-            let cmd_name = context.expr_text(call);
-            if has_external_side_effect(cmd_name, ExternEffect::NoDataInStdout, context, args) {
+            if has_external_side_effect(call, ExternEffect::NoDataInStdout, context, args) {
                 Some(Type::Nothing)
             } else {
                 Some(Type::String)

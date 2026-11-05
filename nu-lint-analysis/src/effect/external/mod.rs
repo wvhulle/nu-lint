@@ -10,11 +10,11 @@ mod shells;
 mod system;
 mod text_processing;
 
-use nu_protocol::ast::ExternalArgument;
+use nu_protocol::ast::{Expression, ExternalArgument};
 pub use predicates::extract_external_arg_text;
 
 use super::CommonEffect;
-use crate::context::LintContext;
+use crate::{ast::external::literal_content, context::LintContext};
 
 /// Things that may happen at runtime for external commands.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -53,11 +53,14 @@ const ALL_COMMANDS: &[&[CommandEffects]] = &[
 ];
 
 pub fn has_external_side_effect(
-    command_name: &str,
+    command_head: &Expression,
     side_effect: ExternEffect,
     context: &LintContext,
     args: &[ExternalArgument],
 ) -> bool {
+    let Some(command_name) = literal_content(command_head) else {
+        return false;
+    };
     log::trace!("Checking external side effect '{side_effect:?}' for command '{command_name}'");
 
     for commands in ALL_COMMANDS {

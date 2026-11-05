@@ -68,43 +68,40 @@ fn classify_builtin_io(
 
 fn matches_external_io_type(
     io_type: IoType,
-    command_name: &str,
+    command_head: &Expression,
     args: &[ExternalArgument],
     context: &LintContext,
 ) -> bool {
     match io_type {
         IoType::Network => has_external_side_effect(
-            command_name,
+            command_head,
             ExternEffect::ModifiesNetworkState,
             context,
             args,
         ),
         IoType::FileSystem => has_external_side_effect(
-            command_name,
+            command_head,
             ExternEffect::ModifiesFileSystem,
             context,
             args,
         ),
         IoType::PrintStdout => {
-            !has_external_side_effect(command_name, ExternEffect::NoDataInStdout, context, args)
+            !has_external_side_effect(command_head, ExternEffect::NoDataInStdout, context, args)
         }
     }
 }
 
 fn classify_external_io(
-    command_name: &str,
+    command_head: &Expression,
     args: &[ExternalArgument],
-    head_span: Span,
     context: &LintContext,
     io_spans: &mut HashMap<IoType, Vec<Span>>,
 ) {
+    let head_span = command_head.span;
     for io_type in [IoType::Network, IoType::FileSystem] {
-        if matches_external_io_type(io_type, command_name, args, context) {
-            log::trace!(
-                "External command '{command_name}' matches IoType::{io_type:?}, adding span \
-                 {head_span:?}"
-            );
-            io_spans.entry(io_type).or_default().push(head_span);
+        if matches_external_io_type(io_type, command_head, args, context) {
+            log::trace!("External command matches IoType::{io_type:?}, adding span {head_span:?}");
+            io_spans.entry(io_type).or_default().push(command_head.span);
         }
     }
 }
@@ -130,8 +127,7 @@ fn collect_io_types_from_expression(
             }
         }
         Expr::ExternalCall(head, args) => {
-            let command_name = context.expr_text(head);
-            classify_external_io(command_name, args, head.span, context, io_spans);
+            classify_external_io(head, args, context, io_spans);
         }
         _ => {}
     }

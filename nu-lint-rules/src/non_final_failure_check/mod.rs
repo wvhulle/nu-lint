@@ -26,7 +26,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<Detection> 
                 "Found an external call to {external_command} in the pipeline at position {i}."
             );
             if !has_external_side_effect(
-                external_command,
+                command,
                 ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
                 context,
                 external_arguments,

@@ -60,10 +60,9 @@ fn last_command_produces_output(block: &Block, context: &LintContext) -> bool {
                 .any(|(_in, out)| !matches!(out, nu_protocol::Type::Nothing))
         }
         Expr::ExternalCall(head, args) => {
-            let cmd_name = context.expr_text(head);
             // If external side effect registry marks command as NoDataInStdout, treat as no
             // output
-            !has_external_side_effect(cmd_name, ExternEffect::NoDataInStdout, context, args)
+            !has_external_side_effect(head, ExternEffect::NoDataInStdout, context, args)
         }
         _ => false,
     }

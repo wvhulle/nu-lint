@@ -1,4 +1,5 @@
 use nu_lint_analysis::{
+    ast::external::literal_content,
     config::LintLevel,
     context::LintContext,
     rule::{DetectFix, Rule},
@@ -28,19 +29,17 @@ impl DetectFix for AvoidNuSubprocess {
     }
 
     fn detect<'a>(&self, context: &'a LintContext) -> Vec<(Detection, Self::FixInput<'a>)> {
-        Self::no_fix(context.detect(|expr, ctx| Self::check_expression(expr, ctx)))
+        Self::no_fix(context.detect(|expr, _ctx| Self::check_expression(expr)))
     }
 }
 
 impl AvoidNuSubprocess {
-    fn check_expression(expr: &Expression, ctx: &LintContext) -> Vec<Detection> {
+    fn check_expression(expr: &Expression) -> Vec<Detection> {
         let Expr::ExternalCall(head, args) = &expr.expr else {
             return vec![];
         };
 
-        let cmd_name = ctx.expr_text(head);
-
-        if !Self::is_nu_with_c_flag(cmd_name, args) {
+        if !Self::is_nu_with_c_flag(head, args) {
             return vec![];
         }
 
@@ -53,8 +52,8 @@ impl AvoidNuSubprocess {
         ]
     }
 
-    fn is_nu_with_c_flag(cmd_name: &str, args: &[ExternalArgument]) -> bool {
-        if cmd_name != "nu" {
+    fn is_nu_with_c_flag(command_head: &Expression, args: &[ExternalArgument]) -> bool {
+        if literal_content(command_head) != Some("nu") {
             return false;
         }
 

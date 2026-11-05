@@ -1,6 +1,6 @@
 use nu_lint_analysis::{
     LintLevel,
-    ast::call::CallExt,
+    ast::{call::CallExt, external::literal_content},
     effect::{
         CommonEffect,
         builtin::{BuiltinEffect, extract_arg_text, has_builtin_side_effect, has_recursive_flag},
@@ -37,10 +37,10 @@ fn extract_dangerous_command<'a>(
 ) -> Option<DangerousCommand<'a>> {
     match &expr.expr {
         Expr::ExternalCall(head, args) => {
-            let cmd_name = context.expr_text(head);
+            let cmd_name = literal_content(head)?;
 
             if !has_external_side_effect(
-                cmd_name,
+                head,
                 ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
                 context,
                 args,

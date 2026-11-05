@@ -73,3 +73,8 @@ fn detect_copy_move_to_system_dirs() {
     RULE.assert_detects("cp kernel.img /boot/vmlinuz");
     RULE.assert_detects("mv myconfig /etc/config");
 }
+
+#[test]
+fn detect_quoted_external_command() {
+    RULE.assert_detects(r#"^"rm" -rf /"#);
+}

@@ -1,5 +1,6 @@
 use nu_lint_analysis::{
     LintLevel,
+    ast::external::literal_content,
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -71,7 +72,9 @@ impl DetectFix for RemoveHatNotBuiltin {
                 return vec![];
             }
 
-            let cmd = ctx.expr_text(head);
+            let Some(cmd) = literal_content(head) else {
+                return vec![];
+            };
             if name_resolves_to_known_command(cmd, ctx) {
                 return vec![];
             }

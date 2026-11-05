@@ -58,8 +58,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<Detection> 
 
             let cmd_name = context.expr_text(head);
 
-            if !has_external_side_effect(cmd_name, ExternEffect::WritesDataToStdErr, context, args)
-            {
+            if !has_external_side_effect(head, ExternEffect::WritesDataToStdErr, context, args) {
                 log::trace!(
                     "Command '{cmd_name}' does not have WritesDataToStdErr side effect, skipping"
                 );

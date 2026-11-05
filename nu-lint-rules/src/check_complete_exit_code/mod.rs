@@ -71,14 +71,6 @@ fn has_complete_call(expr: &Expression, context: &LintContext) -> bool {
     .is_some()
 }
 
-fn extract_command_name(cmd_expr: &Expression, context: &LintContext) -> String {
-    match &cmd_expr.expr {
-        Expr::String(s) => s.clone(),
-        Expr::GlobPattern(pattern, _) => pattern.clone(),
-        _ => context.expr_text(cmd_expr).to_string(),
-    }
-}
-
 fn has_external_command_with_likely_errors(expr: &Expression, context: &LintContext) -> bool {
     use nu_protocol::ast::Traverse;
 
@@ -87,9 +79,8 @@ fn has_external_command_with_likely_errors(expr: &Expression, context: &LintCont
             return ControlFlow::Continue(());
         };
 
-        let cmd_name = extract_command_name(cmd_expr, context);
         if has_external_side_effect(
-            &cmd_name,
+            cmd_expr,
             ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
             context,
             args,

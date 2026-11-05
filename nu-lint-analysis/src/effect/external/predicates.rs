@@ -2,6 +2,7 @@ use nu_protocol::ast::ExternalArgument;
 
 use super::has_external_recursive_flag;
 use crate::{
+    ast::external::literal_content,
     context::LintContext,
     effect::{is_dangerous_path, matches_long_flag, matches_short_flag},
 };
@@ -13,9 +14,14 @@ pub const fn always(_context: &LintContext, _args: &[ExternalArgument]) -> bool 
 }
 
 #[must_use]
-pub fn extract_external_arg_text<'a>(arg: &ExternalArgument, context: &'a LintContext) -> &'a str {
+pub fn extract_external_arg_text<'a>(
+    arg: &'a ExternalArgument,
+    context: &'a LintContext,
+) -> &'a str {
     match arg {
-        ExternalArgument::Regular(expr) | ExternalArgument::Spread(expr) => context.expr_text(expr),
+        ExternalArgument::Regular(expr) | ExternalArgument::Spread(expr) => {
+            literal_content(expr).unwrap_or_else(|| context.expr_text(expr))
+        }
     }
 }
 
@@ -40,7 +46,7 @@ pub fn has_flag(args: &[ExternalArgument], context: &LintContext, patterns: &[&s
         })
 }
 
-pub fn get_subcommand<'a>(args: &[ExternalArgument], context: &'a LintContext) -> &'a str {
+pub fn get_subcommand<'a>(args: &'a [ExternalArgument], context: &'a LintContext) -> &'a str {
     args.first()
         .map_or("", |arg| extract_external_arg_text(arg, context))
 }

@@ -78,3 +78,8 @@ fn detect_copy_move_to_system_dirs() {
 fn detect_quoted_external_command() {
     RULE.assert_detects(r#"^"rm" -rf /"#);
 }
+
+#[test]
+fn detect_quoted_recursive_flag() {
+    RULE.assert_detects(r#"^rm "-rf" /"#);
+}

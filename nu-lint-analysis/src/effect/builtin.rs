@@ -1,7 +1,7 @@
 use nu_protocol::ast::{Argument, Call};
 
 use crate::{
-    ast::call::CallExt,
+    ast::{call::CallExt, expression::ExpressionExt, external::literal_content},
     context::LintContext,
     effect::{CommonEffect, is_dangerous_path},
 };
@@ -54,9 +54,11 @@ pub fn has_recursive_flag(call: &Call, context: &LintContext) -> bool {
 }
 
 #[must_use]
-pub fn extract_arg_text<'a>(arg: &Argument, context: &'a LintContext) -> &'a str {
+pub fn extract_arg_text<'a>(arg: &'a Argument, context: &'a LintContext) -> &'a str {
     match arg {
-        Argument::Positional(expr) | Argument::Spread(expr) => context.expr_text(expr),
+        Argument::Positional(expr) | Argument::Spread(expr) => {
+            literal_content(expr).unwrap_or_else(|| context.expr_text(expr))
+        }
         _ => "",
     }
 }
@@ -124,12 +126,8 @@ fn mv_cp_is_dangerous(context: &LintContext, call: &Call) -> bool {
 
 fn exit_is_dangerous(context: &LintContext, call: &Call) -> bool {
     call.arguments.iter().any(|arg| {
-        if let Argument::Positional(expr) = arg {
-            let code_text = context.expr_text(expr);
-            code_text != "0" && !code_text.starts_with('$')
-        } else {
-            false
-        }
+        matches!(arg, Argument::Positional(expr)
+            if expr.extract_int_value(context).is_some_and(|exit_code| exit_code != 0))
     })
 }
 

@@ -98,8 +98,10 @@ fn test_fix_counts_escaped_delimiter_in_string_value() {
 let parts = ("a\tb\tc" | split row "\t")
 $parts | get 2
 "#;
-    RULE.assert_fixed_contains(bad_code, "get 0.field2");
-    RULE.assert_fixed_contains(bad_code, "field1");
+    RULE.assert_fixed_is(
+        bad_code,
+        "\n\"a\\tb\\tc\" | parse \"{field0}\t{field1}\t{field2}\" | get 0.field2\n",
+    );
 }
 
 #[test]

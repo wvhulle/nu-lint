@@ -157,15 +157,15 @@ fn fix_removes_head_without_spaces_around_pipe() {
 
 #[test]
 fn fix_keeps_types_of_other_parameters() {
-    RULE.assert_fixed_contains(
+    RULE.assert_fixed_is(
         "def tag [items: list<string>, label: string] { $items | each { |item| $label } }",
-        "def tag [label: string] { each",
+        "def tag [label: string] { each { |item| $label } }",
     );
 }
 
 #[test]
 fn fix_keeps_optional_parameter() {
-    RULE.assert_fixed_contains(
+    RULE.assert_fixed_is(
         "def pick [items, count?: int] { $items | first $count }",
         "def pick [count?: int] { first $count }",
     );
@@ -173,7 +173,7 @@ fn fix_keeps_optional_parameter() {
 
 #[test]
 fn fix_keeps_flag() {
-    RULE.assert_fixed_contains(
+    RULE.assert_fixed_is(
         "def pick [items, --reverse] { $items | first }",
         "def pick [--reverse] { first }",
     );
@@ -181,7 +181,7 @@ fn fix_keeps_flag() {
 
 #[test]
 fn fix_keeps_rest_parameter() {
-    RULE.assert_fixed_contains(
+    RULE.assert_fixed_is(
         "def pick [items, ...others] { $items | append $others }",
         "def pick [...others] { append $others }",
     );
@@ -189,7 +189,7 @@ fn fix_keeps_rest_parameter() {
 
 #[test]
 fn fix_removes_last_parameter_without_trailing_comma() {
-    RULE.assert_fixed_contains(
+    RULE.assert_fixed_is(
         "def pick [--reverse, items] { $items | first }",
         "def pick [--reverse] { first }",
     );

@@ -149,9 +149,9 @@ fn fix_keeps_flag_and_comments() {
 
 #[test]
 fn fix_keeps_input_output_annotation() {
-    RULE.assert_fixed_contains(
+    RULE.assert_fixed_is(
         "def show [names: list<string>]: nothing -> nothing { print $names }",
-        "def show [...names: string]: nothing -> nothing {",
+        "def show [...names: string]: nothing -> nothing { print $names }",
     );
 }
 

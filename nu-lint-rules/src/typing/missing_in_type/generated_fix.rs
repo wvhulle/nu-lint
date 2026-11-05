@@ -77,5 +77,8 @@ export def process [] {
 
 #[test]
 fn fix_keeps_parameter_default_values() {
-    RULE.assert_fixed_contains("def shift [offset = 1] { $in | length }", "[offset = 1]:");
+    RULE.assert_fixed_is(
+        "def shift [offset = 1] { $in | length }",
+        "def shift [offset = 1]: list<any> -> any { $in | length }",
+    );
 }

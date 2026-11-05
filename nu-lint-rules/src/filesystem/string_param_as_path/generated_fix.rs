@@ -21,16 +21,16 @@ fn test_fix_optional_string_to_path() {
 
 #[test]
 fn fix_keeps_parameter_after_space() {
-    RULE.assert_fixed_contains(
+    RULE.assert_fixed_is(
         "def read-file [file other: int] { open $file; print $other }",
-        "def read-file [file: path other: int]",
+        "def read-file [file: path other: int] { open $file; print $other }",
     );
 }
 
 #[test]
 fn fix_keeps_default_value() {
-    RULE.assert_fixed_contains(
+    RULE.assert_fixed_is(
         r#"def read-file [file: string = "a,b", other?: int] { open $file; print $other }"#,
-        r#"def read-file [file: path = "a,b", other?: int]"#,
+        r#"def read-file [file: path = "a,b", other?: int] { open $file; print $other }"#,
     );
 }

@@ -150,10 +150,16 @@ fn fix_does_not_guess_output_from_first_signature_of_unknown_input() {
 
 #[test]
 fn fix_keeps_parameter_default_values() {
-    RULE.assert_fixed_contains("def shift [offset = 1] { 2 }", "[offset = 1]:");
+    RULE.assert_fixed_is(
+        "def shift [offset = 1] { 2 }",
+        "def shift [offset = 1]: any -> int { 2 }",
+    );
 }
 
 #[test]
 fn fix_keeps_closure_annotation_parseable() {
-    RULE.assert_fixed_contains("def run-it [action: closure] { 1 }", "[action: closure]:");
+    RULE.assert_fixed_is(
+        "def run-it [action: closure] { 1 }",
+        "def run-it [action: closure]: any -> int { 1 }",
+    );
 }

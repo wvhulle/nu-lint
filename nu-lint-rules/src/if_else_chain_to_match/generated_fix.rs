@@ -80,20 +80,27 @@ def classify [kind: string, other: string] {
 
 #[test]
 fn fix_matches_on_local_variable_with_dollar() {
-    RULE.assert_fixed_contains(
+    RULE.assert_fixed_is(
         r#"let picked = 1
 if $picked == 1 { "a" } else if $picked == 2 { "b" } else if $picked == 3 { "c" }"#,
-        "match $picked {",
+        r#"let picked = 1
+match $picked {
+    1 => { "a" },
+    2 => { "b" },
+    3 => { "c" },
+}"#,
     );
 }
 
 #[test]
 fn fix_matches_on_flag_variable() {
-    RULE.assert_fixed_contains(
-        r#"def pick [--variant: int] {
-    if $variant == 1 { "a" } else if $variant == 2 { "b" } else if $variant == 3 { "c" }
-}"#,
-        "match $variant {",
+    RULE.assert_fixed_is(
+        r#"def pick [--variant: int] { if $variant == 1 { "a" } else if $variant == 2 { "b" } else if $variant == 3 { "c" } }"#,
+        r#"def pick [--variant: int] { match $variant {
+    1 => { "a" },
+    2 => { "b" },
+    3 => { "c" },
+} }"#,
     );
 }
 

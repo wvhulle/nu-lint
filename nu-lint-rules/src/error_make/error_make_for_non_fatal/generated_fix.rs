@@ -47,8 +47,8 @@ fn test_fix_in_try_block() {
 
 #[test]
 fn fix_does_not_double_existing_quotes() {
-    RULE.assert_fixed_contains(
+    RULE.assert_fixed_is(
         r#"def warn-user [] { print --stderr "WARN: missing" }"#,
-        r#"error make { msg: "WARN: missing" }"#,
+        r#"def warn-user [] { error make { msg: "WARN: missing" } }"#,
     );
 }

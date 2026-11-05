@@ -552,15 +552,18 @@ def f [replacement: oneof<string, closure>] {
 
 #[test]
 fn fix_infers_string_from_string_comparison() {
-    RULE.assert_fixed_contains(
+    RULE.assert_fixed_is(
         r#"def check [os] { if ($os == "windows") { print yes } }"#,
-        "os: string",
+        r#"def check [os: string] { if ($os == "windows") { print yes } }"#,
     );
 }
 
 #[test]
 fn fix_infers_string_from_regex_match() {
-    RULE.assert_fixed_contains(r#"def check [os] { $os =~ "mac" }"#, "os: string");
+    RULE.assert_fixed_is(
+        r#"def check [os] { $os =~ "mac" }"#,
+        r#"def check [os: string] { $os =~ "mac" }"#,
+    );
 }
 
 #[test]
@@ -575,9 +578,9 @@ fn fix_does_not_guess_int_from_comparison_to_null() {
 
 #[test]
 fn fix_infers_record_from_field_arithmetic() {
-    RULE.assert_fixed_contains(
+    RULE.assert_fixed_is(
         "def demand [state] { 1.1 ** ($state.market.level - 1) }",
-        "state: record",
+        "def demand [state: record] { 1.1 ** ($state.market.level - 1) }",
     );
 }
 

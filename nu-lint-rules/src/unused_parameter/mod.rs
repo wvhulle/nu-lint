@@ -248,16 +248,14 @@ fn find_call_site_removals(fix_data: &FixData, ctx: &LintContext) -> Vec<Replace
 
             match &fix_data.param_type {
                 ParamType::Required(idx) | ParamType::Optional(idx) => {
-                    remove_positional_arg(call, *idx, ctx)
+                    remove_positional_arg(call, *idx)
                 }
                 ParamType::Named(flag_index) => fix_data
                     .signature
                     .named
                     .get(*flag_index)
-                    .map_or_else(Vec::new, |flag| remove_named_arg(call, &flag.long, ctx)),
-                ParamType::Rest(start_idx) => {
-                    remove_trailing_positional_args(call, *start_idx, ctx)
-                }
+                    .map_or_else(Vec::new, |flag| remove_named_arg(call, &flag.long)),
+                ParamType::Rest(start_idx) => remove_trailing_positional_args(call, *start_idx),
             }
         },
         &mut replacements,
@@ -266,111 +264,54 @@ fn find_call_site_removals(fix_data: &FixData, ctx: &LintContext) -> Vec<Replace
     replacements
 }
 
-/// Remove the nth positional argument from a call
-fn remove_positional_arg(
-    call: &ast::Call,
-    target_idx: usize,
-    ctx: &LintContext,
-) -> Vec<Replacement> {
-    // Collect all positional arguments with their indices
-    let positionals: Vec<_> = call
-        .arguments
-        .iter()
-        .filter_map(|arg| match arg {
-            Argument::Positional(e) | Argument::Unknown(e) => Some(e),
-            _ => None,
-        })
-        .collect();
-
-    if target_idx >= positionals.len() {
-        return vec![];
-    }
-
-    let target_span = positionals[target_idx].span;
-
-    // Determine the removal span (include leading/trailing whitespace/comma)
-    let removal_span = calculate_removal_span(target_span, target_idx, &positionals, ctx);
-
-    vec![Replacement::new(removal_span, String::new())]
-}
-
-/// Remove a named flag and its value from a call
-fn remove_named_arg(call: &ast::Call, flag_name: &str, _ctx: &LintContext) -> Vec<Replacement> {
-    for arg in &call.arguments {
-        if let Argument::Named((name, _, value)) = arg
-            && name.item == flag_name
-        {
-            // Calculate span: from flag name to end of value (if any)
-            let start = name.span.start;
-            let end = value.as_ref().map_or(name.span.end, |v| v.span.end);
-            let span = Span::new(start, end);
-            return vec![Replacement::new(span, String::new())];
-        }
-    }
-    vec![]
-}
-
-/// Remove all positional arguments from `start_idx` onwards
-fn remove_trailing_positional_args(
-    call: &ast::Call,
-    start_idx: usize,
-    _ctx: &LintContext,
-) -> Vec<Replacement> {
-    let positionals: Vec<_> = call
-        .arguments
+fn positional_argument_spans(call: &ast::Call) -> Vec<Span> {
+    call.arguments
         .iter()
         .filter_map(|arg| match arg {
             Argument::Positional(e) | Argument::Unknown(e) => Some(e.span),
             _ => None,
         })
-        .collect();
-
-    if start_idx >= positionals.len() {
-        return vec![];
-    }
-
-    // Remove all args from start_idx to end
-    let start = positionals[start_idx].start;
-    let end = positionals.last().unwrap().end;
-    let span = Span::new(start, end);
-
-    vec![Replacement::new(span, String::new())]
+        .collect()
 }
 
-/// Calculate the span to remove, including appropriate whitespace
-fn calculate_removal_span(
-    target_span: Span,
-    target_idx: usize,
-    positionals: &[&ast::Expression],
-    ctx: &LintContext,
-) -> Span {
-    let is_last = target_idx == positionals.len() - 1;
-    let is_first = target_idx == 0;
+fn removal_with_preceding_gap(call: &ast::Call, removed: Span) -> Replacement {
+    let gap_start = call
+        .arguments
+        .iter()
+        .map(Argument::span)
+        .filter(|argument_span| argument_span.end <= removed.start)
+        .map(|argument_span| argument_span.end)
+        .max()
+        .unwrap_or(call.head.end);
+    Replacement::new(Span::new(gap_start, removed.end), String::new())
+}
 
-    if positionals.len() == 1 {
-        // Only argument - just remove it
-        return target_span;
-    }
+fn remove_positional_arg(call: &ast::Call, target_idx: usize) -> Vec<Replacement> {
+    positional_argument_spans(call)
+        .get(target_idx)
+        .map(|target_span| removal_with_preceding_gap(call, *target_span))
+        .into_iter()
+        .collect()
+}
 
-    if is_last {
-        // Last argument - extend start to include preceding whitespace
-        let prev_end = positionals[target_idx - 1].span.end;
-        Span::new(prev_end, target_span.end)
-    } else if is_first {
-        // First argument - extend end to include trailing whitespace
-        let next_start = positionals[target_idx + 1].span.start;
-        Span::new(target_span.start, next_start)
-    } else {
-        // Middle argument - extend start to include preceding whitespace
-        let prev_end = positionals[target_idx - 1].span.end;
-        // Check if there's meaningful content between prev and target
-        let between = ctx.span_text(Span::new(prev_end, target_span.start));
-        if between.trim().is_empty() || between.trim() == "," {
-            Span::new(prev_end, target_span.end)
-        } else {
-            target_span
-        }
-    }
+fn remove_named_arg(call: &ast::Call, flag_name: &str) -> Vec<Replacement> {
+    call.arguments
+        .iter()
+        .find(|arg| matches!(arg, Argument::Named((name, _, _)) if name.item == flag_name))
+        .map(|arg| removal_with_preceding_gap(call, arg.span()))
+        .into_iter()
+        .collect()
+}
+
+fn remove_trailing_positional_args(call: &ast::Call, start_idx: usize) -> Vec<Replacement> {
+    let spans = positional_argument_spans(call);
+    let (Some(first_removed), Some(last_removed)) = (spans.get(start_idx), spans.last()) else {
+        return vec![];
+    };
+    vec![removal_with_preceding_gap(
+        call,
+        Span::new(first_removed.start, last_removed.end),
+    )]
 }
 
 pub static RULE: &dyn Rule = &UnusedParameter;

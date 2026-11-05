@@ -263,3 +263,20 @@ fn fix_removes_annotated_flag_with_short_form() {
         "def greet [name: string] { print $name }",
     );
 }
+
+#[test]
+fn fix_keeps_flag_before_removed_argument() {
+    RULE.assert_fixed_is(
+        "def greet [name: string, unused_value: string, --loud] { print $name; print $loud \
+         }\ngreet a --loud b\n",
+        "def greet [name: string, --loud] { print $name; print $loud }\ngreet a --loud\n",
+    );
+}
+
+#[test]
+fn fix_leaves_no_space_after_removing_only_argument() {
+    RULE.assert_fixed_is(
+        "def greet [unused_value: string] { print hi }\ngreet a\n",
+        "def greet [] { print hi }\ngreet\n",
+    );
+}

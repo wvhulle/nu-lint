@@ -3470,7 +3470,7 @@ dependencies = [
 
 [[package]]
 name = "nu-lint"
-version = "1.9.1"
+version = "1.9.2"
 dependencies = [
  "clap",
  "criterion",
@@ -3498,7 +3498,7 @@ dependencies = [
 
 [[package]]
 name = "nu-lint-analysis"
-version = "1.9.1"
+version = "1.9.2"
 dependencies = [
  "jaq-core",
  "log",
@@ -3520,7 +3520,7 @@ dependencies = [
 
 [[package]]
 name = "nu-lint-rules"
-version = "1.9.1"
+version = "1.9.2"
 dependencies = [
  "heck",
  "log",
@@ -6986,7 +6986,7 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "1.9.1"
+version = "1.9.2"
 dependencies = [
  "clap",
  "nu-lint",

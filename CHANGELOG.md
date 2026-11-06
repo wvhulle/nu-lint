@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.2](https://codeberg.org/wvhulle/nu-lint/compare/v1.9.1...v1.9.2) - 2026-11-06
+
+### CI
+
+- build the recordings push URL in xtask instead of the workflow
+
+### Fixed
+
+- *(analysis)* read variable names from the parser, not the declaration span
+- *(effects)* match arguments by parsed value, not source text
+
 ## [1.9.1](https://codeberg.org/wvhulle/nu-lint/compare/v1.9.0...v1.9.1) - 2026-11-05
 
 ### Build

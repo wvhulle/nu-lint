@@ -70,23 +70,16 @@ fn matches_external_io_type(
     io_type: IoType,
     command_head: &Expression,
     args: &[ExternalArgument],
-    context: &LintContext,
 ) -> bool {
     match io_type {
-        IoType::Network => has_external_side_effect(
-            command_head,
-            ExternEffect::ModifiesNetworkState,
-            context,
-            args,
-        ),
-        IoType::FileSystem => has_external_side_effect(
-            command_head,
-            ExternEffect::ModifiesFileSystem,
-            context,
-            args,
-        ),
+        IoType::Network => {
+            has_external_side_effect(command_head, ExternEffect::ModifiesNetworkState, args)
+        }
+        IoType::FileSystem => {
+            has_external_side_effect(command_head, ExternEffect::ModifiesFileSystem, args)
+        }
         IoType::PrintStdout => {
-            !has_external_side_effect(command_head, ExternEffect::NoDataInStdout, context, args)
+            !has_external_side_effect(command_head, ExternEffect::NoDataInStdout, args)
         }
     }
 }
@@ -94,12 +87,11 @@ fn matches_external_io_type(
 fn classify_external_io(
     command_head: &Expression,
     args: &[ExternalArgument],
-    context: &LintContext,
     io_spans: &mut HashMap<IoType, Vec<Span>>,
 ) {
     let head_span = command_head.span;
     for io_type in [IoType::Network, IoType::FileSystem] {
-        if matches_external_io_type(io_type, command_head, args, context) {
+        if matches_external_io_type(io_type, command_head, args) {
             log::trace!("External command matches IoType::{io_type:?}, adding span {head_span:?}");
             io_spans.entry(io_type).or_default().push(command_head.span);
         }
@@ -127,7 +119,7 @@ fn collect_io_types_from_expression(
             }
         }
         Expr::ExternalCall(head, args) => {
-            classify_external_io(head, args, context, io_spans);
+            classify_external_io(head, args, io_spans);
         }
         _ => {}
     }

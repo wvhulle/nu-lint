@@ -4,26 +4,26 @@ use super::{
     CommandEffects, ExternEffect,
     predicates::{always, get_subcommand, has_flag},
 };
-use crate::{context::LintContext, effect::CommonEffect};
+use crate::effect::CommonEffect;
 
-fn systemctl_is_dangerous(context: &LintContext, args: &[ExternalArgument]) -> bool {
-    let subcommand = get_subcommand(args, context);
+fn systemctl_is_dangerous(args: &[ExternalArgument]) -> bool {
+    let subcommand = get_subcommand(args);
     matches!(
         subcommand,
-        "stop" | "disable" | "mask" | "kill" | "reboot" | "poweroff" | "halt"
+        Some("stop" | "disable" | "mask" | "kill" | "reboot" | "poweroff" | "halt")
     )
 }
 
-fn kill_is_dangerous(context: &LintContext, args: &[ExternalArgument]) -> bool {
-    has_flag(args, context, &["-9", "-KILL", "-SIGKILL"])
+fn kill_is_dangerous(args: &[ExternalArgument]) -> bool {
+    has_flag(args, &["-9", "-KILL", "-SIGKILL"])
 }
 
-fn find_modifies_fs(context: &LintContext, args: &[ExternalArgument]) -> bool {
-    has_flag(args, context, &["-delete", "-exec"])
+fn find_modifies_fs(args: &[ExternalArgument]) -> bool {
+    has_flag(args, &["-delete", "-exec"])
 }
 
-fn find_is_dangerous(context: &LintContext, args: &[ExternalArgument]) -> bool {
-    has_flag(args, context, &["-delete"])
+fn find_is_dangerous(args: &[ExternalArgument]) -> bool {
+    has_flag(args, &["-delete"])
 }
 
 pub const COMMANDS: &[CommandEffects] = &[

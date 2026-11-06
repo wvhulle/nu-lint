@@ -4,24 +4,22 @@ use super::{
     CommandEffects, ExternEffect,
     predicates::{always, has_flag},
 };
-use crate::{context::LintContext, effect::CommonEffect};
+use crate::effect::CommonEffect;
 
-fn curl_modifies_fs(context: &LintContext, args: &[ExternalArgument]) -> bool {
-    has_flag(args, context, &["-o", "--output", "-O", "--remote-name"])
+fn curl_modifies_fs(args: &[ExternalArgument]) -> bool {
+    has_flag(args, &["-o", "--output", "-O", "--remote-name"])
 }
 
-fn curl_has_streaming(context: &LintContext, args: &[ExternalArgument]) -> bool {
+fn curl_has_streaming(args: &[ExternalArgument]) -> bool {
     has_flag(
         args,
-        context,
         &["-o", "--output", "-O", "--remote-name", "--progress-bar"],
     )
 }
 
-fn rsync_is_dangerous(context: &LintContext, args: &[ExternalArgument]) -> bool {
+fn rsync_is_dangerous(args: &[ExternalArgument]) -> bool {
     has_flag(
         args,
-        context,
         &[
             "--delete",
             "--delete-before",

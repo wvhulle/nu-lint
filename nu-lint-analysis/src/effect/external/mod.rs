@@ -11,10 +11,10 @@ mod system;
 mod text_processing;
 
 use nu_protocol::ast::{Expression, ExternalArgument};
-pub use predicates::extract_external_arg_text;
+pub use predicates::literal_argument;
 
 use super::CommonEffect;
-use crate::{ast::external::literal_content, context::LintContext};
+use crate::ast::external::literal_content;
 
 /// Things that may happen at runtime for external commands.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -55,7 +55,6 @@ const ALL_COMMANDS: &[&[CommandEffects]] = &[
 pub fn has_external_side_effect(
     command_head: &Expression,
     side_effect: ExternEffect,
-    context: &LintContext,
     args: &[ExternalArgument],
 ) -> bool {
     let Some(command_name) = literal_content(command_head) else {
@@ -68,7 +67,7 @@ pub fn has_external_side_effect(
             && let Some((_, predicate)) = effects.iter().find(|(effect, _)| *effect == side_effect)
         {
             log::trace!("Checking external predicate for side effect '{side_effect:?}'");
-            let result = predicate(context, args);
+            let result = predicate(args);
             if result {
                 log::trace!("External predicate matched for side effect '{side_effect:?}'");
             }
@@ -83,16 +82,6 @@ pub fn has_external_side_effect(
 }
 
 #[must_use]
-pub fn has_external_recursive_flag(args: &[ExternalArgument], context: &LintContext) -> bool {
-    args.iter().any(|arg| {
-        let arg_text = extract_external_arg_text(arg, context);
-        matches!(
-            arg_text,
-            text if text.contains("-r")
-                || text.contains("--recursive")
-                || text.contains("-rf")
-                || text.contains("-fr")
-                || text.contains("--force")
-        )
-    })
+pub fn has_external_recursive_flag(args: &[ExternalArgument]) -> bool {
+    predicates::has_flag(args, &["-r", "-R", "--recursive"])
 }

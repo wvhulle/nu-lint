@@ -28,7 +28,6 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<Detection> 
             if !has_external_side_effect(
                 command,
                 ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
-                context,
                 external_arguments,
             ) {
                 continue;

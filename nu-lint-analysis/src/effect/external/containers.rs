@@ -2,73 +2,71 @@ use nu_protocol::ast::ExternalArgument;
 
 use super::{
     CommandEffects, ExternEffect,
-    predicates::{always, extract_external_arg_text, get_subcommand, has_flag},
+    predicates::{always, get_subcommand, has_flag, literal_argument},
 };
-use crate::{context::LintContext, effect::CommonEffect};
+use crate::effect::CommonEffect;
 
-fn docker_has_streaming_output(context: &LintContext, args: &[ExternalArgument]) -> bool {
-    let subcommand = get_subcommand(args, context);
+fn docker_has_streaming_output(args: &[ExternalArgument]) -> bool {
+    let subcommand = get_subcommand(args);
     matches!(
         subcommand,
-        "build" | "pull" | "push" | "run" | "logs" | "exec" | "compose" | "load" | "save"
+        Some("build" | "pull" | "push" | "run" | "logs" | "exec" | "compose" | "load" | "save")
     )
 }
 
-fn docker_is_dangerous(context: &LintContext, args: &[ExternalArgument]) -> bool {
-    let subcommand = get_subcommand(args, context);
+fn docker_is_dangerous(args: &[ExternalArgument]) -> bool {
+    let subcommand = get_subcommand(args);
     match subcommand {
-        "rm" | "rmi" => has_flag(args, context, &["-f", "--force"]),
-        "system" => {
-            let second_arg = args
-                .get(1)
-                .map_or("", |arg| extract_external_arg_text(arg, context));
-            matches!(second_arg, "prune")
+        Some("rm" | "rmi") => has_flag(args, &["-f", "--force"]),
+        Some("system") => {
+            let second_arg = args.get(1).and_then(literal_argument);
+            matches!(second_arg, Some("prune"))
         }
-        "volume" | "network" | "image" | "container" => {
-            let second_arg = args
-                .get(1)
-                .map_or("", |arg| extract_external_arg_text(arg, context));
-            matches!(second_arg, "rm" | "prune")
+        Some("volume" | "network" | "image" | "container") => {
+            let second_arg = args.get(1).and_then(literal_argument);
+            matches!(second_arg, Some("rm" | "prune"))
         }
         _ => false,
     }
 }
 
-fn docker_modifies_fs(context: &LintContext, args: &[ExternalArgument]) -> bool {
-    let subcommand = get_subcommand(args, context);
+fn docker_modifies_fs(args: &[ExternalArgument]) -> bool {
+    let subcommand = get_subcommand(args);
     matches!(
         subcommand,
-        "build" | "save" | "load" | "cp" | "export" | "import"
+        Some("build" | "save" | "load" | "cp" | "export" | "import")
     )
 }
 
-fn kubectl_is_dangerous(context: &LintContext, args: &[ExternalArgument]) -> bool {
-    let subcommand = get_subcommand(args, context);
+fn kubectl_is_dangerous(args: &[ExternalArgument]) -> bool {
+    let subcommand = get_subcommand(args);
     matches!(
         subcommand,
-        "delete" | "drain" | "cordon" | "taint" | "replace"
+        Some("delete" | "drain" | "cordon" | "taint" | "replace")
     )
 }
 
-fn kubectl_modifies_state(context: &LintContext, args: &[ExternalArgument]) -> bool {
-    let subcommand = get_subcommand(args, context);
+fn kubectl_modifies_state(args: &[ExternalArgument]) -> bool {
+    let subcommand = get_subcommand(args);
     matches!(
         subcommand,
-        "apply"
-            | "create"
-            | "delete"
-            | "patch"
-            | "replace"
-            | "scale"
-            | "edit"
-            | "rollout"
-            | "drain"
-            | "cordon"
-            | "uncordon"
-            | "taint"
-            | "label"
-            | "annotate"
-            | "set"
+        Some(
+            "apply"
+                | "create"
+                | "delete"
+                | "patch"
+                | "replace"
+                | "scale"
+                | "edit"
+                | "rollout"
+                | "drain"
+                | "cordon"
+                | "uncordon"
+                | "taint"
+                | "label"
+                | "annotate"
+                | "set"
+        )
     )
 }
 

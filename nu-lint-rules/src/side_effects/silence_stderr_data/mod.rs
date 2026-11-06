@@ -2,7 +2,7 @@ use nu_lint_analysis::{
     LintLevel,
     ast::{block::BlockExt, call::CallExt},
     context::LintContext,
-    effect::external::{ExternEffect, extract_external_arg_text, has_external_side_effect},
+    effect::external::{ExternEffect, has_external_side_effect},
     rule::{DetectFix, Rule},
     violation::Detection,
 };
@@ -58,7 +58,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<Detection> 
 
             let cmd_name = context.expr_text(head);
 
-            if !has_external_side_effect(head, ExternEffect::WritesDataToStdErr, context, args) {
+            if !has_external_side_effect(head, ExternEffect::WritesDataToStdErr, args) {
                 log::trace!(
                     "Command '{cmd_name}' does not have WritesDataToStdErr side effect, skipping"
                 );
@@ -73,7 +73,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<Detection> 
 
             let args_display = args
                 .iter()
-                .map(|arg| extract_external_arg_text(arg, context))
+                .map(|arg| context.expr_text(arg.expr()))
                 .collect::<Vec<_>>()
                 .join(" ");
 

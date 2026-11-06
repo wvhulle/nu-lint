@@ -4,19 +4,19 @@ use super::{
     CommandEffects, ExternEffect,
     predicates::{always, get_subcommand},
 };
-use crate::{context::LintContext, effect::CommonEffect};
+use crate::effect::CommonEffect;
 
-fn npm_has_streaming_output(context: &LintContext, args: &[ExternalArgument]) -> bool {
-    let subcommand = get_subcommand(args, context);
+fn npm_has_streaming_output(args: &[ExternalArgument]) -> bool {
+    let subcommand = get_subcommand(args);
     matches!(
         subcommand,
-        "install" | "ci" | "run" | "test" | "build" | "start" | "publish" | "exec"
+        Some("install" | "ci" | "run" | "test" | "build" | "start" | "publish" | "exec")
     )
 }
 
-fn pip_has_streaming_output(context: &LintContext, args: &[ExternalArgument]) -> bool {
-    let subcommand = get_subcommand(args, context);
-    matches!(subcommand, "install" | "download" | "wheel")
+fn pip_has_streaming_output(args: &[ExternalArgument]) -> bool {
+    let subcommand = get_subcommand(args);
+    matches!(subcommand, Some("install" | "download" | "wheel"))
 }
 
 pub const COMMANDS: &[CommandEffects] = &[

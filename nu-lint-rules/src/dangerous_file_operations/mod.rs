@@ -3,10 +3,9 @@ use nu_lint_analysis::{
     ast::{call::CallExt, external::literal_content},
     effect::{
         CommonEffect,
-        builtin::{BuiltinEffect, extract_arg_text, has_builtin_side_effect, has_recursive_flag},
+        builtin::{BuiltinEffect, has_builtin_side_effect, has_recursive_flag, literal_arguments},
         external::{
-            ExternEffect, extract_external_arg_text, has_external_recursive_flag,
-            has_external_side_effect,
+            ExternEffect, has_external_recursive_flag, has_external_side_effect, literal_argument,
         },
         is_dangerous_path,
     },
@@ -42,7 +41,6 @@ fn extract_dangerous_command<'a>(
             if !has_external_side_effect(
                 head,
                 ExternEffect::CommonEffect(CommonEffect::MayCauseDataLoss),
-                context,
                 args,
             ) {
                 return None;
@@ -98,14 +96,11 @@ fn check_external_command(
     cmd_name: &str,
     args: &[ExternalArgument],
     command_span: Span,
-    context: &nu_lint_analysis::context::LintContext,
     violations: &mut Vec<Detection>,
 ) {
-    let is_recursive = cmd_name == "rm" && has_external_recursive_flag(args, context);
+    let is_recursive = cmd_name == "rm" && has_external_recursive_flag(args);
 
-    for arg in args {
-        let path_str = extract_external_arg_text(arg, context);
-
+    for path_str in args.iter().filter_map(literal_argument) {
         if is_dangerous_path(path_str) {
             violations.push(create_dangerous_path_violation(
                 cmd_name,
@@ -121,14 +116,11 @@ fn check_builtin_command(
     cmd_name: &str,
     call: &Call,
     command_span: Span,
-    context: &nu_lint_analysis::context::LintContext,
     violations: &mut Vec<Detection>,
 ) {
-    let is_recursive = cmd_name == "rm" && has_recursive_flag(call, context);
+    let is_recursive = cmd_name == "rm" && has_recursive_flag(call);
 
-    for arg in &call.arguments {
-        let path_str = extract_arg_text(arg, context);
-
+    for path_str in literal_arguments(call) {
         if is_dangerous_path(path_str) {
             violations.push(create_dangerous_path_violation(
                 cmd_name,
@@ -179,10 +171,10 @@ impl DetectFix for DangerousFileOperations {
         for cmd in dangerous_commands {
             match cmd {
                 DangerousCommand::External { span, name, args } => {
-                    check_external_command(name, args, span, context, &mut violations);
+                    check_external_command(name, args, span, &mut violations);
                 }
                 DangerousCommand::Builtin { span, name, call } => {
-                    check_builtin_command(&name, call, span, context, &mut violations);
+                    check_builtin_command(&name, call, span, &mut violations);
                 }
             }
         }

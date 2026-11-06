@@ -30,7 +30,7 @@ struct RedundantIgnoreFixData {
 fn command_produces_output(expr: &Expression, context: &LintContext) -> bool {
     match &expr.expr {
         Expr::ExternalCall(call, args) => {
-            !has_external_side_effect(call, ExternEffect::NoDataInStdout, context, args)
+            !has_external_side_effect(call, ExternEffect::NoDataInStdout, args)
         }
         Expr::Call(call) => {
             let output_type = call.get_output_type(context, None);

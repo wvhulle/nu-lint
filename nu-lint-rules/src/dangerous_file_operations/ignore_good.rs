@@ -124,3 +124,17 @@ ls ~/.cache/my_app | where modified < (date now | date add -7day) | each { rm $i
 fn ignore_user_defined_rm() {
     RULE.assert_ignores("def rm [target: string, --recursive(-r)] { print $target }\nrm -r /");
 }
+
+#[test]
+fn ignore_non_recursive_rm_as_not_critical() {
+    use nu_lint_analysis::context::LintContext;
+
+    for code in ["rm /", "^rm --dry-run /"] {
+        let violations = LintContext::test_get_violations(code, |context| RULE.check(context));
+        let labels: Vec<_> = violations
+            .iter()
+            .filter_map(|violation| violation.primary_label.as_deref())
+            .collect();
+        assert_eq!(labels, ["dangerous path"], "{code}");
+    }
+}

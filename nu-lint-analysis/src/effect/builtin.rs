@@ -39,28 +39,15 @@ pub fn has_builtin_side_effect(
 }
 
 #[must_use]
-pub fn has_recursive_flag(call: &Call, context: &LintContext) -> bool {
-    call.arguments.iter().any(|arg| {
-        let arg_text = extract_arg_text(arg, context);
-        matches!(
-            arg_text,
-            text if text.contains("-r")
-                || text.contains("--recursive")
-                || text.contains("-rf")
-                || text.contains("-fr")
-                || text.contains("--force")
-        )
-    })
+pub fn has_recursive_flag(call: &Call) -> bool {
+    call.has_named_flag("recursive")
 }
 
-#[must_use]
-pub fn extract_arg_text<'a>(arg: &'a Argument, context: &'a LintContext) -> &'a str {
-    match arg {
-        Argument::Positional(expr) | Argument::Spread(expr) => {
-            literal_content(expr).unwrap_or_else(|| context.expr_text(expr))
-        }
-        _ => "",
-    }
+pub fn literal_arguments(call: &Call) -> impl Iterator<Item = &str> {
+    call.arguments.iter().filter_map(|argument| match argument {
+        Argument::Positional(expr) | Argument::Spread(expr) => literal_content(expr),
+        _ => None,
+    })
 }
 
 #[must_use]
@@ -109,19 +96,12 @@ fn print_to_stdout(_context: &LintContext, call: &Call) -> bool {
     !call.has_named_flag("stderr")
 }
 
-fn rm_is_dangerous(context: &LintContext, call: &Call) -> bool {
-    call.arguments
-        .iter()
-        .map(|arg| extract_arg_text(arg, context))
-        .any(is_dangerous_path)
-        || has_recursive_flag(call, context)
+fn rm_is_dangerous(_context: &LintContext, call: &Call) -> bool {
+    literal_arguments(call).any(is_dangerous_path) || has_recursive_flag(call)
 }
 
-fn mv_cp_is_dangerous(context: &LintContext, call: &Call) -> bool {
-    call.arguments
-        .iter()
-        .map(|arg| extract_arg_text(arg, context))
-        .any(is_dangerous_path)
+fn mv_cp_is_dangerous(_context: &LintContext, call: &Call) -> bool {
+    literal_arguments(call).any(is_dangerous_path)
 }
 
 fn exit_is_dangerous(context: &LintContext, call: &Call) -> bool {

@@ -4,18 +4,14 @@ use super::{
     CommandEffects, ExternEffect,
     predicates::{always, has_flag},
 };
-use crate::{context::LintContext, effect::CommonEffect};
+use crate::effect::CommonEffect;
 
-fn tar_modifies_fs(context: &LintContext, args: &[ExternalArgument]) -> bool {
-    has_flag(
-        args,
-        context,
-        &["-x", "--extract", "--get", "-c", "--create"],
-    )
+fn tar_modifies_fs(args: &[ExternalArgument]) -> bool {
+    has_flag(args, &["-x", "--extract", "--get", "-c", "--create"])
 }
 
-fn tar_has_streaming(context: &LintContext, args: &[ExternalArgument]) -> bool {
-    has_flag(args, context, &["-v", "--verbose"])
+fn tar_has_streaming(args: &[ExternalArgument]) -> bool {
+    has_flag(args, &["-v", "--verbose"])
 }
 
 pub const COMMANDS: &[CommandEffects] = &[

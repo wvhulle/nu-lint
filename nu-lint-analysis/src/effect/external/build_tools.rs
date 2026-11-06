@@ -4,24 +4,27 @@ use super::{
     CommandEffects, ExternEffect,
     predicates::{always, get_subcommand},
 };
-use crate::{context::LintContext, effect::CommonEffect};
+use crate::effect::CommonEffect;
 
-fn cargo_has_streaming_output(context: &LintContext, args: &[ExternalArgument]) -> bool {
-    let subcommand = get_subcommand(args, context);
-    matches!(subcommand, "build" | "test" | "run" | "install" | "bench")
-}
-
-fn cargo_modifies_fs(context: &LintContext, args: &[ExternalArgument]) -> bool {
-    let subcommand = get_subcommand(args, context);
+fn cargo_has_streaming_output(args: &[ExternalArgument]) -> bool {
+    let subcommand = get_subcommand(args);
     matches!(
         subcommand,
-        "build" | "install" | "new" | "init" | "add" | "remove" | "update" | "clean" | "fmt"
+        Some("build" | "test" | "run" | "install" | "bench")
     )
 }
 
-fn cargo_modifies_network(context: &LintContext, args: &[ExternalArgument]) -> bool {
-    let subcommand = get_subcommand(args, context);
-    matches!(subcommand, "publish")
+fn cargo_modifies_fs(args: &[ExternalArgument]) -> bool {
+    let subcommand = get_subcommand(args);
+    matches!(
+        subcommand,
+        Some("build" | "install" | "new" | "init" | "add" | "remove" | "update" | "clean" | "fmt")
+    )
+}
+
+fn cargo_modifies_network(args: &[ExternalArgument]) -> bool {
+    let subcommand = get_subcommand(args);
+    matches!(subcommand, Some("publish"))
 }
 
 pub const COMMANDS: &[CommandEffects] = &[

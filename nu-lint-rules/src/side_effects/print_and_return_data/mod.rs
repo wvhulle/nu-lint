@@ -62,7 +62,7 @@ fn last_command_produces_output(block: &Block, context: &LintContext) -> bool {
         Expr::ExternalCall(head, args) => {
             // If external side effect registry marks command as NoDataInStdout, treat as no
             // output
-            !has_external_side_effect(head, ExternEffect::NoDataInStdout, context, args)
+            !has_external_side_effect(head, ExternEffect::NoDataInStdout, args)
         }
         _ => false,
     }

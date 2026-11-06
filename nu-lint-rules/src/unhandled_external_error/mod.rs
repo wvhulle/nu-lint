@@ -32,7 +32,6 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<Detection> 
             if !has_external_side_effect(
                 cmd_expr,
                 ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
-                context,
                 args,
             ) {
                 return None;
@@ -40,8 +39,7 @@ fn check_pipeline(pipeline: &Pipeline, context: &LintContext) -> Vec<Detection> 
 
             // Skip commands where streaming output is preferred (build tools, etc.)
             // Users often want to see live progress rather than buffering with complete
-            if has_external_side_effect(cmd_expr, ExternEffect::SlowStreamingOutput, context, args)
-            {
+            if has_external_side_effect(cmd_expr, ExternEffect::SlowStreamingOutput, args) {
                 return None;
             }
 

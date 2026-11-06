@@ -83,3 +83,17 @@ fn detect_quoted_external_command() {
 fn detect_quoted_recursive_flag() {
     RULE.assert_detects(r#"^rm "-rf" /"#);
 }
+
+#[test]
+fn detect_recursive_rm_as_critical() {
+    use nu_lint_analysis::context::LintContext;
+
+    for code in ["rm -rf /", "rm --recursive ~", "^rm -rf /", "^rm -R /etc"] {
+        let violations = LintContext::test_get_violations(code, |context| RULE.check(context));
+        let labels: Vec<_> = violations
+            .iter()
+            .filter_map(|violation| violation.primary_label.as_deref())
+            .collect();
+        assert_eq!(labels, ["recursive operation on dangerous path"], "{code}");
+    }
+}

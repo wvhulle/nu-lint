@@ -82,7 +82,6 @@ fn has_external_command_with_likely_errors(expr: &Expression, context: &LintCont
         if has_external_side_effect(
             cmd_expr,
             ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
-            context,
             args,
         ) {
             ControlFlow::Break(Some(()))

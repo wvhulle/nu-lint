@@ -28,7 +28,6 @@ fn find_error_prone_command(expr: &Expression, context: &LintContext) -> Option<
             if has_external_side_effect(
                 head,
                 ExternEffect::CommonEffect(CommonEffect::FailsInNormalCircumstances),
-                context,
                 args,
             ) {
                 return ControlFlow::Break(Some(ErrorSource::External(head.span)));

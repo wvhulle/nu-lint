@@ -4,10 +4,10 @@ use super::{
     CommandEffects, ExternEffect,
     predicates::{always, has_flag},
 };
-use crate::{context::LintContext, effect::CommonEffect};
+use crate::effect::CommonEffect;
 
-fn sed_has_inplace(context: &LintContext, args: &[ExternalArgument]) -> bool {
-    has_flag(args, context, &["-i", "--in-place"])
+fn sed_has_inplace(args: &[ExternalArgument]) -> bool {
+    has_flag(args, &["-i", "--in-place"])
 }
 
 pub const COMMANDS: &[CommandEffects] = &[

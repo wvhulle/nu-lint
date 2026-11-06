@@ -16,9 +16,6 @@ use crate::{
 };
 
 pub trait ExpressionExt: Traverse {
-    /// Extracts the variable name from an expression. Example: `$counter`
-    /// returns "counter"
-    fn extract_variable_name(&self, context: &LintContext) -> Option<String>;
     fn root_var_id(&self) -> Option<VarId>;
     fn variable_path(&self) -> Option<(VarId, &[PathMember])>;
     /// Checks if expression is an assignment operation. Example: `$x = 5` or
@@ -170,18 +167,14 @@ const fn builtin_var_name(var_id: VarId) -> Option<&'static str> {
     }
 }
 
-/// Extracts variable name from `Expr::Var`, handling both built-ins and
-/// user-defined.
-pub fn var_name_from_expr(expr: &Expression, context: &LintContext) -> Option<String> {
-    let Expr::Var(var_id) = &expr.expr else {
-        return None;
-    };
-
-    if let Some(name) = builtin_var_name(*var_id) {
-        return Some(name.to_string());
+#[must_use]
+pub fn variable_name(var_id: VarId, context: &LintContext) -> Option<String> {
+    if let Some(builtin_name) = builtin_var_name(var_id) {
+        return Some(builtin_name.to_string());
     }
-
-    expr.extract_variable_name(context)
+    let declared_name = context.working_set.get_variable(var_id).name.as_deref()?;
+    let without_sigil = declared_name.strip_prefix(b"$").unwrap_or(declared_name);
+    Some(String::from_utf8_lossy(without_sigil).into_owned())
 }
 
 impl ExpressionExt for Expression {
@@ -200,17 +193,6 @@ impl ExpressionExt for Expression {
                 Expr::Var(var_id) => Some((var_id, cell_path.tail.as_slice())),
                 _ => None,
             },
-            _ => None,
-        }
-    }
-
-    fn extract_variable_name(&self, context: &LintContext) -> Option<String> {
-        match &self.expr {
-            Expr::Var(var_id) | Expr::VarDecl(var_id) => {
-                let var = context.working_set.get_variable(*var_id);
-                Some(context.span_text(var.declaration_span).to_string())
-            }
-            Expr::FullCellPath(cell_path) => cell_path.head.extract_variable_name(context),
             _ => None,
         }
     }

@@ -1,6 +1,10 @@
 use nu_lint_analysis::{
     LintLevel,
-    ast::{block::BlockExt, call::CallExt, expression::ExpressionExt},
+    ast::{
+        block::BlockExt,
+        call::CallExt,
+        expression::{ExpressionExt, variable_name},
+    },
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::Detection,
@@ -81,7 +85,7 @@ fn extract_counter_from_mut(
         .then(|| {
             let name_arg = call.get_positional_arg(0)?;
             let counter_var_id = name_arg.root_var_id()?;
-            let var_name = name_arg.extract_variable_name(context)?;
+            let var_name = variable_name(counter_var_id, context)?;
             let init_value = call.get_positional_arg(1)?;
 
             (init_value.extract_int_value(context) == Some(0)).then_some((

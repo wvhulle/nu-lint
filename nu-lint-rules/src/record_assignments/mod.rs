@@ -4,7 +4,7 @@ mod use_record_spread;
 pub use env_assignments_to_load_env::RULE as ENV_ASSIGNMENTS_TO_LOAD_ENV;
 use nu_lint_analysis::{
     ast::{
-        expression::var_name_from_expr,
+        expression::variable_name,
         string::{cell_path_member_needs_quotes, record_key_needs_quotes},
     },
     context::LintContext,
@@ -135,7 +135,7 @@ fn extract_field_assignment(
         return None;
     }
 
-    let var_name = var_name_from_expr(&cell_path.head, context)?;
+    let var_name = variable_name(*var_id, context)?;
     let path = cell_path
         .tail
         .iter()

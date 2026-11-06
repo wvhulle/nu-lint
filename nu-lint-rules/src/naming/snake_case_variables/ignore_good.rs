@@ -52,3 +52,33 @@ def good-func [] {
 
     RULE.assert_ignores(good_code);
 }
+
+#[test]
+fn ignore_snake_case_variables_with_type_annotation() {
+    let good_code = "
+let local: datetime = (date now)
+mut count: int = 0
+let items: list<string> = []
+let point: record<x: int, y: int> = {x: 1, y: 2}
+print $local $count $items $point
+";
+
+    RULE.assert_ignores(good_code);
+}
+
+#[test]
+fn ignore_typed_variable_assigned_from_if_expression() {
+    let good_code = r#"
+export def "ps port" [port: int, --long(-l)]: nothing -> table {
+	let pid: list<int> = if $nu.os-info.name == windows {
+		netstat -ano | lines | where $it ends-with $":($port)"
+	} else {
+		error make 'ps port wrapper is only implemented for windows'
+	}
+
+	ps --long=$long | where pid in $pid
+}
+"#;
+
+    RULE.assert_ignores(good_code);
+}

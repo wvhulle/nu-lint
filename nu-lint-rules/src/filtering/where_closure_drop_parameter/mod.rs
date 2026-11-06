@@ -1,6 +1,9 @@
 use nu_lint_analysis::{
     LintLevel,
-    ast::{block::BlockExt, call::CallExt, declaration::is_implicit_row_parameter},
+    ast::{
+        block::BlockExt, call::CallExt, declaration::is_implicit_row_parameter,
+        expression::variable_name,
+    },
     context::LintContext,
     rule::{DetectFix, Rule},
     violation::{Detection, Fix, Replacement},
@@ -44,8 +47,7 @@ fn extract_closure_parameter(block_id: BlockId, context: &LintContext) -> Option
     }
 
     let var_id = param.var_id?;
-    let var = context.working_set.get_variable(var_id);
-    let name = context.span_text(var.declaration_span).to_string();
+    let name = variable_name(var_id, context)?;
 
     Some(ClosureParameter { name, var_id })
 }
@@ -156,24 +158,6 @@ fn filter_nested_spans(spans: &[Span]) -> Vec<Span> {
         .collect()
 }
 
-/// Replace a parameter name with `it` in a variable reference.
-///
-/// Examples:
-/// - `$x` → `$it`
-/// - `$x.field` → `$it.field`
-///
-/// Assumes `var_text` starts with `$` followed by the parameter name.
-fn replace_param_with_it(var_text: &str, param_name: &str) -> String {
-    // Strip '$' then strip parameter name, keeping any suffix like '.field'
-    let after_dollar = var_text
-        .strip_prefix('$')
-        .expect("variable must start with $");
-    let suffix = after_dollar
-        .strip_prefix(param_name)
-        .expect("variable must start with parameter name");
-    format!("$it{suffix}")
-}
-
 struct WhereClosureToIt;
 
 impl DetectFix for WhereClosureToIt {
@@ -209,12 +193,7 @@ impl DetectFix for WhereClosureToIt {
     fn fix(&self, context: &LintContext, fix_data: &Self::FixInput<'_>) -> Option<Fix> {
         // Extract body span and variable usages from the block (AST-based)
         let block = context.working_set.get_block(fix_data.block_id);
-        let param_name = context.span_text(
-            context
-                .working_set
-                .get_variable(fix_data.param_var_id)
-                .declaration_span,
-        );
+        let param_name = variable_name(fix_data.param_var_id, context)?;
         let body_span = extract_body_span_from_block(fix_data.block_id, context)?;
         let var_usage_spans = block.var_usages(fix_data.param_var_id, context);
 
@@ -240,8 +219,7 @@ impl DetectFix for WhereClosureToIt {
                 result.push_str(context.span_text(before_span));
             }
             // Add the replacement for this variable
-            let var_text = context.span_text(*span);
-            result.push_str(&replace_param_with_it(var_text, param_name));
+            result.push_str("$it");
             last_end = span.end;
         }
 

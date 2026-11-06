@@ -109,3 +109,10 @@ fn fix_renames_cell_path_head_once() {
         "let current_arg = {content: 1}\nprint $current_arg.content",
     );
 }
+
+#[test]
+fn test_snake_case_fix_typed_variable() {
+    let bad_code = "let myVar: int = 1; print $myVar";
+    let fixed = apply_fix(bad_code);
+    assert_eq!(fixed, "let my_var: int = 1; print $my_var");
+}

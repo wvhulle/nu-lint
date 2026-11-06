@@ -41,13 +41,12 @@ fn extract_compared_operand(expr: &Expression) -> Option<&Expression> {
         .map(AsRef::as_ref)
 }
 
-fn extract_comparison_value(expr: &Expression, context: &LintContext) -> Option<Span> {
+fn extract_comparison_value(expr: &Expression) -> Option<Span> {
     let Expr::BinaryOp(left, _op, right) = &expr.expr else {
         return None;
     };
 
-    if left.extract_variable_name(context).is_some() || matches!(&left.expr, Expr::FullCellPath(_))
-    {
+    if left.root_var_id().is_some() || matches!(&left.expr, Expr::FullCellPath(_)) {
         Some(right.span)
     } else {
         Some(left.span)
@@ -90,15 +89,13 @@ enum ChainIterResult {
 /// Iterator over if-else-if chain branches
 struct ChainIterator<'a> {
     current: Option<&'a Call>,
-    context: &'a LintContext<'a>,
     final_else_pending: Option<Span>,
 }
 
 impl<'a> ChainIterator<'a> {
-    const fn new(call: &'a Call, context: &'a LintContext<'a>) -> Self {
+    const fn new(call: &'a Call) -> Self {
         Self {
             current: Some(call),
-            context,
             final_else_pending: None,
         }
     }
@@ -118,7 +115,7 @@ impl Iterator for ChainIterator<'_> {
         // Extract pattern and body from current branch
         let pattern_span = call
             .get_first_positional_arg()
-            .and_then(|arg| extract_comparison_value(arg, self.context))?;
+            .and_then(extract_comparison_value)?;
 
         let body_span = call.get_positional_arg(1).map(|arg| arg.span)?;
 
@@ -148,11 +145,11 @@ impl Iterator for ChainIterator<'_> {
 }
 
 /// Collects all branches from an if-else-if chain
-fn collect_chain_branches(call: &Call, context: &LintContext) -> (Vec<MatchBranch>, Option<Span>) {
+fn collect_chain_branches(call: &Call) -> (Vec<MatchBranch>, Option<Span>) {
     let mut branches = Vec::new();
     let mut final_else = None;
 
-    for result in ChainIterator::new(call, context) {
+    for result in ChainIterator::new(call) {
         match result {
             ChainIterResult::Branch(branch) => branches.push(branch),
             ChainIterResult::FinalElse(else_body) => final_else = Some(else_body),
@@ -295,7 +292,7 @@ fn analyze_if_chain(call: &Call, context: &LintContext) -> Option<(Detection, Fi
     // Collect branch data for fix generation (only if consistent variable)
     let (branches, final_else) =
         if analysis.consistent_variable && chain_compares_literals_only(call, context) {
-            collect_chain_branches(call, context)
+            collect_chain_branches(call)
         } else {
             (vec![], None)
         };

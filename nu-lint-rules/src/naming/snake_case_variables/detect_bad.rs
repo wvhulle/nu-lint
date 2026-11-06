@@ -54,3 +54,27 @@ def test-func [] {
 
     RULE.assert_count(bad_code, 4);
 }
+
+#[test]
+fn detect_camel_case_variable_with_type_annotation() {
+    let bad_code = "let myVar: int = 1; print $myVar";
+
+    RULE.assert_count(bad_code, 1);
+}
+
+#[test]
+fn name_typed_variable_without_type_annotation_colon() {
+    use nu_lint_analysis::context::LintContext;
+
+    let bad_code = "let myVar: record<x: int, y: int> = {x: 1, y: 2}; print $myVar";
+    let violations = LintContext::test_get_violations(bad_code, |context| RULE.check(context));
+
+    let messages: Vec<_> = violations
+        .iter()
+        .map(|violation| violation.message.as_ref())
+        .collect();
+    assert_eq!(
+        messages,
+        ["Variable 'myVar' should use snake_case naming convention"]
+    );
+}

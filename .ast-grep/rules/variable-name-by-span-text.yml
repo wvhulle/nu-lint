@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
+
+id: variable-name-by-span-text
+message: Read a variable's name with variable_name(var_id, context), not from the source text of its declaration span.
+severity: error
+language: Rust
+files:
+  - nu-lint-rules/src/**
+  - nu-lint-analysis/src/**
+rule:
+  any:
+    - pattern: $CONTEXT.span_text($VARIABLE.declaration_span)
+    - pattern: $CONTEXT.span_text($WORKING_SET.get_variable($VAR_ID).declaration_span)
+note: "For a typed `let name: type`, nushell sets the declaration span to the `name:` token, colon included. See CONTRIBUTING.md, section Detection."

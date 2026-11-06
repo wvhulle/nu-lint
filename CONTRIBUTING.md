@@ -154,7 +154,7 @@ Do not search, split or trim source text (`span_text`, `expr_text`, `source_befo
 
 Decide at the highest level the parser supports, so a rule covers more cases and stays correct:
 
-1. **Semantic:** variable and declaration ids, parsed values such as `Expr::Int` and `Expr::String`, types and signatures. Compare variables by `VarId`, because two variables can share a name through shadowing. For example, use `root_var_id`, `variable_path`, `extract_direct_var`, `extract_int_value` and `literal_content`.
+1. **Semantic:** variable and declaration ids, parsed values such as `Expr::Int` and `Expr::String`, types and signatures. Compare variables by `VarId`, because two variables can share a name through shadowing. Read a variable's name with `variable_name`, which returns the name the parser recorded, not the source text of its declaration span (for `let name: type` that span includes the colon). Check builtin flags with `has_named_flag`, not by searching argument text. For example, use `root_var_id`, `variable_path`, `extract_direct_var`, `variable_name`, `has_named_flag`, `extract_int_value` and `literal_content`.
 2. **Structural:** the shape of the AST and the spans of its nodes.
 3. **Layout:** tokens or raw source, only behind a helper in `nu-lint-analysis/src/ast/`, and only when the AST lacks the data or the source spelling is the subject of the rule. Spacing and comments are examples. `SignatureLayout` covers signature annotations, defaults, commas and comments, which have no spans in the AST. It is for fix layout and should not decide detection.
 

@@ -9,9 +9,9 @@ files:
   - nu-lint-analysis/src/**
 rule:
   any:
-    - pattern: $EXPR.extract_variable_name($$$) == $OTHER
-    - pattern: $EXPR.extract_variable_name($$$) != $OTHER
-    - pattern: $EXPR.extract_variable_name($$$).as_deref() == $OTHER
-    - pattern: $EXPR.extract_variable_name($$$).as_deref() != $OTHER
-    - pattern: $EXPR.extract_variable_name($$$).is_some_and($$$)
+    - pattern: variable_name($$$) == $OTHER
+    - pattern: variable_name($$$) != $OTHER
+    - pattern: variable_name($$$).as_deref() == $OTHER
+    - pattern: variable_name($$$).as_deref() != $OTHER
+    - pattern: variable_name($$$).is_some_and($$$)
 note: Two variables can share a name through shadowing. See CONTRIBUTING.md, section Detection.

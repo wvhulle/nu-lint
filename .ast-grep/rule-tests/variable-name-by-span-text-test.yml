@@ -1,0 +1,20 @@
+id: variable-name-by-span-text
+valid:
+  - |
+    fn display_name(var_id: VarId, context: &LintContext) -> Option<String> {
+        variable_name(var_id, context)
+    }
+  - |
+    fn rename(var_id: VarId, new_name: String, context: &LintContext) -> Replacement {
+        Replacement::new(context.working_set.get_variable(var_id).declaration_span, new_name)
+    }
+invalid:
+  - |
+    fn parameter_name(var_id: VarId, context: &LintContext) -> String {
+        let var = context.working_set.get_variable(var_id);
+        context.span_text(var.declaration_span).to_string()
+    }
+  - |
+    fn parameter_name(var_id: VarId, context: &LintContext) -> &str {
+        context.span_text(context.working_set.get_variable(var_id).declaration_span)
+    }

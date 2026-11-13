@@ -1,6 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
   <rect width="128" height="128" rx="26" fill="#2a5223"/>
-  <path d="M22 50 L40 64 L22 78" fill="none" stroke="#eef7e8" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M56 38 H72 M86 38 H104 M56 64 H72 M56 90 H72 M86 90 H104" stroke="#9cc788" stroke-width="10" stroke-linecap="round"/>
-  <path d="M84 66 q5 -10 10 0 t10 0" fill="none" stroke="#f5b83d" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M26 73.03V33.97H36.3V41.07Q37.15 37.52 39.96 35.39Q42.76 33.26 46.81 33.26Q52.49 33.26 55.94 37.23Q59.38 41.21 59.38 47.82V73.03H48.73V48.88Q48.73 45.83 47.13 44.16Q45.53 42.49 42.69 42.49Q39.85 42.49 38.25 44.16Q36.65 45.83 36.65 48.88V73.03ZM85.24 73.74Q77.35 73.74 72.91 69.48Q68.47 65.22 68.47 57.83V33.97H79.13V57.76Q79.13 64.51 85.24 64.51Q88.15 64.51 89.75 62.77Q91.35 61.03 91.35 57.76V33.97H102V57.83Q102 65.29 97.53 69.52Q93.05 73.74 85.24 73.74Z" fill="#eef7e8"/>
+  <path d="M26.00 86.74 q4.75 -9.0 9.50 0 t9.50 0 t9.50 0 t9.50 0 t9.50 0 t9.50 0 t9.50 0 t9.50 0" fill="none" stroke="#f5b83d" stroke-width="7.0" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

@@ -1,3 +1,5 @@
+<img src="assets/logo.svg" width="96" alt="nu-lint logo">
+
 # Nu-Lint
 
 Linter for the innovative [Nu](https://www.nushell.sh/) shell.

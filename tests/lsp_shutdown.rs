@@ -1,5 +1,7 @@
 #![cfg(feature = "lsp")]
 
+mod lsp_conversation;
+
 use std::{
     fs,
     io::Write,
@@ -9,22 +11,9 @@ use std::{
     time::{Duration, Instant},
 };
 
+use lsp_conversation::{framed, shutdown_conversation};
+
 const EXIT_DEADLINE: Duration = Duration::from_secs(10);
-
-fn framed(json_body: &str) -> String {
-    format!("Content-Length: {}\r\n\r\n{json_body}", json_body.len())
-}
-
-fn shutdown_conversation() -> String {
-    [
-        r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"processId":null,"rootUri":null,"capabilities":{}}}"#,
-        r#"{"jsonrpc":"2.0","method":"initialized","params":{}}"#,
-        r#"{"jsonrpc":"2.0","id":2,"method":"shutdown","params":null}"#,
-        r#"{"jsonrpc":"2.0","method":"exit","params":null}"#,
-    ]
-    .map(framed)
-    .concat()
-}
 
 fn wait_until_exited(server: &mut Child) -> Option<ExitStatus> {
     let started_waiting = Instant::now();
@@ -125,9 +114,13 @@ fn legacy_lsp_flag_exits_after_exit_notification() {
 }
 
 #[test]
-fn lsp_exits_cleanly_when_log_directory_cannot_be_created() {
+fn lsp_exits_cleanly_when_log_file_cannot_be_created() {
     let scratch_directory = tempfile::tempdir().unwrap();
-    let cache_home_blocked_by_file = scratch_directory.path().join("regular-file");
-    fs::write(&cache_home_blocked_by_file, "").unwrap();
-    assert_exits_after_exit_notification(&["lsp"], &cache_home_blocked_by_file);
+    let directory_blocked_by_file = scratch_directory.path().join("regular-file");
+    fs::write(&directory_blocked_by_file, "").unwrap();
+    let unwritable_log_file = directory_blocked_by_file.join("lsp.log");
+    assert_exits_after_exit_notification(
+        &["lsp", "--log-file", unwritable_log_file.to_str().unwrap()],
+        scratch_directory.path(),
+    );
 }

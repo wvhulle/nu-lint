@@ -16,6 +16,7 @@ use nu_lint_analysis::{
     rule::Rule,
 };
 use nu_lint_rules::{USED_RULES, groups::ALL_GROUPS};
+use tracing::level_filters::LevelFilter;
 
 #[cfg(feature = "lsp")]
 use crate::lsp;
@@ -90,6 +91,44 @@ struct FixArgs {
     dry_run: bool,
 }
 
+#[derive(clap::ValueEnum, Clone, Copy, Default, Debug, PartialEq, Eq)]
+enum LspLogLevel {
+    Off,
+    Error,
+    #[default]
+    Warn,
+    Info,
+    Debug,
+    Trace,
+}
+
+impl From<LspLogLevel> for LevelFilter {
+    fn from(log_level: LspLogLevel) -> Self {
+        match log_level {
+            LspLogLevel::Off => Self::OFF,
+            LspLogLevel::Error => Self::ERROR,
+            LspLogLevel::Warn => Self::WARN,
+            LspLogLevel::Info => Self::INFO,
+            LspLogLevel::Debug => Self::DEBUG,
+            LspLogLevel::Trace => Self::TRACE,
+        }
+    }
+}
+
+#[derive(Args)]
+struct LspArgs {
+    #[arg(
+        long,
+        value_enum,
+        default_value_t,
+        help = "Log messages at this level and above to stderr and the log file"
+    )]
+    log_level: LspLogLevel,
+
+    #[arg(long, value_name = "PATH", help = "Also append logs to this file")]
+    log_file: Option<PathBuf>,
+}
+
 #[derive(Args)]
 struct ListRulesArgs {
     #[arg(long, short, help = "Path to config file")]
@@ -147,7 +186,7 @@ enum CliCommand {
     #[command(long_flag_alias = "fix", about = "Apply automatic fixes")]
     Fix(FixArgs),
     #[command(long_flag_alias = "lsp", about = "Start the language server")]
-    Lsp,
+    Lsp(LspArgs),
     #[command(
         long_flag_aliases = ["list", "rules"],
         about = "List, explain and group rules"
@@ -387,7 +426,7 @@ pub fn run() -> io::Result<ExitCode> {
         CliCommand::Fix(fix_args) => with_loaded_config(fix_args.input.loaded_config(), |config| {
             fix_args.fix(config)
         }),
-        CliCommand::Lsp => Ok(start_lsp_server()),
+        CliCommand::Lsp(lsp_args) => Ok(start_lsp_server(lsp_args)),
         CliCommand::Rules(rules_args) => run_rules_command(rules_args.into_command()),
         CliCommand::Config(config_command) => run_config_command(&config_command),
         CliCommand::Dev(dev_command) => run_dev_command(dev_command),
@@ -430,15 +469,19 @@ impl RulesArgs {
 }
 
 #[cfg(feature = "lsp")]
-fn start_lsp_server() -> ExitCode {
-    let _log_guard = lsp::init_lsp_log();
+fn start_lsp_server(lsp_args: LspArgs) -> ExitCode {
+    let log_destination = lsp_args.log_file.map_or(
+        lsp::LspLogDestination::Stderr,
+        lsp::LspLogDestination::StderrAndFile,
+    );
+    let _log_session = lsp::init_lsp_log(lsp_args.log_level.into(), &log_destination);
     tracing::info!("nu-lint LSP server started");
     lsp::run_lsp_server();
     ExitCode::SUCCESS
 }
 
 #[cfg(not(feature = "lsp"))]
-fn start_lsp_server() -> ExitCode {
+fn start_lsp_server(_lsp_args: LspArgs) -> ExitCode {
     let _ = writeln!(
         io::stderr(),
         "nu-lint was built without the `lsp` feature; rebuild with `--features lsp`"
@@ -452,7 +495,7 @@ mod tests {
 
     use clap::{Command, CommandFactory, Parser};
 
-    use super::{CliCommand, DevCommand, ListRulesArgs, RulesCommand};
+    use super::{CliCommand, DevCommand, ListRulesArgs, LspArgs, LspLogLevel, RulesCommand};
     use crate::{Config, cli::Cli, file_collection::collect_nu_files};
 
     fn parsed_command(arguments: &[&str]) -> CliCommand {
@@ -552,7 +595,15 @@ mod tests {
         ));
         assert!(matches!(
             parsed_command(&["nu-lint", "lsp"]),
-            CliCommand::Lsp
+            CliCommand::Lsp(LspArgs {
+                log_level: LspLogLevel::Warn,
+                log_file: None
+            })
+        ));
+        assert!(matches!(
+            parsed_command(&["nu-lint", "lsp", "--log-level", "debug", "--log-file", "lsp.log"]),
+            CliCommand::Lsp(LspArgs { log_level: LspLogLevel::Debug, log_file: Some(path) })
+                if path.as_os_str() == "lsp.log"
         ));
     }
 
@@ -590,7 +641,17 @@ mod tests {
         ));
         assert!(matches!(
             parsed_command(&["nu-lint", "--lsp"]),
-            CliCommand::Lsp
+            CliCommand::Lsp(LspArgs {
+                log_level: LspLogLevel::Warn,
+                log_file: None
+            })
+        ));
+        assert!(matches!(
+            parsed_command(&["nu-lint", "--lsp", "--log-level", "info"]),
+            CliCommand::Lsp(LspArgs {
+                log_level: LspLogLevel::Info,
+                ..
+            })
         ));
         assert!(matches!(
             parsed_rules_command(&["nu-lint", "--list", "--config", "c.toml"]),

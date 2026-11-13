@@ -194,6 +194,8 @@ Available as [`Nu-Lint` extension](https://codeberg.org/vmeurisse/nu-lint-zed#re
 
 You can also implement your own editor extensions using the `lsp` command as in: `nu-lint lsp`. This will spawn a language server compliant with the [Language Server Protocol](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/).
 
+The language server logs to stderr, which most editors show in their language server log. Choose how much with `--log-level` (`off`, `error`, `warn` (default), `info`, `debug`, `trace`), and pass `--log-file <PATH>` to also append the same logs to a file, for example `nu-lint lsp --log-level debug --log-file /tmp/nu-lint.log`.
+
 ## Configuration
 
 Rule levels and rule options can be changed in an optional `nu-lint.toml` file in your user configuration directory. Run `nu-lint config example` to print a configuration file with every option, group and rule at its default. See [configuration](https://codeberg.org/wvhulle/nu-lint/src/branch/main/docs/configuration.md) for the file location, the options and how to ignore a single line.

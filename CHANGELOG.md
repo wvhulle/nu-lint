@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0](https://codeberg.org/wvhulle/nu-lint/compare/v1.9.2...v2.0.0) - 2026-11-15
+
+### Added
+
+- *(lsp)* [**breaking**] log to stderr with --log-level and an opt-in --log-file
+
+### Documentation
+
+- add nu-lint logo
+- redesign logo as prompt feeding a table with a flagged cell
+- draw logo as JetBrains Mono nu monogram over a lint squiggle
+
 ## [1.9.2](https://codeberg.org/wvhulle/nu-lint/compare/v1.9.1...v1.9.2) - 2026-11-06
 
 ### CI
